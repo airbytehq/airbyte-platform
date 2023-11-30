@@ -46,6 +46,7 @@ import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
@@ -76,7 +77,7 @@ public class SourceDefinitionsHandler {
 
   @Inject
   public SourceDefinitionsHandler(final ConfigRepository configRepository,
-                                  final Supplier<UUID> uuidSupplier,
+                                  @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
                                   final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
                                   final RemoteDefinitionsProvider remoteDefinitionsProvider,
                                   final SourceHandler sourceHandler,

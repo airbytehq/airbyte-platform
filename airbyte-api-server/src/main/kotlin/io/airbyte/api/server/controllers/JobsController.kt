@@ -41,6 +41,7 @@ open class JobsController(
   private val jobService: JobService,
   private val userService: UserService,
   private val connectionService: ConnectionService,
+  private val trackingHelper: TrackingHelper,
 ) : JobsApi {
   @DELETE
   @Path("/{jobId}")
@@ -51,7 +52,7 @@ open class JobsController(
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val jobResponse: Any? =
-      TrackingHelper.callWithTracker(
+      trackingHelper.callWithTracker(
         {
           jobService.cancelJob(
             jobId,
@@ -63,7 +64,7 @@ open class JobsController(
         userId,
       )
 
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       JOBS_WITH_ID_PATH,
       DELETE,
       userId,
@@ -81,7 +82,7 @@ open class JobsController(
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val connectionResponse: ConnectionResponse =
-      TrackingHelper.callWithTracker(
+      trackingHelper.callWithTracker(
         {
           connectionService.getConnection(
             jobCreateRequest.connectionId,
@@ -97,13 +98,13 @@ open class JobsController(
     return when (jobCreateRequest.jobType) {
       JobTypeEnum.SYNC -> {
         val jobResponse: Any =
-          TrackingHelper.callWithTracker({
+          trackingHelper.callWithTracker({
             jobService.sync(
               jobCreateRequest.connectionId,
               getLocalUserInfoIfNull(userInfo),
             )
           }, JOBS_PATH, POST, userId)!!
-        TrackingHelper.trackSuccess(
+        trackingHelper.trackSuccess(
           JOBS_PATH,
           POST,
           userId,
@@ -117,13 +118,13 @@ open class JobsController(
 
       JobTypeEnum.RESET -> {
         val jobResponse: Any =
-          TrackingHelper.callWithTracker({
+          trackingHelper.callWithTracker({
             jobService.reset(
               jobCreateRequest.connectionId,
               getLocalUserInfoIfNull(userInfo),
             )
           }, JOBS_PATH, POST, userId)!!
-        TrackingHelper.trackSuccess(
+        trackingHelper.trackSuccess(
           JOBS_PATH,
           POST,
           userId,
@@ -137,7 +138,7 @@ open class JobsController(
 
       else -> {
         val unprocessableEntityProblem = UnprocessableEntityProblem()
-        TrackingHelper.trackFailuresIfAny(
+        trackingHelper.trackFailuresIfAny(
           JOBS_PATH,
           POST,
           userId,
@@ -157,7 +158,7 @@ open class JobsController(
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val jobResponse: Any? =
-      TrackingHelper.callWithTracker(
+      trackingHelper.callWithTracker(
         {
           jobService.getJobInfoWithoutLogs(
             jobId,
@@ -169,7 +170,7 @@ open class JobsController(
         userId,
       )
 
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       JOBS_WITH_ID_PATH,
       GET,
       userId,
@@ -213,7 +214,7 @@ open class JobsController(
     jobsResponse =
       (
         if (connectionId != null) {
-          TrackingHelper.callWithTracker(
+          trackingHelper.callWithTracker(
             {
               jobService.getJobList(
                 connectionId,
@@ -228,7 +229,7 @@ open class JobsController(
             userId,
           )
         } else {
-          TrackingHelper.callWithTracker(
+          trackingHelper.callWithTracker(
             {
               jobService.getJobList(
                 workspaceIds ?: emptyList(),
@@ -245,7 +246,7 @@ open class JobsController(
         }
       )!!
 
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       JOBS_PATH,
       GET,
       userId,

@@ -99,6 +99,7 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.time.Instant;
@@ -145,7 +146,7 @@ public class ConnectionsHandler {
   public ConnectionsHandler(
                             final JobPersistence jobPersistence,
                             final ConfigRepository configRepository,
-                            final Supplier<UUID> uuidGenerator,
+                            @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
                             final WorkspaceHelper workspaceHelper,
                             final TrackingClient trackingClient,
                             final EventRunner eventRunner,
@@ -885,22 +886,23 @@ public class ConnectionsHandler {
   }
 
   public List<ConnectionStatusRead> getConnectionStatuses(
-                                                          ConnectionStatusesRequestBody connectionStatusesRequestBody)
+                                                          final ConnectionStatusesRequestBody connectionStatusesRequestBody)
       throws IOException, JsonValidationException, ConfigNotFoundException {
-    List<UUID> connectionIds = connectionStatusesRequestBody.getConnectionIds();
-    List<ConnectionStatusRead> result = new ArrayList<>();
-    for (UUID connectionId : connectionIds) {
-      List<Job> jobs = jobPersistence.listJobs(Set.of(JobConfig.ConfigType.SYNC, JobConfig.ConfigType.RESET_CONNECTION), connectionId.toString(),
-          maxJobLookback);
-      boolean isRunning = jobs.stream().anyMatch(job -> JobStatus.NON_TERMINAL_STATUSES.contains(job.getStatus()));
+    final List<UUID> connectionIds = connectionStatusesRequestBody.getConnectionIds();
+    final List<ConnectionStatusRead> result = new ArrayList<>();
+    for (final UUID connectionId : connectionIds) {
+      final List<Job> jobs =
+          jobPersistence.listJobs(Set.of(JobConfig.ConfigType.SYNC, JobConfig.ConfigType.RESET_CONNECTION), connectionId.toString(),
+              maxJobLookback);
+      final boolean isRunning = jobs.stream().anyMatch(job -> JobStatus.NON_TERMINAL_STATUSES.contains(job.getStatus()));
 
-      Optional<Job> lastJob = jobs.stream().filter(job -> JobStatus.TERMINAL_STATUSES.contains(job.getStatus())).findFirst();
-      Optional<JobStatus> lastSyncStatus = lastJob.map(job -> job.getStatus());
+      final Optional<Job> lastJob = jobs.stream().filter(job -> JobStatus.TERMINAL_STATUSES.contains(job.getStatus())).findFirst();
+      final Optional<JobStatus> lastSyncStatus = lastJob.map(job -> job.getStatus());
 
-      Optional<Job> lastSuccessfulJob = jobs.stream().filter(job -> job.getStatus() == JobStatus.SUCCEEDED).findFirst();
-      Optional<Long> lastSuccessTimestamp = lastSuccessfulJob.map(job -> job.getUpdatedAtInSecond());
+      final Optional<Job> lastSuccessfulJob = jobs.stream().filter(job -> job.getStatus() == JobStatus.SUCCEEDED).findFirst();
+      final Optional<Long> lastSuccessTimestamp = lastSuccessfulJob.map(job -> job.getUpdatedAtInSecond());
 
-      ConnectionStatusRead connectionStatus = new ConnectionStatusRead()
+      final ConnectionStatusRead connectionStatus = new ConnectionStatusRead()
           .connectionId(connectionId)
           .isRunning(isRunning)
           .lastSyncJobStatus(Enums.convertTo(lastSyncStatus.orElse(null),
@@ -908,7 +910,7 @@ public class ConnectionsHandler {
           .lastSuccessfulSync(lastSuccessTimestamp.orElse(null))
           .nextSync(null)
           .isLastCompletedJobReset(lastJob.map(job -> job.getConfigType() == ConfigType.RESET_CONNECTION).orElse(false));
-      Optional<FailureType> failureType =
+      final Optional<FailureType> failureType =
           lastJob.flatMap(Job::getLastFailedAttempt)
               .flatMap(Attempt::getFailureSummary)
               .flatMap(s -> s.getFailures().stream().findFirst())

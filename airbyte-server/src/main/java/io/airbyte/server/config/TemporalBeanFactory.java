@@ -4,32 +4,23 @@
 
 package io.airbyte.server.config;
 
-import io.airbyte.analytics.Deployment;
 import io.airbyte.analytics.TrackingClient;
-import io.airbyte.analytics.TrackingClientSingleton;
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
 import io.airbyte.commons.server.scheduler.DefaultSynchronousSchedulerClient;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.temporal.scheduling.RouterService;
-import io.airbyte.commons.version.AirbyteVersion;
-import io.airbyte.config.Configs.DeploymentMode;
-import io.airbyte.config.Configs.TrackingStrategy;
-import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.micronaut.context.annotation.Factory;
-import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
-import java.io.IOException;
 
 /**
  * Micronaut bean factory for Temporal-related singletons.
@@ -37,27 +28,6 @@ import java.io.IOException;
 @SuppressWarnings({"ParameterName", "MethodName"})
 @Factory
 public class TemporalBeanFactory {
-
-  @Singleton
-  public TrackingClient trackingClient(final TrackingStrategy trackingStrategy,
-                                       final DeploymentMode deploymentMode,
-                                       final JobPersistence jobPersistence,
-                                       final WorkerEnvironment workerEnvironment,
-                                       @Value("${airbyte.role}") final String airbyteRole,
-                                       final AirbyteVersion airbyteVersion,
-                                       final ConfigRepository configRepository)
-      throws IOException {
-
-    TrackingClientSingleton.initialize(
-        trackingStrategy,
-        new Deployment(deploymentMode, jobPersistence.getDeployment().orElseThrow(),
-            workerEnvironment),
-        airbyteRole,
-        airbyteVersion,
-        configRepository);
-
-    return TrackingClientSingleton.get();
-  }
 
   @Singleton
   public OAuthConfigSupplier oAuthConfigSupplier(final ConfigRepository configRepository,

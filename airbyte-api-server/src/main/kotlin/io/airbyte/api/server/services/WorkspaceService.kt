@@ -106,7 +106,11 @@ interface WorkspaceService {
 
 @Singleton
 @Secondary
-open class WorkspaceServiceImpl(private val configApiClient: ConfigApiClient, private val userService: UserService) : WorkspaceService {
+open class WorkspaceServiceImpl(
+  private val configApiClient: ConfigApiClient,
+  private val userService: UserService,
+  private val trackingHelper: TrackingHelper,
+) : WorkspaceService {
   @Value("\${airbyte.api.host}")
   var publicApiHost: String? = null
 
@@ -145,13 +149,13 @@ open class WorkspaceServiceImpl(private val configApiClient: ConfigApiClient, pr
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val workspaceResponse: WorkspaceResponse =
-      TrackingHelper.callWithTracker(
+      trackingHelper.callWithTracker(
         { createWorkspace(workspaceCreateRequest, userInfo) },
         WORKSPACES_PATH,
         POST,
         userId,
       ) as WorkspaceResponse
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       WORKSPACES_PATH,
       POST,
       userId,
@@ -211,7 +215,7 @@ open class WorkspaceServiceImpl(private val configApiClient: ConfigApiClient, pr
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val workspaceResponse: Any? =
-      TrackingHelper.callWithTracker(
+      trackingHelper.callWithTracker(
         {
           getWorkspace(
             workspaceId,
@@ -222,7 +226,7 @@ open class WorkspaceServiceImpl(private val configApiClient: ConfigApiClient, pr
         GET,
         userId,
       )
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       WORKSPACES_WITH_ID_PATH,
       GET,
       userId,
@@ -260,7 +264,7 @@ open class WorkspaceServiceImpl(private val configApiClient: ConfigApiClient, pr
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val workspaceResponse: Any? =
-      TrackingHelper.callWithTracker(
+      trackingHelper.callWithTracker(
         {
           deleteWorkspace(
             workspaceId!!,
@@ -326,7 +330,7 @@ open class WorkspaceServiceImpl(private val configApiClient: ConfigApiClient, pr
     val safeWorkspaceIds = workspaceIds ?: emptyList()
 
     val workspaces: Any? =
-      TrackingHelper.callWithTracker(
+      trackingHelper.callWithTracker(
         {
           listWorkspaces(
             safeWorkspaceIds,
@@ -340,7 +344,7 @@ open class WorkspaceServiceImpl(private val configApiClient: ConfigApiClient, pr
         GET,
         userId,
       )
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       WORKSPACES_PATH,
       GET,
       userId,

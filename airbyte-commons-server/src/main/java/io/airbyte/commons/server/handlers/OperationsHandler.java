@@ -26,6 +26,7 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -49,7 +50,8 @@ public class OperationsHandler {
   }
 
   @VisibleForTesting
-  OperationsHandler(final ConfigRepository configRepository, final Supplier<UUID> uuidGenerator) {
+  OperationsHandler(final ConfigRepository configRepository,
+                    @Named("uuidGenerator") final Supplier<UUID> uuidGenerator) {
     this.configRepository = configRepository;
     this.uuidGenerator = uuidGenerator;
   }
