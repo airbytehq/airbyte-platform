@@ -35,10 +35,10 @@ dependencies {
 
 airbyte {
     spotless {
-        excludes.set(listOf(
+        excludes = listOf(
                 "src/main/resources/seed/oss_registry.json",
                 "src/main/resources/seed/local_oss_registry.json",
-        ))
+        )
     }
 }
 

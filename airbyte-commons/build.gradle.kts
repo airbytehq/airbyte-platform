@@ -31,7 +31,7 @@ dependencies {
 
 airbyte {
     spotless {
-        excludes.set(listOf("src/main/resources/seed/specs_secrets_mask.yaml"))
+        excludes = listOf("src/main/resources/seed/specs_secrets_mask.yaml")
     }
 }
 

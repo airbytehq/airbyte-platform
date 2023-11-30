@@ -36,7 +36,7 @@ val env = Properties().apply {
 airbyte {
     application {
         mainClass = "io.airbyte.keycloak.setup.Application"
-        defaultJvmArgs.set(listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0"))
+        defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
     }
     docker {
         imageName = "keycloak-setup"

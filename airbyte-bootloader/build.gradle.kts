@@ -62,7 +62,7 @@ val env = Properties().apply {
 airbyte {
     application {
         mainClass = "io.airbyte.bootloader.Application"
-        defaultJvmArgs.set(listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0"))
+        defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
         @Suppress("UNCHECKED_CAST")
         localEnvVars.putAll(env.toMutableMap() as Map<String, String>)
         localEnvVars.putAll(mapOf(
