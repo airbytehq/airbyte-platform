@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.support;
 
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONFIG_ID_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_IDS_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.DESTINATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID_HEADER;
@@ -101,6 +102,8 @@ public class AuthenticationHeaderResolver {
       } else if (properties.containsKey(CONNECTION_ID_HEADER)) {
         final String connectionId = properties.get(CONNECTION_ID_HEADER);
         return List.of(workspaceHelper.getWorkspaceForConnectionId(UUID.fromString(connectionId)));
+      } else if (properties.containsKey(CONNECTION_IDS_HEADER)) {
+        return resolveConnectionIds(properties);
       } else if (properties.containsKey(SOURCE_ID_HEADER) && properties.containsKey(DESTINATION_ID_HEADER)) {
         final String destinationId = properties.get(DESTINATION_ID_HEADER);
         final String sourceId = properties.get(SOURCE_ID_HEADER);
@@ -170,6 +173,21 @@ public class AuthenticationHeaderResolver {
       return deserialized.stream().map(UUID::fromString).toList();
     }
     log.debug("Request does not contain any headers that resolve to a list of workspace IDs.");
+    return null;
+  }
+
+  private List<UUID> resolveConnectionIds(final Map<String, String> properties) {
+    final String connectionIds = properties.get(CONNECTION_IDS_HEADER);
+    if (connectionIds != null) {
+      final List<String> deserialized = Jsons.deserialize(connectionIds, List.class);
+      return deserialized.stream().map(connectionId -> {
+        try {
+          return workspaceHelper.getWorkspaceForConnectionId(UUID.fromString(connectionId));
+        } catch (JsonValidationException | ConfigNotFoundException e) {
+          throw new RuntimeException(e);
+        }
+      }).toList();
+    }
     return null;
   }
 

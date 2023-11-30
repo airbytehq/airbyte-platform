@@ -6,6 +6,7 @@ package io.airbyte.commons.server.support;
 
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.AIRBYTE_USER_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONFIG_ID_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_IDS_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CREATOR_USER_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.DESTINATION_ID_HEADER;
@@ -28,6 +29,8 @@ public enum AuthenticationId {
 
   EXTERNAL_AUTH_ID(AuthenticationFields.EXTERNAL_AUTH_ID_FIELD_NAME, EXTERNAL_AUTH_ID_HEADER),
   CONNECTION_ID(AuthenticationFields.CONNECTION_ID_FIELD_NAME, CONNECTION_ID_HEADER),
+  CONNECTION_IDS(AuthenticationFields.CONNECTION_IDS_FIELD_NAME, CONNECTION_IDS_HEADER),
+
   DESTINATION_ID_(AuthenticationFields.DESTINATION_ID_FIELD_NAME, DESTINATION_ID_HEADER),
   EMAIL(AuthenticationFields.EMAIL_FIELD_NAME, EMAIL_HEADER),
   JOB_ID(AuthenticationFields.JOB_ID_FIELD_NAME, JOB_ID_HEADER),

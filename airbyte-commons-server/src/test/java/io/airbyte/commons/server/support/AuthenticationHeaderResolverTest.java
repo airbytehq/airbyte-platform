@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.support;
 
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_IDS_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.DESTINATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID_HEADER;
@@ -63,6 +64,20 @@ class AuthenticationHeaderResolverTest {
 
     final List<UUID> result = resolver.resolveWorkspace(properties);
     assertEquals(List.of(workspaceId), result);
+  }
+
+  @Test
+  void testResolvingFromConnectionIds() throws JsonValidationException, ConfigNotFoundException {
+    final UUID workspaceId = UUID.randomUUID();
+    final UUID connectionId = UUID.randomUUID();
+    final UUID connectionId2 = UUID.randomUUID();
+
+    final Map<String, String> properties = Map.of(CONNECTION_IDS_HEADER, Jsons.serialize(List.of(connectionId.toString(), connectionId2.toString())));
+    when(workspaceHelper.getWorkspaceForConnectionId(connectionId)).thenReturn(workspaceId);
+    when(workspaceHelper.getWorkspaceForConnectionId(connectionId2)).thenReturn(workspaceId);
+
+    final List<UUID> result = resolver.resolveWorkspace(properties);
+    assertEquals(List.of(workspaceId, workspaceId), result);
   }
 
   @Test
