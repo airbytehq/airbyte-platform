@@ -186,7 +186,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
        * client. We do not want to cause the Temporal workflow to retry, so catch it and log the
        * information so that the workflow will continue.
        */
-      if (e.getStatusCode() == HttpStatus.NOT_MODIFIED.getCode()) {
+      if (e.getStatusCode() == HttpStatus.CONFLICT.getCode()) {
         log.warn("Workload {} already created and in progress.  Continuing...", workloadCreateRequest.getWorkloadId());
       } else {
         throw new RuntimeException(e);

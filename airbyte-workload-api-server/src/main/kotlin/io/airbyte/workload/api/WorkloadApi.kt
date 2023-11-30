@@ -6,6 +6,7 @@ package io.airbyte.workload.api
 
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.workload.api.domain.ClaimResponse
+import io.airbyte.workload.api.domain.KnownExceptionInfo
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
 import io.airbyte.workload.api.domain.WorkloadClaimRequest
@@ -62,8 +63,9 @@ open class WorkloadApi(
         description = "Successfully created workload",
       ),
       ApiResponse(
-        responseCode = "304",
+        responseCode = "409",
         description = "Workload with given workload id already exists.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
   )
@@ -108,10 +110,12 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
       ApiResponse(
         responseCode = "410",
         description = "Workload is not in an active state, it cannot be failed.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
   )
@@ -139,10 +143,12 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
       ApiResponse(
         responseCode = "410",
         description = "Workload is not in an active state, it cannot be succeeded.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
   )
@@ -170,10 +176,12 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
       ApiResponse(
         responseCode = "410",
         description = "Workload is not in pending status, it can't be set to running.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
   )
@@ -201,10 +209,12 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
       ApiResponse(
         responseCode = "410",
         description = "Workload is in terminal state, it cannot be cancelled.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
   )
@@ -240,10 +250,12 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
       ApiResponse(
         responseCode = "410",
         description = "Workload is in terminal state, it cannot be claimed.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
   )
@@ -276,6 +288,7 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
   )
@@ -301,10 +314,12 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
       ApiResponse(
         responseCode = "410",
         description = "Workload should stop because it is no longer expected to be running.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
   )
