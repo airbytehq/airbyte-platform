@@ -19,7 +19,6 @@ import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPagina
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import jakarta.inject.Inject;
-import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
@@ -48,7 +47,7 @@ public class OrganizationsHandler {
   @Inject
   public OrganizationsHandler(final OrganizationPersistence organizationPersistence,
                               final PermissionPersistence permissionPersistence,
-                              @Named("uuidGenerator") final Supplier<UUID> uuidGenerator) {
+                              final Supplier<UUID> uuidGenerator) {
     this.organizationPersistence = organizationPersistence;
     this.permissionPersistence = permissionPersistence;
     this.uuidGenerator = uuidGenerator;

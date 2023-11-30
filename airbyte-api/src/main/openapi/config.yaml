@@ -4372,8 +4372,6 @@ components:
       properties:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
-        includeTombstone:
-          type: boolean
     ListConnectionsForWorkspacesRequestBody:
       type: object
       required:

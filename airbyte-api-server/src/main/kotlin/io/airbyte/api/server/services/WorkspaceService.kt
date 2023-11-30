@@ -106,11 +106,7 @@ interface WorkspaceService {
 
 @Singleton
 @Secondary
-open class WorkspaceServiceImpl(
-  private val configApiClient: ConfigApiClient,
-  private val userService: UserService,
-  private val trackingHelper: TrackingHelper,
-) : WorkspaceService {
+open class WorkspaceServiceImpl(private val configApiClient: ConfigApiClient, private val userService: UserService) : WorkspaceService {
   @Value("\${airbyte.api.host}")
   var publicApiHost: String? = null
 
@@ -149,13 +145,13 @@ open class WorkspaceServiceImpl(
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val workspaceResponse: WorkspaceResponse =
-      trackingHelper.callWithTracker(
+      TrackingHelper.callWithTracker(
         { createWorkspace(workspaceCreateRequest, userInfo) },
         WORKSPACES_PATH,
         POST,
         userId,
       ) as WorkspaceResponse
-    trackingHelper.trackSuccess(
+    TrackingHelper.trackSuccess(
       WORKSPACES_PATH,
       POST,
       userId,
@@ -215,7 +211,7 @@ open class WorkspaceServiceImpl(
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val workspaceResponse: Any? =
-      trackingHelper.callWithTracker(
+      TrackingHelper.callWithTracker(
         {
           getWorkspace(
             workspaceId,
@@ -226,7 +222,7 @@ open class WorkspaceServiceImpl(
         GET,
         userId,
       )
-    trackingHelper.trackSuccess(
+    TrackingHelper.trackSuccess(
       WORKSPACES_WITH_ID_PATH,
       GET,
       userId,
@@ -264,7 +260,7 @@ open class WorkspaceServiceImpl(
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val workspaceResponse: Any? =
-      trackingHelper.callWithTracker(
+      TrackingHelper.callWithTracker(
         {
           deleteWorkspace(
             workspaceId!!,
@@ -330,7 +326,7 @@ open class WorkspaceServiceImpl(
     val safeWorkspaceIds = workspaceIds ?: emptyList()
 
     val workspaces: Any? =
-      trackingHelper.callWithTracker(
+      TrackingHelper.callWithTracker(
         {
           listWorkspaces(
             safeWorkspaceIds,
@@ -344,7 +340,7 @@ open class WorkspaceServiceImpl(
         GET,
         userId,
       )
-    trackingHelper.trackSuccess(
+    TrackingHelper.trackSuccess(
       WORKSPACES_PATH,
       GET,
       userId,

@@ -53,7 +53,6 @@ public class ApplicationBeanFactory {
 
   @SuppressWarnings("AbbreviationAsWordInName")
   @Singleton
-  @Named("uuidGenerator")
   public Supplier<UUID> randomUUIDSupplier() {
     return () -> UUID.randomUUID();
   }

@@ -8,7 +8,7 @@ import com.github.slugify.Slugify;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import io.airbyte.analytics.TrackingClient;
+import io.airbyte.analytics.TrackingClientSingleton;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationRead;
@@ -51,7 +51,6 @@ import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
-import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
@@ -83,7 +82,6 @@ public class WorkspacesHandler {
   private final Supplier<UUID> uuidSupplier;
   private final WorkspaceService workspaceService;
   private final Slugify slugify;
-  private final TrackingClient trackingClient;
 
   @VisibleForTesting
   public WorkspacesHandler(final ConfigRepository configRepository,
@@ -94,9 +92,8 @@ public class WorkspacesHandler {
                            final ConnectionsHandler connectionsHandler,
                            final DestinationHandler destinationHandler,
                            final SourceHandler sourceHandler,
-                           @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
-                           final WorkspaceService workspaceService,
-                           final TrackingClient trackingClient) {
+                           final Supplier<UUID> uuidSupplier,
+                           final WorkspaceService workspaceService) {
     this.configRepository = configRepository;
     this.workspacePersistence = workspacePersistence;
     this.organizationPersistence = organizationPersistence;
@@ -108,7 +105,6 @@ public class WorkspacesHandler {
     this.uuidSupplier = uuidSupplier;
     this.workspaceService = workspaceService;
     this.slugify = new Slugify();
-    this.trackingClient = trackingClient;
   }
 
   private static WorkspaceRead buildWorkspaceRead(final StandardWorkspace workspace) {
@@ -318,8 +314,7 @@ public class WorkspacesHandler {
   public WorkspaceRead getWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
-    final boolean includeTombstone = workspaceIdRequestBody.getIncludeTombstone() != null ? workspaceIdRequestBody.getIncludeTombstone() : false;
-    final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, includeTombstone);
+    final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, false);
     return buildWorkspaceRead(workspace);
   }
 
@@ -444,7 +439,7 @@ public class WorkspacesHandler {
     }
 
     // after updating email or tracking info, we need to re-identify the instance.
-    trackingClient.identify(workspaceId);
+    TrackingClientSingleton.get().identify(workspaceId);
 
     return buildWorkspaceReadFromId(workspaceId);
   }

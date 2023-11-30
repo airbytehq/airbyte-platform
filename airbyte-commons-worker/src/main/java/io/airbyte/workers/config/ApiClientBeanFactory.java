@@ -62,6 +62,7 @@ public class ApiClientBeanFactory {
         .setHost(parseHostName(airbyteApiHost))
         .setPort(parsePort(airbyteApiHost))
         .setBasePath("/api")
+        .setHttpClientBuilder(HttpClient.newBuilder().version(Version.HTTP_1_1))
         .setConnectTimeout(Duration.ofSeconds(30))
         .setReadTimeout(Duration.ofSeconds(300))
         .setRequestInterceptor(builder -> {

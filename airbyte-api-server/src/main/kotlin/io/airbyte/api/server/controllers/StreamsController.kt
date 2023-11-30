@@ -33,7 +33,6 @@ class StreamsController(
   private val userService: UserService,
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
-  private val trackingHelper: TrackingHelper,
 ) : StreamsApi {
   companion object {
     private val log: org.slf4j.Logger? = LoggerFactory.getLogger(StreamsController::class.java)
@@ -47,7 +46,7 @@ class StreamsController(
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
     val httpResponse =
-      trackingHelper.callWithTracker(
+      TrackingHelper.callWithTracker(
         {
           sourceService.getSourceSchema(
             sourceId,
@@ -60,7 +59,7 @@ class StreamsController(
         userId,
       )
     val destinationSyncModes =
-      trackingHelper.callWithTracker(
+      TrackingHelper.callWithTracker(
         {
           destinationService.getDestinationSyncModes(
             destinationId!!,
@@ -91,7 +90,7 @@ class StreamsController(
       streamProperties.propertyFields = getStreamFields(airbyteStream.jsonSchema)
       listOfStreamProperties.add(streamProperties)
     }
-    trackingHelper.trackSuccess(
+    TrackingHelper.trackSuccess(
       STREAMS_PATH,
       GET,
       userId,
