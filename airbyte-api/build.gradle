@@ -333,7 +333,7 @@ sourceSets {
                     "$buildDir/generated/api/client/src/main/java",
                     "$buildDir/generated/api/client2/src/main/kotlin",
                     "$buildDir/generated/workloadapi/client/src/main/kotlin"
-                    "$projectDir/src/main/java"
+            "$projectDir/src/main/java"
         }
         resources {
             srcDir "$projectDir/src/main/openapi/"

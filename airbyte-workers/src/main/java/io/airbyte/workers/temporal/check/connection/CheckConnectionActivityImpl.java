@@ -45,6 +45,7 @@ import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.general.DefaultCheckConnectionWorker;
+import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.helpers.SecretPersistenceConfigHelper;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
@@ -82,6 +83,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
   private final FeatureFlagClient featureFlagClient;
+  private final GsonPksExtractor gsonPksExtractor;
 
   public CheckConnectionActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                                      final ProcessFactory processFactory,
@@ -94,7 +96,8 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                                      final AirbyteMessageSerDeProvider serDeProvider,
                                      final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                      final FeatureFlags featureFlags,
-                                     final FeatureFlagClient featureFlagClient) {
+                                     final FeatureFlagClient featureFlagClient,
+                                     final GsonPksExtractor gsonPksExtractor) {
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.secretsRepositoryReader = secretsRepositoryReader;
@@ -107,6 +110,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
     this.migratorFactory = migratorFactory;
     this.featureFlags = featureFlags;
     this.featureFlagClient = featureFlagClient;
+    this.gsonPksExtractor = gsonPksExtractor;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -208,7 +212,9 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
       final var protocolVersion =
           launcherConfig.getProtocolVersion() != null ? launcherConfig.getProtocolVersion() : AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION;
       final AirbyteStreamFactory streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(), Optional.empty(), false);
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(), Optional.empty(),
+              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
+              gsonPksExtractor);
 
       return new DefaultCheckConnectionWorker(integrationLauncher, connectorConfigUpdater, streamFactory);
     };

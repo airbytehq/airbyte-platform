@@ -11,13 +11,11 @@ import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { ConnectorIds, SvgIcon } from "area/connector/utils";
-import { useCurrentWorkspace } from "core/api";
+import { useCurrentWorkspace, useSourceDefinitionList, useDestinationDefinitionList } from "core/api";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
 import { links } from "core/utils/links";
 import { useExperiment } from "hooks/services/Experiment";
 import { ConnectionRoutePaths, DestinationPaths, RoutePaths } from "pages/routePaths";
-import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
-import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 
 import { AirbyteIllustration, HighlightIndex } from "./AirbyteIllustration";
 import styles from "./ConnectionOnboarding.module.scss";

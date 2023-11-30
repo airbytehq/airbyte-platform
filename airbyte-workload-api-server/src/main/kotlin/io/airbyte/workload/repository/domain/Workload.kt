@@ -34,6 +34,7 @@ data class Workload(
   var workloadLabels: List<WorkloadLabel>?,
   var inputPayload: String,
   var logPath: String,
+  var geography: String,
 ) {
   @JvmOverloads
   constructor(
@@ -43,6 +44,7 @@ data class Workload(
     workloadLabels: List<WorkloadLabel>?,
     inputPayload: String,
     logPath: String,
+    geography: String,
   ) : this(
     id = id,
     dataplaneId = dataplaneId,
@@ -50,6 +52,7 @@ data class Workload(
     workloadLabels = workloadLabels,
     inputPayload = inputPayload,
     logPath = logPath,
+    geography = geography,
     createdAt = null,
     updatedAt = null,
   )

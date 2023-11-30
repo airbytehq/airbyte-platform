@@ -49,7 +49,7 @@ const SelectSourcePage = React.lazy(() => import("pages/source/SelectSourcePage"
 const SourceItemPage = React.lazy(() => import("pages/source/SourceItemPage"));
 const SourceConnectionsPage = React.lazy(() => import("pages/source/SourceConnectionsPage"));
 const SourceSettingsPage = React.lazy(() => import("pages/source/SourceSettingsPage"));
-const DefaultView = React.lazy(() => import("./views/DefaultView"));
+const CloudDefaultView = React.lazy(() => import("./views/CloudDefaultView"));
 const CloudSettingsPage = React.lazy(() => import("./views/settings/CloudSettingsPage"));
 
 const MainRoutes: React.FC = () => {
@@ -118,7 +118,7 @@ const CloudMainViewRoutes = () => {
           </CloudWorkspaceDataPrefetcher>
         }
       />
-      <Route path="*" element={<DefaultView />} />
+      <Route path="*" element={<CloudDefaultView />} />
     </Routes>
   );
 };

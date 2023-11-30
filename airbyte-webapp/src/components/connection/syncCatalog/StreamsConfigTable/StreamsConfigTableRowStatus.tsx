@@ -6,13 +6,13 @@ import { MinusIcon } from "components/icons/MinusIcon";
 import { ModificationIcon } from "components/icons/ModificationIcon";
 import { PlusIcon } from "components/icons/PlusIcon";
 
-import { SyncSchemaStream } from "core/domain/catalog";
+import { AirbyteStreamAndConfiguration } from "core/api/types/AirbyteClient";
 
 import styles from "./StreamsConfigTableRowStatus.module.scss";
 import { StatusToDisplay, useStreamsConfigTableRowProps } from "./useStreamsConfigTableRowProps";
 
 interface StreamsConfigTableRowStatusProps {
-  stream: SyncSchemaStream;
+  stream: AirbyteStreamAndConfiguration;
   className?: string;
 }
 

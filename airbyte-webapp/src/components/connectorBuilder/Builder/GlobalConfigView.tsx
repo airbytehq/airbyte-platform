@@ -1,7 +1,6 @@
 import { useIntl } from "react-intl";
 
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 
 import { AuthenticationSection } from "./AuthenticationSection";
 import { BuilderCard } from "./BuilderCard";

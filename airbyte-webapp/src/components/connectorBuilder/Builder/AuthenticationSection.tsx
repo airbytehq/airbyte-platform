@@ -5,8 +5,7 @@ import {
   OAuthAuthenticatorRefreshTokenUpdater,
   SessionTokenAuthenticatorRequestAuthentication,
 } from "core/api/types/ConnectorManifest";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 
 import { BuilderCard } from "./BuilderCard";

@@ -64,7 +64,7 @@ public class EventListeners {
    */
   @EventListener
   void setEnvVars(final ServerStartupEvent unused) {
-    log.info("settings env vars");
+    log.debug("settings env vars");
 
     OrchestratorConstants.ENV_VARS_TO_TRANSFER.stream()
         .filter(envVars::containsKey)
@@ -78,7 +78,7 @@ public class EventListeners {
    */
   @EventListener
   void setLogging(final ServerStartupEvent unused) {
-    log.info("started logging");
+    log.debug("started logging");
 
     // make sure the new configuration is picked up
     final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);

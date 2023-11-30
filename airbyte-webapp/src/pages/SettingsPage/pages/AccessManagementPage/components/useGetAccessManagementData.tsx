@@ -1,5 +1,6 @@
 import { useCurrentWorkspace, useListUsersInOrganization, useListUsersInWorkspace } from "core/api";
 import { OrganizationUserRead, PermissionType, WorkspaceUserRead } from "core/request/AirbyteClient";
+import { useIntent } from "core/utils/rbac";
 
 export type ResourceType = "workspace" | "organization" | "instance";
 
@@ -59,8 +60,10 @@ export interface AccessUsers {
 
 export const useGetWorkspaceAccessUsers = (): AccessUsers => {
   const workspace = useCurrentWorkspace();
+  const canListOrganizationUsers = useIntent("ListOrganizationMembers", { organizationId: workspace.organizationId });
   const workspaceUsers = useListUsersInWorkspace(workspace.workspaceId).users;
-  const organizationUsers = useListUsersInOrganization(workspace.organizationId ?? "").users;
+  const organizationUsers =
+    useListUsersInOrganization(workspace.organizationId ?? "", canListOrganizationUsers)?.users ?? [];
 
   return {
     workspace: {

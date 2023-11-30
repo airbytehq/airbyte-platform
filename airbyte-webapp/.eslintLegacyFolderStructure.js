@@ -1,14 +1,11 @@
 // A list of all files that existed still in the old folder structure
 module.exports = [
   // src/services
-  "src/services/connector/SourceDefinitionService.ts",
-  "src/services/connector/DestinationDefinitionService.ts",
   "src/services/connectorBuilder/ConnectorBuilderTestInputService.tsx",
   "src/services/connectorBuilder/ConnectorBuilderStateService.tsx",
   "src/services/connectorBuilder/ConnectorBuilderLocalStorageService.tsx",
   "src/services/connectorBuilder/SchemaWorker.ts",
   "src/services/useInitService.tsx",
-  "src/services/useDefaultRequestMiddlewares.tsx",
   "src/services/Scope.ts",
   // src/hooks
   "src/hooks/useDeleteModal.tsx",
@@ -21,7 +18,6 @@ module.exports = [
   "src/hooks/services/Health/index.tsx",
   "src/hooks/services/useRequestConnector.tsx",
   "src/hooks/services/ConnectionEdit/ConnectionEditService.tsx",
-  "src/hooks/services/ConnectionEdit/ConnectionEditService.test.tsx",
   "src/hooks/services/ConfirmationModal/types.ts",
   "src/hooks/services/ConfirmationModal/ConfirmationModalService.tsx",
   "src/hooks/services/ConfirmationModal/index.ts",
@@ -35,7 +31,6 @@ module.exports = [
   "src/hooks/services/Modal/ModalService.test.tsx",
   "src/hooks/services/Modal/index.ts",
   "src/hooks/services/useRequestErrorHandler.tsx",
-  "src/hooks/services/ConnectionForm/ConnectionFormService.test.tsx",
   "src/hooks/services/ConnectionForm/ConnectionFormService.tsx",
   "src/hooks/services/useConnectorAuthRevocation.tsx",
   "src/hooks/services/Experiment/experiments.ts",

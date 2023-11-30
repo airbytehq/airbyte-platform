@@ -6,7 +6,7 @@ import { FormControl } from "components/forms";
 import { Message } from "components/ui/Message";
 
 import { NonBreakingChangesPreference } from "core/request/AirbyteClient";
-import { useConnectionHookFormService } from "hooks/services/ConnectionForm/ConnectionHookFormService";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { HookFormConnectionFormValues } from "./hookFormConfig";
@@ -14,7 +14,7 @@ import { HookFormFieldLayout } from "./HookFormFieldLayout";
 
 export const NonBreakingChangesPreferenceHookFormField = () => {
   const { formatMessage } = useIntl();
-  const { connection, mode } = useConnectionHookFormService();
+  const { connection, mode } = useConnectionFormService();
   const autoPropagationEnabled = useExperiment("autopropagation.enabled", true);
   const autoPropagationPrefix = autoPropagationEnabled ? "autopropagation." : "";
   const labelKey = autoPropagationEnabled
@@ -34,10 +34,10 @@ export const NonBreakingChangesPreferenceHookFormField = () => {
   const supportedPreferences = useMemo(() => {
     if (autoPropagationEnabled) {
       return [
-        NonBreakingChangesPreference.ignore,
-        NonBreakingChangesPreference.disable,
         NonBreakingChangesPreference.propagate_columns,
         NonBreakingChangesPreference.propagate_fully,
+        NonBreakingChangesPreference.ignore,
+        NonBreakingChangesPreference.disable,
       ];
     }
     return [NonBreakingChangesPreference.ignore, NonBreakingChangesPreference.disable];
@@ -47,7 +47,7 @@ export const NonBreakingChangesPreferenceHookFormField = () => {
     return supportedPreferences.map((value) => ({
       value,
       label: formatMessage({ id: `connectionForm.nonBreakingChangesPreference.${autoPropagationPrefix}${value}` }),
-      testId: `nonBreakingChangesPreference-${value}`,
+      "data-testid": value,
     }));
   }, [formatMessage, supportedPreferences, autoPropagationPrefix]);
 

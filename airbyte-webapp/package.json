@@ -89,7 +89,6 @@
     "diff": "^5.1.0",
     "firebase": "^10.5.0",
     "flat": "^5.0.2",
-    "formik": "^2.2.9",
     "framer-motion": "^6.3.11",
     "js-yaml": "^4.1.0",
     "json-schema": "^0.4.0",

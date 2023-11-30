@@ -11,11 +11,10 @@ import LoadingPage from "components/LoadingPage";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { useGetSourceFromParams } from "area/connector/utils";
-import { useSourceDefinitionVersion } from "core/api";
+import { useSourceDefinitionVersion, useSourceDefinition } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { RoutePaths } from "pages/routePaths";
-import { useSourceDefinition } from "services/connector/SourceDefinitionService";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";

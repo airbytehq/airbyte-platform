@@ -16,10 +16,10 @@ import {
   signInWithPopup,
   updatePassword,
   updateProfile,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
 } from "firebase/auth";
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
-import { PropsWithChildren, useCallback, useEffect, useMemo, useState } from "react";
-import React from "react";
+import React, { PropsWithChildren, useCallback, useEffect, useMemo, useState } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 import { Observable, Subject } from "rxjs";

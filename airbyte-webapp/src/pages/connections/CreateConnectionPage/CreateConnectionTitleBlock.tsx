@@ -10,13 +10,17 @@ import { NumberBadge } from "components/ui/NumberBadge";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspace, useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
+import {
+  useCurrentWorkspace,
+  useDestinationDefinitionVersion,
+  useSourceDefinitionVersion,
+  useSourceDefinition,
+  useDestinationDefinition,
+} from "core/api";
 import { SupportLevel } from "core/request/AirbyteClient";
 import { useGetDestination } from "hooks/services/useDestinationHook";
 import { useGetSource } from "hooks/services/useSourceHook";
 import { RoutePaths } from "pages/routePaths";
-import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
-import { useSourceDefinition } from "services/connector/SourceDefinitionService";
 
 import styles from "./CreateConnectionTitleBlock.module.scss";
 

@@ -6,8 +6,12 @@ import { SCOPE_USER } from "services/Scope";
 
 import { organizationKeys } from "./organizations";
 import { workspaceKeys } from "./workspaces";
-import { createPermission, listPermissionsByUser } from "../generated/AirbyteClient";
-import { deletePermission, updatePermission } from "../generated/AirbyteClient";
+import {
+  createPermission,
+  listPermissionsByUser,
+  deletePermission,
+  updatePermission,
+} from "../generated/AirbyteClient";
 import { PermissionCreate, PermissionRead, PermissionUpdate } from "../generated/AirbyteClient.schemas";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";

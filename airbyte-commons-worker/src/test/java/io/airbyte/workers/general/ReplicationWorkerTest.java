@@ -50,9 +50,6 @@ import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.featureflag.Context;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
@@ -167,7 +164,6 @@ abstract class ReplicationWorkerTest {
   protected ConnectorConfigUpdater connectorConfigUpdater;
   protected HeartbeatTimeoutChaperone heartbeatTimeoutChaperone;
   protected ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
-  protected FeatureFlagClient featureFlagClient;
   protected AirbyteMessageDataExtractor airbyteMessageDataExtractor;
   protected ReplicationFeatureFlagReader replicationFeatureFlagReader;
   protected DestinationTimeoutMonitor destinationTimeoutMonitor;
@@ -218,7 +214,6 @@ abstract class ReplicationWorkerTest {
     heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMinutes(5), null, null, null, metricClient);
     destinationTimeoutMonitor = mock(DestinationTimeoutMonitor.class);
     replicationAirbyteMessageEventPublishingHelper = mock(ReplicationAirbyteMessageEventPublishingHelper.class);
-    featureFlagClient = mock(TestClient.class);
     workloadApi = mock(WorkloadApi.class);
 
     when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
@@ -983,11 +978,11 @@ abstract class ReplicationWorkerTest {
         .thenReturn(new ReplicationFeatureFlags(true, 0));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
-        featureFlagClient,
         UUID.randomUUID(),
         UUID.randomUUID(),
         metricClient,
         Duration.ofSeconds(1),
+        true,
         Duration.ofSeconds(1)));
 
     destination = new SimpleTimeoutMonitoredDestination(destinationTimeoutMonitor);
@@ -1000,8 +995,6 @@ abstract class ReplicationWorkerTest {
       }
       return null;
     }).when(destinationTimeoutMonitor).resetAcceptTimer();
-
-    when(featureFlagClient.boolVariation(eq(ShouldFailSyncOnDestinationTimeout.INSTANCE), any(Context.class))).thenReturn(true);
 
     doAnswer(invocation -> {
       try {
@@ -1033,11 +1026,11 @@ abstract class ReplicationWorkerTest {
         .thenReturn(new ReplicationFeatureFlags(true, 0));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
-        featureFlagClient,
         UUID.randomUUID(),
         UUID.randomUUID(),
         metricClient,
         Duration.ofSeconds(1),
+        true,
         Duration.ofSeconds(1)));
 
     destination = new SimpleTimeoutMonitoredDestination(destinationTimeoutMonitor);
@@ -1050,8 +1043,6 @@ abstract class ReplicationWorkerTest {
       }
       return null;
     }).when(destinationTimeoutMonitor).resetNotifyEndOfInputTimer();
-
-    when(featureFlagClient.boolVariation(eq(ShouldFailSyncOnDestinationTimeout.INSTANCE), any(Context.class))).thenReturn(true);
 
     doAnswer(invocation -> {
       try {
@@ -1081,11 +1072,11 @@ abstract class ReplicationWorkerTest {
         .thenReturn(new ReplicationFeatureFlags(true, 0));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
-        featureFlagClient,
         UUID.randomUUID(),
         UUID.randomUUID(),
         metricClient,
         Duration.ofSeconds(1),
+        true,
         Duration.ofSeconds(1)));
 
     destination = spy(new SimpleTimeoutMonitoredDestination(destinationTimeoutMonitor));
@@ -1103,8 +1094,6 @@ abstract class ReplicationWorkerTest {
       }
       return null;
     }).when(destinationTimeoutMonitor).resetNotifyEndOfInputTimer();
-
-    when(featureFlagClient.boolVariation(eq(ShouldFailSyncOnDestinationTimeout.INSTANCE), any(Context.class))).thenReturn(true);
 
     doAnswer(invocation -> {
       try {

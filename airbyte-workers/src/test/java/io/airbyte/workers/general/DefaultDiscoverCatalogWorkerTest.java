@@ -41,10 +41,12 @@ import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
+import io.airbyte.protocol.models.AirbyteStream;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.Config;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.process.IntegrationLauncher;
@@ -54,6 +56,8 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
@@ -284,6 +288,65 @@ class DefaultDiscoverCatalogWorkerTest {
     final DefaultDiscoverCatalogWorker worker =
         new DefaultDiscoverCatalogWorker(mAirbyteApiClient, integrationLauncher, connectorConfigUpdater, validCatalogStreamFactory);
     assertThrows(WorkerException.class, () -> worker.run(INPUT, jobRoot));
+  }
+
+  @Test
+  void testDiscoverSchemaValidation() {
+    validCatalogStreamFactory = noop -> Lists.newArrayList(new AirbyteMessage().withType(Type.CATALOG).withCatalog(getAirbyteCatalogWithBadStreams()))
+        .stream();
+    final DefaultDiscoverCatalogWorker worker =
+        new DefaultDiscoverCatalogWorker(mAirbyteApiClient, integrationLauncher, connectorConfigUpdater, validCatalogStreamFactory);
+    final WorkerException workerException = assertThrows(WorkerException.class, () -> worker.run(INPUT, jobRoot));
+    assertEquals("Stream stream-1 has declared cursor field cursor-field-not-present-in-schema but it's not part of the schema {\n"
+        + "  \"id2\" : {\n"
+        + "    \"type\" : \"string\"\n"
+        + "  },\n"
+        + "  \"id\" : {\n"
+        + "    \"type\" : \"string\"\n"
+        + "  }\n"
+        + "},Stream stream-2 has declared primary key field primary-key-not-present-in-schema but it's not part of the schema {\n"
+        + "  \"id2\" : {\n"
+        + "    \"type\" : \"string\"\n"
+        + "  },\n"
+        + "  \"id\" : {\n"
+        + "    \"type\" : \"string\"\n"
+        + "  }\n"
+        + "}", workerException.getMessage());
+  }
+
+  private static AirbyteCatalog getAirbyteCatalogWithBadStreams() {
+    final AirbyteStream cursorFieldNotPresentInSchema = new AirbyteStream()
+        .withNamespace("namespace-1")
+        .withName("stream-1")
+        .withDefaultCursorField(Collections.singletonList("cursor-field-not-present-in-schema"))
+        .withJsonSchema(CatalogHelpers.fieldsToJsonSchema(
+            Field.of("id", JsonSchemaType.STRING),
+            Field.of("id2", JsonSchemaType.STRING)))
+        .withSourceDefinedPrimaryKey(Collections.singletonList(Collections.singletonList("id")))
+        .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
+
+    final AirbyteStream primaryKeyNotPresentInSchema = new AirbyteStream()
+        .withNamespace("namespace-2")
+        .withName("stream-2")
+        .withDefaultCursorField(Collections.singletonList("id"))
+        .withJsonSchema(CatalogHelpers.fieldsToJsonSchema(
+            Field.of("id", JsonSchemaType.STRING),
+            Field.of("id2", JsonSchemaType.STRING)))
+        .withSourceDefinedPrimaryKey(Collections.singletonList(Collections.singletonList("primary-key-not-present-in-schema")))
+        .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
+
+    final AirbyteStream goodStream = new AirbyteStream()
+        .withNamespace("namespace-3")
+        .withName("stream-3")
+        .withDefaultCursorField(Collections.singletonList("id"))
+        .withJsonSchema(CatalogHelpers.fieldsToJsonSchema(
+            Field.of("id", JsonSchemaType.STRING),
+            Field.of("id2", JsonSchemaType.STRING)))
+        .withSourceDefinedPrimaryKey(Collections.singletonList(Collections.singletonList("id2")))
+        .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
+
+    return new AirbyteCatalog().withStreams(
+        List.of(cursorFieldNotPresentInSchema, primaryKeyNotPresentInSchema, goodStream));
   }
 
   @Test

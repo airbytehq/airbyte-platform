@@ -4,8 +4,7 @@ import { useMemo } from "react";
 
 import { PillButtonVariant } from "components/ui/PillListBox/PillButton";
 
-import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
-import { SyncSchemaStream } from "core/domain/catalog";
+import { AirbyteStreamAndConfiguration, AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import styles from "./StreamsConfigTableRow.module.scss";
@@ -14,7 +13,7 @@ import { compareObjectsByFields } from "../utils";
 
 export type StatusToDisplay = "disabled" | "added" | "removed" | "changed" | "unchanged";
 
-export const useStreamsConfigTableRowProps = (stream: SyncSchemaStream) => {
+export const useStreamsConfigTableRowProps = (stream: AirbyteStreamAndConfiguration) => {
   const { initialValues } = useConnectionFormService();
 
   const isStreamEnabled = stream.config?.selected;

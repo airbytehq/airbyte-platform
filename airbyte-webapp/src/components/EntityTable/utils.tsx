@@ -80,14 +80,8 @@ export const getConnectionTableData = (
   return connections.map((connection) => ({
     connectionId: connection.connectionId,
     name: connection.name,
-    entityName:
-      type === "connection"
-        ? `${connection.source?.sourceName} - ${connection.source?.name}`
-        : connection[connectType]?.name || "",
-    connectorName:
-      type === "connection"
-        ? `${connection.destination?.destinationName} - ${connection.destination?.name}`
-        : getConnectorTypeName(connection[connectType]),
+    entityName: type === "connection" ? connection.source?.name : connection[connectType]?.name || "",
+    connectorName: type === "connection" ? connection.destination?.name : getConnectorTypeName(connection[connectType]),
     lastSync: connection.latestSyncJobCreatedAt,
     enabled: connection.status === ConnectionStatus.active,
     schemaChange: connection.schemaChange,

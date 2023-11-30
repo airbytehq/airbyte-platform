@@ -32,6 +32,7 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.general.DefaultGetSpecWorker;
+import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncher;
@@ -68,6 +69,7 @@ public class SpecActivityImpl implements SpecActivity {
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
+  private final GsonPksExtractor gsonPksExtractor;
 
   public SpecActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                           final ProcessFactory processFactory,
@@ -78,7 +80,8 @@ public class SpecActivityImpl implements SpecActivity {
                           @Value("${airbyte.version}") final String airbyteVersion,
                           final AirbyteMessageSerDeProvider serDeProvider,
                           final AirbyteProtocolVersionedMigratorFactory migratorFactory,
-                          final FeatureFlags featureFlags) {
+                          final FeatureFlags featureFlags,
+                          final GsonPksExtractor gsonPksExtractor) {
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.workspaceRoot = workspaceRoot;
@@ -89,6 +92,7 @@ public class SpecActivityImpl implements SpecActivity {
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
     this.featureFlags = featureFlags;
+    this.gsonPksExtractor = gsonPksExtractor;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -155,7 +159,7 @@ public class SpecActivityImpl implements SpecActivity {
         launcherConfig.getProtocolVersion() != null ? launcherConfig.getProtocolVersion() : migratorFactory.getMostRecentVersion();
     // Try to detect version from the stream
     return new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(),
-        Optional.empty(), false)
+        Optional.empty(), new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false), gsonPksExtractor)
             .withDetectVersion(true);
   }
 

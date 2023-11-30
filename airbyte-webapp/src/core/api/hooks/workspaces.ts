@@ -149,7 +149,7 @@ export const useListUsersInWorkspace = (workspaceId: string) => {
   return useSuspenseQuery(queryKey, () => listUsersInWorkspace({ workspaceId }, requestOptions));
 };
 
-export const useListWorkspacesInfinite = (pageSize: number, nameContains: string) => {
+export const useListWorkspacesInfinite = (pageSize: number, nameContains: string, suspense?: boolean) => {
   const { userId } = useCurrentUser();
   const requestOptions = useRequestOptions();
 
@@ -163,7 +163,7 @@ export const useListWorkspacesInfinite = (pageSize: number, nameContains: string
       };
     },
     {
-      suspense: false,
+      suspense: suspense ?? false,
       getPreviousPageParam: (firstPage) => (firstPage.pageParam > 0 ? firstPage.pageParam - 1 : undefined),
       getNextPageParam: (lastPage) => (lastPage.data.workspaces.length < pageSize ? undefined : lastPage.pageParam + 1),
       cacheTime: 10000,

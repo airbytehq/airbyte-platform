@@ -7,7 +7,7 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useConnectionHookFormService } from "hooks/services/ConnectionForm/ConnectionHookFormService";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 
 import { HookFormConnectionFormValues } from "./hookFormConfig";
@@ -24,7 +24,7 @@ interface EditControlHookFormProps {
  * @see EditControls
  */
 export const EditControlsHookForm: React.FC<EditControlHookFormProps> = ({ onCancel }) => {
-  const { mode, getErrorMessage } = useConnectionHookFormService();
+  const { mode, getErrorMessage } = useConnectionFormService();
   const { schemaHasBeenRefreshed } = useConnectionEditService();
   const { isValid, isDirty, isSubmitting, isSubmitSuccessful, errors } = useFormState<HookFormConnectionFormValues>();
   const { reset, trigger, formState } = useFormContext<HookFormConnectionFormValues>();

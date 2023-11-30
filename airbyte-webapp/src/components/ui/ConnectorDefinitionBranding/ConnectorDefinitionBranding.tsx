@@ -1,9 +1,8 @@
 import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { Text } from "components/ui/Text";
 
+import { useSourceDefinitionList, useDestinationDefinitionList } from "core/api";
 import { DestinationDefinitionId, SourceDefinitionId } from "core/request/AirbyteClient";
-import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
-import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 
 import styles from "./ConnectorDefinitionBranding.module.scss";
 import { FlexContainer } from "../Flex";

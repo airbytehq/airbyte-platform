@@ -82,12 +82,14 @@ open class WorkloadApi(
       workloadCreateRequest.labels,
       workloadCreateRequest.workloadInput,
       workloadCreateRequest.logPath,
+      workloadCreateRequest.geography,
     )
     workloadService.create(
       workloadId = workloadCreateRequest.workloadId,
       workloadInput = workloadCreateRequest.workloadInput,
       workloadCreateRequest.labels.associate { it.key to it.value },
       workloadCreateRequest.logPath,
+      workloadCreateRequest.geography,
     )
   }
 

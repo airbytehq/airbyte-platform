@@ -1,3 +1,5 @@
+/* eslint-disable check-file/filename-blocklist */
+// temporary disable eslint rule for this file during form cleanup
 import { act, renderHook } from "@testing-library/react";
 import React from "react";
 
@@ -25,17 +27,11 @@ import {
 import { ConnectionEditServiceProvider, useConnectionEditService } from "./ConnectionEditService";
 import { useConnectionFormService } from "../ConnectionForm/ConnectionFormService";
 
-jest.mock("services/connector/SourceDefinitionService", () => ({
-  useSourceDefinition: () => mockSourceDefinition,
-}));
-
-jest.mock("services/connector/DestinationDefinitionService", () => ({
-  useDestinationDefinition: () => mockDestinationDefinition,
-}));
-
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
   useGetConnection: () => mockConnection,
+  useSourceDefinition: () => mockSourceDefinition,
+  useDestinationDefinition: () => mockDestinationDefinition,
   useGetConnectionQuery:
     () =>
     async ({ withRefreshedCatalog }: WebBackendConnectionRequestBody) =>
@@ -61,7 +57,7 @@ const utils = {
   }),
 };
 
-describe("ConnectionEditService", () => {
+describe("ConnectionEditHookFormServiceProvider", () => {
   const Wrapper: React.FC<React.PropsWithChildren> = ({ children }) => (
     <TestWrapper>
       <ConnectionEditServiceProvider connectionId={mockConnection.connectionId}>

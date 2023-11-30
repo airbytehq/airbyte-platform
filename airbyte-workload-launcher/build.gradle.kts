@@ -29,7 +29,6 @@ dependencies {
     implementation(libs.reactor.kotlin.extensions)
     implementation(libs.slf4j.api)
     implementation(libs.bundles.micronaut.metrics)
-    implementation(libs.micronaut.micrometer.registry.statsd)
     implementation(platform(libs.micronaut.bom))
     implementation(project(":airbyte-api"))
     implementation(project(":airbyte-commons"))
@@ -68,17 +67,21 @@ dependencies {
     testImplementation(libs.testcontainers.vault)
 }
 
-val env = Properties()
-env.load(rootProject.file(".env.dev").inputStream())
+val env = Properties().apply {
+    load(rootProject.file(".env.dev").inputStream())
+}
 
 airbyte {
     application {
         mainClass.set("io.airbyte.workload.launcher.ApplicationKt")
-        defaultJvmArgs.set(listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0"))
-        localEnvVars.putAll((env.toMutableMap() +
-                mutableMapOf("AIRBYTE_VERSION" to env["VERSION"],
-                             "DATA_PLANE_ID" to "local",
-                             "MICRONAUT_ENVIRONMENTS" to "test")) as Map<String,String>)
+        defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
+        @Suppress("UNCHECKED_CAST")
+        localEnvVars.putAll(env.toMutableMap() as Map<String, String>)
+        localEnvVars.putAll(mapOf(
+            "AIRBYTE_VERSION" to env["VERSION"].toString(),
+             "DATA_PLANE_ID" to "local",
+                 "MICRONAUT_ENVIRONMENTS" to "test"
+        ))
     }
     docker {
         imageName.set("workload-launcher")

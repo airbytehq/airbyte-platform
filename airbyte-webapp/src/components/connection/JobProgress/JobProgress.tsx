@@ -3,10 +3,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { JobWithAttempts } from "components/JobItem/types";
-import { getJobStatus } from "components/JobItem/utils";
 import { Text } from "components/ui/Text";
 
+import { JobWithAttempts } from "area/connection/types/jobs";
+import { getJobStatus } from "area/connection/utils/jobs";
 import { AttemptRead, AttemptStatus, SynchronousJobRead } from "core/request/AirbyteClient";
 import { formatBytes } from "core/utils/numberHelper";
 

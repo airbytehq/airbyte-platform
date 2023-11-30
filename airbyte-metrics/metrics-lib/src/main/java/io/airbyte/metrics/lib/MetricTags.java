@@ -21,6 +21,7 @@ public class MetricTags {
   public static final String AUTHENTICATION_RESPONSE = "authentication_response";
   public static final String AUTHENTICATION_RESPONSE_FAILURE_REASON = "authentication_response_failure_reason";
   public static final String AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY = "request_uri";
+  public static final String CANCELLATION_SOURCE = "cancellation_source";
   public static final String CONNECTION_ID = "connection_id";
   public static final String CRON_TYPE = "cron_type";
   public static final String DESTINATION_ID = "destination_id";
@@ -42,6 +43,7 @@ public class MetricTags {
   public static final String RELEASE_STAGE = "release_stage";
   public static final String RESET_WORKFLOW_FAILURE_CAUSE = "failure_cause";
   public static final String SOURCE_ID = "source_id";
+  public static final String STATUS = "status";
   public static final String WORKSPACE_ID = "workspace_id";
   public static final String UNKNOWN = "unknown";
   public static final String USER_TYPE = "user_type"; // real user, service account, data plane user, etc

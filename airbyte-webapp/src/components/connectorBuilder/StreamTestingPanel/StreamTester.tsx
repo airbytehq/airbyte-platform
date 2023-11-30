@@ -14,8 +14,7 @@ import { Text } from "components/ui/Text";
 
 import { KnownExceptionInfo } from "core/api/types/ConnectorBuilderClient";
 import { CommonRequestError } from "core/request/CommonRequestError";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";

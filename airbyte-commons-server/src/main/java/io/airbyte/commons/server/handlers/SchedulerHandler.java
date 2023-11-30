@@ -492,7 +492,7 @@ public class SchedulerHandler {
                 connectionId,
                 source.getName(),
                 result.changeDescription(),
-                item.getSlackConfiguration().getWebhook(),
+                null,
                 List.of(email),
                 isBreakingChange);
           }

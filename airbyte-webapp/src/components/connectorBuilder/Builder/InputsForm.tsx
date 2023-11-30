@@ -10,8 +10,7 @@ import { Message } from "components/ui/Message";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { ConnectorBuilderMainRHFContext } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderField } from "./BuilderField";

@@ -41,6 +41,7 @@ class WorkloadHandlerImplTest {
         workloadLabels = null,
         inputPayload = "",
         logPath = "/",
+        geography = "US",
       )
 
     every { workloadRepository.findById(workloadId) }.returns(Optional.of(domainWorkload))
@@ -70,9 +71,10 @@ class WorkloadHandlerImplTest {
         workloadLabels = null,
         inputPayload = "",
         logPath = "/",
+        geography = "US",
       ),
     )
-    workloadHandler.createWorkload(workloadId, workloadLabels, "input payload", "/log/path")
+    workloadHandler.createWorkload(workloadId, workloadLabels, "input payload", "/log/path", "US")
     verify {
       workloadRepository.save(
         match {
@@ -85,7 +87,8 @@ class WorkloadHandlerImplTest {
             it.workloadLabels!!.get(1).key == workloadLabel2.key &&
             it.workloadLabels!!.get(1).value == workloadLabel2.value &&
             it.inputPayload == "input payload" &&
-            it.logPath == "/log/path"
+            it.logPath == "/log/path" &&
+            it.geography == "US"
         },
       )
     }
@@ -94,7 +97,7 @@ class WorkloadHandlerImplTest {
   @Test
   fun `test create workload id conflict`() {
     every { workloadRepository.existsById(workloadId) }.returns(true)
-    assertThrows<NotModifiedException> { workloadHandler.createWorkload(workloadId, null, "", "") }
+    assertThrows<NotModifiedException> { workloadHandler.createWorkload(workloadId, null, "", "", "US") }
   }
 
   @Test
@@ -110,6 +113,7 @@ class WorkloadHandlerImplTest {
         workloadLabels = null,
         inputPayload = "a payload",
         logPath = "/log/path",
+        geography = "US",
       )
     every { workloadRepository.search(any(), any(), any()) }.returns(listOf(domainWorkload))
     val workloads = workloadHandler.getWorkloads(listOf("dataplane1"), listOf(ApiWorkloadStatus.CLAIMED, ApiWorkloadStatus.FAILURE), null)
@@ -132,6 +136,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -153,6 +158,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -177,6 +183,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -196,6 +203,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -214,6 +222,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -232,6 +241,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -251,6 +261,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -269,6 +280,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -299,6 +311,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -319,6 +332,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -341,6 +355,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -368,6 +383,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -388,6 +404,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -410,6 +427,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -437,6 +455,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -457,6 +476,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -479,6 +499,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -506,6 +527,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -525,6 +547,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -544,6 +567,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )
@@ -566,6 +590,7 @@ class WorkloadHandlerImplTest {
           workloadLabels = listOf(),
           inputPayload = "",
           logPath = "/",
+          geography = "US",
         ),
       ),
     )

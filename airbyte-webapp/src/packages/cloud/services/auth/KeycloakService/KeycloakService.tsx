@@ -1,6 +1,5 @@
 import isEqual from "lodash/isEqual";
-import { User, WebStorageStateStore } from "oidc-client-ts";
-import { UserManager } from "oidc-client-ts";
+import { User, WebStorageStateStore, UserManager } from "oidc-client-ts";
 import {
   MutableRefObject,
   PropsWithChildren,

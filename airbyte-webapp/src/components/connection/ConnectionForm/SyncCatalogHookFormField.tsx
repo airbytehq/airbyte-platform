@@ -22,7 +22,6 @@ import { useRefreshSourceSchemaWithConfirmationOnDirty } from "./refreshSourceSc
 import styles from "./SyncCatalogHookFormField.module.scss";
 import { StreamsConfigTableHeaderHookForm } from "../syncCatalog/StreamsConfigTable/StreamsConfigTableHeaderHookForm";
 import { DisabledStreamsSwitch } from "../syncCatalog/SyncCatalog/DisabledStreamsSwitch";
-import { LocationWithState } from "../syncCatalog/SyncCatalog/SyncCatalogBody";
 import { SyncCatalogEmpty } from "../syncCatalog/SyncCatalog/SyncCatalogEmpty";
 import { SyncCatalogRowHookForm } from "../syncCatalog/SyncCatalog/SyncCatalogRowHookForm";
 import { SyncCatalogStreamSearch } from "../syncCatalog/SyncCatalog/SyncCatalogStreamSearch";
@@ -79,7 +78,7 @@ export const SyncCatalogHookFormField: React.FC = () => {
   );
 
   // Scroll to the stream that was redirected from the Status tab
-  const { state: locationState } = useLocation() as LocationWithState;
+  const { state: locationState } = useLocation() as LocationWithStateHookForm;
   const initialTopMostItemIndex: IndexLocationWithAlign | undefined = useMemo(() => {
     if (locationState?.action !== "showInReplicationTable" && locationState?.action !== "openDetails") {
       return;

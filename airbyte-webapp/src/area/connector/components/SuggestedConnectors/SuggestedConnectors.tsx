@@ -9,11 +9,10 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
+import { useDestinationDefinitionList, useSourceDefinitionList } from "core/api";
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { useLocalStorage } from "core/utils/useLocalStorage";
-import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
-import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 
 import styles from "./SuggestedConnectors.module.scss";
 

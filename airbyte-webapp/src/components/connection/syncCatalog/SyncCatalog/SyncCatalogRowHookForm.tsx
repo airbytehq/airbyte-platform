@@ -1,10 +1,8 @@
 import get from "lodash/get";
 import set from "lodash/set";
 import React, { useCallback, useMemo } from "react";
-import { FieldErrors } from "react-hook-form/dist/types/errors";
+import { FieldErrors } from "react-hook-form";
 import { useToggle } from "react-use";
-
-import { SUPPORTED_MODES } from "components/connection/ConnectionForm/formConfig";
 
 import { SyncSchemaField, SyncSchemaFieldObject } from "core/domain/catalog";
 import { traverseSchemaToField } from "core/domain/catalog/traverseSchemaToField";
@@ -21,7 +19,11 @@ import {
   toggleAllFieldsSelected,
 } from "./streamConfigHelpers";
 import { updateStreamSyncMode } from "./updateStreamSyncMode";
-import { HookFormConnectionFormValues, SyncStreamFieldWithId } from "../../ConnectionForm/hookFormConfig";
+import {
+  HookFormConnectionFormValues,
+  SyncStreamFieldWithId,
+  SUPPORTED_MODES,
+} from "../../ConnectionForm/hookFormConfig";
 import { StreamDetailsPanel } from "../StreamDetailsPanel/StreamDetailsPanel";
 import { StreamsConfigTableRowHookForm } from "../StreamsConfigTable/StreamsConfigTableRowHookForm";
 import { SyncModeValue } from "../SyncModeSelect";

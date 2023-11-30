@@ -11,12 +11,15 @@ import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.protocol.VersionedProtocolSerializer;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.FailMissingPks;
 import io.airbyte.featureflag.FailSyncIfTooBig;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.PrintLongRecordPks;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
@@ -44,17 +47,20 @@ public class AirbyteIntegrationLauncherFactory {
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
   private final FeatureFlagClient featureFlagClient;
+  private final GsonPksExtractor gsonPksExtractor;
 
   public AirbyteIntegrationLauncherFactory(final ProcessFactory processFactory,
                                            final AirbyteMessageSerDeProvider serDeProvider,
                                            final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                            final FeatureFlags featureFlags,
-                                           final FeatureFlagClient featureFlagClient) {
+                                           final FeatureFlagClient featureFlagClient,
+                                           final GsonPksExtractor gsonPksExtractor) {
     this.processFactory = processFactory;
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
     this.featureFlags = featureFlags;
     this.featureFlagClient = featureFlagClient;
+    this.gsonPksExtractor = gsonPksExtractor;
   }
 
   /**
@@ -103,9 +109,22 @@ public class AirbyteIntegrationLauncherFactory {
             new Connection(sourceLauncherConfig.getConnectionId()),
             new Workspace(sourceLauncherConfig.getWorkspaceId()))));
 
+    final boolean failMissingPks = featureFlagClient.boolVariation(FailMissingPks.INSTANCE,
+        new Multi(List.of(
+            new Connection(sourceLauncherConfig.getConnectionId()),
+            new Workspace(sourceLauncherConfig.getWorkspaceId()))));
+
+    final boolean printLongRecordPks = featureFlagClient.boolVariation(PrintLongRecordPks.INSTANCE,
+        new Multi(List.of(
+            new Connection(sourceLauncherConfig.getConnectionId()),
+            new Workspace(sourceLauncherConfig.getWorkspaceId()))));
+
     return new DefaultAirbyteSource(sourceLauncher,
         getStreamFactory(sourceLauncherConfig, configuredAirbyteCatalog, SourceException.class, DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER,
-            failTooLongRecords),
+            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(
+                failTooLongRecords,
+                failMissingPks,
+                printLongRecordPks)),
         heartbeatMonitor,
         getProtocolSerializer(sourceLauncherConfig),
         featureFlags);
@@ -125,8 +144,11 @@ public class AirbyteIntegrationLauncherFactory {
 
     final IntegrationLauncher destinationLauncher = createIntegrationLauncher(destinationLauncherConfig, syncResourceRequirements);
     return new DefaultAirbyteDestination(destinationLauncher,
-        getStreamFactory(destinationLauncherConfig, configuredAirbyteCatalog, DestinationException.class,
-            DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER, false),
+        getStreamFactory(destinationLauncherConfig,
+            configuredAirbyteCatalog,
+            DestinationException.class,
+            DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER,
+            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false)),
         new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
             Optional.of(configuredAirbyteCatalog)),
         getProtocolSerializer(destinationLauncherConfig), destinationTimeoutMonitor);
@@ -140,9 +162,9 @@ public class AirbyteIntegrationLauncherFactory {
                                                 final ConfiguredAirbyteCatalog configuredAirbyteCatalog,
                                                 final Class<? extends RuntimeException> exceptionClass,
                                                 final MdcScope.Builder mdcScopeBuilder,
-                                                final boolean failTooLongRecords) {
+                                                final VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration invalidLineFailureConfiguration) {
     return new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(),
-        Optional.of(configuredAirbyteCatalog), mdcScopeBuilder, Optional.of(exceptionClass), failTooLongRecords);
+        Optional.of(configuredAirbyteCatalog), mdcScopeBuilder, Optional.of(exceptionClass), invalidLineFailureConfiguration, gsonPksExtractor);
   }
 
 }

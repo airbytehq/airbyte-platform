@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.JobSyncConfig;
@@ -21,6 +22,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ReplicationActivityInput {
 
   // Actor ID for the source used in the sync - this is used to update the actor configuration when

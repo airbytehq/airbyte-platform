@@ -189,7 +189,7 @@ public class LogClientSingleton {
     if (shouldUseLocalLogs(workerEnvironment)) {
       LOGGER.debug("Setting docker job mdc");
       if (path != null) {
-        final String resolvedPath = path.resolve(LogClientSingleton.LOG_FILENAME).toString();
+        final String resolvedPath = fullLogPath(path);
         MDC.put(LogClientSingleton.JOB_LOG_PATH_MDC_KEY, resolvedPath);
       } else {
         MDC.remove(LogClientSingleton.JOB_LOG_PATH_MDC_KEY);
@@ -198,7 +198,7 @@ public class LogClientSingleton {
       LOGGER.debug("Setting kube job mdc");
       createCloudClientIfNull(logConfigs);
       if (path != null) {
-        MDC.put(LogClientSingleton.CLOUD_JOB_LOG_PATH_MDC_KEY, path.resolve(LogClientSingleton.LOG_FILENAME).toString());
+        MDC.put(LogClientSingleton.CLOUD_JOB_LOG_PATH_MDC_KEY, fullLogPath(path));
       } else {
         MDC.remove(LogClientSingleton.CLOUD_JOB_LOG_PATH_MDC_KEY);
       }
@@ -223,9 +223,13 @@ public class LogClientSingleton {
     }
   }
 
+  public static String fullLogPath(final Path rootPath) {
+    return rootPath.resolve(LogClientSingleton.LOG_FILENAME).toString();
+  }
+
   // This method should cease to exist here and become a property on the enum instead
   // TODO handle this as part of refactor https://github.com/airbytehq/airbyte/issues/7545
-  private static boolean shouldUseLocalLogs(final WorkerEnvironment workerEnvironment) {
+  public static boolean shouldUseLocalLogs(final WorkerEnvironment workerEnvironment) {
     return workerEnvironment.equals(WorkerEnvironment.DOCKER);
   }
 

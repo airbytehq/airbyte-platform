@@ -186,6 +186,7 @@ components:
           type: boolean
     Workload:
       required:
+      - geography
       - id
       - inputPayload
       - labels
@@ -208,6 +209,8 @@ components:
         inputPayload:
           type: string
         logPath:
+          type: string
+        geography:
           type: string
     WorkloadCancelRequest:
       required:
@@ -234,6 +237,7 @@ components:
           type: string
     WorkloadCreateRequest:
       required:
+      - geography
       - labels
       - logPath
       - workloadId
@@ -249,6 +253,8 @@ components:
         workloadInput:
           type: string
         logPath:
+          type: string
+        geography:
           type: string
     WorkloadFailureRequest:
       required:

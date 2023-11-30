@@ -13,11 +13,11 @@ export interface Experiments {
   "autopropagation.enabled": boolean;
   "billing.newTrialPolicy": boolean;
   "billing.autoRecharge": boolean;
+  "connections.summaryView": boolean;
   "connection.autoDetectSchemaChanges": boolean;
   "connection.columnSelection": boolean;
   "connection.onboarding.destinations": string;
   "connection.onboarding.sources": string;
-  "connection.searchableJobLogs": boolean;
   "connection.streamCentricUI.errorMultiplier": number;
   "connection.streamCentricUI.lateMultiplier": number;
   "connection.streamCentricUI.numberOfLogsToLoad": number;
@@ -36,5 +36,4 @@ export interface Experiments {
   "settings.breakingChangeNotifications": boolean;
   "upcomingFeaturesPage.url": string;
   "settings.accessManagement": boolean;
-  "form.createConnectionHookForm": boolean;
 }

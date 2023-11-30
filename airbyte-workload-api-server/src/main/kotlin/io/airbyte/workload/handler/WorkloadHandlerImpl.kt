@@ -49,6 +49,7 @@ class WorkloadHandlerImpl(
     labels: List<WorkloadLabel>?,
     input: String,
     logPath: String,
+    geography: String,
   ) {
     val workloadAlreadyExists = workloadRepository.existsById(workloadId)
     if (workloadAlreadyExists) {
@@ -63,6 +64,7 @@ class WorkloadHandlerImpl(
         workloadLabels = labels?.map { it.toDomain() },
         inputPayload = input,
         logPath = logPath,
+        geography = geography,
       )
 
     workloadRepository.save(domainWorkload).toApi()

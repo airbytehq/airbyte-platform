@@ -8,13 +8,12 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { ExternalLink } from "components/ui/Link";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
+import { NoWorkspacePermissionsContent } from "area/workspace/NoWorkspacesPermissionWarning";
 import { useListCloudWorkspacesInfinite } from "core/api/cloud";
-import { OrganizationRead } from "core/request/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 import { useOrganizationsToCreateWorkspaces } from "pages/workspaces/components/useOrganizationsToCreateWorkspaces";
@@ -23,10 +22,9 @@ import { WORKSPACE_LIST_LENGTH } from "pages/workspaces/WorkspacesPage";
 
 import { CloudWorkspacesCreateControl } from "./CloudWorkspacesCreateControl";
 import styles from "./CloudWorkspacesPage.module.scss";
-import OctaviaThinking from "./octavia-thinking-no-gears.svg?react";
 
 export const CloudWorkspacesPage: React.FC = () => {
-  const { isLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
+  const { isLoading: isLogoutLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
   useTrackPage(PageTrackingCodes.WORKSPACES);
   const [searchValue, setSearchValue] = useState("");
   const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
@@ -38,6 +36,7 @@ export const CloudWorkspacesPage: React.FC = () => {
     fetchNextPage,
     isFetchingNextPage,
     isFetching,
+    isLoading,
   } = useListCloudWorkspacesInfinite(WORKSPACE_LIST_LENGTH, debouncedSearchValue);
 
   const { organizationsMemberOnly, organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
@@ -61,13 +60,14 @@ export const CloudWorkspacesPage: React.FC = () => {
     250,
     [searchValue]
   );
+  console.log({ showNoWorkspacesContent });
 
   return (
     <div className={styles.cloudWorkspacesPage__container}>
       <FlexContainer justifyContent="space-between">
         <AirbyteLogo className={styles.cloudWorkspacesPage__logo} />
         {logout && (
-          <Button variant="clear" onClick={() => handleLogout()} isLoading={isLoading}>
+          <Button variant="clear" onClick={() => handleLogout()} isLoading={isLogoutLoading}>
             <FormattedMessage id="settings.accountSettings.logoutText" />
           </Button>
         )}
@@ -91,43 +91,20 @@ export const CloudWorkspacesPage: React.FC = () => {
             <CloudWorkspacesCreateControl />
           </Box>
           <Box pb="2xl">
-            <WorkspacesList workspaces={workspaces} fetchNextPage={fetchNextPage} hasNextPage={hasNextPage} />
-            {isFetchingNextPage && (
+            <WorkspacesList
+              workspaces={workspaces}
+              isLoading={isLoading}
+              fetchNextPage={fetchNextPage}
+              hasNextPage={hasNextPage}
+            />
+            {isFetchingNextPage ? (
               <Box py="2xl" className={styles.cloudWorkspacesPage__loadingSpinner}>
                 <LoadingSpinner />
               </Box>
-            )}
+            ) : null}
           </Box>
         </>
       )}
     </div>
-  );
-};
-
-const NoWorkspacePermissionsContent: React.FC<{ organizations: OrganizationRead[] }> = ({ organizations }) => {
-  return (
-    <Box m="2xl" p="2xl" data-testid="noWorkspacePermissionsBanner">
-      <FlexContainer direction="column" gap="2xl">
-        <OctaviaThinking className={styles.cloudWorkspacesPage__illustration} />
-        <div>
-          <Box pb="md">
-            <Text size="md" align="center" bold>
-              <FormattedMessage id="workspaces.noPermissions" />
-            </Text>
-          </Box>
-          <Text size="md" align="center" color="grey">
-            <FormattedMessage
-              id="workspaces.noPermissions.moreInformation"
-              values={{
-                adminEmail: organizations[0].email,
-                lnk: (...lnk: React.ReactNode[]) => (
-                  <ExternalLink href={`mailto:${organizations[0].email}`}>{lnk}</ExternalLink>
-                ),
-              }}
-            />
-          </Text>
-        </div>
-      </FlexContainer>
-    </Box>
   );
 };

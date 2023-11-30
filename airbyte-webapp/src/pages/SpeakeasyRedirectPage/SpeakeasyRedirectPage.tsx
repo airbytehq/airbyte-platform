@@ -1,5 +1,4 @@
-import { Suspense, useEffect } from "react";
-import React from "react";
+import React, { Suspense, useEffect } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
