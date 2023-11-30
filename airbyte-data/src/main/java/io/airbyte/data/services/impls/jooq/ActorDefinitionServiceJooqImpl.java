@@ -13,7 +13,6 @@ import static org.jooq.impl.DSL.asterisk;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.enums.Enums;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
@@ -27,18 +26,14 @@ import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
-import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
-import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -47,7 +42,6 @@ import java.util.stream.Stream;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.InsertSetMoreStep;
-import org.jooq.JSONB;
 import org.jooq.JoinType;
 import org.jooq.Record;
 import org.jooq.Record1;
@@ -513,52 +507,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    *          field from the DB.
    */
   private ActorDefinitionVersion writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion, final DSLContext ctx) {
-    final OffsetDateTime timestamp = OffsetDateTime.now();
-    // Generate a new UUID if one is not provided. Passing an ID is useful for mocks.
-    final UUID versionId = actorDefinitionVersion.getVersionId() != null ? actorDefinitionVersion.getVersionId() : UUID.randomUUID();
-
-    ctx.insertInto(Tables.ACTOR_DEFINITION_VERSION)
-        .set(Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
-        .set(ACTOR_DEFINITION_VERSION.CREATED_AT, timestamp)
-        .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
-        .set(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, actorDefinitionVersion.getActorDefinitionId())
-        .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, actorDefinitionVersion.getDockerRepository())
-        .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, actorDefinitionVersion.getDockerImageTag())
-        .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSpec())))
-        .set(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL, actorDefinitionVersion.getDocumentationUrl())
-        .set(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION, actorDefinitionVersion.getProtocolVersion())
-        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL, actorDefinitionVersion.getSupportLevel() == null ? null
-            : Enums.toEnum(actorDefinitionVersion.getSupportLevel().value(),
-                SupportLevel.class).orElseThrow())
-        .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE, actorDefinitionVersion.getReleaseStage() == null ? null
-            : Enums.toEnum(actorDefinitionVersion.getReleaseStage().value(),
-                ReleaseStage.class).orElseThrow())
-        .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE, actorDefinitionVersion.getReleaseDate() == null ? null
-            : LocalDate.parse(actorDefinitionVersion.getReleaseDate()))
-        .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY,
-            Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                ? actorDefinitionVersion.getNormalizationConfig().getNormalizationRepository()
-                : null)
-        .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG,
-            Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                ? actorDefinitionVersion.getNormalizationConfig().getNormalizationTag()
-                : null)
-        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT, actorDefinitionVersion.getSupportsDbt())
-        .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE,
-            Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                ? actorDefinitionVersion.getNormalizationConfig().getNormalizationIntegrationType()
-                : null)
-        .set(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS, actorDefinitionVersion.getAllowedHosts() == null ? null
-            : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getAllowedHosts())))
-        .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
-            actorDefinitionVersion.getSuggestedStreams() == null ? null
-                : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSuggestedStreams())))
-        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
-            Enums.toEnum(actorDefinitionVersion.getSupportState().value(), io.airbyte.db.instance.configs.jooq.generated.enums.SupportState.class)
-                .orElseThrow())
-        .execute();
-
-    return actorDefinitionVersion.withVersionId(versionId);
+    return ActorDefinitionVersionJooqHelper.writeActorDefinitionVersion(actorDefinitionVersion, ctx);
   }
 
   /**
