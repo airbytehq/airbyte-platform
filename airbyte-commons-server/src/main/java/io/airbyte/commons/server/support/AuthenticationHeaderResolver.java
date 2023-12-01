@@ -12,7 +12,6 @@ import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.OPERATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.PERMISSION_ID_HEADER;
-import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_DEFINITION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_IDS_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_ID_HEADER;
@@ -117,9 +116,6 @@ public class AuthenticationHeaderResolver {
       } else if (properties.containsKey(SOURCE_ID_HEADER)) {
         final String sourceId = properties.get(SOURCE_ID_HEADER);
         return List.of(workspaceHelper.getWorkspaceForSourceId(UUID.fromString(sourceId)));
-      } else if (properties.containsKey(SOURCE_DEFINITION_ID_HEADER)) {
-        final String sourceDefinitionId = properties.get(SOURCE_DEFINITION_ID_HEADER);
-        return List.of(workspaceHelper.getWorkspaceForSourceId(UUID.fromString(sourceDefinitionId)));
       } else if (properties.containsKey(OPERATION_ID_HEADER)) {
         final String operationId = properties.get(OPERATION_ID_HEADER);
         return List.of(workspaceHelper.getWorkspaceForOperationId(UUID.fromString(operationId)));
