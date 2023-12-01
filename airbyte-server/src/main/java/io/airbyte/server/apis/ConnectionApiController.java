@@ -160,8 +160,8 @@ public class ConnectionApiController implements ConnectionApi {
   @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public List<ConnectionDataHistoryReadItem> getConnectionDataHistory(ConnectionDataHistoryRequestBody connectionDataHistoryRequestBody) {
-    return null;
+  public List<ConnectionDataHistoryReadItem> getConnectionDataHistory(@Body final ConnectionDataHistoryRequestBody connectionDataHistoryRequestBody) {
+    return ApiHelper.execute(() -> connectionsHandler.getConnectionDataHistory(connectionDataHistoryRequestBody));
   }
 
   @Override
@@ -173,12 +173,14 @@ public class ConnectionApiController implements ConnectionApi {
     return ApiHelper.execute(() -> connectionsHandler.getConnectionStatuses(connectionStatusesRequestBody));
   }
 
+  @SuppressWarnings("LineLength")
   @Override
   @Post(uri = "/stream_history")
   @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public List<ConnectionStreamHistoryReadItem> getConnectionStreamHistory(ConnectionStreamHistoryRequestBody connectionStreamHistoryRequestBody) {
+  public List<ConnectionStreamHistoryReadItem> getConnectionStreamHistory(
+                                                                          @Body final ConnectionStreamHistoryRequestBody connectionStreamHistoryRequestBody) {
     return null;
   }
 
@@ -187,7 +189,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public List<ConnectionSyncProgressReadItem> getConnectionSyncProgress(ConnectionIdRequestBody connectionIdRequestBody) {
+  public List<ConnectionSyncProgressReadItem> getConnectionSyncProgress(final ConnectionIdRequestBody connectionIdRequestBody) {
     return null;
   }
 
@@ -196,7 +198,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public List<ConnectionSyncResultRead> getConnectionUptimeHistory(ConnectionUptimeHistoryRequestBody connectionUptimeHistoryRequestBody) {
+  public List<ConnectionSyncResultRead> getConnectionUptimeHistory(final ConnectionUptimeHistoryRequestBody connectionUptimeHistoryRequestBody) {
     return null;
   }
 
