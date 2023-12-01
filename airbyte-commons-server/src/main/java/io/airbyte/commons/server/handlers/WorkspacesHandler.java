@@ -39,7 +39,6 @@ import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.UserPermission;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
@@ -386,8 +385,7 @@ public class WorkspacesHandler {
   public WorkspaceReadList listWorkspacesByUser(final ListWorkspacesByUserRequestBody request)
       throws IOException {
     // If user has instance_admin permission, list all workspaces.
-    final UserPermission userInstanceAdminPermission = permissionPersistence.getUserInstanceAdminPermission(request.getUserId());
-    if (userInstanceAdminPermission != null) {
+    if (permissionPersistence.isUserInstanceAdmin(request.getUserId())) {
       return listWorkspacesByInstanceAdminUser(request);
     }
     // User has no instance_admin permission.
