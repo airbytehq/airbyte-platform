@@ -228,7 +228,7 @@
   "connectionForm.nonBreakingChangesPreference.disable": "Disable connection",
   "connectionForm.nonBreakingChangesPreference.autopropagation.ignore": "Detect changes and manually approve",
   "connectionForm.nonBreakingChangesPreference.autopropagation.disable": "Detect changes and pause connection",
-  "connectionForm.nonBreakingChangesPreference.autopropagation.propagate_columns": "Propagate field changes only (default)",
+  "connectionForm.nonBreakingChangesPreference.autopropagation.propagate_columns": "Propagate field changes only",
   "connectionForm.nonBreakingChangesPreference.autopropagation.propagate_fully": "Propagate all field and stream changes",
   "connectionForm.nonBreakingChangesPreference.autopropagation.message": "Auto-propagation will start with your next scheduled sync. To apply immediately, run a manual sync after saving the connection.",
   "connectionForm.schemaChangesBackdrop.message": "Please review the schema updates before making changes to the connection",
