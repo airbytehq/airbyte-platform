@@ -129,6 +129,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
             onCancel={() => setIsOpen(false)}
             showCopyFromStream={!initialValues && numStreams > 0}
             streams={streams}
+            initialUrlPath={initialValues?.urlPath}
           />
         </Modal>
       )}
@@ -141,15 +142,22 @@ const AddStreamForm = ({
   onCancel,
   showCopyFromStream,
   streams,
+  initialUrlPath,
 }: {
   onSubmit: (values: AddStreamValues) => void;
   onCancel: () => void;
   showCopyFromStream: boolean;
   streams: BuilderStream[];
+  initialUrlPath?: string;
 }) => {
   const { formatMessage } = useIntl();
   const methods = useForm({
-    defaultValues: { streamName: "", urlPath: "", copyOtherStream: false, streamToCopy: streams[0]?.name },
+    defaultValues: {
+      streamName: "",
+      urlPath: initialUrlPath ?? "",
+      copyOtherStream: false,
+      streamToCopy: streams[0]?.name,
+    },
     resolver: yupResolver(
       yup.object().shape({
         streamName: yup
