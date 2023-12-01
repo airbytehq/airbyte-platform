@@ -114,7 +114,7 @@ export const SettingsPage: React.FC = () => {
               },
             ]
           : []),
-        ...(multiWorkspaceUI
+        ...(multiWorkspaceUI && canViewWorkspaceSettings
           ? [
               {
                 category: <FormattedMessage id="settings.instanceSettings" />,
