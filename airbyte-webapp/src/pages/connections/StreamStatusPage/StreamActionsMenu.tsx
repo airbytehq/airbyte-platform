@@ -1,5 +1,3 @@
-import { faEllipsisV } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -8,6 +6,7 @@ import { useConnectionSyncContext } from "components/connection/ConnectionSync/C
 import { StreamWithStatus } from "components/connection/StreamStatus/streamStatusUtils";
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
+import { Icon } from "components/ui/Icon";
 
 import { ConnectionRoutePaths } from "pages/routePaths";
 
@@ -51,7 +50,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
 
   return (
     <DropdownMenu placement="bottom-end" options={options} onChange={onOptionClick}>
-      {() => <Button variant="clear" icon={<FontAwesomeIcon icon={faEllipsisV} />} />}
+      {() => <Button variant="clear" icon={<Icon type="options" />} />}
     </DropdownMenu>
   );
 };

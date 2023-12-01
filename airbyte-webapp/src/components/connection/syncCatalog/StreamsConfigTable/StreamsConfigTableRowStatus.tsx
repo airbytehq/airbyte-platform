@@ -2,9 +2,7 @@ import classNames from "classnames";
 import { useState } from "react";
 import { useUpdateEffect } from "react-use";
 
-import { MinusIcon } from "components/icons/MinusIcon";
-import { ModificationIcon } from "components/icons/ModificationIcon";
-import { PlusIcon } from "components/icons/PlusIcon";
+import { Icon } from "components/ui/Icon";
 
 import { AirbyteStreamAndConfiguration } from "core/api/types/AirbyteClient";
 
@@ -19,11 +17,11 @@ interface StreamsConfigTableRowStatusProps {
 const getIcon = (statusToDisplay: StatusToDisplay): React.ReactNode | null => {
   switch (statusToDisplay) {
     case "added":
-      return <PlusIcon />;
+      return <Icon type="plus" />;
     case "removed":
-      return <MinusIcon />;
+      return <Icon type="minus" />;
     case "changed":
-      return <ModificationIcon />;
+      return <Icon type="modification" />;
   }
 
   return null;

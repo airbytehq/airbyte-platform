@@ -1,5 +1,3 @@
-import { faTrashCan, faCopy } from "@fortawesome/free-regular-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import React, { useCallback, useMemo, useState } from "react";
 import { get, useFormContext, useFormState } from "react-hook-form";
@@ -8,6 +6,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import Indicator from "components/Indicator";
 import { Button } from "components/ui/Button";
 import { CodeEditor } from "components/ui/CodeEditor";
+import { Icon } from "components/ui/Icon";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
@@ -192,13 +191,13 @@ const StreamControls = ({
         initialValues={streams[streamNum]}
         button={
           <button className={styles.controlButton} type="button">
-            <FontAwesomeIcon icon={faCopy} />
+            <Icon type="copy" />
           </button>
         }
         modalTitle={formatMessage({ id: "connectorBuilder.copyStreamModal.title" }, { name: streams[streamNum].name })}
       />
       <button className={classNames(styles.deleteButton, styles.controlButton)} type="button" onClick={handleDelete}>
-        <FontAwesomeIcon icon={faTrashCan} />
+        <Icon type="trash" />
       </button>
     </div>
   );

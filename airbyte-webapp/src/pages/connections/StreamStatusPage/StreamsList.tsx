@@ -6,10 +6,10 @@ import { FormattedMessage } from "react-intl";
 import { useToggle } from "react-use";
 
 import { StreamStatusIndicator } from "components/connection/StreamStatusIndicator";
-import { TimeIcon } from "components/icons/TimeIcon";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 
@@ -81,7 +81,7 @@ export const StreamsList = () => {
         header: () => (
           <button onClick={setShowRelativeTime} className={styles.clickableHeader}>
             <FormattedMessage id={`connection.stream.status.table.lastRecord${showRelativeTime ? "" : "At"}`} />
-            <TimeIcon />
+            <Icon type="clockOutline" size="sm" className={styles.icon} />
           </button>
         ),
         cell: (props) => (

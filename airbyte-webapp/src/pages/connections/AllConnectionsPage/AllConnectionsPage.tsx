@@ -1,5 +1,3 @@
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { Suspense, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -79,7 +77,7 @@ const statusFilterOptions: FilterOption[] = [
   {
     label: (
       <Text color="green600" bold>
-        <Icon type="success" size="md" />
+        <Icon type="successFilled" size="md" />
         &nbsp; <FormattedMessage id="tables.connections.filters.status.healthy" />
       </Text>
     ),
@@ -88,7 +86,7 @@ const statusFilterOptions: FilterOption[] = [
   {
     label: (
       <Text color="red" bold>
-        <Icon type="error" size="md" />
+        <Icon type="errorFilled" size="md" />
         &nbsp; <FormattedMessage id="tables.connections.filters.status.failed" />
       </Text>
     ),
@@ -97,7 +95,7 @@ const statusFilterOptions: FilterOption[] = [
   {
     label: (
       <Text color="grey" bold>
-        <Icon type="pause" size="md" />
+        <Icon type="pauseFilled" size="md" />
         &nbsp; <FormattedMessage id="tables.connections.filters.status.paused" />
       </Text>
     ),
@@ -207,7 +205,7 @@ export const AllConnectionsPage: React.FC = () => {
                 endComponent={
                   <FlexItem className={styles.alignSelfStart}>
                     <Button
-                      icon={<FontAwesomeIcon icon={faPlus} />}
+                      icon={<Icon type="plus" />}
                       variant="primary"
                       size="sm"
                       onClick={() => onCreateClick()}

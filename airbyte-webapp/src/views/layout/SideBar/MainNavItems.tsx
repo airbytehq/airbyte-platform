@@ -1,13 +1,11 @@
 import { FormattedMessage } from "react-intl";
 
+import { Icon } from "components/ui/Icon";
+
 import { RoutePaths } from "pages/routePaths";
 
-import BuilderIcon from "./components/BuilderIcon";
-import ConnectionsIcon from "./components/ConnectionsIcon";
-import DestinationIcon from "./components/DestinationIcon";
 import { MenuContent } from "./components/MenuContent";
 import { NavItem } from "./components/NavItem";
-import SourceIcon from "./components/SourceIcon";
 import styles from "./MainNavItems.module.scss";
 
 export const MainNavItems: React.FC = () => {
@@ -15,27 +13,27 @@ export const MainNavItems: React.FC = () => {
     <MenuContent data-testid="navMainItems">
       <NavItem
         label={<FormattedMessage id="sidebar.connections" />}
-        icon={<ConnectionsIcon />}
+        icon={<Icon type="connection" />}
         to={RoutePaths.Connections}
         testId="connectionsLink"
       />
 
       <NavItem
         label={<FormattedMessage id="sidebar.sources" />}
-        icon={<SourceIcon />}
+        icon={<Icon type="source" />}
         to={RoutePaths.Source}
         testId="sourcesLink"
       />
 
       <NavItem
         label={<FormattedMessage id="sidebar.destinations" />}
-        icon={<DestinationIcon />}
+        icon={<Icon type="destination" />}
         testId="destinationsLink"
         to={RoutePaths.Destination}
       />
       <NavItem
         label={<FormattedMessage id="sidebar.builder" />}
-        icon={<BuilderIcon />}
+        icon={<Icon type="wrench" />}
         testId="builderLink"
         to={RoutePaths.ConnectorBuilder}
         className={styles.beta}

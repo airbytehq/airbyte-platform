@@ -1,10 +1,3 @@
-<svg width="24" height="24" fill="none" data-icon="notification" role="img" viewBox="0 0 24 24">
-    <g clip-path="url(#a)">
-        <path fill="currentColor" d="M22 20H2v-2h1v-6.969C3 6.043 7.03 2 12 2s9 4.043 9 9.031V18h1v2ZM9.5 21h5a2.5 2.5 0 0 1-5 0Z"/>
-    </g>
-    <defs>
-        <clipPath id="a">
-            <path fill="currentColor" d="M0 0h24v24H0z"/>
-        </clipPath>
-    </defs>
+<svg fill="none" viewBox="0 0 24 24" data-icon="notification" role="img">
+    <path fill="currentColor" d="M18 13.18V10a6 6 0 0 0-5-5.91V3a1 1 0 0 0-2 0v1.09A6 6 0 0 0 6 10v3.18A3 3 0 0 0 4 16v2a1 1 0 0 0 1 1h3.14a4 4 0 0 0 7.72 0H19a1 1 0 0 0 1-1v-2a3 3 0 0 0-2-2.82ZM8 10a4 4 0 0 1 8 0v3H8v-3Zm4 10a2 2 0 0 1-1.72-1h3.44A2 2 0 0 1 12 20Zm6-3H6v-1a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1Z"/>
 </svg>

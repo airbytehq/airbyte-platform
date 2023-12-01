@@ -30,16 +30,16 @@ describe("<Input />", () => {
 
   it("renders password input with visibilty button", async () => {
     const value = "eight888";
-    const { getByTestId, getByRole } = await render(<Input type="password" defaultValue={value} />);
+    const { getByTestId } = await render(<Input type="password" defaultValue={value} />);
 
     expect(getByTestId("input")).toHaveAttribute("type", "password");
     expect(getByTestId("input")).toHaveValue(value);
-    expect(getByRole("img", { hidden: true })).toHaveAttribute("data-icon", "eye");
+    expect(getByTestId("mocksvg")).toHaveAttribute("data-icon", "eye");
   });
 
   it("renders visible password when visibility button is clicked", async () => {
     const value = "eight888";
-    const { getByTestId, getByRole } = await render(<Input type="password" defaultValue={value} />);
+    const { getByTestId } = await render(<Input type="password" defaultValue={value} />);
 
     await userEvent.click(getByTestId("toggle-password-visibility-button"));
 
@@ -48,7 +48,7 @@ describe("<Input />", () => {
     expect(inputEl).toHaveAttribute("type", "text");
     expect(inputEl).toHaveValue(value);
     expect(inputEl.selectionStart).toBe(value.length);
-    expect(getByRole("img", { hidden: true })).toHaveAttribute("data-icon", "eye-slash");
+    expect(getByTestId("mocksvg")).toHaveAttribute("data-icon", "eye-slash");
   });
 
   it("showing password should remember cursor position", async () => {
@@ -69,7 +69,7 @@ describe("<Input />", () => {
 
   it("hides password on blur", async () => {
     const value = "eight888";
-    const { getByTestId, getByRole } = await render(<Input type="password" defaultValue={value} />);
+    const { getByTestId } = await render(<Input type="password" defaultValue={value} />);
 
     getByTestId("toggle-password-visibility-button").click();
 
@@ -80,7 +80,7 @@ describe("<Input />", () => {
 
     await waitFor(() => {
       expect(inputEl).toHaveAttribute("type", "password");
-      expect(getByRole("img", { hidden: true })).toHaveAttribute("data-icon", "eye");
+      expect(getByTestId("mocksvg")).toHaveAttribute("data-icon", "eye");
     });
   });
 

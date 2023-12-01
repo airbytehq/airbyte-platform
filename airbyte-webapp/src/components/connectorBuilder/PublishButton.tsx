@@ -1,9 +1,8 @@
-import { faWarning } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
+import { Icon } from "components/ui/Icon";
 import { Tooltip } from "components/ui/Tooltip";
 
 import {
@@ -58,7 +57,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
       }}
       disabled={buttonDisabled}
       data-testid="publish-button"
-      icon={showWarningIcon ? <FontAwesomeIcon icon={faWarning} /> : undefined}
+      icon={showWarningIcon ? <Icon type="warningOutline" /> : undefined}
       type="button"
     >
       <FormattedMessage

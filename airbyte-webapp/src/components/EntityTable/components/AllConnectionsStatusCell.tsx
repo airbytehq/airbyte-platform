@@ -45,7 +45,7 @@ const AllConnectionsStatusCell: React.FC<AllConnectionsStatusCellProps> = ({ con
   }, [connectEntities]);
 
   return statusIconProps ? (
-    <StatusIcon {...statusIconProps} title={formatMessage({ id: statusIconProps.title })} />
+    <StatusIcon {...statusIconProps} title={formatMessage({ id: statusIconProps.title })} size="sm" />
   ) : null;
 };
 

@@ -39,6 +39,9 @@ export default defineConfig(() => {
                   overrides: {
                     removeViewBox: false,
                     cleanupIds: false,
+                    removeUnknownsAndDefaults: {
+                      keepRoleAttr: true,
+                    },
                   },
                 },
               },

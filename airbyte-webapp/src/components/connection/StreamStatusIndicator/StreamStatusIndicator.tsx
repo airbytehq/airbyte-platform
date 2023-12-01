@@ -1,25 +1,21 @@
 import classNames from "classnames";
 import React from "react";
 
-import { ClockIcon } from "components/icons/ClockIcon";
-import { ErrorIcon } from "components/icons/ErrorIcon";
-import { SimpleCircleIcon } from "components/icons/SimpleCircleIcon";
-import { SuccessIcon } from "components/icons/SuccessIcon";
-import { WarningCircleIcon } from "components/icons/WarningCircleIcon";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 
 import styles from "./StreamStatusIndicator.module.scss";
 import { StreamStatusLoadingSpinner } from "./StreamStatusLoadingSpinner";
 import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
 
 const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Element>> = {
-  [ConnectionStatusIndicatorStatus.ActionRequired]: <ErrorIcon />,
-  [ConnectionStatusIndicatorStatus.Disabled]: <SimpleCircleIcon viewBox="1 1 22 22" />,
-  [ConnectionStatusIndicatorStatus.Error]: <WarningCircleIcon />,
-  [ConnectionStatusIndicatorStatus.Late]: <ClockIcon viewBox="1 1 22 22" />,
-  [ConnectionStatusIndicatorStatus.Pending]: <SimpleCircleIcon viewBox="0 0 24 24" />,
-  [ConnectionStatusIndicatorStatus.OnTime]: <SuccessIcon />,
-  [ConnectionStatusIndicatorStatus.OnTrack]: <SuccessIcon />,
+  [ConnectionStatusIndicatorStatus.ActionRequired]: <Icon type="errorFilled" />,
+  [ConnectionStatusIndicatorStatus.Disabled]: <Icon type="pauseFilled" />,
+  [ConnectionStatusIndicatorStatus.Error]: <Icon type="warningFilled" />,
+  [ConnectionStatusIndicatorStatus.Late]: <Icon type="clockFilled" />,
+  [ConnectionStatusIndicatorStatus.Pending]: <Icon type="pauseFilled" />,
+  [ConnectionStatusIndicatorStatus.OnTime]: <Icon type="successFilled" />,
+  [ConnectionStatusIndicatorStatus.OnTrack]: <Icon type="successFilled" />,
 };
 
 const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {

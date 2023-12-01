@@ -1,12 +1,10 @@
-import { faDocker } from "@fortawesome/free-brands-svg-icons";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
+import { Icon } from "components/ui/Icon";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCreateDestinationDefinition, useCreateSourceDefinition } from "core/api";
@@ -14,7 +12,6 @@ import { FeatureItem, useFeature } from "core/services/features";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { DestinationPaths, RoutePaths, SourcePaths } from "pages/routePaths";
 
-import BuilderIcon from "./builder-icon.svg?react";
 import CreateConnectorModal from "./CreateConnectorModal";
 
 interface IProps {
@@ -77,7 +74,7 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
             {
               as: "a",
               href: `../../${RoutePaths.ConnectorBuilder}/${ConnectorBuilderRoutePaths.Create}`,
-              icon: <BuilderIcon />,
+              icon: <Icon type="wrench" />,
               displayName: formatMessage({ id: "admin.newConnector.build" }),
               internal: true,
             },
@@ -85,7 +82,7 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
               ? [
                   {
                     as: "button" as const,
-                    icon: <FontAwesomeIcon icon={faDocker} color="#0091E2" size="xs" />,
+                    icon: <Icon type="docker" />,
                     value: "docker",
                     displayName: formatMessage({ id: "admin.newConnector.docker" }),
                   },
@@ -109,7 +106,7 @@ interface NewConnectorButtonProps {
 
 const NewConnectorButton = React.forwardRef<HTMLButtonElement, NewConnectorButtonProps>(({ onClick }, ref) => {
   return (
-    <Button size="xs" icon={<FontAwesomeIcon icon={faPlus} />} onClick={onClick} ref={ref}>
+    <Button size="xs" icon={<Icon type="plus" />} onClick={onClick} ref={ref}>
       <FormattedMessage id="admin.newConnector" />
     </Button>
   );

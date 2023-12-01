@@ -1,9 +1,8 @@
-import { faEdit } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Meta, StoryFn } from "@storybook/react";
 import { useState } from "react";
 
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 
 import { ListBox, ListBoxProps } from "./ListBox";
 
@@ -40,7 +39,7 @@ const options = [
   {
     label: "one",
     value: 1,
-    icon: <FontAwesomeIcon icon={faEdit} />,
+    icon: <Icon type="pencil" />,
   },
   {
     label: "two",

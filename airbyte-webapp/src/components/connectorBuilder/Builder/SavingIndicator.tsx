@@ -1,10 +1,9 @@
-import { faCaretDown, faCheck } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useEffect, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
@@ -60,7 +59,7 @@ function getMessage(savingState: SavingState, displayedVersion: number | undefin
   }
   return (
     <FlexContainer gap="sm" alignItems="center">
-      <FontAwesomeIcon icon={faCheck} />
+      <Icon type="check" />
       <FlexItem>
         {displayedVersion ? <>v{displayedVersion}</> : <FormattedMessage id="connectorBuilder.loadingState.saved" />}
       </FlexItem>
@@ -114,7 +113,7 @@ export const SavingIndicator: React.FC = () => {
         onClick={() => {
           setChangeInProgress(true);
         }}
-        icon={<FontAwesomeIcon icon={faCaretDown} />}
+        icon={<Icon type="chevronDown" />}
         iconPosition="right"
       >
         {message}

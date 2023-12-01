@@ -1,5 +1,3 @@
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import React, { useEffect, useRef, useState } from "react";
 import { FormattedMessage, FormattedNumber, useIntl } from "react-intl";
@@ -10,6 +8,7 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { ExternalLink, Link } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
@@ -132,7 +131,7 @@ export const RemainingCredits: React.FC = () => {
               size="xs"
               onClick={showCreditsModal}
               isLoading={isWaitingForCredits}
-              icon={<FontAwesomeIcon icon={faPlus} />}
+              icon={<Icon type="plus" />}
             >
               <FormattedMessage id="credits.buyCredits" />
             </Button>

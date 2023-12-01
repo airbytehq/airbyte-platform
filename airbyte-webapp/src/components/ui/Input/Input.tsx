@@ -1,9 +1,9 @@
-import { faEye, faEyeSlash } from "@fortawesome/free-regular-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import React, { ReactNode, useCallback, useImperativeHandle, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { useToggle } from "react-use";
+
+import { Icon } from "components/ui/Icon";
 
 import styles from "./Input.module.scss";
 import { Button } from "../Button";
@@ -115,14 +115,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               focusOnInputElement();
             }}
             tabIndex={-1}
-            size="xs"
             type="button"
             variant="clear"
             aria-label={formatMessage({
               id: `ui.input.${isContentVisible ? "hide" : "show"}Password`,
             })}
             data-testid="toggle-password-visibility-button"
-            icon={<FontAwesomeIcon icon={isContentVisible ? faEyeSlash : faEye} fixedWidth />}
+            icon={<Icon type={isContentVisible ? "eyeSlash" : "eye"} />}
           />
         ) : null}
       </div>

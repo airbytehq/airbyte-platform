@@ -107,7 +107,7 @@ const DiscountMessage: React.FC<DiscountMessageProps> = ({ maximum, minimum, dis
   return (
     <FlexContainer gap="sm" alignItems="center">
       <Icon
-        type={isActive ? "checkCircle" : "info"}
+        type={isActive ? "successOutline" : "infoOutline"}
         color={isActive && (!maximum || quantity < maximum) ? "success" : "disabled"}
       />
       <Text size="sm" color={isActive && (!maximum || quantity < maximum) ? "green600" : "grey600"}>

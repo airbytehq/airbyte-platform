@@ -4,8 +4,8 @@ import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
-import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Table } from "components/ui/Table";
@@ -95,7 +95,7 @@ export const UsagePerConnectionTable: React.FC = () => {
               [styles.deleted]: props.row.original.connection.status === ConnectionStatus.deprecated,
             })}
           >
-            <ArrowRightIcon />
+            <Icon type="arrowRight" />
           </div>
         ),
         enableSorting: false,

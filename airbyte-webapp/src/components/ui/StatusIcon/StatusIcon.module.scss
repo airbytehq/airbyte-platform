@@ -2,17 +2,16 @@
 @use "scss/colors";
 @use "scss/mixins";
 
-$sm-width: 12px;
+$sm-width: 14px;
 $md-width: 20px;
-$lg-width: 40px;
+$lg-width: 46px;
 
 // sizes
 
 .sm {
-  font-size: 7px;
+  font-size: 12px;
 
   & .icon {
-    padding: variables.$spacing-xs;
     width: $sm-width;
     height: $sm-width;
   }
@@ -31,11 +30,10 @@ $lg-width: 40px;
 }
 
 .md {
-  font-size: 12px;
+  font-size: 20px;
 
   & .icon {
     width: $md-width;
-    padding: variables.$spacing-sm;
     height: $md-width;
   }
 
@@ -56,7 +54,6 @@ $lg-width: 40px;
   font-size: 24px;
 
   & .icon {
-    padding: variables.$spacing-md;
     width: $lg-width;
     height: $lg-width;
   }
@@ -76,7 +73,6 @@ $lg-width: 40px;
 
 .container {
   border-radius: variables.$border-radius-pill;
-  background-color: colors.$red;
   color: colors.$foreground;
   width: fit-content;
 
@@ -99,21 +95,21 @@ $lg-width: 40px;
 // backgrounds
 
 .success {
-  background-color: colors.$green;
+  color: colors.$green;
 }
 
 .warning {
-  background-color: colors.$yellow;
+  color: colors.$yellow;
 }
 
 .error {
-  background-color: colors.$red;
+  color: colors.$red;
 }
 
 .default {
-  background-color: colors.$grey;
+  color: colors.$grey;
 }
 
 .none {
-  background: none;
+  color: none;
 }

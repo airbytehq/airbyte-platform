@@ -1,5 +1,3 @@
-import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { load, YAMLException } from "js-yaml";
 import lowerCase from "lodash/lowerCase";
 import startCase from "lodash/startCase";
@@ -179,7 +177,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
       </FlexContainer>
       <ExternalLink href={links.connectorBuilderTutorial}>
         <FlexContainer alignItems="center" gap="sm">
-          <Icon type="docs" size="lg" />
+          <Icon type="docs" />
           <FormattedMessage id="connectorBuilder.createPage.tutorialPrompt" />
         </FlexContainer>
       </ExternalLink>
@@ -240,7 +238,7 @@ const Tile: React.FC<TileProps> = ({ image, title, description, buttonText, butt
         </FlexContainer>
         <Button onClick={onClick} {...buttonProps} data-testid={dataTestId}>
           <FlexContainer direction="row" alignItems="center" gap="md" className={styles.tileButton}>
-            <FontAwesomeIcon icon={faArrowRight} />
+            <Icon type="arrowRight" />
             <FormattedMessage id={buttonText} />
           </FlexContainer>
         </Button>

@@ -1,9 +1,9 @@
-import { faEye } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import { useCallback, useMemo, useRef } from "react";
 import { FormattedMessage } from "react-intl";
 import { useToggle, useUpdateEffect } from "react-use";
+
+import { Icon } from "components/ui/Icon";
 
 import styles from "./SecretTextArea.module.scss";
 import { FileUpload } from "../FileUpload/FileUpload";
@@ -98,7 +98,7 @@ export const SecretTextArea: React.FC<SecretTextAreaProps> = ({
               disabled={disabled}
               data-testid="secretTextArea-visibilityButton"
             >
-              <FontAwesomeIcon icon={faEye} className={styles.icon} fixedWidth />
+              <Icon type="eye" className={styles.icon} />
               {hiddenMessage || <FormattedMessage id="ui.secretTextArea.hidden" />}
             </button>
             <input

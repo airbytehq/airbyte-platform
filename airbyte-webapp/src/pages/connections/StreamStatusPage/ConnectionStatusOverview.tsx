@@ -38,7 +38,11 @@ export const ConnectionStatusOverview: React.FC = () => {
           <FormattedMessage id={MESSAGE_BY_STATUS[status]} />
         </span>
         {status === ConnectionStatusIndicatorStatus.OnTrack && (
-          <Tooltip control={<Icon type="info" color="action" className={styles.onTrackInfo} />} placement="top">
+          <Tooltip
+            containerClassName={styles.onTrackInfo}
+            control={<Icon type="infoOutline" color="action" size="sm" />}
+            placement="top"
+          >
             <FormattedMessage
               id={
                 lastSyncJobStatus === JobStatus.failed

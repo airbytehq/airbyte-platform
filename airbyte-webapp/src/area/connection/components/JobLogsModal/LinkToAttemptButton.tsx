@@ -1,10 +1,9 @@
-import { faLink } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useDebounce } from "react-use";
 
 import { Button } from "components/ui/Button";
+import { Icon } from "components/ui/Icon";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { buildAttemptLink } from "area/connection/utils/attemptLink";
@@ -40,7 +39,7 @@ export const LinkToAttemptButton: React.FC<Props> = ({ jobId, attemptId }) => {
           onClick={onCopyLink}
           title={formatMessage({ id: "connection.copyLogLink" })}
           aria-label={formatMessage({ id: "connection.copyLogLink" })}
-          icon={<FontAwesomeIcon icon={faLink} />}
+          icon={<Icon type="link" />}
         />
       }
     >

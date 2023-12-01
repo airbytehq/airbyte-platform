@@ -1,9 +1,8 @@
-import { faUser } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
 
@@ -29,7 +28,7 @@ export const BuilderInputPlaceholder = (props: BuilderFieldProps) => {
           {tooltip && <InfoTooltip placement="top-start">{tooltip}</InfoTooltip>}
         </FlexContainer>
       </FlexItem>
-      <Tooltip control={<FontAwesomeIcon icon={faUser} className={styles.tooltipTrigger} />}>
+      <Tooltip control={<Icon type="user" className={styles.tooltipTrigger} />}>
         <FormattedMessage id="connectorBuilder.placeholder.label" />
         <br />
         <Button

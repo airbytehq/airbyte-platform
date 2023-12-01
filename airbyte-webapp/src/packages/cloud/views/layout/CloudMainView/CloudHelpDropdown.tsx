@@ -1,17 +1,12 @@
-import { faCalendarCheck, faQuestionCircle } from "@fortawesome/free-regular-svg-icons";
-import { faUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { DocsIcon } from "components/icons/DocsIcon";
 import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
+import { Icon } from "components/ui/Icon";
 
 import { links } from "core/utils/links";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { useZendesk } from "packages/cloud/services/thirdParty/zendesk";
-import ChatIcon from "views/layout/SideBar/components/ChatIcon";
 import { NavDropdown } from "views/layout/SideBar/components/NavDropdown";
-import StatusIcon from "views/layout/SideBar/components/StatusIcon";
 
 export const CloudHelpDropdown: React.FC = () => {
   const { formatMessage } = useIntl();
@@ -24,13 +19,13 @@ export const CloudHelpDropdown: React.FC = () => {
         {
           as: "a",
           href: links.supportPortal,
-          icon: <FontAwesomeIcon icon={faUpRightFromSquare} size="sm" />,
+          icon: <Icon type="share" />,
           displayName: formatMessage({ id: "sidebar.supportPortal" }),
         },
         {
           as: "button",
           value: "inApp",
-          icon: <ChatIcon />,
+          icon: <Icon type="chat" />,
           displayName: formatMessage({ id: "sidebar.inAppHelpCenter" }),
         },
         {
@@ -39,26 +34,26 @@ export const CloudHelpDropdown: React.FC = () => {
         {
           as: "a",
           href: links.docsLink,
-          icon: <DocsIcon />,
+          icon: <Icon type="docs" />,
           displayName: formatMessage({ id: "sidebar.documentation" }),
         },
         {
           as: "a",
           href: links.statusLink,
-          icon: <StatusIcon />,
+          icon: <Icon type="pulse" />,
           displayName: formatMessage({ id: "sidebar.status" }),
         },
         {
           as: "a",
           internal: true,
           href: CloudRoutes.UpcomingFeatures,
-          icon: <FontAwesomeIcon icon={faCalendarCheck} />,
+          icon: <Icon type="calendarCheck" />,
           displayName: formatMessage({ id: "sidebar.upcomingFeatures" }),
         },
       ]}
       onChange={handleChatUs}
       label={<FormattedMessage id="sidebar.help" />}
-      icon={<FontAwesomeIcon icon={faQuestionCircle} style={{ height: "22px" }} />}
+      icon={<Icon type="question" />}
     />
   );
 };

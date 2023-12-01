@@ -1,9 +1,8 @@
-import { faRedoAlt } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
+import { Icon } from "components/ui/Icon";
 
 import { useGetConnectorsOutOfDate, useUpdateAllConnectors } from "hooks/services/useConnector";
 
@@ -36,7 +35,7 @@ const UpgradeAllButton: React.FC<UpdateAllButtonProps> = ({ connectorType }) => 
       onClick={handleUpdateAllConnectors}
       isLoading={isLoading}
       disabled={!hasNewVersion}
-      icon={<FontAwesomeIcon icon={faRedoAlt} />}
+      icon={<Icon type="reset" />}
     >
       <FormattedMessage id="admin.upgradeAll" />
     </Button>

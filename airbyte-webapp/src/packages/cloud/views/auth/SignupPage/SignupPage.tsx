@@ -1,6 +1,3 @@
-import { faGoogle } from "@fortawesome/free-brands-svg-icons";
-import { faCheckCircle, faEnvelope } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 import { useSearchParams } from "react-router-dom";
@@ -9,6 +6,7 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
@@ -25,7 +23,7 @@ interface SignupPageProps {
 const Detail: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   return (
     <FlexContainer gap="sm" alignItems="center" className={styles.detailTextContainer}>
-      <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
+      <Icon type="statusSuccess" className={styles.checkIcon} />
       {children}
     </FlexContainer>
   );
@@ -67,24 +65,14 @@ const SignupPage: React.FC<SignupPageProps> = () => {
       {searchParams.get("method") === "email" ? (
         <>
           {signUp && <SignupForm signUp={signUp} />}
-          <Button
-            onClick={() => setSignupMethod()}
-            variant="clear"
-            size="sm"
-            icon={<FontAwesomeIcon icon={faGoogle} />}
-          >
+          <Button onClick={() => setSignupMethod()} variant="clear" size="sm" icon={<Icon type="google" />}>
             <FormattedMessage id="signup.method.oauth" />
           </Button>
         </>
       ) : (
         <>
           {loginWithOAuth && <OAuthLogin loginWithOAuth={loginWithOAuth} />}
-          <Button
-            onClick={() => setSignupMethod("email")}
-            variant="clear"
-            size="sm"
-            icon={<FontAwesomeIcon icon={faEnvelope} />}
-          >
+          <Button onClick={() => setSignupMethod("email")} variant="clear" size="sm" icon={<Icon type="ticket" />}>
             <FormattedMessage id="signup.method.email" />
           </Button>
         </>

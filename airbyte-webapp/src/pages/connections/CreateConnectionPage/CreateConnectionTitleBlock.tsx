@@ -197,7 +197,7 @@ export const CreateConnectionTitleBlock: React.FC = () => {
             return (
               <Fragment key={step}>
                 <StepItem state={stepStatuses[step]} step={step} value={idx + 1} />
-                {idx !== Object.keys(stepStatuses).length - 1 && <Icon type="chevronRight" size="lg" />}
+                {idx !== Object.keys(stepStatuses).length - 1 && <Icon type="chevronRight" color="disabled" />}
               </Fragment>
             );
           })}
