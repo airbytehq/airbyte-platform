@@ -11,6 +11,7 @@ import {
   useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
+import styles from "./PublishButton.module.scss";
 import { PublishModal } from "./PublishModal";
 import { useBuilderWatch } from "./types";
 
@@ -69,7 +70,11 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
   return (
     <div className={className}>
       {tooltipContent !== undefined ? (
-        <Tooltip control={publishButton} placement={mode === "yaml" ? "left" : "top"}>
+        <Tooltip
+          containerClassName={styles.tooltipContainer}
+          control={publishButton}
+          placement={mode === "yaml" ? "left" : "top"}
+        >
           {tooltipContent}
         </Tooltip>
       ) : (
