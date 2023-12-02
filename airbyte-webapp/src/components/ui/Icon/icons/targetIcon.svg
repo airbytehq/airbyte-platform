@@ -1,7 +1,8 @@
-<svg width="24" height="24" fill="none" data-icon="target" role="img" viewBox="0 0 24 24">
+<svg fill="none" viewBox="0 0 24 24" data-icon="target" role="img">
     <g clip-path="url(#a)">
         <path fill="currentColor" d="m13 1 .001 3.062A8.004 8.004 0 0 1 19.938 11H23v2l-3.062.001a8.004 8.004 0 0 1-6.937 6.937L13 23h-2v-3.062a8.004 8.004 0 0 1-6.938-6.937L1 13v-2h3.062A8.004 8.004 0 0 1 11 4.062V1h2Zm-1 5a6 6 0 1 0 0 12 6 6 0 0 0 0-12Zm0 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z"/>
     </g>
+    <path fill="currentColor" d="M21 11h-1.07A8 8 0 0 0 13 4.07V3a1 1 0 0 0-2 0v1.07A8 8 0 0 0 4.07 11H3a1 1 0 0 0 0 2h1.07A8 8 0 0 0 11 19.93V21a1 1 0 0 0 2 0v-1.07A8 8 0 0 0 19.93 13H21a1 1 0 0 0 0-2Zm-4 2h.91A6 6 0 0 1 13 17.91V17a1 1 0 0 0-2 0v.91A6 6 0 0 1 6.09 13H7a1 1 0 0 0 0-2h-.91A6 6 0 0 1 11 6.09V7a1 1 0 0 0 2 0v-.91A6 6 0 0 1 17.91 11H17a1 1 0 0 0 0 2Zm-5-2a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/>
     <defs>
         <clipPath id="a">
             <path fill="currentColor" d="M0 0h24v24H0z"/>

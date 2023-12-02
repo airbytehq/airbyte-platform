@@ -1,5 +1,3 @@
-import { faEllipsisV } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import { Suspense, useCallback, useRef } from "react";
 import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
@@ -9,6 +7,7 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
@@ -231,7 +230,7 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
         ]}
         onChange={handleClick}
       >
-        {() => <Button variant="clear" icon={<FontAwesomeIcon icon={faEllipsisV} />} />}
+        {() => <Button variant="clear" icon={<Icon type="options" />} />}
       </DropdownMenu>
     </div>
   );

@@ -16,7 +16,11 @@ export const GlobalConfigView: React.FC = () => {
   return (
     <BuilderConfigView heading={formatMessage({ id: "connectorBuilder.globalConfiguration" })}>
       {/* Not using intl for the labels and tooltips in this component in order to keep maintainence simple */}
-      <BuilderTitle path="name" label="Connector Name" size="lg" />
+      <BuilderTitle
+        path="name"
+        label={formatMessage({ id: "connectorBuilder.globalConfiguration.connectorName" })}
+        size="lg"
+      />
       <BuilderCard className={styles.content}>
         <BuilderFieldWithInputs
           type="string"

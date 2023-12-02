@@ -1,5 +1,3 @@
-import { faSliders, faUser } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classnames from "classnames";
 import React from "react";
 import { useFormContext } from "react-hook-form";
@@ -106,7 +104,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
             });
           }}
         >
-          <FontAwesomeIcon icon={faSliders} />
+          <Icon type="parameters" />
           <Text className={styles.streamViewText}>
             <FormattedMessage id="connectorBuilder.globalConfiguration" />
           </Text>
@@ -123,7 +121,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
             });
           }}
         >
-          <FontAwesomeIcon icon={faUser} />
+          <Icon type="user" />
           <Text className={styles.streamViewText}>
             <FormattedMessage
               id="connectorBuilder.userInputs"

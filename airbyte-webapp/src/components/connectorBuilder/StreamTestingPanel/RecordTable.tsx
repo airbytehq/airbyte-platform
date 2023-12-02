@@ -1,10 +1,9 @@
-import { faExpand } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Modal, ModalBody } from "components/ui/Modal";
 import { Pre } from "components/ui/Pre";
 import { Table } from "components/ui/Table";
@@ -57,7 +56,7 @@ const ExpandableDataCell = ({ value, selectValue }: { value: unknown; selectValu
     <FlexContainer className={styles.cell}>
       <div className={styles.content}>{stringRepresentation}</div>
       <Button size="xs" variant="clear" className={styles.button} onClick={selectValue}>
-        <FontAwesomeIcon icon={faExpand} />
+        <Icon type="expand" size="sm" />
       </Button>
     </FlexContainer>
   );

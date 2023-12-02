@@ -1,7 +1,7 @@
-import { faCheck, faMinus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import React, { InputHTMLAttributes } from "react";
+
+import { Icon } from "components/ui/Icon";
 
 import styles from "./CheckBox.module.scss";
 
@@ -15,7 +15,7 @@ export interface CheckBoxProps extends InputHTMLAttributes<HTMLInputElement> {
 export const CheckBox: React.FC<CheckBoxProps> = ({ indeterminate, checkboxSize = "lg", ...inputProps }) => {
   const { checked, disabled, className } = inputProps;
 
-  const checkMarkSize = checkboxSize === "lg" ? "sm" : "xs";
+  const checkMarkSize = checkboxSize === "lg" ? "md" : "sm";
 
   return (
     <label
@@ -33,9 +33,9 @@ export const CheckBox: React.FC<CheckBoxProps> = ({ indeterminate, checkboxSize 
     >
       <input type="checkbox" aria-checked={indeterminate ? "mixed" : checked} {...inputProps} />
       {indeterminate ? (
-        <FontAwesomeIcon size={checkMarkSize} icon={faMinus} />
+        <Icon type="minus" size={checkMarkSize} />
       ) : (
-        checked && <FontAwesomeIcon size={checkMarkSize} icon={faCheck} />
+        checked && <Icon type="check" size={checkMarkSize} />
       )}
     </label>
   );

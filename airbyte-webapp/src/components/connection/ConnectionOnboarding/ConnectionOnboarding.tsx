@@ -1,11 +1,10 @@
-import { faCircleQuestion } from "@fortawesome/free-regular-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
@@ -19,7 +18,6 @@ import { ConnectionRoutePaths, DestinationPaths, RoutePaths } from "pages/routeP
 
 import { AirbyteIllustration, HighlightIndex } from "./AirbyteIllustration";
 import styles from "./ConnectionOnboarding.module.scss";
-import PlusIcon from "./plusIcon.svg?react";
 import { SOURCE_DEFINITION_PARAM } from "../CreateConnection/CreateNewSource";
 import { NEW_SOURCE_TYPE, SOURCE_TYPE_PARAM } from "../CreateConnection/SelectSource";
 
@@ -134,7 +132,7 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
             <Tooltip
               control={
                 <span>
-                  <FormattedMessage id="connection.onboarding.sources" /> <FontAwesomeIcon icon={faCircleQuestion} />
+                  <FormattedMessage id="connection.onboarding.sources" /> <Icon type="question" size="sm" />
                 </span>
               }
             >
@@ -182,7 +180,7 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
                   alignItems="center"
                   justifyContent="center"
                 >
-                  <PlusIcon className={styles.moreIcon} />
+                  <Icon type="plus" className={styles.moreIcon} />
                 </FlexContainer>
               </Link>
             }
@@ -202,8 +200,7 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
             <Tooltip
               control={
                 <span>
-                  <FormattedMessage id="connection.onboarding.destinations" />{" "}
-                  <FontAwesomeIcon icon={faCircleQuestion} />
+                  <FormattedMessage id="connection.onboarding.destinations" /> <Icon type="question" size="sm" />
                 </span>
               }
             >
@@ -257,7 +254,7 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
                   alignItems="center"
                   justifyContent="center"
                 >
-                  <PlusIcon className={styles.moreIcon} />
+                  <Icon type="plus" className={styles.moreIcon} />
                 </FlexContainer>
               </Link>
             }

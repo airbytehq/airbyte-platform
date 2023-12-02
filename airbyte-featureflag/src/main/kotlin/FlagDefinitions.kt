@@ -31,8 +31,6 @@ object ContainerOrchestratorJavaOpts : Temporary<String>(key = "container-orches
 
 object NewTrialPolicyEnabled : Temporary<Boolean>(key = "billing.newTrialPolicy", default = false)
 
-object AutoPropagateNewStreams : Temporary<Boolean>(key = "autopropagate-new-streams.enabled", default = false)
-
 object CanonicalCatalogSchema : Temporary<Boolean>(key = "canonical-catalog-schema", default = false)
 
 object CatalogCanonicalJson : Temporary<Boolean>(key = "catalog-canonical-json", default = false)

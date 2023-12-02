@@ -9,6 +9,7 @@ import io.airbyte.commons.json.Jsons;
 import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Singleton;
 import java.util.Optional;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -17,6 +18,12 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 @Slf4j
 public class AirbyteHttpRequestFieldExtractor {
+
+  // For some APIs we asked for a list of ids, such as workspace IDs and connection IDs. We will
+  // validate if user has permission
+  // to all of them.
+  private static final Set<String> ARRAY_FIELDS =
+      Set.of(AuthenticationFields.WORKSPACE_IDS_FIELD_NAME, AuthenticationFields.CONNECTION_IDS_FIELD_NAME);
 
   /**
    * Extracts the requested ID from the HTTP request, if present.
@@ -48,7 +55,7 @@ public class AirbyteHttpRequestFieldExtractor {
   }
 
   private Optional<String> extract(JsonNode jsonNode, String idFieldName) {
-    if (idFieldName.equals(AuthenticationFields.WORKSPACE_IDS_FIELD_NAME)) {
+    if (ARRAY_FIELDS.contains(idFieldName)) {
       log.debug("Try to extract list of ids for field {}", idFieldName);
       return Optional.ofNullable(jsonNode.get(idFieldName))
           .map(Jsons::serialize)

@@ -25,6 +25,7 @@ public final class AuthenticationHttpHeaders {
    * HTTP header that contains the connection ID for authorization purposes.
    */
   public static final String CONNECTION_ID_HEADER = AIRBYTE_HEADER_PREFIX + "Connection-Id";
+  public static final String CONNECTION_IDS_HEADER = AIRBYTE_HEADER_PREFIX + "Connection-Ids";
 
   /**
    * HTTP header that contains the destination ID for authorization purposes.

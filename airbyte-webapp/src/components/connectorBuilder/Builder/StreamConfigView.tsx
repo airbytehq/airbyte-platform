@@ -1,5 +1,3 @@
-import { faTrashCan, faCopy } from "@fortawesome/free-regular-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import React, { useCallback, useMemo, useState } from "react";
 import { get, useFormContext, useFormState } from "react-hook-form";
@@ -8,6 +6,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import Indicator from "components/Indicator";
 import { Button } from "components/ui/Button";
 import { CodeEditor } from "components/ui/CodeEditor";
+import { Icon } from "components/ui/Icon";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
@@ -56,7 +55,11 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
       className={hasMultipleStreams ? styles.multiStreams : undefined}
     >
       {/* Not using intl for the labels and tooltips in this component in order to keep maintainence simple */}
-      <BuilderTitle path={streamFieldPath("name")} label="Stream Name" size="md" />
+      <BuilderTitle
+        path={streamFieldPath("name")}
+        label={formatMessage({ id: "connectorBuilder.streamConfigView.name" })}
+        size="md"
+      />
       <StreamControls
         streamNum={streamNum}
         selectedTab={selectedTab}
@@ -80,15 +83,15 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             <BuilderField
               type="array"
               path={streamFieldPath("fieldPointer")}
-              label="Record Selector"
+              label={formatMessage({ id: "connectorBuilder.streamConfigView.fieldPointer" })}
               manifestPath="DpathExtractor.properties.field_path"
               optional
             />
             <BuilderField
               type="array"
               path={streamFieldPath("primaryKey")}
-              label="Primary Key"
-              tooltip="The field to be used to distinguish unique records. Can either be a single field or a list of fields representing a composite key."
+              label={formatMessage({ id: "connectorBuilder.streamConfigView.primaryKey.label" })}
+              tooltip={formatMessage({ id: "connectorBuilder.streamConfigView.primaryKey.tooltip" })}
               directionalStyle={false}
               optional
             />
@@ -188,13 +191,13 @@ const StreamControls = ({
         initialValues={streams[streamNum]}
         button={
           <button className={styles.controlButton} type="button">
-            <FontAwesomeIcon icon={faCopy} />
+            <Icon type="copy" />
           </button>
         }
         modalTitle={formatMessage({ id: "connectorBuilder.copyStreamModal.title" }, { name: streams[streamNum].name })}
       />
       <button className={classNames(styles.deleteButton, styles.controlButton)} type="button" onClick={handleDelete}>
-        <FontAwesomeIcon icon={faTrashCan} />
+        <Icon type="trash" />
       </button>
     </div>
   );
@@ -258,7 +261,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
   return (
     <>
       <BuilderField
-        label="Automatically import detected schema"
+        label={formatMessage({ id: "connectorBuilder.autoImportSchema.label" })}
         path={autoImportSchemaFieldPath}
         type="boolean"
         tooltip={<FormattedMessage id="connectorBuilder.autoImportSchema.tooltip" values={{ br: () => <br /> }} />}

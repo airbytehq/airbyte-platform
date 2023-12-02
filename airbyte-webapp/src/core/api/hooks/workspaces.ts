@@ -1,4 +1,4 @@
-import { QueryObserverResult, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useLayoutEffect } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
@@ -116,13 +116,6 @@ export const useListWorkspacesAsyncQuery = () => {
   return () => listWorkspaces(requestOptions);
 };
 
-export function useListWorkspacesAsync(): QueryObserverResult<WorkspaceReadList> {
-  const queryKey = getListWorkspacesAsyncQueryKey();
-  const queryFn = useListWorkspacesAsyncQuery();
-
-  return useQuery(queryKey, queryFn);
-}
-
 export const getWorkspaceQueryKey = (workspaceId: string) => {
   return workspaceKeys.detail(workspaceId);
 };
@@ -199,18 +192,11 @@ export const useUpdateWorkspaceName = () => {
       onSuccess: (data) => {
         queryClient.setQueryData<WorkspaceRead>(workspaceKeys.detail(data.workspaceId), data);
         queryClient.setQueryData<WorkspaceReadList>(workspaceKeys.lists(), (old) => {
-          const list = old?.workspaces ?? [];
-          if (list.length === 0) {
-            return { workspaces: [data] };
-          }
-
-          const index = list.findIndex((item) => item.workspaceId === data.workspaceId);
-
-          if (index === -1) {
-            return { workspaces: list };
-          }
-
-          return { workspaces: [...list.slice(0, index), data, ...list.slice(index + 1)] };
+          return {
+            workspaces: old?.workspaces.map((workspace) => {
+              return workspace.workspaceId === data.workspaceId ? data : workspace;
+            }) ?? [data],
+          };
         });
       },
     }

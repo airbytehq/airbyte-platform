@@ -2,9 +2,9 @@ package io.airbyte.workload.handler
 
 import io.airbyte.db.instance.configs.jooq.generated.enums.WorkloadStatus
 import io.airbyte.workload.api.domain.WorkloadLabel
+import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
-import io.airbyte.workload.errors.NotModifiedException
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.Workload
 import io.mockk.Runs
@@ -97,7 +97,7 @@ class WorkloadHandlerImplTest {
   @Test
   fun `test create workload id conflict`() {
     every { workloadRepository.existsById(workloadId) }.returns(true)
-    assertThrows<NotModifiedException> { workloadHandler.createWorkload(workloadId, null, "", "", "US") }
+    assertThrows<ConflictException> { workloadHandler.createWorkload(workloadId, null, "", "", "US") }
   }
 
   @Test

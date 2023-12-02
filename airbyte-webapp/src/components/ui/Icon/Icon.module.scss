@@ -39,8 +39,12 @@ $iconClassname: "icon";
   }
 }
 
-$sizes: "xs" calc(1 / 2.618) 12% -6%, "sm" calc(1 / 1.618) 3% -13%, "md" 1 -6% -30%, "lg" 1.618 -27% -41%,
-  "xl" 2.618 -60% -73%;
+$sizes:
+  "xs" calc(1 / 1.618) 3% -13%,
+  "sm" 1 -6% -30%,
+  "md" 1.618 -27% -41%,
+  "lg" 2.618 -60% -73%,
+  "xl" 3.618 -90% -93%;
 
 @each $name, $sizeModifier, $verticalAlign, $verticalAlignWithBackground in $sizes {
   .#{$name} {

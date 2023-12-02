@@ -1,9 +1,8 @@
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { ReactElement, useMemo } from "react";
 import { useFieldArray } from "react-hook-form";
 
 import { Button } from "components/ui/Button";
+import { Icon } from "components/ui/Icon";
 import { RemoveButton } from "components/ui/RemoveButton/RemoveButton";
 
 import styles from "./BuilderList.module.scss";
@@ -44,7 +43,7 @@ export const BuilderList: React.FC<BuilderListProps> = ({ children, emptyItem, b
         <Button
           type="button"
           variant="secondary"
-          icon={<FontAwesomeIcon icon={faPlus} />}
+          icon={<Icon type="plus" />}
           onClick={() => {
             append({ ...emptyItem });
           }}

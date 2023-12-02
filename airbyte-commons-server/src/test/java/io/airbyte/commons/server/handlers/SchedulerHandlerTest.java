@@ -61,6 +61,7 @@ import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
+import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
@@ -1639,7 +1640,8 @@ class SchedulerHandlerTest {
 
     final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff =
         CatalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceVersion);
-    catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name(A_DIFFERENT_STREAM))
+    catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name(A_DIFFERENT_STREAM)
+        .supportedSyncModes(List.of(SyncMode.FULL_REFRESH)))
         .config(new AirbyteStreamConfiguration().selected(true)));
 
     final UUID workspaceId = source.getWorkspaceId();

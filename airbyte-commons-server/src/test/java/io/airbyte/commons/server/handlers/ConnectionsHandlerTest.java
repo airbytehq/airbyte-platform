@@ -11,10 +11,12 @@ import static io.airbyte.config.EnvConfigs.DEFAULT_FAILED_JOBS_IN_A_ROW_BEFORE_C
 import static io.airbyte.persistence.job.models.Job.REPLICATION_TYPES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -31,6 +33,8 @@ import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
+import io.airbyte.api.model.generated.ConnectionDataHistoryReadItem;
+import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.ConnectionSchedule;
@@ -78,6 +82,9 @@ import io.airbyte.config.FailureReason;
 import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.Geography;
 import io.airbyte.config.JobConfig;
+import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.JobOutput;
+import io.airbyte.config.JobOutput.OutputType;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.Schedule.TimeUnit;
@@ -88,7 +95,10 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
 import io.airbyte.config.StandardSync.Status;
+import io.airbyte.config.StandardSyncOutput;
+import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.SyncStats;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -98,6 +108,7 @@ import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptStatus;
+import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
@@ -110,8 +121,11 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -125,22 +139,45 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 class ConnectionsHandlerTest {
 
+  private static final Instant CURRENT_INSTANT = Instant.now();
+  private static final JobWithStatusAndTimestamp FAILED_JOB =
+      new JobWithStatusAndTimestamp(1, JobStatus.FAILED, CURRENT_INSTANT.getEpochSecond(), CURRENT_INSTANT.getEpochSecond());
+  private static final JobWithStatusAndTimestamp SUCCEEDED_JOB =
+      new JobWithStatusAndTimestamp(1, JobStatus.SUCCEEDED, CURRENT_INSTANT.getEpochSecond(), CURRENT_INSTANT.getEpochSecond());
+  private static final JobWithStatusAndTimestamp CANCELLED_JOB =
+      new JobWithStatusAndTimestamp(1, JobStatus.CANCELLED, CURRENT_INSTANT.getEpochSecond(), CURRENT_INSTANT.getEpochSecond());
+  private static final int MAX_FAILURE_JOBS_IN_A_ROW = DEFAULT_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE;
+  private static final int MAX_DAYS_OF_ONLY_FAILED_JOBS = DEFAULT_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE;
+  private static final int MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_WARNING = DEFAULT_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE / 2;
+  private static final String PRESTO_TO_HUDI = "presto to hudi";
+  private static final String PRESTO_TO_HUDI_PREFIX = "presto_to_hudi";
+  private static final String SOURCE_TEST = "source-test";
+  private static final String DESTINATION_TEST = "destination-test";
+  private static final String CURSOR1 = "cursor1";
+  private static final String CURSOR2 = "cursor2";
+  private static final String PK1 = "pk1";
+  private static final String PK2 = "pk2";
+  private static final String PK3 = "pk3";
+  private static final String STREAM1 = "stream1";
+  private static final String STREAM2 = "stream2";
+  private static final String AZKABAN_USERS = "azkaban_users";
+  private static final String CRON_TIMEZONE_UTC = "UTC";
+  private static final String TIMEZONE_LOS_ANGELES = "America/Los_Angeles";
+  private static final String CRON_EXPRESSION = "* */2 * * * ?";
+  private static final String STREAM_SELECTION_DATA = "null/users-data0";
   private JobPersistence jobPersistence;
   private ConfigRepository configRepository;
   private Supplier<UUID> uuidGenerator;
-
   private ConnectionsHandler connectionsHandler;
   private UUID workspaceId;
   private UUID sourceId;
   private UUID destinationId;
   private UUID sourceDefinitionId;
   private UUID destinationDefinitionId;
-
   private SourceConnection source;
   private DestinationConnection destination;
   private StandardSync standardSync;
@@ -159,33 +196,6 @@ class ConnectionsHandlerTest {
   private ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
   private JobNotifier jobNotifier;
   private Job job;
-
-  private static final Instant CURRENT_INSTANT = Instant.now();
-  private static final JobWithStatusAndTimestamp FAILED_JOB =
-      new JobWithStatusAndTimestamp(1, JobStatus.FAILED, CURRENT_INSTANT.getEpochSecond(), CURRENT_INSTANT.getEpochSecond());
-  private static final JobWithStatusAndTimestamp SUCCEEDED_JOB =
-      new JobWithStatusAndTimestamp(1, JobStatus.SUCCEEDED, CURRENT_INSTANT.getEpochSecond(), CURRENT_INSTANT.getEpochSecond());
-  private static final JobWithStatusAndTimestamp CANCELLED_JOB =
-      new JobWithStatusAndTimestamp(1, JobStatus.CANCELLED, CURRENT_INSTANT.getEpochSecond(), CURRENT_INSTANT.getEpochSecond());
-  private static final int MAX_FAILURE_JOBS_IN_A_ROW = DEFAULT_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE;
-  private static final int MAX_DAYS_OF_ONLY_FAILED_JOBS = DEFAULT_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE;
-  private static final int MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_WARNING = DEFAULT_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE / 2;
-
-  private static final String PRESTO_TO_HUDI = "presto to hudi";
-  private static final String PRESTO_TO_HUDI_PREFIX = "presto_to_hudi";
-  private static final String SOURCE_TEST = "source-test";
-  private static final String DESTINATION_TEST = "destination-test";
-  private static final String CURSOR1 = "cursor1";
-  private static final String CURSOR2 = "cursor2";
-  private static final String PK1 = "pk1";
-  private static final String PK2 = "pk2";
-  private static final String PK3 = "pk3";
-  private static final String STREAM1 = "stream1";
-  private static final String STREAM2 = "stream2";
-  private static final String AZKABAN_USERS = "azkaban_users";
-  private static final String CRON_TIMEZONE_UTC = "UTC";
-  private static final String CRON_EXPRESSION = "* */2 * * * ?";
-  private static final String STREAM_SELECTION_DATA = "null/users-data0";
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -326,6 +336,279 @@ class ConnectionsHandlerTest {
       when(configRepository.getStandardSync(connectionId)).thenReturn(standardSync);
       when(jobPersistence.getLastReplicationJob(connectionId)).thenReturn(Optional.of(job));
       when(jobPersistence.getFirstReplicationJob(connectionId)).thenReturn(Optional.of(job));
+    }
+
+    @Test
+    void testGetConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
+      when(configRepository.getStandardSync(standardSync.getConnectionId()))
+          .thenReturn(standardSync);
+
+      final ConnectionRead actualConnectionRead = connectionsHandler.getConnection(standardSync.getConnectionId());
+
+      assertEquals(ConnectionHelpers.generateExpectedConnectionRead(standardSync), actualConnectionRead);
+    }
+
+    @Test
+    void testListConnectionsForWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
+      when(configRepository.listWorkspaceStandardSyncs(source.getWorkspaceId(), false))
+          .thenReturn(Lists.newArrayList(standardSync));
+      when(configRepository.listWorkspaceStandardSyncs(source.getWorkspaceId(), true))
+          .thenReturn(Lists.newArrayList(standardSync, standardSyncDeleted));
+      when(configRepository.getStandardSync(standardSync.getConnectionId()))
+          .thenReturn(standardSync);
+
+      final WorkspaceIdRequestBody workspaceIdRequestBody = new WorkspaceIdRequestBody().workspaceId(source.getWorkspaceId());
+      final ConnectionReadList actualConnectionReadList = connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody);
+      assertEquals(1, actualConnectionReadList.getConnections().size());
+      assertEquals(
+          ConnectionHelpers.generateExpectedConnectionRead(standardSync),
+          actualConnectionReadList.getConnections().get(0));
+
+      final ConnectionReadList actualConnectionReadListWithDeleted = connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody, true);
+      final List<ConnectionRead> connections = actualConnectionReadListWithDeleted.getConnections();
+      assertEquals(2, connections.size());
+      assertEquals(ApiPojoConverters.internalToConnectionRead(standardSync), connections.get(0));
+      assertEquals(ApiPojoConverters.internalToConnectionRead(standardSyncDeleted), connections.get(1));
+
+    }
+
+    @Test
+    void testListConnections() throws JsonValidationException, ConfigNotFoundException, IOException {
+      when(configRepository.listStandardSyncs())
+          .thenReturn(Lists.newArrayList(standardSync));
+      when(configRepository.getSourceConnection(source.getSourceId()))
+          .thenReturn(source);
+      when(configRepository.getStandardSync(standardSync.getConnectionId()))
+          .thenReturn(standardSync);
+
+      final ConnectionReadList actualConnectionReadList = connectionsHandler.listConnections();
+
+      assertEquals(
+          ConnectionHelpers.generateExpectedConnectionRead(standardSync),
+          actualConnectionReadList.getConnections().get(0));
+    }
+
+    @Test
+    void testListConnectionsByActorDefinition() throws IOException {
+      when(configRepository.listConnectionsByActorDefinitionIdAndType(sourceDefinitionId, ActorType.SOURCE.value(), false))
+          .thenReturn(Lists.newArrayList(standardSync));
+      when(configRepository.listConnectionsByActorDefinitionIdAndType(destinationDefinitionId, ActorType.DESTINATION.value(), false))
+          .thenReturn(Lists.newArrayList(standardSync2));
+
+      final ConnectionReadList connectionReadListForSourceDefinitionId = connectionsHandler.listConnectionsForActorDefinition(
+          new ActorDefinitionRequestBody()
+              .actorDefinitionId(sourceDefinitionId)
+              .actorType(io.airbyte.api.model.generated.ActorType.SOURCE));
+
+      final ConnectionReadList connectionReadListForDestinationDefinitionId = connectionsHandler.listConnectionsForActorDefinition(
+          new ActorDefinitionRequestBody()
+              .actorDefinitionId(destinationDefinitionId)
+              .actorType(io.airbyte.api.model.generated.ActorType.DESTINATION));
+
+      assertEquals(
+          List.of(ConnectionHelpers.generateExpectedConnectionRead(standardSync)),
+          connectionReadListForSourceDefinitionId.getConnections());
+      assertEquals(
+          List.of(ConnectionHelpers.generateExpectedConnectionRead(standardSync2)),
+          connectionReadListForDestinationDefinitionId.getConnections());
+    }
+
+    @Test
+    void testSearchConnections() throws JsonValidationException, ConfigNotFoundException, IOException {
+      final ConnectionRead connectionRead1 = ConnectionHelpers.connectionReadFromStandardSync(standardSync);
+      final StandardSync standardSync2 = new StandardSync()
+          .withConnectionId(UUID.randomUUID())
+          .withName("test connection")
+          .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT)
+          .withNamespaceFormat("ns_format")
+          .withPrefix("test_prefix")
+          .withStatus(StandardSync.Status.ACTIVE)
+          .withCatalog(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog())
+          .withSourceId(sourceId)
+          .withDestinationId(destinationId)
+          .withOperationIds(List.of(operationId))
+          .withManual(true)
+          .withResourceRequirements(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS)
+          .withGeography(Geography.US)
+          .withBreakingChange(false)
+          .withNotifySchemaChanges(false)
+          .withNotifySchemaChangesByEmail(true);
+      final ConnectionRead connectionRead2 = ConnectionHelpers.connectionReadFromStandardSync(standardSync2);
+      final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+          .withName(SOURCE_TEST)
+          .withSourceDefinitionId(UUID.randomUUID());
+      final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+          .withName(DESTINATION_TEST)
+          .withDestinationDefinitionId(UUID.randomUUID());
+
+      when(configRepository.listStandardSyncs())
+          .thenReturn(Lists.newArrayList(standardSync, standardSync2));
+      when(configRepository.getSourceConnection(source.getSourceId()))
+          .thenReturn(source);
+      when(configRepository.getDestinationConnection(destination.getDestinationId()))
+          .thenReturn(destination);
+      when(configRepository.getStandardSync(standardSync.getConnectionId()))
+          .thenReturn(standardSync);
+      when(configRepository.getStandardSync(standardSync2.getConnectionId()))
+          .thenReturn(standardSync2);
+      when(configRepository.getStandardSourceDefinition(source.getSourceDefinitionId()))
+          .thenReturn(sourceDefinition);
+      when(configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId()))
+          .thenReturn(destinationDefinition);
+
+      final ConnectionSearch connectionSearch = new ConnectionSearch();
+      connectionSearch.namespaceDefinition(NamespaceDefinitionType.SOURCE);
+      ConnectionReadList actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
+      assertEquals(1, actualConnectionReadList.getConnections().size());
+      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
+
+      connectionSearch.namespaceDefinition(null);
+      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
+      assertEquals(2, actualConnectionReadList.getConnections().size());
+      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
+      assertEquals(connectionRead2, actualConnectionReadList.getConnections().get(1));
+
+      final SourceSearch sourceSearch = new SourceSearch().sourceId(UUID.randomUUID());
+      connectionSearch.setSource(sourceSearch);
+      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
+      assertEquals(0, actualConnectionReadList.getConnections().size());
+
+      sourceSearch.sourceId(connectionRead1.getSourceId());
+      connectionSearch.setSource(sourceSearch);
+      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
+      assertEquals(2, actualConnectionReadList.getConnections().size());
+      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
+      assertEquals(connectionRead2, actualConnectionReadList.getConnections().get(1));
+
+      final DestinationSearch destinationSearch = new DestinationSearch();
+      connectionSearch.setDestination(destinationSearch);
+      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
+      assertEquals(2, actualConnectionReadList.getConnections().size());
+      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
+      assertEquals(connectionRead2, actualConnectionReadList.getConnections().get(1));
+
+      destinationSearch.connectionConfiguration(Jsons.jsonNode(Collections.singletonMap("apiKey", "not-found")));
+      connectionSearch.setDestination(destinationSearch);
+      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
+      assertEquals(0, actualConnectionReadList.getConnections().size());
+
+      destinationSearch.connectionConfiguration(Jsons.jsonNode(Collections.singletonMap("apiKey", "123-abc")));
+      connectionSearch.setDestination(destinationSearch);
+      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
+      assertEquals(2, actualConnectionReadList.getConnections().size());
+      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
+      assertEquals(connectionRead2, actualConnectionReadList.getConnections().get(1));
+
+      connectionSearch.name("non-existent");
+      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
+      assertEquals(0, actualConnectionReadList.getConnections().size());
+
+      connectionSearch.name(connectionRead1.getName());
+      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
+      assertEquals(1, actualConnectionReadList.getConnections().size());
+      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
+
+      connectionSearch.name(connectionRead2.getName());
+      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
+      assertEquals(1, actualConnectionReadList.getConnections().size());
+      assertEquals(connectionRead2, actualConnectionReadList.getConnections().get(0));
+
+      connectionSearch.namespaceDefinition(connectionRead1.getNamespaceDefinition());
+      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
+      assertEquals(0, actualConnectionReadList.getConnections().size());
+
+      connectionSearch.name(null);
+      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
+      assertEquals(1, actualConnectionReadList.getConnections().size());
+      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
+
+      connectionSearch.namespaceDefinition(connectionRead2.getNamespaceDefinition());
+      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
+      assertEquals(1, actualConnectionReadList.getConnections().size());
+      assertEquals(connectionRead2, actualConnectionReadList.getConnections().get(0));
+
+      connectionSearch.namespaceDefinition(null);
+      connectionSearch.status(ConnectionStatus.INACTIVE);
+      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
+      assertEquals(0, actualConnectionReadList.getConnections().size());
+
+      connectionSearch.status(ConnectionStatus.ACTIVE);
+      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
+      assertEquals(2, actualConnectionReadList.getConnections().size());
+      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
+      assertEquals(connectionRead2, actualConnectionReadList.getConnections().get(1));
+
+      connectionSearch.prefix(connectionRead1.getPrefix());
+      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
+      assertEquals(1, actualConnectionReadList.getConnections().size());
+      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
+
+      connectionSearch.prefix(connectionRead2.getPrefix());
+      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
+      assertEquals(1, actualConnectionReadList.getConnections().size());
+      assertEquals(connectionRead2, actualConnectionReadList.getConnections().get(0));
+    }
+
+    @Test
+    void testDeleteConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
+      connectionsHandler.deleteConnection(connectionId);
+
+      verify(connectionHelper).deleteConnection(connectionId);
+    }
+
+    @Test
+    void failOnUnmatchedWorkspacesInCreate() throws JsonValidationException, ConfigNotFoundException, IOException {
+      when(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(standardSync.getSourceId())).thenReturn(UUID.randomUUID());
+      when(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(standardSync.getDestinationId())).thenReturn(UUID.randomUUID());
+      when(configRepository.getSourceConnection(source.getSourceId()))
+          .thenReturn(source);
+      when(configRepository.getDestinationConnection(destination.getDestinationId()))
+          .thenReturn(destination);
+
+      when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
+      final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+          .withName(SOURCE_TEST)
+          .withSourceDefinitionId(UUID.randomUUID());
+      final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+          .withName(DESTINATION_TEST)
+          .withDestinationDefinitionId(UUID.randomUUID());
+      when(configRepository.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+      when(configRepository.getSourceDefinitionFromConnection(standardSync.getConnectionId())).thenReturn(sourceDefinition);
+      when(configRepository.getDestinationDefinitionFromConnection(standardSync.getConnectionId())).thenReturn(destinationDefinition);
+
+      final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+
+      final ConnectionCreate connectionCreate = new ConnectionCreate()
+          .sourceId(standardSync.getSourceId())
+          .destinationId(standardSync.getDestinationId())
+          .operationIds(standardSync.getOperationIds())
+          .name(PRESTO_TO_HUDI)
+          .namespaceDefinition(NamespaceDefinitionType.SOURCE)
+          .namespaceFormat(null)
+          .prefix(PRESTO_TO_HUDI_PREFIX)
+          .status(ConnectionStatus.ACTIVE)
+          .schedule(ConnectionHelpers.generateBasicConnectionSchedule())
+          .syncCatalog(catalog)
+          .resourceRequirements(new io.airbyte.api.model.generated.ResourceRequirements()
+              .cpuRequest(standardSync.getResourceRequirements().getCpuRequest())
+              .cpuLimit(standardSync.getResourceRequirements().getCpuLimit())
+              .memoryRequest(standardSync.getResourceRequirements().getMemoryRequest())
+              .memoryLimit(standardSync.getResourceRequirements().getMemoryLimit()));
+
+      Assert.assertThrows(IllegalArgumentException.class, () -> {
+        connectionsHandler.createConnection(connectionCreate);
+      });
+    }
+
+    @Test
+    void testEnumConversion() {
+      assertTrue(Enums.isCompatible(ConnectionStatus.class, StandardSync.Status.class));
+      assertTrue(Enums.isCompatible(io.airbyte.config.SyncMode.class, SyncMode.class));
+      assertTrue(Enums.isCompatible(StandardSync.Status.class, ConnectionStatus.class));
+      assertTrue(Enums.isCompatible(ConnectionSchedule.TimeUnitEnum.class, Schedule.TimeUnit.class));
+      assertTrue(Enums.isCompatible(io.airbyte.api.model.generated.DataType.class, DataType.class));
+      assertTrue(Enums.isCompatible(DataType.class, io.airbyte.api.model.generated.DataType.class));
+      assertTrue(Enums.isCompatible(NamespaceDefinitionType.class, io.airbyte.config.JobSyncConfig.NamespaceDefinitionType.class));
     }
 
     @Nested
@@ -528,7 +811,7 @@ class ConnectionsHandlerTest {
             argThat(standardSync -> (standardSync.getStatus().equals(Status.INACTIVE) && standardSync.getConnectionId().equals(connectionId))));
         verify(configRepository, times(1)).writeStandardSync(standardSync);
         verify(jobNotifier, times(1)).autoDisableConnection(job);
-        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), ArgumentMatchers.eq(job));
+        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), eq(job));
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
       }
 
@@ -1119,277 +1402,123 @@ class ConnectionsHandlerTest {
 
     }
 
-    @Test
-    void testGetConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
-      when(configRepository.getStandardSync(standardSync.getConnectionId()))
-          .thenReturn(standardSync);
+  }
 
-      final ConnectionRead actualConnectionRead = connectionsHandler.getConnection(standardSync.getConnectionId());
+  @Nested
+  class ConnectionHistory {
 
-      assertEquals(ConnectionHelpers.generateExpectedConnectionRead(standardSync), actualConnectionRead);
+    @BeforeEach
+    void setUp() {
+      // todo: is this unneeded? i think it's already done in the @BeforeAll
+      connectionsHandler = new ConnectionsHandler(
+          jobPersistence,
+          configRepository,
+          uuidGenerator,
+          workspaceHelper,
+          trackingClient,
+          eventRunner,
+          connectionHelper,
+          featureFlagClient,
+          actorDefinitionVersionHelper,
+          connectorDefinitionSpecificationHandler,
+          jobNotifier,
+          MAX_DAYS_OF_ONLY_FAILED_JOBS,
+          MAX_FAILURE_JOBS_IN_A_ROW);
     }
 
-    @Test
-    void testListConnectionsForWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
-      when(configRepository.listWorkspaceStandardSyncs(source.getWorkspaceId(), false))
-          .thenReturn(Lists.newArrayList(standardSync));
-      when(configRepository.listWorkspaceStandardSyncs(source.getWorkspaceId(), true))
-          .thenReturn(Lists.newArrayList(standardSync, standardSyncDeleted));
-      when(configRepository.getStandardSync(standardSync.getConnectionId()))
-          .thenReturn(standardSync);
-
-      final WorkspaceIdRequestBody workspaceIdRequestBody = new WorkspaceIdRequestBody().workspaceId(source.getWorkspaceId());
-      final ConnectionReadList actualConnectionReadList = connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody);
-      assertEquals(1, actualConnectionReadList.getConnections().size());
-      assertEquals(
-          ConnectionHelpers.generateExpectedConnectionRead(standardSync),
-          actualConnectionReadList.getConnections().get(0));
-
-      final ConnectionReadList actualConnectionReadListWithDeleted = connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody, true);
-      final List<ConnectionRead> connections = actualConnectionReadListWithDeleted.getConnections();
-      assertEquals(2, connections.size());
-      assertEquals(ApiPojoConverters.internalToConnectionRead(standardSync), connections.get(0));
-      assertEquals(ApiPojoConverters.internalToConnectionRead(standardSyncDeleted), connections.get(1));
-
+    private Attempt generateMockAttempt(final Instant attemptTime, final long bytesSynced) {
+      final StandardSyncSummary standardSyncSummary = new StandardSyncSummary().withTotalStats(new SyncStats().withBytesCommitted(bytesSynced));
+      final StandardSyncOutput standardSyncOutput = new StandardSyncOutput().withStandardSyncSummary(standardSyncSummary);
+      final JobOutput jobOutput = new JobOutput().withOutputType(OutputType.SYNC).withSync(standardSyncOutput);
+      return new Attempt(0, 0, null, null, jobOutput, AttemptStatus.FAILED, null, null, 0, 0, attemptTime.getEpochSecond());
     }
 
-    @Test
-    void testListConnections() throws JsonValidationException, ConfigNotFoundException, IOException {
-      when(configRepository.listStandardSyncs())
-          .thenReturn(Lists.newArrayList(standardSync));
-      when(configRepository.getSourceConnection(source.getSourceId()))
-          .thenReturn(source);
-      when(configRepository.getStandardSync(standardSync.getConnectionId()))
-          .thenReturn(standardSync);
-
-      final ConnectionReadList actualConnectionReadList = connectionsHandler.listConnections();
-
-      assertEquals(
-          ConnectionHelpers.generateExpectedConnectionRead(standardSync),
-          actualConnectionReadList.getConnections().get(0));
+    private Job generateMockJob(final UUID connectionId, final Attempt attempt) {
+      return new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(attempt), JobStatus.RUNNING, 1001L, 1000L, 1002L);
     }
 
-    @Test
-    void testListConnectionsByActorDefinition() throws IOException {
-      when(configRepository.listConnectionsByActorDefinitionIdAndType(sourceDefinitionId, ActorType.SOURCE.value(), false))
-          .thenReturn(Lists.newArrayList(standardSync));
-      when(configRepository.listConnectionsByActorDefinitionIdAndType(destinationDefinitionId, ActorType.DESTINATION.value(), false))
-          .thenReturn(Lists.newArrayList(standardSync2));
-
-      final ConnectionReadList connectionReadListForSourceDefinitionId = connectionsHandler.listConnectionsForActorDefinition(
-          new ActorDefinitionRequestBody()
-              .actorDefinitionId(sourceDefinitionId)
-              .actorType(io.airbyte.api.model.generated.ActorType.SOURCE));
-
-      final ConnectionReadList connectionReadListForDestinationDefinitionId = connectionsHandler.listConnectionsForActorDefinition(
-          new ActorDefinitionRequestBody()
-              .actorDefinitionId(destinationDefinitionId)
-              .actorType(io.airbyte.api.model.generated.ActorType.DESTINATION));
-
-      assertEquals(
-          List.of(ConnectionHelpers.generateExpectedConnectionRead(standardSync)),
-          connectionReadListForSourceDefinitionId.getConnections());
-      assertEquals(
-          List.of(ConnectionHelpers.generateExpectedConnectionRead(standardSync2)),
-          connectionReadListForDestinationDefinitionId.getConnections());
+    private List<ConnectionDataHistoryReadItem> generateEmptyConnectionDataHistoryReadList(final LocalDate startDate,
+                                                                                           final LocalDate endDate,
+                                                                                           final String timezone) {
+      final List<ConnectionDataHistoryReadItem> connectionDataHistoryReadList = new ArrayList<>();
+      for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+        connectionDataHistoryReadList.add(new ConnectionDataHistoryReadItem()
+            .timestamp(Math.toIntExact(date.atStartOfDay(ZoneId.of(timezone)).toEpochSecond()))
+            .bytes(0));
+      }
+      return connectionDataHistoryReadList;
     }
 
-    @Test
-    void testSearchConnections() throws JsonValidationException, ConfigNotFoundException, IOException {
-      final ConnectionRead connectionRead1 = ConnectionHelpers.connectionReadFromStandardSync(standardSync);
-      final StandardSync standardSync2 = new StandardSync()
-          .withConnectionId(UUID.randomUUID())
-          .withName("test connection")
-          .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT)
-          .withNamespaceFormat("ns_format")
-          .withPrefix("test_prefix")
-          .withStatus(StandardSync.Status.ACTIVE)
-          .withCatalog(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog())
-          .withSourceId(sourceId)
-          .withDestinationId(destinationId)
-          .withOperationIds(List.of(operationId))
-          .withManual(true)
-          .withResourceRequirements(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS)
-          .withGeography(Geography.US)
-          .withBreakingChange(false)
-          .withNotifySchemaChanges(false)
-          .withNotifySchemaChangesByEmail(true);
-      final ConnectionRead connectionRead2 = ConnectionHelpers.connectionReadFromStandardSync(standardSync2);
-      final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
-          .withName(SOURCE_TEST)
-          .withSourceDefinitionId(UUID.randomUUID());
-      final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
-          .withName(DESTINATION_TEST)
-          .withDestinationDefinitionId(UUID.randomUUID());
+    @Nested
+    class GetConnectionDataHistory {
 
-      when(configRepository.listStandardSyncs())
-          .thenReturn(Lists.newArrayList(standardSync, standardSync2));
-      when(configRepository.getSourceConnection(source.getSourceId()))
-          .thenReturn(source);
-      when(configRepository.getDestinationConnection(destination.getDestinationId()))
-          .thenReturn(destination);
-      when(configRepository.getStandardSync(standardSync.getConnectionId()))
-          .thenReturn(standardSync);
-      when(configRepository.getStandardSync(standardSync2.getConnectionId()))
-          .thenReturn(standardSync2);
-      when(configRepository.getStandardSourceDefinition(source.getSourceDefinitionId()))
-          .thenReturn(sourceDefinition);
-      when(configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId()))
-          .thenReturn(destinationDefinition);
+      @Test
+      @DisplayName("Handles empty history response")
+      void testDataHistoryWithEmptyResponse() throws JsonValidationException, ConfigNotFoundException, IOException {
+        // test that when getConnectionDataHistory is returned an empty list of attempts, the response
+        // contains 30 entries all set to 0 bytesCommitted
+        final ConnectionRead connectionRead = new ConnectionRead()
+            .connectionId(UUID.randomUUID())
+            .syncCatalog(new AirbyteCatalog().streams(Collections.emptyList()));
+        final ConnectionDataHistoryRequestBody requestBody = new ConnectionDataHistoryRequestBody()
+            .connectionId(connectionRead.getConnectionId())
+            .timezone(TIMEZONE_LOS_ANGELES);
+        // todo: does this do weird things if this test is run near a day boundary and/or daylight savings
+        // time? can or should i tell it to mock the actual time to match?
+        final LocalDate startDate = Instant.now().atZone(ZoneId.of(requestBody.getTimezone())).minusDays(30).toLocalDate();
+        final LocalDate endDate = LocalDate.now(ZoneId.of(requestBody.getTimezone()));
 
-      final ConnectionSearch connectionSearch = new ConnectionSearch();
-      connectionSearch.namespaceDefinition(NamespaceDefinitionType.SOURCE);
-      ConnectionReadList actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
-      assertEquals(1, actualConnectionReadList.getConnections().size());
-      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
+        final List<ConnectionDataHistoryReadItem> actual = connectionsHandler.getConnectionDataHistory(requestBody);
+        // expected should be a list of items that has 30 entries, all with 0 bytesCommitted and each with a
+        // timestamp that is 1 day apart
+        final List<ConnectionDataHistoryReadItem> expected = generateEmptyConnectionDataHistoryReadList(startDate, endDate,
+            requestBody.getTimezone());
 
-      connectionSearch.namespaceDefinition(null);
-      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
-      assertEquals(2, actualConnectionReadList.getConnections().size());
-      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
-      assertEquals(connectionRead2, actualConnectionReadList.getConnections().get(1));
+        assertEquals(expected, actual);
+      }
 
-      final SourceSearch sourceSearch = new SourceSearch().sourceId(UUID.randomUUID());
-      connectionSearch.setSource(sourceSearch);
-      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
-      assertEquals(0, actualConnectionReadList.getConnections().size());
+      @Test
+      @DisplayName("Aggregates data correctly")
+      void testDataHistoryAggregation() throws JsonValidationException, ConfigNotFoundException, IOException {
+        final UUID connectionId = UUID.randomUUID();
+        final Instant endTime = Instant.now();
+        final Instant startTime = endTime.minus(30, ChronoUnit.DAYS);
+        final long attempt1Bytes = 100L;
+        final long attempt2Bytes = 150L;
+        final long attempt3Bytes = 200L;
 
-      sourceSearch.sourceId(connectionRead1.getSourceId());
-      connectionSearch.setSource(sourceSearch);
-      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
-      assertEquals(2, actualConnectionReadList.getConnections().size());
-      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
-      assertEquals(connectionRead2, actualConnectionReadList.getConnections().get(1));
+        // First Attempt - Day 1
+        final Attempt attempt1 = generateMockAttempt(startTime.plus(1, ChronoUnit.DAYS), attempt1Bytes); // 100 bytes
+        final AttemptWithJobInfo attemptWithJobInfo1 = new AttemptWithJobInfo(attempt1, generateMockJob(connectionId, attempt1));
 
-      final DestinationSearch destinationSearch = new DestinationSearch();
-      connectionSearch.setDestination(destinationSearch);
-      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
-      assertEquals(2, actualConnectionReadList.getConnections().size());
-      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
-      assertEquals(connectionRead2, actualConnectionReadList.getConnections().get(1));
+        // Second Attempt - Same Day as First
+        final Attempt attempt2 = generateMockAttempt(startTime.plus(1, ChronoUnit.DAYS), attempt2Bytes); // 150 bytes
+        final AttemptWithJobInfo attemptWithJobInfo2 = new AttemptWithJobInfo(attempt2, generateMockJob(connectionId, attempt2));
 
-      destinationSearch.connectionConfiguration(Jsons.jsonNode(Collections.singletonMap("apiKey", "not-found")));
-      connectionSearch.setDestination(destinationSearch);
-      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
-      assertEquals(0, actualConnectionReadList.getConnections().size());
+        // Third Attempt - Different Day
+        final Attempt attempt3 = generateMockAttempt(startTime.plus(2, ChronoUnit.DAYS), attempt3Bytes); // 200 bytes
+        final AttemptWithJobInfo attemptWithJobInfo3 = new AttemptWithJobInfo(attempt3, generateMockJob(connectionId, attempt3));
 
-      destinationSearch.connectionConfiguration(Jsons.jsonNode(Collections.singletonMap("apiKey", "123-abc")));
-      connectionSearch.setDestination(destinationSearch);
-      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
-      assertEquals(2, actualConnectionReadList.getConnections().size());
-      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
-      assertEquals(connectionRead2, actualConnectionReadList.getConnections().get(1));
+        final List<AttemptWithJobInfo> attempts = Arrays.asList(attemptWithJobInfo1, attemptWithJobInfo2, attemptWithJobInfo3);
 
-      connectionSearch.name("non-existent");
-      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
-      assertEquals(0, actualConnectionReadList.getConnections().size());
+        when(jobPersistence.listAttemptsForConnectionAfterTimestamp(eq(connectionId), eq(ConfigType.SYNC), any(Instant.class)))
+            .thenReturn(attempts);
 
-      connectionSearch.name(connectionRead1.getName());
-      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
-      assertEquals(1, actualConnectionReadList.getConnections().size());
-      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
+        final ConnectionDataHistoryRequestBody requestBody = new ConnectionDataHistoryRequestBody()
+            .connectionId(connectionId)
+            .timezone(TIMEZONE_LOS_ANGELES);
+        final List<ConnectionDataHistoryReadItem> actual = connectionsHandler.getConnectionDataHistory(requestBody);
 
-      connectionSearch.name(connectionRead2.getName());
-      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
-      assertEquals(1, actualConnectionReadList.getConnections().size());
-      assertEquals(connectionRead2, actualConnectionReadList.getConnections().get(0));
+        final List<ConnectionDataHistoryReadItem> expected = generateEmptyConnectionDataHistoryReadList(
+            startTime.atZone(ZoneId.of(requestBody.getTimezone())).toLocalDate(),
+            endTime.atZone(ZoneId.of(requestBody.getTimezone())).toLocalDate(),
+            requestBody.getTimezone());
+        expected.get(1).setBytes(Math.toIntExact(attempt1Bytes + attempt2Bytes));
+        expected.get(2).setBytes(Math.toIntExact(attempt3Bytes));
 
-      connectionSearch.namespaceDefinition(connectionRead1.getNamespaceDefinition());
-      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
-      assertEquals(0, actualConnectionReadList.getConnections().size());
+        assertEquals(actual, expected);
+      }
 
-      connectionSearch.name(null);
-      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
-      assertEquals(1, actualConnectionReadList.getConnections().size());
-      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
-
-      connectionSearch.namespaceDefinition(connectionRead2.getNamespaceDefinition());
-      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
-      assertEquals(1, actualConnectionReadList.getConnections().size());
-      assertEquals(connectionRead2, actualConnectionReadList.getConnections().get(0));
-
-      connectionSearch.namespaceDefinition(null);
-      connectionSearch.status(ConnectionStatus.INACTIVE);
-      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
-      assertEquals(0, actualConnectionReadList.getConnections().size());
-
-      connectionSearch.status(ConnectionStatus.ACTIVE);
-      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
-      assertEquals(2, actualConnectionReadList.getConnections().size());
-      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
-      assertEquals(connectionRead2, actualConnectionReadList.getConnections().get(1));
-
-      connectionSearch.prefix(connectionRead1.getPrefix());
-      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
-      assertEquals(1, actualConnectionReadList.getConnections().size());
-      assertEquals(connectionRead1, actualConnectionReadList.getConnections().get(0));
-
-      connectionSearch.prefix(connectionRead2.getPrefix());
-      actualConnectionReadList = connectionsHandler.searchConnections(connectionSearch);
-      assertEquals(1, actualConnectionReadList.getConnections().size());
-      assertEquals(connectionRead2, actualConnectionReadList.getConnections().get(0));
-    }
-
-    @Test
-    void testDeleteConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
-      connectionsHandler.deleteConnection(connectionId);
-
-      verify(connectionHelper).deleteConnection(connectionId);
-    }
-
-    @Test
-    void failOnUnmatchedWorkspacesInCreate() throws JsonValidationException, ConfigNotFoundException, IOException {
-      when(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(standardSync.getSourceId())).thenReturn(UUID.randomUUID());
-      when(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(standardSync.getDestinationId())).thenReturn(UUID.randomUUID());
-      when(configRepository.getSourceConnection(source.getSourceId()))
-          .thenReturn(source);
-      when(configRepository.getDestinationConnection(destination.getDestinationId()))
-          .thenReturn(destination);
-
-      when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
-      final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
-          .withName(SOURCE_TEST)
-          .withSourceDefinitionId(UUID.randomUUID());
-      final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
-          .withName(DESTINATION_TEST)
-          .withDestinationDefinitionId(UUID.randomUUID());
-      when(configRepository.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
-      when(configRepository.getSourceDefinitionFromConnection(standardSync.getConnectionId())).thenReturn(sourceDefinition);
-      when(configRepository.getDestinationDefinitionFromConnection(standardSync.getConnectionId())).thenReturn(destinationDefinition);
-
-      final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
-
-      final ConnectionCreate connectionCreate = new ConnectionCreate()
-          .sourceId(standardSync.getSourceId())
-          .destinationId(standardSync.getDestinationId())
-          .operationIds(standardSync.getOperationIds())
-          .name(PRESTO_TO_HUDI)
-          .namespaceDefinition(NamespaceDefinitionType.SOURCE)
-          .namespaceFormat(null)
-          .prefix(PRESTO_TO_HUDI_PREFIX)
-          .status(ConnectionStatus.ACTIVE)
-          .schedule(ConnectionHelpers.generateBasicConnectionSchedule())
-          .syncCatalog(catalog)
-          .resourceRequirements(new io.airbyte.api.model.generated.ResourceRequirements()
-              .cpuRequest(standardSync.getResourceRequirements().getCpuRequest())
-              .cpuLimit(standardSync.getResourceRequirements().getCpuLimit())
-              .memoryRequest(standardSync.getResourceRequirements().getMemoryRequest())
-              .memoryLimit(standardSync.getResourceRequirements().getMemoryLimit()));
-
-      Assert.assertThrows(IllegalArgumentException.class, () -> {
-        connectionsHandler.createConnection(connectionCreate);
-      });
-    }
-
-    @Test
-    void testEnumConversion() {
-      assertTrue(Enums.isCompatible(ConnectionStatus.class, StandardSync.Status.class));
-      assertTrue(Enums.isCompatible(io.airbyte.config.SyncMode.class, SyncMode.class));
-      assertTrue(Enums.isCompatible(StandardSync.Status.class, ConnectionStatus.class));
-      assertTrue(Enums.isCompatible(ConnectionSchedule.TimeUnitEnum.class, Schedule.TimeUnit.class));
-      assertTrue(Enums.isCompatible(io.airbyte.api.model.generated.DataType.class, DataType.class));
-      assertTrue(Enums.isCompatible(DataType.class, io.airbyte.api.model.generated.DataType.class));
-      assertTrue(Enums.isCompatible(NamespaceDefinitionType.class, io.airbyte.config.JobSyncConfig.NamespaceDefinitionType.class));
     }
 
   }
@@ -1813,7 +1942,7 @@ class ConnectionsHandlerTest {
       assertEquals(Enums.convertTo(JobStatus.FAILED, io.airbyte.api.model.generated.JobStatus.class), connectionStatus.getLastSyncJobStatus());
       assertEquals(802L, connectionStatus.getLastSuccessfulSync());
       assertEquals(true, connectionStatus.getIsRunning());
-      assertEquals(null, connectionStatus.getNextSync());
+      assertNull(connectionStatus.getNextSync());
     }
 
     private AirbyteStreamAndConfiguration getStreamAndConfig(final String name, final AirbyteStreamConfiguration config) {
@@ -1860,9 +1989,9 @@ class ConnectionsHandlerTest {
         CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING));
     private static final ConfiguredAirbyteCatalog configuredAirbyteCatalog =
         CatalogHelpers.createConfiguredAirbyteCatalog(SHOES, null, Field.of(SKU, JsonSchemaType.STRING));
-    private static StandardSync standardSync;
     private static final String A_DIFFERENT_NAMESPACE = "a-different-namespace";
     private static final String A_DIFFERENT_COLUMN = "a-different-column";
+    private static StandardSync standardSync;
 
     @BeforeEach
     void setup() throws IOException, JsonValidationException, ConfigNotFoundException {
@@ -1922,7 +2051,10 @@ class ConnectionsHandlerTest {
       expectedCatalog.getStreams()
           .add(new ConfiguredAirbyteStream().withStream(new io.airbyte.protocol.models.AirbyteStream().withName(A_DIFFERENT_STREAM)
               .withNamespace(A_DIFFERENT_NAMESPACE).withSupportedSyncModes(List.of(io.airbyte.protocol.models.SyncMode.FULL_REFRESH))
-              .withDefaultCursorField(null)).withCursorField(null));
+              .withDefaultCursorField(null))
+              .withDestinationSyncMode(io.airbyte.protocol.models.DestinationSyncMode.OVERWRITE)
+              .withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
+              .withCursorField(null));
       final ArgumentCaptor<StandardSync> standardSyncArgumentCaptor = ArgumentCaptor.forClass(StandardSync.class);
       verify(configRepository).writeStandardSync(standardSyncArgumentCaptor.capture());
       final StandardSync actualStandardSync = standardSyncArgumentCaptor.getValue();

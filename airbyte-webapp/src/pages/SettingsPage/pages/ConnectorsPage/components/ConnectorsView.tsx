@@ -13,6 +13,7 @@ import { BuilderProject } from "core/api";
 import { Connector, ConnectorDefinition } from "core/domain/connector";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
+import { useIntent } from "core/utils/rbac";
 import { RoutePaths } from "pages/routePaths";
 
 import { ConnectorCell } from "./ConnectorCell";
@@ -65,7 +66,8 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   connectorBuilderProjects,
 }) => {
   const [updatingAllConnectors, setUpdatingAllConnectors] = useState(false);
-  const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors);
+  const hasUpdateConnectorsPermissions = useIntent("UpdateConnectorVersions");
+  const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors) && hasUpdateConnectorsPermissions;
   const allowUploadCustomImage = useFeature(FeatureItem.AllowUploadCustomImage);
 
   const showVersionUpdateColumn = useCallback(

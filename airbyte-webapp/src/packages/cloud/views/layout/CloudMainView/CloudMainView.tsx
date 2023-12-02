@@ -4,9 +4,9 @@ import { FormattedMessage } from "react-intl";
 import { Outlet } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { CreditsIcon } from "components/icons/CreditsIcon";
 import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 import { FlexItem } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { ThemeToggle } from "components/ui/ThemeToggle";
 import { WorkspacesPicker } from "components/workspace/WorkspacesPicker";
 
@@ -27,7 +27,6 @@ import { StartOverErrorView } from "views/common/StartOverErrorView";
 import { AirbyteHomeLink } from "views/layout/SideBar/AirbyteHomeLink";
 import { MenuContent } from "views/layout/SideBar/components/MenuContent";
 import { NavItem } from "views/layout/SideBar/components/NavItem";
-import SettingsIcon from "views/layout/SideBar/components/SettingsIcon";
 import { MainNavItems } from "views/layout/SideBar/MainNavItems";
 import { SideBar } from "views/layout/SideBar/SideBar";
 
@@ -70,7 +69,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
             <MenuContent>
               <NavItem
                 to={CloudRoutes.Billing}
-                icon={<CreditsIcon />}
+                icon={<Icon type="credits" />}
                 label={<FormattedMessage id="sidebar.billing" />}
                 testId="creditsButton"
                 withNotification={
@@ -82,7 +81,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
               <CloudHelpDropdown />
               <NavItem
                 label={<FormattedMessage id="sidebar.settings" />}
-                icon={<SettingsIcon />}
+                icon={<Icon type="gear" />}
                 to={RoutePaths.Settings}
               />
               <FlexItem className={styles.themeContainer}>

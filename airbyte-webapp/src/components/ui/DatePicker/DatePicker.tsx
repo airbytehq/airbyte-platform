@@ -1,11 +1,11 @@
-import { faCalendarAlt } from "@fortawesome/free-regular-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import en from "date-fns/locale/en-US";
 import dayjs from "dayjs";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import ReactDatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useIntl } from "react-intl";
+
+import { Icon } from "components/ui/Icon";
 
 import styles from "./DatePicker.module.scss";
 import { Button } from "../Button";
@@ -78,7 +78,7 @@ const DatepickerButton = React.forwardRef<HTMLButtonElement, DatePickerButtonTri
       ref={ref}
       type="button"
       variant="clear"
-      icon={<FontAwesomeIcon icon={faCalendarAlt} className={styles.dropdownButton} fixedWidth />}
+      icon={<Icon type="calendar" className={styles.dropdownButton} />}
     />
   );
 });

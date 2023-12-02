@@ -1,3 +1,3 @@
-<svg width="24" height="24" fill="none" data-icon="options" role="img" viewBox="0 0 24 24">
-    <path fill="currentColor" fill-rule="evenodd" d="M14 4a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm0 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-2 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" clip-rule="evenodd"/>
+<svg fill="none" viewBox="0 0 24 24" data-icon="options" role="img">
+    <path fill="currentColor" d="M12 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm0-7a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
 </svg>

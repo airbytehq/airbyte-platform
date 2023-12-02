@@ -3,9 +3,9 @@ package io.airbyte.workload.handler
 import io.airbyte.db.instance.configs.jooq.generated.enums.WorkloadStatus
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
+import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
-import io.airbyte.workload.errors.NotModifiedException
 import io.airbyte.workload.repository.WorkloadRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
@@ -53,7 +53,7 @@ class WorkloadHandlerImpl(
   ) {
     val workloadAlreadyExists = workloadRepository.existsById(workloadId)
     if (workloadAlreadyExists) {
-      throw NotModifiedException("Workload with id: $workloadId already exists")
+      throw ConflictException("Workload with id: $workloadId already exists")
     }
     val domainWorkload =
       DomainWorkload(

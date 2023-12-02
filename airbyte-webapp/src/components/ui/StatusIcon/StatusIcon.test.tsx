@@ -10,18 +10,18 @@ describe("<StatusIcon />", () => {
     const component = render(<StatusIcon title={title} value={value} />);
 
     expect(component.getByTitle(title)).toBeDefined();
-    expect(component.getByRole("img")).toHaveAttribute("data-icon", "cross");
+    expect(component.getByTestId("mocksvg")).toHaveAttribute("data-icon", "status-error");
     expect(component.getByText(`${value}`)).toBeDefined();
   });
 
   const statusCases: Array<{ status: StatusIconStatus; icon: string }> = [
-    { status: "success", icon: "check" },
-    { status: "inactive", icon: "pause" },
-    { status: "sleep", icon: "moon" },
-    { status: "warning", icon: "triangle-exclamation" },
+    { status: "success", icon: "status-success" },
+    { status: "inactive", icon: "status-inactive" },
+    { status: "sleep", icon: "status-sleep" },
+    { status: "warning", icon: "status-warning" },
     { status: "loading", icon: "circle-loader" },
-    { status: "error", icon: "cross" },
-    { status: "cancelled", icon: "minus" },
+    { status: "error", icon: "status-error" },
+    { status: "cancelled", icon: "status-cancelled" },
   ];
 
   it.each(statusCases)("renders $status status", ({ status, icon }) => {
@@ -36,7 +36,15 @@ describe("<StatusIcon />", () => {
     const component = render(<StatusIcon {...props} />);
 
     expect(component.getByTitle(title)).toBeDefined();
-    expect(component.getByRole("img")).toHaveAttribute("data-icon", icon);
+    let element;
+    if (status === "loading") {
+      // renders <Icon />
+      element = component.getByRole("img");
+    } else {
+      // renders <Icon />
+      element = component.getByTestId("mocksvg");
+    }
+    expect(element).toHaveAttribute("data-icon", icon);
     expect(component.getByText(`${value}`)).toBeDefined();
   });
 });

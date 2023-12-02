@@ -1,9 +1,7 @@
-import { faCheck, faExclamation, faTimes, faInfo } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import React from "react";
 
-import { CrossIcon } from "components/icons/CrossIcon";
+import { Icon, IconType } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import styles from "./Message.module.scss";
@@ -27,11 +25,11 @@ export interface MessageProps {
   textClassName?: string;
 }
 
-const ICON_MAPPING = {
-  warning: faExclamation,
-  error: faTimes,
-  success: faCheck,
-  info: faInfo,
+const ICON_MAPPING: Readonly<Record<MessageType, IconType>> = {
+  warning: "statusWarning",
+  error: "statusError",
+  success: "statusSuccess",
+  info: "infoFilled",
 };
 
 const STYLES_BY_TYPE: Readonly<Record<MessageType, string>> = {
@@ -77,10 +75,7 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
     >
       {!hideIcon && (
         <div className={classNames(styles.iconContainer)}>
-          <FontAwesomeIcon
-            icon={iconOverride ? ICON_MAPPING[iconOverride] : ICON_MAPPING[type]}
-            className={styles.messageIcon}
-          />
+          <Icon type={iconOverride ? ICON_MAPPING[iconOverride] : ICON_MAPPING[type]} className={styles.messageIcon} />
         </div>
       )}
       <div className={classNames(styles.textContainer, textClassName)}>
@@ -109,7 +104,7 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
           className={styles.closeButton}
           onClick={onClose}
           size="xs"
-          icon={<CrossIcon />}
+          icon={<Icon type="cross" />}
         />
       )}
     </div>

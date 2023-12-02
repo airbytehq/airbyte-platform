@@ -3,7 +3,7 @@
 @use "scss/z-indices";
 @use "scss/mixins";
 
-$message-icon-size: 12px;
+$message-icon-size: 18px;
 $message-icon-container-size: 32px;
 
 @mixin type($name, $color, $background) {
@@ -16,10 +16,6 @@ $message-icon-container-size: 32px;
     .iconContainer {
       background-color: var(--message-color);
     }
-
-    .messageIcon {
-      color: var(--message-color);
-    }
   }
 }
 
@@ -27,7 +23,7 @@ $message-icon-container-size: 32px;
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: variables.$spacing-md;
+  gap: variables.$spacing-sm;
   box-sizing: border-box;
   padding: variables.$spacing-md;
   border-radius: variables.$border-radius-md;
@@ -63,7 +59,7 @@ $message-icon-container-size: 32px;
   height: $message-icon-container-size;
   max-height: $message-icon-container-size;
   min-width: $message-icon-container-size;
-  padding: variables.$border-radius-md;
+  padding: variables.$border-radius-sm;
   border-radius: variables.$border-radius-md;
   box-sizing: border-box;
   display: flex;
@@ -74,7 +70,7 @@ $message-icon-container-size: 32px;
 .messageIcon {
   width: $message-icon-size;
   height: $message-icon-size;
-  background: colors.$foreground;
+  color: colors.$foreground;
   border-radius: 50%;
   padding: 1px;
 }
@@ -99,7 +95,6 @@ $message-icon-container-size: 32px;
 
 .closeButton {
   svg {
-    width: 12px;
     color: colors.$dark-blue-900;
   }
 }

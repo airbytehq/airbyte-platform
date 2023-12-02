@@ -1,9 +1,8 @@
-import { faChevronLeft } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "components/ui/Button";
+import { Icon } from "components/ui/Icon";
 
 import styles from "./BackButton.module.scss";
 
@@ -13,7 +12,7 @@ export const BackButton = () => {
     <Button
       className={styles.button}
       variant="clear"
-      icon={<FontAwesomeIcon icon={faChevronLeft} />}
+      icon={<Icon type="chevronLeft" size="lg" />}
       onClick={() => {
         navigate(-1);
       }}

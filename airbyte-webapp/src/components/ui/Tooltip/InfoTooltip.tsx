@@ -1,6 +1,6 @@
 import React from "react";
 
-import { InfoIcon } from "components/icons/InfoIcon";
+import { Icon } from "components/ui/Icon";
 
 import styles from "./InfoTooltip.module.scss";
 import { Tooltip } from "./Tooltip";
@@ -13,7 +13,7 @@ export const InfoTooltip: React.FC<React.PropsWithChildren<InfoTooltipProps>> = 
       control={
         <span className={styles.container}>
           <span className={styles.icon}>
-            <InfoIcon />
+            <Icon type="infoOutline" size="sm" />
           </span>
         </span>
       }

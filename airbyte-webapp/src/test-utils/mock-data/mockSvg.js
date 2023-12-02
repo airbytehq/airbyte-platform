@@ -2,4 +2,6 @@
 // https://react-svgr.com/docs/jest/
 
 // eslint-disable-next-line import/no-anonymous-default-export
-export default "div";
+const MockSvg = (props) => <div {...props} data-testid="mocksvg" />;
+
+export default MockSvg;

@@ -1,10 +1,9 @@
-import { faAngleRight } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Disclosure } from "@headlessui/react";
 import classNames from "classnames";
 import React from "react";
 
 import Indicator from "components/Indicator";
+import { Icon } from "components/ui/Icon";
 
 import styles from "./Collapsible.module.scss";
 import { FlexContainer } from "../Flex";
@@ -65,7 +64,7 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
                   [styles.iconClosed]: !open,
                 })}
               >
-                <FontAwesomeIcon icon={faAngleRight} />
+                <Icon type="chevronRight" />
               </div>
               <Text className={styles.label}>{label}</Text>
               {showErrorIndicator && <Indicator className={styles.errorIndicator} />}

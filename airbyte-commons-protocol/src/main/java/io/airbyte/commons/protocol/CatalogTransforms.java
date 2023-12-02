@@ -6,9 +6,11 @@ package io.airbyte.commons.protocol;
 
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.DestinationSyncMode;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.protocol.models.SyncMode;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -22,7 +24,9 @@ public class CatalogTransforms {
   public static void updateCatalogForReset(
                                            final List<StreamDescriptor> streamsToReset,
                                            final ConfiguredAirbyteCatalog configuredAirbyteCatalog) {
-    configuredAirbyteCatalog.getStreams().forEach(configuredAirbyteStream -> {
+    Iterator<ConfiguredAirbyteStream> iterator = configuredAirbyteCatalog.getStreams().iterator();
+    while (iterator.hasNext()) {
+      ConfiguredAirbyteStream configuredAirbyteStream = iterator.next();
       final StreamDescriptor streamDescriptor = CatalogHelpers.extractDescriptor(configuredAirbyteStream);
       if (streamsToReset.contains(streamDescriptor)) {
         // The Reset Source will emit no record messages for any streams, so setting the destination sync
@@ -33,12 +37,11 @@ public class CatalogTransforms {
         configuredAirbyteStream.setSyncMode(SyncMode.FULL_REFRESH);
         configuredAirbyteStream.setDestinationSyncMode(DestinationSyncMode.OVERWRITE);
       } else {
-        // Set streams that are not being reset to APPEND so that they are not modified in the destination
-        if (configuredAirbyteStream.getDestinationSyncMode() == DestinationSyncMode.OVERWRITE) {
-          configuredAirbyteStream.setDestinationSyncMode(DestinationSyncMode.APPEND);
-        }
+        // Remove the streams that are not being reset.
+        iterator.remove();
       }
-    });
+    }
+
   }
 
 }

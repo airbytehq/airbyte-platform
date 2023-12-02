@@ -83,8 +83,9 @@ export const StreamTester: React.FC<{
   const hasRegularRequests =
     streamReadData !== undefined && !isError && streamReadData.slices && streamReadData.slices.length > 0;
 
-  const logsFlex = isError || errorLogs.length > 0 ? 0.75 : 0;
-  const auxiliaryRequestsFlex = hasAuxiliaryRequests && !hasRegularRequests ? 0.75 : 0;
+  const SECONDARY_PANEL_SIZE = 0.5;
+  const logsFlex = isError || errorLogs.length > 0 ? SECONDARY_PANEL_SIZE : 0;
+  const auxiliaryRequestsFlex = hasAuxiliaryRequests && !hasRegularRequests ? SECONDARY_PANEL_SIZE : 0;
 
   useEffect(() => {
     // This will only be true if the data was manually refetched by the user clicking the Test button,
@@ -201,7 +202,13 @@ export const StreamTester: React.FC<{
                     children: <LogsDisplay logs={streamReadData?.logs ?? []} error={errorMessage} />,
                     minWidth: 0,
                     flex: logsFlex,
-                    splitter: <Splitter label="Connector Logs" num={nonErrorLogs.length} errorNum={errorLogs.length} />,
+                    splitter: (
+                      <Splitter
+                        label={formatMessage({ id: "connectorBuilder.connectorLogs" })}
+                        num={nonErrorLogs.length}
+                        errorNum={errorLogs.length}
+                      />
+                    ),
                     className: styles.secondaryPanel,
                   },
                 ]

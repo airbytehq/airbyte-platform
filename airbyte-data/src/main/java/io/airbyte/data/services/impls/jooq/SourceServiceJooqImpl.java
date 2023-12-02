@@ -6,7 +6,6 @@ package io.airbyte.data.services.impls.jooq;
 
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
@@ -21,7 +20,6 @@ import static org.jooq.impl.DSL.select;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
@@ -44,9 +42,7 @@ import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
-import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.SourceType;
-import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -64,7 +60,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
@@ -479,7 +474,7 @@ public class SourceServiceJooqImpl implements SourceService {
                                       final DSLContext ctx) {
     writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
     writeActorDefinitionBreakingChanges(breakingChangesForDefinition, ctx);
-    setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
+    ActorDefinitionVersionJooqHelper.setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
   }
 
   /**
@@ -512,169 +507,6 @@ public class SourceServiceJooqImpl implements SourceService {
         .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MESSAGE, breakingChange.getMessage())
         .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL, breakingChange.getMigrationDocumentationUrl())
         .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPDATED_AT, timestamp);
-  }
-
-  /**
-   * Set the ActorDefinitionVersion for a given tag as the default version for the associated actor
-   * definition. Check docker image tag on the new ADV; if an ADV exists for that tag, set the
-   * existing ADV for the tag as the default. Otherwise, insert the new ADV and set it as the default.
-   *
-   * @param actorDefinitionVersion new actor definition version
-   * @throws IOException - you never know when you IO
-   */
-  private void setActorDefinitionVersionForTagAsDefault(final ActorDefinitionVersion actorDefinitionVersion,
-                                                        final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
-                                                        final DSLContext ctx) {
-    final Optional<ActorDefinitionVersion> existingADV =
-        getActorDefinitionVersion(actorDefinitionVersion.getActorDefinitionId(), actorDefinitionVersion.getDockerImageTag(), ctx);
-
-    if (existingADV.isPresent()) {
-      setActorDefinitionVersionAsDefaultVersion(existingADV.get(), breakingChangesForDefinition, ctx);
-    } else {
-      final ActorDefinitionVersion insertedADV = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
-      setActorDefinitionVersionAsDefaultVersion(insertedADV, breakingChangesForDefinition, ctx);
-    }
-  }
-
-  private ActorDefinitionVersion writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion, final DSLContext ctx) {
-    final OffsetDateTime timestamp = OffsetDateTime.now();
-    // Generate a new UUID if one is not provided. Passing an ID is useful for mocks.
-    final UUID versionId = actorDefinitionVersion.getVersionId() != null ? actorDefinitionVersion.getVersionId() : UUID.randomUUID();
-
-    ctx.insertInto(Tables.ACTOR_DEFINITION_VERSION)
-        .set(Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
-        .set(ACTOR_DEFINITION_VERSION.CREATED_AT, timestamp)
-        .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
-        .set(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, actorDefinitionVersion.getActorDefinitionId())
-        .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, actorDefinitionVersion.getDockerRepository())
-        .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, actorDefinitionVersion.getDockerImageTag())
-        .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSpec())))
-        .set(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL, actorDefinitionVersion.getDocumentationUrl())
-        .set(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION, actorDefinitionVersion.getProtocolVersion())
-        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL, actorDefinitionVersion.getSupportLevel() == null ? null
-            : Enums.toEnum(actorDefinitionVersion.getSupportLevel().value(),
-                SupportLevel.class).orElseThrow())
-        .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE, actorDefinitionVersion.getReleaseStage() == null ? null
-            : Enums.toEnum(actorDefinitionVersion.getReleaseStage().value(),
-                ReleaseStage.class).orElseThrow())
-        .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE, actorDefinitionVersion.getReleaseDate() == null ? null
-            : LocalDate.parse(actorDefinitionVersion.getReleaseDate()))
-        .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY,
-            Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                ? actorDefinitionVersion.getNormalizationConfig().getNormalizationRepository()
-                : null)
-        .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG,
-            Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                ? actorDefinitionVersion.getNormalizationConfig().getNormalizationTag()
-                : null)
-        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT, actorDefinitionVersion.getSupportsDbt())
-        .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE,
-            Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                ? actorDefinitionVersion.getNormalizationConfig().getNormalizationIntegrationType()
-                : null)
-        .set(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS, actorDefinitionVersion.getAllowedHosts() == null ? null
-            : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getAllowedHosts())))
-        .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
-            actorDefinitionVersion.getSuggestedStreams() == null ? null
-                : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSuggestedStreams())))
-        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
-            Enums.toEnum(actorDefinitionVersion.getSupportState().value(), io.airbyte.db.instance.configs.jooq.generated.enums.SupportState.class)
-                .orElseThrow())
-        .execute();
-
-    return actorDefinitionVersion.withVersionId(versionId);
-  }
-
-  private void setActorDefinitionVersionAsDefaultVersion(final ActorDefinitionVersion actorDefinitionVersion,
-                                                         final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
-                                                         final DSLContext ctx) {
-    if (actorDefinitionVersion.getVersionId() == null) {
-      throw new RuntimeException("Can't set an actorDefinitionVersion as default without it having a versionId.");
-    }
-
-    final Optional<ActorDefinitionVersion> currentDefaultVersion =
-        getDefaultVersionForActorDefinitionIdOptional(actorDefinitionVersion.getActorDefinitionId(), ctx);
-
-    currentDefaultVersion
-        .ifPresent(currentDefault -> {
-          final boolean shouldUpdateActorDefaultVersions = shouldUpdateActorsDefaultVersionsDuringUpgrade(
-              currentDefault.getDockerImageTag(), actorDefinitionVersion.getDockerImageTag(), breakingChangesForDefinition);
-          if (shouldUpdateActorDefaultVersions) {
-            updateDefaultVersionIdForActorsOnVersion(currentDefault.getVersionId(), actorDefinitionVersion.getVersionId(), ctx);
-          }
-        });
-
-    updateActorDefinitionDefaultVersionId(actorDefinitionVersion.getActorDefinitionId(), actorDefinitionVersion.getVersionId(), ctx);
-  }
-
-  private void updateActorDefinitionDefaultVersionId(final UUID actorDefinitionId, final UUID versionId, final DSLContext ctx) {
-    ctx.update(ACTOR_DEFINITION)
-        .set(ACTOR_DEFINITION.UPDATED_AT, OffsetDateTime.now())
-        .set(ACTOR_DEFINITION.DEFAULT_VERSION_ID, versionId)
-        .where(ACTOR_DEFINITION.ID.eq(actorDefinitionId))
-        .execute();
-  }
-
-  private void updateDefaultVersionIdForActorsOnVersion(final UUID previousDefaultVersionId, final UUID newDefaultVersionId, final DSLContext ctx) {
-    ctx.update(ACTOR)
-        .set(ACTOR.UPDATED_AT, OffsetDateTime.now())
-        .set(ACTOR.DEFAULT_VERSION_ID, newDefaultVersionId)
-        .where(ACTOR.DEFAULT_VERSION_ID.eq(previousDefaultVersionId))
-        .execute();
-  }
-
-  /**
-   * Given a current version and a version to upgrade to, and a list of breaking changes, determine
-   * whether actors' default versions should be updated during upgrade. This logic is used to avoid
-   * applying a breaking change to a user's actor.
-   *
-   * @param currentDockerImageTag version to upgrade from
-   * @param dockerImageTagForUpgrade version to upgrade to
-   * @param breakingChangesForDef a list of breaking changes to check
-   * @return whether actors' default versions should be updated during upgrade
-   */
-  public static boolean shouldUpdateActorsDefaultVersionsDuringUpgrade(final String currentDockerImageTag,
-                                                                       final String dockerImageTagForUpgrade,
-                                                                       final List<ActorDefinitionBreakingChange> breakingChangesForDef) {
-    if (breakingChangesForDef.isEmpty()) {
-      // If there aren't breaking changes, early exit in order to avoid trying to parse versions.
-      // This is helpful for custom connectors or local dev images for connectors that don't have
-      // breaking changes.
-      return true;
-    }
-
-    final Version currentVersion = new Version(currentDockerImageTag);
-    final Version versionToUpgradeTo = new Version(dockerImageTagForUpgrade);
-
-    if (versionToUpgradeTo.lessThanOrEqualTo(currentVersion)) {
-      // When downgrading, we don't take into account breaking changes/hold actors back.
-      return true;
-    }
-
-    final boolean upgradingOverABreakingChange = breakingChangesForDef.stream().anyMatch(
-        breakingChange -> currentVersion.lessThan(breakingChange.getVersion()) && versionToUpgradeTo.greaterThanOrEqualTo(
-            breakingChange.getVersion()));
-    return !upgradingOverABreakingChange;
-  }
-
-  /**
-   * Get the actor definition version associated with an actor definition and a docker image tag.
-   *
-   * @param actorDefinitionId - actor definition id
-   * @param dockerImageTag - docker image tag
-   * @param ctx database context
-   * @return actor definition version if there is an entry in the DB already for this version,
-   *         otherwise an empty optional
-   * @throws IOException - you never know when you io
-   */
-  public Optional<ActorDefinitionVersion> getActorDefinitionVersion(final UUID actorDefinitionId, final String dockerImageTag, final DSLContext ctx) {
-    return ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION)
-        .where(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
-            .and(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.eq(dockerImageTag)))
-        .fetch()
-        .stream()
-        .findFirst()
-        .map(DbConverter::buildActorDefinitionVersion);
   }
 
   private ConfigWithMetadata<StandardSync> getStandardSyncWithMetadata(final UUID connectionId) throws IOException, ConfigNotFoundException {
@@ -934,14 +766,7 @@ public class SourceServiceJooqImpl implements SourceService {
    * but not yet set its default version.
    */
   private Optional<ActorDefinitionVersion> getDefaultVersionForActorDefinitionIdOptional(final UUID actorDefinitionId, final DSLContext ctx) {
-    return ctx.select(Tables.ACTOR_DEFINITION_VERSION.asterisk())
-        .from(ACTOR_DEFINITION)
-        .join(ACTOR_DEFINITION_VERSION).on(Tables.ACTOR_DEFINITION_VERSION.ID.eq(Tables.ACTOR_DEFINITION.DEFAULT_VERSION_ID))
-        .where(ACTOR_DEFINITION.ID.eq(actorDefinitionId))
-        .fetch()
-        .stream()
-        .findFirst()
-        .map(DbConverter::buildActorDefinitionVersion);
+    return ActorDefinitionVersionJooqHelper.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx);
   }
 
   /**

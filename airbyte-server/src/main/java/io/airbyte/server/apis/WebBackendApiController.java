@@ -66,7 +66,7 @@ public class WebBackendApiController implements WebBackendApi {
   }
 
   @Post("/check_updates")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @Secured({AUTHENTICATED_USER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WebBackendCheckUpdatesRead webBackendCheckUpdates() {

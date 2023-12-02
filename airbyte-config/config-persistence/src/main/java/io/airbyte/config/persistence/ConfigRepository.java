@@ -2093,27 +2093,6 @@ public class ConfigRepository {
     return actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, dockerImageTag);
   }
 
-  // /**
-  // * Get the actor definition version associated with an actor definition and a docker image tag.
-  // *
-  // * @param actorDefinitionId - actor definition id
-  // * @param dockerImageTag - docker image tag
-  // * @param ctx database context
-  // * @return actor definition version if there is an entry in the DB already for this version,
-  // * otherwise an empty optional
-  // * @throws IOException - you never know when you io
-  // */
-  // public Optional<ActorDefinitionVersion> getActorDefinitionVersion(final UUID actorDefinitionId,
-  // final String dockerImageTag, final DSLContext ctx) {
-  // return ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION)
-  // .where(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
-  // .and(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.eq(dockerImageTag)))
-  // .fetch()
-  // .stream()
-  // .findFirst()
-  // .map(DbConverter::buildActorDefinitionVersion);
-  // }
-
   /**
    * Get an actor definition version by ID.
    *

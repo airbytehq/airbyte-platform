@@ -15,9 +15,7 @@ import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.featureflag.AutoPropagateNewStreams;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Workspace;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -121,15 +119,13 @@ public class AutoPropagateSchemaChangeHelper {
         case ADD_STREAM -> {
           if (nonBreakingChangesPreference.equals(NonBreakingChangesPreference.PROPAGATE_FULLY)) {
             final var streamAndConfigurationToAdd = newCatalogPerStream.get(streamDescriptor);
-            if (featureFlagClient.boolVariation(AutoPropagateNewStreams.INSTANCE, new Workspace(workspaceId))) {
-              // If we're propagating it, we want to enable it! Otherwise, it'll just get dropped when we update
-              // the catalog.
-              streamAndConfigurationToAdd.getConfig()
-                  .selected(true);
-              CatalogConverter.configureDefaultSyncModesForNewStream(streamAndConfigurationToAdd.getStream(),
-                  streamAndConfigurationToAdd.getConfig());
-              CatalogConverter.ensureCompatibleDestinationSyncMode(streamAndConfigurationToAdd, supportedDestinationSyncModes);
-            }
+            // If we're propagating it, we want to enable it! Otherwise, it'll just get dropped when we update
+            // the catalog.
+            streamAndConfigurationToAdd.getConfig()
+                .selected(true);
+            CatalogConverter.configureDefaultSyncModesForNewStream(streamAndConfigurationToAdd.getStream(),
+                streamAndConfigurationToAdd.getConfig());
+            CatalogConverter.ensureCompatibleDestinationSyncMode(streamAndConfigurationToAdd, supportedDestinationSyncModes);
             // TODO(mfsiega-airbyte): handle the case where the chosen sync mode isn't actually one of the
             // supported sync modes.
             oldCatalogPerStream.put(streamDescriptor, streamAndConfigurationToAdd);

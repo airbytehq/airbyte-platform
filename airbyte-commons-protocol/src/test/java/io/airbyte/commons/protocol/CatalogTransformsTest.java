@@ -5,6 +5,7 @@
 package io.airbyte.commons.protocol;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
@@ -52,14 +53,8 @@ class CatalogTransformsTest {
         streamDescriptor, ConfiguredAirbyteStream::getDestinationSyncMode));
     assertEquals(SyncMode.FULL_REFRESH, findStreamSyncMode(configuredAirbyteCatalog,
         streamDescriptor, ConfiguredAirbyteStream::getSyncMode));
-    assertEquals(DestinationSyncMode.APPEND, findStreamSyncMode(configuredAirbyteCatalog,
-        otherStreamDescriptor, ConfiguredAirbyteStream::getDestinationSyncMode));
-    assertEquals(SyncMode.INCREMENTAL, findStreamSyncMode(configuredAirbyteCatalog,
-        otherStreamDescriptor, ConfiguredAirbyteStream::getSyncMode));
-    assertEquals(DestinationSyncMode.APPEND_DEDUP, findStreamSyncMode(configuredAirbyteCatalog,
-        otherStreamDescriptor2, ConfiguredAirbyteStream::getDestinationSyncMode));
-    assertEquals(SyncMode.INCREMENTAL, findStreamSyncMode(configuredAirbyteCatalog,
-        otherStreamDescriptor2, ConfiguredAirbyteStream::getSyncMode));
+    assertFalse(contains(configuredAirbyteCatalog, otherStreamDescriptor));
+    assertFalse(contains(configuredAirbyteCatalog, otherStreamDescriptor2));
   }
 
   private boolean isMatch(final ConfiguredAirbyteStream stream, final StreamDescriptor expected) {
@@ -75,6 +70,15 @@ class CatalogTransformsTest {
         .filter(s -> isMatch(s, match))
         .map(syncModeFunction)
         .findFirst().get();
+  }
+
+  private boolean contains(final ConfiguredAirbyteCatalog configuredAirbyteCatalog,
+                           final StreamDescriptor match) {
+    return configuredAirbyteCatalog.getStreams()
+        .stream()
+        .filter(s -> isMatch(s, match))
+        .findFirst()
+        .isPresent();
   }
 
 }

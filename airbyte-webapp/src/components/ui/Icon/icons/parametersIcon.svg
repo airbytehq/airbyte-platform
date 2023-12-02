@@ -1,3 +1,3 @@
-<svg width="24" height="24" fill="none" data-icon="parameters" role="img" viewBox="2 2 20 20">
-    <path fill="currentColor" d="M6.17 18a3 3 0 0 1 5.66 0H22v2H11.83a3 3 0 0 1-5.66 0H2v-2h4.17Zm6-7a3 3 0 0 1 5.66 0H22v2h-4.17a3 3 0 0 1-5.66 0H2v-2h10.17Zm-6-7a3.001 3.001 0 0 1 5.66 0H22v2H11.83a3 3 0 0 1-5.66 0H2V4h4.17ZM9 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm6 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm-6 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"/>
+<svg fill="none" viewBox="0 0 24 24" data-icon="parameters" role="img">
+    <path fill="currentColor" d="M8.18 4H3a1 1 0 1 0 0 2h5.18a3 3 0 0 0 5.64 0H21a1 1 0 1 0 0-2h-7.18a3 3 0 0 0-5.64 0ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Zm2.18 6H3a1 1 0 1 0 0 2h11.18a3 3 0 0 0 5.64 0H21a1 1 0 0 0 0-2h-1.18a3 3 0 0 0-5.64 0ZM18 12a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM6.18 18H3a1 1 0 1 0 0 2h3.18a3 3 0 0 0 5.64 0H21a1 1 0 0 0 0-2h-9.18a3 3 0 0 0-5.64 0ZM10 19a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"/>
 </svg>

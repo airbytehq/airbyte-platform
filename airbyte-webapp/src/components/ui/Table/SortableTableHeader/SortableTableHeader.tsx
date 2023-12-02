@@ -1,6 +1,6 @@
-import { faCaretDown, faCaretUp } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { PropsWithChildren } from "react";
+
+import { Icon } from "components/ui/Icon";
 
 import styles from "./SortableTableHeader.module.scss";
 
@@ -18,6 +18,6 @@ export const SortableTableHeader: React.FC<PropsWithChildren<SortableTableHeader
 }) => (
   <button className={styles.sortButton} onClick={onClick}>
     {children}
-    <FontAwesomeIcon className={styles.sortIcon} icon={isAscending || !isActive ? faCaretUp : faCaretDown} />
+    <Icon className={styles.sortIcon} type={isAscending || !isActive ? "chevronUp" : "chevronDown"} />
   </button>
 );
