@@ -103,6 +103,7 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.time.Instant;
@@ -153,7 +154,7 @@ public class ConnectionsHandler {
   public ConnectionsHandler(
                             final JobPersistence jobPersistence,
                             final ConfigRepository configRepository,
-                            final Supplier<UUID> uuidGenerator,
+                            @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
                             final WorkspaceHelper workspaceHelper,
                             final TrackingClient trackingClient,
                             final EventRunner eventRunner,

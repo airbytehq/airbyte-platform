@@ -44,6 +44,7 @@ import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
@@ -76,7 +77,7 @@ public class DestinationDefinitionsHandler {
 
   @VisibleForTesting
   public DestinationDefinitionsHandler(final ConfigRepository configRepository,
-                                       final Supplier<UUID> uuidSupplier,
+                                       @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
                                        final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
                                        final RemoteDefinitionsProvider remoteDefinitionsProvider,
                                        final DestinationHandler destinationHandler,

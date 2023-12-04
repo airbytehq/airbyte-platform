@@ -31,7 +31,11 @@ import java.util.UUID
 import javax.ws.rs.core.Response
 
 @Controller(DESTINATIONS_PATH)
-open class DestinationsController(private val destinationService: DestinationService, private val userService: UserService) : DestinationsApi {
+open class DestinationsController(
+  private val destinationService: DestinationService,
+  private val userService: UserService,
+  private val trackingHelper: TrackingHelper,
+) : DestinationsApi {
   override fun createDestination(
     destinationCreateRequest: DestinationCreateRequest,
     userInfo: String?,
@@ -44,7 +48,7 @@ open class DestinationsController(private val destinationService: DestinationSer
           val configurationJsonNode = destinationCreateRequest.configuration as ObjectNode
           if (configurationJsonNode.findValue(DESTINATION_TYPE) == null) {
             val unprocessableEntityProblem = UnprocessableEntityProblem()
-            TrackingHelper.trackFailuresIfAny(
+            trackingHelper.trackFailuresIfAny(
               DESTINATIONS_PATH,
               POST,
               userId,
@@ -59,7 +63,7 @@ open class DestinationsController(private val destinationService: DestinationSer
     removeDestinationType(destinationCreateRequest)
 
     val destinationResponse: Any? =
-      TrackingHelper.callWithTracker(
+      trackingHelper.callWithTracker(
         {
           destinationService.createDestination(
             destinationCreateRequest,
@@ -71,7 +75,7 @@ open class DestinationsController(private val destinationService: DestinationSer
         POST,
         userId,
       )
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       DESTINATIONS_PATH,
       POST,
       userId,
@@ -90,7 +94,7 @@ open class DestinationsController(private val destinationService: DestinationSer
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val destinationResponse: Any? =
-      TrackingHelper.callWithTracker(
+      trackingHelper.callWithTracker(
         {
           destinationService.deleteDestination(
             destinationId,
@@ -101,7 +105,7 @@ open class DestinationsController(private val destinationService: DestinationSer
         DELETE,
         userId,
       )
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       DESTINATIONS_WITH_ID_PATH,
       DELETE,
       userId,
@@ -119,7 +123,7 @@ open class DestinationsController(private val destinationService: DestinationSer
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val destinationResponse: Any? =
-      TrackingHelper.callWithTracker(
+      trackingHelper.callWithTracker(
         {
           destinationService.getDestination(
             destinationId,
@@ -130,7 +134,7 @@ open class DestinationsController(private val destinationService: DestinationSer
         GET,
         userId,
       )
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       DESTINATIONS_WITH_ID_PATH,
       GET,
       userId,
@@ -152,7 +156,7 @@ open class DestinationsController(private val destinationService: DestinationSer
 
     val safeWorkspaceIds = workspaceIds ?: emptyList()
     val destinations: Any? =
-      TrackingHelper.callWithTracker({
+      trackingHelper.callWithTracker({
         destinationService.listDestinationsForWorkspaces(
           safeWorkspaceIds,
           includeDeleted!!,
@@ -161,7 +165,7 @@ open class DestinationsController(private val destinationService: DestinationSer
           getLocalUserInfoIfNull(userInfo),
         )
       }, DESTINATIONS_PATH, GET, userId)
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       DESTINATIONS_PATH,
       GET,
       userId,
@@ -183,7 +187,7 @@ open class DestinationsController(private val destinationService: DestinationSer
     removeDestinationType(destinationPatchRequest)
 
     val destinationResponse: Any =
-      TrackingHelper.callWithTracker(
+      trackingHelper.callWithTracker(
         {
           destinationService.partialUpdateDestination(
             destinationId,
@@ -196,7 +200,7 @@ open class DestinationsController(private val destinationService: DestinationSer
         userId,
       )!!
 
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       DESTINATIONS_WITH_ID_PATH,
       PATCH,
       userId,
@@ -217,7 +221,7 @@ open class DestinationsController(private val destinationService: DestinationSer
     removeDestinationType(destinationPutRequest)
 
     val destinationResponse: Any? =
-      TrackingHelper.callWithTracker(
+      trackingHelper.callWithTracker(
         {
           destinationService.updateDestination(
             destinationId,
@@ -230,7 +234,7 @@ open class DestinationsController(private val destinationService: DestinationSer
         userId,
       )
 
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       DESTINATIONS_WITH_ID_PATH,
       PUT,
       userId,

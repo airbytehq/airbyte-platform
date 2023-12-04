@@ -43,6 +43,7 @@ import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
@@ -79,7 +80,7 @@ public class UserHandler {
                      final OrganizationPersistence organizationPersistence,
                      final PermissionHandler permissionHandler,
                      final WorkspacesHandler workspacesHandler,
-                     final Supplier<UUID> uuidGenerator,
+                     @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
                      final Optional<UserAuthenticationResolver> userAuthenticationResolver,
                      final Optional<InitialUserConfiguration> initialUserConfiguration) {
     this.uuidGenerator = uuidGenerator;

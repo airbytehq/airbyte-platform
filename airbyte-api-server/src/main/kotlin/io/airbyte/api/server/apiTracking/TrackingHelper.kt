@@ -4,7 +4,9 @@
 
 package io.airbyte.api.server.apiTracking
 
+import io.airbyte.analytics.TrackingClient
 import io.micronaut.http.HttpStatus
+import jakarta.inject.Singleton
 import org.zalando.problem.AbstractThrowableProblem
 import java.util.Optional
 import java.util.UUID
@@ -13,9 +15,9 @@ import javax.ws.rs.core.Response
 
 /**
  * Helper for segment tracking used by the public-api server.
- * Todo: This should be a middleware through a micronaut annotation so that we do not need to add this wrapper functions around all our calls.
  */
-object TrackingHelper {
+@Singleton
+class TrackingHelper(private val trackingClient: TrackingClient) {
   private fun trackSuccess(
     endpointPath: String,
     httpOperation: String,
@@ -61,7 +63,7 @@ object TrackingHelper {
   fun trackFailuresIfAny(
     endpointPath: String?,
     httpOperation: String?,
-    userId: UUID?,
+    userId: UUID,
     e: Exception?,
   ) {
     var statusCode = 0
@@ -99,7 +101,7 @@ object TrackingHelper {
     function: Callable<T>,
     endpoint: String?,
     httpOperation: String?,
-    userId: UUID?,
+    userId: UUID,
   ): T {
     return try {
       function.call()
@@ -107,5 +109,40 @@ object TrackingHelper {
       trackFailuresIfAny(endpoint, httpOperation, userId, e)
       throw e
     }
+  }
+
+  fun track(
+    userId: UUID,
+    endpointPath: String?,
+    httpOperation: String?,
+    httpStatusCode: Int,
+    workspaceId: Optional<UUID>,
+  ) {
+    val payload =
+      mutableMapOf(
+        Pair(USER_ID, userId),
+        Pair(ENDPOINT, endpointPath),
+        Pair(OPERATION, httpOperation),
+        Pair(STATUS_CODE, httpStatusCode),
+      )
+    if (workspaceId.isPresent) {
+      payload[WORKSPACE] = workspaceId.get().toString()
+    }
+    trackingClient.track(
+      userId,
+      AIRBYTE_API_CALL,
+      payload as Map<String?, Any?>?,
+    )
+  }
+
+  companion object {
+    // Operation names
+    const val AIRBYTE_API_CALL = "Airbyte_API_Call"
+
+    const val USER_ID = "user_id"
+    const val ENDPOINT = "endpoint"
+    const val OPERATION = "operation"
+    const val STATUS_CODE = "status_code"
+    const val WORKSPACE = "workspace"
   }
 }
