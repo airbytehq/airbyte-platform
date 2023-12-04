@@ -14,7 +14,7 @@ import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import java.util.UUID;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 @MicronautTest
 @Requires(env = {Environment.TEST})
@@ -29,7 +29,7 @@ class DeploymentMetadataApiControllerTest extends BaseControllerTest {
         .mode(Configs.DeploymentMode.OSS.name())
         .version("0.2.3");
     when(deploymentMetadataHandler.getDeploymentMetadata()).thenReturn(deploymentMetadataRead);
-    final String path = "/api/v1/deployment, metadata";
+    final String path = "/api/v1/deployment/metadata";
     testEndpointStatus(
         HttpRequest.POST(path, null),
         HttpStatus.OK);
