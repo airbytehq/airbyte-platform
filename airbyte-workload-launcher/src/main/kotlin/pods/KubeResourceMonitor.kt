@@ -9,10 +9,12 @@ import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.KUBERENTES_RESOURCE_MONITOR_NAME
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.fabric8.kubernetes.api.model.Pod
+import io.fabric8.kubernetes.api.model.PodList
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import io.micronaut.scheduling.annotation.Scheduled
+import io.temporal.worker.WorkerFactory
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.time.Instant
@@ -28,7 +30,10 @@ class KubeResourceMonitor(
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String,
   @Value("\${airbyte.kubernetes.pending-time-limit-sec}") private val pendingTimeLimitSec: Long,
   private val customMetricPublisher: CustomMetricPublisher,
+  private val workerFactory: WorkerFactory,
 ) {
+  var isPollingSuspended: Boolean = false
+
   /**
    * Checks for pods in the configured namespace that have been in a pending
    * state for longer than the allowed pending time limit.  The goal of this
@@ -40,11 +45,19 @@ class KubeResourceMonitor(
   fun checkKubernetesResources() {
     logger.debug { "Scanning pending pods for any older than $pendingTimeLimitSec seconds..." }
 
-    val pendingPods =
-      kubernetesClient.pods()
-        .inNamespace(namespace)
-        .withField(STATUS_PHASE, PENDING)
-        .list()
+    val pendingPods: PodList
+    try {
+      pendingPods =
+        kubernetesClient.pods()
+          .inNamespace(namespace)
+          .withField(STATUS_PHASE, PENDING)
+          .list()
+    } catch (e: Exception) {
+      logger.info { "Pausing the job polling because the kube API is not responsive" }
+      workerFactory.suspendPolling()
+      isPollingSuspended = true
+      return
+    }
 
     logger.debug { "Found ${pendingPods.items.size} pending pods in the $namespace namespace..." }
 
@@ -66,8 +79,19 @@ class KubeResourceMonitor(
         pendingDurationSeconds,
         { pendingDurationSeconds.toDouble() },
       )
+      if (!isPollingSuspended) {
+        logger.info { "Pausing the job polling because pods have been pending for too long" }
+        workerFactory.suspendPolling()
+        isPollingSuspended = true
+      }
     } else {
       logger.info { "No pods have been pending for longer than $pendingTimeLimitSec seconds." }
+
+      if (isPollingSuspended) {
+        logger.info { "Resuming polling" }
+        workerFactory.resumePolling()
+        isPollingSuspended = false
+      }
     }
   }
 
