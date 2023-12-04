@@ -20,6 +20,12 @@ dependencies:
 - name: worker
   repository: https://airbytehq.github.io/helm-charts/
   version: 0.50.4
+- name: workload-api-server
+  repository: https://airbytehq.github.io/helm-charts/
+  version: 0.50.4
+- name: workload-launcher
+  repository: https://airbytehq.github.io/helm-charts/
+  version: 0.50.4
 - name: pod-sweeper
   repository: https://airbytehq.github.io/helm-charts/
   version: 0.50.4
