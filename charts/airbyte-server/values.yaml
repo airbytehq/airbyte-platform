@@ -82,6 +82,17 @@ podAnnotations: {}
 ##
 podLabels: {}
 
+## Configure server disruption budget
+## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/#specifying-a-poddisruptionbudget
+##  server.podDisruptionBudget.enabled Enable podDisruptionBudget on the server
+##  server.podDisruptionBudget.maxUnavailable Maximum unavailable pods/percentage for the server
+##  server.podDisruptionBudget.minAvailable Minimum available pods/percentage for the server
+##
+podDisruptionBudget:
+  enabled: false
+  maxUnavailable: ""
+  minAvailable: ""
+
 ##  containerSecurityContext Security context for the container
 ## Examples:
 ## containerSecurityContext:

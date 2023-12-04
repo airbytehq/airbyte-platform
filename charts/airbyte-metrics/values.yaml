@@ -28,6 +28,17 @@ podAnnotations: {}
 ##
 podLabels: {}
 
+## Configure metrics-reporter disruption budget
+## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/#specifying-a-poddisruptionbudget
+##  metrics.podDisruptionBudget.enabled Enable podDisruptionBudget on the metrics-reporter
+##  metrics.podDisruptionBudget.maxUnavailable Maximum unavailable pods/percentage for the metrics-reporter
+##  metrics.podDisruptionBudget.minAvailable Minimum available pods/percentage for the metrics-reporter
+##
+podDisruptionBudget:
+  enabled: false
+  maxUnavailable: ""
+  minAvailable: ""
+
 ##  metrics.containerSecurityContext Security context for the container
 ## Examples:
 ## containerSecurityContext:

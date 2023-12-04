@@ -40,6 +40,17 @@ podAnnotations: {}
 ##
 podLabels: {}
 
+## Configure temporal disruption budget
+## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/#specifying-a-poddisruptionbudget
+##  temporal.podDisruptionBudget.enabled Enable podDisruptionBudget on the temporal
+##  temporal.podDisruptionBudget.maxUnavailable Maximum unavailable pods/percentage for the temporal
+##  temporal.podDisruptionBudget.minAvailable Minimum available pods/percentage for the temporal
+##
+podDisruptionBudget:
+  enabled: false
+  maxUnavailable: ""
+  minAvailable: ""
+
 ##  temporal.containerSecurityContext Security context for the container
 ## Examples:
 ## containerSecurityContext:
