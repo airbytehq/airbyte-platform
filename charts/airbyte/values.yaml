@@ -859,6 +859,7 @@ worker:
 
 workload-launcher:
   enabled: false
+
   ##  workload-launcher.replicaCount Number of workload launcher replicas
   replicaCount: 1
 
@@ -1821,7 +1822,7 @@ keycloak:
 keycloak-setup:
   enabled: false
 
-workload-api:
+workload-api-server:
   enabled: false
 
   bearerToken: token
@@ -1833,7 +1834,7 @@ workload-api:
   ##  workload-api.image.pullPolicy the pull policy to use for the airbyte-workload-api-server image
   ##  workload-api.image.tag The airbyte-workload-api-server image tag. Defaults to the chart's AppVersion
   image:
-    repository: airbyte/airbyte-workload-api-server
+    repository: airbyte/workload-api-server
     pullPolicy: IfNotPresent
 
   ## Configure extra options for the server containers' liveness and readiness probes

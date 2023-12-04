@@ -57,8 +57,8 @@ dependencies:
     name: worker
     repository: "file://../airbyte-worker"
     version: "*"
-  - condition: workload-api.enabled
-    name: workload-api
+  - condition: workload-api-server.enabled
+    name: workload-api-server
     repository: "file://../airbyte-workload-api-server"
     version: "*"
   - condition: workload-launcher.enabled

@@ -88,7 +88,7 @@ airbyte {
         ))
     }
     docker {
-        imageName = "airbyte-workload-api-server"
+        imageName = "workload-api-server"
     }
 }
 
