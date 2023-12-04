@@ -81,6 +81,8 @@ tags:
     description: Interactions with permission related resources.
   - name: organization
     description: Interactions with organizations.
+  - name: deployment_metadata
+    description: Metadata about the Airbyte deployment
 
 paths:
   /v1/workspaces/create:
@@ -4213,6 +4215,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrganizationReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/deployment/metadata:
+    post:
+      summary: Provides the Airbyte deployment metadata.
+      tags:
+        - deployment_metadata
+      operationId: getDeploymentMetadata
+      responses:
+        "200":
+          description: The Airbyte deployment metadata.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeploymentMetadataRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
 
@@ -8706,6 +8723,24 @@ components:
           type: string
         message:
           type: string
+    DeploymentMetadataRead:
+      type: object
+      required:
+        - environment
+        - id
+        - mode
+        - version
+      properties:
+        environment:
+          type: string
+        id:
+          type: string
+          format: uuid
+        mode:
+          type: string
+        version:
+          type: string
+
     NotFoundKnownExceptionInfo:
       type: object
       required:
