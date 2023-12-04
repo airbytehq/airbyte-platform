@@ -300,7 +300,6 @@ public interface JobPersistence {
 
   List<Job> listJobsForConnectionWithStatuses(UUID connectionId, Set<JobConfig.ConfigType> configTypes, Set<JobStatus> statuses) throws IOException;
 
-  // todo: do we actually care about being able to pass in configType
   List<AttemptWithJobInfo> listAttemptsForConnectionAfterTimestamp(UUID connectionId,
                                                                    ConfigType configType,
                                                                    Instant attemptEndedAtTimestamp)

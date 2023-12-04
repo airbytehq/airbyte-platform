@@ -6080,14 +6080,17 @@ components:
       required:
         - timestamp
         - status
-        - stream
+        - streamName
+        - streamNamespace
       properties:
         timestamp:
           type: integer
           format: int64
         status:
           $ref: "#/components/schemas/JobStatus"
-        stream:
+        streamName:
+          type: string
+        streamNamespace:
           type: string
     ConnectionDataHistoryRead:
       type: array

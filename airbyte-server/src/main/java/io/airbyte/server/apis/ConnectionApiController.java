@@ -46,6 +46,7 @@ import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.commons.temporal.scheduling.RouterService;
+import io.airbyte.server.handlers.StreamStatusesHandler;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Body;
@@ -66,15 +67,18 @@ public class ConnectionApiController implements ConnectionApi {
   private final OperationsHandler operationsHandler;
   private final SchedulerHandler schedulerHandler;
   private final RouterService routerService;
+  private final StreamStatusesHandler streamStatusesHandler;
 
   public ConnectionApiController(final ConnectionsHandler connectionsHandler,
                                  final OperationsHandler operationsHandler,
                                  final SchedulerHandler schedulerHandler,
-                                 final RouterService routerService) {
+                                 final RouterService routerService,
+                                 final StreamStatusesHandler streamStatusesHandler) {
     this.connectionsHandler = connectionsHandler;
     this.operationsHandler = operationsHandler;
     this.schedulerHandler = schedulerHandler;
     this.routerService = routerService;
+    this.streamStatusesHandler = streamStatusesHandler;
   }
 
   @Override
@@ -199,7 +203,7 @@ public class ConnectionApiController implements ConnectionApi {
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public List<ConnectionSyncResultRead> getConnectionUptimeHistory(final ConnectionUptimeHistoryRequestBody connectionUptimeHistoryRequestBody) {
-    return null;
+    return ApiHelper.execute(() -> streamStatusesHandler.getConnectionUptimeHistory(connectionUptimeHistoryRequestBody));
   }
 
   @Override

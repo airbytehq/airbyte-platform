@@ -1454,7 +1454,7 @@ class ConnectionsHandlerTest {
 
       @Test
       @DisplayName("Handles empty history response")
-      void testDataHistoryWithEmptyResponse() throws JsonValidationException, ConfigNotFoundException, IOException {
+      void testDataHistoryWithEmptyResponse() throws IOException {
         // test that when getConnectionDataHistory is returned an empty list of attempts, the response
         // contains 30 entries all set to 0 bytesCommitted
         final ConnectionRead connectionRead = new ConnectionRead()
@@ -1479,7 +1479,7 @@ class ConnectionsHandlerTest {
 
       @Test
       @DisplayName("Aggregates data correctly")
-      void testDataHistoryAggregation() throws JsonValidationException, ConfigNotFoundException, IOException {
+      void testDataHistoryAggregation() throws IOException {
         final UUID connectionId = UUID.randomUUID();
         final Instant endTime = Instant.now();
         final Instant startTime = endTime.minus(30, ChronoUnit.DAYS);

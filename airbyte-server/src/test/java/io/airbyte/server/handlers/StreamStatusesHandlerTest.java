@@ -7,16 +7,24 @@ package io.airbyte.server.handlers;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.model.generated.ConnectionSyncResultRead;
+import io.airbyte.api.model.generated.ConnectionUptimeHistoryRequestBody;
 import io.airbyte.api.model.generated.StreamStatusCreateRequestBody;
 import io.airbyte.api.model.generated.StreamStatusListRequestBody;
 import io.airbyte.api.model.generated.StreamStatusRead;
 import io.airbyte.api.model.generated.StreamStatusReadList;
+import io.airbyte.api.model.generated.StreamStatusRunState;
 import io.airbyte.api.model.generated.StreamStatusUpdateRequestBody;
 import io.airbyte.server.handlers.api_domain_mapping.StreamStatusesMapper;
 import io.airbyte.server.repositories.StreamStatusesRepository;
 import io.airbyte.server.repositories.StreamStatusesRepository.FilterParams;
 import io.airbyte.server.repositories.domain.StreamStatus;
 import io.micronaut.data.model.Page;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
@@ -106,6 +114,38 @@ class StreamStatusesHandlerTest {
         .thenReturn(apiItem);
 
     Assertions.assertEquals(apiResp, handler.listStreamStatusPerRunState(apiReq));
+  }
+
+  @Test
+  void testGetConnectionUptimeHistory() {
+    final UUID connectionId = UUID.randomUUID();
+    final String timezone = "America/Los_Angeles";
+    final ConnectionUptimeHistoryRequestBody apiReq = new ConnectionUptimeHistoryRequestBody()
+        .connectionId(connectionId)
+        .timezone(timezone);
+    final StreamStatus domainItem = StreamStatus.builder().build();
+
+    final StreamStatusRead apiItem = new StreamStatusRead();
+    apiItem.setTransitionedAt(Instant.now().toEpochMilli());
+    apiItem.setRunState(StreamStatusRunState.COMPLETE);
+
+    final List<ConnectionSyncResultRead> expected = List.of(
+        handler.mapStreamStatusToSyncReadResult(apiItem, ZoneId.of(timezone)));
+
+    // Calculate 30 days ago in the specified timezone, then convert to UTC OffsetDateTime
+    final OffsetDateTime thirtyDaysAgoInSpecifiedTZ = ZonedDateTime.now(ZoneId.of(timezone))
+        .minusDays(30)
+        .toLocalDate()
+        .atStartOfDay(ZoneId.of(timezone))
+        .withZoneSameInstant(ZoneOffset.UTC)
+        .toOffsetDateTime();
+
+    when(repo.findLatestStatusPerRunStateByConnectionIdAndDayAfterTimestamp(connectionId, thirtyDaysAgoInSpecifiedTZ))
+        .thenReturn(List.of(domainItem));
+    when(mapper.map(domainItem))
+        .thenReturn(apiItem);
+
+    Assertions.assertEquals(expected, handler.getConnectionUptimeHistory(apiReq));
   }
 
 }
