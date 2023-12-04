@@ -15,7 +15,7 @@ import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
-import { NoWorkspacePermissionsContent } from "area/workspace/NoWorkspacesPermissionWarning";
+import { NoWorkspacePermissionsContent } from "area/workspace/components/NoWorkspacesPermissionWarning";
 import { useCreateWorkspace, useListWorkspacesInfinite } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";

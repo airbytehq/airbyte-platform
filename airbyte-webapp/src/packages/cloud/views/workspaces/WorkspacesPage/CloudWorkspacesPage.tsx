@@ -12,7 +12,7 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import { NoWorkspacePermissionsContent } from "area/workspace/NoWorkspacesPermissionWarning";
+import { NoWorkspacePermissionsContent } from "area/workspace/components/NoWorkspacesPermissionWarning";
 import { useListCloudWorkspacesInfinite } from "core/api/cloud";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
