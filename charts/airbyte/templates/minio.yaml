@@ -29,6 +29,10 @@ spec:
         {{ include "airbyte.minioSelectorLabels" . | nindent 8 }}
     spec:
       # Refer to the PVC created earlier
+      {{- if .Values.minio.tolerations }}
+      tolerations:
+        {{- toYaml .Values.minio.tolerations | nindent 8}}
+      {{- end }}
       containers:
         - name: airbyte-minio
           # Pulls the default Minio image from Docker Hub
