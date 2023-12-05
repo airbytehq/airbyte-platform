@@ -12,4 +12,6 @@ data class Workload(
   var inputPayload: String = "",
   var logPath: String = "",
   var geography: String = DEFAULT_GEOGRAPHY,
+  var mutexKey: String? = null,
+  var type: WorkloadType = WorkloadType.SYNC,
 )

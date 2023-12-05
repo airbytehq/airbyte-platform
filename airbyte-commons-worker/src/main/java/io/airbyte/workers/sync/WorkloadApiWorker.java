@@ -27,13 +27,13 @@ import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorNameGenerator;
 import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workers.workload.WorkloadType;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel;
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus;
+import io.airbyte.workload.api.client.model.generated.WorkloadType;
 import io.micronaut.http.HttpStatus;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -87,7 +87,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     workloadId = workloadIdGenerator.generate(replicationInput.getConnectionId(),
         Long.parseLong(replicationInput.getJobRunConfig().getJobId()),
         replicationInput.getJobRunConfig().getAttemptId().intValue(),
-        WorkloadType.SYNC);
+        WorkloadType.SYNC.name());
 
     log.info("Creating workload {}", workloadId);
 
@@ -105,7 +105,9 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
             new WorkloadLabel("attemptNumber", replicationInput.getJobRunConfig().getAttemptId().toString())),
         serializedInput,
         fullLogPath(jobRoot),
-        geo.getValue()));
+        geo.getValue(),
+        replicationInput.getConnectionId().toString(),
+        WorkloadType.SYNC));
 
     // Wait until workload reaches a terminal status
     int i = 0;

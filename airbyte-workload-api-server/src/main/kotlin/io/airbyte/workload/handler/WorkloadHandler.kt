@@ -2,6 +2,7 @@ package io.airbyte.workload.handler
 
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
+import io.airbyte.workload.api.domain.WorkloadType
 import jakarta.transaction.Transactional
 import java.time.OffsetDateTime
 
@@ -25,6 +26,8 @@ interface WorkloadHandler {
     input: String,
     logPath: String,
     geography: String,
+    mutexKey: String,
+    type: WorkloadType,
   )
 
   fun claimWorkload(

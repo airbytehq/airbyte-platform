@@ -45,9 +45,9 @@ import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
 import io.airbyte.workers.workload.WorkloadIdGenerator
-import io.airbyte.workers.workload.WorkloadType
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
+import io.airbyte.workload.api.client.model.generated.WorkloadType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.commons.io.FileUtils
 import java.nio.file.Path
@@ -118,7 +118,7 @@ class ReplicationWorkerHelper(
                   it.connectionId,
                   it.jobId,
                   it.attempt,
-                  WorkloadType.SYNC,
+                  WorkloadType.SYNC.name,
                 ),
               ),
             )

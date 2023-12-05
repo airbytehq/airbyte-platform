@@ -85,6 +85,8 @@ open class WorkloadApi(
       workloadCreateRequest.workloadInput,
       workloadCreateRequest.logPath,
       workloadCreateRequest.geography,
+      workloadCreateRequest.mutexKey,
+      workloadCreateRequest.type,
     )
     workloadService.create(
       workloadId = workloadCreateRequest.workloadId,

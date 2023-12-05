@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.workload
 
+import io.airbyte.workload.api.client.model.generated.WorkloadType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
@@ -19,7 +20,7 @@ class WorkloadIdGeneratorTest {
     val attemptNumber = 1
     val generator = WorkloadIdGenerator()
 
-    val generatedWorkloadId = generator.generate(connectionId, jobId, attemptNumber, workloadType)
+    val generatedWorkloadId = generator.generate(connectionId, jobId, attemptNumber, workloadType.name)
     assertEquals(
       "${connectionId}_${jobId}_${attemptNumber}_${workloadType.name.lowercase(Locale.ENGLISH)}",
       generatedWorkloadId,

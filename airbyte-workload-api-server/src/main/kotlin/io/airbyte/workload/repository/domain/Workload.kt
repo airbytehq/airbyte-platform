@@ -1,6 +1,7 @@
 package io.airbyte.workload.repository.domain
 
 import io.airbyte.db.instance.configs.jooq.generated.enums.WorkloadStatus
+import io.airbyte.db.instance.configs.jooq.generated.enums.WorkloadType
 import io.micronaut.core.annotation.Nullable
 import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.DateUpdated
@@ -35,6 +36,10 @@ data class Workload(
   var inputPayload: String,
   var logPath: String,
   var geography: String,
+  @Nullable
+  var mutexKey: String?,
+  @field:TypeDef(type = DataType.OBJECT)
+  var type: WorkloadType,
 ) {
   @JvmOverloads
   constructor(
@@ -45,6 +50,8 @@ data class Workload(
     inputPayload: String,
     logPath: String,
     geography: String,
+    mutexKey: String,
+    type: WorkloadType,
   ) : this(
     id = id,
     dataplaneId = dataplaneId,
@@ -53,6 +60,9 @@ data class Workload(
     inputPayload = inputPayload,
     logPath = logPath,
     geography = geography,
+    mutexKey = mutexKey,
+    type = type,
+    lastHeartbeatAt = null,
     createdAt = null,
     updatedAt = null,
   )

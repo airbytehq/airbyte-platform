@@ -3,6 +3,7 @@ package io.airbyte.workload.handler
 import io.airbyte.db.instance.configs.jooq.generated.enums.WorkloadStatus
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
+import io.airbyte.workload.api.domain.WorkloadType
 import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
@@ -50,6 +51,8 @@ class WorkloadHandlerImpl(
     input: String,
     logPath: String,
     geography: String,
+    mutexKey: String,
+    type: WorkloadType,
   ) {
     val workloadAlreadyExists = workloadRepository.existsById(workloadId)
     if (workloadAlreadyExists) {
@@ -60,11 +63,12 @@ class WorkloadHandlerImpl(
         id = workloadId,
         dataplaneId = null,
         status = WorkloadStatus.pending,
-        lastHeartbeatAt = null,
         workloadLabels = labels?.map { it.toDomain() },
         inputPayload = input,
         logPath = logPath,
         geography = geography,
+        mutexKey = mutexKey,
+        type = type.toDomain(),
       )
 
     workloadRepository.save(domainWorkload).toApi()

@@ -254,6 +254,7 @@ components:
       - inputPayload
       - labels
       - logPath
+      - type
       type: object
       properties:
         id:
@@ -275,6 +276,11 @@ components:
           type: string
         geography:
           type: string
+        mutexKey:
+          type: string
+          nullable: true
+        type:
+          $ref: '#/components/schemas/WorkloadType'
     WorkloadCancelRequest:
       required:
       - reason
@@ -303,6 +309,8 @@ components:
       - geography
       - labels
       - logPath
+      - mutexKey
+      - type
       - workloadId
       - workloadInput
       type: object
@@ -319,6 +327,10 @@ components:
           type: string
         geography:
           type: string
+        mutexKey:
+          type: string
+        type:
+          $ref: '#/components/schemas/WorkloadType'
     WorkloadFailureRequest:
       required:
       - workloadId
@@ -392,3 +404,10 @@ components:
       properties:
         workloadId:
           type: string
+    WorkloadType:
+      type: string
+      enum:
+      - sync
+      - check
+      - discover
+      - spec

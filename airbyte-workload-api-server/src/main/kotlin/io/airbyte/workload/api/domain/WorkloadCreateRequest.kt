@@ -11,4 +11,6 @@ data class WorkloadCreateRequest(
   var workloadInput: String = "",
   var logPath: String = "",
   var geography: String = DEFAULT_GEOGRAPHY,
+  var mutexKey: String = "",
+  var type: WorkloadType = WorkloadType.SYNC,
 )
