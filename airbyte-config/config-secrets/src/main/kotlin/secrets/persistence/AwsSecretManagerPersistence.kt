@@ -6,14 +6,18 @@ package io.airbyte.config.secrets.persistence
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider
+import com.amazonaws.regions.Regions
 import com.amazonaws.secretsmanager.caching.SecretCache
 import com.amazonaws.services.secretsmanager.AWSSecretsManager
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder
 import com.amazonaws.services.secretsmanager.model.CreateSecretRequest
 import com.amazonaws.services.secretsmanager.model.DeleteSecretRequest
 import com.amazonaws.services.secretsmanager.model.ResourceNotFoundException
+import com.amazonaws.services.secretsmanager.model.Tag
 import com.amazonaws.services.secretsmanager.model.UpdateSecretRequest
 import com.google.common.base.Preconditions
+import io.airbyte.config.AwsRoleSecretPersistenceConfig
 import io.airbyte.config.secrets.SecretCoordinate
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
@@ -57,6 +61,13 @@ class AwsSecretManagerPersistence(private val awsClient: AwsClient, private val 
           .withSecretId(coordinate.coordinateBase)
           .withSecretString(payload)
           .withDescription("Airbyte secret.")
+
+      if (awsClient.serializedConfig?.kmsKeyArn != null) {
+        request.withKmsKeyId(awsClient.serializedConfig?.kmsKeyArn)
+      }
+
+      // No tags on update
+
       awsClient.client.updateSecret(request)
     } else {
       logger.debug { "Secret ${coordinate.coordinateBase} not found, creating a new one." }
@@ -65,6 +76,15 @@ class AwsSecretManagerPersistence(private val awsClient: AwsClient, private val 
           .withName(coordinate.coordinateBase)
           .withSecretString(payload)
           .withDescription("Airbyte secret.")
+
+      if (awsClient.serializedConfig?.kmsKeyArn != null) {
+        secretRequest.withKmsKeyId(awsClient.serializedConfig?.kmsKeyArn)
+      }
+
+      if (awsClient.serializedConfig?.tagKey != null) {
+        secretRequest.withTags(Tag().withKey(awsClient.serializedConfig?.tagKey).withValue("true"))
+      }
+
       awsClient.client.createSecret(secretRequest)
     }
   }
@@ -84,28 +104,49 @@ class AwsSecretManagerPersistence(private val awsClient: AwsClient, private val 
 }
 
 @Singleton
-@Requires(property = "airbyte.secret.persistence", pattern = "(?i)^aws_secret_manager$")
 class AwsClient(
   @Value("\${airbyte.secret.store.aws.access-key}") private val awsAccessKey: String,
   @Value("\${airbyte.secret.store.aws.secret-key}") private val awsSecretKey: String,
   @Value("\${airbyte.secret.store.aws.region}") private val awsRegion: String,
 ) {
-  val client: AWSSecretsManager by lazy {
-    val builder = AWSSecretsManagerClientBuilder.standard()
+  // values coming from a passed in SecretPersistenceConfig
+  var serializedConfig: AwsRoleSecretPersistenceConfig? = null
+  private lateinit var roleArn: String
+  private lateinit var externalId: String
+  private lateinit var region: String
 
+  constructor(serializedConfig: AwsRoleSecretPersistenceConfig, airbyteAccessKey: String, airbyteSecretKey: String) :
+    this(airbyteAccessKey, airbyteSecretKey, serializedConfig.awsRegion) {
+    this.serializedConfig = serializedConfig
+    this.roleArn = serializedConfig.roleArn
+    this.externalId = serializedConfig.externalId
+    this.region = serializedConfig.awsRegion
+  }
+
+  val client: AWSSecretsManager by lazy {
     // If credentials are part of this config, specify them. Otherwise,
     // let the SDK's default credential provider take over.
-    if (awsSecretKey.isNotEmpty()) {
-      val credentials = BasicAWSCredentials(awsAccessKey, awsSecretKey)
-      builder.withCredentials(AWSStaticCredentialsProvider(credentials))
+    if (serializedConfig == null) {
+      logger.debug { "fetching access key/secret key based AWS secret manager" }
+      AWSSecretsManagerClientBuilder.standard()
+        .withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
+        .withRegion(awsRegion)
+        .build()
+    } else {
+      logger.debug { "fetching role based AWS secret manager" }
+      val credentialsProvider =
+        STSAssumeRoleSessionCredentialsProvider.Builder(roleArn, "airbyte")
+          .withExternalId(externalId)
+          .build()
+      AWSSecretsManagerClientBuilder.standard()
+        .withCredentials(credentialsProvider)
+        .withRegion(Regions.fromName(region))
+        .build()
     }
-    builder.withRegion(awsRegion)
-    builder.build()
   }
 }
 
 @Singleton
-@Requires(property = "airbyte.secret.persistence", pattern = "(?i)^aws_secret_manager$")
 class AwsCache(private val awsClient: AwsClient) {
   val cache: SecretCache by lazy {
     SecretCache(awsClient.client)

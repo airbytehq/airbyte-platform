@@ -23,6 +23,7 @@ dependencies {
     api(libs.airbyte.protocol)
     api(libs.jakarta.transaction.api)
     api(libs.micronaut.data.tx)
+    api(libs.aws.java.sdk.sts)
     api(project(":airbyte-commons"))
 
     /*
