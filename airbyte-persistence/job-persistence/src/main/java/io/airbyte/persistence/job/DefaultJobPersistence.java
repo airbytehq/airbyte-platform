@@ -44,6 +44,7 @@ import io.airbyte.persistence.job.models.AttemptStatus;
 import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
+import io.airbyte.persistence.job.models.JobStatusSummary;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
 import io.airbyte.protocol.models.v0.StreamDescriptor;
 import java.io.IOException;
@@ -1078,23 +1079,25 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   /**
-   * For each connection ID in the input, find that connection's latest sync job and return it if one
-   * exists.
+   * For each connection ID in the input, find that connection's latest job if one exists and return a
+   * status summary.
    */
   @Override
-  public List<Job> getLastSyncJobForConnections(final List<UUID> connectionIds) throws IOException {
+  public List<JobStatusSummary> getLastSyncJobForConnections(final List<UUID> connectionIds) throws IOException {
     if (connectionIds.isEmpty()) {
       return Collections.emptyList();
     }
 
     return jobDatabase.query(ctx -> ctx
-        .fetch("SELECT DISTINCT ON (scope) * FROM jobs "
+        .fetch("SELECT DISTINCT ON (scope) jobs.scope, jobs.created_at, jobs.status "
+            + " FROM jobs "
             + WHERE + "CAST(jobs.config_type AS VARCHAR) = ? "
             + AND + scopeInList(connectionIds)
             + "ORDER BY scope, created_at DESC",
             toSqlName(ConfigType.SYNC))
         .stream()
-        .flatMap(r -> getJobOptional(ctx, r.get("id", Long.class)).stream())
+        .map(r -> new JobStatusSummary(UUID.fromString(r.get("scope", String.class)), getEpoch(r, "created_at"),
+            JobStatus.valueOf(r.get("status", String.class).toUpperCase())))
         .collect(Collectors.toList()));
   }
 

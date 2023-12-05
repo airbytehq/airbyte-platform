@@ -19,6 +19,7 @@ import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
+import io.airbyte.persistence.job.models.JobStatusSummary;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -324,7 +325,7 @@ public interface JobPersistence {
 
   Optional<Job> getLastSyncJob(UUID connectionId) throws IOException;
 
-  List<Job> getLastSyncJobForConnections(final List<UUID> connectionIds) throws IOException;
+  List<JobStatusSummary> getLastSyncJobForConnections(final List<UUID> connectionIds) throws IOException;
 
   List<Job> getRunningSyncJobForConnections(final List<UUID> connectionIds) throws IOException;
 

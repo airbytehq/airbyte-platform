@@ -95,6 +95,7 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.DestinationAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.SourceAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
+import io.airbyte.persistence.job.models.JobStatusSummary;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.Field;
@@ -239,7 +240,8 @@ class WebBackendConnectionsHandlerTest {
     when(jobHistoryHandler.getLatestSyncJob(connectionRead.getConnectionId())).thenReturn(Optional.of(jobRead.getJob()));
 
     when(jobHistoryHandler.getLatestSyncJobsForConnections(Collections.singletonList(connectionRead.getConnectionId())))
-        .thenReturn(Collections.singletonList(jobRead.getJob()));
+        .thenReturn(Collections.singletonList(new JobStatusSummary(UUID.fromString(jobRead.getJob().getConfigId()), jobRead.getJob().getCreatedAt(),
+            io.airbyte.persistence.job.models.JobStatus.valueOf(jobRead.getJob().getStatus().toString().toUpperCase()))));
 
     final JobWithAttemptsRead brokenJobRead = new JobWithAttemptsRead()
         .job(new JobRead()
@@ -261,7 +263,8 @@ class WebBackendConnectionsHandlerTest {
     when(jobHistoryHandler.getLatestSyncJob(brokenConnectionRead.getConnectionId())).thenReturn(Optional.of(brokenJobRead.getJob()));
 
     when(jobHistoryHandler.getLatestSyncJobsForConnections(Collections.singletonList(brokenConnectionRead.getConnectionId())))
-        .thenReturn(Collections.singletonList(brokenJobRead.getJob()));
+        .thenReturn(Collections.singletonList(new JobStatusSummary(UUID.fromString(brokenJobRead.getJob().getConfigId()), brokenJobRead.getJob()
+            .getCreatedAt(), io.airbyte.persistence.job.models.JobStatus.valueOf(brokenJobRead.getJob().getStatus().toString().toUpperCase()))));
 
     expectedListItem = ConnectionHelpers.generateExpectedWebBackendConnectionListItem(
         standardSync,

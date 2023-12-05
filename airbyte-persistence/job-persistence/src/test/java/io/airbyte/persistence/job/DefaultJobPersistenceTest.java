@@ -55,6 +55,7 @@ import io.airbyte.persistence.job.models.AttemptStatus;
 import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
+import io.airbyte.persistence.job.models.JobStatusSummary;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
 import io.airbyte.test.utils.Databases;
 import java.io.IOException;
@@ -1396,7 +1397,7 @@ class DefaultJobPersistenceTest {
     @Test
     @DisplayName("Should return nothing if no sync job exists")
     void testGetLastSyncJobsForConnectionsEmpty() throws IOException {
-      final List<Job> actual = jobPersistence.getLastSyncJobForConnections(CONNECTION_IDS);
+      final var actual = jobPersistence.getLastSyncJobForConnections(CONNECTION_IDS);
 
       assertTrue(actual.isEmpty());
     }
@@ -1410,7 +1411,7 @@ class DefaultJobPersistenceTest {
       final long scope2Job1 = jobPersistence.enqueueJob(SCOPE_2, SYNC_JOB_CONFIG).orElseThrow();
       jobPersistence.succeedAttempt(scope2Job1, jobPersistence.createAttempt(scope2Job1, LOG_PATH));
 
-      final long scope3Job1 = jobPersistence.enqueueJob(SCOPE_3, SYNC_JOB_CONFIG).orElseThrow();
+      jobPersistence.enqueueJob(SCOPE_3, SYNC_JOB_CONFIG).orElseThrow();
 
       final Instant afterNow = NOW.plusSeconds(1000);
       when(timeSupplier.get()).thenReturn(afterNow);
@@ -1420,19 +1421,17 @@ class DefaultJobPersistenceTest {
 
       // should return the latest sync job even if failed
       jobPersistence.failAttempt(scope1Job2, scope1Job2AttemptNumber);
-      final Attempt scope1Job2attempt = jobPersistence.getJob(scope1Job2).getAttempts().stream().findFirst().orElseThrow();
       jobPersistence.failJob(scope1Job2);
 
       // will leave this job running
       final long scope2Job2 = jobPersistence.enqueueJob(SCOPE_2, SYNC_JOB_CONFIG).orElseThrow();
       jobPersistence.createAttempt(scope2Job2, LOG_PATH);
-      final Attempt scope2Job2attempt = jobPersistence.getJob(scope2Job2).getAttempts().stream().findFirst().orElseThrow();
 
-      final List<Job> actual = jobPersistence.getLastSyncJobForConnections(CONNECTION_IDS);
-      final List<Job> expected = new ArrayList<>();
-      expected.add(createJob(scope1Job2, SYNC_JOB_CONFIG, JobStatus.FAILED, List.of(scope1Job2attempt), afterNow.getEpochSecond(), SCOPE_1));
-      expected.add(createJob(scope2Job2, SYNC_JOB_CONFIG, JobStatus.RUNNING, List.of(scope2Job2attempt), afterNow.getEpochSecond(), SCOPE_2));
-      expected.add(createJob(scope3Job1, SYNC_JOB_CONFIG, JobStatus.PENDING, Collections.emptyList(), NOW.getEpochSecond(), SCOPE_3));
+      final List<JobStatusSummary> actual = jobPersistence.getLastSyncJobForConnections(CONNECTION_IDS);
+      final List<JobStatusSummary> expected = new ArrayList<>();
+      expected.add(new JobStatusSummary(CONNECTION_ID_1, afterNow.getEpochSecond(), JobStatus.FAILED));
+      expected.add(new JobStatusSummary(CONNECTION_ID_2, afterNow.getEpochSecond(), JobStatus.RUNNING));
+      expected.add(new JobStatusSummary(CONNECTION_ID_3, NOW.getEpochSecond(), JobStatus.PENDING));
 
       assertTrue(expected.size() == actual.size() && expected.containsAll(actual) && actual.containsAll(expected));
     }
@@ -1446,7 +1445,7 @@ class DefaultJobPersistenceTest {
       final Instant afterNow = NOW.plusSeconds(1000);
       when(timeSupplier.get()).thenReturn(afterNow);
 
-      final List<Job> actual = jobPersistence.getLastSyncJobForConnections(CONNECTION_IDS);
+      final var actual = jobPersistence.getLastSyncJobForConnections(CONNECTION_IDS);
 
       assertTrue(actual.isEmpty());
     }
