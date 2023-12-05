@@ -31,7 +31,6 @@ import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest;
-import io.airbyte.workload.api.client.model.generated.WorkloadType;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
@@ -122,11 +121,10 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   ReplicationOutput runWithWorkloadEnabled(final ReplicationWorker replicationWorker, final ReplicationInput replicationInput, final Path jobRoot)
       throws WorkerException, IOException {
 
-    final String workloadId = workloadIdGenerator.generate(
+    final String workloadId = workloadIdGenerator.generateSyncWorkloadId(
         replicationInput.getConnectionId(),
         Long.parseLong(jobRunConfig.getJobId()),
-        Math.toIntExact(jobRunConfig.getAttemptId()),
-        WorkloadType.SYNC.name());
+        Math.toIntExact(jobRunConfig.getAttemptId()));
 
     try {
       final ReplicationOutput replicationOutput = replicationWorker.run(replicationInput, jobRoot);
@@ -144,15 +142,15 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
     }
   }
 
-  private void cancelWorkload(String workloadId) throws IOException {
+  private void cancelWorkload(final String workloadId) throws IOException {
     workloadApi.workloadCancel(new WorkloadCancelRequest(workloadId, "Replication job has been cancelled", "orchestrator"));
   }
 
-  private void failWorkload(String workloadId) throws IOException {
+  private void failWorkload(final String workloadId) throws IOException {
     workloadApi.workloadFailure(new WorkloadFailureRequest(workloadId));
   }
 
-  private void succeedWorkload(String workloadId) throws IOException {
+  private void succeedWorkload(final String workloadId) throws IOException {
     workloadApi.workloadSuccess(new WorkloadSuccessRequest(workloadId));
   }
 

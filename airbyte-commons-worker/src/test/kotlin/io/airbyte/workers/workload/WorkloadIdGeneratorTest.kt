@@ -4,25 +4,58 @@
 
 package io.airbyte.workers.workload
 
-import io.airbyte.workload.api.client.model.generated.WorkloadType
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.EnumSource
-import java.util.Locale
+import org.junit.jupiter.api.Test
 import java.util.UUID
 
 class WorkloadIdGeneratorTest {
-  @ParameterizedTest()
-  @EnumSource(WorkloadType::class)
-  internal fun `test that the correct workload ID is generated`(workloadType: WorkloadType) {
+  private val generator = WorkloadIdGenerator()
+
+  @Test
+  internal fun `test that the correct workload ID is generated for check`() {
+    val actorId = UUID.randomUUID()
+    val jobId = UUID.randomUUID()
+
+    val generatedWorkloadId = generator.generateCheckWorkloadId(actorId, jobId)
+    assertEquals(
+      "${actorId}_${jobId}_check",
+      generatedWorkloadId,
+    )
+  }
+
+  @Test
+  internal fun `test that the correct workload ID is generated for discover`() {
+    val actorId = UUID.randomUUID()
+    val jobId = UUID.randomUUID()
+
+    val generatedWorkloadId = generator.generateDiscoverWorkloadId(actorId, jobId)
+    assertEquals(
+      "${actorId}_${jobId}_discover",
+      generatedWorkloadId,
+    )
+  }
+
+  @Test
+  internal fun `test that the correct workload ID is generated for specs`() {
+    val workspaceId = UUID.randomUUID()
+    val jobId = UUID.randomUUID()
+
+    val generatedWorkloadId = generator.generateSpeckWorkloadId(workspaceId, jobId)
+    assertEquals(
+      "${workspaceId}_${jobId}_spec",
+      generatedWorkloadId,
+    )
+  }
+
+  @Test
+  internal fun `test that the correct workload ID is generated for syncs`() {
     val connectionId = UUID.randomUUID()
     val jobId = 12345L
     val attemptNumber = 1
-    val generator = WorkloadIdGenerator()
 
-    val generatedWorkloadId = generator.generate(connectionId, jobId, attemptNumber, workloadType.name)
+    val generatedWorkloadId = generator.generateSyncWorkloadId(connectionId, jobId, attemptNumber)
     assertEquals(
-      "${connectionId}_${jobId}_${attemptNumber}_${workloadType.name.lowercase(Locale.ENGLISH)}",
+      "${connectionId}_${jobId}_${attemptNumber}_sync",
       generatedWorkloadId,
     )
   }

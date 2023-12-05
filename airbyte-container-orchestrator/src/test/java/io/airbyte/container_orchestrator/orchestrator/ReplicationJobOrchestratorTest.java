@@ -57,7 +57,7 @@ class ReplicationJobOrchestratorTest {
     final ReplicationAttemptSummary replicationAttemptSummary = new ReplicationAttemptSummary().withStatus(ReplicationStatus.CANCELLED);
     final ReplicationOutput replicationOutput = new ReplicationOutput().withReplicationAttemptSummary(replicationAttemptSummary);
     when(replicationWorker.run(any(), any())).thenReturn(replicationOutput);
-    when(workloadIdGenerator.generate(any(), anyLong(), anyInt(), any())).thenReturn(WORKLOAD_ID);
+    when(workloadIdGenerator.generateSyncWorkloadId(any(), anyLong(), anyInt())).thenReturn(WORKLOAD_ID);
 
     final JobRunConfig jobRunConfig = new JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_ID);
 
@@ -83,7 +83,7 @@ class ReplicationJobOrchestratorTest {
     final ReplicationAttemptSummary replicationAttemptSummary = new ReplicationAttemptSummary().withStatus(ReplicationStatus.COMPLETED);
     final ReplicationOutput replicationOutput = new ReplicationOutput().withReplicationAttemptSummary(replicationAttemptSummary);
     when(replicationWorker.run(any(), any())).thenReturn(replicationOutput);
-    when(workloadIdGenerator.generate(any(), anyLong(), anyInt(), any())).thenReturn(WORKLOAD_ID);
+    when(workloadIdGenerator.generateSyncWorkloadId(any(), anyLong(), anyInt())).thenReturn(WORKLOAD_ID);
 
     final JobRunConfig jobRunConfig = new JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_ID);
 
@@ -109,7 +109,7 @@ class ReplicationJobOrchestratorTest {
     final ReplicationAttemptSummary replicationAttemptSummary = new ReplicationAttemptSummary().withStatus(ReplicationStatus.FAILED);
     final ReplicationOutput replicationOutput = new ReplicationOutput().withReplicationAttemptSummary(replicationAttemptSummary);
     when(replicationWorker.run(any(), any())).thenReturn(replicationOutput);
-    when(workloadIdGenerator.generate(any(), anyLong(), anyInt(), any())).thenReturn(WORKLOAD_ID);
+    when(workloadIdGenerator.generateSyncWorkloadId(any(), anyLong(), anyInt())).thenReturn(WORKLOAD_ID);
 
     final JobRunConfig jobRunConfig = new JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_ID);
 
@@ -135,7 +135,7 @@ class ReplicationJobOrchestratorTest {
     final ReplicationAttemptSummary replicationAttemptSummary = new ReplicationAttemptSummary().withStatus(ReplicationStatus.FAILED);
     final ReplicationOutput replicationOutput = new ReplicationOutput().withReplicationAttemptSummary(replicationAttemptSummary);
     when(replicationWorker.run(any(), any())).thenReturn(replicationOutput);
-    when(workloadIdGenerator.generate(any(), anyLong(), anyInt(), any())).thenReturn(WORKLOAD_ID);
+    when(workloadIdGenerator.generateSyncWorkloadId(any(), anyLong(), anyInt())).thenReturn(WORKLOAD_ID);
 
     final JobRunConfig jobRunConfig = new JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_ID);
 

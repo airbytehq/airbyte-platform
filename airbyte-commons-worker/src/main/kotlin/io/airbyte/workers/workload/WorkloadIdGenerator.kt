@@ -5,7 +5,6 @@
 package io.airbyte.workers.workload
 
 import jakarta.inject.Singleton
-import java.util.Locale
 import java.util.UUID
 
 /**
@@ -17,12 +16,32 @@ import java.util.UUID
  */
 @Singleton
 class WorkloadIdGenerator {
-  fun generate(
+  fun generateCheckWorkloadId(
+    actorId: UUID,
+    differentiator: UUID,
+  ): String {
+    return "${actorId}_${differentiator}_check"
+  }
+
+  fun generateDiscoverWorkloadId(
+    actorId: UUID,
+    differentiator: UUID,
+  ): String {
+    return "${actorId}_${differentiator}_discover"
+  }
+
+  fun generateSpeckWorkloadId(
+    workspaceId: UUID,
+    differentiator: UUID,
+  ): String {
+    return "${workspaceId}_${differentiator}_spec"
+  }
+
+  fun generateSyncWorkloadId(
     connectionId: UUID,
     jobId: Long,
     attemptNumber: Int,
-    workloadTypeTag: String,
   ): String {
-    return "${connectionId}_${jobId}_${attemptNumber}_${workloadTypeTag.lowercase(Locale.ENGLISH)}"
+    return "${connectionId}_${jobId}_${attemptNumber}_sync"
   }
 }

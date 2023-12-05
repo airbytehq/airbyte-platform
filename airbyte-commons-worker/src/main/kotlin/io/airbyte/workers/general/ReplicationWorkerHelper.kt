@@ -47,7 +47,6 @@ import io.airbyte.workers.internal.syncpersistence.SyncPersistence
 import io.airbyte.workers.workload.WorkloadIdGenerator
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.commons.io.FileUtils
 import java.nio.file.Path
@@ -114,11 +113,10 @@ class ReplicationWorkerHelper(
           try {
             workloadApi.workloadHeartbeat(
               WorkloadHeartbeatRequest(
-                workloadIdGenerator.generate(
+                workloadIdGenerator.generateSyncWorkloadId(
                   it.connectionId,
                   it.jobId,
                   it.attempt,
-                  WorkloadType.SYNC.name,
                 ),
               ),
             )

@@ -84,10 +84,9 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   @SuppressWarnings("PMD.AssignmentInOperand")
   public ReplicationOutput run(final ReplicationInput replicationInput, final Path jobRoot) throws WorkerException {
     final String serializedInput = Jsons.serialize(input);
-    workloadId = workloadIdGenerator.generate(replicationInput.getConnectionId(),
+    workloadId = workloadIdGenerator.generateSyncWorkloadId(replicationInput.getConnectionId(),
         Long.parseLong(replicationInput.getJobRunConfig().getJobId()),
-        replicationInput.getJobRunConfig().getAttemptId().intValue(),
-        WorkloadType.SYNC.name());
+        replicationInput.getJobRunConfig().getAttemptId().intValue());
 
     log.info("Creating workload {}", workloadId);
 
@@ -138,7 +137,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
       if (workloadId != null) {
         workloadApi.workloadCancel(new WorkloadCancelRequest(workloadId, "user requested", "WorkloadApiWorker"));
       }
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new RuntimeException(e);
     }
   }
