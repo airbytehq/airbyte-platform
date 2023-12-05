@@ -28,6 +28,7 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
+import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Controller;
@@ -43,9 +44,12 @@ import io.micronaut.security.rules.SecurityRule;
 public class DestinationDefinitionApiController implements DestinationDefinitionApi {
 
   private final DestinationDefinitionsHandler destinationDefinitionsHandler;
+  private final ActorDefinitionAccessValidator accessValidator;
 
-  public DestinationDefinitionApiController(final DestinationDefinitionsHandler destinationDefinitionsHandler) {
+  public DestinationDefinitionApiController(final DestinationDefinitionsHandler destinationDefinitionsHandler,
+                                            final ActorDefinitionAccessValidator accessValidator) {
     this.destinationDefinitionsHandler = destinationDefinitionsHandler;
+    this.accessValidator = accessValidator;
   }
 
   @Post(uri = "/create_custom")
@@ -63,11 +67,13 @@ public class DestinationDefinitionApiController implements DestinationDefinition
   }
 
   @Post(uri = "/delete")
-  @Secured({ADMIN})
+  // the accessValidator will provide additional authorization checks, depending on Airbyte edition.
+  @Secured({AUTHENTICATED_USER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
   public void deleteDestinationDefinition(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody) {
+    accessValidator.validateWriteAccess(destinationDefinitionIdRequestBody.getDestinationDefinitionId());
     ApiHelper.execute(() -> {
       destinationDefinitionsHandler.deleteDestinationDefinition(destinationDefinitionIdRequestBody);
       return null;
@@ -156,10 +162,12 @@ public class DestinationDefinitionApiController implements DestinationDefinition
   }
 
   @Post(uri = "/update")
+  // the accessValidator will provide additional authorization checks, depending on Airbyte edition.
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionRead updateDestinationDefinition(final DestinationDefinitionUpdate destinationDefinitionUpdate) {
+    accessValidator.validateWriteAccess(destinationDefinitionUpdate.getDestinationDefinitionId());
     return ApiHelper.execute(() -> destinationDefinitionsHandler.updateDestinationDefinition(destinationDefinitionUpdate));
   }
 

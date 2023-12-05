@@ -4,6 +4,8 @@
 
 package io.airbyte.server.apis;
 
+import static org.mockito.Mockito.doThrow;
+
 import io.airbyte.api.model.generated.PrivateSourceDefinitionRead;
 import io.airbyte.api.model.generated.PrivateSourceDefinitionReadList;
 import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
@@ -14,6 +16,7 @@ import io.airbyte.api.model.generated.SourceDefinitionUpdate;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.errors.ApplicationErrorKnownException;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -22,6 +25,7 @@ import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import java.io.IOException;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -53,6 +57,17 @@ class SourceDefinitionApiTest extends BaseControllerTest {
     testErrorEndpointStatus(
         HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody())),
         HttpStatus.NOT_FOUND);
+  }
+
+  @Test
+  void testDeleteSourceDefinitionNoWriteAccess() {
+    final UUID sourceDefinitionId = UUID.randomUUID();
+    doThrow(new ApplicationErrorKnownException("invalid")).when(actorDefinitionAccessValidator).validateWriteAccess(sourceDefinitionId);
+
+    final String path = "/api/v1/source_definitions/delete";
+    testErrorEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId))),
+        HttpStatus.UNPROCESSABLE_ENTITY);
   }
 
   @Test
@@ -159,6 +174,17 @@ class SourceDefinitionApiTest extends BaseControllerTest {
     testErrorEndpointStatus(
         HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionUpdate())),
         HttpStatus.NOT_FOUND);
+  }
+
+  @Test
+  void testUpdateSourceDefinitionNoWriteAccess() {
+    final UUID sourceDefinitionId = UUID.randomUUID();
+    doThrow(new ApplicationErrorKnownException("invalid")).when(actorDefinitionAccessValidator).validateWriteAccess(sourceDefinitionId);
+
+    final String path = "/api/v1/source_definitions/update";
+    testErrorEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionUpdate().sourceDefinitionId(sourceDefinitionId))),
+        HttpStatus.UNPROCESSABLE_ENTITY);
   }
 
 }

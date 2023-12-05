@@ -33,6 +33,7 @@ import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler;
 import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler;
 import io.airbyte.commons.server.handlers.WorkspacesHandler;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
+import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.db.Database;
 import io.airbyte.persistence.job.JobNotifier;
@@ -209,6 +210,14 @@ abstract class BaseControllerTest {
   @Replaces(SourceDefinitionsHandler.class)
   SourceDefinitionsHandler mmSourceDefinitionsHandler() {
     return sourceDefinitionsHandler;
+  }
+
+  ActorDefinitionAccessValidator actorDefinitionAccessValidator = Mockito.mock(ActorDefinitionAccessValidator.class);
+
+  @MockBean(ActorDefinitionAccessValidator.class)
+  @Replaces(ActorDefinitionAccessValidator.class)
+  ActorDefinitionAccessValidator mmActorDefinitionAccessValidator() {
+    return actorDefinitionAccessValidator;
   }
 
   SourceHandler sourceHandler = Mockito.mock(SourceHandler.class);

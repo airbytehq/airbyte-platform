@@ -28,6 +28,7 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
+import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Controller;
@@ -36,16 +37,21 @@ import io.micronaut.http.annotation.Status;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
+import lombok.extern.slf4j.Slf4j;
 
 @Controller("/api/v1/source_definitions")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
+@Slf4j
 public class SourceDefinitionApiController implements SourceDefinitionApi {
 
   private final SourceDefinitionsHandler sourceDefinitionsHandler;
+  private final ActorDefinitionAccessValidator accessValidator;
 
-  public SourceDefinitionApiController(final SourceDefinitionsHandler sourceDefinitionsHandler) {
+  public SourceDefinitionApiController(final SourceDefinitionsHandler sourceDefinitionsHandler,
+                                       final ActorDefinitionAccessValidator accessValidator) {
     this.sourceDefinitionsHandler = sourceDefinitionsHandler;
+    this.accessValidator = accessValidator;
   }
 
   @Post("/create_custom")
@@ -63,11 +69,14 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   }
 
   @Post("/delete")
-  @Secured({ADMIN})
+  // the accessValidator will provide additional authorization checks, depending on Airbyte edition.
+  @Secured({AUTHENTICATED_USER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
   public void deleteSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody) {
+    log.info("about to call access validator");
+    accessValidator.validateWriteAccess(sourceDefinitionIdRequestBody.getSourceDefinitionId());
     ApiHelper.execute(() -> {
       sourceDefinitionsHandler.deleteSourceDefinition(sourceDefinitionIdRequestBody);
       return null;
@@ -154,10 +163,12 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   }
 
   @Post("/update")
+  // the accessValidator will provide additional authorization checks, depending on Airbyte edition.
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public SourceDefinitionRead updateSourceDefinition(final SourceDefinitionUpdate sourceDefinitionUpdate) {
+    accessValidator.validateWriteAccess(sourceDefinitionUpdate.getSourceDefinitionId());
     return ApiHelper.execute(() -> sourceDefinitionsHandler.updateSourceDefinition(sourceDefinitionUpdate));
   }
 
