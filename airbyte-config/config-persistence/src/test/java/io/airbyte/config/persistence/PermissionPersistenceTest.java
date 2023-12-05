@@ -200,6 +200,32 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
     }
   }
 
+  @Test
+  void isUserInstanceAdmin() throws IOException {
+    final User user1 = MockData.users().get(0);
+    Assertions.assertEquals(user1.getUserId(), MockData.permission1.getUserId());
+    Assertions.assertEquals(MockData.permission1.getPermissionType(), PermissionType.INSTANCE_ADMIN);
+    Assertions.assertTrue(permissionPersistence.isUserInstanceAdmin(user1.getUserId()));
+
+    final User user2 = MockData.users().get(1);
+    Assertions.assertEquals(user2.getUserId(), MockData.permission2.getUserId());
+    Assertions.assertNotEquals(MockData.permission2.getPermissionType(), PermissionType.INSTANCE_ADMIN);
+    Assertions.assertFalse(permissionPersistence.isUserInstanceAdmin(user2.getUserId()));
+  }
+
+  @Test
+  void isAuthUserInstanceAdmin() throws IOException {
+    final User user1 = MockData.users().get(0);
+    Assertions.assertEquals(user1.getUserId(), MockData.permission1.getUserId());
+    Assertions.assertEquals(MockData.permission1.getPermissionType(), PermissionType.INSTANCE_ADMIN);
+    Assertions.assertTrue(permissionPersistence.isAuthUserInstanceAdmin(user1.getAuthUserId()));
+
+    final User user2 = MockData.users().get(1);
+    Assertions.assertEquals(user2.getUserId(), MockData.permission2.getUserId());
+    Assertions.assertNotEquals(MockData.permission2.getPermissionType(), PermissionType.INSTANCE_ADMIN);
+    Assertions.assertFalse(permissionPersistence.isAuthUserInstanceAdmin(user2.getAuthUserId()));
+  }
+
   @Nested
   class WritePermission {
 

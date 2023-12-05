@@ -80,6 +80,7 @@ google-auth-library-oauth2-http = { module = "com.google.auth:google-auth-librar
 google-cloud-storage = { module = "com.google.cloud:google-cloud-storage", version = "2.17.2" }
 google-cloud-storage-secretmanager = { module = "com.google.cloud:google-cloud-secretmanager", version = "2.0.5" }
 guava = { module = "com.google.guava:guava", version = "31.1-jre" }
+gson = { module = "com.google.code.gson:gson", version = "2.10.1" }
 hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "fasterxml_version" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "fasterxml_version" }
@@ -216,7 +217,7 @@ micronaut-annotation = ["jakarta-inject", "micronaut-inject-java", "micronaut-op
 micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor", "micronaut-http-validation", "micronaut-openapi"]
 micronaut-data-jdbc = [ "micronaut-data-jdbc", "micronaut-data-model", "jakarta-persistence-api", "micronaut-jdbc-hikari"]
 micronaut-email = ["micronaut-email", "micronaut-email-sendgrid"]
-micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core"]
+micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micronaut-micrometer-registry-statsd"]
 micronaut-server = ["micronaut-jaxrs-processor", "micronaut-jaxrs-server"]
 micronaut-test = ["micronaut-test-core", "micronaut-test-junit5", "h2-database"]
 micronaut-test-annotation-processor = ["micronaut-inject-java"]

@@ -4,191 +4,154 @@
 
 package io.airbyte.workload.launcher.pipeline
 
-import io.airbyte.workload.launcher.client.StatusUpdater
-import io.airbyte.workload.launcher.pipeline.stages.BuildInputStage
-import io.airbyte.workload.launcher.pipeline.stages.CheckStatusStage
-import io.airbyte.workload.launcher.pipeline.stages.ClaimStage
-import io.airbyte.workload.launcher.pipeline.stages.EnforceMutexStage
-import io.airbyte.workload.launcher.pipeline.stages.LaunchPodStage
+import io.airbyte.config.Configs
+import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.workload.launcher.ClaimedProcessor
+import io.airbyte.workload.launcher.client.LogContextFactory
+import io.airbyte.workload.launcher.client.WorkloadApiClient
+import io.airbyte.workload.launcher.fixtures.SharedMocks.Companion.metricPublisher
+import io.airbyte.workload.launcher.fixtures.TestStage
+import io.airbyte.workload.launcher.pipeline.LogPathTest.Fixtures.inputMsgs
+import io.airbyte.workload.launcher.pipeline.LogPathTest.Fixtures.launchPipeline
+import io.airbyte.workload.launcher.pipeline.LogPathTest.Fixtures.readTestLogs
+import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
+import io.airbyte.workload.launcher.pipeline.handlers.FailureHandler
+import io.airbyte.workload.launcher.pipeline.handlers.SuccessHandler
 import io.airbyte.workload.launcher.pipeline.stages.StageName
-import io.github.oshai.kotlinlogging.KotlinLogging
+import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.mockk.every
 import io.mockk.mockk
-import org.junit.jupiter.api.Test
-import pipeline.SharedMocks.Companion.metricPublisher
-import pipeline.SharedMocks.Companion.processClaimedScheduler
-import reactor.kotlin.core.publisher.toMono
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import org.junit.jupiter.params.provider.ValueSource
 import java.io.File
-
-private val LOGGER = KotlinLogging.logger {}
+import java.nio.file.Files
+import java.util.Optional
+import java.util.function.Function
+import java.util.stream.Stream
+import kotlin.io.path.Path
 
 class LogPathTest {
-  @Test
-  fun `should write stage and success logs to file`() {
-    val workloadId = "1"
-    val dataplaneId = "dataplane_id"
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun `singled-threaded queue-fed pipeline writes stage and completion logs to log path on input`(testErrorCase: Boolean) {
+    val pipeline = launchPipeline(testErrorCase)
 
-    val logFile: File = File.createTempFile("log-path-1", ".txt")
-    val launcherInputMessage =
-      LauncherInput(workloadId, "workload-input", mapOf(), logFile.absolutePath)
-    val launchStageIO = LaunchStageIO(launcherInputMessage)
+    val msgs = inputMsgs()
 
-    val claim: ClaimStage = claimStage(launchStageIO)
-    val check: CheckStatusStage = checkStatusStage(launchStageIO)
-    val build: BuildInputStage = buildInputStage(launchStageIO)
-    val mutex: EnforceMutexStage = mutexStage(launchStageIO)
-    val launch: LaunchPodStage = launchPodStage(launchStageIO, false)
-    val statusUpdater: StatusUpdater = mockk()
+    msgs.parallelStream().forEach { msg ->
+      pipeline.accept(msg)
+    }
 
-    val launchPipeline =
-      LaunchPipeline(
-        dataplaneId,
-        claim,
-        check,
-        build,
-        mutex,
-        launch,
-        statusUpdater,
-        metricPublisher,
-        processClaimedScheduler,
-      )
-    launchPipeline.accept(launcherInputMessage)
-
-    assertLogFileContent(logFile, false)
-  }
-
-  @Test
-  fun `should write stage and failure logs to file`() {
-    val workloadId = "1"
-    val dataplaneId = "dataplane_id"
-
-    val logFile: File = File.createTempFile("log-path-1", ".txt")
-    val launcherInputMessage =
-      LauncherInput(workloadId, "workload-input", mapOf(), logFile.absolutePath)
-    val launchStageIO = LaunchStageIO(launcherInputMessage)
-
-    val claim: ClaimStage = claimStage(launchStageIO)
-    val check: CheckStatusStage = checkStatusStage(launchStageIO)
-    val build: BuildInputStage = buildInputStage(launchStageIO)
-    val mutex: EnforceMutexStage = mutexStage(launchStageIO)
-    val launch: LaunchPodStage = launchPodStage(launchStageIO, true)
-    val statusUpdater: StatusUpdater =
-      mockk {
-        every {
-          reportFailure(any())
-        } answers {
-          LOGGER.info { "Failure for workload " + launchStageIO.msg.workloadId }
-        }
+    msgs.forEach { msg ->
+      val logLines = readTestLogs(msg.logPath)
+      assert(logLines.isNotEmpty())
+      assert(logLines[0].endsWith("TEST: Stage: CLAIM. Id: ${msg.workloadId}."))
+      assert(logLines[1].endsWith("TEST: Stage: CHECK_STATUS. Id: ${msg.workloadId}."))
+      assert(logLines[2].endsWith("TEST: Stage: BUILD. Id: ${msg.workloadId}."))
+      assert(logLines[3].endsWith("TEST: Stage: MUTEX. Id: ${msg.workloadId}."))
+      assert(logLines[4].endsWith("TEST: Stage: LAUNCH. Id: ${msg.workloadId}."))
+      if (testErrorCase) {
+        assert(logLines[5].endsWith("TEST: failure. Id: ${msg.workloadId}."))
+      } else {
+        assert(logLines[5].endsWith("TEST: success. Id: ${msg.workloadId}."))
       }
-    val launchPipeline =
-      LaunchPipeline(
-        dataplaneId,
-        claim,
-        check,
-        build,
-        mutex,
-        launch,
-        statusUpdater,
-        metricPublisher,
-        processClaimedScheduler,
-      )
-    launchPipeline.accept(launcherInputMessage)
-
-    assertLogFileContent(logFile, true)
+    }
   }
 
-  private fun buildInputStage(launchStageIO: LaunchStageIO): BuildInputStage {
-    val build: BuildInputStage =
-      mockk {
-        every {
-          apply(launchStageIO)
-        } answers {
-          LOGGER.info { StageName.BUILD.name + " for workload " + launchStageIO.msg.workloadId }
-          launchStageIO.toMono()
-        }
-      }
-    return build
-  }
-
-  private fun checkStatusStage(launchStageIO: LaunchStageIO): CheckStatusStage {
-    val check: CheckStatusStage =
-      mockk {
-        every {
-          apply(launchStageIO)
-        } answers {
-          LOGGER.info { StageName.CHECK_STATUS.name + " for workload " + launchStageIO.msg.workloadId }
-          launchStageIO.toMono()
-        }
-      }
-    return check
-  }
-
-  private fun claimStage(launchStageIO: LaunchStageIO): ClaimStage {
-    val claim: ClaimStage =
-      mockk {
-        every {
-          apply(launchStageIO)
-        } answers {
-          LOGGER.info { StageName.CLAIM.name + " for workload " + launchStageIO.msg.workloadId }
-          launchStageIO.toMono()
-        }
-      }
-    return claim
-  }
-
-  private fun mutexStage(launchStageIO: LaunchStageIO): EnforceMutexStage {
-    val mutex: EnforceMutexStage =
-      mockk {
-        every {
-          apply(launchStageIO)
-        } answers {
-          LOGGER.info { StageName.MUTEX.name + " for workload " + launchStageIO.msg.workloadId }
-          launchStageIO.toMono()
-        }
-      }
-    return mutex
-  }
-
-  private fun launchPodStage(
-    launchStageIO: LaunchStageIO,
-    throwException: Boolean,
-  ): LaunchPodStage {
-    val launch: LaunchPodStage =
-      mockk {
-        every {
-          apply(launchStageIO)
-        } answers {
-          LOGGER.info { StageName.LAUNCH.name + " for workload " + launchStageIO.msg.workloadId }
-          if (throwException) {
-            throw StageError(
-              launchStageIO,
-              StageName.LAUNCH,
-              RuntimeException("exception occurred"),
-            )
-          }
-          launchStageIO.toMono()
-        }
-      }
-    return launch
-  }
-
-  private fun assertLogFileContent(
-    logFile: File,
-    assertException: Boolean,
+  @ParameterizedTest
+  @MethodSource("processClaimedMatrix")
+  fun `multi-threaded claimed processor (rehydrator) writes stage and completion logs to log path on input`(
+    testErrorCase: Boolean,
+    parallelism: Int,
   ) {
-    val fileContent = StringBuilder()
-    logFile.forEachLine { c ->
-      fileContent.append(c)
-    }
-    val completeFileContent = fileContent.toString()
+    val pipeline = launchPipeline(testErrorCase)
 
-    assert(completeFileContent.isNotBlank()) { "File content was blank" }
-    assert(completeFileContent.contains("CLAIM for workload 1")) { "CLAIM line missing" }
-    assert(completeFileContent.contains("CHECK_STATUS for workload 1")) { "CHECK_STATUS line missing" }
-    assert(completeFileContent.contains("BUILD for workload 1")) { "BUILD line missing" }
-    assert(completeFileContent.contains("LAUNCH for workload 1")) { "LAUNCH line missing" }
-    if (assertException) {
-      assert(completeFileContent.contains("Failure for workload 1")) { "FAILURE line missing" }
+    val processor =
+      ClaimedProcessor(
+        mockk<WorkloadApi>(),
+        pipeline,
+        metricPublisher,
+        "dataplane_id",
+        parallelism,
+      )
+
+    val msgs = inputMsgs()
+
+    processor.processMessages(msgs)
+
+    msgs.forEach { msg ->
+      val logLines = readTestLogs(msg.logPath)
+      assert(logLines.isNotEmpty())
+      assert(logLines[0].endsWith("TEST: Stage: CLAIM. Id: ${msg.workloadId}."))
+      assert(logLines[1].endsWith("TEST: Stage: CHECK_STATUS. Id: ${msg.workloadId}."))
+      assert(logLines[2].endsWith("TEST: Stage: BUILD. Id: ${msg.workloadId}."))
+      assert(logLines[3].endsWith("TEST: Stage: MUTEX. Id: ${msg.workloadId}."))
+      assert(logLines[4].endsWith("TEST: Stage: LAUNCH. Id: ${msg.workloadId}."))
+      if (testErrorCase) {
+        assert(logLines[5].endsWith("TEST: failure. Id: ${msg.workloadId}."))
+      } else {
+        assert(logLines[5].endsWith("TEST: success. Id: ${msg.workloadId}."))
+      }
     }
+  }
+
+  companion object {
+    @JvmStatic
+    fun processClaimedMatrix(): Stream<Arguments> {
+      return Stream.of(
+        Arguments.of(false, 4),
+        Arguments.of(false, 1),
+        Arguments.of(false, 5),
+        Arguments.of(true, 4),
+        Arguments.of(true, 1),
+        Arguments.of(true, 6),
+      )
+    }
+  }
+
+  object Fixtures {
+    private val mockApiClient: WorkloadApiClient =
+      mockk {
+        every { reportFailure(any()) } returns Unit
+      }
+    private val successHandler = SuccessHandler(metricPublisher, Optional.of(Function { id -> "TEST: success. Id: $id." }))
+    private val failureHandler = FailureHandler(mockApiClient, metricPublisher, Optional.of(Function { id -> "TEST: failure. Id: $id." }))
+
+    private const val TEST_LOG_PREFIX = "TEST"
+
+    private val stageLogMsgFn = { name: StageName, io: LaunchStageIO -> "$TEST_LOG_PREFIX: Stage: $name. Id: ${io.msg.workloadId}." }
+
+    fun inputMsgs(): List<LauncherInput> {
+      val logFile1: File = File.createTempFile("log-path-1", ".txt")
+      val logFile2: File = File.createTempFile("log-path-2", ".txt")
+      val logFile3: File = File.createTempFile("log-path-3", ".txt")
+      val logFile4: File = File.createTempFile("log-path-4", ".txt")
+      val logFile5: File = File.createTempFile("log-path-5", ".txt")
+      return listOf(
+        LauncherInput("1", "workload-input", mapOf(), logFile1.absolutePath),
+        LauncherInput("2", "workload-input", mapOf(), logFile2.absolutePath),
+        LauncherInput("3", "workload-input", mapOf(), logFile3.absolutePath),
+        LauncherInput("4", "workload-input", mapOf(), logFile4.absolutePath),
+        LauncherInput("5", "workload-input", mapOf(), logFile5.absolutePath),
+      )
+    }
+
+    fun launchPipeline(testErrorCase: Boolean) =
+      LaunchPipeline(
+        "dataplane_id",
+        TestStage(StageName.CLAIM, stageLogMsgFn),
+        TestStage(StageName.CHECK_STATUS, stageLogMsgFn),
+        TestStage(StageName.BUILD, stageLogMsgFn),
+        TestStage(StageName.MUTEX, stageLogMsgFn),
+        TestStage(StageName.LAUNCH, stageLogMsgFn, testErrorCase),
+        successHandler,
+        failureHandler,
+        metricPublisher,
+        LogContextFactory(Configs.WorkerEnvironment.DOCKER),
+      )
+
+    fun readTestLogs(logPath: String): List<String> = Files.readAllLines(Path(logPath)).filter { line -> line.contains(TEST_LOG_PREFIX) }
   }
 }

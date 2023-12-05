@@ -1,10 +1,29 @@
 @use "scss/colors";
+@use "scss/variables";
 
-.link {
-  color: colors.$dark-blue;
+.alignSelfStart {
+  align-self: flex-start;
+}
 
-  &:hover,
-  &:focus {
-    color: colors.$blue-400;
-  }
+.lowercase {
+  text-transform: lowercase;
+}
+
+.filterButton {
+  background-color: colors.$foreground;
+  border-radius: variables.$border-radius-sm;
+  color: colors.$grey-400;
+  border: variables.$border-thin solid colors.$grey-300;
+  min-height: auto;
+  height: variables.$button-height-xs;
+}
+
+.filterOptionsMenu {
+  display: block; // default is `flex` which shrinks the options to fit the box, instead overflowing into scroll
+  overflow: auto;
+  max-height: variables.$height-long-listbox-options-list;
+}
+
+.filterOption {
+  white-space: nowrap;
 }

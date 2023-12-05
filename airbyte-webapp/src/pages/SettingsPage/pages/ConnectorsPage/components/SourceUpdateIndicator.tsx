@@ -2,7 +2,7 @@ import { useMemo } from "react";
 
 import Indicator from "components/Indicator";
 
-import { useLatestSourceDefinitionList } from "services/connector/SourceDefinitionService";
+import { useLatestSourceDefinitionList } from "core/api";
 
 import { ConnectorCellProps } from "./ConnectorCell";
 

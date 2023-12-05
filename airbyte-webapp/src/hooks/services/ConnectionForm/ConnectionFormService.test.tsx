@@ -1,6 +1,10 @@
+/* eslint-disable check-file/filename-blocklist */
+// temporary disable eslint rule for this file during cleanup
 import { act, renderHook } from "@testing-library/react";
 import React from "react";
+import { FieldErrors } from "react-hook-form";
 
+import { HookFormConnectionFormValues } from "components/connection/ConnectionForm/hookFormConfig";
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
   mockDestinationDefinition,
@@ -23,23 +27,17 @@ import {
   useConnectionFormService,
 } from "./ConnectionFormService";
 
-jest.mock("services/connector/SourceDefinitionService", () => ({
-  useSourceDefinition: () => mockSourceDefinition,
-}));
-
-jest.mock("services/connector/DestinationDefinitionService", () => ({
-  useDestinationDefinition: () => mockDestinationDefinition,
-}));
-
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
   useSourceDefinitionVersion: () => mockSourceDefinitionVersion,
   useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
   useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
+  useSourceDefinition: () => mockSourceDefinition,
+  useDestinationDefinition: () => mockDestinationDefinition,
 }));
 
-describe("ConnectionFormService", () => {
+describe("ConnectionHookFormService", () => {
   const Wrapper: React.FC<React.PropsWithChildren<Parameters<typeof ConnectionFormServiceProvider>[0]>> = ({
     children,
     ...props
@@ -154,9 +152,11 @@ describe("ConnectionFormService", () => {
         ),
       });
 
-      const errors = {
+      const errors: FieldErrors<HookFormConnectionFormValues> = {
         syncCatalog: {
-          streams: "connectionForm.streams.required",
+          streams: {
+            message: "connectionForm.streams.required",
+          },
         },
       };
 
@@ -172,9 +172,11 @@ describe("ConnectionFormService", () => {
         ),
       });
 
-      const errors = {
+      const errors: FieldErrors<HookFormConnectionFormValues> = {
         syncCatalog: {
-          streams: "There's an error",
+          streams: {
+            message: "There's an error",
+          },
         },
       };
 

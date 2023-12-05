@@ -11,6 +11,7 @@ import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.logging.LoggingHelper;
 import io.airbyte.commons.logging.LoggingHelper.Color;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.logging.MdcScope.Builder;
@@ -21,6 +22,7 @@ import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.process.IntegrationLauncher;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -42,7 +44,7 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultAirbyteDestination.class);
   public static final MdcScope.Builder CONTAINER_LOG_MDC_BUILDER = new Builder()
-      .setLogPrefix("destination")
+      .setLogPrefix(LoggingHelper.DESTINATION_LOGGER_PREFIX)
       .setPrefixColor(Color.YELLOW_BACKGROUND);
   static final Set<Integer> IGNORED_EXIT_CODES = Set.of(
       0, // Normal exit
@@ -65,8 +67,13 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
   @VisibleForTesting
   public DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher, final DestinationTimeoutMonitor destinationTimeoutMonitor) {
     this(integrationLauncher,
-        VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(LOGGER, CONTAINER_LOG_MDC_BUILDER, Optional.empty(),
-            Runtime.getRuntime().maxMemory(), false),
+        VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(
+            LOGGER,
+            CONTAINER_LOG_MDC_BUILDER,
+            Optional.empty(),
+            Runtime.getRuntime().maxMemory(),
+            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
+            new GsonPksExtractor()),
         new DefaultAirbyteMessageBufferedWriterFactory(),
         new DefaultProtocolSerializer(),
         destinationTimeoutMonitor);

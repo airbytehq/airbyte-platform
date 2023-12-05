@@ -4,13 +4,13 @@
 
 package io.airbyte.commons.server.support;
 
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_IDS_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.DESTINATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.OPERATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.PERMISSION_ID_HEADER;
-import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_DEFINITION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_IDS_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_ID_HEADER;
@@ -66,6 +66,20 @@ class AuthenticationHeaderResolverTest {
   }
 
   @Test
+  void testResolvingFromConnectionIds() throws JsonValidationException, ConfigNotFoundException {
+    final UUID workspaceId = UUID.randomUUID();
+    final UUID connectionId = UUID.randomUUID();
+    final UUID connectionId2 = UUID.randomUUID();
+
+    final Map<String, String> properties = Map.of(CONNECTION_IDS_HEADER, Jsons.serialize(List.of(connectionId.toString(), connectionId2.toString())));
+    when(workspaceHelper.getWorkspaceForConnectionId(connectionId)).thenReturn(workspaceId);
+    when(workspaceHelper.getWorkspaceForConnectionId(connectionId2)).thenReturn(workspaceId);
+
+    final List<UUID> result = resolver.resolveWorkspace(properties);
+    assertEquals(List.of(workspaceId, workspaceId), result);
+  }
+
+  @Test
   void testResolvingFromSourceAndDestinationId() throws JsonValidationException, ConfigNotFoundException {
     final UUID workspaceId = UUID.randomUUID();
     final UUID destinationId = UUID.randomUUID();
@@ -105,17 +119,6 @@ class AuthenticationHeaderResolverTest {
     final UUID sourceId = UUID.randomUUID();
     final Map<String, String> properties = Map.of(SOURCE_ID_HEADER, sourceId.toString());
     when(workspaceHelper.getWorkspaceForSourceId(sourceId)).thenReturn(workspaceId);
-
-    final List<UUID> result = resolver.resolveWorkspace(properties);
-    assertEquals(List.of(workspaceId), result);
-  }
-
-  @Test
-  void testResolvingFromSourceDefinitionId() throws JsonValidationException, ConfigNotFoundException {
-    final UUID workspaceId = UUID.randomUUID();
-    final UUID sourceDefinitionId = UUID.randomUUID();
-    final Map<String, String> properties = Map.of(SOURCE_DEFINITION_ID_HEADER, sourceDefinitionId.toString());
-    when(workspaceHelper.getWorkspaceForSourceId(sourceDefinitionId)).thenReturn(workspaceId);
 
     final List<UUID> result = resolver.resolveWorkspace(properties);
     assertEquals(List.of(workspaceId), result);

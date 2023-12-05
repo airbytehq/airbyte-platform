@@ -1,5 +1,3 @@
-import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { load, YAMLException } from "js-yaml";
 import lowerCase from "lodash/lowerCase";
 import startCase from "lodash/startCase";
@@ -20,8 +18,7 @@ import { Text } from "components/ui/Text";
 
 import { useListBuilderProjects } from "core/api";
 import { ConnectorManifest } from "core/api/types/ConnectorManifest";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useNotificationService } from "hooks/services/Notification";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
@@ -180,7 +177,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
       </FlexContainer>
       <ExternalLink href={links.connectorBuilderTutorial}>
         <FlexContainer alignItems="center" gap="sm">
-          <Icon type="docs" size="lg" />
+          <Icon type="docs" />
           <FormattedMessage id="connectorBuilder.createPage.tutorialPrompt" />
         </FlexContainer>
       </ExternalLink>
@@ -241,7 +238,7 @@ const Tile: React.FC<TileProps> = ({ image, title, description, buttonText, butt
         </FlexContainer>
         <Button onClick={onClick} {...buttonProps} data-testid={dataTestId}>
           <FlexContainer direction="row" alignItems="center" gap="md" className={styles.tileButton}>
-            <FontAwesomeIcon icon={faArrowRight} />
+            <Icon type="arrowRight" />
             <FormattedMessage id={buttonText} />
           </FlexContainer>
         </Button>

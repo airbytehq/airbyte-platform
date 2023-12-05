@@ -23,6 +23,8 @@ import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
+import io.airbyte.api.model.generated.ConnectionDataHistoryReadItem;
+import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.ConnectionSearch;
@@ -66,6 +68,7 @@ import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.Geography;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.ScheduleData;
@@ -91,6 +94,7 @@ import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.models.Attempt;
+import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
@@ -99,11 +103,16 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -145,7 +154,7 @@ public class ConnectionsHandler {
   public ConnectionsHandler(
                             final JobPersistence jobPersistence,
                             final ConfigRepository configRepository,
-                            final Supplier<UUID> uuidGenerator,
+                            @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
                             final WorkspaceHelper workspaceHelper,
                             final TrackingClient trackingClient,
                             final EventRunner eventRunner,
@@ -169,6 +178,99 @@ public class ConnectionsHandler {
     this.jobNotifier = jobNotifier;
     this.maxDaysOfOnlyFailedJobsBeforeConnectionDisable = maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
     this.maxFailedJobsInARowBeforeConnectionDisable = maxFailedJobsInARowBeforeConnectionDisable;
+  }
+
+  /**
+   * Modifies the given StandardSync by applying changes from a partially-filled ConnectionUpdate
+   * patch. Any fields that are null in the patch will be left unchanged.
+   */
+  private static void applyPatchToStandardSync(final StandardSync sync, final ConnectionUpdate patch) throws JsonValidationException {
+    // update the sync's schedule using the patch's scheduleType and scheduleData. validations occur in
+    // the helper to ensure both fields
+    // make sense together.
+    if (patch.getScheduleType() != null) {
+      ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(sync, patch.getScheduleType(), patch.getScheduleData());
+    }
+
+    // the rest of the fields are straightforward to patch. If present in the patch, set the field to
+    // the value
+    // in the patch. Otherwise, leave the field unchanged.
+
+    if (patch.getSyncCatalog() != null) {
+      validateCatalogDoesntContainDuplicateStreamNames(patch.getSyncCatalog());
+      sync.setCatalog(CatalogConverter.toConfiguredProtocol(patch.getSyncCatalog()));
+      sync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(patch.getSyncCatalog()));
+    }
+
+    if (patch.getName() != null) {
+      sync.setName(patch.getName());
+    }
+
+    if (patch.getNamespaceDefinition() != null) {
+      sync.setNamespaceDefinition(Enums.convertTo(patch.getNamespaceDefinition(), NamespaceDefinitionType.class));
+    }
+
+    if (patch.getNamespaceFormat() != null) {
+      sync.setNamespaceFormat(patch.getNamespaceFormat());
+    }
+
+    if (patch.getPrefix() != null) {
+      sync.setPrefix(patch.getPrefix());
+    }
+
+    if (patch.getOperationIds() != null) {
+      sync.setOperationIds(patch.getOperationIds());
+    }
+
+    if (patch.getStatus() != null) {
+      sync.setStatus(ApiPojoConverters.toPersistenceStatus(patch.getStatus()));
+    }
+
+    if (patch.getSourceCatalogId() != null) {
+      sync.setSourceCatalogId(patch.getSourceCatalogId());
+    }
+
+    if (patch.getResourceRequirements() != null) {
+      sync.setResourceRequirements(ApiPojoConverters.resourceRequirementsToInternal(patch.getResourceRequirements()));
+    }
+
+    if (patch.getGeography() != null) {
+      sync.setGeography(ApiPojoConverters.toPersistenceGeography(patch.getGeography()));
+    }
+
+    if (patch.getBreakingChange() != null) {
+      sync.setBreakingChange(patch.getBreakingChange());
+    }
+
+    if (patch.getNotifySchemaChanges() != null) {
+      sync.setNotifySchemaChanges(patch.getNotifySchemaChanges());
+    }
+
+    if (patch.getNotifySchemaChangesByEmail() != null) {
+      sync.setNotifySchemaChangesByEmail(patch.getNotifySchemaChangesByEmail());
+    }
+
+    if (patch.getNonBreakingChangesPreference() != null) {
+      sync.setNonBreakingChangesPreference(ApiPojoConverters.toPersistenceNonBreakingChangesPreference(patch.getNonBreakingChangesPreference()));
+    }
+  }
+
+  private static String getFrequencyStringFromScheduleType(final ScheduleType scheduleType, final ScheduleData scheduleData) {
+    switch (scheduleType) {
+      case MANUAL -> {
+        return "manual";
+      }
+      case BASIC_SCHEDULE -> {
+        return TimeUnit.SECONDS.toMinutes(ScheduleHelpers.getIntervalInSecond(scheduleData.getBasicSchedule())) + " min";
+      }
+      case CRON -> {
+        // TODO(https://github.com/airbytehq/airbyte/issues/2170): consider something more detailed.
+        return "cron";
+      }
+      default -> {
+        throw new RuntimeException("Unexpected schedule type");
+      }
+    }
   }
 
   public InternalOperationResult autoDisableConnection(final UUID connectionId)
@@ -520,81 +622,6 @@ public class ConnectionsHandler {
     return updatedRead;
   }
 
-  /**
-   * Modifies the given StandardSync by applying changes from a partially-filled ConnectionUpdate
-   * patch. Any fields that are null in the patch will be left unchanged.
-   */
-  private static void applyPatchToStandardSync(final StandardSync sync, final ConnectionUpdate patch) throws JsonValidationException {
-    // update the sync's schedule using the patch's scheduleType and scheduleData. validations occur in
-    // the helper to ensure both fields
-    // make sense together.
-    if (patch.getScheduleType() != null) {
-      ConnectionScheduleHelper.populateSyncFromScheduleTypeAndData(sync, patch.getScheduleType(), patch.getScheduleData());
-    }
-
-    // the rest of the fields are straightforward to patch. If present in the patch, set the field to
-    // the value
-    // in the patch. Otherwise, leave the field unchanged.
-
-    if (patch.getSyncCatalog() != null) {
-      validateCatalogDoesntContainDuplicateStreamNames(patch.getSyncCatalog());
-      sync.setCatalog(CatalogConverter.toConfiguredProtocol(patch.getSyncCatalog()));
-      sync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(patch.getSyncCatalog()));
-    }
-
-    if (patch.getName() != null) {
-      sync.setName(patch.getName());
-    }
-
-    if (patch.getNamespaceDefinition() != null) {
-      sync.setNamespaceDefinition(Enums.convertTo(patch.getNamespaceDefinition(), NamespaceDefinitionType.class));
-    }
-
-    if (patch.getNamespaceFormat() != null) {
-      sync.setNamespaceFormat(patch.getNamespaceFormat());
-    }
-
-    if (patch.getPrefix() != null) {
-      sync.setPrefix(patch.getPrefix());
-    }
-
-    if (patch.getOperationIds() != null) {
-      sync.setOperationIds(patch.getOperationIds());
-    }
-
-    if (patch.getStatus() != null) {
-      sync.setStatus(ApiPojoConverters.toPersistenceStatus(patch.getStatus()));
-    }
-
-    if (patch.getSourceCatalogId() != null) {
-      sync.setSourceCatalogId(patch.getSourceCatalogId());
-    }
-
-    if (patch.getResourceRequirements() != null) {
-      sync.setResourceRequirements(ApiPojoConverters.resourceRequirementsToInternal(patch.getResourceRequirements()));
-    }
-
-    if (patch.getGeography() != null) {
-      sync.setGeography(ApiPojoConverters.toPersistenceGeography(patch.getGeography()));
-    }
-
-    if (patch.getBreakingChange() != null) {
-      sync.setBreakingChange(patch.getBreakingChange());
-    }
-
-    if (patch.getNotifySchemaChanges() != null) {
-      sync.setNotifySchemaChanges(patch.getNotifySchemaChanges());
-    }
-
-    if (patch.getNotifySchemaChangesByEmail() != null) {
-      sync.setNotifySchemaChangesByEmail(patch.getNotifySchemaChangesByEmail());
-    }
-
-    if (patch.getNonBreakingChangesPreference() != null) {
-      sync.setNonBreakingChangesPreference(ApiPojoConverters.toPersistenceNonBreakingChangesPreference(patch.getNonBreakingChangesPreference()));
-    }
-  }
-
   private void validateConnectionPatch(final WorkspaceHelper workspaceHelper, final StandardSync persistedSync, final ConnectionUpdate patch) {
     // sanity check that we're updating the right connection
     Preconditions.checkArgument(persistedSync.getConnectionId().equals(patch.getConnectionId()));
@@ -827,24 +854,6 @@ public class ConnectionsHandler {
     return ApiPojoConverters.internalToConnectionRead(standardSync);
   }
 
-  private static String getFrequencyStringFromScheduleType(final ScheduleType scheduleType, final ScheduleData scheduleData) {
-    switch (scheduleType) {
-      case MANUAL -> {
-        return "manual";
-      }
-      case BASIC_SCHEDULE -> {
-        return TimeUnit.SECONDS.toMinutes(ScheduleHelpers.getIntervalInSecond(scheduleData.getBasicSchedule())) + " min";
-      }
-      case CRON -> {
-        // TODO(https://github.com/airbytehq/airbyte/issues/2170): consider something more detailed.
-        return "cron";
-      }
-      default -> {
-        throw new RuntimeException("Unexpected schedule type");
-      }
-    }
-  }
-
   public ConnectionReadList listConnectionsForWorkspaces(final ListConnectionsForWorkspacesRequestBody listConnectionsForWorkspacesRequestBody)
       throws IOException {
 
@@ -885,22 +894,23 @@ public class ConnectionsHandler {
   }
 
   public List<ConnectionStatusRead> getConnectionStatuses(
-                                                          ConnectionStatusesRequestBody connectionStatusesRequestBody)
+                                                          final ConnectionStatusesRequestBody connectionStatusesRequestBody)
       throws IOException, JsonValidationException, ConfigNotFoundException {
-    List<UUID> connectionIds = connectionStatusesRequestBody.getConnectionIds();
-    List<ConnectionStatusRead> result = new ArrayList<>();
-    for (UUID connectionId : connectionIds) {
-      List<Job> jobs = jobPersistence.listJobs(Set.of(JobConfig.ConfigType.SYNC, JobConfig.ConfigType.RESET_CONNECTION), connectionId.toString(),
+    final List<UUID> connectionIds = connectionStatusesRequestBody.getConnectionIds();
+    final List<ConnectionStatusRead> result = new ArrayList<>();
+    for (final UUID connectionId : connectionIds) {
+      final List<Job> jobs = jobPersistence.listJobs(Set.of(JobConfig.ConfigType.SYNC, JobConfig.ConfigType.RESET_CONNECTION),
+          connectionId.toString(),
           maxJobLookback);
-      boolean isRunning = jobs.stream().anyMatch(job -> JobStatus.NON_TERMINAL_STATUSES.contains(job.getStatus()));
+      final boolean isRunning = jobs.stream().anyMatch(job -> JobStatus.NON_TERMINAL_STATUSES.contains(job.getStatus()));
 
-      Optional<Job> lastJob = jobs.stream().filter(job -> JobStatus.TERMINAL_STATUSES.contains(job.getStatus())).findFirst();
-      Optional<JobStatus> lastSyncStatus = lastJob.map(job -> job.getStatus());
+      final Optional<Job> lastJob = jobs.stream().filter(job -> JobStatus.TERMINAL_STATUSES.contains(job.getStatus())).findFirst();
+      final Optional<JobStatus> lastSyncStatus = lastJob.map(job -> job.getStatus());
 
-      Optional<Job> lastSuccessfulJob = jobs.stream().filter(job -> job.getStatus() == JobStatus.SUCCEEDED).findFirst();
-      Optional<Long> lastSuccessTimestamp = lastSuccessfulJob.map(job -> job.getUpdatedAtInSecond());
+      final Optional<Job> lastSuccessfulJob = jobs.stream().filter(job -> job.getStatus() == JobStatus.SUCCEEDED).findFirst();
+      final Optional<Long> lastSuccessTimestamp = lastSuccessfulJob.map(job -> job.getUpdatedAtInSecond());
 
-      ConnectionStatusRead connectionStatus = new ConnectionStatusRead()
+      final ConnectionStatusRead connectionStatus = new ConnectionStatusRead()
           .connectionId(connectionId)
           .isRunning(isRunning)
           .lastSyncJobStatus(Enums.convertTo(lastSyncStatus.orElse(null),
@@ -908,7 +918,7 @@ public class ConnectionsHandler {
           .lastSuccessfulSync(lastSuccessTimestamp.orElse(null))
           .nextSync(null)
           .isLastCompletedJobReset(lastJob.map(job -> job.getConfigType() == ConfigType.RESET_CONNECTION).orElse(false));
-      Optional<FailureType> failureType =
+      final Optional<FailureType> failureType =
           lastJob.flatMap(Job::getLastFailedAttempt)
               .flatMap(Attempt::getFailureSummary)
               .flatMap(s -> s.getFailures().stream().findFirst())
@@ -920,6 +930,65 @@ public class ConnectionsHandler {
     }
 
     return result;
+  }
+
+  /**
+   * Returns bytes committed per day for the given connection for the last 30 days in the given
+   * timezone.
+   *
+   * @param connectionDataHistoryRequestBody the connectionId and timezone string
+   * @return list of ConnectionDataHistoryReadItems (timestamp and bytes committed)
+   */
+  public List<ConnectionDataHistoryReadItem> getConnectionDataHistory(final ConnectionDataHistoryRequestBody connectionDataHistoryRequestBody)
+      throws IOException {
+
+    // Start time in designated timezone
+    final ZonedDateTime endTimeInUserTimeZone = Instant.now().atZone(ZoneId.of(connectionDataHistoryRequestBody.getTimezone()));
+    final ZonedDateTime startTimeInUserTimeZone = endTimeInUserTimeZone.minusDays(30);
+    // Convert start time to UTC (since that's what the database uses)
+    final Instant startTimeInUTC = startTimeInUserTimeZone.toInstant();
+
+    final List<AttemptWithJobInfo> attempts = jobPersistence.listAttemptsForConnectionAfterTimestamp(
+        connectionDataHistoryRequestBody.getConnectionId(),
+        ConfigType.SYNC,
+        startTimeInUTC);
+
+    // we want an entry per day - even if it's empty
+    final Map<LocalDate, ConnectionDataHistoryReadItem> connectionDataHistoryReadItemsByDate = new HashMap<>();
+    final LocalDate startDate = startTimeInUserTimeZone.toLocalDate();
+    final LocalDate endDate = endTimeInUserTimeZone.toLocalDate();
+    for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+      connectionDataHistoryReadItemsByDate.put(date, new ConnectionDataHistoryReadItem()
+          .timestamp(Math.toIntExact(date.atStartOfDay(ZoneId.of(connectionDataHistoryRequestBody.getTimezone())).toEpochSecond()))
+          .bytes(0));
+    }
+
+    for (final AttemptWithJobInfo attempt : attempts) {
+      final Optional<Long> endedAtOptional = attempt.getAttempt().getEndedAtInSecond();
+
+      if (endedAtOptional.isPresent()) {
+        // Convert the endedAt timestamp from the database to the designated timezone
+        final Instant attemptEndedAt = Instant.ofEpochSecond(endedAtOptional.get());
+        final LocalDate attemptDateInUserTimeZone = attemptEndedAt.atZone(ZoneId.of(connectionDataHistoryRequestBody.getTimezone()))
+            .toLocalDate();
+
+        // Merge it with the bytes synced from the attempt
+        int bytesSynced = 0;
+        final Optional<JobOutput> attemptOutput = attempt.getAttempt().getOutput();
+        if (attemptOutput.isPresent()) {
+          bytesSynced = Math.toIntExact(attemptOutput.get().getSync().getStandardSyncSummary().getTotalStats().getBytesCommitted());
+        }
+
+        // Update the bytes synced for the corresponding day
+        final ConnectionDataHistoryReadItem existingItem = connectionDataHistoryReadItemsByDate.get(attemptDateInUserTimeZone);
+        existingItem.setBytes(existingItem.getBytes() + bytesSynced);
+      }
+    }
+
+    // Sort the results by date
+    return connectionDataHistoryReadItemsByDate.values().stream()
+        .sorted(Comparator.comparing(ConnectionDataHistoryReadItem::getTimestamp))
+        .collect(Collectors.toList());
   }
 
   public ConnectionAutoPropagateResult applySchemaChange(final ConnectionAutoPropagateSchemaChange request)

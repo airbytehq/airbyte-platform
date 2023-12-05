@@ -28,6 +28,7 @@ import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.AirbyteControlConnectorConfigMessage;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
+import io.airbyte.protocol.models.AirbyteStream;
 import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
@@ -38,6 +39,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.StringJoiner;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,6 +108,10 @@ public class DefaultDiscoverCatalogWorker implements DiscoverCatalogWorker {
       }
 
       if (catalog.isPresent()) {
+        final String error = validateCatalog(catalog.get());
+        if (!error.isEmpty()) {
+          WorkerUtils.throwWorkerException(error, process);
+        }
         final DiscoverCatalogResult result =
             AirbyteApiClient.retryWithJitter(() -> airbyteApiClient.getSourceApi()
                 .writeDiscoverCatalogResult(buildSourceDiscoverSchemaWriteRequestBody(discoverSchemaInput, catalog.get())),
@@ -122,6 +128,34 @@ public class DefaultDiscoverCatalogWorker implements DiscoverCatalogWorker {
       ApmTraceUtils.addExceptionToTrace(e);
       throw new WorkerException("Error while discovering schema", e);
     }
+  }
+
+  private String validateCatalog(final AirbyteCatalog persistenceCatalog) {
+    final StringJoiner streamsWithFaultySchema = new StringJoiner(",");
+    for (final AirbyteStream s : persistenceCatalog.getStreams()) {
+      if (s.getJsonSchema() != null && s.getJsonSchema().has("properties") && s.getJsonSchema().get("properties") != null) {
+        final JsonNode jsonSchema = s.getJsonSchema().get("properties");
+        for (final String cursor : s.getDefaultCursorField()) {
+          if (!jsonSchema.has(cursor)) {
+            streamsWithFaultySchema.add(
+                String.format("Stream %s has declared cursor field %s but it's not part of the schema %s", s.getName(), cursor,
+                    jsonSchema.toPrettyString()));
+          }
+        }
+
+        for (final List<String> pkey : s.getSourceDefinedPrimaryKey()) {
+          for (final String k : pkey) {
+            if (!jsonSchema.has(k)) {
+              streamsWithFaultySchema.add(
+                  String.format("Stream %s has declared primary key field %s but it's not part of the schema %s", s.getName(), k,
+                      jsonSchema.toPrettyString()));
+            }
+          }
+        }
+      }
+    }
+
+    return streamsWithFaultySchema.toString();
   }
 
   private SourceDiscoverSchemaWriteRequestBody buildSourceDiscoverSchemaWriteRequestBody(final StandardDiscoverCatalogInput discoverSchemaInput,

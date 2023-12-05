@@ -2,8 +2,16 @@ import { useMemo } from "react";
 import { FieldArrayWithId } from "react-hook-form";
 
 import { NormalizationType } from "area/connection/types";
+import { isDbtTransformation, isNormalizationTransformation } from "area/connection/utils";
 import { useCurrentWorkspace } from "core/api";
-import { AirbyteCatalog, DestinationDefinitionSpecificationRead, SchemaChange } from "core/api/types/AirbyteClient";
+import {
+  AirbyteCatalog,
+  DestinationDefinitionSpecificationRead,
+  DestinationSyncMode,
+  OperationCreate,
+  SchemaChange,
+  SyncMode,
+} from "core/api/types/AirbyteClient";
 import {
   ActorDefinitionVersionRead,
   ConnectionScheduleData,
@@ -14,14 +22,16 @@ import {
   OperationRead,
 } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
-import { ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useConnectionHookFormService } from "hooks/services/ConnectionForm/ConnectionHookFormService";
+import {
+  ConnectionOrPartialConnection,
+  useConnectionFormService,
+} from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { calculateInitialCatalogHookForm } from "./calculateInitialCatalogHookForm";
-import { getInitialNormalization, getInitialTransformations } from "./formConfig";
 import { BASIC_FREQUENCY_DEFAULT_VALUE } from "./ScheduleHookFormField/useBasicFrequencyDropdownDataHookForm";
 import { createConnectionValidationSchema } from "./schema";
+import { DbtOperationRead } from "../TransformationHookForm";
 
 /**
  * react-hook-form form values type for the connection form
@@ -47,12 +57,22 @@ export interface HookFormConnectionFormValues {
 export type SyncStreamFieldWithId = FieldArrayWithId<HookFormConnectionFormValues, "syncCatalog.streams", "id">;
 
 /**
+ * supported sync modes for the sync catalog row
+ */
+export const SUPPORTED_MODES: Array<[SyncMode, DestinationSyncMode]> = [
+  [SyncMode.incremental, DestinationSyncMode.append_dedup],
+  [SyncMode.full_refresh, DestinationSyncMode.overwrite],
+  [SyncMode.incremental, DestinationSyncMode.append],
+  [SyncMode.full_refresh, DestinationSyncMode.append],
+];
+
+/**
  * useConnectionValidationSchema with additional arguments
  */
 export const useConnectionHookFormValidationSchema = () => {
   const allowSubOneHourCronExpressions = useFeature(FeatureItem.AllowSyncSubOneHourCronExpressions);
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
-  const { mode } = useConnectionHookFormService();
+  const { mode } = useConnectionFormService();
 
   return useMemo(
     () => createConnectionValidationSchema(mode, allowSubOneHourCronExpressions, allowAutoDetectSchema),
@@ -60,12 +80,38 @@ export const useConnectionHookFormValidationSchema = () => {
   );
 };
 
+/**
+ * get transformation operations only
+ * @param operations
+ */
+export const getInitialTransformations = (operations: OperationRead[]): DbtOperationRead[] =>
+  operations?.filter(isDbtTransformation) ?? [];
+
+/**
+ * get normalization initial normalization type
+ * @param operations
+ * @param isEditMode
+ */
+export const getInitialNormalization = (
+  operations?: Array<OperationRead | OperationCreate>,
+  isEditMode?: boolean
+): NormalizationType => {
+  const initialNormalization =
+    operations?.find(isNormalizationTransformation)?.operatorConfiguration?.normalization?.option;
+
+  return initialNormalization
+    ? NormalizationType[initialNormalization]
+    : isEditMode
+    ? NormalizationType.raw
+    : NormalizationType.basic;
+};
+
 // react-hook-form form values type for the connection form.
 export const useInitialHookFormValues = (
   connection: ConnectionOrPartialConnection,
   destDefinitionVersion: ActorDefinitionVersionRead,
   destDefinitionSpecification: DestinationDefinitionSpecificationRead,
-  isNotCreateMode?: boolean
+  isEditMode?: boolean
 ): HookFormConnectionFormValues => {
   const autoPropagationEnabled = useExperiment("autopropagation.enabled", false);
   const workspace = useCurrentWorkspace();
@@ -99,14 +145,14 @@ export const useInitialHookFormValues = (
         connection.syncCatalog,
         destDefinitionSpecification?.supportedDestinationSyncModes || [],
         streamTransformsWithBreakingChange,
-        isNotCreateMode,
+        isEditMode,
         newStreamDescriptors
       ),
     [
       connection.syncCatalog,
       destDefinitionSpecification?.supportedDestinationSyncModes,
       streamTransformsWithBreakingChange,
-      isNotCreateMode,
+      isEditMode,
       newStreamDescriptors,
     ]
   );
@@ -114,7 +160,7 @@ export const useInitialHookFormValues = (
   return useMemo(() => {
     const initialValues: HookFormConnectionFormValues = {
       // set name field
-      ...(isNotCreateMode
+      ...(isEditMode
         ? {}
         : {
             name: connection.name ?? `${connection.source.name} → ${connection.destination.name}`,
@@ -147,7 +193,7 @@ export const useInitialHookFormValues = (
       geography: connection.geography || workspace.defaultGeography || "auto",
       ...{
         ...(destDefinitionVersion.supportsDbt && {
-          normalization: getInitialNormalization(connection.operations ?? [], isNotCreateMode),
+          normalization: getInitialNormalization(connection.operations ?? [], isEditMode),
         }),
       },
       ...{
@@ -174,7 +220,7 @@ export const useInitialHookFormValues = (
     defaultNonBreakingChangesPreference,
     workspace.defaultGeography,
     destDefinitionVersion.supportsDbt,
-    isNotCreateMode,
+    isEditMode,
     initialSchema,
   ]);
 };

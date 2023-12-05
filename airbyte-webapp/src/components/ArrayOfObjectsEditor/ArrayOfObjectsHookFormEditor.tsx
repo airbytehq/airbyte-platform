@@ -22,7 +22,6 @@ export interface ArrayOfObjectsHookFormEditorProps<T> {
 /**
  * The component is used to render a list of react-hook-form FieldArray items with the ability to add, edit and remove items.
  * It's a react-hook-form version of the ArrayOfObjectsEditor component and will replace it in the future.
- * @see ArrayOfObjectsEditor
  * @param fields
  * @param mainTitle
  * @param addButtonText

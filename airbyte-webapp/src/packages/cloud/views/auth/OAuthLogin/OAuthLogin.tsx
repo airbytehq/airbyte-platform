@@ -1,5 +1,3 @@
-import { faIdCardClip } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useRef, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { createSearchParams, useNavigate, useSearchParams } from "react-router-dom";
@@ -7,6 +5,7 @@ import { useUnmount } from "react-use";
 import { Subscription } from "rxjs";
 
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { Spinner } from "components/ui/Spinner";
 
@@ -44,7 +43,7 @@ const SsoButton: React.FC = () => {
 
   return (
     <Link className={styles.sso} to={linkLocation}>
-      <FontAwesomeIcon icon={faIdCardClip} />
+      <Icon type="idCard" />
       <FormattedMessage id="login.sso.continueWithSSO" tagName="span" />
     </Link>
   );

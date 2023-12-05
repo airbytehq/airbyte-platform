@@ -1,6 +1,6 @@
 import { FormattedMessage } from "react-intl";
 
-import { PlusIcon } from "components/icons/PlusIcon";
+import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import styles from "./RequestNewConnectorButton.module.scss";
@@ -12,7 +12,7 @@ interface RequestNewConnectorButtonProps {
 export const RequestNewConnectorButton: React.FC<RequestNewConnectorButtonProps> = ({ onClick }) => {
   return (
     <button onClick={onClick} className={styles.button}>
-      <PlusIcon />
+      <Icon type="plus" />
       <Text size="lg" className={styles.button__text}>
         <FormattedMessage id="connector.requestConnector" />
       </Text>

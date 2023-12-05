@@ -22,18 +22,21 @@ export const ScheduleTypeFormControl: React.FC = () => {
         id: "frequency.scheduled",
       }),
       value: ConnectionScheduleType.basic,
+      "data-testid": "scheduled",
     },
     {
       label: formatMessage({
         id: "frequency.manual",
       }),
       value: ConnectionScheduleType.manual,
+      "data-testid": "manual",
     },
     {
       label: formatMessage({
         id: "frequency.cron",
       }),
       value: ConnectionScheduleType.cron,
+      "data-testid": "cron",
     },
   ];
 
@@ -74,6 +77,7 @@ export const ScheduleTypeFormControl: React.FC = () => {
               onScheduleTypeSelect(value);
             }}
             selectedValue={field.value}
+            data-testid="schedule-type"
           />
         </FormFieldLayout>
       )}

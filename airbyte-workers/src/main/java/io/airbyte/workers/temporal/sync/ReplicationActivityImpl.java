@@ -162,7 +162,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           if (featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE,
               new Multi(
                   List.of(new Workspace(replicationActivityInput.getWorkspaceId()), new Connection(replicationActivityInput.getConnectionId()))))) {
-            worker = new WorkloadApiWorker(documentStoreClient, orchestratorNameGenerator, workloadApi, workloadIdGenerator,
+            worker = new WorkloadApiWorker(documentStoreClient, orchestratorNameGenerator, airbyteApiClient, workloadApi, workloadIdGenerator,
                 replicationActivityInput, featureFlagClient);
           } else {
             final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =

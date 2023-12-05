@@ -1,3 +1,4 @@
+import { JSONSchema7Type } from "json-schema";
 import get from "lodash/get";
 import React, { useState } from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
@@ -97,10 +98,34 @@ const stringify = (value: unknown): string => {
 const getItemName = (item: Record<string, unknown>, properties: FormBlock[]): string => {
   return Object.keys(item)
     .sort()
+    .filter((key) => item[key] !== undefined && item[key] !== null && item[key] !== "")
+    .filter((key) =>
+      // do not show empty objects
+      typeof item[key] === "object" && !Array.isArray(item[key])
+        ? Object.keys(item[key] as Record<string, unknown>).length > 0
+        : true
+    )
     .map((key) => {
       const property = properties.find(({ fieldKey }) => fieldKey === key);
       const name = property?.title ?? key;
-      return `${name}: ${stringify(item[key])}`;
+      const value = item[key];
+      if (!property) {
+        return `${name}: ${stringify(value)}`;
+      }
+      if (property._type === "formItem") {
+        return `${name}: ${property.isSecret ? "*****" : stringify(value)}`;
+      }
+      if (property._type === "formGroup") {
+        return getItemName(value as Record<string, unknown>, property.properties);
+      }
+      if (property._type === "formCondition") {
+        const selectionValue = (value as Record<string, unknown>)[property.selectionKey] as JSONSchema7Type;
+        const selectedOption = property.conditions[property.selectionConstValues.indexOf(selectionValue)];
+        return `${name}: ${selectedOption?.title ?? stringify(selectionValue)}`;
+      }
+      const arrayValue = value as Array<Record<string, unknown>>;
+      return `${name}: [${arrayValue.length > 0 ? "..." : ""}]`;
     })
+    .filter(Boolean)
     .join(" | ");
 };

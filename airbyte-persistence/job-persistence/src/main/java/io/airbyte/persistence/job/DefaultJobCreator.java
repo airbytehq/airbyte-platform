@@ -127,7 +127,9 @@ public class DefaultJobCreator implements JobCreator {
                                                  final List<StreamDescriptor> streamsToReset,
                                                  final UUID workspaceId)
       throws IOException {
-    final ConfiguredAirbyteCatalog configuredAirbyteCatalog = standardSync.getCatalog();
+    final ConfiguredAirbyteCatalog immutableConfiguredAirbyteCatalog = standardSync.getCatalog();
+    final ConfiguredAirbyteCatalog configuredAirbyteCatalog = new ConfiguredAirbyteCatalog()
+        .withStreams(new ArrayList<>(immutableConfiguredAirbyteCatalog.getStreams()));
     CatalogTransforms.updateCatalogForReset(streamsToReset, configuredAirbyteCatalog);
 
     final var resetResourceRequirements =

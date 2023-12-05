@@ -8,7 +8,7 @@ import com.github.slugify.Slugify;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import io.airbyte.analytics.TrackingClientSingleton;
+import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationRead;
@@ -39,7 +39,6 @@ import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.UserPermission;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
@@ -51,6 +50,7 @@ import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
@@ -82,6 +82,7 @@ public class WorkspacesHandler {
   private final Supplier<UUID> uuidSupplier;
   private final WorkspaceService workspaceService;
   private final Slugify slugify;
+  private final TrackingClient trackingClient;
 
   @VisibleForTesting
   public WorkspacesHandler(final ConfigRepository configRepository,
@@ -92,8 +93,9 @@ public class WorkspacesHandler {
                            final ConnectionsHandler connectionsHandler,
                            final DestinationHandler destinationHandler,
                            final SourceHandler sourceHandler,
-                           final Supplier<UUID> uuidSupplier,
-                           final WorkspaceService workspaceService) {
+                           @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
+                           final WorkspaceService workspaceService,
+                           final TrackingClient trackingClient) {
     this.configRepository = configRepository;
     this.workspacePersistence = workspacePersistence;
     this.organizationPersistence = organizationPersistence;
@@ -105,6 +107,7 @@ public class WorkspacesHandler {
     this.uuidSupplier = uuidSupplier;
     this.workspaceService = workspaceService;
     this.slugify = new Slugify();
+    this.trackingClient = trackingClient;
   }
 
   private static WorkspaceRead buildWorkspaceRead(final StandardWorkspace workspace) {
@@ -314,7 +317,8 @@ public class WorkspacesHandler {
   public WorkspaceRead getWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
-    final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, false);
+    final boolean includeTombstone = workspaceIdRequestBody.getIncludeTombstone() != null ? workspaceIdRequestBody.getIncludeTombstone() : false;
+    final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, includeTombstone);
     return buildWorkspaceRead(workspace);
   }
 
@@ -386,8 +390,7 @@ public class WorkspacesHandler {
   public WorkspaceReadList listWorkspacesByUser(final ListWorkspacesByUserRequestBody request)
       throws IOException {
     // If user has instance_admin permission, list all workspaces.
-    final UserPermission userInstanceAdminPermission = permissionPersistence.getUserInstanceAdminPermission(request.getUserId());
-    if (userInstanceAdminPermission != null) {
+    if (permissionPersistence.isUserInstanceAdmin(request.getUserId())) {
       return listWorkspacesByInstanceAdminUser(request);
     }
     // User has no instance_admin permission.
@@ -439,7 +442,7 @@ public class WorkspacesHandler {
     }
 
     // after updating email or tracking info, we need to re-identify the instance.
-    TrackingClientSingleton.get().identify(workspaceId);
+    trackingClient.identify(workspaceId);
 
     return buildWorkspaceReadFromId(workspaceId);
   }

@@ -2,7 +2,9 @@ package io.airbyte.workload.repository
 
 import io.airbyte.db.factory.DSLContextFactory
 import io.airbyte.db.instance.configs.jooq.generated.enums.WorkloadStatus
+import io.airbyte.db.instance.configs.jooq.generated.enums.WorkloadType
 import io.airbyte.db.instance.test.TestDatabaseProviders
+import io.airbyte.workload.repository.WorkloadRepositoryTest.Fixtures.WORKLOAD_ID
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.micronaut.context.ApplicationContext
@@ -26,8 +28,6 @@ import javax.sql.DataSource
 
 @MicronautTest
 internal class WorkloadRepositoryTest {
-  private val workloadId = "test"
-
   companion object {
     private lateinit var context: ApplicationContext
     lateinit var workloadRepo: WorkloadRepository
@@ -115,19 +115,14 @@ internal class WorkloadRepositoryTest {
     labels.add(label1)
     labels.add(label2)
     val workload =
-      Workload(
-        id = workloadId,
+      Fixtures.workload(
+        id = WORKLOAD_ID,
         dataplaneId = null,
         status = WorkloadStatus.pending,
-        createdAt = null,
-        updatedAt = null,
-        lastHeartbeatAt = null,
         workloadLabels = labels,
-        inputPayload = "",
-        logPath = "",
       )
     workloadRepo.save(workload)
-    val persistedWorkload = workloadRepo.findById(workloadId)
+    val persistedWorkload = workloadRepo.findById(WORKLOAD_ID)
     assertTrue(persistedWorkload.isPresent)
     assertNull(persistedWorkload.get().dataplaneId)
     assertEquals(WorkloadStatus.pending, persistedWorkload.get().status)
@@ -149,25 +144,20 @@ internal class WorkloadRepositoryTest {
   @Test
   fun `test status update`() {
     val workload =
-      Workload(
-        id = workloadId,
+      Fixtures.workload(
+        id = WORKLOAD_ID,
         dataplaneId = null,
         status = WorkloadStatus.pending,
-        createdAt = null,
-        updatedAt = null,
-        lastHeartbeatAt = null,
-        workloadLabels = null,
-        inputPayload = "",
-        logPath = "",
+        geography = "US",
       )
     workloadRepo.save(workload)
-    workloadRepo.update(workloadId, WorkloadStatus.running)
-    var persistedWorkload = workloadRepo.findById(workloadId)
+    workloadRepo.update(WORKLOAD_ID, WorkloadStatus.running)
+    var persistedWorkload = workloadRepo.findById(WORKLOAD_ID)
     assertTrue(persistedWorkload.isPresent)
     assertEquals(WorkloadStatus.running, persistedWorkload.get().status)
 
-    workloadRepo.update(workloadId, WorkloadStatus.failure)
-    persistedWorkload = workloadRepo.findById(workloadId)
+    workloadRepo.update(WORKLOAD_ID, WorkloadStatus.failure)
+    persistedWorkload = workloadRepo.findById(WORKLOAD_ID)
     assertTrue(persistedWorkload.isPresent)
     assertEquals(WorkloadStatus.failure, persistedWorkload.get().status)
   }
@@ -175,29 +165,24 @@ internal class WorkloadRepositoryTest {
   @Test
   fun `test heartbeat update`() {
     val workload =
-      Workload(
-        id = workloadId,
+      Fixtures.workload(
+        id = WORKLOAD_ID,
         dataplaneId = null,
         status = WorkloadStatus.pending,
-        createdAt = null,
-        updatedAt = null,
-        lastHeartbeatAt = null,
-        workloadLabels = null,
-        inputPayload = "",
-        logPath = "",
+        geography = "US",
       )
     workloadRepo.save(workload)
     val now = OffsetDateTime.now()
-    workloadRepo.update(workloadId, WorkloadStatus.running, now)
-    var persistedWorkload = workloadRepo.findById(workloadId)
+    workloadRepo.update(WORKLOAD_ID, WorkloadStatus.running, now)
+    var persistedWorkload = workloadRepo.findById(WORKLOAD_ID)
     assertTrue(persistedWorkload.isPresent)
     // Using .toEpochSecond() here because of dagger, it is passing locally but there is nano second errors on dagger
     assertEquals(now.toEpochSecond(), persistedWorkload.get().lastHeartbeatAt?.toEpochSecond())
     assertEquals(WorkloadStatus.running, persistedWorkload.get().status)
 
     val nowPlusOneMinute = now.plus(1, ChronoUnit.MINUTES)
-    workloadRepo.update(workloadId, WorkloadStatus.running, nowPlusOneMinute)
-    persistedWorkload = workloadRepo.findById(workloadId)
+    workloadRepo.update(WORKLOAD_ID, WorkloadStatus.running, nowPlusOneMinute)
+    persistedWorkload = workloadRepo.findById(WORKLOAD_ID)
     assertTrue(persistedWorkload.isPresent)
     assertEquals(nowPlusOneMinute.toEpochSecond(), persistedWorkload.get().lastHeartbeatAt?.toEpochSecond())
   }
@@ -205,25 +190,20 @@ internal class WorkloadRepositoryTest {
   @Test
   fun `test dataplane update`() {
     val workload =
-      Workload(
-        id = workloadId,
+      Fixtures.workload(
+        id = WORKLOAD_ID,
         dataplaneId = null,
         status = WorkloadStatus.pending,
-        createdAt = null,
-        updatedAt = null,
-        lastHeartbeatAt = null,
-        workloadLabels = null,
-        inputPayload = "",
-        logPath = "",
+        geography = "AUTO",
       )
     workloadRepo.save(workload)
-    workloadRepo.update(workloadId, "dataplaneId1", WorkloadStatus.running)
-    var persistedWorkload = workloadRepo.findById(workloadId)
+    workloadRepo.update(WORKLOAD_ID, "dataplaneId1", WorkloadStatus.running)
+    var persistedWorkload = workloadRepo.findById(WORKLOAD_ID)
     assertTrue(persistedWorkload.isPresent)
     assertEquals("dataplaneId1", persistedWorkload.get().dataplaneId)
 
-    workloadRepo.update(workloadId, "dataplaneId2", WorkloadStatus.running)
-    persistedWorkload = workloadRepo.findById(workloadId)
+    workloadRepo.update(WORKLOAD_ID, "dataplaneId2", WorkloadStatus.running)
+    persistedWorkload = workloadRepo.findById(WORKLOAD_ID)
     assertTrue(persistedWorkload.isPresent)
     assertEquals("dataplaneId2", persistedWorkload.get().dataplaneId)
   }
@@ -231,28 +211,18 @@ internal class WorkloadRepositoryTest {
   @Test
   fun `test search`() {
     val workload1 =
-      Workload(
+      Fixtures.workload(
         id = "workload1",
         dataplaneId = "dataplane1",
         status = WorkloadStatus.failure,
-        createdAt = null,
-        updatedAt = null,
-        lastHeartbeatAt = null,
-        workloadLabels = null,
-        inputPayload = "",
-        logPath = "",
+        geography = "AUTO",
       )
     val workload2 =
-      Workload(
+      Fixtures.workload(
         id = "workload2",
         dataplaneId = "dataplane2",
         status = WorkloadStatus.success,
-        createdAt = null,
-        updatedAt = null,
-        lastHeartbeatAt = null,
-        workloadLabels = null,
-        inputPayload = "",
-        logPath = "",
+        geography = "US",
       )
     workloadRepo.save(workload1)
     workloadRepo.save(workload2)
@@ -311,5 +281,32 @@ internal class WorkloadRepositoryTest {
 
     val resultSearch11 = sortedSearch(listOf("fakeDataplane"), java.util.List.of(WorkloadStatus.failure, WorkloadStatus.success), now.plusDays(1))
     assertEquals(0, resultSearch11.size)
+  }
+
+  object Fixtures {
+    const val WORKLOAD_ID = "test"
+
+    fun workload(
+      id: String = WORKLOAD_ID,
+      dataplaneId: String? = null,
+      status: WorkloadStatus = WorkloadStatus.pending,
+      workloadLabels: List<WorkloadLabel>? = listOf(),
+      inputPayload: String = "",
+      logPath: String = "/",
+      geography: String = "US",
+      mutexKey: String = "",
+      type: WorkloadType = WorkloadType.sync,
+    ): Workload =
+      Workload(
+        id = id,
+        dataplaneId = dataplaneId,
+        status = status,
+        workloadLabels = workloadLabels,
+        inputPayload = inputPayload,
+        logPath = logPath,
+        geography = geography,
+        mutexKey = mutexKey,
+        type = type,
+      )
   }
 }

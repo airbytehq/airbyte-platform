@@ -1,5 +1,3 @@
-import { faSliders, faUser } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classnames from "classnames";
 import React from "react";
 import { useFormContext } from "react-hook-form";
@@ -12,8 +10,7 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
 
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -107,7 +104,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
             });
           }}
         >
-          <FontAwesomeIcon icon={faSliders} />
+          <Icon type="parameters" />
           <Text className={styles.streamViewText}>
             <FormattedMessage id="connectorBuilder.globalConfiguration" />
           </Text>
@@ -124,7 +121,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
             });
           }}
         >
-          <FontAwesomeIcon icon={faUser} />
+          <Icon type="user" />
           <Text className={styles.streamViewText}>
             <FormattedMessage
               id="connectorBuilder.userInputs"

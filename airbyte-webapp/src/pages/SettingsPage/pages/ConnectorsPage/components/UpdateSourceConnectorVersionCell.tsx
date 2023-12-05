@@ -1,4 +1,4 @@
-import { useLatestSourceDefinitionList } from "services/connector/SourceDefinitionService";
+import { useLatestSourceDefinitionList } from "core/api";
 
 import { VersionCell, VersionCellProps } from "./VersionCell";
 

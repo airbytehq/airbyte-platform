@@ -1,3 +1,5 @@
+import { useIntl } from "react-intl";
+
 import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
 
@@ -5,8 +7,7 @@ import {
   OAuthAuthenticatorRefreshTokenUpdater,
   SessionTokenAuthenticatorRequestAuthentication,
 } from "core/api/types/ConnectorManifest";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 
 import { BuilderCard } from "./BuilderCard";
@@ -15,8 +16,8 @@ import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderInputPlaceholder } from "./BuilderInputPlaceholder";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderOptional } from "./BuilderOptional";
+import { BuilderRequestInjection } from "./BuilderRequestInjection";
 import { ErrorHandlerSection } from "./ErrorHandlerSection";
-import { InjectIntoFields } from "./InjectIntoFields";
 import { KeyValueListField } from "./KeyValueListField";
 import { getDescriptionByManifest, getLabelAndTooltip, getOptionsByManifest } from "./manifestHelpers";
 import { RequestOptionSection } from "./RequestOptionSection";
@@ -44,13 +45,17 @@ const AUTH_PATH = "formValues.global.authenticator";
 const authPath = <T extends string>(path: T) => `${AUTH_PATH}.${path}` as const;
 
 export const AuthenticationSection: React.FC = () => {
+  const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
 
   return (
-    <BuilderCard docLink={links.connectorBuilderAuthentication} label="Authentication">
+    <BuilderCard
+      docLink={links.connectorBuilderAuthentication}
+      label={formatMessage({ id: "connectorBuilder.authentication.label" })}
+    >
       <BuilderOneOf<BuilderFormAuthenticator>
         path={AUTH_PATH}
-        label="Method"
+        label={formatMessage({ id: "connectorBuilder.authentication.method.label" })}
         manifestPath="HttpRequester.properties.authenticator"
         manifestOptionPaths={[
           "ApiKeyAuthenticator",
@@ -65,9 +70,9 @@ export const AuthenticationSection: React.FC = () => {
           })
         }
         options={[
-          { label: "No Auth", default: { type: NO_AUTH } },
+          { label: formatMessage({ id: "connectorBuilder.authentication.method.noAuth" }), default: { type: NO_AUTH } },
           {
-            label: "API Key",
+            label: formatMessage({ id: "connectorBuilder.authentication.method.apiKey" }),
             default: {
               type: API_KEY_AUTHENTICATOR,
               ...inferredAuthValues("ApiKeyAuthenticator"),
@@ -79,13 +84,17 @@ export const AuthenticationSection: React.FC = () => {
             },
             children: (
               <>
-                <InjectIntoFields path={authPath("inject_into")} descriptor="token" excludeValues={["path"]} />
+                <BuilderRequestInjection
+                  path={authPath("inject_into")}
+                  descriptor={formatMessage({ id: "connectorBuilder.authentication.injectInto.token" })}
+                  excludeValues={["path"]}
+                />
                 <BuilderInputPlaceholder manifestPath="ApiKeyAuthenticator.properties.api_token" />
               </>
             ),
           },
           {
-            label: "Bearer",
+            label: formatMessage({ id: "connectorBuilder.authentication.method.bearer" }),
             default: {
               type: BEARER_AUTHENTICATOR,
               ...(inferredAuthValues("BearerAuthenticator") as Record<"api_token", string>),
@@ -93,7 +102,7 @@ export const AuthenticationSection: React.FC = () => {
             children: <BuilderInputPlaceholder manifestPath="BearerAuthenticator.properties.api_token" />,
           },
           {
-            label: "Basic HTTP",
+            label: formatMessage({ id: "connectorBuilder.authentication.method.basicHttp" }),
             default: {
               type: BASIC_AUTHENTICATOR,
               ...(inferredAuthValues("BasicHttpAuthenticator") as Record<"username" | "password", string>),
@@ -106,7 +115,7 @@ export const AuthenticationSection: React.FC = () => {
             ),
           },
           {
-            label: "OAuth",
+            label: formatMessage({ id: "connectorBuilder.authentication.method.oAuth" }),
             default: {
               type: OAUTH_AUTHENTICATOR,
               ...(inferredAuthValues("OAuthAuthenticator") as Record<
@@ -120,7 +129,7 @@ export const AuthenticationSection: React.FC = () => {
             children: <OAuthForm />,
           },
           {
-            label: "Session Token",
+            label: formatMessage({ id: "connectorBuilder.authentication.method.sessionToken" }),
             default: {
               type: SESSION_TOKEN_AUTHENTICATOR,
               login_requester: {
@@ -158,6 +167,7 @@ export const AuthenticationSection: React.FC = () => {
 };
 
 const OAuthForm = () => {
+  const { formatMessage } = useIntl();
   const grantType = useBuilderWatch(authPath("grant_type"));
   const refreshToken = useBuilderWatch(authPath("refresh_token"));
   return (
@@ -179,8 +189,8 @@ const OAuthForm = () => {
         <>
           <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.refresh_token" />
           <ToggleGroupField<OAuthAuthenticatorRefreshTokenUpdater>
-            label="Overwrite config with refresh token response"
-            tooltip="If enabled, the refresh token response will overwrite the current OAuth config. This is useful if requesting a new access token invalidates the old refresh token."
+            label={formatMessage({ id: "connectorBuilder.authentication.refreshTokenUpdater.label" })}
+            tooltip={formatMessage({ id: "connectorBuilder.authentication.refreshTokenUpdater.tooltip" })}
             fieldPath={authPath("refresh_token_updater")}
             initialValues={{
               refresh_token_name: "",
@@ -233,8 +243,9 @@ const OAuthForm = () => {
 };
 
 const SessionTokenForm = () => {
+  const { formatMessage } = useIntl();
   const { label: loginRequesterLabel, tooltip: loginRequesterTooltip } = getLabelAndTooltip(
-    "Session Token Retrieval",
+    formatMessage({ id: "connectorBuilder.authentication.loginRequester.label" }),
     undefined,
     "SessionTokenAuthenticator.properties.login_requester",
     authPath("login_requester"),
@@ -246,8 +257,8 @@ const SessionTokenForm = () => {
         <BuilderFieldWithInputs
           type="string"
           path={authPath("login_requester.url")}
-          label="URL"
-          tooltip="The full URL of where to send the request to retrieve the session token"
+          label={formatMessage({ id: "connectorBuilder.authentication.loginRequester.url.label" })}
+          tooltip={formatMessage({ id: "connectorBuilder.authentication.loginRequester.url.tooltip" })}
         />
         <BuilderField
           type="enum"
@@ -257,13 +268,16 @@ const SessionTokenForm = () => {
         />
         <BuilderOneOf<BuilderFormAuthenticator>
           path={authPath("login_requester.authenticator")}
-          label="Authentication Method"
+          label={formatMessage({ id: "connectorBuilder.authentication.loginRequester.authenticator.label" })}
           manifestPath="HttpRequester.properties.authenticator"
           manifestOptionPaths={["ApiKeyAuthenticator", "BearerAuthenticator", "BasicHttpAuthenticator"]}
           options={[
-            { label: "No Auth", default: { type: NO_AUTH } },
             {
-              label: "API Key",
+              label: formatMessage({ id: "connectorBuilder.authentication.method.noAuth" }),
+              default: { type: NO_AUTH },
+            },
+            {
+              label: formatMessage({ id: "connectorBuilder.authentication.method.apiKey" }),
               default: {
                 type: API_KEY_AUTHENTICATOR,
                 ...inferredAuthValues("ApiKeyAuthenticator"),
@@ -275,9 +289,9 @@ const SessionTokenForm = () => {
               },
               children: (
                 <>
-                  <InjectIntoFields
+                  <BuilderRequestInjection
                     path={authPath("login_requester.authenticator.inject_into")}
-                    descriptor="token"
+                    descriptor={formatMessage({ id: "connectorBuilder.authentication.injectInto.token" })}
                     excludeValues={["path"]}
                   />
                   <BuilderInputPlaceholder manifestPath="ApiKeyAuthenticator.properties.api_token" />
@@ -285,7 +299,7 @@ const SessionTokenForm = () => {
               ),
             },
             {
-              label: "Bearer",
+              label: formatMessage({ id: "connectorBuilder.authentication.method.bearer" }),
               default: {
                 type: BEARER_AUTHENTICATOR,
                 ...(inferredAuthValues(BEARER_AUTHENTICATOR) as Record<"api_token", string>),
@@ -293,7 +307,7 @@ const SessionTokenForm = () => {
               children: <BuilderInputPlaceholder manifestPath="BearerAuthenticator.properties.api_token" />,
             },
             {
-              label: "Basic HTTP",
+              label: formatMessage({ id: "connectorBuilder.authentication.method.basicHttp" }),
               default: {
                 type: BASIC_AUTHENTICATOR,
                 ...(inferredAuthValues(BASIC_AUTHENTICATOR) as Record<"username" | "password", string>),
@@ -309,7 +323,7 @@ const SessionTokenForm = () => {
         />
         <RequestOptionSection inline basePath={authPath("login_requester.requestOptions")} omitInterpolationContext />
         <ToggleGroupField<BuilderErrorHandler[]>
-          label="Error Handler"
+          label={formatMessage({ id: "connectorBuilder.authentication.loginRequester.errorHandler" })}
           tooltip={getDescriptionByManifest("DefaultErrorHandler")}
           fieldPath={authPath("login_requester.errorHandler")}
           initialValues={[{ type: "DefaultErrorHandler" }]}
@@ -320,8 +334,8 @@ const SessionTokenForm = () => {
       <BuilderField
         type="array"
         path={authPath("session_token_path")}
-        label="Session Token Path"
-        tooltip="The path to the session token in the response body returned from the Session Token Retrieval request"
+        label={formatMessage({ id: "connectorBuilder.authentication.sessionTokenPath.label" })}
+        tooltip={formatMessage({ id: "connectorBuilder.authentication.sessionTokenPath.tooltip" })}
         directionalStyle
       />
       <BuilderField
@@ -337,7 +351,7 @@ const SessionTokenForm = () => {
         manifestOptionPaths={["SessionTokenRequestApiKeyAuthenticator", "SessionTokenRequestBearerAuthenticator"]}
         options={[
           {
-            label: "API Key",
+            label: formatMessage({ id: "connectorBuilder.authentication.method.apiKey" }),
             default: {
               type: SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
               inject_into: {
@@ -347,17 +361,19 @@ const SessionTokenForm = () => {
               },
             },
             children: (
-              <InjectIntoFields
+              <BuilderRequestInjection
                 path={authPath("request_authentication.inject_into")}
-                descriptor="session token"
-                label="Inject Session Token into outgoing HTTP Request"
-                tooltip="Configure how the session token will be sent in requests to the source API"
+                descriptor={formatMessage({ id: "connectorBuilder.authentication.injectInto.sessionToken" })}
+                label={formatMessage({ id: "connectorBuilder.authentication.requestAuthentication.injectInto.label" })}
+                tooltip={formatMessage({
+                  id: "connectorBuilder.authentication.requestAuthentication.injectInto.tooltip",
+                })}
                 excludeValues={["path", "body_data", "body_json"]}
               />
             ),
           },
           {
-            label: "Bearer",
+            label: formatMessage({ id: "connectorBuilder.authentication.method.bearer" }),
             default: { type: SESSION_TOKEN_REQUEST_BEARER_AUTHENTICATOR },
           },
         ]}

@@ -22,8 +22,16 @@ paths:
           description: Success
         "404":
           description: Workload with given id was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
         "410":
           description: "Workload is in terminal state, it cannot be cancelled."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
   /api/v1/workload/claim:
     put:
       tags:
@@ -45,8 +53,16 @@ paths:
                 $ref: '#/components/schemas/ClaimResponse'
         "404":
           description: Workload with given id was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
         "410":
           description: "Workload is in terminal state, it cannot be claimed."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
   /api/v1/workload/create:
     post:
       tags:
@@ -61,8 +77,12 @@ paths:
       responses:
         "204":
           description: Successfully created workload
-        "304":
+        "409":
           description: Workload with given workload id already exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
   /api/v1/workload/failure:
     put:
       tags:
@@ -79,8 +99,16 @@ paths:
           description: Success
         "404":
           description: Workload with given id was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
         "410":
           description: "Workload is not in an active state, it cannot be failed."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
   /api/v1/workload/heartbeat:
     put:
       tags:
@@ -97,9 +125,17 @@ paths:
           description: Successfully heartbeated
         "404":
           description: Workload with given id was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
         "410":
           description: Workload should stop because it is no longer expected to be
             running.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
   /api/v1/workload/list:
     post:
       tags:
@@ -134,8 +170,16 @@ paths:
           description: Success
         "404":
           description: Workload with given id was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
         "410":
           description: "Workload is not in pending status, it can't be set to running."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
   /api/v1/workload/success:
     put:
       tags:
@@ -152,8 +196,16 @@ paths:
           description: Success
         "404":
           description: Workload with given id was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
         "410":
           description: "Workload is not in an active state, it cannot be succeeded."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
   /api/v1/workload/{workloadId}:
     get:
       tags:
@@ -175,6 +227,10 @@ paths:
                 $ref: '#/components/schemas/Workload'
         "404":
           description: Workload with given id was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
 components:
   schemas:
     ClaimResponse:
@@ -184,12 +240,21 @@ components:
       properties:
         claimed:
           type: boolean
+    KnownExceptionInfo:
+      required:
+      - message
+      type: object
+      properties:
+        message:
+          type: string
     Workload:
       required:
+      - geography
       - id
       - inputPayload
       - labels
       - logPath
+      - type
       type: object
       properties:
         id:
@@ -209,6 +274,13 @@ components:
           type: string
         logPath:
           type: string
+        geography:
+          type: string
+        mutexKey:
+          type: string
+          nullable: true
+        type:
+          $ref: '#/components/schemas/WorkloadType'
     WorkloadCancelRequest:
       required:
       - reason
@@ -234,8 +306,11 @@ components:
           type: string
     WorkloadCreateRequest:
       required:
+      - geography
       - labels
       - logPath
+      - mutexKey
+      - type
       - workloadId
       - workloadInput
       type: object
@@ -250,6 +325,12 @@ components:
           type: string
         logPath:
           type: string
+        geography:
+          type: string
+        mutexKey:
+          type: string
+        type:
+          $ref: '#/components/schemas/WorkloadType'
     WorkloadFailureRequest:
       required:
       - workloadId
@@ -323,3 +404,10 @@ components:
       properties:
         workloadId:
           type: string
+    WorkloadType:
+      type: string
+      enum:
+      - sync
+      - check
+      - discover
+      - spec

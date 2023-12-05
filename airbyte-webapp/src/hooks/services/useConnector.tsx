@@ -5,22 +5,20 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { ConnectionConfiguration } from "area/connector/types";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useConfig } from "config";
-import { useGetOutOfDateConnectorsCount } from "core/api";
+import {
+  useGetOutOfDateConnectorsCount,
+  useDestinationDefinitionList,
+  useLatestDestinationDefinitionList,
+  useUpdateDestinationDefinition,
+  useLatestSourceDefinitionList,
+  useSourceDefinitionList,
+  useUpdateSourceDefinition,
+} from "core/api";
 import { CheckConnectionRead } from "core/api/types/AirbyteClient";
 // eslint-disable-next-line import/no-restricted-paths
 import { useRequestOptions } from "core/api/useRequestOptions";
 import { DestinationService } from "core/domain/connector/DestinationService";
 import { SourceService } from "core/domain/connector/SourceService";
-import {
-  useDestinationDefinitionList,
-  useLatestDestinationDefinitionList,
-  useUpdateDestinationDefinition,
-} from "services/connector/DestinationDefinitionService";
-import {
-  useLatestSourceDefinitionList,
-  useSourceDefinitionList,
-  useUpdateSourceDefinition,
-} from "services/connector/SourceDefinitionService";
 import { useInitService } from "services/useInitService";
 
 import { useAppMonitoringService } from "./AppMonitoringService";

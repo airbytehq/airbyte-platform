@@ -1,11 +1,9 @@
-import { faEllipsisV } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCallback } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { RotateIcon } from "components/icons/RotateIcon";
 import { Button, ButtonVariant } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
+import { Icon } from "components/ui/Icon";
 
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
@@ -69,7 +67,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
       {!jobSyncRunning && !jobResetRunning && (
         <Button
           onClick={syncConnection}
-          icon={syncStarting ? undefined : <RotateIcon height={styles.syncIconHeight} width={styles.syncIconHeight} />}
+          icon={syncStarting ? undefined : <Icon type="sync" />}
           variant={variant}
           className={buttonClassName}
           isLoading={syncStarting}
@@ -105,7 +103,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
         ]}
         onChange={handleDropdownMenuOptionClick}
       >
-        {() => <Button variant="clear" icon={<FontAwesomeIcon icon={faEllipsisV} />} />}
+        {() => <Button variant="clear" icon={<Icon type="options" />} />}
       </DropdownMenu>
     </div>
   );

@@ -11,6 +11,7 @@ import io.airbyte.commons.server.handlers.ActorDefinitionVersionHandler;
 import io.airbyte.commons.server.handlers.AttemptHandler;
 import io.airbyte.commons.server.handlers.ConnectionsHandler;
 import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler;
+import io.airbyte.commons.server.handlers.DeploymentMetadataHandler;
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler;
 import io.airbyte.commons.server.handlers.DestinationHandler;
 import io.airbyte.commons.server.handlers.HealthCheckHandler;
@@ -264,6 +265,14 @@ abstract class BaseControllerTest {
   @Replaces(OrganizationsHandler.class)
   OrganizationsHandler mmOrganizationsHandler() {
     return organizationsHandler;
+  }
+
+  DeploymentMetadataHandler deploymentMetadataHandler = Mockito.mock(DeploymentMetadataHandler.class);
+
+  @MockBean(DeploymentMetadataHandler.class)
+  @Replaces(DeploymentMetadataHandler.class)
+  DeploymentMetadataHandler mmDeploymentMetadataHandler() {
+    return deploymentMetadataHandler;
   }
 
   @MockBean(SynchronousSchedulerClient.class)

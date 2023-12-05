@@ -17,6 +17,7 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Lists;
+import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
@@ -109,6 +110,7 @@ class WorkspacesHandlerTest {
   private WorkspacePersistence workspacePersistence;
   private WorkspaceService workspaceService;
   private OrganizationPersistence organizationPersistence;
+  private TrackingClient trackingClient;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -124,12 +126,13 @@ class WorkspacesHandlerTest {
     sourceHandler = mock(SourceHandler.class);
     uuidSupplier = mock(Supplier.class);
     workspaceService = mock(WorkspaceService.class);
+    trackingClient = mock(TrackingClient.class);
 
     workspace = generateWorkspace();
     workspacesHandler =
         new WorkspacesHandler(configRepository, workspacePersistence, organizationPersistence, secretsRepositoryWriter, permissionPersistence,
             connectionsHandler,
-            destinationHandler, sourceHandler, uuidSupplier, workspaceService);
+            destinationHandler, sourceHandler, uuidSupplier, workspaceService, trackingClient);
   }
 
   private StandardWorkspace generateWorkspace() {
@@ -770,7 +773,7 @@ class WorkspacesHandlerTest {
     workspacesHandler =
         new WorkspacesHandler(configRepository, workspacePersistence, organizationPersistence,
             secretsRepositoryWriter, permissionPersistence, connectionsHandler,
-            destinationHandler, sourceHandler, uuidSupplier, workspaceService);
+            destinationHandler, sourceHandler, uuidSupplier, workspaceService, trackingClient);
 
     final UUID uuid = UUID.randomUUID();
     when(uuidSupplier.get()).thenReturn(uuid);

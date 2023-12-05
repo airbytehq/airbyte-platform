@@ -1,11 +1,7 @@
-import { faCheck, faExclamationTriangle, faMinus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import React from "react";
 
-import { CrossIcon } from "components/icons/CrossIcon";
-import { MoonIcon } from "components/icons/MoonIcon";
-import { PauseIcon } from "components/icons/PauseIcon";
+import { Icon } from "components/ui/Icon";
 
 import { CircleLoader } from "./CircleLoader";
 import styles from "./StatusIcon.module.scss";
@@ -41,9 +37,9 @@ const colorStyles: Record<StatusIconStatus, string> = {
 };
 
 const _iconByStatus = {
-  success: faCheck,
-  warning: faExclamationTriangle,
-  cancelled: faMinus,
+  success: "statusSuccess",
+  warning: "statusWarning",
+  cancelled: "statusCancelled",
 } as const;
 
 export const StatusIcon: React.FC<StatusIconProps> = ({ title, status = "error", size = "md", value }) => {
@@ -63,15 +59,15 @@ export const StatusIcon: React.FC<StatusIconProps> = ({ title, status = "error",
         >
           <FlexContainer className={classNames(styles.icon)} justifyContent="center" alignItems="center" gap="none">
             {status === "inactive" ? (
-              <PauseIcon title={title} />
+              <Icon type="statusInactive" title={title} className={classNames(styles.icon)} />
             ) : status === "sleep" ? (
-              <MoonIcon title={title} />
+              <Icon type="statusSleep" title={title} className={classNames(styles.icon)} />
             ) : status === "error" ? (
-              <CrossIcon title={title} />
+              <Icon type="statusError" title={title} className={classNames(styles.icon)} />
             ) : status === "loading" ? (
               <CircleLoader title={title} />
             ) : (
-              <FontAwesomeIcon icon={_iconByStatus[status]} title={title} />
+              <Icon type={_iconByStatus[status]} title={title} className={classNames(styles.icon)} />
             )}
           </FlexContainer>
           {value !== undefined && (

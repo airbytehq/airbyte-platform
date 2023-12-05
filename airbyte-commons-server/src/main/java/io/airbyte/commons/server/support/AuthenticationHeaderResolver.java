@@ -5,13 +5,13 @@
 package io.airbyte.commons.server.support;
 
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONFIG_ID_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_IDS_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.DESTINATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.OPERATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.PERMISSION_ID_HEADER;
-import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_DEFINITION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_IDS_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_ID_HEADER;
@@ -101,6 +101,8 @@ public class AuthenticationHeaderResolver {
       } else if (properties.containsKey(CONNECTION_ID_HEADER)) {
         final String connectionId = properties.get(CONNECTION_ID_HEADER);
         return List.of(workspaceHelper.getWorkspaceForConnectionId(UUID.fromString(connectionId)));
+      } else if (properties.containsKey(CONNECTION_IDS_HEADER)) {
+        return resolveConnectionIds(properties);
       } else if (properties.containsKey(SOURCE_ID_HEADER) && properties.containsKey(DESTINATION_ID_HEADER)) {
         final String destinationId = properties.get(DESTINATION_ID_HEADER);
         final String sourceId = properties.get(SOURCE_ID_HEADER);
@@ -114,9 +116,6 @@ public class AuthenticationHeaderResolver {
       } else if (properties.containsKey(SOURCE_ID_HEADER)) {
         final String sourceId = properties.get(SOURCE_ID_HEADER);
         return List.of(workspaceHelper.getWorkspaceForSourceId(UUID.fromString(sourceId)));
-      } else if (properties.containsKey(SOURCE_DEFINITION_ID_HEADER)) {
-        final String sourceDefinitionId = properties.get(SOURCE_DEFINITION_ID_HEADER);
-        return List.of(workspaceHelper.getWorkspaceForSourceId(UUID.fromString(sourceDefinitionId)));
       } else if (properties.containsKey(OPERATION_ID_HEADER)) {
         final String operationId = properties.get(OPERATION_ID_HEADER);
         return List.of(workspaceHelper.getWorkspaceForOperationId(UUID.fromString(operationId)));
@@ -170,6 +169,21 @@ public class AuthenticationHeaderResolver {
       return deserialized.stream().map(UUID::fromString).toList();
     }
     log.debug("Request does not contain any headers that resolve to a list of workspace IDs.");
+    return null;
+  }
+
+  private List<UUID> resolveConnectionIds(final Map<String, String> properties) {
+    final String connectionIds = properties.get(CONNECTION_IDS_HEADER);
+    if (connectionIds != null) {
+      final List<String> deserialized = Jsons.deserialize(connectionIds, List.class);
+      return deserialized.stream().map(connectionId -> {
+        try {
+          return workspaceHelper.getWorkspaceForConnectionId(UUID.fromString(connectionId));
+        } catch (JsonValidationException | ConfigNotFoundException e) {
+          throw new RuntimeException(e);
+        }
+      }).toList();
+    }
     return null;
   }
 

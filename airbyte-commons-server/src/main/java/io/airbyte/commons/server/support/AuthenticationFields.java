@@ -16,6 +16,11 @@ public final class AuthenticationFields {
   public static final String CONNECTION_ID_FIELD_NAME = "connectionId";
 
   /**
+   * Name of the field in HTTP request bodies that contains the connection IDs value.
+   */
+  public static final String CONNECTION_IDS_FIELD_NAME = "connectionIds";
+
+  /**
    * Name of the field in HTTP request bodies that contains the destination ID value.
    */
   public static final String DESTINATION_ID_FIELD_NAME = "destinationId";

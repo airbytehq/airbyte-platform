@@ -254,30 +254,28 @@ public class PermissionPersistence {
     return records.stream().map(record -> buildUserPermissionFromRecord(record)).collect(Collectors.toList());
   }
 
-  private UserPermission getUserInstanceAdminPermission(final DSLContext ctx, final UUID userId) {
-    var record = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
+  public Boolean isUserInstanceAdmin(final UUID userId) throws IOException {
+    return this.database.query(ctx -> isUserInstanceAdmin(ctx, userId));
+  }
+
+  private Boolean isUserInstanceAdmin(final DSLContext ctx, final UUID userId) {
+    return ctx.fetchExists(select()
+        .from(PERMISSION)
+        .where(PERMISSION.PERMISSION_TYPE.eq(io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.instance_admin))
+        .and(PERMISSION.USER_ID.eq(userId)));
+  }
+
+  public Boolean isAuthUserInstanceAdmin(final String authUserId) throws IOException {
+    return this.database.query(ctx -> isAuthUserInstanceAdmin(ctx, authUserId));
+  }
+
+  private Boolean isAuthUserInstanceAdmin(final DSLContext ctx, final String authUserId) {
+    return ctx.fetchExists(select()
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))
         .where(PERMISSION.PERMISSION_TYPE.eq(io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.instance_admin))
-        .and(PERMISSION.USER_ID.eq(userId))
-        .fetchOne();
-    if (record == null) {
-      return null;
-    }
-    return buildUserPermissionFromRecord(record);
-  }
-
-  /**
-   * Check and get instance_admin permission for a user.
-   *
-   * @param userId user id
-   * @return UserPermission User details with instance_admin permission, null if user does not have
-   *         instance_admin role.
-   * @throws IOException if there is an issue while interacting with the db.
-   */
-  public UserPermission getUserInstanceAdminPermission(final UUID userId) throws IOException {
-    return this.database.query(ctx -> getUserInstanceAdminPermission(ctx, userId));
+        .and(USER.AUTH_USER_ID.eq(authUserId)));
   }
 
   public PermissionType findPermissionTypeForUserAndWorkspace(final UUID workspaceId, final String authUserId)

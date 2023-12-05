@@ -1,28 +1,42 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useFieldArray } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { ArrayOfObjectsHookFormEditor } from "components/ArrayOfObjectsEditor";
 
+import { OperationCreate, OperatorType } from "core/api/types/AirbyteClient";
 import { isDefined } from "core/utils/common";
 import { useModalService } from "hooks/services/Modal";
+import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { CustomTransformationsFormValues } from "pages/connections/ConnectionTransformationPage/CustomTransformationsForm";
 
-import { useDefaultTransformation } from "./formConfig";
 import { DbtOperationReadOrCreate, TransformationHookForm } from "../TransformationHookForm";
 
 /**
- * Custom transformations field for react-hook-form
- * will replace TransformationField in the future
- * @see TransformationField
- * @constructor
+ * react-hook-form custom transformations form
  */
 export const TransformationFieldHookForm: React.FC = () => {
+  const { workspaceId } = useCurrentWorkspace();
   const { fields, append, remove, update } = useFieldArray<CustomTransformationsFormValues>({
     name: "transformations",
   });
   const { openModal, closeModal } = useModalService();
-  const defaultTransformation = useDefaultTransformation();
+
+  const defaultTransformation: OperationCreate = useMemo(
+    () => ({
+      name: "My dbt transformations",
+      workspaceId,
+      operatorConfiguration: {
+        operatorType: OperatorType.dbt,
+        dbt: {
+          gitRepoUrl: "",
+          dockerImage: "fishtownanalytics/dbt:1.0.0",
+          dbtArguments: "run",
+        },
+      },
+    }),
+    [workspaceId]
+  );
 
   const openEditModal = (transformationItemIndex?: number) =>
     openModal({

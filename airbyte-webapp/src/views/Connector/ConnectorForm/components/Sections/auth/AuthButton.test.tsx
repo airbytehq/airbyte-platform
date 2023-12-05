@@ -10,16 +10,6 @@ import { useAuthentication } from "views/Connector/ConnectorForm/useAuthenticati
 import { AuthButton } from "./AuthButton";
 jest.setTimeout(10000);
 
-jest.mock("formik", () => {
-  const useFormikContext = () => {
-    const values = {};
-    const submitCount = 0;
-    return { values, submitCount };
-  };
-
-  return { useFormikContext };
-});
-
 /**
  * Mock services to reuse multiple times with different values:
  * 1. mock the service

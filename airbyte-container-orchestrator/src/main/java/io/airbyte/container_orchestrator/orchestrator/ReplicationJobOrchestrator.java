@@ -27,11 +27,11 @@ import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.process.KubePodProcess;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workers.workload.WorkloadType;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest;
+import io.airbyte.workload.api.client.model.generated.WorkloadType;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
@@ -122,11 +122,11 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   ReplicationOutput runWithWorkloadEnabled(final ReplicationWorker replicationWorker, final ReplicationInput replicationInput, final Path jobRoot)
       throws WorkerException, IOException {
 
-    String workloadId = workloadIdGenerator.generate(
+    final String workloadId = workloadIdGenerator.generate(
         replicationInput.getConnectionId(),
         Long.parseLong(jobRunConfig.getJobId()),
         Math.toIntExact(jobRunConfig.getAttemptId()),
-        WorkloadType.SYNC);
+        WorkloadType.SYNC.name());
 
     try {
       final ReplicationOutput replicationOutput = replicationWorker.run(replicationInput, jobRoot);

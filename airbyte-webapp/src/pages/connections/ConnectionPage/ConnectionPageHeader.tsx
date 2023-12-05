@@ -8,8 +8,7 @@ import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 import { Tabs, LinkTab } from "components/ui/Tabs";
 
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { RoutePaths } from "pages/routePaths";
-import { ConnectionRoutePaths } from "pages/routePaths";
+import { RoutePaths, ConnectionRoutePaths } from "pages/routePaths";
 
 import { ConnectionTitleBlock } from "./ConnectionTitleBlock";
 

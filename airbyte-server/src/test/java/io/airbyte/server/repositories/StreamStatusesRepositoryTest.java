@@ -87,14 +87,19 @@ class StreamStatusesRepositoryTest {
     repo = context.getBean(StreamStatusesRepository.class);
   }
 
-  @BeforeEach
-  void truncate() {
-    jooqDslContext.truncateTable(Tables.STREAM_STATUSES).cascade().execute();
-  }
-
   @AfterAll
   static void dbDown() {
     container.close();
+  }
+
+  // Aliasing to cut down on the verbosity significantly
+  private static <T> void assertContainsSameElements(final List<T> expected, final List<T> actual) {
+    org.assertj.core.api.Assertions.assertThat(expected).containsExactlyInAnyOrderElementsOf(actual);
+  }
+
+  @BeforeEach
+  void truncate() {
+    jooqDslContext.truncateTable(Tables.STREAM_STATUSES).cascade().execute();
   }
 
   @Test
@@ -387,9 +392,62 @@ class StreamStatusesRepositoryTest {
     assertContainsSameElements(List.of(p4, r3, r4, c3, c4, if2), results2);
   }
 
-  // Aliasing to cut down on the verbosity significantly
-  private static <T> void assertContainsSameElements(final List<T> expected, final List<T> actual) {
-    org.assertj.core.api.Assertions.assertThat(expected).containsExactlyInAnyOrderElementsOf(actual);
+  @Test
+  void testFindLatestStatusPerRunStateByConnectionIdAndDayAfterTimestamp() {
+    final long now = Instant.now().toEpochMilli();
+    final OffsetDateTime time1 = Fixtures.timestamp(now);
+    final OffsetDateTime time2 = Fixtures.timestamp(now + 1);
+    final OffsetDateTime time3 = Fixtures.timestamp(now + 2);
+    final OffsetDateTime time4 = Fixtures.timestamp(now + 3);
+
+    // Two connections with some combination of 4 types of statuses. Each connection should return the
+    // most recent example of each status PER STREAM.
+    // connection 1 should return p3, connection 2 will return p4
+    final var p1 = Fixtures.pending().transitionedAt(time1).connectionId(Fixtures.connectionId1).build();
+    final var p2 = Fixtures.pending().transitionedAt(time2).connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).build();
+    final var p3 = Fixtures.pending().transitionedAt(time3).connectionId(Fixtures.connectionId1).build();
+    final var p4 = Fixtures.pending().transitionedAt(time4).connectionId(Fixtures.connectionId2).build();
+
+    // connection 1 should return r2, connection 2 should return r3, r4
+    final var r1 = Fixtures.running().transitionedAt(time1).connectionId(Fixtures.connectionId1).build();
+    final var r2 = Fixtures.running().transitionedAt(time2).connectionId(Fixtures.connectionId1).build();
+    final var r3 = Fixtures.running().transitionedAt(time3).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
+    final var r4 = Fixtures.running().transitionedAt(time4).connectionId(Fixtures.connectionId2).build();
+
+    // connection 1 should not return any from this set, connection 2 should return c3, c4
+    final var c1 = Fixtures.complete().transitionedAt(time1).connectionId(Fixtures.connectionId1).build();
+    final var c2 = Fixtures.complete().transitionedAt(time2).connectionId(Fixtures.connectionId2).build();
+    final var c3 = Fixtures.complete().transitionedAt(time3).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
+    final var c4 = Fixtures.complete().transitionedAt(time4).connectionId(Fixtures.connectionId2).build();
+
+    // connection 1 should return if3, if4, connection 2 should return if2
+    final var if1 = Fixtures.failed().transitionedAt(time1).connectionId(Fixtures.connectionId2).build();
+    final var if2 = Fixtures.failed().transitionedAt(time2).connectionId(Fixtures.connectionId2).build();
+    final var if3 = Fixtures.failed().transitionedAt(time3).connectionId(Fixtures.connectionId1).streamNamespace("test2_").build();
+    final var if4 = Fixtures.failed().transitionedAt(time4).connectionId(Fixtures.connectionId1).build();
+
+    // connection 1 should return ic3, ic4, connection 2 will not return any from this set
+    final var ic1 = Fixtures.canceled().transitionedAt(time1).connectionId(Fixtures.connectionId1).build();
+    final var ic2 = Fixtures.canceled().transitionedAt(time2).connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).build();
+    final var ic3 = Fixtures.canceled().transitionedAt(time3).connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).build();
+    final var ic4 = Fixtures.canceled().transitionedAt(time4).connectionId(Fixtures.connectionId1).build();
+
+    // connection 1 should only return reset4 from this set, connection 2 will not return any from this
+    // set
+    final var reset1 = Fixtures.reset().transitionedAt(time1).connectionId(Fixtures.connectionId1).build();
+    final var reset2 = Fixtures.reset().transitionedAt(time2).connectionId(Fixtures.connectionId1).build();
+    final var reset3 = Fixtures.reset().transitionedAt(time3).connectionId(Fixtures.connectionId1).build();
+    final var reset4 = Fixtures.reset().transitionedAt(time4).connectionId(Fixtures.connectionId1).build();
+
+    repo.saveAll(List.of(p1, p2, p3, p4, r1, r2, r3, r4, c1, c2, c3, c4, if1, if2, if3, if4, ic1, ic2, ic3, ic4, reset1, reset2, reset3, reset4));
+
+    final var results1 = repo.findLatestStatusPerRunStateByConnectionIdAndDayAfterTimestamp(Fixtures.connectionId1,
+        time1);
+    final var results2 = repo.findLatestStatusPerRunStateByConnectionIdAndDayAfterTimestamp(Fixtures.connectionId2,
+        time1);
+
+    assertContainsSameElements(List.of(p2, p3, r2, if3, if4, ic3, ic4, reset4), results1);
+    assertContainsSameElements(List.of(p4, r3, r4, if2, c3, c4), results2);
   }
 
   private static class Fixtures {

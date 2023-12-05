@@ -158,10 +158,11 @@ public abstract class ReplicationWorkerPerformanceTest {
         new AirbyteControlMessageEventListener(connectorConfigUpdater),
         new AirbyteStreamStatusMessageEventListener(streamStatusTracker));
     final DestinationTimeoutMonitor destinationTimeoutMonitor = new DestinationTimeoutMonitor(
-        featureFlagClient,
         workspaceID,
         UUID.randomUUID(),
-        new NotImplementedMetricClient());
+        new NotImplementedMetricClient(),
+        Duration.ofMinutes(120),
+        false);
     final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper =
         mock(ReplicationAirbyteMessageEventPublishingHelper.class);
     doAnswer((e) -> {

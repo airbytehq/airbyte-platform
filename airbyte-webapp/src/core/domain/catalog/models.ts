@@ -18,3 +18,5 @@ export class SyncSchemaFieldObject {
     return field.path.length > 1;
   }
 }
+
+export type Path = string[];

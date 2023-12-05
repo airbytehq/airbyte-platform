@@ -75,6 +75,7 @@ $controlButtonWidth: 24px;
 .autoSchemaContainer {
   overflow-y: auto;
   flex: 1 1 0;
+  font-size: variables.$font-size-md;
 }
 
 .multiStreams {

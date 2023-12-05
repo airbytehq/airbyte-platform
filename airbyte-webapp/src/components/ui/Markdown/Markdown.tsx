@@ -24,6 +24,9 @@ function surroundTagWithNewlines(tag: string, markdown: string): string {
 }
 
 function preprocessMarkdown(markdown: string): string {
+  // Note: there is also some preprocessing happening in DocumentationPanel.tsx's
+  // prepareMarkdown function that is specific to the connector documentation pages.
+
   // Remove frontmatter (content wrapped in ---) from the beginning of the markdown.
   let preprocessed = markdown.replace(/^\s*---\n[\s\S]*?\n---\n/, "");
 
@@ -42,7 +45,13 @@ function preprocessMarkdown(markdown: string): string {
   // The reason is to prevent markdown-to-jsx from rendering them as separate sub-bullets
   // as a result of the following linked issue. Once resolved, this can be removed:
   // https://github.com/probablyup/markdown-to-jsx/issues/285#issuecomment-1813224435
-  preprocessed = preprocessed.replace(/(?<!<!-)(?<=\S)(- |\+ |[^*]\* |\d+\. )/g, "&ZeroWidthSpace;$1");
+  //
+  // Since hyphens have a few context-dependent meanings in markdown documents outside of
+  // bullet lists, like html comments and gfm table syntax, we need a somewhat complex set
+  // of lookbehind assertions: besides legitimate lists, we don't want to insert a
+  // zero-width space into a table definition or html comment and break their rendering,
+  // either.
+  preprocessed = preprocessed.replace(/(?<!<!-|-|:|\|)(?<=\S)(- |\+ |[^*]\* |\d+\. )/g, "&ZeroWidthSpace;$1");
 
   // Ensure there's an empty line before and after tags with custom react logic if there
   // isn't one already, to ensure that it is parsed as its own component.

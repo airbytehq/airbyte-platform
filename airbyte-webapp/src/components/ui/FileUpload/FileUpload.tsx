@@ -1,7 +1,7 @@
-import { faFileLines } from "@fortawesome/free-regular-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import { useRef, useState } from "react";
+
+import { Icon } from "components/ui/Icon";
 
 import styles from "./FileUpload.module.scss";
 import { FlexContainer } from "../Flex";
@@ -79,7 +79,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onUpload }) => {
         className={classNames(styles.button, { [styles.draggingOver]: isDraggingOver })}
       >
         <FlexContainer alignItems="center" justifyContent="center" gap="sm" className={styles.buttonContents}>
-          <FontAwesomeIcon icon={faFileLines} />
+          <Icon type="file" />
           <Text className={styles.buttonText} onDragOver={(e) => e.preventDefault()}>
             Upload file
           </Text>

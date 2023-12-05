@@ -1,7 +1,7 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { sourceDefinitionKeys } from "services/connector/SourceDefinitionService";
+import { sourceDefinitionKeys } from "core/api";
 import { SCOPE_WORKSPACE } from "services/Scope";
 
 import { useBuilderResolveManifestQuery } from "./connectorBuilderApi";

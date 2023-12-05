@@ -4,6 +4,12 @@
 
 package io.airbyte.workers.sync;
 
+import static io.airbyte.config.helpers.LogClientSingleton.fullLogPath;
+
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.featureflag.Connection;
@@ -21,13 +27,13 @@ import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorNameGenerator;
 import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workers.workload.WorkloadType;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel;
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus;
+import io.airbyte.workload.api.client.model.generated.WorkloadType;
 import io.micronaut.http.HttpStatus;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -37,6 +43,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import org.openapitools.client.infrastructure.ClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +57,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   private static final Set<WorkloadStatus> TERMINAL_STATUSES = Set.of(WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS);
   private final DocumentStoreClient documentStoreClient;
   private final OrchestratorNameGenerator orchestratorNameGenerator;
+  private final AirbyteApiClient apiClient;
   private final WorkloadApi workloadApi;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final ReplicationActivityInput input;
@@ -58,12 +66,14 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
 
   public WorkloadApiWorker(final DocumentStoreClient documentStoreClient,
                            final OrchestratorNameGenerator orchestratorNameGenerator,
+                           final AirbyteApiClient apiClient,
                            final WorkloadApi workloadApi,
                            final WorkloadIdGenerator workloadIdGenerator,
                            final ReplicationActivityInput input,
                            final FeatureFlagClient featureFlagClient) {
     this.documentStoreClient = documentStoreClient;
     this.orchestratorNameGenerator = orchestratorNameGenerator;
+    this.apiClient = apiClient;
     this.workloadApi = workloadApi;
     this.workloadIdGenerator = workloadIdGenerator;
     this.input = input;
@@ -77,11 +87,15 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     workloadId = workloadIdGenerator.generate(replicationInput.getConnectionId(),
         Long.parseLong(replicationInput.getJobRunConfig().getJobId()),
         replicationInput.getJobRunConfig().getAttemptId().intValue(),
-        WorkloadType.SYNC);
+        WorkloadType.SYNC.name());
 
     log.info("Creating workload {}", workloadId);
 
     // TODO worker may resume, check if job exists first
+
+    // Ideally, this should be passed down to avoid the extra API call.
+    final Geography geo = getGeography(replicationInput.getConnectionId());
+
     // Create the workload
     createWorkload(new WorkloadCreateRequest(
         workloadId,
@@ -90,7 +104,10 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
             new WorkloadLabel("jobId", replicationInput.getJobRunConfig().getJobId()),
             new WorkloadLabel("attemptNumber", replicationInput.getJobRunConfig().getAttemptId().toString())),
         serializedInput,
-        jobRoot.toString()));
+        fullLogPath(jobRoot),
+        geo.getValue(),
+        replicationInput.getConnectionId().toString(),
+        WorkloadType.SYNC));
 
     // Wait until workload reaches a terminal status
     int i = 0;
@@ -104,6 +121,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
         }
 
         if (i % 5 == 0) {
+          i++;
           log.info("Workload {} is {}", workloadId, workload.getStatus());
         }
         i++;
@@ -122,6 +140,14 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
       }
     } catch (IOException e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  private Geography getGeography(final UUID connectionId) throws WorkerException {
+    try {
+      return apiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody().connectionId(connectionId)).getGeography();
+    } catch (final ApiException e) {
+      throw new WorkerException("Unable to find geography of connection " + connectionId, e);
     }
   }
 
@@ -162,7 +188,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
        * client. We do not want to cause the Temporal workflow to retry, so catch it and log the
        * information so that the workflow will continue.
        */
-      if (e.getStatusCode() == HttpStatus.NOT_MODIFIED.getCode()) {
+      if (e.getStatusCode() == HttpStatus.CONFLICT.getCode()) {
         log.warn("Workload {} already created and in progress.  Continuing...", workloadCreateRequest.getWorkloadId());
       } else {
         throw new RuntimeException(e);

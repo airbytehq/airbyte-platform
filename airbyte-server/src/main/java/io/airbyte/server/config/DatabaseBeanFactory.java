@@ -193,6 +193,12 @@ public class DatabaseBeanFactory {
     return new StreamResetPersistence(configDatabase);
   }
 
+  @Singleton
+  @Named("unwrappedConfig")
+  public DSLContext unwrappedConfigDslContext(@Named("config") final DSLContext dslContext) {
+    return unwrapContext(dslContext);
+  }
+
   // Micronaut-data wraps the injected data sources with transactional semantics, which don't respect
   // our jooq operations and error out. If we inject an unwrapped one, it will be re-wrapped. So we
   // manually unwrap them.

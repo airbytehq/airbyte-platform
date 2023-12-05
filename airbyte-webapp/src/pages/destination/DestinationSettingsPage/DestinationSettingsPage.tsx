@@ -5,7 +5,12 @@ import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
 import { useGetDestinationFromParams } from "area/connector/utils";
-import { useConnectionList, useDestinationDefinitionVersion, useGetDestinationDefinitionSpecification } from "core/api";
+import {
+  useConnectionList,
+  useDestinationDefinitionVersion,
+  useGetDestinationDefinitionSpecification,
+  useDestinationDefinition,
+} from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 import {
@@ -14,7 +19,6 @@ import {
   useUpdateDestination,
 } from "hooks/services/useDestinationHook";
 import { useDeleteModal } from "hooks/useDeleteModal";
-import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
 

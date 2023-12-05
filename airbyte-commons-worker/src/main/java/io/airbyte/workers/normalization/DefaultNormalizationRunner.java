@@ -15,6 +15,7 @@ import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.logging.LoggingHelper;
 import io.airbyte.commons.logging.LoggingHelper.Color;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.logging.MdcScope.Builder;
@@ -51,7 +52,7 @@ public class DefaultNormalizationRunner implements NormalizationRunner {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultNormalizationRunner.class);
   private static final MdcScope.Builder CONTAINER_LOG_MDC_BUILDER = new Builder()
-      .setLogPrefix("normalization")
+      .setLogPrefix(LoggingHelper.NORMALIZATION_LOGGER_PREFIX)
       .setPrefixColor(Color.GREEN_BACKGROUND);
 
   private final String normalizationIntegrationType;

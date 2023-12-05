@@ -5,6 +5,8 @@
 package io.airbyte.workers.temporal.scheduling.activities;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.logging.LoggingHelper;
+import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.helpers.LogClientSingleton;
@@ -49,11 +51,16 @@ public class AppendToAttemptLogActivityImpl implements AppendToAttemptLogActivit
 
     try {
       final var msg = input.getMessage();
+      try (final var mdcScope = new MdcScope.Builder()
+          .setLogPrefix(LoggingHelper.PLATFORM_LOGGER_PREFIX)
+          .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
+          .build()) {
 
-      switch (input.getLevel()) {
-        case ERROR -> logger.error(msg);
-        case WARN -> logger.warn(msg);
-        default -> logger.info(msg);
+        switch (input.getLevel()) {
+          case ERROR -> logger.error(msg);
+          case WARN -> logger.warn(msg);
+          default -> logger.info(msg);
+        }
       }
 
       return new LogOutput(true);

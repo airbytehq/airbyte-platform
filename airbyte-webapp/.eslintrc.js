@@ -133,6 +133,7 @@ module.exports = {
     "prefer-template": "warn",
     "spaced-comment": ["warn", "always", { markers: ["/"] }],
     yoda: "warn",
+    "import/no-duplicates": ["warn", { considerQueryString: true }],
     "import/order": [
       "warn",
       {

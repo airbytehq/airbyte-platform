@@ -1,9 +1,7 @@
-import { faWarning } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormattedMessage } from "react-intl";
 
-import { RotateIcon } from "components/icons/RotateIcon";
 import { Button } from "components/ui/Button";
+import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
@@ -80,10 +78,10 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
       data-testid="read-stream"
       icon={
         showWarningIcon ? (
-          <FontAwesomeIcon icon={faWarning} />
+          <Icon type="warningOutline" />
         ) : (
           <div>
-            <RotateIcon width={styles.testIconHeight} height={styles.testIconHeight} />
+            <Icon type="rotate" />
           </div>
         )
       }

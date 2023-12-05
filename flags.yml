@@ -25,3 +25,15 @@ flags:
     serve: false
   - name: platform.use-new-schema-update-notification
     serve: false
+  # whether the platform will track destination timeouts. If set to 'true', then the platform will monitor if there has been
+  # a call to a destination that has taken more than the threshold defined in 'destination-timeout.maxSeconds', and if so,
+  # the platform will consider the destination to have timed out.
+  - name: destination-timeout-enabled
+    serve: true
+  # If set to 'true' and the platform detects a destination timeout, it will fail the sync. Otherwise, it will
+  # log a message and the sync will proceed.
+  - name: destination-timeout.failSync
+    serve: true
+  # the time the platform waits before it decides that a destination has timed out.
+  - name: destination-timeout.seconds
+    serve: 86400

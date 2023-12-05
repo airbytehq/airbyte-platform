@@ -55,7 +55,10 @@ describe("useRbac", () => {
       mockUseRbacPermissionsQuery.mockClear();
       renderHook(() => useRbac({ resourceType: "INSTANCE", role: "ADMIN" }));
       expect(mockUseRbacPermissionsQuery).toHaveBeenCalledTimes(1);
-      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({ resourceType: "INSTANCE", role: "ADMIN" });
+      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({
+        resourceType: "INSTANCE",
+        role: "ADMIN",
+      });
     });
 
     it("instance admin does not need to add details to the query", () => {

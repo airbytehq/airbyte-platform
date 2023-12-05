@@ -19,6 +19,7 @@ import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPagina
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
@@ -47,7 +48,7 @@ public class OrganizationsHandler {
   @Inject
   public OrganizationsHandler(final OrganizationPersistence organizationPersistence,
                               final PermissionPersistence permissionPersistence,
-                              final Supplier<UUID> uuidGenerator) {
+                              @Named("uuidGenerator") final Supplier<UUID> uuidGenerator) {
     this.organizationPersistence = organizationPersistence;
     this.permissionPersistence = permissionPersistence;
     this.uuidGenerator = uuidGenerator;
@@ -106,6 +107,11 @@ public class OrganizationsHandler {
     if (organizationUpdateRequestBody.getOrgLevelBilling() != null && !organization.getOrgLevelBilling()
         .equals(organizationUpdateRequestBody.getOrgLevelBilling())) {
       organization.setOrgLevelBilling(organizationUpdateRequestBody.getOrgLevelBilling());
+      hasChanged = true;
+    }
+    if (organizationUpdateRequestBody.getEmail() != null && !organizationUpdateRequestBody.getEmail()
+        .equals(organization.getEmail())) {
+      organization.setEmail(organizationUpdateRequestBody.getEmail());
       hasChanged = true;
     }
     if (hasChanged) {

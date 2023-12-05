@@ -17,6 +17,7 @@ import io.micronaut.data.model.query.builder.sql.Dialect;
 import io.micronaut.data.repository.PageableRepository;
 import io.micronaut.data.repository.jpa.JpaSpecificationExecutor;
 import io.micronaut.data.repository.jpa.criteria.PredicateSpecification;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import lombok.Builder;
@@ -78,10 +79,21 @@ public interface StreamStatusesRepository extends PageableRepository<StreamStatu
   List<StreamStatus> findAllPerRunStateByConnectionId(final UUID connectionId);
 
   /**
+   * Returns the latest stream status per run state per day for a connection after a given timestamp.
+   */
+
+  @Query("SELECT DISTINCT ON (stream_name, stream_namespace, run_state, incomplete_run_cause, job_type, DATE(transitioned_at)) * "
+      + "FROM stream_statuses WHERE connection_id = :connectionId AND transitioned_at > :timestamp "
+      + "ORDER BY stream_name, stream_namespace, run_state, incomplete_run_cause, job_type, DATE(transitioned_at), transitioned_at DESC")
+  List<StreamStatus> findLatestStatusPerRunStateByConnectionIdAndDayAfterTimestamp(final UUID connectionId, final OffsetDateTime timestamp);
+
+  /**
    * Pagination params.
    */
   record Pagination(int offset,
-                    int size) {}
+                    int size) {
+
+  }
 
   /**
    * Params for filtering our list functionality.
@@ -94,7 +106,9 @@ public interface StreamStatusesRepository extends PageableRepository<StreamStatu
                       String streamName,
                       Integer attemptNumber,
                       JobStreamStatusJobType jobType,
-                      Pagination pagination) {}
+                      Pagination pagination) {
+
+  }
 
   /**
    * Predicates for dynamic query building. Portable.

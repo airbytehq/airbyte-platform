@@ -2,8 +2,7 @@ import { useMonaco } from "@monaco-editor/react";
 import { load, YAMLException } from "js-yaml";
 import debounce from "lodash/debounce";
 import { editor } from "monaco-editor/esm/vs/editor/editor.api";
-import { useMemo, useRef } from "react";
-import React from "react";
+import React, { useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { useUpdateEffect } from "react-use";
 

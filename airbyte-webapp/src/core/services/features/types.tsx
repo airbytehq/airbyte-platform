@@ -17,6 +17,7 @@ export enum FeatureItem {
   EmailNotifications = "EMAIL_NOTIFICATIONS",
   EnterpriseBranding = "ENTERPRISE_BRANDING",
   ShowInviteUsersHint = "SHOW_INVITE_USERS_HINT",
+  RBAC = "RBAC",
   RestrictAdminInForeignWorkspace = "RESTRICT_ADMIN_IN_FOREIGN_WORKSPACE",
   ConnectorBreakingChangeDeadlines = "CONNECTOR_BREAKING_CHANGE_DEADLINES",
   MultiWorkspaceUI = "MULTI_WORKSPACE_UI",

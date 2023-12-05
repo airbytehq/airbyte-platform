@@ -6,8 +6,7 @@ import { useRemoveConnectionsFromList, useSuspenseQuery } from "core/api";
 // eslint-disable-next-line import/no-restricted-paths
 import { useRequestOptions } from "core/api/useRequestOptions";
 import { DestinationService } from "core/domain/connector/DestinationService";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { isDefined } from "core/utils/common";
 import { useInitService } from "services/useInitService";
 

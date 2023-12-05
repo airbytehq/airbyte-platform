@@ -134,6 +134,7 @@ class ContainerOrchestratorConfigBeanFactory {
     @Value("\${airbyte.workload-api.retries.max}") workloadApiRetriesMax: String,
     cloudLoggingConfig: CloudLoggingConfig,
     cloudStateConfig: CloudStateConfig,
+    workerEnv: Configs.WorkerEnvironment,
   ): Map<String, String> {
     // Build the map of additional environment variables to be passed to the container orchestrator
     val envMap: MutableMap<String, String> = HashMap()
@@ -194,7 +195,7 @@ class ContainerOrchestratorConfigBeanFactory {
     envMap[ACCEPTANCE_TEST_ENABLED_VAR] = java.lang.Boolean.toString(isInTestMode)
 
     // Manually add the worker environment
-    envMap[WorkerConstants.WORKER_ENVIRONMENT] = Configs.WorkerEnvironment.KUBERNETES.name
+    envMap[WorkerConstants.WORKER_ENVIRONMENT] = workerEnv.name
     envMap[LogClientSingleton.GOOGLE_APPLICATION_CREDENTIALS] = googleApplicationCredentials
 
     // Cloud logging configuration

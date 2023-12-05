@@ -10,6 +10,8 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.SetWorkflowInAttemptRequestBody;
+import io.airbyte.commons.logging.LoggingHelper;
+import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.helpers.LogClientSingleton;
@@ -118,21 +120,27 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
   @Override
   public OUTPUT get() {
     try {
-      mdcSetter.accept(jobRoot);
+      try (final var mdcScope = new MdcScope.Builder()
+          .setLogPrefix(LoggingHelper.PLATFORM_LOGGER_PREFIX)
+          .setPrefixColor(LoggingHelper.Color.CYAN_BACKGROUND)
+          .build()) {
 
-      if (MDC.get(LogClientSingleton.JOB_LOG_PATH_MDC_KEY) != null) {
-        LOGGER.info("Docker volume job log path: " + MDC.get(LogClientSingleton.JOB_LOG_PATH_MDC_KEY));
-      } else if (MDC.get(LogClientSingleton.CLOUD_JOB_LOG_PATH_MDC_KEY) != null) {
-        LOGGER.info("Cloud storage job log path: " + MDC.get(LogClientSingleton.CLOUD_JOB_LOG_PATH_MDC_KEY));
+        mdcSetter.accept(jobRoot);
+
+        if (MDC.get(LogClientSingleton.JOB_LOG_PATH_MDC_KEY) != null) {
+          LOGGER.info("Docker volume job log path: " + MDC.get(LogClientSingleton.JOB_LOG_PATH_MDC_KEY));
+        } else if (MDC.get(LogClientSingleton.CLOUD_JOB_LOG_PATH_MDC_KEY) != null) {
+          LOGGER.info("Cloud storage job log path: " + MDC.get(LogClientSingleton.CLOUD_JOB_LOG_PATH_MDC_KEY));
+        }
+
+        LOGGER.info("Executing worker wrapper. Airbyte version: {}", airbyteVersion);
+        AirbyteApiClient.retryWithJitter(() -> {
+          saveWorkflowIdForCancellation(airbyteApiClient);
+          return null;
+        }, "save workflow id for cancellation");
+
+        return worker.run(input, jobRoot);
       }
-
-      LOGGER.info("Executing worker wrapper. Airbyte version: {}", airbyteVersion);
-      AirbyteApiClient.retryWithJitter(() -> {
-        saveWorkflowIdForCancellation(airbyteApiClient);
-        return null;
-      }, "save workflow id for cancellation");
-
-      return worker.run(input, jobRoot);
 
     } catch (final Exception e) {
       addActualRootCauseToTrace(e);

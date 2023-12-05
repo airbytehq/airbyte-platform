@@ -3,8 +3,7 @@ import path from "path";
 import viteYaml from "@modyfi/vite-plugin-yaml";
 import basicSsl from "@vitejs/plugin-basic-ssl";
 import react from "@vitejs/plugin-react";
-import { UserConfig } from "vite";
-import { defineConfig } from "vite";
+import { UserConfig, defineConfig } from "vite";
 import checker from "vite-plugin-checker";
 import svgrPlugin from "vite-plugin-svgr";
 import viteTsconfigPaths from "vite-tsconfig-paths";
@@ -39,6 +38,10 @@ export default defineConfig(() => {
                 params: {
                   overrides: {
                     removeViewBox: false,
+                    cleanupIds: false,
+                    removeUnknownsAndDefaults: {
+                      keepRoleAttr: true,
+                    },
                   },
                 },
               },

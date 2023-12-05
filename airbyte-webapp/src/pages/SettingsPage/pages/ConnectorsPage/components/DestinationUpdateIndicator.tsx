@@ -2,7 +2,7 @@ import { useMemo } from "react";
 
 import Indicator from "components/Indicator";
 
-import { useLatestDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
+import { useLatestDestinationDefinitionList } from "core/api";
 
 interface DestinationUpdateIndicatorProps {
   id: string;

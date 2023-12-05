@@ -1,6 +1,10 @@
 import { ConnectorIds } from "@src/area/connector/utils/constants";
-import { WebBackendConnectionCreate } from "@src/core/api/types/AirbyteClient";
-import { DestinationCreate, SourceCreate, WebBackendConnectionUpdate } from "@src/core/api/types/AirbyteClient";
+import {
+  WebBackendConnectionCreate,
+  DestinationCreate,
+  SourceCreate,
+  WebBackendConnectionUpdate,
+} from "@src/core/api/types/AirbyteClient";
 
 import { getWorkspaceId } from "./workspace";
 

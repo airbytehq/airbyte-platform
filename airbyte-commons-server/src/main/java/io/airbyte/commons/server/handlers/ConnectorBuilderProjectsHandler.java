@@ -34,6 +34,7 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.UUID;
@@ -55,7 +56,7 @@ public class ConnectorBuilderProjectsHandler {
   @Inject
   public ConnectorBuilderProjectsHandler(final ConfigRepository configRepository,
                                          final CdkVersionProvider cdkVersionProvider,
-                                         final Supplier<UUID> uuidSupplier,
+                                         @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
                                          final DeclarativeSourceManifestInjector manifestInjector) {
     this.configRepository = configRepository;
     this.cdkVersionProvider = cdkVersionProvider;

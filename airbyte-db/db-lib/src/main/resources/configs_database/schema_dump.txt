@@ -359,6 +359,9 @@ create table "public"."workload" (
   "last_heartbeat_at" timestamp(6) with time zone,
   "input_payload" text not null,
   "log_path" text not null,
+  "geography" varchar(2147483647) not null default cast('AUTO' as varchar),
+  "mutex_key" varchar(2147483647),
+  "type" "public"."workload_type" not null,
   constraint "workload_pkey"
     primary key ("id")
 );

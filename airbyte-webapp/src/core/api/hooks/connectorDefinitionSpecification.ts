@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { useSuspenseQuery } from "core/api";
-import { useCurrentWorkspace } from "core/api";
+import { useSuspenseQuery, useCurrentWorkspace } from "core/api";
 import { isDefined } from "core/utils/common";
 
 import { SCOPE_WORKSPACE } from "../../../services/Scope";

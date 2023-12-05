@@ -1,5 +1,3 @@
-import { faRocket } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import React from "react";
 import { FormattedMessage } from "react-intl";
@@ -7,6 +5,7 @@ import { FormattedMessage } from "react-intl";
 import { LoadingPage } from "components";
 import { Version } from "components/common/Version";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { ThemeToggle } from "components/ui/ThemeToggle";
 import { WorkspacesPicker } from "components/workspace/WorkspacesPicker";
 
@@ -25,7 +24,6 @@ import { AirbyteHomeLink } from "../SideBar/AirbyteHomeLink";
 import { MenuContent } from "../SideBar/components/MenuContent";
 import { NavItem } from "../SideBar/components/NavItem";
 import { ResourcesDropdown } from "../SideBar/components/ResourcesDropdown";
-import SettingsIcon from "../SideBar/components/SettingsIcon";
 import { MainNavItems } from "../SideBar/MainNavItems";
 import { SideBar } from "../SideBar/SideBar";
 
@@ -46,14 +44,14 @@ const MainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
             <NavItem
               as="a"
               to={links.updateLink}
-              icon={<FontAwesomeIcon icon={faRocket} />}
+              icon={<Icon type="rocket" />}
               label={<FormattedMessage id="sidebar.update" />}
               testId="updateLink"
             />
             <ResourcesDropdown />
             <NavItem
               label={<FormattedMessage id="sidebar.settings" />}
-              icon={<SettingsIcon />}
+              icon={<Icon type="gear" />}
               to={RoutePaths.Settings}
               withNotification={hasNewVersions}
             />

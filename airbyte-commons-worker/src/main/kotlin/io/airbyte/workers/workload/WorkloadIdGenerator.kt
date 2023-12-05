@@ -21,14 +21,8 @@ class WorkloadIdGenerator {
     connectionId: UUID,
     jobId: Long,
     attemptNumber: Int,
-    workloadType: WorkloadType,
+    workloadTypeTag: String,
   ): String {
-    return "${connectionId}_${jobId}_${attemptNumber}_${workloadType.name.lowercase(Locale.ENGLISH)}"
+    return "${connectionId}_${jobId}_${attemptNumber}_${workloadTypeTag.lowercase(Locale.ENGLISH)}"
   }
-}
-
-enum class WorkloadType {
-  CHECK,
-  DISCOVER,
-  SYNC,
 }

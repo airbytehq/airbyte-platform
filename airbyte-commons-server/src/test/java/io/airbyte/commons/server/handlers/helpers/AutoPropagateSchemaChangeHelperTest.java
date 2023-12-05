@@ -7,7 +7,6 @@ package io.airbyte.commons.server.handlers.helpers;
 import static io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.extractStreamAndConfigPerStreamDescriptor;
 import static io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.getUpdatedSchema;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -22,7 +21,6 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.featureflag.AutoPropagateNewStreams;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import java.util.List;
@@ -143,7 +141,6 @@ class AutoPropagateSchemaChangeHelperTest {
 
   @Test
   void applyAdd() {
-    when(featureFlagClient.boolVariation(eq(AutoPropagateNewStreams.INSTANCE), any())).thenReturn(true);
     final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
     final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
 
@@ -174,7 +171,6 @@ class AutoPropagateSchemaChangeHelperTest {
 
   @Test
   void applyAddWithSourceDefinedCursor() {
-    when(featureFlagClient.boolVariation(eq(AutoPropagateNewStreams.INSTANCE), any())).thenReturn(true);
     final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
     final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
 
@@ -206,7 +202,6 @@ class AutoPropagateSchemaChangeHelperTest {
 
   @Test
   void applyAddWithSourceDefinedCursorNoPrimaryKey() {
-    when(featureFlagClient.boolVariation(eq(AutoPropagateNewStreams.INSTANCE), any())).thenReturn(true);
     final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
     final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
 
@@ -231,7 +226,6 @@ class AutoPropagateSchemaChangeHelperTest {
 
   @Test
   void applyAddWithSourceDefinedCursorNoPrimaryKeyNoFullRefresh() {
-    when(featureFlagClient.boolVariation(eq(AutoPropagateNewStreams.INSTANCE), any())).thenReturn(true);
     final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
     final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
 

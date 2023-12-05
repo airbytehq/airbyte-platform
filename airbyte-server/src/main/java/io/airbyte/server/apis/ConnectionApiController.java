@@ -46,6 +46,7 @@ import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.commons.temporal.scheduling.RouterService;
+import io.airbyte.server.handlers.StreamStatusesHandler;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Body;
@@ -66,15 +67,18 @@ public class ConnectionApiController implements ConnectionApi {
   private final OperationsHandler operationsHandler;
   private final SchedulerHandler schedulerHandler;
   private final RouterService routerService;
+  private final StreamStatusesHandler streamStatusesHandler;
 
   public ConnectionApiController(final ConnectionsHandler connectionsHandler,
                                  final OperationsHandler operationsHandler,
                                  final SchedulerHandler schedulerHandler,
-                                 final RouterService routerService) {
+                                 final RouterService routerService,
+                                 final StreamStatusesHandler streamStatusesHandler) {
     this.connectionsHandler = connectionsHandler;
     this.operationsHandler = operationsHandler;
     this.schedulerHandler = schedulerHandler;
     this.routerService = routerService;
+    this.streamStatusesHandler = streamStatusesHandler;
   }
 
   @Override
@@ -160,8 +164,8 @@ public class ConnectionApiController implements ConnectionApi {
   @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public List<ConnectionDataHistoryReadItem> getConnectionDataHistory(ConnectionDataHistoryRequestBody connectionDataHistoryRequestBody) {
-    return null;
+  public List<ConnectionDataHistoryReadItem> getConnectionDataHistory(@Body final ConnectionDataHistoryRequestBody connectionDataHistoryRequestBody) {
+    return ApiHelper.execute(() -> connectionsHandler.getConnectionDataHistory(connectionDataHistoryRequestBody));
   }
 
   @Override
@@ -173,12 +177,14 @@ public class ConnectionApiController implements ConnectionApi {
     return ApiHelper.execute(() -> connectionsHandler.getConnectionStatuses(connectionStatusesRequestBody));
   }
 
+  @SuppressWarnings("LineLength")
   @Override
   @Post(uri = "/stream_history")
   @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public List<ConnectionStreamHistoryReadItem> getConnectionStreamHistory(ConnectionStreamHistoryRequestBody connectionStreamHistoryRequestBody) {
+  public List<ConnectionStreamHistoryReadItem> getConnectionStreamHistory(
+                                                                          @Body final ConnectionStreamHistoryRequestBody connectionStreamHistoryRequestBody) {
     return null;
   }
 
@@ -187,7 +193,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public List<ConnectionSyncProgressReadItem> getConnectionSyncProgress(ConnectionIdRequestBody connectionIdRequestBody) {
+  public List<ConnectionSyncProgressReadItem> getConnectionSyncProgress(final ConnectionIdRequestBody connectionIdRequestBody) {
     return null;
   }
 
@@ -196,8 +202,8 @@ public class ConnectionApiController implements ConnectionApi {
   @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public List<ConnectionSyncResultRead> getConnectionUptimeHistory(ConnectionUptimeHistoryRequestBody connectionUptimeHistoryRequestBody) {
-    return null;
+  public List<ConnectionSyncResultRead> getConnectionUptimeHistory(final ConnectionUptimeHistoryRequestBody connectionUptimeHistoryRequestBody) {
+    return ApiHelper.execute(() -> streamStatusesHandler.getConnectionUptimeHistory(connectionUptimeHistoryRequestBody));
   }
 
   @Override

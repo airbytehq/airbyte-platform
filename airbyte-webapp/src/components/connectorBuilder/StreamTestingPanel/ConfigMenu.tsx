@@ -1,11 +1,10 @@
-import { faUser } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Message } from "components/ui/Message";
 import { Modal, ModalBody } from "components/ui/Modal";
 import { NumberBadge } from "components/ui/NumberBadge";
@@ -79,7 +78,7 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
                 !jsonManifest.spec ||
                 Object.keys(jsonManifest.spec.connection_specification?.properties || {}).length === 0
               }
-              icon={<FontAwesomeIcon className={styles.icon} icon={faUser} />}
+              icon={<Icon type="user" className={styles.icon} />}
             >
               <FormattedMessage id="connectorBuilder.inputsButton" />
             </Button>

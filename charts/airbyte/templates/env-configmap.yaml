@@ -25,7 +25,13 @@ data:
   GCS_LOG_BUCKET: {{ .Values.global.logs.gcs.bucket | quote }}
   GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.gcpLogCredentialsPath" . | quote }}
   INTERNAL_API_HOST: {{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
-  WORKLOAD_API_HOST: {{ .Release.Name }}-workload-api:{{ index .Values "workload-api" "service" "port" }}
+{{- if eq (index .Values "workload-api-server" "enabled") true }}
+  # Temporary conditional for OSS deploys.  Eventually, the workload-api will be present in OSS deploys and the else
+  # block can be removed
+  WORKLOAD_API_HOST: {{ .Release.Name }}-workload-api-server:{{ index .Values "workload-api-server" "service" "port" }}
+{{- else }}
+  WORKLOAD_API_HOST: localhost # placeholder value
+{{- end }}
 {{- if eq .Values.global.edition "pro" }}
   KEYCLOAK_INTERNAL_HOST: {{ .Release.Name }}-airbyte-keycloak-svc:{{ .Values.keycloak.service.port }}
   KEYCLOAK_PORT: {{ .Values.keycloak.service.port | quote }}

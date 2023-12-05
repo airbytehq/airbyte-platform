@@ -25,7 +25,7 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
 
   const getBodyOptions = (): Array<OneOfOption<BuilderRequestBody>> => [
     {
-      label: "JSON (key-value pairs)",
+      label: formatMessage({ id: "connectorBuilder.requestOptions.jsonList" }),
       default: {
         type: "json_list",
         values: [],
@@ -41,7 +41,7 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
       ),
     },
     {
-      label: "Form encoded (key-value pairs)",
+      label: formatMessage({ id: "connectorBuilder.requestOptions.formList" }),
       default: {
         type: "form_list",
         values: [],
@@ -57,7 +57,7 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
       ),
     },
     {
-      label: "JSON (free form)",
+      label: formatMessage({ id: "connectorBuilder.requestOptions.jsonFreeform" }),
       default: {
         type: "json_freeform",
         value: bodyValue.type === "json_list" ? JSON.stringify(Object.fromEntries(bodyValue.values)) : "{}",
@@ -72,7 +72,7 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
       ),
     },
     {
-      label: "Text (Free form)",
+      label: formatMessage({ id: "connectorBuilder.requestOptions.stringFreeform" }),
       default: {
         type: "string_freeform",
         value: "",
@@ -81,7 +81,7 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
         <BuilderField
           type="textarea"
           path={concatPath(props.basePath, "requestBody.value")}
-          label="Request body as string"
+          label={formatMessage({ id: "connectorBuilder.requestOptions.stringFreeform.value" })}
           manifestPath="HttpRequester.properties.request_body_data"
           omitInterpolationContext={props.omitInterpolationContext}
         />
@@ -105,7 +105,7 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
       />
       <BuilderOneOf<BuilderRequestBody>
         path={concatPath(props.basePath, "requestBody")}
-        label="Request Body"
+        label={formatMessage({ id: "connectorBuilder.requestOptions.requestBody" })}
         options={getBodyOptions()}
         omitInterpolationContext={props.omitInterpolationContext}
       />

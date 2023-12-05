@@ -8,7 +8,7 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { useConnectionHookFormService } from "hooks/services/ConnectionForm/ConnectionHookFormService";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { HookFormConnectionFormValues } from "./hookFormConfig";
 
@@ -20,7 +20,7 @@ import { HookFormConnectionFormValues } from "./hookFormConfig";
 export const CreateControlsHookForm: React.FC = () => {
   const { isSubmitting, isValid, errors } = useFormState<HookFormConnectionFormValues>();
   const { trigger } = useFormContext<HookFormConnectionFormValues>();
-  const { getErrorMessage } = useConnectionHookFormService();
+  const { getErrorMessage } = useConnectionFormService();
   const errorMessage = getErrorMessage(isValid, errors);
 
   // If the source doesn't select any streams by default, the initial untouched state

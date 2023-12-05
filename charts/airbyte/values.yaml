@@ -422,7 +422,7 @@ pod-sweeper:
   image:
     repository: bitnami/kubectl
     pullPolicy: IfNotPresent
-    tag: latest
+    tag: 1.28.4
 
   ##  podSweeper.podAnnotations [object] Add extra annotations to the podSweeper pod
   ##
@@ -859,6 +859,7 @@ worker:
 
 workload-launcher:
   enabled: false
+
   ##  workload-launcher.replicaCount Number of workload launcher replicas
   replicaCount: 1
 
@@ -1411,7 +1412,7 @@ postgresql:
   containerSecurityContext:
     runAsNonRoot: true
   commonAnnotations:
-    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook: pre-install
     helm.sh/hook-weight: "-1"
 ## External PostgreSQL configuration
 ## All of these values are only used when postgresql.enabled is set to false
@@ -1447,7 +1448,7 @@ minio:
   ## image.tag Minio tag image
   image:
     repository: minio/minio
-    tag: latest
+    tag: RELEASE.2023-11-20T22-40-07Z
 
   auth:
     rootUser: minio
@@ -1841,7 +1842,7 @@ keycloak:
 keycloak-setup:
   enabled: false
 
-workload-api:
+workload-api-server:
   enabled: false
 
   bearerToken: token
@@ -1853,7 +1854,7 @@ workload-api:
   ##  workload-api.image.pullPolicy the pull policy to use for the airbyte-workload-api-server image
   ##  workload-api.image.tag The airbyte-workload-api-server image tag. Defaults to the chart's AppVersion
   image:
-    repository: airbyte/airbyte-workload-api-server
+    repository: airbyte/workload-api-server
     pullPolicy: IfNotPresent
 
   ## Configure extra options for the server containers' liveness and readiness probes

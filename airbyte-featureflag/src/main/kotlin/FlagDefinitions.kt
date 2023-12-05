@@ -31,8 +31,6 @@ object ContainerOrchestratorJavaOpts : Temporary<String>(key = "container-orches
 
 object NewTrialPolicyEnabled : Temporary<Boolean>(key = "billing.newTrialPolicy", default = false)
 
-object AutoPropagateNewStreams : Temporary<Boolean>(key = "autopropagate-new-streams.enabled", default = false)
-
 object CanonicalCatalogSchema : Temporary<Boolean>(key = "canonical-catalog-schema", default = false)
 
 object CatalogCanonicalJson : Temporary<Boolean>(key = "catalog-canonical-json", default = false)
@@ -61,9 +59,11 @@ object ShouldFailSyncIfHeartbeatFailure : Permanent<Boolean>(key = "heartbeat.fa
 
 object ConnectorVersionOverride : Permanent<String>(key = "connectors.versionOverrides", default = "")
 
-object DestinationTimeoutEnabled : Permanent<Boolean>(key = "destination-timeout-enabled", default = false)
+object DestinationTimeoutEnabled : Permanent<Boolean>(key = "destination-timeout-enabled", default = true)
 
-object ShouldFailSyncOnDestinationTimeout : Permanent<Boolean>(key = "destination-timeout.failSync", default = false)
+object ShouldFailSyncOnDestinationTimeout : Permanent<Boolean>(key = "destination-timeout.failSync", default = true)
+
+object DestinationTimeoutSeconds : Permanent<Int>(key = "destination-timeout.seconds", default = 7200)
 
 object UseActorScopedDefaultVersions : Temporary<Boolean>(key = "connectors.useActorScopedDefaultVersions", default = true)
 
@@ -159,3 +159,9 @@ object UseNewCronScheduleCalculation : Temporary<Boolean>(key = "platform.use-ne
 object UseRuntimeSecretPersistence : Temporary<Boolean>(key = "platform.use-runtime-secret-persistence", default = false)
 
 object UseWorkloadApi : Temporary<Boolean>(key = "platform.use-workload-api", default = false)
+
+object WorkloadApiRouting : Permanent<String>(key = "workload-api-routing", default = "workload_default")
+
+object FailMissingPks : Temporary<Boolean>(key = "platform.fail-missing-pks", default = false)
+
+object PrintLongRecordPks : Temporary<Boolean>(key = "platform.print-long-record-pks", default = false)

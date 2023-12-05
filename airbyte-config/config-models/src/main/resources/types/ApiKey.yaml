@@ -1,0 +1,23 @@
+---
+"$schema": http://json-schema.org/draft-07/schema#
+"$id": https://github.com/airbytehq/airbyte/blob/master/airbyte-config/models/src/main/resources/types/ApiKey.yaml
+title: Api Key
+description: An API key for a user or non-user entity i.e. an organization
+type: object
+required:
+  - name
+additionalProperties: false
+properties:
+  id:
+    type: string
+    description: An ID that uniquely identifies the API key in the downstream service. Is used for deletion.
+  name:
+    description: Caption name for the Api Key
+    type: string
+  apiKey:
+    description: The API key, only returned on creation
+    type: string
+  createdOn:
+    type: string
+    description: A date string in ISO 8601 format (e.g. 2021-01-01T00:00:00Z) that the key was created.
+    format: string

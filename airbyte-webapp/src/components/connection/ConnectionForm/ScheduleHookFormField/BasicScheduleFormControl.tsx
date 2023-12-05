@@ -6,7 +6,7 @@ import { FormLabel } from "components/forms/FormControl";
 import { ListBox, Option } from "components/ui/ListBox";
 
 import { ConnectionScheduleDataBasicSchedule } from "core/request/AirbyteClient";
-import { useConnectionHookFormService } from "hooks/services/ConnectionForm/ConnectionHookFormService";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { useBasicFrequencyDropdownDataHookForm } from "./useBasicFrequencyDropdownDataHookForm";
 import { useTrackConnectionFrequency } from "./useTrackConnectionFrequency";
@@ -15,7 +15,7 @@ import { HookFormConnectionFormValues } from "../hookFormConfig";
 
 export const BasicScheduleFormControl: React.FC = () => {
   const { formatMessage } = useIntl();
-  const { connection } = useConnectionHookFormService();
+  const { connection } = useConnectionFormService();
   const { setValue, control } = useFormContext<HookFormConnectionFormValues>();
   const { trackDropdownSelect } = useTrackConnectionFrequency(connection);
   const frequencies: Array<Option<ConnectionScheduleDataBasicSchedule>> = useBasicFrequencyDropdownDataHookForm(

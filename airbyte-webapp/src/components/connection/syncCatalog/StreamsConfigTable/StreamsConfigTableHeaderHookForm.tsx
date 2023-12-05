@@ -1,5 +1,3 @@
-import { faGear } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import set from "lodash/set";
 import React from "react";
 import { useFormContext } from "react-hook-form";
@@ -7,6 +5,7 @@ import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
@@ -128,7 +127,7 @@ export const StreamsConfigTableHeaderHookForm: React.FC<StreamsConfigTableHeader
             })
           }
         >
-          <FontAwesomeIcon icon={faGear} />
+          <Icon type="gear" size="sm" />
         </Button>
       </HeaderCell>
       <HeaderCell>
@@ -153,7 +152,7 @@ export const StreamsConfigTableHeaderHookForm: React.FC<StreamsConfigTableHeader
             })
           }
         >
-          <FontAwesomeIcon icon={faGear} />
+          <Icon type="gear" size="sm" />
         </Button>
       </HeaderCell>
       <HeaderCell className={styles.syncModeCell}>

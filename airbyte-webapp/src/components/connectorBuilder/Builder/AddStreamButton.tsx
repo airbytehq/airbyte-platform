@@ -1,23 +1,21 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import classNames from "classnames";
 import merge from "lodash/merge";
-import { useMemo, useState } from "react";
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { v4 as uuid } from "uuid";
 import * as yup from "yup";
 
 import { Button } from "components/ui/Button";
+import { Icon } from "components/ui/Icon";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 
 import styles from "./AddStreamButton.module.scss";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
-import PlusIcon from "../../connection/ConnectionOnboarding/plusIcon.svg?react";
 import {
   BuilderStream,
   DEFAULT_BUILDER_STREAM_VALUES,
@@ -113,7 +111,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
             type="button"
             className={styles.addButton}
             onClick={buttonClickHandler}
-            icon={<PlusIcon />}
+            icon={<Icon type="plus" />}
             data-testid={testId}
           />
         </div>
@@ -131,6 +129,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
             onCancel={() => setIsOpen(false)}
             showCopyFromStream={!initialValues && numStreams > 0}
             streams={streams}
+            initialUrlPath={initialValues?.urlPath}
           />
         </Modal>
       )}
@@ -143,15 +142,22 @@ const AddStreamForm = ({
   onCancel,
   showCopyFromStream,
   streams,
+  initialUrlPath,
 }: {
   onSubmit: (values: AddStreamValues) => void;
   onCancel: () => void;
   showCopyFromStream: boolean;
   streams: BuilderStream[];
+  initialUrlPath?: string;
 }) => {
   const { formatMessage } = useIntl();
   const methods = useForm({
-    defaultValues: { streamName: "", urlPath: "", copyOtherStream: false, streamToCopy: streams[0]?.name },
+    defaultValues: {
+      streamName: "",
+      urlPath: initialUrlPath ?? "",
+      copyOtherStream: false,
+      streamToCopy: streams[0]?.name,
+    },
     resolver: yupResolver(
       yup.object().shape({
         streamName: yup

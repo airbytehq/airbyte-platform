@@ -1,6 +1,4 @@
-import { faAngleDown } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-
+import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps, ListBoxProps } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
@@ -10,7 +8,7 @@ const ControlButton = <T,>(props: ListBoxControlButtonProps<T>) => {
   return (
     <>
       {props.selectedOption && <Text size="md">{props.selectedOption.label}</Text>}
-      <FontAwesomeIcon className={styles.arrow} icon={faAngleDown} />
+      <Icon type="chevronDown" className={styles.arrow} />
     </>
   );
 };

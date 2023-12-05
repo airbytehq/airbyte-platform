@@ -2,28 +2,26 @@ import classNames from "classnames";
 import { useState } from "react";
 import { useUpdateEffect } from "react-use";
 
-import { MinusIcon } from "components/icons/MinusIcon";
-import { ModificationIcon } from "components/icons/ModificationIcon";
-import { PlusIcon } from "components/icons/PlusIcon";
+import { Icon } from "components/ui/Icon";
 
-import { SyncSchemaStream } from "core/domain/catalog";
+import { AirbyteStreamAndConfiguration } from "core/api/types/AirbyteClient";
 
 import styles from "./StreamsConfigTableRowStatus.module.scss";
 import { StatusToDisplay, useStreamsConfigTableRowProps } from "./useStreamsConfigTableRowProps";
 
 interface StreamsConfigTableRowStatusProps {
-  stream: SyncSchemaStream;
+  stream: AirbyteStreamAndConfiguration;
   className?: string;
 }
 
 const getIcon = (statusToDisplay: StatusToDisplay): React.ReactNode | null => {
   switch (statusToDisplay) {
     case "added":
-      return <PlusIcon />;
+      return <Icon type="plus" />;
     case "removed":
-      return <MinusIcon />;
+      return <Icon type="minus" />;
     case "changed":
-      return <ModificationIcon />;
+      return <Icon type="modification" />;
   }
 
   return null;

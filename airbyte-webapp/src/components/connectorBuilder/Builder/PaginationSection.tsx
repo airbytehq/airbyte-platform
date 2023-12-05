@@ -1,3 +1,4 @@
+import lowerCase from "lodash/lowerCase";
 import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
@@ -10,7 +11,7 @@ import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderOneOf } from "./BuilderOneOf";
-import { InjectIntoFields } from "./InjectIntoFields";
+import { BuilderRequestInjection } from "./BuilderRequestInjection";
 import { ToggleGroupField } from "./ToggleGroupField";
 import {
   BuilderCursorPagination,
@@ -36,8 +37,8 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
   return (
     <BuilderCard
       docLink={links.connectorBuilderPagination}
-      label="Pagination"
-      tooltip="Configure how pagination is handled by your connector"
+      label={formatMessage({ id: "connectorBuilder.pagination.label" })}
+      tooltip={formatMessage({ id: "connectorBuilder.pagination.tooltip" })}
       toggleConfig={{
         path: streamFieldPath("paginator"),
         defaultValue: {
@@ -65,12 +66,12 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
     >
       <BuilderOneOf<BuilderPaginator["strategy"]>
         path={streamFieldPath("paginator.strategy")}
-        label="Mode"
-        tooltip="Pagination method to use for requests sent to the API"
+        label={formatMessage({ id: "connectorBuilder.pagination.strategy.label" })}
+        tooltip={formatMessage({ id: "connectorBuilder.pagination.strategy.tooltip" })}
         manifestOptionPaths={["OffsetIncrement", "PageIncrement", "CursorPagination"]}
         options={[
           {
-            label: "Offset Increment",
+            label: formatMessage({ id: "connectorBuilder.pagination.strategy.offsetIncrement" }),
             default: {
               type: OFFSET_INCREMENT,
               page_size: "",
@@ -83,13 +84,21 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   path={streamFieldPath("paginator.strategy.page_size")}
                   optional
                 />
-                {pageSize ? <PageSizeOption label="Limit" streamFieldPath={streamFieldPath} /> : null}
-                <PageTokenOption label="Offset" streamFieldPath={streamFieldPath} />
+                {pageSize ? (
+                  <PageSizeOption
+                    label={formatMessage({ id: "connectorBuilder.pagination.strategy.offsetIncrement.limit" })}
+                    streamFieldPath={streamFieldPath}
+                  />
+                ) : null}
+                <PageTokenOption
+                  label={formatMessage({ id: "connectorBuilder.pagination.strategy.offsetIncrement.offset" })}
+                  streamFieldPath={streamFieldPath}
+                />
               </>
             ),
           },
           {
-            label: "Page Increment",
+            label: formatMessage({ id: "connectorBuilder.pagination.strategy.pageIncrement" }),
             default: {
               type: PAGE_INCREMENT,
               page_size: undefined,
@@ -109,13 +118,21 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   manifestPath="PageIncrement.properties.start_from_page"
                   optional
                 />
-                {pageSize ? <PageSizeOption label="Page Size" streamFieldPath={streamFieldPath} /> : null}
-                <PageTokenOption label="Page Number" streamFieldPath={streamFieldPath} />
+                {pageSize ? (
+                  <PageSizeOption
+                    label={formatMessage({ id: "connectorBuilder.pagination.strategy.pageSize" })}
+                    streamFieldPath={streamFieldPath}
+                  />
+                ) : null}
+                <PageTokenOption
+                  label={formatMessage({ id: "connectorBuilder.pagination.strategy.pageIncrement.pageNumber" })}
+                  streamFieldPath={streamFieldPath}
+                />
               </>
             ),
           },
           {
-            label: "Cursor Pagination",
+            label: formatMessage({ id: "connectorBuilder.pagination.strategy.cursor" }),
             default: {
               type: CURSOR_PAGINATION,
               page_size: undefined,
@@ -128,32 +145,41 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
               <>
                 <BuilderOneOf<BuilderCursorPagination["cursor"]>
                   path={streamFieldPath("paginator.strategy.cursor")}
-                  label="Next page cursor"
+                  label={formatMessage({ id: "connectorBuilder.pagination.strategy.cursor.cursor.label" })}
                   tooltip={
                     <LabelInfo
-                      description="Specify how to select the next page"
+                      description={formatMessage({ id: "connectorBuilder.pagination.strategy.cursor.cursor.tooltip" })}
                       options={[
                         {
-                          title: "Response",
-                          description:
-                            "Pointer to a field in the raw response body that will be used as the cursor token for fetching the next page of data",
+                          title: formatMessage({
+                            id: "connectorBuilder.pagination.strategy.cursor.cursor.response.label",
+                          }),
+                          description: formatMessage({
+                            id: "connectorBuilder.pagination.strategy.cursor.cursor.response.tooltip",
+                          }),
                         },
                         {
-                          title: "Header",
-                          description:
-                            "Pointer to a field in the raw response headers that will be used as the cursor token for fetching the next page of data",
+                          title: formatMessage({
+                            id: "connectorBuilder.pagination.strategy.cursor.cursor.header.label",
+                          }),
+                          description: formatMessage({
+                            id: "connectorBuilder.pagination.strategy.cursor.cursor.header.tooltip",
+                          }),
                         },
                         {
-                          title: "Custom",
-                          description:
-                            "Define a custom cursor token for fetching the next page of data which supports interpolated values, and a stop condition describing when to stop fetching more pages",
+                          title: formatMessage({
+                            id: "connectorBuilder.pagination.strategy.cursor.cursor.custom.label",
+                          }),
+                          description: formatMessage({
+                            id: "connectorBuilder.pagination.strategy.cursor.cursor.custom.tooltip",
+                          }),
                         },
                       ]}
                     />
                   }
                   options={[
                     {
-                      label: "Response",
+                      label: formatMessage({ id: "connectorBuilder.pagination.strategy.cursor.cursor.response.label" }),
                       default: {
                         type: "response",
                         path: [],
@@ -162,8 +188,10 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                         <BuilderField
                           type="array"
                           path={streamFieldPath("paginator.strategy.cursor.path")}
-                          label="Path"
-                          tooltip="Path to the value in the response object to select"
+                          label={formatMessage({ id: "connectorBuilder.pagination.strategy.cursor.cursor.path" })}
+                          tooltip={formatMessage({
+                            id: "connectorBuilder.pagination.strategy.cursor.cursor.response.path",
+                          })}
                         />
                       ),
                     },
@@ -177,13 +205,15 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                         <BuilderField
                           type="array"
                           path={streamFieldPath("paginator.strategy.cursor.path")}
-                          label="Path"
-                          tooltip="Path to the header value to select"
+                          label={formatMessage({ id: "connectorBuilder.pagination.strategy.cursor.cursor.path" })}
+                          tooltip={formatMessage({
+                            id: "connectorBuilder.pagination.strategy.cursor.cursor.header.path",
+                          })}
                         />
                       ),
                     },
                     {
-                      label: "Custom",
+                      label: formatMessage({ id: "connectorBuilder.pagination.strategy.cursor.cursor.custom.label" }),
                       default: {
                         type: "custom",
                         cursor_value: "",
@@ -207,7 +237,10 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                     },
                   ]}
                 />
-                <PageTokenOption label="Cursor Value" streamFieldPath={streamFieldPath} />
+                <PageTokenOption
+                  label={formatMessage({ id: "connectorBuilder.pagination.strategy.cursorValue" })}
+                  streamFieldPath={streamFieldPath}
+                />
                 <BuilderField
                   type="number"
                   path={streamFieldPath("paginator.strategy.page_size")}
@@ -219,7 +252,12 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   }}
                   optional
                 />
-                {pageSize ? <PageSizeOption label="Page Size" streamFieldPath={streamFieldPath} /> : null}
+                {pageSize ? (
+                  <PageSizeOption
+                    label={formatMessage({ id: "connectorBuilder.pagination.strategy.pageSize" })}
+                    streamFieldPath={streamFieldPath}
+                  />
+                ) : null}
               </>
             ),
           },
@@ -236,10 +274,12 @@ const PageTokenOption = ({
   label: string;
   streamFieldPath: (fieldPath: string) => string;
 }): JSX.Element => {
+  const { formatMessage } = useIntl();
+
   return (
     <ToggleGroupField<RequestOption>
-      label={`Inject ${label} into outgoing HTTP Request`}
-      tooltip={`Configures how the ${label} will be sent in requests to the source API`}
+      label={formatMessage({ id: "connectorBuilder.injection.label" }, { label })}
+      tooltip={formatMessage({ id: "connectorBuilder.injection.tooltip" }, { label: lowerCase(label) })}
       fieldPath={streamFieldPath("paginator.pageTokenOption")}
       initialValues={{
         inject_into: "request_parameter",
@@ -247,7 +287,7 @@ const PageTokenOption = ({
         field_name: "",
       }}
     >
-      <InjectIntoFields path={streamFieldPath("paginator.pageTokenOption")} descriptor={label} />
+      <BuilderRequestInjection path={streamFieldPath("paginator.pageTokenOption")} descriptor={lowerCase(label)} />
     </ToggleGroupField>
   );
 };
@@ -259,10 +299,12 @@ const PageSizeOption = ({
   label: string;
   streamFieldPath: (fieldPath: string) => string;
 }): JSX.Element => {
+  const { formatMessage } = useIntl();
+
   return (
     <ToggleGroupField<RequestOption>
-      label={`Inject ${label} into outgoing HTTP Request`}
-      tooltip={`Configures how the ${label} will be sent in requests to the source API`}
+      label={formatMessage({ id: "connectorBuilder.injection.label" }, { label })}
+      tooltip={formatMessage({ id: "connectorBuilder.injection.tooltip" }, { label: lowerCase(label) })}
       fieldPath={streamFieldPath("paginator.pageSizeOption")}
       initialValues={{
         inject_into: "request_parameter",
@@ -270,9 +312,9 @@ const PageSizeOption = ({
         field_name: "",
       }}
     >
-      <InjectIntoFields
+      <BuilderRequestInjection
         path={streamFieldPath("paginator.pageSizeOption")}
-        descriptor={label}
+        descriptor={lowerCase(label)}
         excludeValues={["path"]}
       />
     </ToggleGroupField>

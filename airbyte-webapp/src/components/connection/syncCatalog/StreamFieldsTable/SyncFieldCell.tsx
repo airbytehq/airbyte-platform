@@ -1,5 +1,4 @@
-import { useCallback } from "react";
-import React from "react";
+import React, { useCallback } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";

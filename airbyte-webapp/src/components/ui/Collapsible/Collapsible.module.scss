@@ -1,7 +1,7 @@
 @use "scss/variables";
 @use "scss/colors";
 
-$icon-width: 10px;
+$icon-width: 18px;
 
 .container:not(:last-child) {
   margin-bottom: variables.$spacing-xl;

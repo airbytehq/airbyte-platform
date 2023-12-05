@@ -4,17 +4,14 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { SyncSchema } from "core/domain/catalog";
-import { getFrequencyFromScheduleData } from "core/services/analytics";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { getFrequencyFromScheduleData, useAnalyticsService, Action, Namespace } from "core/services/analytics";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { RoutePaths } from "pages/routePaths";
 import { SCOPE_WORKSPACE } from "services/Scope";
 
 import { useCurrentWorkspace, useInvalidateWorkspaceStateQuery } from "./workspaces";
-import { useAppMonitoringService } from "../../../hooks/services/AppMonitoringService";
-import { useNotificationService } from "../../../hooks/services/Notification";
 import {
   createOrUpdateStateSafe,
   deleteConnection,
@@ -29,6 +26,7 @@ import {
   webBackendUpdateConnection,
 } from "../generated/AirbyteClient";
 import {
+  AirbyteCatalog,
   ConnectionScheduleData,
   ConnectionScheduleType,
   ConnectionStateCreateOrUpdate,
@@ -62,11 +60,7 @@ export interface ConnectionValues {
   prefix?: string;
   namespaceDefinition: NamespaceDefinitionType;
   namespaceFormat?: string;
-  /**
-   * TOD0: change to AirbyteCatalog after migration on react-hook form since we don't use custom id field anymore
-   * https://github.com/airbytehq/airbyte-platform-internal/issues/8639
-   */
-  syncCatalog: SyncSchema;
+  syncCatalog: AirbyteCatalog;
   operations?: OperationCreate[];
 }
 

@@ -6,7 +6,10 @@ package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.ConnectorBuilderProjectApi;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
@@ -67,7 +70,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Override
   @Post(uri = "/get_with_manifest")
   @Status(HttpStatus.OK)
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectorBuilderProjectRead getConnectorBuilderProject(
@@ -78,7 +81,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Override
   @Post(uri = "/list")
   @Status(HttpStatus.OK)
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectorBuilderProjectReadList listConnectorBuilderProjects(final WorkspaceIdRequestBody workspaceIdRequestBody) {

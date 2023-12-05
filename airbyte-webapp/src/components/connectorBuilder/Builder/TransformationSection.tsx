@@ -24,17 +24,22 @@ export const TransformationSection: React.FC<TransformationSectionProps> = ({
 
   const getTransformationOptions = (buildPath: (path: string) => string): Array<OneOfOption<BuilderTransformation>> => [
     {
-      label: "Remove field",
+      label: formatMessage({ id: "connectorBuilder.transformation.remove" }),
       default: {
         type: "remove",
         path: [],
       },
       children: (
-        <BuilderField type="array" path={buildPath("path")} label="Path" tooltip="Path to the field to remove" />
+        <BuilderField
+          type="array"
+          path={buildPath("path")}
+          label={formatMessage({ id: "connectorBuilder.transformation.remove.path.label" })}
+          tooltip={formatMessage({ id: "connectorBuilder.transformation.remove.path.tooltip" })}
+        />
       ),
     },
     {
-      label: "Add field",
+      label: formatMessage({ id: "connectorBuilder.transformation.add" }),
       default: {
         type: "add",
         value: "",
@@ -85,8 +90,8 @@ export const TransformationSection: React.FC<TransformationSectionProps> = ({
         {({ buildPath }) => (
           <BuilderOneOf<BuilderTransformation>
             path={buildPath("")}
-            label="Transformation"
-            tooltip="Add or remove a field"
+            label={formatMessage({ id: "connectorBuilder.transformation.label" })}
+            tooltip={formatMessage({ id: "connectorBuilder.transformation.tooltip" })}
             options={getTransformationOptions(buildPath)}
           />
         )}

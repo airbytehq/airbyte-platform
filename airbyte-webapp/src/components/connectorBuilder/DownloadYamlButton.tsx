@@ -1,14 +1,12 @@
-import { faWarning } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { dump } from "js-yaml";
 import snakeCase from "lodash/snakeCase";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
+import { Icon } from "components/ui/Icon";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { FILE_TYPE_DOWNLOAD, downloadFile } from "core/utils/file";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -73,7 +71,7 @@ export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ classNam
       variant="secondary"
       onClick={handleClick}
       disabled={buttonDisabled}
-      icon={showWarningIcon ? <FontAwesomeIcon icon={faWarning} /> : undefined}
+      icon={showWarningIcon ? <Icon type="warningOutline" /> : undefined}
       data-testid="download-yaml-button"
       type="button"
     >

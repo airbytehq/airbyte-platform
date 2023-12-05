@@ -2,7 +2,7 @@ import { FormattedMessage } from "react-intl";
 
 import { CollapsibleCard } from "components/ui/CollapsibleCard";
 
-import { useConnectionHookFormService } from "hooks/services/ConnectionForm/ConnectionHookFormService";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { ConnectionConfigurationHookFormPreview } from "./ConnectionConfigurationHookFormPreview";
 import { DestinationStreamPrefixNameHookForm } from "./DestinationStreamPrefixNameHookForm";
@@ -15,7 +15,7 @@ import { ScheduleHookFormField } from "./ScheduleHookFormField/ScheduleHookFormF
  * this component is used in create and update connection cases
  */
 export const ConnectionConfigurationHookFormCard = () => {
-  const { mode } = useConnectionHookFormService();
+  const { mode } = useConnectionFormService();
   const isEditMode = mode === "edit";
 
   return (

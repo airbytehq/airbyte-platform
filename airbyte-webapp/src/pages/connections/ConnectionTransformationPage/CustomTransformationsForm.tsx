@@ -3,7 +3,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
 import { SchemaOf } from "yup";
 
-import { getInitialTransformations } from "components/connection/ConnectionForm/formConfig";
+import { getInitialTransformations } from "components/connection/ConnectionForm/hookFormConfig";
 import { TransformationFieldHookForm } from "components/connection/ConnectionForm/TransformationFieldHookForm";
 import { DbtOperationReadOrCreate, dbtOperationReadOrCreateSchema } from "components/connection/TransformationHookForm";
 import { Form } from "components/forms";

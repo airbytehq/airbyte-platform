@@ -5,7 +5,7 @@ metadata:
   # This name uniquely identifies the Deployment
   name: airbyte-minio
   annotations:
-    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook: pre-install
     helm.sh/hook-weight: "-1"
   labels:
     {{ include "airbyte.minioLabels" . | nindent 4 }}
@@ -72,7 +72,7 @@ metadata:
   labels:
     {{ include "airbyte.minioLabels" . | nindent 4 }}
   annotations:
-    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook: pre-install
     helm.sh/hook-weight: "-1"
 spec:
   ports:
@@ -89,8 +89,8 @@ kind: Pod
 metadata:
   name: airbyte-minio-create-bucket
   annotations:
-    "helm.sh/hook": post-install
-    "helm.sh/hook-delete-policy": hook-succeeded
+    "helm.sh/hook": post-install, post-upgrade
+    "helm.sh/hook-delete-policy": hook-succeeded, before-hook-creation
 spec:
   restartPolicy: OnFailure
   containers:
