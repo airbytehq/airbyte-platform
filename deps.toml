@@ -20,7 +20,7 @@ keycloak = "21.1.1" # should be kept in sync with airbyte-keycloak/Dockerfile ba
 kotlin-logging = "5.1.0"
 kubernetes-client = "6.5.1"
 log4j = "2.17.2"
-lombok = "1.18.24"
+lombok = "1.18.30"
 micronaut = "3.10.1"
 micronaut-data = "3.10.0"
 micronaut-email = "1.5.0"
@@ -150,7 +150,7 @@ segment-java-analytics = { module = "com.segment.analytics.java:analytics", vers
 sentry-java = { module = "io.sentry:sentry", version.ref = "sentry" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slugify = { module = "com.github.slugify:slugify", version = "2.4" }
-spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.7.3" }
+spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.8.2" }
 spring-core = { module = "org.springframework:spring-core", version = "6.0.8" }
 stripe = { module = "com.stripe:stripe-java", version = "20.102.0" }
 swagger-annotations = { module = "io.swagger:swagger-annotations", version.ref = "swagger" }
