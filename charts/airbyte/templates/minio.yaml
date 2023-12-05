@@ -48,6 +48,8 @@ spec:
           volumeMounts:
             - name: airbyte-minio-pv-claim # must match the volume name, above
               mountPath: "/data"
+          resources:
+            {{- toYaml .Values.minio.resources | nindent 12 }}
       {{- with .Values.minio.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
