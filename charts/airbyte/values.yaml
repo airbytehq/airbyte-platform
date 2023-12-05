@@ -1414,6 +1414,22 @@ postgresql:
   commonAnnotations:
     helm.sh/hook: pre-install
     helm.sh/hook-weight: "-1"
+
+  ##  postgresql.nodeSelector [object] Node labels for pod assignment
+  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ##
+  nodeSelector: {}
+
+  ##  postgresql.tolerations [array] Tolerations for postgresql pod assignment.
+  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  ##
+  tolerations: []
+
+  ##  postgresql.affinity [object] Affinity and anti-affinity for postgresql pod assignment.
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+  ##
+  affinity: {}
+
 ## External PostgreSQL configuration
 ## All of these values are only used when postgresql.enabled is set to false
 ##  externalDatabase.host Database host
@@ -1455,6 +1471,21 @@ minio:
     rootPassword: minio123
   storage:
     volumeClaimValue: 500Mi
+
+  ##  minio.nodeSelector [object] Node labels for pod assignment
+  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ##
+  nodeSelector: {}
+
+  ##  minio.tolerations [array] Tolerations for minio pod assignment.
+  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  ##
+  tolerations: []
+
+  ##  minio.affinity [object] Affinity and anti-affinity for minio pod assignment.
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+  ##
+  affinity: {}
 
 ## @section cron parameters
 
