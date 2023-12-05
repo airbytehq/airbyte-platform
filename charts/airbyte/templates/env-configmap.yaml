@@ -28,7 +28,7 @@ data:
 {{- if eq (index .Values "workload-api-server" "enabled") true }}
   # Temporary conditional for OSS deploys.  Eventually, the workload-api will be present in OSS deploys and the else
   # block can be removed
-  WORKLOAD_API_HOST: {{ .Release.Name }}-workload-api-server:{{ index .Values "workload-api-server" "service" "port" }}
+  WORKLOAD_API_HOST: {{ .Release.Name }}-workload-api-server-svc:{{ index .Values "workload-api-server" "service" "port" }}
 {{- else }}
   WORKLOAD_API_HOST: localhost # placeholder value
 {{- end }}

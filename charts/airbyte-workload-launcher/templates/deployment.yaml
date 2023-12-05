@@ -461,7 +461,7 @@ spec:
         - name: {{ $k }}
           valueFrom:
             secretKeyRef:
-              name: worker-secrets
+              name: workload-launcher-secrets
               key: {{ $k }}
         {{- end }}
         {{- end }}
