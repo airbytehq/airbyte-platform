@@ -24,7 +24,7 @@ data:
   DB_DOCKER_MOUNT: airbyte_db
   GCS_LOG_BUCKET: {{ .Values.global.logs.gcs.bucket | quote }}
   GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.gcpLogCredentialsPath" . | quote }}
-  INTERNAL_API_HOST: {{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
+  INTERNAL_API_HOST: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
 {{- if eq (index .Values "workload-api-server" "enabled") true }}
   # Temporary conditional for OSS deploys.  Eventually, the workload-api will be present in OSS deploys and the else
   # block can be removed
