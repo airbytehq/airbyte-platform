@@ -203,7 +203,7 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testVersionedFieldsDoNotChangeWithoutVersionBump() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testUpdateConnectorMetadata() throws IOException, JsonValidationException, ConfigNotFoundException {
     final StandardSourceDefinition sourceDefinition = createBaseSourceDef();
     final UUID actorDefinitionId = sourceDefinition.getSourceDefinitionId();
     final ActorDefinitionVersion actorDefinitionVersion1 = createBaseActorDefVersion(actorDefinitionId);
@@ -226,11 +226,13 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(retrievedSourceDefinition, configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId()));
     final Optional<ActorDefinitionVersion> optADVForTagAfterCall2 = configRepository.getActorDefinitionVersion(actorDefinitionId, DOCKER_IMAGE_TAG);
     assertTrue(optADVForTagAfterCall2.isPresent());
-    // Versioned data does not get updated since the tag did not change - old spec is still returned
-    assertEquals(advForTag, optADVForTagAfterCall2.get());
 
-    // Modifying docker image tag creates a new version (which can contain new versioned data)
-    final ActorDefinitionVersion newADV = createBaseActorDefVersion(actorDefinitionId).withDockerImageTag(UPGRADE_IMAGE_TAG).withSpec(updatedSpec);
+    // Modifying fields without updating image tag updates existing version
+    assertEquals(modifiedADV.withVersionId(advForTag.getVersionId()), optADVForTagAfterCall2.get());
+
+    // Modifying docker image tag creates a new version
+    final ActorDefinitionVersion newADV =
+        createBaseActorDefVersion(actorDefinitionId).withDockerImageTag(UPGRADE_IMAGE_TAG).withSpec(updatedSpec);
     configRepository.writeConnectorMetadata(sourceDefinition, newADV);
 
     final Optional<ActorDefinitionVersion> optADVForTag2 = configRepository.getActorDefinitionVersion(actorDefinitionId, UPGRADE_IMAGE_TAG);
@@ -300,7 +302,8 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     // Update
     if (upgradeShouldSucceed) {
       assertDoesNotThrow(() -> configRepository.writeConnectorMetadata(sourceDefinition,
-          createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(dockerImageTag), sourceBreakingChanges));
+          createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(dockerImageTag),
+          sourceBreakingChanges));
       assertDoesNotThrow(() -> configRepository.writeConnectorMetadata(destinationDefinition,
           createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId()).withDockerImageTag(dockerImageTag),
           destinationBreakingChanges));
@@ -532,7 +535,6 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
 
   private static ActorDefinitionVersion createBaseActorDefVersion(final UUID actorDefId) {
     return new ActorDefinitionVersion()
-        .withVersionId(UUID.randomUUID())
         .withActorDefinitionId(actorDefId)
         .withDockerRepository("source-image-" + actorDefId)
         .withDockerImageTag(DOCKER_IMAGE_TAG)

@@ -120,8 +120,8 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @throws IOException - you never know when you IO
    */
   @Override
-  public int updateActorDefinitionsDockerImageTag(List<UUID> actorDefinitionIds,
-                                                  String targetImageTag)
+  public int updateActorDefinitionsDockerImageTag(final List<UUID> actorDefinitionIds,
+                                                  final String targetImageTag)
       throws IOException {
     return database.transaction(ctx -> writeSourceDefinitionImageTag(actorDefinitionIds, targetImageTag, ctx));
   }
@@ -135,9 +135,9 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @throws IOException - you never know when you IO
    */
   @Override
-  public void writeActorDefinitionWorkspaceGrant(UUID actorDefinitionId,
-                                                 UUID scopeId,
-                                                 ScopeType scopeType)
+  public void writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId,
+                                                 final UUID scopeId,
+                                                 final ScopeType scopeType)
       throws IOException {
     database.query(ctx -> writeActorDefinitionWorkspaceGrant(actorDefinitionId, scopeId,
         io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType.valueOf(scopeType.value()), ctx));
@@ -153,9 +153,9 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @throws IOException - you never know when you IO
    */
   @Override
-  public boolean actorDefinitionWorkspaceGrantExists(UUID actorDefinitionId,
-                                                     UUID scopeId,
-                                                     ScopeType scopeType)
+  public boolean actorDefinitionWorkspaceGrantExists(final UUID actorDefinitionId,
+                                                     final UUID scopeId,
+                                                     final ScopeType scopeType)
       throws IOException {
     final Integer count = database.query(ctx -> ctx.fetchCount(
         DSL.selectFrom(ACTOR_DEFINITION_WORKSPACE_GRANT)
@@ -175,9 +175,9 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @throws IOException - you never know when you IO
    */
   @Override
-  public void deleteActorDefinitionWorkspaceGrant(UUID actorDefinitionId,
-                                                  UUID scopeId,
-                                                  ScopeType scopeType)
+  public void deleteActorDefinitionWorkspaceGrant(final UUID actorDefinitionId,
+                                                  final UUID scopeId,
+                                                  final ScopeType scopeType)
       throws IOException {
     database.query(ctx -> ctx.deleteFrom(ACTOR_DEFINITION_WORKSPACE_GRANT)
         .where(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
@@ -197,7 +197,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    */
   @Override
   public ActorDefinitionVersion writeActorDefinitionVersion(
-                                                            ActorDefinitionVersion actorDefinitionVersion)
+                                                            final ActorDefinitionVersion actorDefinitionVersion)
       throws IOException {
     return database.transaction(ctx -> writeActorDefinitionVersion(actorDefinitionVersion, ctx));
   }
@@ -212,8 +212,8 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @throws IOException - you never know when you io
    */
   @Override
-  public Optional<ActorDefinitionVersion> getActorDefinitionVersion(UUID actorDefinitionId,
-                                                                    String dockerImageTag)
+  public Optional<ActorDefinitionVersion> getActorDefinitionVersion(final UUID actorDefinitionId,
+                                                                    final String dockerImageTag)
       throws IOException {
     return database.query(ctx -> getActorDefinitionVersion(actorDefinitionId, dockerImageTag, ctx));
   }
@@ -228,7 +228,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @throws IOException - you never know when you io
    */
   @Override
-  public ActorDefinitionVersion getActorDefinitionVersion(UUID actorDefinitionVersionId)
+  public ActorDefinitionVersion getActorDefinitionVersion(final UUID actorDefinitionVersionId)
       throws IOException, ConfigNotFoundException {
     return getActorDefinitionVersions(List.of(actorDefinitionVersionId))
         .stream()
@@ -245,7 +245,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    */
   @Override
   public List<ActorDefinitionVersion> listActorDefinitionVersionsForDefinition(
-                                                                               UUID actorDefinitionId)
+                                                                               final UUID actorDefinitionId)
       throws IOException {
     return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION)
         .where(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
@@ -264,7 +264,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    */
   @Override
   public List<ActorDefinitionVersion> getActorDefinitionVersions(
-                                                                 List<UUID> actorDefinitionVersionIds)
+                                                                 final List<UUID> actorDefinitionVersionIds)
       throws IOException {
     return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION))
         .where(Tables.ACTOR_DEFINITION_VERSION.ID.in(actorDefinitionVersionIds))
@@ -281,7 +281,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @param actorDefinitionVersionId - actor definition version id
    */
   @Override
-  public void setActorDefaultVersion(UUID actorId, UUID actorDefinitionVersionId)
+  public void setActorDefaultVersion(final UUID actorId, final UUID actorDefinitionVersionId)
       throws IOException {
     database.query(ctx -> ctx.update(Tables.ACTOR)
         .set(Tables.ACTOR.DEFAULT_VERSION_ID, actorDefinitionVersionId)
@@ -299,7 +299,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    */
   @Override
   public List<ActorDefinitionBreakingChange> listBreakingChangesForActorDefinition(
-                                                                                   UUID actorDefinitionId)
+                                                                                   final UUID actorDefinitionId)
       throws IOException {
     return database.query(ctx -> listBreakingChangesForActorDefinition(actorDefinitionId, ctx));
   }
@@ -312,8 +312,8 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @throws IOException - you never know when you io
    */
   @Override
-  public void setActorDefinitionVersionSupportStates(List<UUID> actorDefinitionVersionIds,
-                                                     SupportState supportState)
+  public void setActorDefinitionVersionSupportStates(final List<UUID> actorDefinitionVersionIds,
+                                                     final SupportState supportState)
       throws IOException {
     database.query(ctx -> ctx.update(Tables.ACTOR_DEFINITION_VERSION)
         .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
@@ -335,7 +335,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    */
   @Override
   public List<ActorDefinitionBreakingChange> listBreakingChangesForActorDefinitionVersion(
-                                                                                          ActorDefinitionVersion actorDefinitionVersion)
+                                                                                          final ActorDefinitionVersion actorDefinitionVersion)
       throws IOException {
     final List<ActorDefinitionBreakingChange> breakingChanges = listBreakingChangesForActorDefinition(actorDefinitionVersion.getActorDefinitionId());
     if (breakingChanges.isEmpty()) {
@@ -378,9 +378,9 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @throws IOException - you never know when you IO
    */
   @Override
-  public boolean scopeCanUseDefinition(UUID actorDefinitionId,
-                                       UUID scopeId,
-                                       String scopeType)
+  public boolean scopeCanUseDefinition(final UUID actorDefinitionId,
+                                       final UUID scopeId,
+                                       final String scopeType)
       throws IOException {
     final Result<Record> records = actorDefinitionsJoinedWithGrants(
         scopeId,

@@ -34,61 +34,118 @@ import org.jooq.JSONB;
 public class ActorDefinitionVersionJooqHelper {
 
   /**
-   * Insert an actor definition version.
+   * Write an actor definition version.
    *
-   * @param actorDefinitionVersion - actor definition version to insert
+   * @param actorDefinitionVersion - actor definition version to write
    * @param ctx database context
    * @throws IOException - you never know when you io
-   * @returns the POJO associated with the actor definition version inserted. Contains the versionId
+   * @returns the POJO associated with the actor definition version written. Contains the versionId
    *          field from the DB.
    */
   public static ActorDefinitionVersion writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
-    // Generate a new UUID if one is not provided. Passing an ID is useful for mocks.
-    final UUID versionId = actorDefinitionVersion.getVersionId() != null ? actorDefinitionVersion.getVersionId() : UUID.randomUUID();
 
-    ctx.insertInto(Tables.ACTOR_DEFINITION_VERSION)
-        .set(Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
-        .set(ACTOR_DEFINITION_VERSION.CREATED_AT, timestamp)
-        .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
-        .set(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, actorDefinitionVersion.getActorDefinitionId())
-        .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, actorDefinitionVersion.getDockerRepository())
-        .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, actorDefinitionVersion.getDockerImageTag())
-        .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSpec())))
-        .set(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL, actorDefinitionVersion.getDocumentationUrl())
-        .set(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION, actorDefinitionVersion.getProtocolVersion())
-        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL, actorDefinitionVersion.getSupportLevel() == null ? null
-            : Enums.toEnum(actorDefinitionVersion.getSupportLevel().value(),
-                SupportLevel.class).orElseThrow())
-        .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE, actorDefinitionVersion.getReleaseStage() == null ? null
-            : Enums.toEnum(actorDefinitionVersion.getReleaseStage().value(),
-                ReleaseStage.class).orElseThrow())
-        .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE, actorDefinitionVersion.getReleaseDate() == null ? null
-            : LocalDate.parse(actorDefinitionVersion.getReleaseDate()))
-        .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY,
-            Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                ? actorDefinitionVersion.getNormalizationConfig().getNormalizationRepository()
-                : null)
-        .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG,
-            Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                ? actorDefinitionVersion.getNormalizationConfig().getNormalizationTag()
-                : null)
-        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT, actorDefinitionVersion.getSupportsDbt())
-        .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE,
-            Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                ? actorDefinitionVersion.getNormalizationConfig().getNormalizationIntegrationType()
-                : null)
-        .set(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS, actorDefinitionVersion.getAllowedHosts() == null ? null
-            : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getAllowedHosts())))
-        .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
-            actorDefinitionVersion.getSuggestedStreams() == null ? null
-                : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSuggestedStreams())))
-        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
-            Enums.toEnum(actorDefinitionVersion.getSupportState().value(), io.airbyte.db.instance.configs.jooq.generated.enums.SupportState.class)
-                .orElseThrow())
-        .execute();
+    final Optional<UUID> providedVersionId = Optional.ofNullable(actorDefinitionVersion.getVersionId());
 
-    return actorDefinitionVersion.withVersionId(versionId);
+    final UUID actorDefinitionId = actorDefinitionVersion.getActorDefinitionId();
+    final String dockerImageTag = actorDefinitionVersion.getDockerImageTag();
+    final Optional<ActorDefinitionVersion> existingADV = getActorDefinitionVersion(actorDefinitionId, dockerImageTag, ctx);
+
+    if (providedVersionId.isPresent() && existingADV.isPresent() && !existingADV.get().getVersionId().equals(providedVersionId.get())) {
+      throw new RuntimeException(
+          String.format("Provided version id %s does not match existing version id %s for actor definition %s and docker image tag %s",
+              providedVersionId.get(), existingADV.get().getVersionId(), actorDefinitionId, dockerImageTag));
+    }
+
+    if (existingADV.isPresent()) {
+      final UUID versionId = existingADV.get().getVersionId();
+      actorDefinitionVersion.setVersionId(versionId);
+
+      ctx.update(Tables.ACTOR_DEFINITION_VERSION)
+          .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
+          .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, actorDefinitionVersion.getDockerRepository())
+          .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSpec())))
+          .set(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL, actorDefinitionVersion.getDocumentationUrl())
+          .set(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION, actorDefinitionVersion.getProtocolVersion())
+          .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL, actorDefinitionVersion.getSupportLevel() == null ? null
+              : Enums.toEnum(actorDefinitionVersion.getSupportLevel().value(),
+                  SupportLevel.class).orElseThrow())
+          .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE, actorDefinitionVersion.getReleaseStage() == null ? null
+              : Enums.toEnum(actorDefinitionVersion.getReleaseStage().value(),
+                  ReleaseStage.class).orElseThrow())
+          .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE, actorDefinitionVersion.getReleaseDate() == null ? null
+              : LocalDate.parse(actorDefinitionVersion.getReleaseDate()))
+          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY,
+              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
+                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationRepository()
+                  : null)
+          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG,
+              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
+                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationTag()
+                  : null)
+          .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT, actorDefinitionVersion.getSupportsDbt())
+          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE,
+              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
+                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationIntegrationType()
+                  : null)
+          .set(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS, actorDefinitionVersion.getAllowedHosts() == null ? null
+              : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getAllowedHosts())))
+          .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
+              actorDefinitionVersion.getSuggestedStreams() == null ? null
+                  : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSuggestedStreams())))
+          .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
+              Enums.toEnum(actorDefinitionVersion.getSupportState().value(), io.airbyte.db.instance.configs.jooq.generated.enums.SupportState.class)
+                  .orElseThrow())
+          .where(ACTOR_DEFINITION_VERSION.ID.eq(versionId))
+          .execute();
+    } else {
+      // If the version id is provided, use it (useful for mocks). Otherwise, generate a new one.
+      final UUID versionId = providedVersionId.orElse(UUID.randomUUID());
+      actorDefinitionVersion.setVersionId(versionId);
+
+      ctx.insertInto(Tables.ACTOR_DEFINITION_VERSION)
+          .set(Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
+          .set(ACTOR_DEFINITION_VERSION.CREATED_AT, timestamp)
+          .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
+          .set(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, actorDefinitionVersion.getActorDefinitionId())
+          .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, actorDefinitionVersion.getDockerRepository())
+          .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, actorDefinitionVersion.getDockerImageTag())
+          .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSpec())))
+          .set(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL, actorDefinitionVersion.getDocumentationUrl())
+          .set(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION, actorDefinitionVersion.getProtocolVersion())
+          .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL, actorDefinitionVersion.getSupportLevel() == null ? null
+              : Enums.toEnum(actorDefinitionVersion.getSupportLevel().value(),
+                  SupportLevel.class).orElseThrow())
+          .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE, actorDefinitionVersion.getReleaseStage() == null ? null
+              : Enums.toEnum(actorDefinitionVersion.getReleaseStage().value(),
+                  ReleaseStage.class).orElseThrow())
+          .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE, actorDefinitionVersion.getReleaseDate() == null ? null
+              : LocalDate.parse(actorDefinitionVersion.getReleaseDate()))
+          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY,
+              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
+                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationRepository()
+                  : null)
+          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG,
+              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
+                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationTag()
+                  : null)
+          .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT, actorDefinitionVersion.getSupportsDbt())
+          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE,
+              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
+                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationIntegrationType()
+                  : null)
+          .set(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS, actorDefinitionVersion.getAllowedHosts() == null ? null
+              : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getAllowedHosts())))
+          .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
+              actorDefinitionVersion.getSuggestedStreams() == null ? null
+                  : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSuggestedStreams())))
+          .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
+              Enums.toEnum(actorDefinitionVersion.getSupportState().value(), io.airbyte.db.instance.configs.jooq.generated.enums.SupportState.class)
+                  .orElseThrow())
+          .execute();
+    }
+
+    return actorDefinitionVersion;
   }
 
   /**
@@ -124,15 +181,8 @@ public class ActorDefinitionVersionJooqHelper {
   public static void setActorDefinitionVersionForTagAsDefault(final ActorDefinitionVersion actorDefinitionVersion,
                                                               final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
                                                               final DSLContext ctx) {
-    final Optional<ActorDefinitionVersion> existingADV =
-        getActorDefinitionVersion(actorDefinitionVersion.getActorDefinitionId(), actorDefinitionVersion.getDockerImageTag(), ctx);
-
-    if (existingADV.isPresent()) {
-      setActorDefinitionVersionAsDefaultVersion(existingADV.get(), breakingChangesForDefinition, ctx);
-    } else {
-      final ActorDefinitionVersion insertedADV = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
-      setActorDefinitionVersionAsDefaultVersion(insertedADV, breakingChangesForDefinition, ctx);
-    }
+    final ActorDefinitionVersion writtenADV = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
+    setActorDefinitionVersionAsDefaultVersion(writtenADV, breakingChangesForDefinition, ctx);
   }
 
   private static void setActorDefinitionVersionAsDefaultVersion(final ActorDefinitionVersion actorDefinitionVersion,

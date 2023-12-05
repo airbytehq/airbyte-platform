@@ -64,6 +64,10 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
   private static final String PROTOCOL_VERSION = "1.0.0";
   private static final ConnectorSpecification SPEC = new ConnectorSpecification()
       .withConnectionSpecification(Jsons.jsonNode(Map.of("key", "value"))).withProtocolVersion(PROTOCOL_VERSION);
+  private static final ConnectorSpecification SPEC_2 = new ConnectorSpecification()
+      .withConnectionSpecification(Jsons.jsonNode(Map.of("key2", "value2"))).withProtocolVersion(PROTOCOL_VERSION);
+  private static final ConnectorSpecification SPEC_3 = new ConnectorSpecification()
+      .withConnectionSpecification(Jsons.jsonNode(Map.of("key3", "value3"))).withProtocolVersion(PROTOCOL_VERSION);
 
   private static StandardSourceDefinition baseSourceDefinition(final UUID actorDefinitionId) {
     return new StandardSourceDefinition()
@@ -170,6 +174,63 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
     final Optional<ActorDefinitionVersion> optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
     assertTrue(optRetrievedADV.isPresent());
     assertEquals(adv.withVersionId(id), optRetrievedADV.get());
+  }
+
+  @Test
+  void testUpdateActorDefinitionVersion() throws IOException {
+    final UUID defId = sourceDefinition.getSourceDefinitionId();
+    final ActorDefinitionVersion initialADV = baseActorDefinitionVersion(defId);
+
+    // initial insert
+    final ActorDefinitionVersion insertedADV = configRepository.writeActorDefinitionVersion(Jsons.clone(initialADV));
+    final UUID id = insertedADV.getVersionId();
+
+    Optional<ActorDefinitionVersion> optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
+    assertTrue(optRetrievedADV.isPresent());
+    assertEquals(insertedADV, optRetrievedADV.get());
+    assertEquals(Jsons.clone(initialADV).withVersionId(id), optRetrievedADV.get());
+
+    // update w/o ID
+    final ActorDefinitionVersion advWithNewSpec = Jsons.clone(initialADV).withSpec(SPEC_2);
+    final ActorDefinitionVersion updatedADV = configRepository.writeActorDefinitionVersion(advWithNewSpec);
+
+    optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
+    assertTrue(optRetrievedADV.isPresent());
+    assertEquals(updatedADV, optRetrievedADV.get());
+    assertEquals(Jsons.clone(advWithNewSpec).withVersionId(id), optRetrievedADV.get());
+
+    // update w/ ID
+    final ActorDefinitionVersion advWithAnotherNewSpecAndId = Jsons.clone(updatedADV).withSpec(SPEC_3);
+    final ActorDefinitionVersion updatedADV2 = configRepository.writeActorDefinitionVersion(advWithAnotherNewSpecAndId);
+
+    optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
+    assertTrue(optRetrievedADV.isPresent());
+    assertEquals(updatedADV2, optRetrievedADV.get());
+    assertEquals(advWithAnotherNewSpecAndId, optRetrievedADV.get());
+  }
+
+  @Test
+  void testUpdateActorDefinitionVersionWithMismatchedIdFails() throws IOException {
+    final UUID defId = sourceDefinition.getSourceDefinitionId();
+    final ActorDefinitionVersion initialADV = baseActorDefinitionVersion(defId);
+
+    // initial insert
+    final ActorDefinitionVersion insertedADV = configRepository.writeActorDefinitionVersion(Jsons.clone(initialADV));
+    final UUID id = insertedADV.getVersionId();
+
+    Optional<ActorDefinitionVersion> optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
+    assertTrue(optRetrievedADV.isPresent());
+    assertEquals(insertedADV, optRetrievedADV.get());
+    assertEquals(Jsons.clone(initialADV).withVersionId(id), optRetrievedADV.get());
+
+    // update same tag w/ different ID throws
+    final ActorDefinitionVersion advWithNewId = Jsons.clone(initialADV).withSpec(SPEC_2).withVersionId(UUID.randomUUID());
+    assertThrows(RuntimeException.class, () -> configRepository.writeActorDefinitionVersion(advWithNewId));
+
+    // no change in DB
+    optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
+    assertTrue(optRetrievedADV.isPresent());
+    assertEquals(Jsons.clone(initialADV).withVersionId(id), optRetrievedADV.get());
   }
 
   @Test

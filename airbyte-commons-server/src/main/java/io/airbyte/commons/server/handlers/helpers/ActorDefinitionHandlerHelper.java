@@ -106,21 +106,25 @@ public class ActorDefinitionHandlerHelper {
     final Optional<ActorDefinitionVersion> newVersionFromDbOrRemote = actorDefinitionVersionResolver.resolveVersionForTag(
         currentVersion.getActorDefinitionId(), actorType, currentVersion.getDockerRepository(), newDockerImageTag);
 
+    final boolean isDev = ServerConstants.DEV_IMAGE_TAG.equals(newDockerImageTag);
+
+    // The version already exists in the database or in our registry
     if (newVersionFromDbOrRemote.isPresent()) {
-      // TODO (ella): based on the existing behavior, the new version from the db will exist for `dev`,
-      // so we would want to re-run the spec below for `dev` images as well. However, there is an existing
-      // bug(?) that would stop us from persisting that new spec since the ADV already exists for
-      // (<actor def id>, 'dev').
-      return newVersionFromDbOrRemote.get();
+      final ActorDefinitionVersion newVersion = newVersionFromDbOrRemote.get();
+
+      if (isDev) {
+        // re-fetch spec for dev images to allow for easier iteration
+        final ConnectorSpecification refreshedSpec =
+            getSpecForImage(currentVersion.getDockerRepository(), newDockerImageTag, isCustomConnector, null);
+        newVersion.setSpec(refreshedSpec);
+        newVersion.setProtocolVersion(getAndValidateProtocolVersionFromSpec(refreshedSpec));
+      }
+
+      return newVersion;
     }
 
-    // specs are re-fetched from the container if the image tag has changed, or if the tag is "dev",
-    // to allow for easier iteration of dev images
-    final boolean specNeedsUpdate = !currentVersion.getDockerImageTag().equals(newDockerImageTag)
-        || ServerConstants.DEV_IMAGE_TAG.equals(newDockerImageTag);
-    final ConnectorSpecification spec = specNeedsUpdate
-        ? getSpecForImage(currentVersion.getDockerRepository(), newDockerImageTag, isCustomConnector, null)
-        : currentVersion.getSpec();
+    // We've never seen this version
+    final ConnectorSpecification spec = getSpecForImage(currentVersion.getDockerRepository(), newDockerImageTag, isCustomConnector, null);
     final String protocolVersion = getAndValidateProtocolVersionFromSpec(spec);
 
     return new ActorDefinitionVersion()
