@@ -27,6 +27,8 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.io.File
 import java.nio.file.Files
+import java.util.Optional
+import java.util.function.Function
 import java.util.stream.Stream
 import kotlin.io.path.Path
 
@@ -114,8 +116,8 @@ class LogPathTest {
       mockk {
         every { reportFailure(any()) } returns Unit
       }
-    private val successHandler = SuccessHandler(metricPublisher) { id -> "TEST: success. Id: $id." }
-    private val failureHandler = FailureHandler(mockApiClient, metricPublisher) { id -> "TEST: failure. Id: $id." }
+    private val successHandler = SuccessHandler(metricPublisher, Optional.of(Function { id -> "TEST: success. Id: $id." }))
+    private val failureHandler = FailureHandler(mockApiClient, metricPublisher, Optional.of(Function { id -> "TEST: failure. Id: $id." }))
 
     private const val TEST_LOG_PREFIX = "TEST"
 
