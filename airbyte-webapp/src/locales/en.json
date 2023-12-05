@@ -1240,7 +1240,7 @@
   "connectorBuilder.incremental.endTimeInjectInto.label": "Inject End Time into outgoing HTTP Request",
   "connectorBuilder.incremental.endTimeInjectInto.tooltip": "Optionally configures how the end datetime will be sent in requests to the source API",
   "connectorBuilder.incremental.endTimeInjectInto.descriptor": "end datetime",
-  "connectorBuilder.incremental.outgoingDatetimeFormat.label": "Outgoing Injected Datetime Format",
+  "connectorBuilder.incremental.outgoingDatetimeFormat.label": "Outgoing Datetime Format",
   "connectorBuilder.incremental.outgoingDatetimeFormat.tooltip": "The datetime format used to format the datetime values that are sent in outgoing requests to the API. If not provided, the first format in Cursor Datetime Formats will be used.",
   "connectorBuilder.incremental.splitUpInterval.label": "Split Up Interval",
   "connectorBuilder.incremental.splitUpInterval.tooltip": "Optionally split up the interval into smaller chunks to reduce the amount of data fetched in a single request and to make the sync more resilient to failures",
