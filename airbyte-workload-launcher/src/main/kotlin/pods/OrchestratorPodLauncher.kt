@@ -6,6 +6,9 @@ import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseCustomK8sScheduler
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.KubePodProcess
 import io.airbyte.workers.process.KubePodResourceHelper
@@ -34,7 +37,6 @@ import java.time.Duration
 import java.util.Objects
 import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
-import kotlin.collections.ArrayList
 
 private val logger = KotlinLogging.logger {}
 
@@ -55,6 +57,7 @@ class OrchestratorPodLauncher(
   @Named("orchestratorEnvVars") private val envVars: List<EnvVar>,
   @Named("orchestratorContainerPorts") private val containerPorts: List<ContainerPort>,
   @Named("orchestratorAnnotations") private val annotations: Map<String, String>,
+  private val metricClient: MetricClient,
 ) {
   fun create(
     allLabels: Map<String, String>,
@@ -191,36 +194,51 @@ class OrchestratorPodLauncher(
         .build()
 
     // should only create after the kubernetes API creates the pod
-    return kubernetesClient.pods()
-      .inNamespace(kubePodInfo.namespace)
-      .resource(podToCreate)
-      .serverSideApply()
+    return runKubeCommand(
+      {
+        kubernetesClient.pods()
+          .inNamespace(kubePodInfo.namespace)
+          .resource(podToCreate)
+          .serverSideApply()
+      },
+      "pod_create",
+    )
   }
 
   fun waitForPodInit(
     labels: Map<String, String>,
     waitDuration: Duration,
   ) {
-    kubernetesClient.pods()
-      .inNamespace(namespace)
-      .withLabels(labels)
-      .waitUntilCondition(
-        { p: Pod ->
-          (
-            p.status.initContainerStatuses.isNotEmpty() &&
-              p.status.initContainerStatuses[0].state.waiting == null
+    runKubeCommand(
+      {
+        kubernetesClient.pods()
+          .inNamespace(namespace)
+          .withLabels(labels)
+          .waitUntilCondition(
+            { p: Pod ->
+              (
+                p.status.initContainerStatuses.isNotEmpty() &&
+                  p.status.initContainerStatuses[0].state.waiting == null
+              )
+            },
+            waitDuration.toMinutes(),
+            TimeUnit.MINUTES,
           )
-        },
-        waitDuration.toMinutes(),
-        TimeUnit.MINUTES,
-      )
+      },
+      "wait",
+    )
 
     val pods =
-      kubernetesClient.pods()
-        .inNamespace(namespace)
-        .withLabels(labels)
-        .list()
-        .items
+      runKubeCommand(
+        {
+          kubernetesClient.pods()
+            .inNamespace(namespace)
+            .withLabels(labels)
+            .list()
+            .items
+        },
+        "list",
+      )
 
     if (pods.isEmpty()) {
       throw RuntimeException("No pods found for labels: $labels. Nothing to wait for.")
@@ -244,17 +262,22 @@ class OrchestratorPodLauncher(
     labels: Map<String, String>,
     waitDuration: Duration,
   ) {
-    kubernetesClient.pods()
-      .inNamespace(namespace)
-      .withLabels(labels)
-      .waitUntilCondition(
-        { p: Pod? ->
-          Objects.nonNull(p) &&
-            (Readiness.getInstance().isReady(p) || KubePodResourceHelper.isTerminal(p))
-        },
-        waitDuration.toMinutes(),
-        TimeUnit.MINUTES,
-      )
+    runKubeCommand(
+      {
+        kubernetesClient.pods()
+          .inNamespace(namespace)
+          .withLabels(labels)
+          .waitUntilCondition(
+            { p: Pod? ->
+              Objects.nonNull(p) &&
+                (Readiness.getInstance().isReady(p) || KubePodResourceHelper.isTerminal(p))
+            },
+            waitDuration.toMinutes(),
+            TimeUnit.MINUTES,
+          )
+      },
+      "wait",
+    )
   }
 
   fun copyFilesToKubeConfigVolumeMain(
@@ -284,7 +307,13 @@ class OrchestratorPodLauncher(
             containerPath,
             KubePodProcess.INIT_CONTAINER_NAME,
           )
-        proc = Runtime.getRuntime().exec(command)
+        proc =
+          runKubeCommand(
+            {
+              Runtime.getRuntime().exec(command)
+            },
+            "kubectl_cp",
+          )
         val exitCode = proc.waitFor()
         if (exitCode != 0) {
           throw IOException("kubectl cp failed with exit code $exitCode")
@@ -302,21 +331,26 @@ class OrchestratorPodLauncher(
 
   fun podsExist(labels: Map<String, String>): Boolean {
     try {
-      return kubernetesClient.pods()
-        .inNamespace(namespace)
-        .withLabels(labels)
-        .list()
-        .items
-        .stream()
-        .filter(
-          Predicate<Pod> { kubePod: Pod? ->
-            !KubePodResourceHelper.isTerminal(
-              kubePod,
+      return runKubeCommand(
+        {
+          kubernetesClient.pods()
+            .inNamespace(namespace)
+            .withLabels(labels)
+            .list()
+            .items
+            .stream()
+            .filter(
+              Predicate<Pod> { kubePod: Pod? ->
+                !KubePodResourceHelper.isTerminal(
+                  kubePod,
+                )
+              },
             )
-          },
-        )
-        .findAny()
-        .isPresent
+            .findAny()
+            .isPresent
+        },
+        "list",
+      )
     } catch (e: Exception) {
       logger.warn(e) { "Could not find pods running for $labels, presuming no pods are running" }
       return false
@@ -324,17 +358,37 @@ class OrchestratorPodLauncher(
   }
 
   fun deletePods(labels: Map<String, String>): List<StatusDetails> {
-    return kubernetesClient.pods()
-      .inNamespace(namespace)
-      .withLabels(labels)
-      .list()
-      .items
-      .flatMap { p ->
+    return runKubeCommand(
+      {
         kubernetesClient.pods()
           .inNamespace(namespace)
-          .resource(p)
-          .withPropagationPolicy(DeletionPropagation.FOREGROUND)
-          .delete()
-      }
+          .withLabels(labels)
+          .list()
+          .items
+          .flatMap { p ->
+            kubernetesClient.pods()
+              .inNamespace(namespace)
+              .resource(p)
+              .withPropagationPolicy(DeletionPropagation.FOREGROUND)
+              .delete()
+          }
+      },
+      "delete",
+    )
+  }
+
+  private fun <T> runKubeCommand(
+    kubeCommand: () -> T,
+    commandName: String,
+  ): T {
+    try {
+      return kubeCommand()
+    } catch (e: Exception) {
+      val attributes: List<MetricAttribute> = listOf(MetricAttribute("operation", commandName))
+      val attributesArray = attributes.toTypedArray<MetricAttribute>()
+      metricClient.count(OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_ERROR, 1, *attributesArray)
+
+      throw e
+    }
   }
 }

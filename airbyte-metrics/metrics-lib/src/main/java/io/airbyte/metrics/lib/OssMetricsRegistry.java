@@ -359,7 +359,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "Skip the line because of its size"),
   TOO_LONG_LINES_DISTRIBUTION(MetricEmittingApps.WORKER,
       "too_long_lines_distribution",
-      "Too long line distribution");
+      "Too long line distribution"),
+  WORKLOAD_LAUNCHER_KUBE_ERROR(MetricEmittingApps.WORKLOAD_LAUNCHER,
+      "workload_kube_error",
+      "Number of kube error in the workload launcher");
 
   private final MetricEmittingApp application;
   private final String metricName;
