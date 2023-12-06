@@ -229,7 +229,10 @@ public class CustomerioNotificationClient extends NotificationClient {
 
   @Override
   public boolean notifySchemaPropagated(final UUID workspaceId,
+                                        final String workspaceName,
                                         final UUID connectionId,
+                                        final String connectionName,
+                                        final String connectionUrl,
                                         final String sourceName,
                                         final List<String> changes,
                                         final String url,
@@ -248,8 +251,10 @@ public class CustomerioNotificationClient extends NotificationClient {
     node.set("identifiers", identifiersNode);
 
     ObjectNode messageDataNode = mapper.createObjectNode();
+    messageDataNode.put("connection_name", connectionName);
     messageDataNode.put("connection_id", connectionId.toString());
     messageDataNode.put("workspace_id", workspaceId.toString());
+    messageDataNode.put("workspace_name", workspaceName);
     messageDataNode.put("changes_details", String.join("\n", changes));
     messageDataNode.put("source", sourceName);
 

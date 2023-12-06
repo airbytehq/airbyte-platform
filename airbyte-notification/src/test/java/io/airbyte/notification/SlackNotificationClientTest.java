@@ -20,6 +20,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.UUID;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -156,6 +157,36 @@ class SlackNotificationClientTest {
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
     assertTrue(client.notifyConnectionDisableWarning("", SOURCE_TEST, DESTINATION_TEST, "job description.", WORKSPACE_ID, CONNECTION_ID));
+  }
+
+  @Test
+  void testNotifySchemaPropagated() throws IOException, InterruptedException {
+    final UUID connectionId = UUID.randomUUID();
+    final List<String> changes = List.of("Change1", "Some other change");
+    String workspaceName = "";
+    String connectionName = "PSQL ->> BigQuery";
+    String sourceName = "";
+    boolean isBreaking = false;
+    String url = "";
+    String connectionUrl = "http://airbyte.io/your_connection";
+    String recipient = "";
+
+    final String expectedNotificationMessage = String.format(
+        """
+        Your source schema has changed for connection '%s' and the following changes were automatically propagated:
+         * Change1
+         * Some other change
+
+        Visit the connection page: %s
+        """, connectionName, connectionUrl);
+    server.createContext(TEST_PATH, new ServerHandler(expectedNotificationMessage));
+    final SlackNotificationClient client =
+        new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
+
+    assertTrue(client.notifySchemaPropagated(UUID.randomUUID(), workspaceName, connectionId, connectionName, connectionUrl, sourceName, changes, url,
+        recipient,
+        isBreaking));
+
   }
 
   static class ServerHandler implements HttpHandler {

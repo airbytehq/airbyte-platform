@@ -76,11 +76,14 @@ public abstract class NotificationClient {
       throws IOException, InterruptedException;
 
   public abstract boolean notifySchemaPropagated(final UUID workspaceId,
+                                                 final String workspaceName,
                                                  final UUID connectionId,
+                                                 final String connectionName,
+                                                 final String connectionUrl,
                                                  final String sourceName,
                                                  final List<String> changes,
                                                  final String url,
-                                                 final String recipent,
+                                                 final String recipient,
                                                  boolean isBreaking)
       throws IOException, InterruptedException;
 

@@ -449,7 +449,7 @@ public class SchedulerHandler {
         final boolean newNotificationsEnabled = featureFlagClient.boolVariation(
             UseNewSchemaUpdateNotification.INSTANCE, new Workspace(sourceAutoPropagateChange.getWorkspaceId()));
         if (notificationSettings != null && newNotificationsEnabled && notificationSettings.getSendOnConnectionUpdate() != null) {
-          notifySchemaPropagated(notificationSettings, diff, workspace.getWorkspaceId(), connectionRead.getConnectionId(), source,
+          notifySchemaPropagated(notificationSettings, diff, workspace, connectionRead, source,
               workspace.getEmail(), result);
         }
       } else {
@@ -461,13 +461,14 @@ public class SchedulerHandler {
 
   public void notifySchemaPropagated(final NotificationSettings notificationSettings,
                                      final CatalogDiff diff,
-                                     final UUID workspaceId,
-                                     final UUID connectionId,
+                                     final StandardWorkspace workspace,
+                                     final ConnectionRead connection,
                                      final SourceConnection source,
                                      final String email,
                                      final UpdateSchemaResult result)
       throws IOException {
     final NotificationItem item;
+    final String connectionUrl = webUrlHelper.getConnectionUrl(workspace.getWorkspaceId(), connection.getConnectionId());
     final boolean isBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
     if (isBreakingChange) {
       item = notificationSettings.getSendOnConnectionUpdateActionRequired();
@@ -480,8 +481,11 @@ public class SchedulerHandler {
           case SLACK -> {
             final SlackNotificationClient slackNotificationClient = new SlackNotificationClient(item.getSlackConfiguration());
             slackNotificationClient.notifySchemaPropagated(
-                workspaceId,
-                connectionId,
+                workspace.getWorkspaceId(),
+                workspace.getName(),
+                connection.getConnectionId(),
+                connection.getName(),
+                connectionUrl,
                 source.getName(),
                 result.changeDescription(),
                 item.getSlackConfiguration().getWebhook(),
@@ -491,8 +495,11 @@ public class SchedulerHandler {
           case CUSTOMERIO -> {
             final CustomerioNotificationClient emailNotificationClient = new CustomerioNotificationClient();
             emailNotificationClient.notifySchemaPropagated(
-                workspaceId,
-                connectionId,
+                workspace.getWorkspaceId(),
+                workspace.getName(),
+                connection.getConnectionId(),
+                connection.getName(),
+                connectionUrl,
                 source.getName(),
                 result.changeDescription(),
                 null,
@@ -504,7 +511,7 @@ public class SchedulerHandler {
           }
         }
       } catch (final InterruptedException e) {
-        LOGGER.error("Failed to send notification for connectionId: '{}'", connectionId, e);
+        LOGGER.error("Failed to send notification for connectionId: '{}'", connection.getConnectionId(), e);
       }
     }
   }
