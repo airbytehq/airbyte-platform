@@ -47,6 +47,8 @@ import io.airbyte.api.model.generated.ConnectionSearch;
 import io.airbyte.api.model.generated.ConnectionStatus;
 import io.airbyte.api.model.generated.ConnectionStatusRead;
 import io.airbyte.api.model.generated.ConnectionStatusesRequestBody;
+import io.airbyte.api.model.generated.ConnectionStreamHistoryReadItem;
+import io.airbyte.api.model.generated.ConnectionStreamHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead;
@@ -98,6 +100,7 @@ import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -128,10 +131,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
@@ -1409,7 +1414,6 @@ class ConnectionsHandlerTest {
 
     @BeforeEach
     void setUp() {
-      // todo: is this unneeded? i think it's already done in the @BeforeAll
       connectionsHandler = new ConnectionsHandler(
           jobPersistence,
           configRepository,
@@ -1430,6 +1434,26 @@ class ConnectionsHandlerTest {
       final StandardSyncSummary standardSyncSummary = new StandardSyncSummary().withTotalStats(new SyncStats().withBytesCommitted(bytesSynced));
       final StandardSyncOutput standardSyncOutput = new StandardSyncOutput().withStandardSyncSummary(standardSyncSummary);
       final JobOutput jobOutput = new JobOutput().withOutputType(OutputType.SYNC).withSync(standardSyncOutput);
+      return new Attempt(0, 0, null, null, jobOutput, AttemptStatus.FAILED, null, null, 0, 0, attemptTime.getEpochSecond());
+    }
+
+    private Attempt generateMockAttemptWithStreamStats(final Instant attemptTime, final List<Map<List<String>, Long>> streamsToRecordsSynced) {
+      final List<StreamSyncStats> streamSyncStatsList = streamsToRecordsSynced.stream().map(streamToRecordsSynced -> {
+        final List<String> streamKey = new ArrayList<>(streamToRecordsSynced.keySet().iterator().next());
+        final String streamNamespace = streamKey.get(0);
+        final String streamName = streamKey.get(1);
+        final long recordsSynced = streamToRecordsSynced.get(streamKey);
+
+        return new StreamSyncStats()
+            .withStreamName(streamName)
+            .withStreamNamespace(streamNamespace)
+            .withStats(new SyncStats().withRecordsCommitted(recordsSynced));
+      }).collect(Collectors.toList());
+
+      final StandardSyncSummary standardSyncSummary = new StandardSyncSummary().withStreamStats(streamSyncStatsList);
+      final StandardSyncOutput standardSyncOutput = new StandardSyncOutput().withStandardSyncSummary(standardSyncSummary);
+      final JobOutput jobOutput = new JobOutput().withOutputType(OutputType.SYNC).withSync(standardSyncOutput);
+
       return new Attempt(0, 0, null, null, jobOutput, AttemptStatus.FAILED, null, null, 0, 0, attemptTime.getEpochSecond());
     }
 
@@ -1463,8 +1487,6 @@ class ConnectionsHandlerTest {
         final ConnectionDataHistoryRequestBody requestBody = new ConnectionDataHistoryRequestBody()
             .connectionId(connectionRead.getConnectionId())
             .timezone(TIMEZONE_LOS_ANGELES);
-        // todo: does this do weird things if this test is run near a day boundary and/or daylight savings
-        // time? can or should i tell it to mock the actual time to match?
         final LocalDate startDate = Instant.now().atZone(ZoneId.of(requestBody.getTimezone())).minusDays(30).toLocalDate();
         final LocalDate endDate = LocalDate.now(ZoneId.of(requestBody.getTimezone()));
 
@@ -1515,6 +1537,109 @@ class ConnectionsHandlerTest {
             requestBody.getTimezone());
         expected.get(1).setBytes(Math.toIntExact(attempt1Bytes + attempt2Bytes));
         expected.get(2).setBytes(Math.toIntExact(attempt3Bytes));
+
+        assertEquals(actual, expected);
+      }
+
+    }
+
+    @Nested
+    class GetConnectionStreamHistory {
+
+      @Test
+      @DisplayName("Handles empty history response")
+      void testStreamHistoryWithEmptyResponse() throws IOException {
+        final UUID connectionId = UUID.randomUUID();
+        final String timezone = "America/Los_Angeles";
+        final ConnectionStreamHistoryRequestBody requestBody = new ConnectionStreamHistoryRequestBody()
+            .connectionId(connectionId)
+            .timezone(timezone);
+
+        when(jobPersistence.listAttemptsForConnectionAfterTimestamp(eq(connectionId), eq(ConfigType.SYNC), any(Instant.class)))
+            .thenReturn(Collections.emptyList());
+
+        final List<ConnectionStreamHistoryReadItem> actual = connectionsHandler.getConnectionStreamHistory(requestBody);
+
+        final List<ConnectionStreamHistoryReadItem> expected = Collections.emptyList();
+
+        assertEquals(expected, actual);
+      }
+
+      @Test
+      @DisplayName("Aggregates data correctly")
+      void testStreamHistoryAggregation() throws IOException {
+        final UUID connectionId = UUID.randomUUID();
+        final Instant endTime = Instant.now();
+        final Instant startTime = endTime.minus(30, ChronoUnit.DAYS);
+        final long attempt1Records = 100L;
+        final long attempt2Records = 150L;
+        final long attempt3Records = 200L;
+        final long attempt4Records = 125L;
+        final String streamName = "testStream";
+        final String streamNamespace = "testNamespace";
+        final String streamName2 = "testStream2";
+
+        // First Attempt - Day 1
+        final Attempt attempt1 = generateMockAttemptWithStreamStats(startTime.plus(1, ChronoUnit.DAYS),
+            List.of(Map.of(List.of(streamNamespace, streamName),
+                attempt1Records))); // 100 records
+        final AttemptWithJobInfo attemptWithJobInfo1 = new AttemptWithJobInfo(attempt1, generateMockJob(connectionId, attempt1));
+
+        // Second Attempt - Same Day as First, same stream as first
+        final Attempt attempt2 = generateMockAttemptWithStreamStats(startTime.plus(1, ChronoUnit.DAYS),
+            List.of(Map.of(List.of(streamNamespace, streamName),
+                attempt2Records))); // 100 records
+        final AttemptWithJobInfo attemptWithJobInfo2 = new AttemptWithJobInfo(attempt2, generateMockJob(connectionId, attempt2));
+
+        // Third Attempt - Same Day, different stream
+        final Attempt attempt3 = generateMockAttemptWithStreamStats(startTime.plus(1, ChronoUnit.DAYS),
+            List.of(Map.of(List.of(streamNamespace, streamName2),
+                attempt3Records))); // 100 records
+        final AttemptWithJobInfo attemptWithJobInfo3 = new AttemptWithJobInfo(attempt3, generateMockJob(connectionId, attempt3));
+
+        // Fourth Attempt - Different day, first stream
+        final Attempt attempt4 = generateMockAttemptWithStreamStats(startTime.plus(2, ChronoUnit.DAYS),
+            List.of(Map.of(List.of(streamNamespace, streamName),
+                attempt4Records))); // 100 records
+        final AttemptWithJobInfo attemptWithJobInfo4 = new AttemptWithJobInfo(attempt4, generateMockJob(connectionId, attempt4));
+
+        final List<AttemptWithJobInfo> attempts = Arrays.asList(attemptWithJobInfo1, attemptWithJobInfo2, attemptWithJobInfo3, attemptWithJobInfo4);
+
+        when(jobPersistence.listAttemptsForConnectionAfterTimestamp(eq(connectionId), eq(ConfigType.SYNC), any(Instant.class)))
+            .thenReturn(attempts);
+
+        final ConnectionStreamHistoryRequestBody requestBody = new ConnectionStreamHistoryRequestBody()
+            .connectionId(connectionId)
+            .timezone(TIMEZONE_LOS_ANGELES);
+        final List<ConnectionStreamHistoryReadItem> actual = connectionsHandler.getConnectionStreamHistory(requestBody);
+
+        final List<ConnectionStreamHistoryReadItem> expected = new ArrayList<>();
+        // expect the first entry to contain stream 1, day 1, 250 records... next item should be stream 2,
+        // day 1, 200 records, and final entry should be stream 1, day 2, 125 records
+        expected.add(new ConnectionStreamHistoryReadItem()
+            .timestamp(Math.toIntExact(startTime.plus(1, ChronoUnit.DAYS)
+                .atZone(ZoneId.of(requestBody.getTimezone()))
+                .toLocalDate().atStartOfDay(ZoneId.of(requestBody.getTimezone()))
+                .toEpochSecond()))
+            .streamName(streamName)
+            .streamNamespace(streamNamespace)
+            .recordsCommitted(attempt1Records + attempt2Records));
+        expected.add(new ConnectionStreamHistoryReadItem()
+            .timestamp(Math.toIntExact(startTime.plus(1, ChronoUnit.DAYS)
+                .atZone(ZoneId.of(requestBody.getTimezone()))
+                .toLocalDate().atStartOfDay(ZoneId.of(requestBody.getTimezone()))
+                .toEpochSecond()))
+            .streamName(streamName2)
+            .streamNamespace(streamNamespace)
+            .recordsCommitted(attempt3Records));
+        expected.add(new ConnectionStreamHistoryReadItem()
+            .timestamp(Math.toIntExact(startTime.plus(2, ChronoUnit.DAYS)
+                .atZone(ZoneId.of(requestBody.getTimezone()))
+                .toLocalDate().atStartOfDay(ZoneId.of(requestBody.getTimezone()))
+                .toEpochSecond()))
+            .streamName(streamName)
+            .streamNamespace(streamNamespace)
+            .recordsCommitted(attempt4Records));
 
         assertEquals(actual, expected);
       }

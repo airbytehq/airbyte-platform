@@ -185,7 +185,7 @@ public class ConnectionApiController implements ConnectionApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public List<ConnectionStreamHistoryReadItem> getConnectionStreamHistory(
                                                                           @Body final ConnectionStreamHistoryRequestBody connectionStreamHistoryRequestBody) {
-    return null;
+    return ApiHelper.execute(() -> connectionsHandler.getConnectionStreamHistory(connectionStreamHistoryRequestBody));
   }
 
   @Override

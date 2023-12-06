@@ -30,6 +30,8 @@ import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.ConnectionSearch;
 import io.airbyte.api.model.generated.ConnectionStatusRead;
 import io.airbyte.api.model.generated.ConnectionStatusesRequestBody;
+import io.airbyte.api.model.generated.ConnectionStreamHistoryReadItem;
+import io.airbyte.api.model.generated.ConnectionStreamHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationRead;
@@ -79,6 +81,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
 import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -120,6 +123,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -989,6 +993,92 @@ public class ConnectionsHandler {
     return connectionDataHistoryReadItemsByDate.values().stream()
         .sorted(Comparator.comparing(ConnectionDataHistoryReadItem::getTimestamp))
         .collect(Collectors.toList());
+  }
+
+  /**
+   * Returns records synced per stream per day for the given connection for the last 30 days in the
+   * given timezone.
+   *
+   * @param connectionStreamHistoryRequestBody the connection id and timezone string
+   * @return list of ConnectionStreamHistoryReadItems (timestamp, stream namespace, stream name,
+   *         records synced)
+   */
+
+  public List<ConnectionStreamHistoryReadItem> getConnectionStreamHistory(
+                                                                          final ConnectionStreamHistoryRequestBody connectionStreamHistoryRequestBody)
+      throws IOException {
+
+    // Start time in designated timezone
+    final ZonedDateTime endTimeInUserTimeZone = Instant.now().atZone(ZoneId.of(connectionStreamHistoryRequestBody.getTimezone()));
+    final ZonedDateTime startTimeInUserTimeZone = endTimeInUserTimeZone.minusDays(30);
+    // Convert start time to UTC (since that's what the database uses)
+    final Instant startTimeInUTC = startTimeInUserTimeZone.toInstant();
+
+    final List<AttemptWithJobInfo> attempts = jobPersistence.listAttemptsForConnectionAfterTimestamp(
+        connectionStreamHistoryRequestBody.getConnectionId(),
+        ConfigType.SYNC,
+        startTimeInUTC);
+
+    final TreeMap<LocalDate, Map<List<String>, Long>> connectionStreamHistoryReadItemsByDate = new TreeMap<>();
+    final ZoneId userTimeZone = ZoneId.of(connectionStreamHistoryRequestBody.getTimezone());
+
+    final LocalDate startDate = startTimeInUserTimeZone.toLocalDate();
+    final LocalDate endDate = endTimeInUserTimeZone.toLocalDate();
+    for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+      connectionStreamHistoryReadItemsByDate.put(date, new HashMap<>());
+    }
+
+    for (final AttemptWithJobInfo attempt : attempts) {
+      final Optional<Long> endedAtOptional = attempt.getAttempt().getEndedAtInSecond();
+
+      if (endedAtOptional.isPresent()) {
+        // Convert the endedAt timestamp from the database to the designated timezone
+        final Instant attemptEndedAt = Instant.ofEpochSecond(endedAtOptional.get());
+        final LocalDate attemptDateInUserTimeZone = attemptEndedAt.atZone(ZoneId.of(connectionStreamHistoryRequestBody.getTimezone()))
+            .toLocalDate();
+
+        // Merge it with the records synced from the attempt
+        final Optional<JobOutput> attemptOutput = attempt.getAttempt().getOutput();
+        if (attemptOutput.isPresent()) {
+          final List<StreamSyncStats> streamSyncStats = attemptOutput.get().getSync().getStandardSyncSummary().getStreamStats();
+          for (final StreamSyncStats streamSyncStat : streamSyncStats) {
+            final String streamName = streamSyncStat.getStreamName();
+            final String streamNamespace = streamSyncStat.getStreamNamespace();
+            final long recordsCommitted = streamSyncStat.getStats().getRecordsCommitted();
+
+            // Update the records loaded for the corresponding stream for that day
+            final Map<List<String>, Long> existingItem = connectionStreamHistoryReadItemsByDate.get(attemptDateInUserTimeZone);
+            final List<String> key = List.of(streamNamespace, streamName);
+            if (existingItem.containsKey(key)) {
+              existingItem.put(key, existingItem.get(key) + recordsCommitted);
+            } else {
+              existingItem.put(key, recordsCommitted);
+            }
+          }
+        }
+      }
+    }
+
+    final List<ConnectionStreamHistoryReadItem> result = new ArrayList<>();
+    for (final Entry<LocalDate, Map<List<String>, Long>> entry : connectionStreamHistoryReadItemsByDate.entrySet()) {
+      final LocalDate date = entry.getKey();
+      final Map<List<String>, Long> streamRecordsByStream = entry.getValue();
+
+      streamRecordsByStream.entrySet().stream()
+          .sorted(Comparator.comparing((Entry<List<String>, Long> e) -> e.getKey().get(0))
+              .thenComparing(e -> e.getKey().get(1)))
+          .forEach(streamRecords -> {
+            final List<String> streamNamespaceAndName = streamRecords.getKey();
+            final Long recordsCommitted = streamRecords.getValue();
+
+            result.add(new ConnectionStreamHistoryReadItem()
+                .timestamp(Math.toIntExact(date.atStartOfDay(userTimeZone).toEpochSecond()))
+                .streamNamespace(streamNamespaceAndName.get(0))
+                .streamName(streamNamespaceAndName.get(1))
+                .recordsCommitted(recordsCommitted));
+          });
+    }
+    return result;
   }
 
   public ConnectionAutoPropagateResult applySchemaChange(final ConnectionAutoPropagateSchemaChange request)

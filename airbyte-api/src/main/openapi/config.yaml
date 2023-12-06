@@ -6116,20 +6116,20 @@ components:
       type: object
       required:
         - timestamp
-        - stream
-        - namespace
-        - volume
+        - streamName
+        - streamNamespace
+        - recordsCommitted
       properties:
         timestamp:
           type: integer
           format: int
-        stream:
+        streamName:
           type: string
-        namespace:
+        streamNamespace:
           type: string
-        volume:
+        recordsCommitted:
           type: integer
-          format: int
+          format: int64
     SchemaChange:
       enum:
         - no_change
