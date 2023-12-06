@@ -4,6 +4,8 @@
 
 package io.airbyte.notification;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
@@ -54,8 +56,8 @@ public class CustomerioNotificationClient extends NotificationClient {
   private static final String AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID = "8";
   private static final String BREAKING_CHANGE_WARNING_BROADCAST_ID = "32";
   private static final String BREAKING_CHANGE_SYNCS_DISABLED_BROADCAST_ID = "33";
-  private static final String SCHEMA_CHANGE_BROADCAST_ID = "23";
-  private static final String SCHEMA_BREAKING_CHANGE_BROADCAST_ID = "24";
+  private static final String SCHEMA_CHANGE_TRANSACTION_ID = "23";
+  private static final String SCHEMA_BREAKING_CHANGE_TRANSACTION_ID = "24";
 
   private static final String SYNC_SUCCEED_MESSAGE_ID = "18";
   private static final String SYNC_SUCCEED_TEMPLATE_PATH = "customerio/sync_succeed_template.json";
@@ -226,19 +228,41 @@ public class CustomerioNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifySchemaPropagated(final UUID connectionId,
+  public boolean notifySchemaPropagated(final UUID workspaceId,
+                                        final UUID connectionId,
                                         final String sourceName,
                                         final List<String> changes,
                                         final String url,
-                                        final List<String> recipients,
+                                        final String recipient,
                                         final boolean isBreaking)
       throws IOException {
-    String templateId = isBreaking ? SCHEMA_CHANGE_BROADCAST_ID : SCHEMA_BREAKING_CHANGE_BROADCAST_ID;
-    String details = String.join("\n", changes);
-    return notifyByEmailBroadcast(templateId, recipients, Map.of(
-        "connection_id", connectionId.toString(),
-        "changes_details", details,
-        "source", sourceName));
+    String transactionalMessageId = isBreaking ? SCHEMA_BREAKING_CHANGE_TRANSACTION_ID : SCHEMA_CHANGE_TRANSACTION_ID;
+
+    ObjectMapper mapper = new ObjectMapper();
+    ObjectNode node = mapper.createObjectNode();
+    node.put("transactional_message_id", transactionalMessageId);
+    node.put("to", recipient);
+
+    ObjectNode identifiersNode = mapper.createObjectNode();
+    identifiersNode.put("email", recipient);
+    node.set("identifiers", identifiersNode);
+
+    ObjectNode messageDataNode = mapper.createObjectNode();
+    messageDataNode.put("connection_id", connectionId.toString());
+    messageDataNode.put("workspace_id", workspaceId.toString());
+    messageDataNode.put("changes_details", String.join("\n", changes));
+    messageDataNode.put("source", sourceName);
+
+    node.set("message_data", messageDataNode);
+
+    node.put("disable_message_retention", false);
+    node.put("send_to_unsubscribed", true);
+    node.put("tracked", false);
+    node.put("queue_draft", false);
+    node.put("disable_css_preprocessing", true);
+
+    String payload = Jsons.serialize(node);
+    return notifyByEmail(payload);
   }
 
   @Override

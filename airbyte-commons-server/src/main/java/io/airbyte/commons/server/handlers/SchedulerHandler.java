@@ -449,7 +449,7 @@ public class SchedulerHandler {
         final boolean newNotificationsEnabled = featureFlagClient.boolVariation(
             UseNewSchemaUpdateNotification.INSTANCE, new Workspace(sourceAutoPropagateChange.getWorkspaceId()));
         if (notificationSettings != null && newNotificationsEnabled && notificationSettings.getSendOnConnectionUpdate() != null) {
-          notifySchemaPropagated(notificationSettings, diff, connectionRead.getConnectionId(), source,
+          notifySchemaPropagated(notificationSettings, diff, workspace.getWorkspaceId(), connectionRead.getConnectionId(), source,
               workspace.getEmail(), result);
         }
       } else {
@@ -461,6 +461,7 @@ public class SchedulerHandler {
 
   public void notifySchemaPropagated(final NotificationSettings notificationSettings,
                                      final CatalogDiff diff,
+                                     final UUID workspaceId,
                                      final UUID connectionId,
                                      final SourceConnection source,
                                      final String email,
@@ -479,21 +480,23 @@ public class SchedulerHandler {
           case SLACK -> {
             final SlackNotificationClient slackNotificationClient = new SlackNotificationClient(item.getSlackConfiguration());
             slackNotificationClient.notifySchemaPropagated(
+                workspaceId,
                 connectionId,
                 source.getName(),
                 result.changeDescription(),
                 item.getSlackConfiguration().getWebhook(),
-                List.of(email),
+                email,
                 isBreakingChange);
           }
           case CUSTOMERIO -> {
             final CustomerioNotificationClient emailNotificationClient = new CustomerioNotificationClient();
             emailNotificationClient.notifySchemaPropagated(
+                workspaceId,
                 connectionId,
                 source.getName(),
                 result.changeDescription(),
                 null,
-                List.of(email),
+                email,
                 isBreakingChange);
           }
           default -> {

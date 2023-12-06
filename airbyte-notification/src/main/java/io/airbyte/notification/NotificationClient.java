@@ -75,11 +75,12 @@ public abstract class NotificationClient {
                                              final String url)
       throws IOException, InterruptedException;
 
-  public abstract boolean notifySchemaPropagated(final UUID connectionId,
+  public abstract boolean notifySchemaPropagated(final UUID workspaceId,
+                                                 final UUID connectionId,
                                                  final String sourceName,
                                                  final List<String> changes,
                                                  final String url,
-                                                 final List<String> recipients,
+                                                 final String recipent,
                                                  boolean isBreaking)
       throws IOException, InterruptedException;
 

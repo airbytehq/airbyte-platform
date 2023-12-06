@@ -59,16 +59,16 @@ public class AutoPropagateSchemaChangeHelper {
         return String.format("Removed stream %s", transform.getStreamDescriptor().getName());
       }
       case UPDATE_STREAM -> {
-        String returnValue = String.format("Modified stream %s", transform.getStreamDescriptor().getName());
+        String returnValue = String.format("Modified stream '%s' ", transform.getStreamDescriptor().getName());
         if (transform.getUpdateStream() == null) {
           return returnValue;
         }
         for (final FieldTransform fieldTransform : transform.getUpdateStream()) {
           final String fieldName = String.join(".", fieldTransform.getFieldName());
           switch (fieldTransform.getTransformType()) {
-            case ADD_FIELD -> returnValue += String.format("Added field: %s,", fieldName);
-            case REMOVE_FIELD -> returnValue += String.format("Removed field: %s,", fieldName);
-            case UPDATE_FIELD_SCHEMA -> returnValue += String.format("Field type changed: %s,", fieldName);
+            case ADD_FIELD -> returnValue += String.format(" Added field: '%s',", fieldName);
+            case REMOVE_FIELD -> returnValue += String.format(" Removed field: '%s',", fieldName);
+            case UPDATE_FIELD_SCHEMA -> returnValue += String.format(" Field type changed: '%s',", fieldName);
             default -> throw new NotSupportedException("Not supported transformation.");
           }
         }
