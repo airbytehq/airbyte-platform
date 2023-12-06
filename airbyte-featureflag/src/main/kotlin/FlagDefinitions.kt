@@ -160,7 +160,7 @@ object UseRuntimeSecretPersistence : Temporary<Boolean>(key = "platform.use-runt
 
 object UseWorkloadApi : Temporary<Boolean>(key = "platform.use-workload-api", default = false)
 
-object AddInitialCreditsForWorkspace : Temporary<Int>(key = "billing.add-credits-at-workspace-creation-for-org", default = 0)
+object AddInitialCreditsForWorkspace : Temporary<Int>(key = "add-credits-at-workspace-creation-for-org", default = 0)
 
 object WorkloadApiRouting : Permanent<String>(key = "workload-api-routing", default = "workload_default")
 
