@@ -131,17 +131,17 @@ export const StateBlock: React.FC<StateBlockProps> = ({ connectionId, syncCatalo
               />
             </FlexContainer>
 
-            <div className={styles.stateEditor}>
-              <CodeEditor
-                value={stateDraft ?? existingStateString}
-                language="json"
-                automaticLayout
-                showSuggestions={false}
-                onChange={(value) => {
-                  setStateDraft(value ?? "");
-                }}
-              />
-            </div>
+            <CodeEditor
+              value={stateDraft ?? existingStateString}
+              height={styles.stateEditorHeight}
+              language="json"
+              automaticLayout
+              showSuggestions={false}
+              onChange={(value) => {
+                setStateDraft(value ?? "");
+              }}
+            />
+
             <FlexContainer direction="column">
               {errorMessage ? (
                 <Message type="error" text={errorMessage} />
