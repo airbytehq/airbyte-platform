@@ -478,9 +478,9 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   }
 
   /**
-   * This query retrieves successful sync jobs for connections that have been created in the past 7
-   * days OR finds the first successful sync jobs for their corresponding connections. These results
-   * are used to mark these early syncs as free.
+   * This query retrieves billable sync jobs (job status: INCOMPLETE, SUCCEEDED and CANCELLED) for
+   * connections that have been created in the past 7 days OR finds the first successful sync jobs for
+   * their corresponding connections. These results are used to mark these early syncs as free.
    */
   private static final String EARLY_SYNC_JOB_QUERY =
       // Find the first successful sync job ID for every connection.
@@ -492,13 +492,13 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
           + " WHERE j2.status = 'succeeded' AND j2.config_type = 'sync'"
           + " GROUP BY j2.scope"
           + ")"
-          // Left join Jobs on Connection and the above MinJobIds, and only keep successful
+          // Left join Jobs on Connection and the above MinJobIds, and only keep billable
           // sync jobs that have an associated Connection ID
           + " SELECT j.id AS job_id, j.created_at, c.id AS conn_id, c.created_at AS connection_created_at, min_job_id"
           + " FROM jobs j"
           + " LEFT JOIN connection c ON c.id = UUID(j.scope)"
           + " LEFT JOIN FirstSuccessfulJobIdByConnection min_j_ids ON j.id = min_j_ids.min_job_id"
-          + " WHERE j.status = 'succeeded'"
+          + " WHERE j.status IN ('succeeded', 'incomplete', 'cancelled')"
           + " AND j.config_type = 'sync'"
           + " AND c.id IS NOT NULL"
           // Keep a job if it was created within 7 days of its connection's creation,
