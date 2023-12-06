@@ -43,8 +43,6 @@ dependencies {
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-temporal-core"))
     implementation(project(":airbyte-config:config-models"))
-    implementation(project(":airbyte-db:db-lib"))
-    implementation(project(":airbyte-db:jooq"))
     implementation(project(":airbyte-featureflag"))
     implementation(project(":airbyte-metrics:metrics-lib"))
 

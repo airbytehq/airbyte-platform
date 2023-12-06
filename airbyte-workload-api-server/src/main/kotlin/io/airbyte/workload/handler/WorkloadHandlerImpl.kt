@@ -1,6 +1,5 @@
 package io.airbyte.workload.handler
 
-import io.airbyte.db.instance.configs.jooq.generated.enums.WorkloadStatus
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.api.domain.WorkloadType
@@ -8,6 +7,7 @@ import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
 import io.airbyte.workload.repository.WorkloadRepository
+import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.time.OffsetDateTime
@@ -62,7 +62,7 @@ class WorkloadHandlerImpl(
       DomainWorkload(
         id = workloadId,
         dataplaneId = null,
-        status = WorkloadStatus.pending,
+        status = WorkloadStatus.PENDING,
         workloadLabels = labels?.map { it.toDomain() },
         inputPayload = input,
         logPath = logPath,
@@ -85,8 +85,8 @@ class WorkloadHandlerImpl(
     }
 
     when (workload.status) {
-      WorkloadStatus.pending -> workloadRepository.update(workloadId, dataplaneId, WorkloadStatus.claimed)
-      WorkloadStatus.claimed -> {}
+      WorkloadStatus.PENDING -> workloadRepository.update(workloadId, dataplaneId, WorkloadStatus.CLAIMED)
+      WorkloadStatus.CLAIMED -> {}
       else -> throw InvalidStatusTransitionException(
         "Tried to claim a workload that is not pending. Workload id: $workloadId has status: ${workload.status}",
       )
@@ -99,12 +99,12 @@ class WorkloadHandlerImpl(
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.pending, WorkloadStatus.running, WorkloadStatus.claimed ->
+      WorkloadStatus.PENDING, WorkloadStatus.RUNNING, WorkloadStatus.CLAIMED ->
         workloadRepository.update(
           workloadId,
-          WorkloadStatus.cancelled,
+          WorkloadStatus.CANCELLED,
         )
-      WorkloadStatus.cancelled -> logger.info { "Workload $workloadId is already cancelled. Cancelling an already cancelled workload is a noop" }
+      WorkloadStatus.CANCELLED -> logger.info { "Workload $workloadId is already cancelled. Cancelling an already cancelled workload is a noop" }
       else -> throw InvalidStatusTransitionException(
         "Cannot cancel a workload in either success or failure status. Workload id: $workloadId has status: ${workload.status}",
       )
@@ -115,12 +115,12 @@ class WorkloadHandlerImpl(
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.claimed, WorkloadStatus.running ->
+      WorkloadStatus.CLAIMED, WorkloadStatus.RUNNING ->
         workloadRepository.update(
           workloadId,
-          WorkloadStatus.failure,
+          WorkloadStatus.FAILURE,
         )
-      WorkloadStatus.failure -> logger.info { "Workload $workloadId is already marked as failed. Failing an already failed workload is a noop" }
+      WorkloadStatus.FAILURE -> logger.info { "Workload $workloadId is already marked as failed. Failing an already failed workload is a noop" }
       else -> throw InvalidStatusTransitionException(
         "Tried to fail a workload that is not active. Workload id: $workloadId has status: ${workload.status}",
       )
@@ -131,12 +131,12 @@ class WorkloadHandlerImpl(
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.claimed, WorkloadStatus.running ->
+      WorkloadStatus.CLAIMED, WorkloadStatus.RUNNING ->
         workloadRepository.update(
           workloadId,
-          WorkloadStatus.success,
+          WorkloadStatus.SUCCESS,
         )
-      WorkloadStatus.success ->
+      WorkloadStatus.SUCCESS ->
         logger.info { "Workload $workloadId is already marked as succeeded. Succeeding an already succeeded workload is a noop" }
       else -> throw InvalidStatusTransitionException(
         "Tried to succeed a workload that is not active. Workload id: $workloadId has status: ${workload.status}",
@@ -148,16 +148,16 @@ class WorkloadHandlerImpl(
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.claimed ->
+      WorkloadStatus.CLAIMED ->
         workloadRepository.update(
           workloadId,
-          WorkloadStatus.success,
+          WorkloadStatus.SUCCESS,
         )
-      WorkloadStatus.running -> logger.info { "Workload $workloadId is already marked as running. Trying to update its status to running is a noop" }
-      WorkloadStatus.cancelled, WorkloadStatus.failure, WorkloadStatus.success -> throw InvalidStatusTransitionException(
+      WorkloadStatus.RUNNING -> logger.info { "Workload $workloadId is already marked as running. Trying to update its status to running is a noop" }
+      WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
         "Heartbeat a workload in a terminal state",
       )
-      WorkloadStatus.pending -> throw InvalidStatusTransitionException(
+      WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
         "Can't set a workload status to running on a workload that hasn't been claimed",
       )
     }
@@ -167,16 +167,16 @@ class WorkloadHandlerImpl(
     val workload: DomainWorkload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.claimed, WorkloadStatus.running ->
+      WorkloadStatus.CLAIMED, WorkloadStatus.RUNNING ->
         workloadRepository.update(
           workloadId,
-          WorkloadStatus.running,
+          WorkloadStatus.RUNNING,
           OffsetDateTime.now(),
         )
-      WorkloadStatus.cancelled, WorkloadStatus.failure, WorkloadStatus.success -> throw InvalidStatusTransitionException(
+      WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
         "Heartbeat a workload in a terminal state",
       )
-      WorkloadStatus.pending -> throw InvalidStatusTransitionException("Heartbeat a non claimed workload")
+      WorkloadStatus.PENDING -> throw InvalidStatusTransitionException("Heartbeat a non claimed workload")
     }
   }
 }

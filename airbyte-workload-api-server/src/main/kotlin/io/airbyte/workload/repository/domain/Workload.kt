@@ -1,7 +1,5 @@
 package io.airbyte.workload.repository.domain
 
-import io.airbyte.db.instance.configs.jooq.generated.enums.WorkloadStatus
-import io.airbyte.db.instance.configs.jooq.generated.enums.WorkloadType
 import io.micronaut.core.annotation.Nullable
 import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.DateUpdated
@@ -10,6 +8,7 @@ import io.micronaut.data.annotation.MappedEntity
 import io.micronaut.data.annotation.Relation
 import io.micronaut.data.annotation.TypeDef
 import io.micronaut.data.model.DataType
+import org.jsoup.internal.Normalizer.lowerCase
 import java.time.OffsetDateTime
 
 @MappedEntity("workload")
@@ -66,4 +65,30 @@ data class Workload(
     createdAt = null,
     updatedAt = null,
   )
+}
+
+enum class WorkloadStatus {
+  CLAIMED,
+  RUNNING,
+  PENDING,
+  SUCCESS,
+  FAILURE,
+  CANCELLED,
+  ;
+
+  override fun toString(): String {
+    return lowerCase(this.name)
+  }
+}
+
+enum class WorkloadType {
+  SYNC,
+  CHECK,
+  DISCOVER,
+  SPEC,
+  ;
+
+  override fun toString(): String {
+    return lowerCase(this.name)
+  }
 }

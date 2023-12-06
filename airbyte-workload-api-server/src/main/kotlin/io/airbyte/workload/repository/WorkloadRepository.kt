@@ -1,7 +1,7 @@
 package io.airbyte.workload.repository
 
-import io.airbyte.db.instance.configs.jooq.generated.enums.WorkloadStatus
 import io.airbyte.workload.repository.domain.Workload
+import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.micronaut.data.annotation.Expandable
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.Join
