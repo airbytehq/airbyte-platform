@@ -4,9 +4,13 @@
 
 package io.airbyte.commons.server.support;
 
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.AIRBYTE_USER_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_IDS_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_ID_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CREATOR_USER_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.DESTINATION_ID_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.EMAIL_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.EXTERNAL_AUTH_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.OPERATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER;
@@ -22,27 +26,34 @@ import io.airbyte.api.model.generated.PermissionIdRequestBody;
 import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.PermissionHandler;
+import io.airbyte.config.User;
 import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class AuthenticationHeaderResolverTest {
 
+  private static final String AUTH_USER_ID = "authUserId";
+
   private WorkspaceHelper workspaceHelper;
   private PermissionHandler permissionHandler;
+  private UserPersistence userPersistence;
   private AuthenticationHeaderResolver resolver;
 
   @BeforeEach
   void setup() {
     this.workspaceHelper = mock(WorkspaceHelper.class);
     this.permissionHandler = mock(PermissionHandler.class);
-    this.resolver = new AuthenticationHeaderResolver(workspaceHelper, permissionHandler);
+    this.userPersistence = mock(UserPersistence.class);
+    this.resolver = new AuthenticationHeaderResolver(workspaceHelper, permissionHandler, userPersistence);
   }
 
   @Test
@@ -203,6 +214,50 @@ class AuthenticationHeaderResolverTest {
 
     final List<UUID> result = resolver.resolveOrganization(properties);
     assertEquals(List.of(organizationId), result);
+  }
+
+  @Test
+  void testResolvingAuthUserFromUserId() throws Exception {
+    final UUID userId = UUID.randomUUID();
+    final Map<String, String> properties = Map.of(AIRBYTE_USER_ID_HEADER, userId.toString());
+    final User expectedUser = new User().withUserId(userId).withAuthUserId(AUTH_USER_ID);
+    when(userPersistence.getUser(userId)).thenReturn(Optional.of(expectedUser));
+
+    final String resolvedAuthUserId = resolver.resolveUserAuthId(properties);
+    assertEquals(expectedUser.getAuthUserId(), resolvedAuthUserId);
+  }
+
+  @Test
+  void testResolvingAuthUserFromCreatorUserId() throws Exception {
+    final UUID userId = UUID.randomUUID();
+    final Map<String, String> properties = Map.of(CREATOR_USER_ID_HEADER, userId.toString());
+    final User expectedUser = new User().withUserId(userId).withAuthUserId(AUTH_USER_ID);
+    when(userPersistence.getUser(userId)).thenReturn(Optional.of(expectedUser));
+
+    final String resolvedAuthUserId = resolver.resolveUserAuthId(properties);
+    assertEquals(expectedUser.getAuthUserId(), resolvedAuthUserId);
+  }
+
+  @Test
+  void testResolvingAuthUserFromExternalAuthUserId() throws Exception {
+    final UUID userId = UUID.randomUUID();
+    final Map<String, String> properties = Map.of(EXTERNAL_AUTH_ID_HEADER, AUTH_USER_ID);
+    final User expectedUser = new User().withUserId(userId).withAuthUserId(AUTH_USER_ID);
+    when(userPersistence.getUser(userId)).thenReturn(Optional.of(expectedUser));
+
+    final String resolvedAuthUserId = resolver.resolveUserAuthId(properties);
+    assertEquals(expectedUser.getAuthUserId(), resolvedAuthUserId);
+  }
+
+  @Test
+  void testResolvingAuthUserFromEmail() throws Exception {
+    final String email = "random@email.com";
+    final Map<String, String> properties = Map.of(EMAIL_HEADER, email);
+    final User expectedUser = new User().withEmail(email).withAuthUserId(AUTH_USER_ID);
+    when(userPersistence.getUserByEmail(email)).thenReturn(Optional.of(expectedUser));
+
+    final String resolvedAuthUserId = resolver.resolveUserAuthId(properties);
+    assertEquals(expectedUser.getAuthUserId(), resolvedAuthUserId);
   }
 
 }

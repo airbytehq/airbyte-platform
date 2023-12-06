@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.support;
 
+import io.airbyte.commons.auth.AuthRole;
+import io.airbyte.commons.auth.AuthRoleConstants;
 import io.airbyte.commons.auth.OrganizationAuthRole;
 import io.airbyte.commons.auth.WorkspaceAuthRole;
 import io.airbyte.commons.enums.Enums;
@@ -35,27 +37,51 @@ public class RbacRoleHelper {
     this.permissionPersistence = permissionPersistence;
   }
 
-  public Collection<String> getRbacRoles(final String userId, final HttpRequest<?> request) {
+  public Collection<String> getRbacRoles(final String authUserId, final HttpRequest<?> request) {
     final Map<String, String> headerMap = request.getHeaders().asMap(String.class, String.class);
 
     final List<UUID> workspaceIds = headerResolver.resolveWorkspace(headerMap);
     final List<UUID> organizationIds = headerResolver.resolveOrganization(headerMap);
+    final String targetAuthUserId = headerResolver.resolveUserAuthId(headerMap);
 
     final Set<String> roles = new HashSet<>();
 
     if (workspaceIds != null && !workspaceIds.isEmpty()) {
-      roles.addAll(getWorkspaceAuthRoles(userId, workspaceIds));
+      roles.addAll(getWorkspaceAuthRoles(authUserId, workspaceIds));
     }
     if (organizationIds != null && !organizationIds.isEmpty()) {
-      roles.addAll(getOrganizationAuthRoles(userId, organizationIds));
+      roles.addAll(getOrganizationAuthRoles(authUserId, organizationIds));
+    }
+    if (targetAuthUserId != null && targetAuthUserId.equals(authUserId)) {
+      roles.add(AuthRoleConstants.SELF);
+    }
+    try {
+      if (permissionPersistence.isAuthUserInstanceAdmin(authUserId)) {
+        roles.addAll(getInstanceAdminRoles());
+      }
+    } catch (final IOException ex) {
+      log.error("Failed to get instance admin roles for user {}", authUserId, ex);
+      throw new RuntimeException(ex);
     }
 
     return roles;
   }
 
-  private Set<String> getWorkspaceAuthRoles(final String userId, final List<UUID> workspaceIds) {
+  private static Set<String> getInstanceAdminRoles() {
+    final Set<String> roles = new HashSet<>();
+    roles.addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN));
+    roles.addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN));
+    roles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN));
+    // For now, SELF is intentionally excluded from instance admin roles. If a user-centric endpoint
+    // should be
+    // callable by an instance admin, then the endpoint should be annotated with ADMIN in addition to
+    // SELF.
+    return roles;
+  }
+
+  private Set<String> getWorkspaceAuthRoles(final String authUserId, final List<UUID> workspaceIds) {
     final Optional<WorkspaceAuthRole> minAuthRoleOptional = workspaceIds.stream()
-        .map(workspaceId -> fetchWorkspacePermission(userId, workspaceId))
+        .map(workspaceId -> fetchWorkspacePermission(authUserId, workspaceId))
         .filter(Objects::nonNull)
         .map(this::convertToWorkspaceAuthRole)
         .filter(Objects::nonNull)
@@ -65,11 +91,11 @@ public class RbacRoleHelper {
     return WorkspaceAuthRole.buildWorkspaceAuthRolesSet(authRole);
   }
 
-  private Permission.PermissionType fetchWorkspacePermission(final String userId, final UUID workspaceId) {
+  private Permission.PermissionType fetchWorkspacePermission(final String authUserId, final UUID workspaceId) {
     try {
-      return permissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId, userId);
+      return permissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId, authUserId);
     } catch (IOException ex) {
-      log.error("Failed to get permission for user {} and workspaces {}", userId, workspaceId, ex);
+      log.error("Failed to get permission for user {} and workspaces {}", authUserId, workspaceId, ex);
       throw new RuntimeException(ex);
     }
   }
@@ -83,9 +109,9 @@ public class RbacRoleHelper {
     }
   }
 
-  private Set<String> getOrganizationAuthRoles(final String userId, final List<UUID> organizationIds) {
+  private Set<String> getOrganizationAuthRoles(final String authUserId, final List<UUID> organizationIds) {
     final Optional<OrganizationAuthRole> minAuthRoleOptional = organizationIds.stream()
-        .map(orgId -> fetchOrganizationPermission(userId, orgId))
+        .map(orgId -> fetchOrganizationPermission(authUserId, orgId))
         .filter(Objects::nonNull)
         .map(this::convertToOrganizationAuthRole)
         .filter(Objects::nonNull)
@@ -95,11 +121,11 @@ public class RbacRoleHelper {
     return OrganizationAuthRole.buildOrganizationAuthRolesSet(authRole);
   }
 
-  private Permission.PermissionType fetchOrganizationPermission(final String userId, final UUID orgId) {
+  private Permission.PermissionType fetchOrganizationPermission(final String authUserId, final UUID orgId) {
     try {
-      return permissionPersistence.findPermissionTypeForUserAndOrganization(orgId, userId);
+      return permissionPersistence.findPermissionTypeForUserAndOrganization(orgId, authUserId);
     } catch (IOException ex) {
-      log.error("Failed to get permission for user {} and organization {}", userId, orgId, ex);
+      log.error("Failed to get permission for user {} and organization {}", authUserId, orgId, ex);
       throw new RuntimeException(ex);
     }
   }

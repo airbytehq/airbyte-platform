@@ -8,14 +8,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.commons.auth.AuthRole;
-import io.airbyte.commons.auth.OrganizationAuthRole;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
-import io.airbyte.commons.server.support.AuthenticationHeaderResolver;
 import io.airbyte.commons.server.support.JwtTokenParser;
-import io.airbyte.config.Permission.PermissionType;
-import io.airbyte.config.persistence.PermissionPersistence;
+import io.airbyte.commons.server.support.RbacRoleHelper;
 import io.micrometer.common.util.StringUtils;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
@@ -27,17 +24,10 @@ import io.micronaut.security.authentication.Authentication;
 import io.micronaut.security.authentication.AuthenticationException;
 import io.micronaut.security.token.validator.TokenValidator;
 import jakarta.inject.Singleton;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
@@ -54,24 +44,14 @@ public class KeycloakTokenValidator implements TokenValidator {
 
   private final HttpClient client;
   private final AirbyteKeycloakConfiguration keycloakConfiguration;
-  private final AuthenticationHeaderResolver headerResolver;
-  private final PermissionPersistence permissionPersistence;
-
-  private static final Map<PermissionType, AuthRole> WORKSPACE_PERMISSION_TYPE_TO_AUTH_ROLE = Map.of(PermissionType.WORKSPACE_ADMIN, AuthRole.ADMIN,
-      PermissionType.WORKSPACE_EDITOR, AuthRole.EDITOR, PermissionType.WORKSPACE_READER, AuthRole.READER);
-  private static final Map<PermissionType, OrganizationAuthRole> ORGANIZATION_PERMISSION_TYPE_TO_AUTH_ROLE =
-      Map.of(PermissionType.ORGANIZATION_ADMIN, OrganizationAuthRole.ORGANIZATION_ADMIN, PermissionType.ORGANIZATION_EDITOR,
-          OrganizationAuthRole.ORGANIZATION_EDITOR, PermissionType.ORGANIZATION_READER, OrganizationAuthRole.ORGANIZATION_READER,
-          PermissionType.ORGANIZATION_MEMBER, OrganizationAuthRole.ORGANIZATION_MEMBER);
+  private final RbacRoleHelper rbacRoleHelper;
 
   public KeycloakTokenValidator(final HttpClient httpClient,
                                 final AirbyteKeycloakConfiguration keycloakConfiguration,
-                                final AuthenticationHeaderResolver headerResolver,
-                                final PermissionPersistence permissionPersistence) {
+                                final RbacRoleHelper rbacRoleHelper) {
     this.client = httpClient;
     this.keycloakConfiguration = keycloakConfiguration;
-    this.headerResolver = headerResolver;
-    this.permissionPersistence = permissionPersistence;
+    this.rbacRoleHelper = rbacRoleHelper;
   }
 
   @Override
@@ -90,25 +70,26 @@ public class KeycloakTokenValidator implements TokenValidator {
 
   private Authentication getAuthentication(final String token, final HttpRequest<?> request) {
     final String payload = JwtTokenParser.getJwtPayloadToken(token);
+    final Collection<String> roles = new HashSet<>();
 
     try {
       final String jwtPayloadString = new String(Base64.getDecoder().decode(payload), StandardCharsets.UTF_8);
       final JsonNode jwtPayload = Jsons.deserialize(jwtPayloadString);
       log.debug("jwtPayload: {}", jwtPayload);
 
-      final String userId = jwtPayload.get("sub").asText();
-      log.debug("Performing authentication for user '{}'...", userId);
+      final String authUserId = jwtPayload.get("sub").asText();
+      log.debug("Performing authentication for auth user '{}'...", authUserId);
 
-      if (StringUtils.isNotBlank(userId)) {
-        log.debug("Fetching roles for user '{}'...", userId);
-        // For now, give all valid Keycloak users instance_admin, until we actually create an Airbyte User
-        // with permissions for such logins.
-        final Collection<String> roles = getInstanceAdminRoles();
-        // final Collection<String> roles = getRoles(userId, request);
-        log.debug("Authenticating user '{}' with roles {}...", userId, roles);
+      if (StringUtils.isNotBlank(authUserId)) {
+        log.debug("Successfully authenticated auth user '{}'.", authUserId);
+        roles.add(AuthRole.AUTHENTICATED_USER.toString());
 
+        log.debug("Fetching roles for auth user '{}'...", authUserId);
+        roles.addAll(rbacRoleHelper.getRbacRoles(authUserId, request));
+
+        log.debug("Authenticating user '{}' with roles {}...", authUserId, roles);
         final var userAttributeMap = JwtTokenParser.convertJwtPayloadToUserAttributes(jwtPayload);
-        return Authentication.build(userId, roles, userAttributeMap);
+        return Authentication.build(authUserId, roles, userAttributeMap);
       } else {
         throw new AuthenticationException("Failed to authenticate the user because the userId was blank.");
       }
@@ -116,61 +97,6 @@ public class KeycloakTokenValidator implements TokenValidator {
       log.error("Encountered an exception while validating the token.", e);
       throw new AuthenticationException("Failed to authenticate the user.");
     }
-  }
-
-  private Collection<String> getInstanceAdminRoles() {
-    Set<String> roles = new HashSet<>();
-    roles.addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN));
-    roles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN));
-    return roles;
-  }
-
-  // TODO replace this with a call to RbacRoleHelper. Not 100% identical right now because
-  // the RbacRoleHelper uses `WORKSPACE_ADMIN`, `WORKSPACE_EDITOR`, etc. instead of
-  // `ADMIN`, `EDITOR` for workspace roles.
-  private Collection<String> getRoles(final String userId, final HttpRequest<?> request) {
-    Map<String, String> headerMap = request.getHeaders().asMap(String.class, String.class);
-
-    // We will check for permissions over organization and workspace
-    final List<UUID> workspaceIds = headerResolver.resolveWorkspace(headerMap);
-    final List<UUID> organizationIds = headerResolver.resolveOrganization(headerMap);
-
-    Set<String> roles = new HashSet<>();
-    roles.add(AuthRole.AUTHENTICATED_USER.toString());
-
-    // Find the minimum permission for workspace
-    if (workspaceIds != null && !workspaceIds.isEmpty()) {
-      Optional<AuthRole> minAuthRoleOptional = workspaceIds.stream()
-          .map(workspaceId -> {
-            try {
-              return permissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId, userId);
-            } catch (IOException ex) {
-              log.error("Failed to get permission for user {} and workspaces {}", userId, workspaceId, ex);
-              throw new RuntimeException(ex);
-            }
-          })
-          .map(permissionType -> WORKSPACE_PERMISSION_TYPE_TO_AUTH_ROLE.get(permissionType))
-          .min(Comparator.comparingInt(AuthRole::getAuthority));
-      AuthRole authRole = minAuthRoleOptional.orElse(AuthRole.NONE);
-      roles.addAll(AuthRole.buildAuthRolesSet(authRole));
-    }
-    if (organizationIds != null && !organizationIds.isEmpty()) {
-      Optional<OrganizationAuthRole> minAuthRoleOptional = organizationIds.stream()
-          .map(organizationId -> {
-            try {
-              return permissionPersistence.findPermissionTypeForUserAndOrganization(organizationId, userId);
-            } catch (IOException ex) {
-              log.error("Failed to get permission for user {} and organization {}", userId, organizationId, ex);
-              throw new RuntimeException(ex);
-            }
-          })
-          .map(permissionType -> ORGANIZATION_PERMISSION_TYPE_TO_AUTH_ROLE.get(permissionType))
-          .min(Comparator.comparingInt(OrganizationAuthRole::getAuthority));
-      OrganizationAuthRole authRole = minAuthRoleOptional.orElse(OrganizationAuthRole.NONE);
-      roles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(authRole));
-    }
-
-    return roles;
   }
 
   private Mono<Boolean> validateTokenWithKeycloak(final String token) {

@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.jooq.exception.DataAccessException;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -61,6 +62,17 @@ class PermissionHandlerTest {
     uuidSupplier = mock(Supplier.class);
     workspaceService = mock(WorkspaceService.class);
     permissionHandler = new PermissionHandler(permissionPersistence, workspaceService, uuidSupplier);
+  }
+
+  @Test
+  void isUserInstanceAdmin() throws IOException {
+    final UUID userId = UUID.randomUUID();
+
+    when(permissionPersistence.isUserInstanceAdmin(userId)).thenReturn(true);
+    Assertions.assertTrue(permissionHandler.isUserInstanceAdmin(userId));
+
+    when(permissionPersistence.isUserInstanceAdmin(userId)).thenReturn(false);
+    Assertions.assertFalse(permissionHandler.isUserInstanceAdmin(userId));
   }
 
   @Nested
