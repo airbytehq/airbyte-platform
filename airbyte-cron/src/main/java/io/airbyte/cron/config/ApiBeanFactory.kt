@@ -20,7 +20,6 @@ import java.time.Duration
 class ApiBeanFactory {
   @Singleton
   fun workloadApiClient(
-    @Named("internalApiScheme") internalApiScheme: String,
     @Value("\${airbyte.workload-api.base-path}") workloadApiBasePath: String,
     @Value("\${airbyte.workload-api.connect-timeout-seconds}") connectTimeoutSeconds: Long,
     @Value("\${airbyte.workload-api.read-timeout-seconds}") readTimeoutSeconds: Long,
@@ -50,7 +49,7 @@ class ApiBeanFactory {
         .withMaxRetries(maxRetries)
         .build()
 
-    return WorkloadApi("$internalApiScheme://$workloadApiBasePath", okHttpClient, retryPolicy)
+    return WorkloadApi(workloadApiBasePath, okHttpClient, retryPolicy)
   }
 
   @Singleton
