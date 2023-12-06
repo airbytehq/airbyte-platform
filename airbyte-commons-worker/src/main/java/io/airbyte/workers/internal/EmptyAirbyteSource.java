@@ -44,12 +44,8 @@ public class EmptyAirbyteSource implements AirbyteSource {
   private final AtomicBoolean hasEmittedStreamStatus;
   private final Queue<StreamDescriptor> streamsToReset = new LinkedList<>();
   private final Queue<AirbyteMessage> perStreamMessages = new LinkedList<>();
-  // TODO: Once we are sure that the legacy way of transmitting the state is not use anymore, we need
-  // to remove this variable and the associated
-  // checks
-  private boolean isResetBasedForConfig;
   private boolean isStarted = false;
-  private Optional<StateWrapper> stateWrapper;
+  private Optional<StateWrapper> stateWrapper = Optional.empty();
 
   public EmptyAirbyteSource() {
     hasEmittedState = new AtomicBoolean();
@@ -59,37 +55,11 @@ public class EmptyAirbyteSource implements AirbyteSource {
   @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public void start(final WorkerSourceConfig workerSourceConfig, final Path jobRoot) throws Exception {
-
-    if (workerSourceConfig == null || workerSourceConfig.getSourceConnectionConfiguration() == null) {
-      // TODO: When the jobConfig is fully updated and tested, we can remove this extra check that makes
-      // us compatible with running a reset with
-      // a null config
-      /*
-       * This is a protection against reverting a commit that set the resetSourceConfiguration, it makes
-       * that there is not side effect of such a revert. The legacy behavior is to have the config as an
-       * empty jsonObject, this is an extra protection if the workerConfiguration is null. In the previous
-       * implementation it was unused so passing it as null should not result in a NPE or a parsing
-       * failure.
-       */
-      isResetBasedForConfig = false;
-    } else {
-      final ResetSourceConfiguration resetSourceConfiguration;
-      resetSourceConfiguration = parseResetSourceConfigurationAndLogError(workerSourceConfig);
+    if (workerSourceConfig != null && workerSourceConfig.getSourceConnectionConfiguration() != null) {
+      final ResetSourceConfiguration resetSourceConfiguration = parseResetSourceConfigurationAndLogError(workerSourceConfig);
       streamsToReset.addAll(resetSourceConfiguration.getStreamsToReset());
 
-      if (streamsToReset.isEmpty()) {
-        // TODO: This is done to be able to handle the transition period where we can have no stream being
-        // pass to the configuration because the
-        // logic of populating this list is not implemented
-        /*
-         * This is a protection against reverting a commit that set the resetSourceConfiguration, it makes
-         * that there is not side effect of such a revert. The legacy behavior is to have the config as an
-         * empty object, it has been changed here:
-         * https://github.com/airbytehq/airbyte/pull/13696/files#diff-
-         * f51ff997b60a346c704608bb1cd7d22457eda2559b42987d5fa1281d568fc222L40
-         */
-        isResetBasedForConfig = false;
-      } else {
+      if (!streamsToReset.isEmpty()) {
         if (workerSourceConfig.getState() != null) {
           stateWrapper = StateMessageHelper.getTypedState(workerSourceConfig.getState().getState());
 
@@ -100,12 +70,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
             throw new IllegalStateException("Try to perform a partial reset on a legacy state");
           }
 
-          isResetBasedForConfig = true;
-        } else {
-          /// No state
-          isResetBasedForConfig = false;
         }
-
       }
     }
     isStarted = true;
@@ -132,15 +97,19 @@ public class EmptyAirbyteSource implements AirbyteSource {
       throw new IllegalStateException("The empty source has not been started.");
     }
 
-    if (isResetBasedForConfig) {
+    if (stateWrapper.isPresent()) {
       if (stateWrapper.get().getStateType() == StateType.STREAM) {
         return emitPerStreamState();
       } else if (stateWrapper.get().getStateType() == StateType.GLOBAL) {
         return emitGlobalState();
       }
+      final boolean isLegacyStateValueAbsent = stateWrapper.get().getLegacyState() == null
+          || stateWrapper.get().getLegacyState().isNull()
+          || stateWrapper.get().getLegacyState().isEmpty();
+      return emitLegacyState(!isLegacyStateValueAbsent);
     }
+    return emitLegacyState(false);
 
-    return emitLegacyState();
   }
 
   @Trace(operationName = WORKER_OPERATION_NAME)
@@ -184,11 +153,13 @@ public class EmptyAirbyteSource implements AirbyteSource {
     return emitStreamResetTraceMessagesForSingleStateTypes();
   }
 
-  private Optional<AirbyteMessage> emitLegacyState() {
+  private Optional<AirbyteMessage> emitLegacyState(final boolean emitState) {
     if (!hasEmittedState.get()) {
       hasEmittedState.compareAndSet(false, true);
-      return Optional.of(new AirbyteMessage().withType(Type.STATE)
-          .withState(new AirbyteStateMessage().withType(AirbyteStateType.LEGACY).withData(Jsons.emptyObject())));
+      if (emitState) {
+        return Optional.of(new AirbyteMessage().withType(Type.STATE)
+            .withState(new AirbyteStateMessage().withType(AirbyteStateType.LEGACY).withData(Jsons.emptyObject())));
+      }
     }
 
     return emitStreamResetTraceMessagesForSingleStateTypes();

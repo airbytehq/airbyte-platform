@@ -15,11 +15,15 @@ import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * State Message helpers.
  */
 public class StateMessageHelper {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(StateMessageHelper.class);
 
   private static class AirbyteStateMessageListTypeReference extends TypeReference<List<AirbyteStateMessage>> {}
 
@@ -39,6 +43,7 @@ public class StateMessageHelper {
       try {
         stateMessages = Jsons.object(state, new AirbyteStateMessageListTypeReference());
       } catch (final IllegalArgumentException e) {
+        LOGGER.warn("Failed to convert state, falling back to legacy state wrapper");
         return Optional.of(getLegacyStateWrapper(state));
       }
       if (stateMessages.isEmpty()) {
