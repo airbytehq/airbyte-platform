@@ -28,9 +28,9 @@ data:
 {{- if eq (index .Values "workload-api-server" "enabled") true }}
   # Temporary conditional for OSS deploys.  Eventually, the workload-api will be present in OSS deploys and the else
   # block can be removed
-  WORKLOAD_API_HOST: {{ .Release.Name }}-workload-api-server-svc:{{ index .Values "workload-api-server" "service" "port" }}
+  WORKLOAD_API_HOST: {{ printf "http://%s-workload-api-server-svc:-%d" .Release.Name (index .Values "workload-api-server" "service" "port") }}
 {{- else }}
-  WORKLOAD_API_HOST: localhost # placeholder value
+  WORKLOAD_API_HOST: http://localhost # placeholder value
 {{- end }}
 {{- if eq .Values.global.edition "pro" }}
   KEYCLOAK_INTERNAL_HOST: {{ .Release.Name }}-airbyte-keycloak-svc:{{ .Values.keycloak.service.port }}

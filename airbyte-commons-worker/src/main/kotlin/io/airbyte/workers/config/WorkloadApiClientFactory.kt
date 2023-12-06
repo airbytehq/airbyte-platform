@@ -11,7 +11,6 @@ import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
-import jakarta.inject.Named
 import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -26,7 +25,6 @@ private val logger = KotlinLogging.logger {}
 class WorkloadApiClientFactory {
   @Singleton
   fun workloadApiClient(
-    @Named("internalApiScheme") internalApiScheme: String,
     @Value("\${airbyte.workload-api.base-path}") workloadApiBasePath: String,
     @Value("\${airbyte.workload-api.connect-timeout-seconds}") connectTimeoutSeconds: Long,
     @Value("\${airbyte.workload-api.read-timeout-seconds}") readTimeoutSeconds: Long,
@@ -58,6 +56,6 @@ class WorkloadApiClientFactory {
         .withMaxRetries(maxRetries)
         .build()
 
-    return WorkloadApiClient("$internalApiScheme://$workloadApiBasePath", retryPolicy, okHttpClient).workloadApi
+    return WorkloadApiClient(workloadApiBasePath, retryPolicy, okHttpClient).workloadApi
   }
 }
