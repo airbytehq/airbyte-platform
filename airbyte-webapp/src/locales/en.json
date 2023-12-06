@@ -399,6 +399,8 @@
   "jobs.failure.originLabel": "Failure origin:",
   "jobs.failure.typeLabel": "Failure type:",
   "jobs.failure.seeMore": "See more",
+  "jobs.failure.copyText": "Copy text",
+  "jobs.failure.copyText.success": "Text copied to clipboard",
   "sources.additionLogs": " Logs",
   "sources.emptyLogs": "Waiting for logs...",
   "sources.hour": "{hour}h ",

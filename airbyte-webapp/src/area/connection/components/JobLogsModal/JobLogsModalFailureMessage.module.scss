@@ -1,6 +1,12 @@
 @use "scss/colors";
 @use "scss/variables";
 
+.internalFailureContainer {
+  border-radius: variables.$border-radius-md;
+  background-color: colors.$red-50;
+  padding-bottom: variables.$spacing-md;
+}
+
 .internalFailureReason {
   max-height: 300px;
   overflow-y: auto;
@@ -9,13 +15,4 @@
   background: colors.$red-30;
   padding: variables.$spacing-sm variables.$spacing-md;
   font-family: monospace;
-}
-
-.disclosureContainer {
-  border-radius: variables.$border-radius-md;
-  background-color: colors.$red-50;
-}
-
-.disclosureContainer__open {
-  padding-bottom: variables.$spacing-md;
 }

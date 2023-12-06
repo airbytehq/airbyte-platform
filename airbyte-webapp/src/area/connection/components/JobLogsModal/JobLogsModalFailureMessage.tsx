@@ -1,7 +1,5 @@
-import { Disclosure } from "@headlessui/react";
-import classNames from "classnames";
 import { useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
@@ -9,6 +7,8 @@ import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 
 import { AttemptFailureSummary, FailureType } from "core/request/AirbyteClient";
+import { copyToClipboard } from "core/utils/clipboard";
+import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./JobLogsModalFailureMessage.module.scss";
 
@@ -17,6 +17,9 @@ interface JobLogsModalFailureMessageProps {
 }
 
 export const JobLogsModalFailureMessage: React.FC<JobLogsModalFailureMessageProps> = ({ failureSummary }) => {
+  const { registerNotification } = useNotificationService();
+  const { formatMessage } = useIntl();
+
   const internalFailureReason = useMemo(() => failureSummary?.failures[0]?.internalMessage, [failureSummary]);
 
   const externalFailureReason = useMemo(() => failureSummary?.failures[0]?.externalMessage, [failureSummary]);
@@ -38,33 +41,40 @@ export const JobLogsModalFailureMessage: React.FC<JobLogsModalFailureMessageProp
     return null;
   }
 
+  const onCopyTextBtnClick = async () => {
+    if (!internalFailureReason) {
+      return;
+    }
+    await copyToClipboard(internalFailureReason);
+
+    registerNotification({
+      type: "success",
+      text: formatMessage({ id: "jobs.failure.copyText.success" }),
+      id: "jobs.failure.copyText.success",
+    });
+  };
+
   return (
     <Box px="md" pb="md">
       {failureToShow === "internal" && (
-        <Disclosure>
-          {({ open }) => (
-            <div className={classNames(styles.disclosureContainer, { [styles.disclosureContainer__open]: open })}>
-              <Message
-                type="error"
-                text={
-                  <FlexContainer justifyContent="space-between" alignItems="center">
-                    <FormattedMessage id="jobHistory.logs.failureReason" values={{ reason: externalFailureReason }} />
+        <div className={styles.internalFailureContainer}>
+          <Message
+            type="error"
+            text={
+              <FlexContainer justifyContent="space-between" alignItems="center">
+                <FormattedMessage id="jobHistory.logs.failureReason" values={{ reason: externalFailureReason }} />
 
-                    <Disclosure.Button as={Button}>
-                      <FormattedMessage id="jobs.failure.seeMore" />
-                    </Disclosure.Button>
-                  </FlexContainer>
-                }
-              />
+                <Button onClick={onCopyTextBtnClick}>
+                  <FormattedMessage id="jobs.failure.copyText" />
+                </Button>
+              </FlexContainer>
+            }
+          />
 
-              <Disclosure.Panel>
-                <Box px="md">
-                  <div className={styles.internalFailureReason}>{internalFailureReason}</div>
-                </Box>
-              </Disclosure.Panel>
-            </div>
-          )}
-        </Disclosure>
+          <Box px="md">
+            <div className={styles.internalFailureReason}>{internalFailureReason}</div>
+          </Box>
+        </div>
       )}
 
       {failureToShow === "external" && (
