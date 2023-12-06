@@ -8,12 +8,14 @@ data class LauncherInputMessage(
   val workloadInput: String,
   val labels: Map<String, String>,
   val logPath: String,
+  val startTimeMs: Long? = null,
 ) {
   data class Builder(
     var workloadId: String? = null,
     var workloadInput: String? = null,
     var labels: Map<String, String>? = null,
     var logPath: String? = null,
+    var startTimeMs: Long? = null,
   ) {
     fun workloadId(workloadId: String) = apply { this.workloadId = workloadId }
 
@@ -23,12 +25,15 @@ data class LauncherInputMessage(
 
     fun logPath(logPath: String) = apply { this.logPath = logPath }
 
+    fun startTimeMs(timestampMs: Long) = apply { this.startTimeMs = timestampMs }
+
     fun build() =
       LauncherInputMessage(
         workloadId = workloadId!!,
         workloadInput = workloadInput!!,
         labels = labels!!,
         logPath = logPath!!,
+        startTimeMs = startTimeMs,
       )
   }
 }

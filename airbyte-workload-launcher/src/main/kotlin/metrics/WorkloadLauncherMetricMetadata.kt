@@ -56,6 +56,14 @@ enum class WorkloadLauncherMetricMetadata(
     "workload_pods_oldest_pending_time",
     "the time of the oldest pending job (in seconds)",
   ),
+  PRODUCER_TO_CONSUMER_LATENCY_MS(
+    "producer_to_consumer_start_latency_ms",
+    "the time it takes to produce a message until it is consumed",
+  ),
+  PRODUCER_TO_POD_STARTED_LATENCY_MS(
+    "producer_to_pod_started_latency_ms",
+    "the time it takes to produce a message until it is fully processed",
+  ),
   ;
 
   override fun getApplication(): MetricEmittingApp {

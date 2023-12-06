@@ -5,4 +5,5 @@ data class LauncherInput(
   val workloadInput: String,
   val labels: Map<String, String>,
   val logPath: String,
+  val startTimeMs: Long? = null,
 )

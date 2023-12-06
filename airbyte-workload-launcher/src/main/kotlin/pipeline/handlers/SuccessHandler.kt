@@ -29,6 +29,14 @@ class SuccessHandler(
         WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED_SUCCESSFULLY,
         MetricAttribute(MeterFilterFactory.WORKLOAD_ID_TAG, io.msg.workloadId),
       )
+      if (io.msg.startTimeMs != null) {
+        val timeElapsed = System.currentTimeMillis() - io.msg.startTimeMs
+        metricPublisher.gauge(
+          WorkloadLauncherMetricMetadata.PRODUCER_TO_POD_STARTED_LATENCY_MS,
+          timeElapsed,
+          { it.toDouble() },
+        )
+      }
       logger.info { logMsgTemplate.orElse { id: String -> "Pipeline completed for workload: $id." }.apply(io.msg.workloadId) }
     }
   }
