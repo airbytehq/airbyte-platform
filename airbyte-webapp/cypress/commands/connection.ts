@@ -1,3 +1,4 @@
+import * as statusPage from "@cy/pages/connection/statusPageObject";
 import {
   DestinationRead,
   SourceRead,
@@ -8,7 +9,7 @@ import {
 
 import {
   enterConnectionName,
-  selectSchedule,
+  selectScheduleType,
   setupDestinationNamespaceSourceFormat,
 } from "pages/connection/connectionFormPageObject";
 import { openCreateConnection } from "pages/destinationPage";
@@ -71,7 +72,7 @@ export const createTestConnection = (sourceName: string, destinationName: string
   cy.get("div").contains(sourceName).click();
   cy.wait("@discoverSchema");
   enterConnectionName("Connection name");
-  selectSchedule("Manual");
+  selectScheduleType("Manual");
 
   setupDestinationNamespaceSourceFormat();
   submitButtonClick();
@@ -84,8 +85,8 @@ export const startManualSync = () => {
 };
 
 export const startManualReset = () => {
-  cy.get("[data-testid='job-history-dropdown-menu']").click();
-  cy.get("[data-testid='reset-data-dropdown-option']").click();
+  cy.get(statusPage.jobHistoryDropdownMenu).click();
+  cy.get(statusPage.resetDataDropdownOption).click();
   cy.get("[data-id='reset']").click();
 };
 

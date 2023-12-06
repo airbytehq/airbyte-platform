@@ -74,6 +74,7 @@ export const CustomTransformationsForm: React.FC = () => {
       onError={onError}
       disabled={mode === "readonly"}
       trackDirtyChanges
+      dataTestId="custom-transformation-form"
     >
       <CollapsibleCard title={<FormattedMessage id="connection.customTransformations" />} collapsible>
         <TransformationFieldHookForm />

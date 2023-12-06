@@ -1,6 +1,6 @@
 import { clickOnCellInTable } from "commands/common";
 
-const settingsTab = "div[data-id='settings-step']";
+const settingsTab = "a[data-testid='settings-step']";
 const sourceColumnName = "Source name";
 const destinationColumnName = "Destination name";
 const connectionsTable = "table[data-testid='connectionsTable']";

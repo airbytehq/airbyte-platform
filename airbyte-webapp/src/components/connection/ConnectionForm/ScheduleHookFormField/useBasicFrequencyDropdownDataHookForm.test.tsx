@@ -35,6 +35,10 @@ describe("#useBasicFrequencyDropdownDataHookForm", () => {
 
     // +1 for additionalFrequency
     expect(result.current.length).toEqual(frequencyConfig.length + 1);
-    expect(result.current).toContainEqual({ label: "Every 7 minutes", value: { units: 7, timeUnit: "minutes" } });
+    expect(result.current).toContainEqual({
+      label: "Every 7 minutes",
+      value: { units: 7, timeUnit: "minutes" },
+      "data-testid": "frequency-7-minutes",
+    });
   });
 });

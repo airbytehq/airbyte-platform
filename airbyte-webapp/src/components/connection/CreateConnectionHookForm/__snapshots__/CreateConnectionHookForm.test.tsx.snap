@@ -199,12 +199,15 @@ exports[`CreateConnectionHookForm should render 1`] = `
               <div
                 class="<removed-for-snapshot-test>"
               >
-                <div>
+                <div
+                  data-testid="basic-schedule"
+                >
                   <button
                     aria-expanded="false"
                     aria-haspopup="listbox"
                     class="<removed-for-snapshot-test>"
                     data-headlessui-state=""
+                    data-testid="basic-schedule-listbox-button"
                     id="headlessui-listbox-button-:r1:"
                     type="button"
                   >

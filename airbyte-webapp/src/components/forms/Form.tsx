@@ -36,6 +36,7 @@ interface FormProps<T extends FormValues> {
    * Disable all form controls including submission buttons. Defaults to false.
    */
   disabled?: boolean;
+  dataTestId?: string;
 }
 
 export const Form = <T extends FormValues>({
@@ -48,6 +49,7 @@ export const Form = <T extends FormValues>({
   trackDirtyChanges = false,
   reinitializeDefaultValues = false,
   disabled = false,
+  dataTestId,
 }: FormProps<T>) => {
   const methods = useForm<T>({
     defaultValues,
@@ -84,7 +86,7 @@ export const Form = <T extends FormValues>({
     <FormProvider {...methods}>
       <FormDevTools />
       {trackDirtyChanges && <FormChangeTracker changed={methods.formState.isDirty} />}
-      <form onSubmit={methods.handleSubmit(processSubmission)}>
+      <form onSubmit={methods.handleSubmit(processSubmission)} data-testid={dataTestId}>
         <fieldset disabled={disabled} className={styles.fieldset}>
           {children}
         </fieldset>

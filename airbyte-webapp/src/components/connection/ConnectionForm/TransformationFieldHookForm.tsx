@@ -4,10 +4,10 @@ import { FormattedMessage } from "react-intl";
 
 import { ArrayOfObjectsHookFormEditor } from "components/ArrayOfObjectsEditor";
 
+import { useCurrentWorkspace } from "core/api";
 import { OperationCreate, OperatorType } from "core/api/types/AirbyteClient";
 import { isDefined } from "core/utils/common";
 import { useModalService } from "hooks/services/Modal";
-import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { CustomTransformationsFormValues } from "pages/connections/ConnectionTransformationPage/CustomTransformationsForm";
 
 import { DbtOperationReadOrCreate, TransformationHookForm } from "../TransformationHookForm";

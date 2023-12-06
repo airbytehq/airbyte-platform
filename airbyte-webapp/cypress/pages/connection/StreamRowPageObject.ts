@@ -13,7 +13,7 @@ const getFieldSelectButtonTestId = (type: SyncFieldType) =>
 
 const getSourceDefinedTestId = (type: SyncFieldType) => getTestId(`${type}-text`);
 
-export const syncModeSelectButton = joinTestIds(getTestId("sync-mode-select"), getTestId("pill-select-button"));
+export const syncModeSelectButton = getTestId("sync-mode-select-listbox-button");
 
 const [streamSyncSwitch, destinationStreamNameCell, destinationNamespaceCell, dropDownOverlayContainer] = getTestIds(
   ["selected-switch", "input"],

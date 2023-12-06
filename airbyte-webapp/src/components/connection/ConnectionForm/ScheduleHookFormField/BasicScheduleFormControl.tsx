@@ -44,6 +44,7 @@ export const BasicScheduleFormControl: React.FC = () => {
             options={frequencies}
             onSelect={onBasicScheduleSelect}
             selectedValue={field.value}
+            data-testid="basic-schedule"
           />
         </FormFieldLayout>
       )}

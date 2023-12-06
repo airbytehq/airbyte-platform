@@ -98,6 +98,7 @@ export const NormalizationForm: React.FC = () => {
       onError={onError}
       disabled={mode === "readonly"}
       trackDirtyChanges
+      dataTestId="normalization-form"
     >
       <CollapsibleCard title={<FormattedMessage id="connection.normalization" />} collapsible>
         <NormalizationHookFormField />

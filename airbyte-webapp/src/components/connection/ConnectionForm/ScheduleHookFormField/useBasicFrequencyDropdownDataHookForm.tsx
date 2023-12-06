@@ -65,6 +65,7 @@ export const useBasicFrequencyDropdownDataHookForm = (
         { value: frequency.units }
       ),
       value: frequency,
+      "data-testid": `frequency-${frequency.units}-${frequency.timeUnit}`,
     }));
   }, [additionalFrequency, formatMessage]);
 };

@@ -193,7 +193,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
         `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}?sourceId=${source.sourceId}&destinationId=${destination.destinationId}`
       );
       waitForDiscoverSchemaRequest();
-      connectionConfigurationForm.selectSchedule("Manual");
+      connectionConfigurationForm.selectScheduleType("Manual");
     });
   });
 

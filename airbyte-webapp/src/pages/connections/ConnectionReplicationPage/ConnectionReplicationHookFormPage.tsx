@@ -108,7 +108,7 @@ export const ConnectionReplicationHookFormPage: React.FC = () => {
   const { openModal } = useModalService();
 
   const { connection, schemaRefreshing, updateConnection, discardRefreshedSchema } = useConnectionEditService();
-  const { initialValues, schemaError, setSubmitError, refreshSchema } = useConnectionFormService();
+  const { initialValues, schemaError, setSubmitError, refreshSchema, mode } = useConnectionFormService();
   const validationSchema = useConnectionHookFormValidationSchema();
 
   const saveConnection = useCallback(
@@ -165,14 +165,12 @@ export const ConnectionReplicationHookFormPage: React.FC = () => {
       const getStreamId = (stream: AirbyteStreamAndConfiguration) => {
         return `${stream.stream?.namespace ?? ""}-${stream.stream?.name}`;
       };
-
       const lookupConnectionValuesStreamById = connection.syncCatalog.streams.reduce<
         Record<string, AirbyteStreamAndConfiguration>
       >((agg, stream) => {
         agg[getStreamId(stream)] = stream;
         return agg;
       }, {});
-
       const hasUserChangesInEnabledStreamsRequiringReset = values.syncCatalog.streams.some((_stream) => {
         const formStream = structuredClone(_stream);
         const connectionStream = structuredClone(lookupConnectionValuesStreamById[getStreamId(formStream)]);
@@ -257,6 +255,7 @@ export const ConnectionReplicationHookFormPage: React.FC = () => {
           schema={validationSchema}
           onSubmit={onFormSubmit}
           trackDirtyChanges
+          disabled={mode === "readonly"}
         >
           <FlexContainer direction="column">
             <SchemaChangeMessageHookForm />

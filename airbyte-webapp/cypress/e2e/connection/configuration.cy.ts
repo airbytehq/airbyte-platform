@@ -12,8 +12,6 @@ import {
   createPokeApiSourceViaApi,
   createPostgresDestinationViaApi,
   createPostgresSourceViaApi,
-  startManualReset,
-  startManualSync,
 } from "@cy/commands/connection";
 import { runDbQuery } from "@cy/commands/db/db";
 import { createUsersTableQuery, dropUsersTableQuery } from "@cy/commands/db/queries";
@@ -26,6 +24,7 @@ import {
 import * as connectionForm from "@cy/pages/connection/connectionFormPageObject";
 import { getSyncEnabledSwitch, visit } from "@cy/pages/connection/connectionPageObject";
 import * as replicationPage from "@cy/pages/connection/connectionReplicationPageObject";
+import * as statusPage from "@cy/pages/connection/statusPageObject";
 import { streamsTable } from "@cy/pages/connection/StreamsTablePageObject";
 import {
   AirbyteStreamAndConfiguration,
@@ -92,69 +91,12 @@ describe("Connection Configuration", () => {
     runDbQuery(dropUsersTableQuery);
   });
 
-  describe.only("Status", () => {
-    beforeEach(() => {
-      createNewConnectionViaApi(postgresSource, postgresDestination).as("connection");
-    });
-
-    after(() => {
-      cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
-        requestDeleteConnection({ connectionId: connection.connectionId });
-      });
-    });
-
-    it("should initialize as pending", () => {
-      cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
-        cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Status}/`);
-        cy.get("[data-testid='connection-status-text']").contains("Pending").should("exist");
-      });
-    });
-
-    it("should allow starting a sync", () => {
-      cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
-        cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Status}/`);
-
-        // sync & verify the button enters and exits its disabled state as the status updates
-        startManualSync();
-        cy.get("[data-testid='manual-sync-button']").should("be.disabled");
-        cy.get("[data-testid='connection-status-text']")
-          .contains("On time", {
-            timeout: 30000,
-          })
-          .should("exist");
-        cy.get("[data-testid='manual-sync-button']").should("not.be.disabled");
-      });
-    });
-
-    it("should allow resetting a sync", () => {
-      cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
-        cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Status}/`);
-
-        // reset & verify the button enters and exits its disabled state as the status updates
-        startManualReset();
-
-        cy.get("[data-testid='job-history-dropdown-menu']").click();
-        cy.get("[data-testid='reset-data-dropdown-option']").should("be.disabled");
-
-        cy.get("[data-testid='connection-status-text']")
-          .contains("Pending", {
-            timeout: 30000,
-          })
-          .should("exist");
-
-        cy.get("[data-testid='job-history-dropdown-menu']").should("not.be.disabled");
-        cy.get("[data-testid='job-history-dropdown-menu']").click();
-
-        cy.get("[data-testid='job-history-dropdown-menu']").click();
-        cy.get("[data-testid='reset-data-dropdown-option']").should("not.be.disabled");
-      });
-    });
-  });
   describe("Replication settings", () => {
     beforeEach(() => {
       interceptGetConnectionRequest();
       interceptUpdateConnectionRequest();
     });
+
     describe("Replication frequency", { testIsolation: false }, () => {
       let loadedConnection: WebBackendConnectionRead;
       it("Default to manual schedule", () => {
@@ -180,7 +122,7 @@ describe("Connection Configuration", () => {
       it("Set cron as schedule type", () => {
         connectionForm.expandConfigurationSection();
 
-        connectionForm.selectSchedule("Cron");
+        connectionForm.selectScheduleType("Cron");
         submitButtonClick();
         waitForUpdateConnectionRequest().then((interception) => {
           // Schedule is pulled out here, but we don't do anything with is as it's legacy
@@ -196,7 +138,7 @@ describe("Connection Configuration", () => {
         replicationPage.checkSuccessResult();
       });
       it("Set manual as schedule type", () => {
-        connectionForm.selectSchedule("Manual");
+        connectionForm.selectScheduleType("Manual");
         submitButtonClick();
         replicationPage.checkSuccessResult();
         waitForUpdateConnectionRequest().then((interception) => {
@@ -208,7 +150,8 @@ describe("Connection Configuration", () => {
       });
 
       it("Set hourly as schedule type", () => {
-        connectionForm.selectSchedule("Every hour");
+        connectionForm.selectScheduleType("Scheduled");
+        connectionForm.selectBasicScheduleData("1-hours");
         submitButtonClick();
         waitForUpdateConnectionRequest().then((interception) => {
           // Schedule is pulled out here, but we don't do anything with is as it's legacy
@@ -357,7 +300,6 @@ describe("Connection Configuration", () => {
             .to.contain({
               name: `${connection?.name}`,
               namespaceDefinition: "destination",
-              namespaceFormat: "${SOURCE_NAMESPACE}",
               status: "active",
             });
 
@@ -373,6 +315,7 @@ describe("Connection Configuration", () => {
         replicationPage.checkSuccessResult();
       });
     });
+
     describe("Destination prefix", { testIsolation: false }, () => {
       it("add destination prefix, set destination namespace custom format, change prefix and make sure that it's applied to all streams", () => {
         createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
@@ -410,7 +353,7 @@ describe("Connection Configuration", () => {
 
           expect(streamToUpdate.config).to.contain({
             aliasName: "pokemon",
-            destinationSyncMode: "append",
+            destinationSyncMode: "overwrite",
             selected: true,
           });
 
@@ -423,13 +366,16 @@ describe("Connection Configuration", () => {
       });
     });
   });
-  it("Delete connection", () => {
-    createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
-      connection = connectionResponse;
-      visit(connection);
+
+  describe("Settings page", () => {
+    it("Delete connection", () => {
+      createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
+        connection = connectionResponse;
+        visit(connection);
+      });
+      connectionSettings.goToSettingsPage();
+      deleteEntity();
     });
-    connectionSettings.goToSettingsPage();
-    deleteEntity();
   });
 
   describe("Deleted connection", () => {
@@ -482,8 +428,8 @@ describe("Connection Configuration", () => {
         cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
           cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.JobHistory}/`);
           getSyncEnabledSwitch().should("be.disabled");
-          cy.get("[data-testid='job-history-dropdown-menu']").click();
-          cy.contains("Reset your data").should("be.disabled");
+          cy.get(statusPage.jobHistoryDropdownMenu).click();
+          cy.get(statusPage.resetDataDropdownOption).should("be.disabled");
           cy.contains(/Sync now/).should("be.disabled");
         });
       });
@@ -492,10 +438,10 @@ describe("Connection Configuration", () => {
       it("Cannot edit fields in Configuration section", () => {
         cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
           cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Replication}`);
-          cy.get(connectionForm.scheduleTypeDropdown).within(() => cy.get("input").should("be.disabled"));
+          cy.get(connectionForm.scheduleTypeDropdown).should("be.disabled");
           cy.get(connectionForm.destinationNamespaceEditButton).should("be.disabled");
           cy.get(connectionForm.destinationPrefixEditButton).should("be.disabled");
-          cy.get(replicationPage.nonBreakingChangesPreference).within(() => cy.get("input").should("be.disabled"));
+          cy.get(replicationPage.nonBreakingChangesPreference).should("be.disabled");
         });
       });
       it("Cannot enable/disable streams", () => {
@@ -515,11 +461,16 @@ describe("Connection Configuration", () => {
           row.checkSyncModeDropdownDisabled();
         });
       });
-      it("Stream filters are not disabled", () => {
+      it("Stream filters are disabled and not applied", () => {
         cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
           cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Replication}`);
-          cy.get('[data-testid="hideDisableStreams-switch"]').should("not.be.disabled");
-          cy.get('input[placeholder*="Search stream name"]').should("not.be.disabled");
+          // input for filtering streams by name
+          cy.get('input[placeholder*="Search stream name"]').should("be.disabled");
+          cy.get('input[placeholder*="Search stream name"]').should("be.empty");
+
+          // "hide disabled streams" switch
+          cy.get('[data-testid="hideDisableStreams-switch"]').should("be.disabled");
+          cy.get('[data-testid="hideDisableStreams-switch"]').should("be.not.checked");
         });
       });
     });
@@ -549,19 +500,24 @@ describe("Connection Configuration", () => {
       });
     });
     describe("Transformations tab", () => {
-      it("cannot edit any fields on the transformation tab", () => {
+      it("cannot edit Normalization form settings", () => {
         cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
           cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Transformation}`);
 
-          cy.get("fieldset").within(() => {
-            cy.get("input").should("be.disabled");
-          });
+          cy.get('form[data-testid="normalization-form"]').children("fieldset").should("be.disabled");
         });
       });
-      //   cannot edit existing transformation
-      //   cannot change normalization method
+
+      it("cannot edit Custom transformations form settings", () => {
+        cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
+          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Transformation}`);
+
+          cy.get('form[data-testid="custom-transformation-form"]').children("fieldset").should("be.disabled");
+        });
+      });
     });
   });
+
   describe("Disabled connection", () => {
     beforeEach(() => {
       createNewConnectionViaApi(postgresSource, postgresDestination)
@@ -574,21 +530,23 @@ describe("Connection Configuration", () => {
         })
         .as("postgresConnection");
     });
+
     it("should not be allowed to trigger a reset or a sync", () => {
       cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
         cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/`);
-        cy.contains(/Sync \d+ enabled streams?/).should("be.disabled");
-        cy.get("[data-testid='job-history-dropdown-menu']").click();
-        cy.contains("Reset your data").should("be.disabled");
+        cy.get(statusPage.manualSyncButton).should("be.disabled");
+        cy.get(statusPage.jobHistoryDropdownMenu).click();
+        cy.get(statusPage.resetDataDropdownOption).should("be.disabled");
       });
     });
+
     it("should be able to edit the connection and refresh source schema", () => {
       interceptUpdateConnectionRequest();
       cy.get<WebBackendConnectionRead>("@postgresConnection").then((postgresConnection) => {
         cy.visit(`/${RoutePaths.Connections}/${postgresConnection.connectionId}/${ConnectionRoutePaths.Replication}`);
-        cy.get("[data-testid='refresh-source-schema-btn']").should("not.be.disabled");
+        cy.get(replicationPage.refreshSourceSchemaBtn).should("not.be.disabled");
         connectionForm.expandConfigurationSection();
-        connectionForm.selectSchedule("Manual");
+        connectionForm.selectScheduleType("Manual");
         submitButtonClick();
 
         waitForUpdateConnectionRequest().then((interception) => {

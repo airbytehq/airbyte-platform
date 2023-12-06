@@ -5,7 +5,9 @@ import { Button, ButtonVariant } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { Icon } from "components/ui/Icon";
 
+import { ConnectionStatus } from "core/request/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import styles from "./ConnectionSyncButtons.module.scss";
 import { useConnectionSyncContext } from "./ConnectionSyncContext";
@@ -37,6 +39,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
     jobSyncRunning,
     jobResetRunning,
   } = useConnectionSyncContext();
+  const { mode, connection } = useConnectionFormService();
 
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
@@ -97,7 +100,8 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
           {
             displayName: formatMessage({ id: "connection.resetData" }),
             value: ContextMenuOptions.ResetData,
-            disabled: jobSyncRunning || jobResetRunning,
+            disabled:
+              jobSyncRunning || jobResetRunning || connection.status !== ConnectionStatus.active || mode === "readonly",
             "data-testid": "reset-data-dropdown-option",
           },
         ]}
