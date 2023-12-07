@@ -59,7 +59,7 @@ spec:
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: INTERNAL_API_HOST
+              key: CONFIG_API_HOST
         - name: AIRBYTE_API_HOST
           valueFrom:
             configMapKeyRef:
