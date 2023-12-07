@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.launcher.pipeline
 
+import fixtures.RecordFixtures
 import io.airbyte.config.Configs
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.launcher.ClaimedProcessor
@@ -130,11 +131,11 @@ class LogPathTest {
       val logFile4: File = File.createTempFile("log-path-4", ".txt")
       val logFile5: File = File.createTempFile("log-path-5", ".txt")
       return listOf(
-        LauncherInput("1", "workload-input", mapOf(), logFile1.absolutePath),
-        LauncherInput("2", "workload-input", mapOf(), logFile2.absolutePath),
-        LauncherInput("3", "workload-input", mapOf(), logFile3.absolutePath),
-        LauncherInput("4", "workload-input", mapOf(), logFile4.absolutePath),
-        LauncherInput("5", "workload-input", mapOf(), logFile5.absolutePath),
+        RecordFixtures.launcherInput(workloadId = "1", logPath = logFile1.absolutePath),
+        RecordFixtures.launcherInput(workloadId = "2", logPath = logFile2.absolutePath),
+        RecordFixtures.launcherInput(workloadId = "3", logPath = logFile3.absolutePath),
+        RecordFixtures.launcherInput(workloadId = "4", logPath = logFile4.absolutePath),
+        RecordFixtures.launcherInput(workloadId = "5", logPath = logFile5.absolutePath),
       )
     }
 

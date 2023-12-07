@@ -6,6 +6,7 @@ package io.airbyte.workload.api
 
 import datadog.trace.api.Trace
 import io.airbyte.commons.temporal.queue.TemporalMessageProducer
+import io.airbyte.config.WorkloadType
 import io.airbyte.config.messages.LauncherInputMessage
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Geography
@@ -36,6 +37,8 @@ open class WorkloadService(
     labels: Map<String, String>,
     logPath: String,
     geography: String,
+    mutexKey: String?,
+    workloadType: WorkloadType,
   ) {
     // TODO feature flag geography
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadId) as Map<String, Any>?)
@@ -43,7 +46,11 @@ open class WorkloadService(
     // TODO: We could pass through created_at, but I'm use using system time for now.
     // This may get just replaced by tracing at some point if we manage to set it up properly.
     val startTimeMs = System.currentTimeMillis()
-    messageProducer.publish(queue, LauncherInputMessage(workloadId, workloadInput, labels, logPath, startTimeMs), "wl-create_$workloadId")
+    messageProducer.publish(
+      queue,
+      LauncherInputMessage(workloadId, workloadInput, labels, logPath, mutexKey, workloadType, startTimeMs),
+      "wl-create_$workloadId",
+    )
     metricPublisher.count(
       WorkloadApiMetricMetadata.WORKLOAD_MESSAGE_PUBLISHED.metricName,
       MetricAttribute(WORKLOAD_ID_TAG, workloadId),

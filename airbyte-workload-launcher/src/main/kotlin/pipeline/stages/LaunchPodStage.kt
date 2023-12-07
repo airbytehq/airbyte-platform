@@ -22,7 +22,7 @@ class LaunchPodStage(private val launcher: KubePodClient) : LaunchStage {
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
     val replInput = input.replicationInput!!
 
-    launcher.launchReplication(replInput, input.msg.workloadId, input.msg.labels)
+    launcher.launchReplication(replInput, input.msg)
 
     return input
   }

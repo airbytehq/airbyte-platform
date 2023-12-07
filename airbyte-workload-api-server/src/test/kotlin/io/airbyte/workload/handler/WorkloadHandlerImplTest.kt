@@ -78,7 +78,7 @@ class WorkloadHandlerImplTest {
       "/log/path",
       "US",
       "mutex-this",
-      io.airbyte.workload.api.domain.WorkloadType.SYNC,
+      io.airbyte.config.WorkloadType.SYNC,
     )
     verify {
       workloadRepository.save(
@@ -105,7 +105,7 @@ class WorkloadHandlerImplTest {
   fun `test create workload id conflict`() {
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(true)
     assertThrows<ConflictException> {
-      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.workload.api.domain.WorkloadType.SYNC)
+      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC)
     }
   }
 
@@ -131,7 +131,7 @@ class WorkloadHandlerImplTest {
     assertEquals("/log/path", workloads[0].logPath)
     assertEquals("US", workloads[0].geography)
     assertEquals("mutex-this", workloads[0].mutexKey)
-    assertEquals(io.airbyte.workload.api.domain.WorkloadType.DISCOVER, workloads[0].type)
+    assertEquals(io.airbyte.config.WorkloadType.DISCOVER, workloads[0].type)
   }
 
   @ParameterizedTest

@@ -94,6 +94,8 @@ open class WorkloadApi(
       workloadCreateRequest.labels.associate { it.key to it.value },
       workloadCreateRequest.logPath,
       workloadCreateRequest.geography,
+      workloadCreateRequest.mutexKey,
+      workloadCreateRequest.type,
     )
   }
 

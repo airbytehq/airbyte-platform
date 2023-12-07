@@ -4,12 +4,11 @@
 
 package io.airbyte.workload.launcher.pipeline.stages
 
+import fixtures.RecordFixtures
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
-import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pods.KubePodClient
-import io.airbyte.workload.launcher.pods.PodLabeler
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -18,21 +17,42 @@ import org.junit.jupiter.api.Test
 class EnforceMutexStageTest {
   @Test
   fun `deletes existing pods for mutex key`() {
-    val msgStr = "foo"
     val replInput = ReplicationInput()
+    val mutexKey = "a unique key"
 
     val launcher: KubePodClient = mockk()
     val metricClient: CustomMetricPublisher = mockk()
-    val labeler: PodLabeler = mockk()
     every { launcher.deleteMutexPods(any()) } returns false
 
-    val stage = EnforceMutexStage(launcher, metricClient, labeler)
-    val io = LaunchStageIO(msg = LauncherInput("1", msgStr, mapOf("label_key" to "label_value"), "/log/path"), replicationInput = replInput)
+    val stage = EnforceMutexStage(launcher, metricClient)
+    val io =
+      LaunchStageIO(msg = RecordFixtures.launcherInput(mutexKey = mutexKey), replicationInput = replInput)
 
     val result = stage.applyStage(io)
 
     verify {
-      launcher.deleteMutexPods(replInput)
+      launcher.deleteMutexPods(mutexKey)
+    }
+
+    assert(result.replicationInput == replInput)
+  }
+
+  @Test
+  fun `noops if mutex key not present`() {
+    val replInput = ReplicationInput()
+
+    val launcher: KubePodClient = mockk()
+    val metricClient: CustomMetricPublisher = mockk()
+    every { launcher.deleteMutexPods(any()) } returns false
+
+    val stage = EnforceMutexStage(launcher, metricClient)
+    val io =
+      LaunchStageIO(msg = RecordFixtures.launcherInput(mutexKey = null), replicationInput = replInput)
+
+    val result = stage.applyStage(io)
+
+    verify(exactly = 0) {
+      launcher.deleteMutexPods(any())
     }
 
     assert(result.replicationInput == replInput)

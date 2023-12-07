@@ -48,7 +48,6 @@ class PayloadKubeInputMapperTest {
         customSelectors,
       )
     val input: ReplicationInput = mockk()
-    val workloadId = "31415"
 
     mockkStatic("io.airbyte.workload.launcher.model.ReplicationInputExtensionsKt")
     val jobId = "415"
@@ -69,16 +68,16 @@ class PayloadKubeInputMapperTest {
     val orchestratorLabels = mapOf("orchestrator" to "labels")
     val sourceLabels = mapOf("source" to "labels")
     val destinationLabels = mapOf("dest" to "labels")
-    val passThroughLabels = mapOf("pass through" to "labels")
-    every { labeler.getOrchestratorLabels(input, workloadId, passThroughLabels) } returns orchestratorLabels
-    every { labeler.getSourceLabels(input, workloadId, passThroughLabels) } returns sourceLabels
-    every { labeler.getDestinationLabels(input, workloadId, passThroughLabels) } returns destinationLabels
+    val sharedLabels = mapOf("pass through" to "labels")
+    every { labeler.getOrchestratorLabels() } returns orchestratorLabels
+    every { labeler.getSourceLabels() } returns sourceLabels
+    every { labeler.getDestinationLabels() } returns destinationLabels
 
-    val result = mapper.toKubeInput(input, workloadId, passThroughLabels)
+    val result = mapper.toKubeInput(input, sharedLabels)
 
-    assert(result.orchestratorLabels == orchestratorLabels)
-    assert(result.sourceLabels == sourceLabels)
-    assert(result.destinationLabels == destinationLabels)
+    assert(result.orchestratorLabels == orchestratorLabels + sharedLabels)
+    assert(result.sourceLabels == sourceLabels + sharedLabels)
+    assert(result.destinationLabels == destinationLabels + sharedLabels)
     assert(result.nodeSelectors == if (customConnector) customSelectors else selectors)
     assert(result.kubePodInfo == KubePodInfo(namespace, "orchestrator-repl-job-415-attempt-7654", containerInfo))
     assert(

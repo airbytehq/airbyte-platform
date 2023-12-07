@@ -10,7 +10,6 @@ import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pods.KubePodClient
-import io.airbyte.workload.launcher.pods.PodLabeler
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -27,21 +26,29 @@ private val logger = KotlinLogging.logger {}
 class EnforceMutexStage(
   private val launcher: KubePodClient,
   private val metricPublisher: CustomMetricPublisher,
-  private val labeler: PodLabeler,
 ) : LaunchStage {
   @Trace(operationName = LAUNCH_PIPELINE_STAGE_OPERATION_NAME)
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
-    val replInput = input.replicationInput!!
+    val workloadId = input.msg.workloadId
+    val key = input.msg.mutexKey
 
-    val deleted = launcher.deleteMutexPods(replInput)
+    if (key == null) {
+      logger.info { "No mutex key specified for workload: $workloadId. Continuing..." }
+      return input
+    }
+
+    logger.info { "Mutex key: $key specified for workload: $workloadId. Attempting to delete existing pods..." }
+
+    val deleted = launcher.deleteMutexPods(key)
     if (deleted) {
-      val key = labeler.getMutexKey(replInput)
-      logger.info { "Existing pods for key: $key deleted." }
+      logger.info { "Existing pods for mutex key: $key deleted." }
       metricPublisher.count(
         WorkloadLauncherMetricMetadata.PODS_DELETED_FOR_MUTEX_KEY,
         MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId),
         MetricAttribute(MUTEX_KEY_TAG, key),
       )
+    } else {
+      logger.info { "Mutex key: $key specified for workload: $workloadId found no existing pods. Continuing..." }
     }
 
     return input

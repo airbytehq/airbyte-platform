@@ -28,6 +28,8 @@ class LauncherMessageConsumer(
         workloadInput = input.workloadInput,
         labels = input.labels,
         logPath = input.logPath,
+        mutexKey = input.mutexKey,
+        workloadType = input.workloadType,
         startTimeMs = input.startTimeMs,
       ),
     )

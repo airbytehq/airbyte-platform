@@ -4,9 +4,9 @@
 
 package io.airbyte.workload.launcher.pipeline.stages
 
+import fixtures.RecordFixtures
 import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.fixtures.SharedMocks.Companion.metricPublisher
-import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.mockk.every
 import io.mockk.mockk
@@ -26,7 +26,7 @@ class ClaimStageTest {
     } returns true
 
     val claimStage = ClaimStage(workloadApiClient, metricPublisher)
-    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
+    val originalInput = LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
     val outputFromClaimStage = claimStage.applyStage(originalInput)
 
     verify { workloadApiClient.claim(workloadId) }
@@ -46,7 +46,7 @@ class ClaimStageTest {
     } returns false
 
     val claimStage = ClaimStage(workloadApiClient, metricPublisher)
-    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
+    val originalInput = LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
     val outputFromClaimStage = claimStage.applyStage(originalInput)
 
     verify { workloadApiClient.claim(workloadId) }

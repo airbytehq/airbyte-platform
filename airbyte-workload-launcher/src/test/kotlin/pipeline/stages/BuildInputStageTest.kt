@@ -5,10 +5,10 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
 import com.fasterxml.jackson.databind.node.POJONode
+import fixtures.RecordFixtures
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.models.ReplicationActivityInput
-import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.serde.PayloadDeserializer
 import io.mockk.every
@@ -38,7 +38,7 @@ class BuildInputStageTest {
         replicationInputHydrator,
         deserializer,
       )
-    val io = LaunchStageIO(msg = LauncherInput("1", msgStr, mapOf("label_key" to "label_value"), "/log/path"))
+    val io = LaunchStageIO(msg = RecordFixtures.launcherInput("1", msgStr, mapOf("label_key" to "label_value"), "/log/path"))
 
     val result = stage.applyStage(io)
 

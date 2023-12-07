@@ -4,8 +4,8 @@
 
 package io.airbyte.workload.launcher.pipeline.stages
 
+import fixtures.RecordFixtures
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pods.KubePodClient
 import io.mockk.every
@@ -17,21 +17,20 @@ import java.util.UUID
 class LaunchPodStageTest {
   @Test
   fun `launches replication`() {
-    val msgStr = "foo"
     val replInput = ReplicationInput()
 
     val launcher: KubePodClient = mockk()
-    every { launcher.launchReplication(any(), any(), any()) } returns Unit
+    every { launcher.launchReplication(any(), any()) } returns Unit
 
     val stage = LaunchPodStage(launcher)
     val workloadId = UUID.randomUUID().toString()
-    val labels = mapOf("label_key" to "label_value")
-    val io = LaunchStageIO(msg = LauncherInput(workloadId, msgStr, labels, "/log/path"), replicationInput = replInput)
+    val msg = RecordFixtures.launcherInput(workloadId)
+    val io = LaunchStageIO(msg = msg, replicationInput = replInput)
 
     val result = stage.applyStage(io)
 
     verify {
-      launcher.launchReplication(replInput, workloadId, labels)
+      launcher.launchReplication(replInput, msg)
     }
 
     assert(result.replicationInput == replInput)

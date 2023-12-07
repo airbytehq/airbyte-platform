@@ -4,9 +4,9 @@
 
 package io.airbyte.workload.launcher.pipeline.stages
 
+import fixtures.RecordFixtures
 import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.fixtures.SharedMocks.Companion.metricPublisher
-import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pods.KubePodClient
 import io.mockk.every
@@ -37,7 +37,7 @@ class CheckStatusStageTest {
 
     val checkStatusStage = CheckStatusStage(workloadApiClient, kubernetesClient, metricPublisher)
 
-    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
+    val originalInput = LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
 
     verify { workloadApiClient.updateStatusToRunning(workloadId) }
@@ -58,7 +58,7 @@ class CheckStatusStageTest {
 
     val checkStatusStage = CheckStatusStage(workloadApiClient, kubernetesClient, metricPublisher)
 
-    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
+    val originalInput = LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
 
     verify(exactly = 0) { workloadApiClient.updateStatusToRunning(workloadId) }
@@ -85,7 +85,7 @@ class CheckStatusStageTest {
 
     val checkStatusStage = CheckStatusStage(workloadApiClient, kubernetesClient, metricPublisher)
 
-    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
+    val originalInput = LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
 
     assertDoesNotThrow { checkStatusStage.applyStage(originalInput) }
   }
@@ -109,7 +109,7 @@ class CheckStatusStageTest {
 
     val checkStatusStage = CheckStatusStage(workloadApiClient, kubernetesClient, metricPublisher)
 
-    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
+    val originalInput = LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
 
     assertThrows<Exception> { checkStatusStage.applyStage(originalInput) }
   }

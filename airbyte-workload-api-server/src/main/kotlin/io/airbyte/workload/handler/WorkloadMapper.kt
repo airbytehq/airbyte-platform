@@ -10,7 +10,7 @@ typealias DomainWorkload = Workload
 typealias ApiWorkload = io.airbyte.workload.api.domain.Workload
 typealias DomainWorkloadLabel = WorkloadLabel
 typealias ApiWorkloadLabel = io.airbyte.workload.api.domain.WorkloadLabel
-typealias ApiWorkloadType = io.airbyte.workload.api.domain.WorkloadType
+typealias ApiWorkloadType = io.airbyte.config.WorkloadType
 
 fun ApiWorkloadStatus.toDomain(): WorkloadStatus {
   return when (this) {

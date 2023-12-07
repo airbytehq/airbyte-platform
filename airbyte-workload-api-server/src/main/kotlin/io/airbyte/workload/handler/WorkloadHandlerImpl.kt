@@ -1,8 +1,8 @@
 package io.airbyte.workload.handler
 
+import io.airbyte.config.WorkloadType
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
-import io.airbyte.workload.api.domain.WorkloadType
 import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException

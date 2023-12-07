@@ -1,4 +1,4 @@
-package io.airbyte.workload.api.domain
+package io.airbyte.config
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
