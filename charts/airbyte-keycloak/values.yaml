@@ -6,7 +6,9 @@
 ##  database.host Hostname of database
 ##  database.port Database port
 global:
+  # serviceAccountName -- Service Account name override
   serviceAccountName: placeholderServiceAccount
+  # -- airbyte deployment mode
   deploymentMode: oss
   secretName: ""
   database:

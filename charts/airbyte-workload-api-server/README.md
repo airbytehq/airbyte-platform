@@ -1,8 +1,8 @@
-# server
+# workload-api-server
 
 ![Version: 0.50.4](https://img.shields.io/badge/Version-0.50.4-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: dev](https://img.shields.io/badge/AppVersion-dev-informational?style=flat-square)
 
-Helm chart to deploy airbyte-server
+Helm chart to deploy the workload-api service
 
 ## Requirements
 
@@ -19,7 +19,7 @@ Helm chart to deploy airbyte-server
 | debug.enabled | bool | `false` |  |
 | debug.remoteDebugPort | int | `5005` |  |
 | deploymentStrategyType | string | `"Recreate"` |  |
-| enabled | bool | `true` |  |
+| enabled | bool | `false` |  |
 | env_vars | object | `{}` |  |
 | extraContainers | list | `[]` |  |
 | extraEnv | list | `[]` |  |
@@ -57,7 +57,12 @@ Helm chart to deploy airbyte-server
 | global.secretName | string | `""` |  |
 | global.serviceAccountName | string | `"placeholderServiceAccount"` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
-| image.repository | string | `"airbyte/server"` |  |
+| image.repository | string | `"airbyte/workload-api-server"` |  |
+| ingress.annotations | object | `{}` |  |
+| ingress.className | string | `""` |  |
+| ingress.enabled | bool | `false` |  |
+| ingress.hosts | list | `[]` |  |
+| ingress.tls | list | `[]` |  |
 | livenessProbe.enabled | bool | `true` |  |
 | livenessProbe.failureThreshold | int | `3` |  |
 | livenessProbe.initialDelaySeconds | int | `60` |  |
@@ -79,7 +84,7 @@ Helm chart to deploy airbyte-server
 | resources.requests | object | `{}` |  |
 | secrets | object | `{}` |  |
 | service.annotations | object | `{}` |  |
-| service.port | int | `8001` |  |
+| service.port | int | `8007` |  |
 | service.type | string | `"ClusterIP"` |  |
 | tolerations | list | `[]` |  |
 
