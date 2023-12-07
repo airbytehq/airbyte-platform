@@ -10,6 +10,7 @@ import { getFrequencyFromScheduleData, Action, Namespace, useAnalyticsService } 
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import styles from "./EnabledControl.module.scss";
+import { FreeHistoricalSyncIndicator } from "./FreeHistoricalSyncIndicator";
 
 interface EnabledControlProps {
   disabled?: boolean;
@@ -52,6 +53,7 @@ export const EnabledControl: React.FC<EnabledControlProps> = ({ disabled }) => {
 
   return (
     <div className={styles.container} data-testid="enabledControl">
+      <FreeHistoricalSyncIndicator />
       <label
         htmlFor="toggle-enabled-source"
         className={classNames(styles.label, { [styles.disabled]: isSwitchDisabled })}

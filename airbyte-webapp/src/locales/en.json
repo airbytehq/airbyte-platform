@@ -1,4 +1,5 @@
 {
+  "general.unicodeBullet": "•",
   "webapp.cannotReachServer": "Cannot reach server. The server may still be starting up.",
   "notifications.error.health": "Cannot reach server",
   "notifications.error.somethingWentWrong": "Something went wrong",
@@ -501,6 +502,9 @@
   "connection.updateSchema.noDiff": "No changes were detected in the source schema.",
   "connection.enable.creditsProblem": "You're out of credits! Add more to re-enable your sync.",
   "connection.enable.creditsProblem.cta": "Add credits",
+  "connection.freeHistoricalSyncs.message.initial": "Free syncs for 7 days",
+  "connection.freeHistoricalSyncs.message": "{count, plural, one {Free syncs for 1 more day} other {Free syncs for # more days}}",
+  "connection.freeHistoricalSyncs.tooltip": "This connection is free to sync for the first 7 days.",
 
   "connection.catalogTree.sourceDefined": "'<source defined>",
   "connection.catalogTree.sourceSchema": "'<source schema>",
