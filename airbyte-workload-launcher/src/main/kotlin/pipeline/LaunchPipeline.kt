@@ -37,6 +37,7 @@ class LaunchPipeline(
   private val metricPublisher: CustomMetricPublisher,
   private val ctxFactory: LogContextFactory,
 ) {
+  @Trace(operationName = LAUNCH_PIPELINE_OPERATION_NAME)
   fun accept(msg: LauncherInput) {
     metricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_RECEIVED, MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId))
     buildPipeline(msg)
@@ -44,7 +45,6 @@ class LaunchPipeline(
       .subscribe()
   }
 
-  @Trace(operationName = LAUNCH_PIPELINE_OPERATION_NAME)
   fun buildPipeline(msg: LauncherInput): Mono<LaunchStageIO> {
     addTagsToTrace(msg)
     val loggingCtx = ctxFactory.create(msg)

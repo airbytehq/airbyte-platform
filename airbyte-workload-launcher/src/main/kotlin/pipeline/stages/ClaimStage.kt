@@ -4,11 +4,9 @@
 
 package io.airbyte.workload.launcher.pipeline.stages
 
-import datadog.trace.api.Trace
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
-import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_PIPELINE_STAGE_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_ID_TAG
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
@@ -30,7 +28,6 @@ class ClaimStage(
   private val apiClient: WorkloadApiClient,
   private val metricPublisher: CustomMetricPublisher,
 ) : LaunchStage {
-  @Trace(operationName = LAUNCH_PIPELINE_STAGE_OPERATION_NAME)
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
     val claimed = apiClient.claim(input.msg.workloadId)
 

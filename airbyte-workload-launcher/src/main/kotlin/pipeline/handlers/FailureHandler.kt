@@ -4,7 +4,6 @@
 
 package io.airbyte.workload.launcher.pipeline.handlers
 
-import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
@@ -34,7 +33,6 @@ class FailureHandler(
   ): Mono<LaunchStageIO> {
     withLoggingContext(io.logCtx) {
       logger.error(e) { ("Pipeline Error") }
-      ApmTraceUtils.addExceptionToTrace(e)
 
       if (e is StageError) {
         apiClient.reportFailure(e)
