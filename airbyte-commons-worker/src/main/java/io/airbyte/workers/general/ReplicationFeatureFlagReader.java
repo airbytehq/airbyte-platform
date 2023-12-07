@@ -8,6 +8,7 @@ import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.DestinationTimeoutEnabled;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.WorkloadHeartbeatRate;
+import io.airbyte.featureflag.WorkloadHeartbeatTimeout;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
 
 /**
@@ -29,11 +30,15 @@ public class ReplicationFeatureFlagReader {
    * @return The flags.
    */
   public ReplicationFeatureFlags readReplicationFeatureFlags() {
-    return new ReplicationFeatureFlags(isDestinationTimeoutEnabled(), getWorkloadHeartbeatRate());
+    return new ReplicationFeatureFlags(isDestinationTimeoutEnabled(), getWorkloadHeartbeatRate(), getWorkloadHeartbeatTimeout());
   }
 
   private int getWorkloadHeartbeatRate() {
     return featureFlagClient.intVariation(WorkloadHeartbeatRate.INSTANCE, flagContext);
+  }
+
+  private int getWorkloadHeartbeatTimeout() {
+    return featureFlagClient.intVariation(WorkloadHeartbeatTimeout.INSTANCE, flagContext);
   }
 
   private boolean isDestinationTimeoutEnabled() {

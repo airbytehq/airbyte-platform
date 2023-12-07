@@ -152,7 +152,14 @@ object FailSyncIfTooBig : Temporary<Boolean>(key = "platform.fail-sync-if-too-bi
 
 object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-default-org-for-new-workspace", default = false)
 
-object WorkloadHeartbeatRate : Permanent<Int>(key = "workload.heartbeat.rate", default = 60)
+object WorkloadHeartbeatRate : Permanent<Int>(key = "workload.heartbeat.rate", default = 5)
+
+object WorkloadPollingInterval : Permanent<Int>(key = "workload.polling.interval", default = 30)
+
+/**
+ * Duration in minutes. This should always be less than the value for [io.airbyte.cron.jobs.WorkloadMonitor.heartbeatTimeout]
+ */
+object WorkloadHeartbeatTimeout : Permanent<Int>(key = "workload.heartbeat.timeout", default = 4)
 
 object UseNewCronScheduleCalculation : Temporary<Boolean>(key = "platform.use-new-cron-schedule-calculation", default = false)
 

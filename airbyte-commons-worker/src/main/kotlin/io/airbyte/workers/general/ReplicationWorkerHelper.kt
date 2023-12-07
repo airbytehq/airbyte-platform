@@ -48,9 +48,12 @@ import io.airbyte.workers.workload.WorkloadIdGenerator
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.http.HttpStatus
 import org.apache.commons.io.FileUtils
+import org.openapitools.client.infrastructure.ClientException
 import java.nio.file.Path
 import java.time.Duration
+import java.time.Instant
 import java.util.Collections
 import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
@@ -107,6 +110,8 @@ class ReplicationWorkerHelper(
   fun getWorkloadStatusHeartbeat(heartbeatInterval: Duration): Runnable {
     return Runnable {
       logger.info { "Starting workload heartbeat" }
+      var lastSuccessfulHeartbeat: Instant = Instant.now()
+      val heartbeatTimeoutDuration: Duration = Duration.ofMinutes(replicationFeatureFlags.workloadHeartbeatTimeoutInMinutes)
       do {
         Thread.sleep(heartbeatInterval.toMillis())
         ctx?.let {
@@ -120,10 +125,23 @@ class ReplicationWorkerHelper(
                 ),
               ),
             )
-          } catch (e: Exception) {
-            logger.error(e) { "Heartbeat failed" }
-            markCancelled()
-            return@Runnable
+            lastSuccessfulHeartbeat = Instant.now()
+          }
+          /**
+           * The WorkloadApi returns responseCode "410" from the heartbeat endpoint if
+           * Workload should stop because it is no longer expected to be running.
+           * See [io.airbyte.workload.api.WorkloadApi.workloadHeartbeat]
+           */ catch (e: Exception) {
+            if (e is ClientException && e.statusCode == HttpStatus.GONE.getCode()) {
+              logger.warn(e) { "Received kill response from API, shutting down heartbeat" }
+              markCancelled()
+              return@Runnable
+            } else if (Duration.between(lastSuccessfulHeartbeat, Instant.now()).compareTo(heartbeatTimeoutDuration) > 0) {
+              logger.warn(e) { "Have not been able to update heartbeat for more than the timeout duration, shutting down heartbeat" }
+              markCancelled()
+              return@Runnable
+            }
+            logger.warn(e) { "Error while trying to heartbeat, re-trying" }
           }
         }
       } while (true)

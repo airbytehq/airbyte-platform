@@ -19,6 +19,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Source;
 import io.airbyte.featureflag.WorkloadHeartbeatRate;
+import io.airbyte.featureflag.WorkloadPollingInterval;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.Worker;
@@ -110,6 +111,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
 
     // Wait until workload reaches a terminal status
     int i = 0;
+    final Duration sleepInterval = Duration.ofSeconds(featureFlagClient.intVariation(WorkloadPollingInterval.INSTANCE, getFeatureFlagContext()));
     while (true) {
       final Workload workload = getWorkload(workloadId);
 
@@ -125,7 +127,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
         }
         i++;
       }
-      sleep(Duration.ofMinutes(1).toMillis());
+      sleep(sleepInterval.toMillis());
     }
 
     return getReplicationOutput(workloadId);
@@ -161,11 +163,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   }
 
   private Optional<String> fetchReplicationOutput(final String outputLocation) {
-    final Context context = new Multi(List.of(
-        new Workspace(input.getWorkspaceId()),
-        new Connection(input.getConnectionId()),
-        new Source(input.getSourceId()),
-        new Destination(input.getDestinationId())));
+    final Context context = getFeatureFlagContext();
     final int workloadHeartbeatRate = featureFlagClient.intVariation(WorkloadHeartbeatRate.INSTANCE, context);
     final Instant cutoffTime = Instant.now().plus(workloadHeartbeatRate, ChronoUnit.SECONDS);
     do {
@@ -175,6 +173,14 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
       }
     } while (Instant.now().isBefore(cutoffTime));
     return Optional.empty();
+  }
+
+  private Context getFeatureFlagContext() {
+    return new Multi(List.of(
+        new Workspace(input.getWorkspaceId()),
+        new Connection(input.getConnectionId()),
+        new Source(input.getSourceId()),
+        new Destination(input.getDestinationId())));
   }
 
   private void createWorkload(final WorkloadCreateRequest workloadCreateRequest) {

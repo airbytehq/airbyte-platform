@@ -23,6 +23,10 @@ import java.time.ZoneOffset
 
 private val logger = KotlinLogging.logger { }
 
+/**
+ * The value for [heartbeatTimeout] should always be greater
+ * than [io.airbyte.featureflag.WorkloadHeartbeatTimeout] value
+ */
 @Singleton
 @Requires(
   property = "airbyte.workload.monitor.enabled",
