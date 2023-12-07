@@ -8,6 +8,7 @@ import dev.failsafe.RetryPolicy
 import io.airbyte.api.client2.generated.AttemptApi
 import io.airbyte.api.client2.generated.ConnectionApi
 import io.airbyte.api.client2.generated.ConnectorBuilderProjectApi
+import io.airbyte.api.client2.generated.DeploymentMetadataApi
 import io.airbyte.api.client2.generated.DestinationApi
 import io.airbyte.api.client2.generated.DestinationDefinitionApi
 import io.airbyte.api.client2.generated.DestinationDefinitionSpecificationApi
@@ -58,6 +59,7 @@ class AirbyteApiClient2
   ) {
     val connectionApi = ConnectionApi(basePath = basePath, client = httpClient, policy = policy)
     val connectorBuilderProjectApi = ConnectorBuilderProjectApi(basePath = basePath, client = httpClient, policy = policy)
+    val deploymentMetadataApi = DeploymentMetadataApi(basePath = basePath, client = httpClient, policy = policy)
     val destinationDefinitionApi = DestinationDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
     val destinationApi = DestinationApi(basePath = basePath, client = httpClient, policy = policy)
     val destinationSpecificationApi = DestinationDefinitionSpecificationApi(basePath = basePath, client = httpClient, policy = policy)

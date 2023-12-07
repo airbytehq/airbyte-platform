@@ -8,14 +8,11 @@ import com.segment.analytics.Analytics
 import com.segment.analytics.messages.AliasMessage
 import com.segment.analytics.messages.IdentifyMessage
 import com.segment.analytics.messages.TrackMessage
+import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.api.client.model.generated.WorkspaceRead
-import io.airbyte.commons.version.AirbyteVersion
-import io.airbyte.config.Configs
-import io.airbyte.config.Configs.WorkerEnvironment
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
-import io.micronaut.context.env.Environment
 import io.micronaut.http.context.ServerRequestContext
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -87,23 +84,24 @@ interface TrackingClient {
  * https://docs.google.com/spreadsheets/d/1lGLmLIhiSPt_-oaEf3CpK-IxXnCO0NRHurvmWldoA2w/edit#gid=1567609168
  */
 @Singleton
-@Requires(property = "airbyte.tracking-strategy", pattern = "(?i)^segment$")
+@Requires(property = "airbyte.tracking.strategy", pattern = "(?i)^segment$")
 @Named("trackingClient")
 class SegmentTrackingClient(
   private val segmentAnalyticsClient: SegmentAnalyticsClient,
   private val trackingIdentityFetcher: TrackingIdentityFetcher,
-  val deployment: Deployment,
+  private val deploymentFetcher: DeploymentFetcher,
   @Value("\${airbyte.role}") val airbyteRole: String,
 ) : TrackingClient {
   override fun identify(workspaceId: UUID) {
+    val deployment: Deployment = deploymentFetcher.get()
     val trackingIdentity: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId)
     val identityMetadata: MutableMap<String, Any?> = HashMap()
 
     // deployment
-    identityMetadata[AIRBYTE_VERSION_KEY] = trackingIdentity.airbyteVersion.serialize()
-    identityMetadata["deployment_mode"] = deployment.deploymentMode
+    identityMetadata[AIRBYTE_VERSION_KEY] = deployment.getDeploymentVersion()
+    identityMetadata["deployment_mode"] = deployment.getDeploymentMode()
     identityMetadata["deployment_env"] = deployment.getDeploymentEnvironment()
-    identityMetadata["deployment_id"] = deployment.deploymentIdSupplier.get()
+    identityMetadata["deployment_id"] = deployment.getDeploymentId().toString()
 
     // workspace (includes info that in the future we would store in an organization)
     identityMetadata["anonymized"] = trackingIdentity.isAnonymousDataCollection()
@@ -152,16 +150,17 @@ class SegmentTrackingClient(
     }
 
     val mapCopy: MutableMap<String, Any?> = java.util.HashMap(metadata)
+    val deployment: Deployment = deploymentFetcher.get()
     val trackingIdentity: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId)
 
     val airbyteSource: Optional<String> = getAirbyteSource()
     mapCopy[AIRBYTE_SOURCE] = airbyteSource.orElse(UNKNOWN)
 
     // Always add these traits.
-    mapCopy[AIRBYTE_VERSION_KEY] = trackingIdentity.airbyteVersion.serialize()
+    mapCopy[AIRBYTE_VERSION_KEY] = deployment.getDeploymentVersion()
     mapCopy[CUSTOMER_ID_KEY] = trackingIdentity.customerId
-    mapCopy[AIRBYTE_DEPLOYMENT_ID] = deployment.deploymentIdSupplier.get()
-    mapCopy[AIRBYTE_DEPLOYMENT_MODE] = deployment.deploymentMode
+    mapCopy[AIRBYTE_DEPLOYMENT_ID] = deployment.getDeploymentId().toString()
+    mapCopy[AIRBYTE_DEPLOYMENT_MODE] = deployment.getDeploymentMode()
     mapCopy[AIRBYTE_TRACKED_AT] = Instant.now().toString()
     if (metadata!!.isNotEmpty()) {
       if (trackingIdentity.email != null) {
@@ -200,22 +199,23 @@ class SegmentTrackingClient(
 }
 
 @Singleton
-@Requires(property = "airbyte.tracking-strategy", pattern = "(?i)^segment$")
-class SegmentAnalyticsClient {
-  val analyticsClient: Analytics = Analytics.builder(SEGMENT_WRITE_KEY).build()
-
-  companion object {
-    const val SEGMENT_WRITE_KEY = "7UDdp5K55CyiGgsauOr2pNNujGvmhaeu"
-  }
+@Requires(property = "airbyte.tracking.strategy", pattern = "(?i)^segment$")
+class SegmentAnalyticsClient(
+  @Value("\${airbyte.tracking.write-key}") writeKey: String,
+) {
+  val analyticsClient: Analytics = Analytics.builder(writeKey).build()
 }
 
 /**
  * Tracking client that logs to STDOUT. Mainly used for local development.
  */
 @Singleton
-@Requires(property = "airbyte.tracking-strategy", pattern = "(?i)^logging$")
+@Requires(property = "airbyte.tracking.strategy", pattern = "(?i)^logging$")
 @Named("trackingClient")
-class LoggingTrackingClient(private val trackingIdentityFetcher: TrackingIdentityFetcher) : TrackingClient {
+class LoggingTrackingClient(
+  private val deploymentFetcher: DeploymentFetcher,
+  private val trackingIdentityFetcher: TrackingIdentityFetcher,
+) : TrackingClient {
   override fun identify(workspaceId: UUID) {
     logger.info { "identify. userId: ${trackingIdentityFetcher.apply(workspaceId).customerId}" }
   }
@@ -241,16 +241,26 @@ class LoggingTrackingClient(private val trackingIdentityFetcher: TrackingIdentit
     action: String?,
     metadata: Map<String?, Any?>?,
   ) {
+    val deployment: Deployment = deploymentFetcher.get()
     val trackingIdentity: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId)
-    val version: String = trackingIdentity.airbyteVersion.serialize()
+    val version: String = deployment.getDeploymentVersion()
     val userId: UUID = trackingIdentity.customerId
     logger.info { "track. version: $version, userId: $userId, action: $action, metadata: $metadata" }
   }
 }
 
 @Singleton
+class DeploymentFetcher(
+  @Named("deploymentSupplier") val deploymentFetcher: Supplier<DeploymentMetadataRead>,
+) : Supplier<Deployment> {
+  override fun get(): Deployment {
+    val deploymentMetadata = deploymentFetcher.get()
+    return Deployment(deploymentMetadata)
+  }
+}
+
+@Singleton
 class TrackingIdentityFetcher(
-  val airbyteVersion: AirbyteVersion,
   @Named("workspaceFetcher") val workspaceFetcher: Function<UUID, WorkspaceRead>,
 ) : Function<UUID, TrackingIdentity> {
   override fun apply(workspaceId: UUID): TrackingIdentity {
@@ -262,7 +272,6 @@ class TrackingIdentityFetcher(
         null
       }
     return TrackingIdentity(
-      airbyteVersion,
       workspaceRead.customerId,
       email,
       workspaceRead.anonymousDataCollection,
@@ -272,26 +281,25 @@ class TrackingIdentityFetcher(
   }
 }
 
-@Singleton
-class Deployment(
-  val deploymentMode: Configs.DeploymentMode,
-  @Named("deploymentIdSupplier") val deploymentIdSupplier: Supplier<UUID>,
-  val deploymentEnvironment: Environment,
-) {
+class Deployment(private val deploymentMetadata: DeploymentMetadataRead) {
+  fun getDeploymentMode(): String {
+    return deploymentMetadata.mode
+  }
+
+  fun getDeploymentId(): UUID {
+    return deploymentMetadata.id
+  }
+
   fun getDeploymentEnvironment(): String {
-    return if (deploymentEnvironment.activeNames.contains(
-        Environment.KUBERNETES,
-      )
-    ) {
-      WorkerEnvironment.KUBERNETES.name
-    } else {
-      WorkerEnvironment.DOCKER.name
-    }
+    return deploymentMetadata.environment
+  }
+
+  fun getDeploymentVersion(): String {
+    return deploymentMetadata.version
   }
 }
 
 data class TrackingIdentity(
-  val airbyteVersion: AirbyteVersion,
   val customerId: UUID,
   val email: String?,
   val anonymousDataCollection: Boolean?,

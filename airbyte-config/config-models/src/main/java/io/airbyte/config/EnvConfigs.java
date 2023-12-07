@@ -58,7 +58,6 @@ public class EnvConfigs implements Configs {
   public static final String LOCAL_DOCKER_MOUNT = "LOCAL_DOCKER_MOUNT";
   public static final String CONFIG_ROOT = "CONFIG_ROOT";
   public static final String DOCKER_NETWORK = "DOCKER_NETWORK";
-  public static final String TRACKING_STRATEGY = "TRACKING_STRATEGY";
   public static final String JOB_ERROR_REPORTING_STRATEGY = "JOB_ERROR_REPORTING_STRATEGY";
   public static final String JOB_ERROR_REPORTING_SENTRY_DSN = "JOB_ERROR_REPORTING_SENTRY_DSN";
   public static final String DEPLOYMENT_MODE = "DEPLOYMENT_MODE";
@@ -912,18 +911,6 @@ public class EnvConfigs implements Configs {
         .splitToStream(tagsString)
         .filter(s -> !s.trim().isBlank())
         .collect(Collectors.toList());
-  }
-
-  @Override
-  public TrackingStrategy getTrackingStrategy() {
-    return getEnvOrDefault(TRACKING_STRATEGY, TrackingStrategy.LOGGING, s -> {
-      try {
-        return TrackingStrategy.valueOf(s.toUpperCase());
-      } catch (final IllegalArgumentException e) {
-        LOGGER.info(s + " not recognized, defaulting to " + TrackingStrategy.LOGGING);
-        return TrackingStrategy.LOGGING;
-      }
-    });
   }
 
   @Override

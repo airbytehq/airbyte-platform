@@ -513,11 +513,6 @@ public interface Configs {
   List<String> getDDConstantTags();
 
   /**
-   * Define whether to publish tracking events to Segment or log-only. Airbyte internal use.
-   */
-  TrackingStrategy getTrackingStrategy();
-
-  /**
    * Define whether to send job failure events to Sentry or log-only. Airbyte internal use.
    */
   JobErrorReportingStrategy getJobErrorReportingStrategy();
@@ -696,14 +691,6 @@ public interface Configs {
   String getCdkEntrypoint();
 
   String getCustomerIoKey();
-
-  /**
-   * Tracking strategy.
-   */
-  enum TrackingStrategy {
-    SEGMENT,
-    LOGGING
-  }
 
   /**
    * Job error reporting strategy.

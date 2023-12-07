@@ -96,6 +96,11 @@ spec:
             secretKeyRef:
               name: {{ .Release.Name }}-airbyte-secrets
               key: DATABASE_USER
+        - name: SEGMENT_WRITE_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: SEGMENT_WRITE_KEY
         - name: TRACKING_STRATEGY
           valueFrom:
             configMapKeyRef:

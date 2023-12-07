@@ -99,7 +99,9 @@ airbyte:
         prefix: ${VAULT_PREFIX:}
         token: ${VAULT_AUTH_TOKEN:}
   role: ${AIRBYTE_ROLE:dev}
-  tracking-strategy: ${TRACKING_STRATEGY:LOGGING}
+  tracking:
+    strategy: ${TRACKING_STRATEGY:LOGGING}
+    write-key: ${SEGMENT_WRITE_KEY:}
   worker:
     kube-job-configs:
       default:

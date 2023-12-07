@@ -35,7 +35,9 @@ airbyte:
   temporal:
     worker:
       ports: ${TEMPORAL_WORKER_PORTS:}
-  tracking-strategy: ${TRACKING_STRATEGY:LOGGING}
+  tracking:
+    strategy: ${TRACKING_STRATEGY:LOGGING}
+    write-key: ${SEGMENT_WRITE_KEY:}
   version: ${AIRBYTE_VERSION}
   workflow:
     failure:

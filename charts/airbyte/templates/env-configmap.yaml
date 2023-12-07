@@ -77,6 +77,7 @@ data:
   S3_LOG_BUCKET_REGION: {{ .Values.global.logs.s3.bucketRegion | quote }}
   S3_MINIO_ENDPOINT: {{ include "airbyte.minio.endpoint" . | quote }}
   S3_PATH_STYLE_ACCESS: {{ include "airbyte.s3PathStyleAccess" . | quote }}
+  SEGMENT_WRITE_KEY: 7UDdp5K55CyiGgsauOr2pNNujGvmhaeu
   STATE_STORAGE_MINIO_BUCKET_NAME: state-storage
   STATE_STORAGE_MINIO_ENDPOINT: {{ include "airbyte.minio.endpoint" . | quote }}
   TEMPORAL_HOST: {{ .Release.Name }}-temporal:{{ .Values.temporal.service.port }}

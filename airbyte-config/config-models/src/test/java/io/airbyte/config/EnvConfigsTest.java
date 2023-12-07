@@ -4,7 +4,12 @@
 
 package io.airbyte.config;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.DeploymentMode;
@@ -159,24 +164,6 @@ class EnvConfigsTest {
 
     envMap.put(EnvConfigs.DOCKER_NETWORK, ABC);
     assertEquals(ABC, config.getDockerNetwork());
-  }
-
-  @Test
-  void testTrackingStrategy() {
-    envMap.put(EnvConfigs.TRACKING_STRATEGY, null);
-    assertEquals(Configs.TrackingStrategy.LOGGING, config.getTrackingStrategy());
-
-    envMap.put(EnvConfigs.TRACKING_STRATEGY, ABC);
-    assertEquals(Configs.TrackingStrategy.LOGGING, config.getTrackingStrategy());
-
-    envMap.put(EnvConfigs.TRACKING_STRATEGY, "logging");
-    assertEquals(Configs.TrackingStrategy.LOGGING, config.getTrackingStrategy());
-
-    envMap.put(EnvConfigs.TRACKING_STRATEGY, "segment");
-    assertEquals(Configs.TrackingStrategy.SEGMENT, config.getTrackingStrategy());
-
-    envMap.put(EnvConfigs.TRACKING_STRATEGY, "LOGGING");
-    assertEquals(Configs.TrackingStrategy.LOGGING, config.getTrackingStrategy());
   }
 
   @Test
