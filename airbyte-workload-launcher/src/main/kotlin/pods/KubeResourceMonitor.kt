@@ -6,7 +6,7 @@ package io.airbyte.workload.launcher.pods
 
 import datadog.trace.api.Trace
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
-import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.KUBERENTES_RESOURCE_MONITOR_NAME
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.KUBERNETES_RESOURCE_MONITOR_NAME
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodList
@@ -40,7 +40,7 @@ class KubeResourceMonitor(
    * check is to determine if the cluster has run out of resources and is
    * unable to run new pods.
    */
-  @Trace(operationName = KUBERENTES_RESOURCE_MONITOR_NAME)
+  @Trace(operationName = KUBERNETES_RESOURCE_MONITOR_NAME)
   @Scheduled(fixedRate = "\${airbyte.kubernetes.resource-check-rate}")
   fun checkKubernetesResources() {
     logger.debug { "Scanning pending pods for any older than $pendingTimeLimitSec seconds..." }
