@@ -13,7 +13,7 @@ import { NamespaceDefinitionType } from "core/request/AirbyteClient";
 
 import { DestinationNamespaceDescription } from "./DestinationNamespaceDescription";
 import styles from "./DestinationNamespaceModal.module.scss";
-import { HookFormConnectionFormValues } from "../ConnectionForm/hookFormConfig";
+import { FormConnectionFormValues } from "../ConnectionForm/formConfig";
 import { LabeledRadioButtonFormControl } from "../ConnectionForm/LabeledRadioButtonFormControl";
 import { namespaceDefinitionSchema, namespaceFormatSchema } from "../ConnectionForm/schema";
 
@@ -51,7 +51,7 @@ const destinationNamespaceValidationSchema = yup.object().shape({
 });
 
 interface DestinationNamespaceModalProps {
-  initialValues: Pick<HookFormConnectionFormValues, "namespaceDefinition" | "namespaceFormat">;
+  initialValues: Pick<FormConnectionFormValues, "namespaceDefinition" | "namespaceFormat">;
   onCloseModal: () => void;
   onSubmit: (values: DestinationNamespaceFormValues) => void;
 }

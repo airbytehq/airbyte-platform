@@ -1,15 +1,16 @@
 import { useMemo } from "react";
 
-import { AirbyteStreamAndConfiguration } from "core/api/types/AirbyteClient";
+import { AirbyteStreamAndConfiguration } from "core/request/AirbyteClient";
+
+import { SyncStreamFieldWithId } from "../../ConnectionForm/formConfig";
 
 export const useStreamFilters = (
   searchString: string,
   hideDisabledStreams: boolean,
-  sortedSchema: AirbyteStreamAndConfiguration[]
-) => {
+  sortedSchema: SyncStreamFieldWithId[]
+): SyncStreamFieldWithId[] => {
   return useMemo(() => {
     const filters: Array<(s: AirbyteStreamAndConfiguration) => boolean> = [
-      (_: AirbyteStreamAndConfiguration) => true,
       searchString
         ? (stream: AirbyteStreamAndConfiguration) =>
             stream.stream?.name.toLowerCase().includes(searchString.toLowerCase())

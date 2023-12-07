@@ -1,1 +1,1 @@
-export { ArrayOfObjectsHookFormEditor } from "./ArrayOfObjectsHookFormEditor";
+export { ArrayOfObjectsEditor } from "./ArrayOfObjectsEditor";

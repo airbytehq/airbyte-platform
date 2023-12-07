@@ -2,10 +2,7 @@ import React, { createContext, useCallback, useContext, useState } from "react";
 import { FieldErrors } from "react-hook-form";
 import { useIntl } from "react-intl";
 
-import {
-  HookFormConnectionFormValues,
-  useInitialHookFormValues,
-} from "components/connection/ConnectionForm/hookFormConfig";
+import { FormConnectionFormValues, useInitialFormValues } from "components/connection/ConnectionForm/formConfig";
 
 import {
   useSourceDefinitionVersion,
@@ -49,14 +46,11 @@ interface ConnectionFormHook {
   destDefinition: DestinationDefinitionRead;
   destDefinitionVersion: ActorDefinitionVersionRead;
   destDefinitionSpecification: DestinationDefinitionSpecificationRead;
-  initialValues: HookFormConnectionFormValues;
+  initialValues: FormConnectionFormValues;
   schemaError?: SchemaError;
   refreshSchema: () => Promise<void>;
   setSubmitError: (submitError: FormError | null) => void;
-  getErrorMessage: (
-    formValid: boolean,
-    errors?: FieldErrors<HookFormConnectionFormValues>
-  ) => string | JSX.Element | null;
+  getErrorMessage: (formValid: boolean, errors?: FieldErrors<FormConnectionFormValues>) => string | JSX.Element | null;
 }
 
 const useConnectionForm = ({
@@ -81,7 +75,7 @@ const useConnectionForm = ({
     connection.destinationId
   );
 
-  const initialValues = useInitialHookFormValues(
+  const initialValues = useInitialFormValues(
     connection,
     destDefinitionVersion,
     destDefinitionSpecification,

@@ -3,9 +3,9 @@ import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
 import { SchemaOf } from "yup";
 
-import { getInitialTransformations } from "components/connection/ConnectionForm/hookFormConfig";
-import { TransformationFieldHookForm } from "components/connection/ConnectionForm/TransformationFieldHookForm";
-import { DbtOperationReadOrCreate, dbtOperationReadOrCreateSchema } from "components/connection/TransformationHookForm";
+import { CustomTransformationsFormField } from "components/connection/ConnectionForm/CustomTransformationsFormField";
+import { getInitialTransformations } from "components/connection/ConnectionForm/formConfig";
+import { DbtOperationReadOrCreate, dbtOperationReadOrCreateSchema } from "components/connection/TransformationForm";
 import { Form } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { CollapsibleCard } from "components/ui/CollapsibleCard";
@@ -77,7 +77,7 @@ export const CustomTransformationsForm: React.FC = () => {
       dataTestId="custom-transformation-form"
     >
       <CollapsibleCard title={<FormattedMessage id="connection.customTransformations" />} collapsible>
-        <TransformationFieldHookForm />
+        <CustomTransformationsFormField />
         <FormSubmissionButtons submitKey="form.saveChanges" />
       </CollapsibleCard>
     </Form>

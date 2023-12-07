@@ -4,7 +4,7 @@ import { act, renderHook } from "@testing-library/react";
 import React from "react";
 import { FieldErrors } from "react-hook-form";
 
-import { HookFormConnectionFormValues } from "components/connection/ConnectionForm/hookFormConfig";
+import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
   mockDestinationDefinition,
@@ -37,7 +37,7 @@ jest.mock("core/api", () => ({
   useDestinationDefinition: () => mockDestinationDefinition,
 }));
 
-describe("ConnectionHookFormService", () => {
+describe("ConnectionFormService", () => {
   const Wrapper: React.FC<React.PropsWithChildren<Parameters<typeof ConnectionFormServiceProvider>[0]>> = ({
     children,
     ...props
@@ -152,7 +152,7 @@ describe("ConnectionHookFormService", () => {
         ),
       });
 
-      const errors: FieldErrors<HookFormConnectionFormValues> = {
+      const errors: FieldErrors<FormConnectionFormValues> = {
         syncCatalog: {
           streams: {
             message: "connectionForm.streams.required",
@@ -172,7 +172,7 @@ describe("ConnectionHookFormService", () => {
         ),
       });
 
-      const errors: FieldErrors<HookFormConnectionFormValues> = {
+      const errors: FieldErrors<FormConnectionFormValues> = {
         syncCatalog: {
           streams: {
             message: "There's an error",

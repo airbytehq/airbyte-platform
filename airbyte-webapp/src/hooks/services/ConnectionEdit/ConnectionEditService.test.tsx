@@ -57,7 +57,7 @@ const utils = {
   }),
 };
 
-describe("ConnectionEditHookFormServiceProvider", () => {
+describe("ConnectionEditServiceProvider", () => {
   const Wrapper: React.FC<React.PropsWithChildren> = ({ children }) => (
     <TestWrapper>
       <ConnectionEditServiceProvider connectionId={mockConnection.connectionId}>

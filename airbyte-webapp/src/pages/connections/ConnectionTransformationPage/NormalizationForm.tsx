@@ -3,8 +3,8 @@ import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
 import { SchemaOf } from "yup";
 
-import { getInitialNormalization } from "components/connection/ConnectionForm/hookFormConfig";
-import { NormalizationHookFormField } from "components/connection/ConnectionForm/NormalizationHookFormField";
+import { getInitialNormalization } from "components/connection/ConnectionForm/formConfig";
+import { NormalizationFormField } from "components/connection/ConnectionForm/NormalizationFormField";
 import { Form } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { CollapsibleCard } from "components/ui/CollapsibleCard";
@@ -101,7 +101,7 @@ export const NormalizationForm: React.FC = () => {
       dataTestId="normalization-form"
     >
       <CollapsibleCard title={<FormattedMessage id="connection.normalization" />} collapsible>
-        <NormalizationHookFormField />
+        <NormalizationFormField />
         <FormSubmissionButtons submitKey="form.saveChanges" />
       </CollapsibleCard>
     </Form>

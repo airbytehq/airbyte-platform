@@ -5,7 +5,7 @@ import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import { LoadingPage } from "components";
 import { HeadTitle } from "components/common/HeadTitle";
 import { MainPageWithScroll } from "components/common/MainPageWithScroll/MainPageWithScroll";
-import { CreateConnectionHookForm } from "components/connection/CreateConnectionHookForm/CreateConnectionHookForm";
+import { CreateConnectionForm } from "components/connection/CreateConnectionForm/CreateConnectionForm";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
@@ -49,7 +49,7 @@ export const ConfigureConnectionPage = () => {
       }
     >
       <Suspense fallback={<LoadingPage />}>
-        <CreateConnectionHookForm />
+        <CreateConnectionForm />
       </Suspense>
     </MainPageWithScroll>
   );

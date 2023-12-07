@@ -11,7 +11,7 @@ import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
-import { HookFormConnectionFormValues } from "../ConnectionForm/hookFormConfig";
+import { FormConnectionFormValues } from "../ConnectionForm/formConfig";
 import { LabeledRadioButtonFormControl } from "../ConnectionForm/LabeledRadioButtonFormControl";
 
 export const enum StreamNameDefinitionValueType {
@@ -63,7 +63,7 @@ const destinationStreamNamesValidationSchema = yup.object().shape({
 });
 
 interface DestinationStreamNamesModalProps {
-  initialValues: Pick<HookFormConnectionFormValues, "prefix">;
+  initialValues: Pick<FormConnectionFormValues, "prefix">;
   onCloseModal: () => void;
   onSubmit: (value: DestinationStreamNamesFormValues) => void;
 }

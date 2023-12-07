@@ -1,4 +1,4 @@
-import { DbtOperationRead } from "components/connection/TransformationHookForm";
+import { DbtOperationRead } from "components/connection/TransformationForm";
 
 import { OperationCreate, OperationRead, OperatorType } from "core/api/types/AirbyteClient";
 
