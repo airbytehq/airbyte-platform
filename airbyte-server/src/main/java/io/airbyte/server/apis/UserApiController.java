@@ -15,6 +15,7 @@ import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationUserReadList;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
+import io.airbyte.api.model.generated.UserEmailRequestBody;
 import io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse;
 import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.api.model.generated.UserRead;
@@ -68,6 +69,14 @@ public class UserApiController implements UserApi {
   @Override
   public UserRead getUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody) {
     return ApiHelper.execute(() -> userHandler.getUserByAuthId(userAuthIdRequestBody));
+  }
+
+  @Post("/get_by_email")
+  @SecuredUser
+  @Secured({ADMIN, SELF})
+  @Override
+  public UserRead getUserByEmail(final UserEmailRequestBody userEmailRequestBody) {
+    return ApiHelper.execute(() -> userHandler.getUserByEmail(userEmailRequestBody));
   }
 
   @Post("/delete")

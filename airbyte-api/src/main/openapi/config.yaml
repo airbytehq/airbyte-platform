@@ -3372,6 +3372,30 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/users/get_by_email:
+    post:
+      tags:
+        - user
+      summary: Find Airbyte user by email
+      operationId: getUserByEmail
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserEmailRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   /v1/users/get_or_create_by_auth_id:
     post:
       tags:
@@ -6799,6 +6823,14 @@ components:
         - authUserId
       properties:
         authUserId:
+          type: string
+
+    UserEmailRequestBody:
+      type: object
+      required:
+        - email
+      properties:
+        email:
           type: string
 
     UserCreate:

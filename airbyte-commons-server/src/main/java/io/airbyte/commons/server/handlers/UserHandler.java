@@ -15,6 +15,7 @@ import io.airbyte.api.model.generated.OrganizationUserReadList;
 import io.airbyte.api.model.generated.PermissionType;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
+import io.airbyte.api.model.generated.UserEmailRequestBody;
 import io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse;
 import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.api.model.generated.UserRead;
@@ -166,6 +167,24 @@ public class UserHandler {
       return buildUserRead(user.get());
     } else {
       throw new ConfigNotFoundException(ConfigSchema.USER, String.format("User not found by auth request: %s", userAuthIdRequestBody));
+    }
+  }
+
+  /**
+   * Retrieves the user by email.
+   *
+   * @param userEmailRequestBody The {@link UserEmailRequestBody} that contains the email.
+   * @return The user associated with the email.
+   * @throws IOException if unable to retrieve the user.
+   * @throws JsonValidationException if unable to retrieve the user.
+   */
+  public UserRead getUserByEmail(final UserEmailRequestBody userEmailRequestBody)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
+    final Optional<User> user = userPersistence.getUserByEmail(userEmailRequestBody.getEmail());
+    if (user.isPresent()) {
+      return buildUserRead(user.get());
+    } else {
+      throw new ConfigNotFoundException(ConfigSchema.USER, String.format("User not found by email request: %s", userEmailRequestBody));
     }
   }
 
