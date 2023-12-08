@@ -19,9 +19,12 @@ import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.airbyte.workload.handler.WorkloadHandler
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.DATA_PLANE_ID_TAG
+import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.GEOGRAPHY_TAG
+import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.MUTEX_KEY_TAG
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_CANCEL_REASON_TAG
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_CANCEL_SOURCE_TAG
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_ID_TAG
+import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_TYPE_TAG
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Status
@@ -77,7 +80,12 @@ open class WorkloadApi(
     ) workloadCreateRequest: WorkloadCreateRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(
-      mutableMapOf(WORKLOAD_ID_TAG to workloadCreateRequest.workloadId) as Map<String, Any>?,
+      mutableMapOf(
+        GEOGRAPHY_TAG to workloadCreateRequest.geography,
+        MUTEX_KEY_TAG to workloadCreateRequest.mutexKey,
+        WORKLOAD_ID_TAG to workloadCreateRequest.workloadId,
+        WORKLOAD_TYPE_TAG to workloadCreateRequest.type,
+      ) as Map<String, Any>?,
     )
     workloadHandler.createWorkload(
       workloadCreateRequest.workloadId,

@@ -14,7 +14,7 @@ import io.airbyte.featureflag.WorkloadApiRouting
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.metrics.CustomMetricPublisher
-import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.QUEUE_NAME
+import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.QUEUE_NAME_TAG
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_ID_TAG
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_PUBLISHER_OPERATION_NAME
 import io.airbyte.workload.metrics.WorkloadApiMetricMetadata
@@ -54,7 +54,7 @@ open class WorkloadService(
     metricPublisher.count(
       WorkloadApiMetricMetadata.WORKLOAD_MESSAGE_PUBLISHED.metricName,
       MetricAttribute(WORKLOAD_ID_TAG, workloadId),
-      MetricAttribute(QUEUE_NAME, queue),
+      MetricAttribute(QUEUE_NAME_TAG, queue),
     )
   }
 
