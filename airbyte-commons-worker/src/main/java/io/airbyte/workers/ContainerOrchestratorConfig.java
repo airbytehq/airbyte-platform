@@ -4,8 +4,10 @@
 
 package io.airbyte.workers;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.workers.storage.DocumentStoreClient;
+import io.airbyte.workers.workload.JobOutputDocStore;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import java.util.Map;
 
@@ -25,6 +27,7 @@ import java.util.Map;
  * @param googleApplicationCredentials gcp creds
  * @param workerEnvironment worker env
  * @param serviceAccount kube service account for orchestrator pod
+ * @param jobOutputDocStore wrapper to save the workload output
  */
 public record ContainerOrchestratorConfig(
                                           String namespace,
@@ -39,4 +42,35 @@ public record ContainerOrchestratorConfig(
                                           String containerOrchestratorImagePullPolicy,
                                           String googleApplicationCredentials,
                                           WorkerEnvironment workerEnvironment,
-                                          String serviceAccount) {}
+                                          String serviceAccount,
+                                          JobOutputDocStore jobOutputDocStore) {
+
+  @VisibleForTesting
+  public ContainerOrchestratorConfig(
+                                     final String namespace,
+                                     final Map<String, String> environmentVariables,
+                                     final String secretName,
+                                     final String secretMountPath,
+                                     final String dataPlaneCredsSecretName,
+                                     final String dataPlaneCredsSecretMountPath,
+                                     final String containerOrchestratorImage,
+                                     final String containerOrchestratorImagePullPolicy,
+                                     final String googleApplicationCredentials,
+                                     final String serviceAccount) {
+    this(namespace,
+        null,
+        environmentVariables,
+        null,
+        secretName,
+        secretMountPath,
+        dataPlaneCredsSecretName,
+        dataPlaneCredsSecretMountPath,
+        containerOrchestratorImage,
+        containerOrchestratorImagePullPolicy,
+        googleApplicationCredentials,
+        null,
+        serviceAccount,
+        null);
+  }
+
+}

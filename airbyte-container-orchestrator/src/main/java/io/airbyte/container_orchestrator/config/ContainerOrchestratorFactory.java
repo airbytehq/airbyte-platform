@@ -129,8 +129,15 @@ class ContainerOrchestratorFactory {
   }
 
   @Singleton
+  @Named("stateDocumentStore")
   DocumentStoreClient documentStoreClient(final EnvConfigs config) {
     return StateClients.create(config.getStateStorageCloudConfigs(), Path.of("/state"));
+  }
+
+  @Singleton
+  @Named("outputDocumentStore")
+  DocumentStoreClient outputDocumentStoreClient(final EnvConfigs config) {
+    return StateClients.create(config.getStateStorageCloudConfigs(), Path.of("/workload/output"));
   }
 
   @Prototype

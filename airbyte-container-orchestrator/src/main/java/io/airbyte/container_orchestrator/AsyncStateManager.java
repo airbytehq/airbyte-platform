@@ -8,6 +8,7 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.process.KubePodInfo;
 import io.airbyte.workers.storage.DocumentStoreClient;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
@@ -37,7 +38,7 @@ public class AsyncStateManager {
   private final DocumentStoreClient documentStoreClient;
   private final KubePodInfo kubePodInfo;
 
-  public AsyncStateManager(final DocumentStoreClient documentStoreClient, final KubePodInfo kubePodInfo) {
+  public AsyncStateManager(@Named("stateDocumentStore") final DocumentStoreClient documentStoreClient, final KubePodInfo kubePodInfo) {
     this.documentStoreClient = documentStoreClient;
     this.kubePodInfo = kubePodInfo;
   }

@@ -45,9 +45,9 @@ import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
 import io.airbyte.workers.orchestrator.OrchestratorNameGenerator;
-import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.sync.WorkloadApiWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
+import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.micronaut.context.annotation.Value;
@@ -84,7 +84,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final String airbyteVersion;
   private final AirbyteConfigValidator airbyteConfigValidator;
   private final AirbyteApiClient airbyteApiClient;
-  private final DocumentStoreClient documentStoreClient;
+  private final JobOutputDocStore jobOutputDocStore;
   private final WorkloadApi workloadApi;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final OrchestratorHandleFactory orchestratorHandleFactory;
@@ -99,7 +99,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  @Value("${airbyte.version}") final String airbyteVersion,
                                  final AirbyteConfigValidator airbyteConfigValidator,
                                  final AirbyteApiClient airbyteApiClient,
-                                 final DocumentStoreClient documentStoreClient,
+                                 final JobOutputDocStore jobOutputDocStore,
                                  final WorkloadApi workloadApi,
                                  final WorkloadIdGenerator workloadIdGenerator,
                                  final OrchestratorHandleFactory orchestratorHandleFactory,
@@ -118,7 +118,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.airbyteVersion = airbyteVersion;
     this.airbyteConfigValidator = airbyteConfigValidator;
     this.airbyteApiClient = airbyteApiClient;
-    this.documentStoreClient = documentStoreClient;
+    this.jobOutputDocStore = jobOutputDocStore;
     this.workloadApi = workloadApi;
     this.workloadIdGenerator = workloadIdGenerator;
     this.orchestratorHandleFactory = orchestratorHandleFactory;
@@ -167,7 +167,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
               replicationActivityInput.getConnectionId(),
               replicationActivityInput.getConnectionContext().getOrganizationId());
           if (featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, ffContext)) {
-            worker = new WorkloadApiWorker(documentStoreClient, orchestratorNameGenerator, airbyteApiClient, workloadApi, workloadIdGenerator,
+            worker = new WorkloadApiWorker(jobOutputDocStore, airbyteApiClient, workloadApi, workloadIdGenerator,
                 replicationActivityInput, featureFlagClient);
           } else {
             final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =
@@ -215,7 +215,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   }
 
   private Context buildUseWorkloadApiFeatureFlagContext(final UUID workspaceId, final UUID connectionId, final UUID organizationId) {
-    List<Context> contexts = new ArrayList<>();
+    final List<Context> contexts = new ArrayList<>();
     contexts.add(new Workspace(workspaceId));
     contexts.add(new Connection(connectionId));
     if (organizationId != null) {

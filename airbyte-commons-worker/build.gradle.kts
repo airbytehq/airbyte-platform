@@ -87,6 +87,7 @@ dependencies {
     testImplementation(libs.bundles.junit)
     testImplementation(libs.assertj.core)
     testImplementation(libs.junit.pioneer)
+    testImplementation(libs.mockk)
 }
 
 tasks.named<Test>("test") {

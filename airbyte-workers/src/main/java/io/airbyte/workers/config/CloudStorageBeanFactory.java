@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.config;
 
+import static io.airbyte.workers.config.ContainerOrchestratorConfigBeanFactory.OUTPUT_STORAGE_PREFIX;
 import static io.airbyte.workers.config.ContainerOrchestratorConfigBeanFactory.STATE_STORAGE_PREFIX;
 
 import io.airbyte.config.storage.CloudStorageConfigs;
@@ -106,14 +107,34 @@ public class CloudStorageBeanFactory {
 
   @Singleton
   @Requires(env = Environment.KUBERNETES)
+  @Named("stateDocumentStore")
   public DocumentStoreClient documentStoreClient(@Named("stateStorageConfigs") final Optional<CloudStorageConfigs> cloudStateStorageConfiguration) {
     return StateClients.create(cloudStateStorageConfiguration.orElse(null), STATE_STORAGE_PREFIX);
   }
 
   @Singleton
   @Requires(notEnv = Environment.KUBERNETES)
+  @Named("stateDocumentStore")
   public DocumentStoreClient documentStoreClient(@Value("${airbyte.workspace.root}") final String workspaceRoot,
                                                  @Value("${airbyte.workspace.docker-mount}") final String workspaceDockerMount) {
+    return new DockerComposeDocumentStoreClient(
+        StringUtils.isNotEmpty(workspaceDockerMount) ? Path.of(workspaceDockerMount) : Path.of(workspaceRoot));
+  }
+
+  @SuppressWarnings("LineLength")
+
+  @Singleton
+  @Requires(env = Environment.KUBERNETES)
+  @Named("outputDocumentStore")
+  public DocumentStoreClient outputDocumentStoreClient(@Named("stateStorageConfigs") final Optional<CloudStorageConfigs> cloudStateStorageConfiguration) {
+    return StateClients.create(cloudStateStorageConfiguration.orElse(null), OUTPUT_STORAGE_PREFIX);
+  }
+
+  @Singleton
+  @Requires(notEnv = Environment.KUBERNETES)
+  @Named("outputDocumentStore")
+  public DocumentStoreClient outputDocumentStoreClient(@Value("${airbyte.workspace.root}") final String workspaceRoot,
+                                                       @Value("${airbyte.workspace.docker-mount}") final String workspaceDockerMount) {
     return new DockerComposeDocumentStoreClient(
         StringUtils.isNotEmpty(workspaceDockerMount) ? Path.of(workspaceDockerMount) : Path.of(workspaceRoot));
   }
