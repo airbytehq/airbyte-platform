@@ -17,4 +17,14 @@ class WorkflowClientFactory {
       WorkflowClientOptions.newBuilder().setNamespace(namespace).build(),
     )
   }
+
+  fun createWorkflowClient(
+    workflowServiceStubs: WorkflowServiceStubs,
+    options: WorkflowClientOptions,
+  ): WorkflowClient {
+    return WorkflowClient.newInstance(
+      workflowServiceStubs,
+      options,
+    )
+  }
 }

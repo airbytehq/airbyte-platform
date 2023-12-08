@@ -29,6 +29,7 @@ dependencies {
     implementation(libs.failsafe.okhttp)
     implementation(libs.jakarta.transaction.api)
     implementation(libs.bundles.temporal)
+    implementation(libs.bundles.temporal.telemetry)
     implementation(libs.log4j.impl)
     implementation(libs.micronaut.jaxrs.server)
     implementation(libs.micronaut.security)

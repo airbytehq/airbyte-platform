@@ -17,6 +17,7 @@ dependencies {
     implementation(libs.bundles.log4j)
     implementation(libs.bundles.micronaut)
     implementation(libs.bundles.temporal)
+    implementation(libs.bundles.temporal.telemetry)
     implementation(libs.failsafe.okhttp)
     implementation(libs.google.cloud.storage)
     implementation(libs.guava)

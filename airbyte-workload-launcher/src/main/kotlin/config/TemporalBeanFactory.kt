@@ -14,7 +14,9 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Property
 import io.temporal.activity.ActivityOptions
 import io.temporal.client.WorkflowClient
+import io.temporal.opentracing.OpenTracingWorkerInterceptor
 import io.temporal.worker.WorkerFactory
+import io.temporal.worker.WorkerFactoryOptions
 import io.temporal.worker.WorkerOptions
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -47,7 +49,11 @@ class TemporalBeanFactory {
     @Named("starterActivities") workloadStarterActivities: QueueActivity<LauncherInputMessage>,
     @Property(name = "airbyte.workload-launcher.parallelism") paralellism: Int,
   ): WorkerFactory {
-    val workerFactory = WorkerFactory.newInstance(workflowClient)
+    val workerFactoryOptions =
+      WorkerFactoryOptions.newBuilder()
+        .setWorkerInterceptors(OpenTracingWorkerInterceptor())
+        .build()
+    val workerFactory = WorkerFactory.newInstance(workflowClient, workerFactoryOptions)
     val worker = workerFactory.newWorker(launcherQueue, WorkerOptions.newBuilder().setMaxConcurrentActivityExecutionSize(paralellism).build())
     worker.registerActivitiesImplementations(workloadStarterActivities)
     worker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(LauncherWorkflowImpl::class.java))

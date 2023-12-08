@@ -156,6 +156,7 @@ stripe = { module = "com.stripe:stripe-java", version = "20.102.0" }
 swagger-annotations = { module = "io.swagger:swagger-annotations", version.ref = "swagger" }
 v3-swagger-annotations = { module = "io.swagger.core.v3:swagger-annotations", version.ref = "v3-swagger" }
 temporal-sdk = { module = "io.temporal:temporal-sdk", version.ref = "temporal" }
+temporal-opentracing = { module = "io.temporal:temporal-opentracing", version.ref = "temporal" }
 temporal-serviceclient = { module = "io.temporal:temporal-serviceclient", version.ref = "temporal" }
 temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "temporal" }
 testcontainers-vault = { module = "org.testcontainers:vault",  version = "1.18.3" }
@@ -224,6 +225,7 @@ micronaut-test-annotation-processor = ["micronaut-inject-java"]
 secret-hydration = ["google-cloud-storage", "google-cloud-storage-secretmanager", "aws-secretsmanager-caching-java", "vault-java-driver"]
 slf4j = ["jul-to-slf4j", "jcl-over-slf4j", "log4j-over-slf4j"]
 temporal = ["temporal-sdk", "temporal-serviceclient"]
+temporal-telemetry = ["temporal-opentracing"]
 
 [plugins]
 node-gradle = { id = "com.github.node-gradle.node", version = "3.4.0" }
