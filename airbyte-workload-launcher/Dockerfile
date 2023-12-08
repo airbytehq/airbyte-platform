@@ -1,4 +1,4 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.3
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.4
 FROM ${JDK_IMAGE} AS airbyte-workload-launcher
 
 # Seems to also be here to enable kubectl cmds (namely, cp)

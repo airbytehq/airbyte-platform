@@ -1,4 +1,4 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.3
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.4
 FROM ${JDK_IMAGE} AS keycloak-setup
 WORKDIR /app
 ADD airbyte-app.tar /app
