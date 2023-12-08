@@ -16,7 +16,6 @@ import { TagInput } from "components/ui/TagInput";
 import { Text } from "components/ui/Text";
 import { TextArea } from "components/ui/TextArea";
 import { Tooltip } from "components/ui/Tooltip";
-import { InfoTooltip } from "components/ui/Tooltip/InfoTooltip";
 
 import { FORM_PATTERN_ERROR } from "core/form/types";
 import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
@@ -158,9 +157,11 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   }, [path, scrollToField, setScrollToField]);
 
   if (props.type === "boolean") {
+    const switchId = `switch-${path}`;
     const labeledSwitch = (
       <LabeledSwitch
         {...field}
+        id={switchId}
         ref={(ref) => {
           elementRef.current = ref;
           // Call handler in here to make sure it handles new refs
@@ -168,9 +169,13 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
         }}
         checked={fieldValue as boolean}
         label={
-          <>
-            {label} {tooltip && <InfoTooltip placement="top-start">{tooltip}</InfoTooltip>}
-          </>
+          <ControlLabels
+            className={styles.switchLabel}
+            label={label}
+            infoTooltipContent={tooltip}
+            optional={optional}
+            htmlFor={switchId}
+          />
         }
         disabled={props.disabled}
       />
