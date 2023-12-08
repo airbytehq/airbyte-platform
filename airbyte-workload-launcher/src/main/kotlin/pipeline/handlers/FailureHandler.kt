@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.launcher.pipeline.handlers
 
+import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
@@ -32,6 +33,8 @@ class FailureHandler(
     io: LaunchStageIO,
   ): Mono<LaunchStageIO> {
     withLoggingContext(io.logCtx) {
+      // Attaching an exception here should tie it to the root span to ensure we mark it as failed.
+      ApmTraceUtils.addExceptionToTrace(e)
       logger.error(e) { ("Pipeline Error") }
 
       if (e is StageError) {
