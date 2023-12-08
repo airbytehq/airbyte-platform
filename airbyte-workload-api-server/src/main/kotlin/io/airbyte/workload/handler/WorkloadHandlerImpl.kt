@@ -179,4 +179,20 @@ class WorkloadHandlerImpl(
       WorkloadStatus.PENDING -> throw InvalidStatusTransitionException("Heartbeat a non claimed workload")
     }
   }
+
+  override fun getWorkloadsRunningCreatedBefore(
+    dataplaneId: List<String>?,
+    workloadType: List<ApiWorkloadType>?,
+    createdBefore: OffsetDateTime?,
+  ): List<Workload> {
+    val domainWorkloads =
+      workloadRepository.searchByTypeStatusAndCreationDate(
+        dataplaneId,
+        listOf(WorkloadStatus.RUNNING),
+        workloadType?.map { it.toDomain() },
+        createdBefore,
+      )
+
+    return domainWorkloads.map { it.toApi() }
+  }
 }

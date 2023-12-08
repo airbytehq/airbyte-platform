@@ -87,6 +87,17 @@ internal class WorkloadRepositoryTest {
       workloads.sortWith(Comparator.comparing(Workload::id))
       return workloads
     }
+
+    private fun sortedSearchByTypeStatusCreatedDate(
+      dataplaneIds: List<String>?,
+      statuses: List<WorkloadStatus>?,
+      types: List<WorkloadType>?,
+      createdBefore: OffsetDateTime?,
+    ): MutableList<Workload> {
+      val workloads = workloadRepo.searchByTypeStatusAndCreationDate(dataplaneIds, statuses, types, createdBefore).toMutableList()
+      workloads.sortWith(Comparator.comparing(Workload::id))
+      return workloads
+    }
   }
 
   @AfterEach
@@ -232,7 +243,7 @@ internal class WorkloadRepositoryTest {
     assertEquals("workload1", resulSearch1[0].id)
     assertEquals("workload2", resulSearch1[1].id)
 
-    val resultSearch2 = sortedSearch(null, java.util.List.of(WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS), null)
+    val resultSearch2 = sortedSearch(null, listOf(WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS), null)
     assertEquals(2, resultSearch2.size)
     assertEquals("workload1", resultSearch2[0].id)
     assertEquals("workload2", resultSearch2[1].id)
@@ -245,14 +256,14 @@ internal class WorkloadRepositoryTest {
     val resultSearch4 =
       sortedSearch(
         listOf("dataplane1", "dataplane2"),
-        java.util.List.of(WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS),
+        listOf(WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS),
         now.plusDays(1),
       )
     assertEquals(2, resultSearch4.size)
     assertEquals("workload1", resultSearch4[0].id)
     assertEquals("workload2", resultSearch4[1].id)
 
-    val resultSearch5 = sortedSearch(null, java.util.List.of(WorkloadStatus.FAILURE), now.plusDays(1))
+    val resultSearch5 = sortedSearch(null, listOf(WorkloadStatus.FAILURE), now.plusDays(1))
     assertEquals(1, resultSearch5.size)
     assertEquals("workload1", resultSearch5[0].id)
 
@@ -260,27 +271,74 @@ internal class WorkloadRepositoryTest {
     assertEquals(1, resultSearch6.size)
     assertEquals("workload1", resultSearch6[0].id)
 
-    val resultSearch7 = sortedSearch(listOf("dataplane1", "dataplane2"), java.util.List.of(WorkloadStatus.FAILURE), null)
+    val resultSearch7 = sortedSearch(listOf("dataplane1", "dataplane2"), listOf(WorkloadStatus.FAILURE), null)
     assertEquals(1, resultSearch7.size)
     assertEquals("workload1", resultSearch7[0].id)
 
-    val resultSearch8 = sortedSearch(listOf("dataplane1"), java.util.List.of(WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS), now.plusDays(1))
+    val resultSearch8 = sortedSearch(listOf("dataplane1"), listOf(WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS), now.plusDays(1))
     assertEquals(1, resultSearch8.size)
     assertEquals("workload1", resultSearch8[0].id)
 
     val resultSearch9 =
       sortedSearch(
         listOf("dataplane1", "dataplane2"),
-        java.util.List.of(WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS),
+        listOf(WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS),
         now.minusDays(1),
       )
     assertEquals(0, resultSearch9.size)
 
-    val resultSearch10 = sortedSearch(listOf("dataplane1", "dataplane2"), java.util.List.of(WorkloadStatus.CLAIMED), now.plusDays(1))
+    val resultSearch10 = sortedSearch(listOf("dataplane1", "dataplane2"), listOf(WorkloadStatus.CLAIMED), now.plusDays(1))
     assertEquals(0, resultSearch10.size)
 
-    val resultSearch11 = sortedSearch(listOf("fakeDataplane"), java.util.List.of(WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS), now.plusDays(1))
+    val resultSearch11 = sortedSearch(listOf("fakeDataplane"), listOf(WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS), now.plusDays(1))
     assertEquals(0, resultSearch11.size)
+  }
+
+  @Test
+  fun `test search by type status and creation date`() {
+    val workload1 =
+      Fixtures.workload(
+        id = "workload1",
+        dataplaneId = "dataplane1",
+        status = WorkloadStatus.RUNNING,
+        geography = "AUTO",
+        type = WorkloadType.CHECK,
+      )
+    val workload2 =
+      Fixtures.workload(
+        id = "workload2",
+        dataplaneId = "dataplane2",
+        status = WorkloadStatus.SUCCESS,
+        geography = "US",
+        type = WorkloadType.SYNC,
+      )
+    workloadRepo.save(workload1)
+    workloadRepo.save(workload2)
+    val now = OffsetDateTime.now()
+    var resultSearch = sortedSearchByTypeStatusCreatedDate(null, null, null, now.plusDays(1))
+    assertEquals(2, resultSearch.size)
+    assertEquals("workload1", resultSearch[0].id)
+    assertEquals("workload2", resultSearch[1].id)
+
+    resultSearch = sortedSearchByTypeStatusCreatedDate(null, null, listOf(WorkloadType.CHECK), now.plusDays(1))
+    assertEquals(1, resultSearch.size)
+    assertEquals("workload1", resultSearch[0].id)
+
+    resultSearch = sortedSearchByTypeStatusCreatedDate(null, null, listOf(WorkloadType.SPEC), now.plusDays(1))
+    assertEquals(0, resultSearch.size)
+
+    resultSearch = sortedSearchByTypeStatusCreatedDate(null, listOf(WorkloadStatus.RUNNING), null, now.plusDays(1))
+    assertEquals(1, resultSearch.size)
+    assertEquals("workload1", resultSearch[0].id)
+
+    resultSearch = sortedSearchByTypeStatusCreatedDate(null, listOf(WorkloadStatus.CANCELLED), null, now.plusDays(1))
+    assertEquals(0, resultSearch.size)
+
+    resultSearch = sortedSearchByTypeStatusCreatedDate(null, null, null, now.minusDays(1))
+    assertEquals(0, resultSearch.size)
+
+    resultSearch = sortedSearchByTypeStatusCreatedDate(null, listOf(WorkloadStatus.RUNNING), listOf(WorkloadType.SYNC), now.plusDays(1))
+    assertEquals(0, resultSearch.size)
   }
 
   object Fixtures {
