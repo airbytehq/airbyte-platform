@@ -1,7 +1,9 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
+import datadog.trace.api.Trace
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.MUTEX_KEY_TAG
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_ID_TAG
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
@@ -11,6 +13,7 @@ import io.airbyte.workload.launcher.pods.KubePodClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import reactor.core.publisher.Mono
 
 private val logger = KotlinLogging.logger {}
 
@@ -25,6 +28,11 @@ class EnforceMutexStage(
   private val launcher: KubePodClient,
   private val metricPublisher: CustomMetricPublisher,
 ) : LaunchStage {
+  @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "EnforceMutexStage")
+  override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
+    return super.apply(input)
+  }
+
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
     val workloadId = input.msg.workloadId
     val key = input.msg.mutexKey
