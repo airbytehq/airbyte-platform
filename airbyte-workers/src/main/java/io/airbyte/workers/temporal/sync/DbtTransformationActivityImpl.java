@@ -47,7 +47,6 @@ import io.airbyte.workers.helpers.SecretPersistenceConfigHelper;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.DbtLauncherWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
-import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.micronaut.context.annotation.Value;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
@@ -79,7 +78,6 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;
   private final MetricClient metricClient;
-  private final WorkloadIdGenerator workloadIdGenerator;
 
   public DbtTransformationActivityImpl(@Named("containerOrchestratorConfig") final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig,
                                        final WorkerConfigsProvider workerConfigsProvider,
@@ -93,8 +91,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
                                        final AirbyteConfigValidator airbyteConfigValidator,
                                        final AirbyteApiClient airbyteApiClient,
                                        final FeatureFlagClient featureFlagClient,
-                                       final MetricClient metricClient,
-                                       final WorkloadIdGenerator workloadIdGenerator) {
+                                       final MetricClient metricClient) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
@@ -108,7 +105,6 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
     this.airbyteApiClient = airbyteApiClient;
     this.featureFlagClient = featureFlagClient;
     this.metricClient = metricClient;
-    this.workloadIdGenerator = workloadIdGenerator;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -206,8 +202,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
         containerOrchestratorConfig.get(),
         serverPort,
         featureFlagClient,
-        metricClient,
-        workloadIdGenerator);
+        metricClient);
   }
 
 }

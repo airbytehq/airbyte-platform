@@ -25,9 +25,9 @@ import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.models.ReplicationActivityInput;
-import io.airbyte.workers.workload.JobOutputDocStore;
+import io.airbyte.workers.orchestrator.OrchestratorNameGenerator;
+import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workers.workload.exception.DocStoreAccessException;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
@@ -56,7 +56,8 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
 
   private static final Logger log = LoggerFactory.getLogger(WorkloadApiWorker.class);
   private static final Set<WorkloadStatus> TERMINAL_STATUSES = Set.of(WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS);
-  private final JobOutputDocStore jobOutputDocStore;
+  private final DocumentStoreClient documentStoreClient;
+  private final OrchestratorNameGenerator orchestratorNameGenerator;
   private final AirbyteApiClient apiClient;
   private final WorkloadApi workloadApi;
   private final WorkloadIdGenerator workloadIdGenerator;
@@ -64,13 +65,15 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   private final FeatureFlagClient featureFlagClient;
   private String workloadId = null;
 
-  public WorkloadApiWorker(final JobOutputDocStore jobOutputDocStore,
+  public WorkloadApiWorker(final DocumentStoreClient documentStoreClient,
+                           final OrchestratorNameGenerator orchestratorNameGenerator,
                            final AirbyteApiClient apiClient,
                            final WorkloadApi workloadApi,
                            final WorkloadIdGenerator workloadIdGenerator,
                            final ReplicationActivityInput input,
                            final FeatureFlagClient featureFlagClient) {
-    this.jobOutputDocStore = jobOutputDocStore;
+    this.documentStoreClient = documentStoreClient;
+    this.orchestratorNameGenerator = orchestratorNameGenerator;
     this.apiClient = apiClient;
     this.workloadApi = workloadApi;
     this.workloadIdGenerator = workloadIdGenerator;
@@ -127,11 +130,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
       sleep(sleepInterval.toMillis());
     }
 
-    try {
-      return getReplicationOutput(workloadId);
-    } catch (final DocStoreAccessException e) {
-      throw new WorkerException("Fail to read the output in the docstore", e);
-    }
+    return getReplicationOutput(workloadId);
   }
 
   @Override
@@ -153,20 +152,22 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     }
   }
 
-  private ReplicationOutput getReplicationOutput(final String workloadId) throws DocStoreAccessException {
+  private ReplicationOutput getReplicationOutput(final String workloadId) {
+    final String outputLocation = orchestratorNameGenerator.getOrchestratorOutputLocation(input.getJobRunConfig().getJobId(),
+        input.getJobRunConfig().getAttemptId());
 
-    final Optional<ReplicationOutput> output = fetchReplicationOutput(workloadId);
+    final Optional<String> output = fetchReplicationOutput(outputLocation);
 
-    log.info("Replication output for workload {} : {}", workloadId, output.orElse(null));
-    return output.orElse(null);
+    log.info("Replication output for workload {} : {}", workloadId, output.orElse(""));
+    return output.map(s -> Jsons.deserialize(s, ReplicationOutput.class)).orElse(null);
   }
 
-  private Optional<ReplicationOutput> fetchReplicationOutput(final String workloadId) throws DocStoreAccessException {
+  private Optional<String> fetchReplicationOutput(final String outputLocation) {
     final Context context = getFeatureFlagContext();
     final int workloadHeartbeatRate = featureFlagClient.intVariation(WorkloadHeartbeatRate.INSTANCE, context);
     final Instant cutoffTime = Instant.now().plus(workloadHeartbeatRate, ChronoUnit.SECONDS);
     do {
-      final Optional<ReplicationOutput> output = jobOutputDocStore.readSyncOutput(workloadId);
+      final Optional<String> output = documentStoreClient.read(outputLocation);
       if (output.isPresent()) {
         return output;
       }
