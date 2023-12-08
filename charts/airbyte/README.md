@@ -1,6 +1,6 @@
 # airbyte
 
-![Version: 0.50.4](https://img.shields.io/badge/Version-0.50.4-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: dev](https://img.shields.io/badge/AppVersion-dev-informational?style=flat-square)
+![Version: 0.50.9](https://img.shields.io/badge/Version-0.50.9-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: dev](https://img.shields.io/badge/AppVersion-dev-informational?style=flat-square)
 
 Helm chart to deploy airbyte
 
@@ -8,18 +8,20 @@ Helm chart to deploy airbyte
 
 | Repository | Name | Version |
 |------------|------|---------|
-| https://airbytehq.github.io/helm-charts/ | airbyte-api-server | 0.50.4 |
-| https://airbytehq.github.io/helm-charts/ | airbyte-bootloader | 0.50.4 |
-| https://airbytehq.github.io/helm-charts/ | connector-builder-server | 0.50.4 |
-| https://airbytehq.github.io/helm-charts/ | cron | 0.50.4 |
-| https://airbytehq.github.io/helm-charts/ | keycloak | 0.50.4 |
-| https://airbytehq.github.io/helm-charts/ | keycloak-setup | 0.50.4 |
-| https://airbytehq.github.io/helm-charts/ | metrics | 0.50.4 |
-| https://airbytehq.github.io/helm-charts/ | pod-sweeper | 0.50.4 |
-| https://airbytehq.github.io/helm-charts/ | server | 0.50.4 |
-| https://airbytehq.github.io/helm-charts/ | temporal | 0.50.4 |
-| https://airbytehq.github.io/helm-charts/ | webapp | 0.50.4 |
-| https://airbytehq.github.io/helm-charts/ | worker | 0.50.4 |
+| https://airbytehq.github.io/helm-charts/ | airbyte-api-server | 0.50.9 |
+| https://airbytehq.github.io/helm-charts/ | airbyte-bootloader | 0.50.9 |
+| https://airbytehq.github.io/helm-charts/ | connector-builder-server | 0.50.9 |
+| https://airbytehq.github.io/helm-charts/ | cron | 0.50.9 |
+| https://airbytehq.github.io/helm-charts/ | keycloak | 0.50.9 |
+| https://airbytehq.github.io/helm-charts/ | keycloak-setup | 0.50.9 |
+| https://airbytehq.github.io/helm-charts/ | metrics | 0.50.9 |
+| https://airbytehq.github.io/helm-charts/ | pod-sweeper | 0.50.9 |
+| https://airbytehq.github.io/helm-charts/ | server | 0.50.9 |
+| https://airbytehq.github.io/helm-charts/ | temporal | 0.50.9 |
+| https://airbytehq.github.io/helm-charts/ | webapp | 0.50.9 |
+| https://airbytehq.github.io/helm-charts/ | worker | 0.50.9 |
+| https://airbytehq.github.io/helm-charts/ | workload-api-server | 0.50.9 |
+| https://airbytehq.github.io/helm-charts/ | workload-launcher | 0.50.9 |
 | https://charts.bitnami.com/bitnami | common | 1.x.x |
 
 ## Values
@@ -122,7 +124,6 @@ Helm chart to deploy airbyte
 | cron.resources.requests | object | `{}` | The requested resources for the cron container |
 | cron.secrets | object | `{}` | Supply additional secrets to container |
 | cron.tolerations | list | `[]` | Tolerations for cron pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ |
-| externalDatabase | object | `{"database":"db-airbyte","existingSecret":"","existingSecretPasswordKey":"","host":"localhost","jdbcUrl":"","password":"","port":5432,"user":"airbyte"}` | External PostgreSQL configuration, All of these values are only used when postgresql.enabled is set to false |
 | externalDatabase.database | string | `"db-airbyte"` | Database name |
 | externalDatabase.existingSecret | string | `""` | Name of an existing secret resource containing the DB password |
 | externalDatabase.existingSecretPasswordKey | string | `""` | Name of an existing secret key containing the DB password |
@@ -132,8 +133,6 @@ Helm chart to deploy airbyte
 | externalDatabase.port | int | `5432` | Database port number |
 | externalDatabase.user | string | `"airbyte"` | non-root Username for Airbyte Database |
 | fullnameOverride | string | `""` | String to fully override airbyte.fullname template with a string |
-| global | object | `{"database":{"host":"example.com","port":"5432","secretName":"","secretValue":""},"deploymentMode":"oss","edition":"community","env_vars":{},"jobs":{"kube":{"annotations":{},"images":{"busybox":"","curl":"","socat":""},"labels":{},"main_container_image_pull_secret":"","nodeSelector":{},"tolerations":[]},"resources":{"limits":{},"requests":{}}},"logs":{"accessKey":{"existingSecret":"","existingSecretKey":"","password":""},"externalMinio":{"enabled":false,"host":"localhost","port":9000},"gcs":{"bucket":"","credentials":"","credentialsJson":""},"minio":{"affinity":{},"enabled":true,"nodeSelector":{},"tolerations":[]},"s3":{"bucket":"airbyte-dev-logs","bucketRegion":"","enabled":false},"secretKey":{"existingSecret":"","existingSecretKey":"","password":""},"storage":{"type":"MINIO"}},"metrics":{"metricClient":"","otelCollectorEndpoint":""},"serviceAccountName":"airbyte-admin","state":{"storage":{"type":"MINIO"}}}` | Global params that are overwritten with umbrella chart |
-| global.database | object | `{"host":"example.com","port":"5432","secretName":"","secretValue":""}` | Database configuration override |
 | global.database.host | string | `"example.com"` | Database host |
 | global.database.port | string | `"5432"` | Database port |
 | global.database.secretName | string | `""` | Secret name where database credentials are stored |
@@ -141,7 +140,6 @@ Helm chart to deploy airbyte
 | global.deploymentMode | string | `"oss"` | Deployment mode, whether or not render the default env vars and volumes in deployment spec |
 | global.edition | string | `"community"` | Edition; "community" or "pro" |
 | global.env_vars | object | `{}` | Environment variables |
-| global.jobs | object | `{"kube":{"annotations":{},"images":{"busybox":"","curl":"","socat":""},"labels":{},"main_container_image_pull_secret":"","nodeSelector":{},"tolerations":[]},"resources":{"limits":{},"requests":{}}}` | Jobs resource requests and limits, see http://kubernetes.io/docs/user-guide/compute-resources/ # We usually recommend not to specify default resources and to leave this as a conscious # choice for the user. This also increases chances charts run on environments with little # resources, such as Minikube. |
 | global.jobs.kube.annotations | object | `{}` | key/value annotations applied to kube jobs |
 | global.jobs.kube.images.busybox | string | `""` | busybox image used by the job pod |
 | global.jobs.kube.images.curl | string | `""` | curl image used by the job pod |
@@ -155,15 +153,12 @@ Helm chart to deploy airbyte
 | global.logs.accessKey.existingSecret | string | `""` | Existing secret |
 | global.logs.accessKey.existingSecretKey | string | `""` | Existing secret key |
 | global.logs.accessKey.password | string | `""` | Logs access key |
-| global.logs.externalMinio | object | `{"enabled":false,"host":"localhost","port":9000}` | External minio configuration, used if logs.storage.type is "MINIO" and enabled |
 | global.logs.externalMinio.enabled | bool | `false` | Enable or disable an external Minio instance |
 | global.logs.externalMinio.host | string | `"localhost"` | External Minio host |
 | global.logs.externalMinio.port | int | `9000` | External Minio port |
-| global.logs.gcs | object | `{"bucket":"","credentials":"","credentialsJson":""}` | Google Cloud Storage (GCS) configuration, used if logs.storage.type is "GCS" |
 | global.logs.gcs.bucket | string | `""` | GCS Bucket Name |
 | global.logs.gcs.credentials | string | `""` | The path the GCS creds are written to. If you are mounting an existing secret to extraVolumes on scheduler, server and worker deployments, then set credentials to the path of the mounted JSON file. |
 | global.logs.gcs.credentialsJson | string | `""` | Base64 encoded json GCP credentials file contents. If credentialsJson is set then credentials auto resolves (to /secrets/gcs-log-creds/gcp.json). |
-| global.logs.minio | object | `{"affinity":{},"enabled":true,"nodeSelector":{},"tolerations":[]}` | Minio configuration, used if logs.storage.type is "MINIO" |
 | global.logs.minio.affinity | object | `{}` | Node affinity and anti-affinity for pod assignment |
 | global.logs.minio.enabled | bool | `true` | Enable or disable the Minio helm chart |
 | global.logs.minio.nodeSelector | object | `{}` | Node labels for pod assignment |
@@ -202,13 +197,16 @@ Helm chart to deploy airbyte
 | metrics.resources.requests | object | `{}` | The requested resources for the metrics-reporter container |
 | metrics.secrets | object | `{}` |  |
 | metrics.tolerations | list | `[]` | Tolerations for metrics-reporter pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ |
+| minio.affinity | object | `{}` | Affinity and anti-affinity for minio pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity |
 | minio.auth.rootPassword | string | `"minio123"` |  |
 | minio.auth.rootUser | string | `"minio"` |  |
 | minio.enabled | bool | `true` |  |
 | minio.endpoint | string | `"http://airbyte-minio-svc:9000"` |  |
 | minio.image.repository | string | `"minio/minio"` | Minio image used by Minio helm chart |
 | minio.image.tag | string | `"RELEASE.2023-11-20T22-40-07Z"` | Minio tag image |
+| minio.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/ # |
 | minio.storage.volumeClaimValue | string | `"500Mi"` |  |
+| minio.tolerations | list | `[]` | Tolerations for minio pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ # |
 | nameOverride | string | `""` | String to partially override airbyte.fullname template with a string (will prepend the release name) |
 | pod-sweeper.affinity | object | `{}` | Affinity and anti-affinity for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity |
 | pod-sweeper.containerSecurityContext | object | `{}` | Security context for the container |
@@ -236,15 +234,18 @@ Helm chart to deploy airbyte
 | pod-sweeper.resources.limits | object | `{}` | The resources limits for the podSweeper container |
 | pod-sweeper.resources.requests | object | `{}` | The requested resources for the podSweeper container |
 | pod-sweeper.tolerations | list | `[]` | Tolerations for pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ |
-| postgresql | object | `{"commonAnnotations":{"helm.sh/hook":"pre-install","helm.sh/hook-weight":"-1"},"containerSecurityContext":{"runAsNonRoot":true},"enabled":true,"existingSecret":"","image":{"repository":"airbyte/db"},"postgresqlDatabase":"db-airbyte","postgresqlPassword":"airbyte","postgresqlUsername":"airbyte"}` | PostgreSQL chart configuration, see https://github.com/bitnami/charts/blob/master/bitnami/postgresql/values.yaml |
+| postgresql.affinity | object | `{}` | Affinity and anti-affinity for postgresql pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity |
 | postgresql.commonAnnotations."helm.sh/hook" | string | `"pre-install"` | It will determine when the hook should be rendered |
 | postgresql.commonAnnotations."helm.sh/hook-weight" | string | `"-1"` | The order in which the hooks are executed. If weight is lower, it has higher priority |
 | postgresql.containerSecurityContext.runAsNonRoot | bool | `true` | Ensures the container will run with a non-root user |
 | postgresql.enabled | bool | `true` | Switch to enable or disable the PostgreSQL helm chart |
 | postgresql.existingSecret | string | `""` | Name of an existing secret containing the PostgreSQL password ('postgresql-password' key) |
+| postgresql.image.repository | string | `"airbyte/db"` |  |
+| postgresql.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/ |
 | postgresql.postgresqlDatabase | string | `"db-airbyte"` | Airbyte Postgresql database |
 | postgresql.postgresqlPassword | string | `"airbyte"` | Airbyte Postgresql password |
 | postgresql.postgresqlUsername | string | `"airbyte"` | Airbyte Postgresql username |
+| postgresql.tolerations | list | `[]` | Tolerations for postgresql pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ |
 | server.affinity | object | `{}` | Affinity and anti-affinity for server pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity |
 | server.containerSecurityContext | object | `{}` | Security context for the container |
 | server.enabled | bool | `true` |  |
@@ -277,7 +278,6 @@ Helm chart to deploy airbyte
 | server.resources.requests | object | `{}` | The requested resources for the server container |
 | server.secrets | object | `{}` | Supply additional secrets to container |
 | server.tolerations | list | `[]` | Tolerations for server pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ |
-| serviceAccount | object | `{"annotations":{},"create":true,"name":"airbyte-admin"}` | Pods Service Account, see https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/ |
 | serviceAccount.annotations | object | `{}` | Annotations for service account. Evaluated as a template. Only used if `create` is `true`. |
 | serviceAccount.create | bool | `true` | Specifies whether a ServiceAccount should be created |
 | serviceAccount.name | string | `"airbyte-admin"` | Name of the service account to use. If not set and create is true, a name is generated using the fullname template. |
@@ -388,7 +388,6 @@ Helm chart to deploy airbyte
 | workload-api-server.env_vars | object | `{}` |  |
 | workload-api-server.image.pullPolicy | string | `"IfNotPresent"` | The pull policy to use for the airbyte-workload-api-server image |
 | workload-api-server.image.repository | string | `"airbyte/workload-api-server"` | The repository to use for the airbyte-workload-api-server image. |
-| workload-api-server.ingress | object | `{"annotations":{},"className":"","enabled":false,"hosts":[],"tls":[]}` | Configure the ingress resource that allows you to access the Airbyte Workload API, see http://kubernetes.io/docs/user-guide/ingress/ |
 | workload-api-server.ingress.annotations | object | `{}` | Ingress annotations done as key:value pairs |
 | workload-api-server.ingress.className | string | `""` | Specifies ingressClassName for clusters >= 1.18+ |
 | workload-api-server.ingress.enabled | bool | `false` | Set to true to enable ingress record generation |

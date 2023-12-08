@@ -1,6 +1,6 @@
 ### TEST FOR RELEASE WORKFLOW
 
-# -- Global params that are overwritten with umbrella chart
+# Global params that are overwritten with umbrella chart
 global:
   # -- Service Account name override
   serviceAccountName: &service-account-name "airbyte-admin"
@@ -12,7 +12,7 @@ global:
   # -- Environment variables
   env_vars: {}
 
-  # -- Database configuration override
+  # Database configuration override
   database:
     # -- Secret name where database credentials are stored
     secretName: ""
@@ -49,7 +49,7 @@ global:
       # Used in conjunction with logs.minio.*, logs.s3.* or logs.gcs.*
       type: "MINIO"
 
-    # -- Minio configuration, used if logs.storage.type is "MINIO"
+    # Minio configuration, used if logs.storage.type is "MINIO"
     minio:
       # -- Enable or disable the Minio helm chart
       enabled: true
@@ -60,7 +60,7 @@ global:
       # -- Node affinity and anti-affinity for pod assignment
       affinity: {}
 
-    # -- External minio configuration, used if logs.storage.type is "MINIO" and enabled
+    # External minio configuration, used if logs.storage.type is "MINIO" and enabled
     externalMinio:
       # -- Enable or disable an external Minio instance
       enabled: false
@@ -78,7 +78,7 @@ global:
       # -- Region where bucket is located (must be empty if using Minio)
       bucketRegion: ""
 
-    # -- Google Cloud Storage (GCS) configuration, used if logs.storage.type is "GCS"
+    # Google Cloud Storage (GCS) configuration, used if logs.storage.type is "GCS"
     gcs:
       # -- GCS Bucket Name
       bucket: ""
@@ -95,10 +95,10 @@ global:
 
     # -- The open-telemetry-collector endpoint that metrics will be sent to
     otelCollectorEndpoint: ""
-  # -- Jobs resource requests and limits, see http://kubernetes.io/docs/user-guide/compute-resources/
-  ## We usually recommend not to specify default resources and to leave this as a conscious
-  ## choice for the user. This also increases chances charts run on environments with little
-  ## resources, such as Minikube.
+  # Jobs resource requests and limits, see http://kubernetes.io/docs/user-guide/compute-resources/
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube.
   jobs:
     resources:
       ## Example:
@@ -157,7 +157,7 @@ nameOverride: ""
 # -- String to fully override airbyte.fullname template with a string
 fullnameOverride: ""
 
-# -- Pods Service Account, see https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
+# Pods Service Account, see https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
 serviceAccount:
   # -- Specifies whether a ServiceAccount should be created
   create: true
@@ -1255,7 +1255,7 @@ temporal:
 
 ## @section Airbyte Database parameters
 
-# -- PostgreSQL chart configuration, see https://github.com/bitnami/charts/blob/master/bitnami/postgresql/values.yaml
+# PostgreSQL chart configuration, see https://github.com/bitnami/charts/blob/master/bitnami/postgresql/values.yaml
 postgresql:
   # -- Switch to enable or disable the PostgreSQL helm chart
   enabled: true
@@ -1291,7 +1291,7 @@ postgresql:
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
-## -- External PostgreSQL configuration, All of these values are only used when postgresql.enabled is set to false
+# External PostgreSQL configuration, All of these values are only used when postgresql.enabled is set to false
 externalDatabase:
   # -- Database host
   host: localhost
@@ -1328,19 +1328,16 @@ minio:
   storage:
     volumeClaimValue: 500Mi
 
-  ##  minio.nodeSelector [object] Node labels for pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   ##
   nodeSelector: {}
 
-  ##  minio.tolerations [array] Tolerations for minio pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  # -- Tolerations for minio pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   ##
   tolerations: []
 
-  ##  minio.affinity [object] Affinity and anti-affinity for minio pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
-  ##
+  # -- Affinity and anti-affinity for minio pod assignment, see
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
 ## @section cron parameters
@@ -1748,7 +1745,7 @@ workload-api-server:
   service:
     port: 8007
 
-  # -- Configure the ingress resource that allows you to access the Airbyte Workload API, see http://kubernetes.io/docs/user-guide/ingress/
+  # Configure the ingress resource that allows you to access the Airbyte Workload API, see http://kubernetes.io/docs/user-guide/ingress/
   ingress:
     # -- Set to true to enable ingress record generation
     enabled: false
