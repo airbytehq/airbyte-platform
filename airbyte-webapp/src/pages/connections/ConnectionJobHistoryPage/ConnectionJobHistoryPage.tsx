@@ -25,7 +25,7 @@ import { useConnectionEditService } from "hooks/services/ConnectionEdit/Connecti
 import styles from "./ConnectionJobHistoryPage.module.scss";
 import JobsList from "./JobsList";
 
-const JOB_PAGE_SIZE_INCREMENT = 25;
+const JOB_PAGE_SIZE_INCREMENT = 15;
 
 export const ConnectionJobHistoryPage: React.FC = () => {
   const { connection } = useConnectionEditService();

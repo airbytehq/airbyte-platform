@@ -44,7 +44,7 @@ export const useListJobsForConnectionStatus = (connectionId: string) => {
     configId: connectionId,
     configTypes: ["sync", "reset_connection"],
     pagination: {
-      pageSize: useExperiment("connection.streamCentricUI.numberOfLogsToLoad", 10),
+      pageSize: useExperiment("connection.streamCentricUI.numberOfLogsToLoad", 15),
     },
   });
 };
