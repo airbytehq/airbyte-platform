@@ -47,6 +47,12 @@ micronaut:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
 
+airbyte:
+  feature-flag:
+    client: ${FEATURE_FLAG_CLIENT:}
+    path: ${FEATURE_FLAG_PATH:/flags}
+    api-key: ${LAUNCHDARKLY_KEY:}
+
 endpoints:
   beans:
     enabled: true
