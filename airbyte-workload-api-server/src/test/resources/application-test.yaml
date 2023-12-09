@@ -29,4 +29,4 @@ jooq:
 
 logger:
   levels:
-    io.micronaut.context.condition: INFO
+    io.micronaut.context.condition: DEBUG

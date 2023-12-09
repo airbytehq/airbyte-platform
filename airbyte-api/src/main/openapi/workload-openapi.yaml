@@ -154,42 +154,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WorkloadListResponse'
-  /api/v1/workload/list_long_running_non_sync:
-    post:
-      tags:
-      - workload
-      summary: Get workloads according to the filters.
-      operationId: workloadListOldNonSync
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LongRunningWorkloadRequest'
-      responses:
-        "200":
-          description: Success
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkloadListResponse'
-  /api/v1/workload/list_long_running_sync:
-    post:
-      tags:
-      - workload
-      summary: Get workloads according to the filters.
-      operationId: workloadListOldSync
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LongRunningWorkloadRequest'
-      responses:
-        "200":
-          description: Success
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkloadListResponse'
   /api/v1/workload/running:
     put:
       tags:
@@ -283,18 +247,6 @@ components:
       properties:
         message:
           type: string
-    LongRunningWorkloadRequest:
-      type: object
-      properties:
-        dataplane:
-          type: array
-          nullable: true
-          items:
-            type: string
-        createdBefore:
-          type: string
-          format: date-time
-          nullable: true
     Workload:
       required:
       - geography

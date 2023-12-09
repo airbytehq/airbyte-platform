@@ -6,7 +6,6 @@ import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workload.api.client.generated.WorkloadApi
-import io.airbyte.workload.api.client.model.generated.LongRunningWorkloadRequest
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadListRequest
@@ -37,8 +36,6 @@ class WorkloadMonitor(
   private val workloadApi: WorkloadApi,
   @Property(name = "airbyte.workload.monitor.claim-timeout") private val claimTimeout: Duration,
   @Property(name = "airbyte.workload.monitor.heartbeat-timeout") private val heartbeatTimeout: Duration,
-  @Property(name = "airbyte.workload.monitor.non-sync-workload-timeout") private val nonSyncWorkloadTimeout: Duration,
-  @Property(name = "airbyte.workload.monitor.sync-workload-timeout") private val syncWorkloadTimeout: Duration,
   @Named("replicationNotStartedTimeout") private val nonStartedTimeout: Duration,
   private val metricClient: MetricClient,
   private val timeProvider: (ZoneId) -> OffsetDateTime = OffsetDateTime::now,
@@ -89,34 +86,6 @@ class WorkloadMonitor(
       )
 
     cancelWorkloads(nonHeartbeatingWorkloads.workloads, "No heartbeat within time limit", "workload-monitor-heartbeat")
-  }
-
-  @Trace
-  @Scheduled(fixedRate = "\${airbyte.workload.monitor.non-sync-age-check-rate}")
-  fun cancelRunningForTooLongNonSyncWorkloads() {
-    logger.info { "Checking for workloads running for too long." }
-    val nonHeartbeatingWorkloads =
-      workloadApi.workloadListOldNonSync(
-        LongRunningWorkloadRequest(
-          createdBefore = timeProvider(ZoneOffset.UTC).minus(nonSyncWorkloadTimeout),
-        ),
-      )
-
-    cancelWorkloads(nonHeartbeatingWorkloads.workloads, "Non sync workload timeout", "workload-monitor-non-sync-timeout")
-  }
-
-  @Trace
-  @Scheduled(fixedRate = "\${airbyte.workload.monitor.sync-age-check-rate}")
-  fun cancelRunningForTooLongSyncWorkloads() {
-    logger.info { "Checking for sync workloads running for too long." }
-    val nonHeartbeatingWorkloads =
-      workloadApi.workloadListOldSync(
-        LongRunningWorkloadRequest(
-          createdBefore = timeProvider(ZoneOffset.UTC).minus(syncWorkloadTimeout),
-        ),
-      )
-
-    cancelWorkloads(nonHeartbeatingWorkloads.workloads, "Sync workload timeout", "workload-monitor-sync-timeout")
   }
 
   private fun cancelWorkloads(

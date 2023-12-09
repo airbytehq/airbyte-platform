@@ -489,26 +489,6 @@ class WorkloadHandlerImplTest {
     verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.SUCCESS)) }
   }
 
-  @Test
-  fun `test get workload running before`() {
-    every { workloadRepository.searchByTypeStatusAndCreationDate(any(), eq(listOf(WorkloadStatus.RUNNING)), any(), any()) }
-      .returns(listOf())
-    val dataplaneIds = listOf("dataplaneId")
-    val workloadTypes = listOf(ApiWorkloadType.CHECK)
-    val createdAt = OffsetDateTime.now()
-
-    workloadHandler.getWorkloadsRunningCreatedBefore(dataplaneIds, workloadTypes, createdAt)
-
-    verify {
-      workloadRepository.searchByTypeStatusAndCreationDate(
-        dataplaneIds,
-        listOf(WorkloadStatus.RUNNING),
-        listOf(WorkloadType.CHECK),
-        createdAt,
-      )
-    }
-  }
-
   object Fixtures {
     val workloadRepository = mockk<WorkloadRepository>()
     const val WORKLOAD_ID = "test"

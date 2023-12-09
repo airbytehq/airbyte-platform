@@ -2,7 +2,6 @@ package io.airbyte.workload.repository
 
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadStatus
-import io.airbyte.workload.repository.domain.WorkloadType
 import io.micronaut.data.annotation.Expandable
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.Join
@@ -26,28 +25,13 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
       WHERE ((:dataplaneIds) IS NULL OR dataplane_id IN (:dataplaneIds))
       AND ((:statuses) IS NULL OR status = ANY(CAST(ARRAY[:statuses] AS workload_status[])))
       AND (CAST(:updatedBefore AS timestamptz) IS NULL OR updated_at < CAST(:updatedBefore AS timestamptz))
+      
       """,
   )
   fun search(
     @Expandable dataplaneIds: List<String>?,
     @Expandable statuses: List<WorkloadStatus>?,
     updatedBefore: OffsetDateTime?,
-  ): List<Workload>
-
-  @Query(
-    """
-      SELECT * FROM workload
-      WHERE ((:dataplaneIds) IS NULL OR dataplane_id IN (:dataplaneIds))
-      AND ((:statuses) IS NULL OR status = ANY(CAST(ARRAY[:statuses] AS workload_status[])))
-      AND ((:types) IS NULL OR type = ANY(CAST(ARRAY[:types] AS workload_type[])))
-      AND (CAST(:createdBefore AS timestamptz) IS NULL OR created_at < CAST(:createdBefore AS timestamptz))
-      """,
-  )
-  fun searchByTypeStatusAndCreationDate(
-    @Expandable dataplaneIds: List<String>?,
-    @Expandable statuses: List<WorkloadStatus>?,
-    @Expandable types: List<WorkloadType>?,
-    createdBefore: OffsetDateTime?,
   ): List<Workload>
 
   fun update(

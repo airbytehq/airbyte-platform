@@ -4,11 +4,9 @@
 
 package io.airbyte.workload.api
 
-import io.airbyte.config.WorkloadType
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.workload.api.domain.ClaimResponse
 import io.airbyte.workload.api.domain.KnownExceptionInfo
-import io.airbyte.workload.api.domain.LongRunningWorkloadRequest
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
 import io.airbyte.workload.api.domain.WorkloadClaimRequest
@@ -370,62 +368,6 @@ open class WorkloadApi(
         workloadListRequest.dataplane,
         workloadListRequest.status,
         workloadListRequest.updatedBefore,
-      ),
-    )
-  }
-
-  @POST
-  @Path("/list_long_running_non_sync")
-  @Consumes("application/json")
-  @Produces("application/json")
-  @Operation(summary = "Get workloads according to the filters.", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "200",
-        description = "Success",
-        content = [Content(schema = Schema(implementation = WorkloadListResponse::class))],
-      ),
-    ],
-  )
-  open fun workloadListOldNonSync(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = LongRunningWorkloadRequest::class))],
-    ) longRunningWorkloadRequest: LongRunningWorkloadRequest,
-  ): WorkloadListResponse {
-    return WorkloadListResponse(
-      workloadHandler.getWorkloadsRunningCreatedBefore(
-        longRunningWorkloadRequest.dataplane,
-        listOf(WorkloadType.CHECK, WorkloadType.DISCOVER, WorkloadType.SPEC),
-        longRunningWorkloadRequest.createdBefore,
-      ),
-    )
-  }
-
-  @POST
-  @Path("/list_long_running_sync")
-  @Consumes("application/json")
-  @Produces("application/json")
-  @Operation(summary = "Get workloads according to the filters.", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "200",
-        description = "Success",
-        content = [Content(schema = Schema(implementation = WorkloadListResponse::class))],
-      ),
-    ],
-  )
-  open fun workloadListOldSync(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = LongRunningWorkloadRequest::class))],
-    ) longRunningWorkloadRequest: LongRunningWorkloadRequest,
-  ): WorkloadListResponse {
-    return WorkloadListResponse(
-      workloadHandler.getWorkloadsRunningCreatedBefore(
-        longRunningWorkloadRequest.dataplane,
-        listOf(WorkloadType.SYNC),
-        longRunningWorkloadRequest.createdBefore,
       ),
     )
   }
