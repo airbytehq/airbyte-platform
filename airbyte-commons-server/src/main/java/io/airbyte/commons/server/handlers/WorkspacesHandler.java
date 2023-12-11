@@ -30,6 +30,7 @@ import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
+import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
@@ -462,6 +463,22 @@ public class WorkspacesHandler {
     configRepository.writeStandardWorkspaceNoSecrets(persistedWorkspace);
 
     return buildWorkspaceReadFromId(workspaceId);
+  }
+
+  @SuppressWarnings("PMD.PreserveStackTrace")
+  public WorkspaceRead updateWorkspaceOrganization(final WorkspaceUpdateOrganization workspaceUpdateOrganization)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final UUID workspaceId = workspaceUpdateOrganization.getWorkspaceId();
+
+    try {
+      final StandardWorkspace persistedWorkspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false);
+      persistedWorkspace
+          .withOrganizationId(workspaceUpdateOrganization.getOrganizationId());
+      workspaceService.writeStandardWorkspaceNoSecrets(persistedWorkspace);
+      return buildWorkspaceReadFromId(workspaceId);
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    }
   }
 
   public void setFeedbackDone(final WorkspaceGiveFeedback workspaceGiveFeedback)

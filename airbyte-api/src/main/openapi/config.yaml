@@ -354,6 +354,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/workspaces/update_organization:
+    post:
+      tags:
+        - workspace
+      summary: Update workspace organization
+      operationId: updateWorkspaceOrganization
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceUpdateOrganization"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/workspaces/tag_feedback_status_as_done:
     post:
       tags:
@@ -4548,6 +4571,16 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         name:
           type: string
+    WorkspaceUpdateOrganization:
+      type: object
+      required:
+        - workspaceId
+        - organizationId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
     WorkspaceUpdate:
       type: object
       description: Used to apply a patch-style update to a workspace, which means that null properties remain unchanged

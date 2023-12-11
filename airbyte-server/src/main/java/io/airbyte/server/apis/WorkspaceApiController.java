@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis;
 
+import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
@@ -27,6 +28,7 @@ import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
+import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.WorkspacesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
@@ -149,6 +151,14 @@ public class WorkspaceApiController implements WorkspaceApi {
   @Override
   public WorkspaceRead updateWorkspaceName(@Body final WorkspaceUpdateName workspaceUpdateName) {
     return ApiHelper.execute(() -> workspacesHandler.updateWorkspaceName(workspaceUpdateName));
+  }
+
+  @Post("/update_organization")
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public WorkspaceRead updateWorkspaceOrganization(@Body final WorkspaceUpdateOrganization workspaceUpdateOrganization) {
+    return ApiHelper.execute(() -> workspacesHandler.updateWorkspaceOrganization(workspaceUpdateOrganization));
   }
 
   @Post("/get_by_connection_id")

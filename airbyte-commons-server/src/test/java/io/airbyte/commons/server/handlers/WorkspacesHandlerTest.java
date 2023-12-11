@@ -38,6 +38,7 @@ import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
+import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.NotificationConverter;
 import io.airbyte.commons.server.converters.NotificationSettingsConverter;
@@ -718,6 +719,41 @@ class WorkspacesHandlerTest {
 
     verify(configRepository).writeStandardWorkspaceNoSecrets(expectedWorkspace);
 
+    assertEquals(expectedWorkspaceRead, actualWorkspaceRead);
+  }
+
+  @Test
+  @DisplayName("Update organization in workspace")
+  void testWorkspaceUpdateOrganization()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    final UUID newOrgId = UUID.randomUUID();
+    final WorkspaceUpdateOrganization workspaceUpdateOrganization = new WorkspaceUpdateOrganization()
+        .workspaceId(workspace.getWorkspaceId())
+        .organizationId(newOrgId);
+    final StandardWorkspace expectedWorkspace = Jsons.clone(workspace).withOrganizationId(newOrgId);
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+        .thenReturn(expectedWorkspace);
+    when(configRepository.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+        .thenReturn(expectedWorkspace);
+    // The same as the original workspace, with only the organization ID updated.
+    final WorkspaceRead expectedWorkspaceRead = new WorkspaceRead()
+        .workspaceId(workspace.getWorkspaceId())
+        .customerId(workspace.getCustomerId())
+        .email(workspace.getEmail())
+        .name(workspace.getName())
+        .slug(workspace.getSlug())
+        .initialSetupComplete(workspace.getInitialSetupComplete())
+        .displaySetupWizard(workspace.getDisplaySetupWizard())
+        .news(workspace.getNews())
+        .anonymousDataCollection(false)
+        .securityUpdates(workspace.getSecurityUpdates())
+        .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
+        .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
+        .defaultGeography(GEOGRAPHY_AUTO)
+        .organizationId(newOrgId);
+
+    final WorkspaceRead actualWorkspaceRead = workspacesHandler.updateWorkspaceOrganization(workspaceUpdateOrganization);
+    verify(workspaceService).writeStandardWorkspaceNoSecrets(expectedWorkspace);
     assertEquals(expectedWorkspaceRead, actualWorkspaceRead);
   }
 
