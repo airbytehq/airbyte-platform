@@ -25,6 +25,8 @@ class WorkloadMonitorTest {
   val claimTimeout = Duration.of(5, ChronoUnit.SECONDS)
   val heartbeatTimeout = Duration.of(6, ChronoUnit.SECONDS)
   val nonStartedTimeout = Duration.of(7, ChronoUnit.SECONDS)
+  val nonSyncTimeout = Duration.of(9, ChronoUnit.MINUTES)
+  val syncTimeout = Duration.of(30, ChronoUnit.DAYS)
 
   lateinit var currentTime: OffsetDateTime
   lateinit var metricClient: MetricClient
@@ -44,6 +46,8 @@ class WorkloadMonitorTest {
         claimTimeout = claimTimeout,
         heartbeatTimeout = heartbeatTimeout,
         nonStartedTimeout = nonStartedTimeout,
+        nonSyncWorkloadTimeout = nonSyncTimeout,
+        syncWorkloadTimeout = syncTimeout,
         metricClient = metricClient,
         timeProvider = { _: ZoneId -> currentTime },
       )
@@ -155,6 +159,80 @@ class WorkloadMonitorTest {
         OssMetricsRegistry.WORKLOADS_CANCEL,
         1,
         MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-heartbeat"),
+        MetricAttribute(MetricTags.STATUS, "fail"),
+      )
+    }
+  }
+
+  @Test
+  fun `test cancel timeout non sync workload`() {
+    val expiredWorkloads = WorkloadListResponse(workloads = listOf(getWorkload("3"), getWorkload("4"), getWorkload("5")))
+    currentTime = OffsetDateTime.now()
+    every { workloadApi.workloadListOldNonSync(any()) } returns expiredWorkloads
+    every { workloadApi.workloadCancel(any()) } returns Unit andThenThrows ServerException() andThen Unit
+
+    workloadMonitor.cancelRunningForTooLongNonSyncWorkloads()
+
+    verifyAll {
+      workloadApi.workloadListOldNonSync(
+        match {
+          it.createdBefore == currentTime.minus(nonSyncTimeout)
+        },
+      )
+      workloadApi.workloadCancel(match { it.workloadId == "3" })
+      workloadApi.workloadCancel(match { it.workloadId == "4" })
+      workloadApi.workloadCancel(match { it.workloadId == "5" })
+    }
+    verify(exactly = 2) {
+      metricClient.count(
+        OssMetricsRegistry.WORKLOADS_CANCEL,
+        1,
+        MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-non-sync-timeout"),
+        MetricAttribute(MetricTags.STATUS, "ok"),
+      )
+    }
+    verify(exactly = 1) {
+      metricClient.count(
+        OssMetricsRegistry.WORKLOADS_CANCEL,
+        1,
+        MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-non-sync-timeout"),
+        MetricAttribute(MetricTags.STATUS, "fail"),
+      )
+    }
+  }
+
+  @Test
+  fun `test cancel timeout sync workload`() {
+    val expiredWorkloads = WorkloadListResponse(workloads = listOf(getWorkload("3"), getWorkload("4"), getWorkload("5")))
+    currentTime = OffsetDateTime.now()
+    every { workloadApi.workloadListOldSync(any()) } returns expiredWorkloads
+    every { workloadApi.workloadCancel(any()) } returns Unit andThenThrows ServerException() andThen Unit
+
+    workloadMonitor.cancelRunningForTooLongSyncWorkloads()
+
+    verifyAll {
+      workloadApi.workloadListOldSync(
+        match {
+          it.createdBefore == currentTime.minus(syncTimeout)
+        },
+      )
+      workloadApi.workloadCancel(match { it.workloadId == "3" })
+      workloadApi.workloadCancel(match { it.workloadId == "4" })
+      workloadApi.workloadCancel(match { it.workloadId == "5" })
+    }
+    verify(exactly = 2) {
+      metricClient.count(
+        OssMetricsRegistry.WORKLOADS_CANCEL,
+        1,
+        MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-sync-timeout"),
+        MetricAttribute(MetricTags.STATUS, "ok"),
+      )
+    }
+    verify(exactly = 1) {
+      metricClient.count(
+        OssMetricsRegistry.WORKLOADS_CANCEL,
+        1,
+        MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-sync-timeout"),
         MetricAttribute(MetricTags.STATUS, "fail"),
       )
     }

@@ -44,4 +44,10 @@ interface WorkloadHandler {
   fun setWorkloadStatusToRunning(workloadId: String)
 
   fun heartbeat(workloadId: String)
+
+  fun getWorkloadsRunningCreatedBefore(
+    dataplaneId: List<String>?,
+    workloadType: List<ApiWorkloadType>?,
+    createdBefore: OffsetDateTime?,
+  ): List<Workload>
 }
