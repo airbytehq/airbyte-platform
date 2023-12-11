@@ -1,6 +1,7 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
 import datadog.trace.api.Trace
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
@@ -18,7 +19,7 @@ private val logger = KotlinLogging.logger {}
  */
 @Singleton
 @Named("launch")
-class LaunchPodStage(private val launcher: KubePodClient) : LaunchStage {
+class LaunchPodStage(private val launcher: KubePodClient, metricPublisher: CustomMetricPublisher) : LaunchStage(metricPublisher) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "LaunchPodStage")
   override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
     return super.apply(input)

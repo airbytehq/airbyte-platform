@@ -4,6 +4,7 @@ import datadog.trace.api.Trace
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.models.ReplicationActivityInput
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
@@ -25,7 +26,8 @@ private val logger = KotlinLogging.logger {}
 class BuildInputStage(
   private val replicationInputHydrator: ReplicationInputHydrator,
   private val deserializer: PayloadDeserializer,
-) : LaunchStage {
+  metricPublisher: CustomMetricPublisher,
+) : LaunchStage(metricPublisher) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "BuildInputStage")
   override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
     return super.apply(input)

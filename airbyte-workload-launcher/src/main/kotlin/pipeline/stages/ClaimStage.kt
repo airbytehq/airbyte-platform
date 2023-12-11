@@ -29,8 +29,8 @@ private val logger = KotlinLogging.logger {}
 @Named("claim")
 class ClaimStage(
   private val apiClient: WorkloadApiClient,
-  private val metricPublisher: CustomMetricPublisher,
-) : LaunchStage {
+  metricPublisher: CustomMetricPublisher,
+) : LaunchStage(metricPublisher) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "ClaimStage")
   override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
     return super.apply(input)

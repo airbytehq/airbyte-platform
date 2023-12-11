@@ -43,6 +43,8 @@ class MeterFilterFactory(
     const val DATA_DOG_SERVICE_TAG = "DD_SERVICE"
     const val DATA_DOG_VERSION_TAG = "DD_VERSION"
     const val DATA_PLANE_ID_TAG = "data_plane_id"
+    const val STAGE_NAME_TAG = "stage_name"
+    const val STATUS_TAG = "status"
     const val WORKLOAD_ID_TAG = "workload_id"
     const val MUTEX_KEY_TAG = "mutex_key"
 
@@ -50,5 +52,7 @@ class MeterFilterFactory(
     const val LAUNCH_PIPELINE_STAGE_OPERATION_NAME = "launch-pipeline-stage"
     const val RESUME_CLAIMED_OPERATION_NAME = "resume_claimed"
     const val KUBERNETES_RESOURCE_MONITOR_NAME = "kubernetes-resource-monitor"
+    const val SUCCESS_STATUS = "ok"
+    const val FAILURE_STATUS = "error"
   }
 }

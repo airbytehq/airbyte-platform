@@ -36,13 +36,17 @@ enum class WorkloadLauncherMetricMetadata(
     "workload_claims_rehydrated",
     "increments when the launcher restarts and finds out a workload that was claimed before restart and needs to be processed",
   ),
-  WORKLOAD_PROCESSED_SUCCESSFULLY(
-    "workload_processed_successfully",
-    "increments when the launcher processes a workload successfully",
+  WORKLOAD_PROCESSED(
+    "workload_processed",
+    "increments when the launcher processes a workload",
   ),
-  WORKLOAD_PROCESSED_UNSUCCESSFULLY(
-    "workload_processed_unsuccessfully",
-    "increments when the launcher does not processes a workload successfully",
+  WORKLOAD_STAGE_START(
+    "workload_stage_start",
+    "increments when a workload stage starts",
+  ),
+  WORKLOAD_STAGE_DONE(
+    "workload_stage_done",
+    "increments when a workload stage is done",
   ),
   PODS_DELETED_FOR_MUTEX_KEY(
     "workload_pods_deleted_for_mutex_key",

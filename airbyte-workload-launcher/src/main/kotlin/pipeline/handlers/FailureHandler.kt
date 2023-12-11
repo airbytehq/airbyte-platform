@@ -42,8 +42,9 @@ class FailureHandler(
       }
 
       metricPublisher.count(
-        WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED_UNSUCCESSFULLY,
+        WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED,
         MetricAttribute(MeterFilterFactory.WORKLOAD_ID_TAG, io.msg.workloadId),
+        MetricAttribute(MeterFilterFactory.STATUS_TAG, MeterFilterFactory.FAILURE_STATUS),
       )
       logger.info { logMsgTemplate.orElse { id -> "Pipeline aborted after error for workload: $id." }.apply(io.msg.workloadId) }
     }

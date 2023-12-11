@@ -37,6 +37,7 @@ class BuildInputStageTest {
       BuildInputStage(
         replicationInputHydrator,
         deserializer,
+        mockk(),
       )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput("1", msgStr, mapOf("label_key" to "label_value"), "/log/path"))
 

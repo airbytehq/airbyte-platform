@@ -10,7 +10,7 @@ class SharedMocks {
     val metricPublisher: CustomMetricPublisher =
       mockk {
         every {
-          count(any(), any())
+          count(any(), *anyVararg())
         } returns Unit
         every {
           gauge<Any>(any(), any(), any(), any())

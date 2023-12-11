@@ -26,8 +26,9 @@ class SuccessHandler(
   fun accept(io: LaunchStageIO) {
     withLoggingContext(io.logCtx) {
       metricPublisher.count(
-        WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED_SUCCESSFULLY,
+        WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED,
         MetricAttribute(MeterFilterFactory.WORKLOAD_ID_TAG, io.msg.workloadId),
+        MetricAttribute(MeterFilterFactory.STATUS_TAG, MeterFilterFactory.SUCCESS_STATUS),
       )
       if (io.msg.startTimeMs != null) {
         val timeElapsed = System.currentTimeMillis() - io.msg.startTimeMs

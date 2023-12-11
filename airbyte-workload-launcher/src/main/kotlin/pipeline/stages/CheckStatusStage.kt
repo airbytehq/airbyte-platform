@@ -27,7 +27,7 @@ class CheckStatusStage(
   private val apiClient: WorkloadApiClient,
   private val kubeClient: KubePodClient,
   private val customMetricPublisher: CustomMetricPublisher,
-) : LaunchStage {
+) : LaunchStage(customMetricPublisher) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "CheckStatusStage")
   override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
     return super.apply(input)

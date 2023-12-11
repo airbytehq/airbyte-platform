@@ -22,7 +22,7 @@ class LaunchPodStageTest {
     val launcher: KubePodClient = mockk()
     every { launcher.launchReplication(any(), any()) } returns Unit
 
-    val stage = LaunchPodStage(launcher)
+    val stage = LaunchPodStage(launcher, mockk())
     val workloadId = UUID.randomUUID().toString()
     val msg = RecordFixtures.launcherInput(workloadId)
     val io = LaunchStageIO(msg = msg, replicationInput = replInput)

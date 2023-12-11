@@ -26,8 +26,8 @@ private val logger = KotlinLogging.logger {}
 @Named("mutex")
 class EnforceMutexStage(
   private val launcher: KubePodClient,
-  private val metricPublisher: CustomMetricPublisher,
-) : LaunchStage {
+  metricPublisher: CustomMetricPublisher,
+) : LaunchStage(metricPublisher) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "EnforceMutexStage")
   override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
     return super.apply(input)
