@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { getByTestId, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { BroadcastChannel } from "broadcast-channel";
 import React from "react";
 import selectEvent from "react-select-event";
 
@@ -11,6 +12,7 @@ import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/doma
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { DestinationDefinitionSpecificationRead } from "core/request/AirbyteClient";
 import { FeatureItem } from "core/services/features";
+import { OAUTH_BROADCAST_CHANNEL_NAME } from "hooks/services/useConnectorAuth";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
 
 import { ConnectorFormValues } from "./types";
@@ -52,6 +54,9 @@ jest.mock("../ConnectorDocumentationLayout/DocumentationPanelContext", () => {
 });
 
 jest.setTimeout(40000);
+
+const oauthPopupIdentifier = "123456789";
+jest.mock("uuid", () => ({ v4: () => oauthPopupIdentifier }));
 
 const nextTick = () => new Promise((r) => setTimeout(r, 0));
 
@@ -112,12 +117,11 @@ async function executeOAuthFlow(container: HTMLElement) {
   // wait for the mocked consent url call to finish
   await waitFor(nextTick);
   // mock the message coming from the separate oauth window
-  window.postMessage(
-    {
-      airbyte_type: "airbyte_oauth_callback",
-    },
-    "http://localhost"
-  );
+  const bc = new BroadcastChannel(OAUTH_BROADCAST_CHANNEL_NAME);
+  bc.postMessage({
+    airbyte_oauth_popup_identifier: oauthPopupIdentifier,
+    query: {},
+  });
   // mock the complete oauth request
   await waitFor(nextTick);
 }
@@ -1022,17 +1026,18 @@ describe("Connector form", () => {
     });
 
     it("should insert values correctly and submit them", async () => {
-      const container = await renderNewOAuthForm();
       (useCompleteOAuth as jest.MockedFunction<typeof useCompleteOAuth>).mockReturnValue({
         completeDestinationOAuth: jest.fn(),
-        completeSourceOAuth: () =>
-          Promise.resolve({
+        completeSourceOAuth: () => {
+          return Promise.resolve({
             request_succeeded: true,
             auth_payload: {
               access_token: "mytoken",
             },
-          }),
+          });
+        },
       });
+      const container = await renderNewOAuthForm();
 
       await executeOAuthFlow(container);
 
