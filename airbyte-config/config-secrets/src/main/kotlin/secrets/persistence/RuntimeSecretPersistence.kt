@@ -12,8 +12,8 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Property
 import kotlin.jvm.optionals.getOrElse
 
-private const val AWS_ASSUME_ROLE_ACCESS_KEY_ID = "AWS_ASSUME_ROLE_ACCESS_KEY_ID"
-private const val AWS_ASSUME_ROLE_SECRET_ACCESS_KEY = "AWS_ASSUME_ROLE_SECRET_ACCESS_KEY"
+private const val AWS_ACCESS_KEY = "AWS_ACCESS_KEY_ID"
+private const val AWS_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY"
 
 /**
  * Class representing a RuntimeSecretPersistence to be used for BYO secrets customers.
@@ -22,10 +22,10 @@ class RuntimeSecretPersistence(private val secretPersistenceConfig: SecretPersis
   private val log = KotlinLogging.logger {}
 
   @Property(name = "airbyte.secret.store.aws.access-key")
-  private val awsAccessKey: String? = System.getenv(AWS_ASSUME_ROLE_ACCESS_KEY_ID)
+  private val awsAccessKey: String? = System.getenv(AWS_ACCESS_KEY)
 
   @Property(name = "airbyte.secret.store.aws.secret-key")
-  private val awsSecretKey: String? = System.getenv(AWS_ASSUME_ROLE_SECRET_ACCESS_KEY)
+  private val awsSecretKey: String? = System.getenv(AWS_SECRET_ACCESS_KEY)
 
   private fun buildSecretPersistence(secretPersistenceConfig: SecretPersistenceConfig): SecretPersistence {
     return when (secretPersistenceConfig.secretPersistenceType) {
