@@ -43,9 +43,18 @@ class WorkloadMonitor(
   private val metricClient: MetricClient,
   private val timeProvider: (ZoneId) -> OffsetDateTime = OffsetDateTime::now,
 ) {
+  companion object {
+    const val CHECK_CLAIMS = "workload-monitor-claim"
+    const val CHECK_HEARTBEAT = "workload-monitor-heartbeat"
+    const val CHECK_NON_SYNC_TIMEOUT = "workload-monitor-non-sync-timeout"
+    const val CHECK_START = "workload-monitor-start"
+    const val CHECK_SYNC_TIMEOUT = "workload-monitor-sync-timeout"
+  }
+
   @Trace
   @Scheduled(fixedRate = "\${airbyte.workload.monitor.not-started-check-rate}")
   fun cancelNotStartedWorkloads() {
+    metricClient.count(OssMetricsRegistry.WORKLOAD_MONITOR_RUN, 1, MetricAttribute(MetricTags.CRON_TYPE, CHECK_START))
     logger.info { "Checking for not started workloads." }
     val oldestStartedTime = timeProvider(ZoneOffset.UTC).minusSeconds(nonStartedTimeout.seconds)
     val notStartedWorkloads =
@@ -56,12 +65,13 @@ class WorkloadMonitor(
         ),
       )
 
-    cancelWorkloads(notStartedWorkloads.workloads, "Not started within time limit", "workload-monitor-start")
+    cancelWorkloads(notStartedWorkloads.workloads, "Not started within time limit", CHECK_START)
   }
 
   @Trace
   @Scheduled(fixedRate = "\${airbyte.workload.monitor.claim-check-rate}")
   fun cancelNotClaimedWorkloads() {
+    metricClient.count(OssMetricsRegistry.WORKLOAD_MONITOR_RUN, 1, MetricAttribute(MetricTags.CRON_TYPE, CHECK_CLAIMS))
     logger.info { "Checking for not claimed workloads." }
     val oldestClaimTime = timeProvider(ZoneOffset.UTC).minusSeconds(claimTimeout.seconds)
     val notClaimedWorkloads =
@@ -72,12 +82,13 @@ class WorkloadMonitor(
         ),
       )
 
-    cancelWorkloads(notClaimedWorkloads.workloads, "Not claimed within time limit", "workload-monitor-claim")
+    cancelWorkloads(notClaimedWorkloads.workloads, "Not claimed within time limit", CHECK_CLAIMS)
   }
 
   @Trace
   @Scheduled(fixedRate = "\${airbyte.workload.monitor.heartbeat-check-rate}")
   fun cancelNotHeartbeatingWorkloads() {
+    metricClient.count(OssMetricsRegistry.WORKLOAD_MONITOR_RUN, 1, MetricAttribute(MetricTags.CRON_TYPE, CHECK_HEARTBEAT))
     logger.info { "Checking for non heartbeating workloads." }
     val oldestHeartbeatTime = timeProvider(ZoneOffset.UTC).minusSeconds(heartbeatTimeout.seconds)
     val nonHeartbeatingWorkloads =
@@ -88,12 +99,13 @@ class WorkloadMonitor(
         ),
       )
 
-    cancelWorkloads(nonHeartbeatingWorkloads.workloads, "No heartbeat within time limit", "workload-monitor-heartbeat")
+    cancelWorkloads(nonHeartbeatingWorkloads.workloads, "No heartbeat within time limit", CHECK_HEARTBEAT)
   }
 
   @Trace
   @Scheduled(fixedRate = "\${airbyte.workload.monitor.non-sync-age-check-rate}")
   fun cancelRunningForTooLongNonSyncWorkloads() {
+    metricClient.count(OssMetricsRegistry.WORKLOAD_MONITOR_RUN, 1, MetricAttribute(MetricTags.CRON_TYPE, CHECK_NON_SYNC_TIMEOUT))
     logger.info { "Checking for workloads running for too long with timeout value $nonSyncWorkloadTimeout" }
     val nonHeartbeatingWorkloads =
       workloadApi.workloadListOldNonSync(
@@ -102,12 +114,13 @@ class WorkloadMonitor(
         ),
       )
 
-    cancelWorkloads(nonHeartbeatingWorkloads.workloads, "Non sync workload timeout", "workload-monitor-non-sync-timeout")
+    cancelWorkloads(nonHeartbeatingWorkloads.workloads, "Non sync workload timeout", CHECK_NON_SYNC_TIMEOUT)
   }
 
   @Trace
   @Scheduled(fixedRate = "\${airbyte.workload.monitor.sync-age-check-rate}")
   fun cancelRunningForTooLongSyncWorkloads() {
+    metricClient.count(OssMetricsRegistry.WORKLOAD_MONITOR_RUN, 1, MetricAttribute(MetricTags.CRON_TYPE, CHECK_SYNC_TIMEOUT))
     logger.info { "Checking for sync workloads running for too long with timeout value $syncWorkloadTimeout" }
     val nonHeartbeatingWorkloads =
       workloadApi.workloadListOldSync(
@@ -116,7 +129,7 @@ class WorkloadMonitor(
         ),
       )
 
-    cancelWorkloads(nonHeartbeatingWorkloads.workloads, "Sync workload timeout", "workload-monitor-sync-timeout")
+    cancelWorkloads(nonHeartbeatingWorkloads.workloads, "Sync workload timeout", CHECK_SYNC_TIMEOUT)
   }
 
   private fun cancelWorkloads(
