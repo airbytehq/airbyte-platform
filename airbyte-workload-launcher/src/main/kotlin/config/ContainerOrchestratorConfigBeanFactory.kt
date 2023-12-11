@@ -15,6 +15,8 @@ import io.airbyte.workload.launcher.config.cloud.CloudStateConfig
 import io.fabric8.kubernetes.api.model.ContainerPort
 import io.fabric8.kubernetes.api.model.ContainerPortBuilder
 import io.fabric8.kubernetes.api.model.EnvVar
+import io.fabric8.kubernetes.api.model.EnvVarSource
+import io.fabric8.kubernetes.api.model.SecretKeySelector
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.fabric8.kubernetes.client.KubernetesClientBuilder
 import io.micronaut.context.annotation.Factory
@@ -127,7 +129,6 @@ class ContainerOrchestratorConfigBeanFactory {
     @Value("\${datadog.orchestrator.disabled.integrations}") disabledIntegrations: String,
     @Value("\${google.application.credentials}") googleApplicationCredentials: String,
     @Value("\${airbyte.workload-api.base-path}") workloadApiBasePath: String,
-    @Value("\${airbyte.workload-api.bearer-token}") workloadApiBearerToken: String,
     @Value("\${airbyte.workload-api.connect-timeout-seconds}") workloadApiConnectTimeoutSeconds: String,
     @Value("\${airbyte.workload-api.read-timeout-seconds}") workloadApiReadTimeoutSeconds: String,
     @Value("\${airbyte.workload-api.retries.delay-seconds}") workloadApiRetriesDelaySeconds: String,
@@ -175,7 +176,6 @@ class ContainerOrchestratorConfigBeanFactory {
 
     // Environment variables for Workload API
     envMap[WORKLOAD_API_HOST_ENV_VAR] = workloadApiBasePath
-    envMap[WORKLOAD_API_BEARER_TOKEN_ENV_VAR] = workloadApiBearerToken
     envMap[WORKLOAD_API_CONNECT_TIMEOUT_SECONDS_ENV_VAR] = workloadApiConnectTimeoutSeconds
     envMap[WORKLOAD_API_READ_TIMEOUT_SECONDS_ENV_VAR] = workloadApiReadTimeoutSeconds
     envMap[WORKLOAD_API_RETRY_DELAY_SECONDS_ENV_VAR] = workloadApiRetriesDelaySeconds
@@ -214,16 +214,61 @@ class ContainerOrchestratorConfigBeanFactory {
     return envMap
   }
 
+  /**
+   * Creates a map that represents environment variables that will be used by the orchestrator that are sourced from kubernetes secrets.
+   * The map key is the environment variable name and the map value contains the kubernetes secret name and key
+   */
+  @Singleton
+  @Named("orchestratorSecretsEnvMap")
+  fun orchestratorSecretsEnvMap(
+    @Value("\${airbyte.workload-api.bearer-token-secret-name}") bearerTokenSecretName: String,
+    @Value("\${airbyte.workload-api.bearer-token-secret-key}") bearerTokenSecretKey: String,
+  ): Map<String, EnvVarSource> {
+    val envMap: MutableMap<String, EnvVarSource> = HashMap()
+    envMap[WORKLOAD_API_BEARER_TOKEN_ENV_VAR] = createEnvVarSource(bearerTokenSecretName, bearerTokenSecretKey)
+    return envMap
+  }
+
+  private fun createEnvVarSource(
+    secretName: String,
+    secretKey: String,
+  ): EnvVarSource {
+    val secretKeySelector = SecretKeySelector()
+    secretKeySelector.name = secretName
+    secretKeySelector.key = secretKey
+
+    val envVarSource = EnvVarSource()
+    envVarSource.secretKeyRef = secretKeySelector
+
+    return envVarSource
+  }
+
+  /**
+   * Creates a list of environment variables to be passed to the orchestrator.
+   * The created list contains both regular environment variables and environment variables that
+   * are sourced from Kubernetes secrets.
+   */
   @Singleton
   @Named("orchestratorEnvVars")
   fun orchestratorEnvVars(
     @Named("orchestratorEnvMap") envMap: Map<String, String>,
+    @Named("orchestratorSecretsEnvMap") secretsEnvMap: Map<String, EnvVarSource> = emptyMap(),
   ): List<EnvVar> {
-    return envMap
-      .entries
-      .stream()
-      .map { (key, value): Map.Entry<String, String> -> EnvVar(key, value, null) }
-      .toList()
+    val envVars =
+      envMap
+        .entries
+        .stream()
+        .map { (name, value): Map.Entry<String, String> -> EnvVar(name, value, null) }
+        .toList()
+
+    val secretEnvVars =
+      secretsEnvMap
+        .entries
+        .stream()
+        .map { (name, envVarSource): Map.Entry<String, EnvVarSource> -> EnvVar(name, null, envVarSource) }
+        .toList()
+
+    return envVars + secretEnvVars
   }
 
   companion object {
@@ -245,10 +290,12 @@ class ContainerOrchestratorConfigBeanFactory {
     private const val DD_INTEGRATION_ENV_VAR_FORMAT = "DD_INTEGRATION_%s_ENABLED"
     private const val WORKER_V2_MICRONAUT_ENV = "worker-v2"
     private const val WORKLOAD_API_HOST_ENV_VAR = "WORKLOAD_API_HOST"
-    private const val WORKLOAD_API_BEARER_TOKEN_ENV_VAR = "WORKLOAD_API_BEARER_TOKEN"
     private const val WORKLOAD_API_CONNECT_TIMEOUT_SECONDS_ENV_VAR = "WORKLOAD_API_CONNECT_TIMEOUT_SECONDS"
     private const val WORKLOAD_API_READ_TIMEOUT_SECONDS_ENV_VAR = "WORKLOAD_API_READ_TIMEOUT_SECONDS"
     private const val WORKLOAD_API_RETRY_DELAY_SECONDS_ENV_VAR = "WORKLOAD_API_RETRY_DELAY_SECONDS"
     private const val WORKLOAD_API_MAX_RETRIES_ENV_VAR = "WORKLOAD_API_MAX_RETRIES"
+
+    // secrets
+    private const val WORKLOAD_API_BEARER_TOKEN_ENV_VAR = "WORKLOAD_API_BEARER_TOKEN"
   }
 }

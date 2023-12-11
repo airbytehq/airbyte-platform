@@ -30,6 +30,8 @@ airbyte:
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
+    bearer-token-secret-key: ${WORKLOAD_API_BEARER_TOKEN_SECRET_KEY:}
+    bearer-token-secret-name: ${WORKLOAD_API_BEARER_TOKEN_SECRET_NAME:}
     connect-timeout-seconds: ${WORKLOAD_API_CONNECT_TIMEOUT_SECONDS:30}
     read-timeout-seconds: ${WORKLOAD_API_READ_TIMEOUT_SECONDS:300}
     retries:
