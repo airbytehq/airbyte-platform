@@ -1,61 +1,19 @@
-import { ConnectionConfiguration } from "area/connector/types";
 import { AirbyteRequestService } from "core/request/AirbyteRequestService";
 import { CommonRequestError } from "core/request/CommonRequestError";
 import { LogsRequestError } from "core/request/LogsRequestError";
 
 import {
-  CheckConnectionRead,
-  CheckConnectionReadStatus,
-  checkConnectionToSource,
-  checkConnectionToSourceForUpdate,
   createSource,
   deleteSource,
   discoverSchemaForSource,
-  executeSourceCheckConnection,
   getSource,
   listSourcesForWorkspace,
-  SourceCoreConfig,
   SourceCreate,
   SourceUpdate,
   updateSource,
 } from "../../request/AirbyteClient";
 
 export class SourceService extends AirbyteRequestService {
-  public async check_connection(
-    params: {
-      sourceId?: string;
-      connectionConfiguration?: ConnectionConfiguration;
-      workspaceId?: string;
-    },
-    requestParams?: RequestInit
-  ) {
-    let result: CheckConnectionRead;
-    if (!params.sourceId) {
-      result = await executeSourceCheckConnection(params as SourceCoreConfig, {
-        ...this.requestOptions,
-        signal: requestParams?.signal,
-      });
-    } else if (params.connectionConfiguration) {
-      result = await checkConnectionToSourceForUpdate(params as SourceUpdate, {
-        ...this.requestOptions,
-        signal: requestParams?.signal,
-      });
-    } else {
-      result = await checkConnectionToSource(
-        { sourceId: params.sourceId },
-        { ...this.requestOptions, signal: requestParams?.signal }
-      );
-    }
-
-    if (!result.jobInfo?.succeeded) {
-      throw new LogsRequestError(result.jobInfo, "Failed to run connection tests.");
-    } else if (result.status === CheckConnectionReadStatus.failed) {
-      throw new LogsRequestError(result.jobInfo, result.message);
-    }
-
-    return result;
-  }
-
   public get(sourceId: string) {
     return getSource({ sourceId }, this.requestOptions);
   }
