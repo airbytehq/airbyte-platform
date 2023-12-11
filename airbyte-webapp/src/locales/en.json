@@ -1469,6 +1469,8 @@
   "settings.workspaceSettings.delete.confirmation.title": "Delete workspace",
   "settings.workspaceSettings.delete.confirmation.text": "Deleting this workspace will remove it for all users and cancel all pending syncs. Do you want to proceed?",
   "settings.workspaceSettings.delete.confirmation.submitButtonText": "Delete workspace",
+  "settings.workspaceSettings.deleteWorkspace.confirmation.title": "Delete workspace: <b>{name}</b>",
+  "settings.workspaceSettings.deleteWorkspace.confirmation.text": "Deleting this workspace will remove it for all users and cancel all pending syncs. To confirm deletion, type the name of the workspace in the input field.",
 
   "settings.workspaceSettings.delete.permissionsError": "You do not have sufficient permissions to delete this workspace. Please consult with the workspace owner.",
   "settings.integrationSettings": "Integration settings",
