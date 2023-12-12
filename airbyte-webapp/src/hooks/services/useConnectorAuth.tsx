@@ -28,6 +28,25 @@ const OAUTH_REDIRECT_URL = `${window.location.protocol}//${window.location.host}
 export const OAUTH_BROADCAST_CHANNEL_NAME = "airbyte_oauth_callback";
 const OAUTH_POPUP_IDENTIFIER_KEY = "airbyte_oauth_popup_identifier";
 
+/**
+ * Since some OAuth providers clear out the window.opener and window.name properties,
+ * we need to use a different mechanism to relate the popup window back to this tab.
+ *
+ * Therefore, this method first opens the window to the /auth_flow page, with the
+ * consent URL as a query param and a random UUID as the window name.
+ *
+ * This /auth_flow page will store the UUID into session storage before redirecting
+ * to the consent URL.
+ *
+ * Once the OAuth consent flow is finished and the window is redirected back to
+ * /auth_flow, the UUID is retrieved from session storage and attached to the message
+ * sent to the broadcast channel.
+ *
+ * This tab listens for a message on the broadcast channel with the corresponding
+ * UUID, and completes the OAuth flow when it receives the message.
+ *
+ * @param url the OAuth consent URL
+ */
 function openWindow(url: string): void {
   if (windowObjectReference == null || windowObjectReference.closed) {
     /* if the pointer to the window object in memory does not exist
