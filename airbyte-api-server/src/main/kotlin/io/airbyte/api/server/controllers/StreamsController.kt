@@ -43,6 +43,7 @@ class StreamsController(
     sourceId: UUID,
     destinationId: UUID?,
     ignoreCache: Boolean?,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -52,6 +53,7 @@ class StreamsController(
           sourceService.getSourceSchema(
             sourceId,
             ignoreCache!!,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -64,6 +66,7 @@ class StreamsController(
         {
           destinationService.getDestinationSyncModes(
             destinationId!!,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },

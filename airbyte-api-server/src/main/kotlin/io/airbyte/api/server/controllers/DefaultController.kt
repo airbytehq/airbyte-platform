@@ -12,7 +12,10 @@ open class DefaultController() : DefaultApi {
   @Value("\${airbyte.internal.documentation.host}")
   var documentationHost: String? = null
 
-  override fun getDocumentation(userInfo: String?): Response {
+  override fun getDocumentation(
+    authorization: String?,
+    userInfo: String?,
+  ): Response {
     return Response
       .status(302)
       .location(URI.create(documentationHost))

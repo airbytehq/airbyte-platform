@@ -22,6 +22,7 @@ interface SourceDefinitionService {
   fun getSourceDefinitionSpecification(
     sourceDefinitionId: UUID,
     workspaceId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): SourceDefinitionSpecificationRead?
 }
@@ -36,13 +37,14 @@ class SourceDefinitionServiceImpl(private val configApiClient: ConfigApiClient) 
   override fun getSourceDefinitionSpecification(
     sourceDefinitionId: UUID,
     workspaceId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): SourceDefinitionSpecificationRead? {
     val sourceDefinitionIdWithWorkspaceId = SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(sourceDefinitionId).workspaceId(workspaceId)
 
     var response: HttpResponse<SourceDefinitionSpecificationRead>
     try {
-      response = configApiClient.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId, userInfo!!)
+      response = configApiClient.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId, authorization, userInfo!!)
     } catch (e: HttpClientResponseException) {
       log.error("Config api response error for cancelJob: ", e)
       response = e.response as HttpResponse<SourceDefinitionSpecificationRead>

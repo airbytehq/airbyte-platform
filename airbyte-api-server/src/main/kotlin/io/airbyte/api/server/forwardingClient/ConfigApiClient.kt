@@ -46,6 +46,7 @@ import io.airbyte.api.client.model.generated.WorkspaceReadList
 import io.airbyte.api.client.model.generated.WorkspaceUpdate
 import io.airbyte.api.server.constants.ANALYTICS_HEADER
 import io.airbyte.api.server.constants.ANALYTICS_HEADER_VALUE
+import io.airbyte.api.server.constants.AUTH_HEADER
 import io.airbyte.api.server.constants.ENDPOINT_API_USER_INFO_HEADER
 import io.airbyte.api.server.constants.INTERNAL_API_HOST
 import io.micronaut.http.HttpHeaders
@@ -75,36 +76,42 @@ interface ConfigApiClient {
   @Post(value = "/api/v1/connections/create", processes = [MediaType.APPLICATION_JSON])
   fun createConnection(
     @Body connectionId: ConnectionCreate,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<String>
 
   @Post(value = "/api/v1/connections/delete", processes = [MediaType.APPLICATION_JSON])
   fun deleteConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<String>
 
   @Post(value = "/api/v1/connections/sync", processes = [MediaType.APPLICATION_JSON])
   fun sync(
     @Body connectionId: ConnectionIdRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<JobInfoRead>
 
   @Post(value = "/api/v1/connections/reset", processes = [MediaType.APPLICATION_JSON])
   fun reset(
     @Body connectionId: ConnectionIdRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<JobInfoRead>
 
   @Post(value = "/api/v1/connections/get", processes = [MediaType.APPLICATION_JSON])
   fun getConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<ConnectionRead>
 
   @Post(value = "/api/v1/connections/update", processes = [MediaType.APPLICATION_JSON])
   fun updateConnection(
     @Body connectionUpdate: ConnectionUpdate,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<String>
 
@@ -112,12 +119,14 @@ interface ConfigApiClient {
   @Post(value = "/api/v1/source_oauths/get_consent_url", processes = [MediaType.APPLICATION_JSON])
   fun getSourceConsentUrl(
     @Body consentRequest: SourceOauthConsentRequest,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<OAuthConsentRead>
 
   @Post(value = "/api/v1/source_oauths/complete_oauth", processes = [MediaType.APPLICATION_JSON])
   fun completeSourceOAuth(
     @Body completeSourceOauthRequest: CompleteSourceOauthRequest,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<CompleteOAuthResponse>
 
@@ -125,36 +134,42 @@ interface ConfigApiClient {
   @Post(value = "/api/v1/sources/create", processes = [MediaType.APPLICATION_JSON])
   fun createSource(
     @Body sourceCreate: SourceCreate,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<SourceRead>
 
   @Post(value = "/api/v1/sources/delete", processes = [MediaType.APPLICATION_JSON])
   fun deleteSource(
     @Body sourceIdRequestBody: SourceIdRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<String>
 
   @Post(value = "/api/v1/sources/get", processes = [MediaType.APPLICATION_JSON])
   fun getSource(
     @Body sourceIdRequestBody: SourceIdRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<SourceRead>
 
   @Post(value = "/api/v1/sources/partial_update", processes = [MediaType.APPLICATION_JSON])
   fun partialUpdateSource(
     @Body partialSourceUpdate: PartialSourceUpdate,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<SourceRead>
 
   @Post(value = "/api/v1/sources/update", processes = [MediaType.APPLICATION_JSON])
   fun updateSource(
     @Body sourceUpdate: SourceUpdate,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<SourceRead>
 
   @Post(value = "/api/v1/sources/discover_schema", processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
   fun getSourceSchema(
     @Body sourceId: SourceDiscoverSchemaRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<SourceDiscoverSchemaRead>
 
@@ -165,6 +180,7 @@ interface ConfigApiClient {
   )
   fun getSourceDefinitionSpecification(
     @Body sourceDefinitionIdWithWorkspaceId: SourceDefinitionIdWithWorkspaceId,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<SourceDefinitionSpecificationRead>
 
@@ -172,36 +188,42 @@ interface ConfigApiClient {
   @Post(value = "/api/v1/destinations/create", processes = [MediaType.APPLICATION_JSON])
   fun createDestination(
     @Body destinationCreate: DestinationCreate,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<DestinationRead>
 
   @Post(value = "/api/v1/destinations/get", processes = [MediaType.APPLICATION_JSON])
   fun getDestination(
     @Body destinationIdRequestBody: DestinationIdRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<DestinationRead>
 
   @Post(value = "/api/v1/destinations/update", processes = [MediaType.APPLICATION_JSON])
   fun updateDestination(
     @Body destinationUpdate: DestinationUpdate,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<DestinationRead>
 
   @Post(value = "/api/v1/destinations/partial_update", processes = [MediaType.APPLICATION_JSON])
   fun partialUpdateDestination(
     @Body partialDestinationUpdate: PartialDestinationUpdate,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<DestinationRead>
 
   @Post(value = "/api/v1/destinations/delete", processes = [MediaType.APPLICATION_JSON])
   fun deleteDestination(
     @Body destinationIdRequestBody: DestinationIdRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<String>
 
   @Post(value = "/api/v1/destination_definition_specifications/get", processes = [MediaType.APPLICATION_JSON])
   fun getDestinationSpec(
     @Body destinationDefinitionIdWithWorkspaceId: DestinationDefinitionIdWithWorkspaceId,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<DestinationDefinitionSpecificationRead>
 
@@ -209,24 +231,28 @@ interface ConfigApiClient {
   @Post(value = "/api/v1/jobs/get_without_logs", processes = [MediaType.APPLICATION_JSON])
   fun getJobInfoWithoutLogs(
     @Body jobId: JobIdRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<JobInfoRead>
 
   @Post(value = "/api/v1/jobs/list", processes = [MediaType.APPLICATION_JSON])
   fun getJobList(
     @Body jobListRequestBody: JobListRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<JobReadList>
 
   @Post(value = "/api/v1/jobs/list_for_workspaces", processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
   fun getJobListForWorkspaces(
     @Body listForWorkspacesRequestBody: JobListForWorkspacesRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) userInfo: String?,
   ): HttpResponse<JobReadList>
 
   @Post(value = "/api/v1/jobs/cancel", processes = [MediaType.APPLICATION_JSON])
   fun cancelJob(
     @Body jobIdRequestBody: JobIdRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<JobInfoRead>
 
@@ -234,53 +260,62 @@ interface ConfigApiClient {
   @Post(value = "/api/v1/workspaces/get", processes = [MediaType.APPLICATION_JSON])
   fun getWorkspace(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<WorkspaceRead>
 
   @Post(value = "/api/v1/workspaces/list", processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
   fun listAllWorkspaces(
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<WorkspaceReadList>
 
   @Post(value = "/api/v1/workspaces/create", processes = [MediaType.APPLICATION_JSON])
   fun createWorkspace(
     @Body workspaceCreate: WorkspaceCreate,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<WorkspaceRead>
 
   @Post(value = "/api/v1/workspaces/update", processes = [MediaType.APPLICATION_JSON])
   fun updateWorkspace(
     @Body workspaceUpdate: WorkspaceUpdate,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<WorkspaceRead>
 
   @Post(value = "/api/v1/workspaces/delete", processes = [MediaType.APPLICATION_JSON])
   fun deleteWorkspace(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<Unit>
 
   @Post(value = "/api/v1/connections/list_paginated", processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
   fun listConnectionsForWorkspaces(
     @Body listConnectionsForWorkspacesRequestBody: ListConnectionsForWorkspacesRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<ConnectionReadList>
 
   @Post(value = "/api/v1/sources/list_paginated", processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
   fun listSourcesForWorkspaces(
     @Body listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<SourceReadList>
 
   @Post(value = "/api/v1/destinations/list_paginated", processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
   fun listDestinationsForWorkspaces(
     @Body listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<DestinationReadList>
 
   @Post(value = "/api/v1/workspaces/list_paginated", processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
   fun listWorkspaces(
     @Body listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<WorkspaceReadList>
 
@@ -291,6 +326,7 @@ interface ConfigApiClient {
   )
   fun setWorkspaceOverrideOAuthParams(
     @Body workspaceOverrideOauthParamsRequestBody: WorkspaceOverrideOauthParamsRequestBody?,
+    @Header(AUTH_HEADER) authorization: String?,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<*>?
 }

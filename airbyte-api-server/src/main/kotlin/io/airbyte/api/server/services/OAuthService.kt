@@ -18,6 +18,7 @@ interface OAuthService {
     definitionId: @NotBlank UUID,
     redirectUrl: @NotBlank String,
     oauthInputConfiguration: JsonNode,
+    authorization: String?,
     userInfo: String?,
   ): OAuthConsentRead
 
@@ -27,6 +28,7 @@ interface OAuthService {
     redirectUrl: @NotBlank String,
     queryParameters: @NotBlank Map<String, String>,
     oauthInputConfiguration: JsonNode,
+    authorization: String?,
     userInfo: String?,
   ): HttpResponse<CompleteOAuthResponse>
 
@@ -35,6 +37,7 @@ interface OAuthService {
     actorType: ActorTypeEnum,
     definitionId: UUID,
     oauthCredentialsConfiguration: JsonNode,
+    authorization: String?,
     userInfo: String?,
   )
 }

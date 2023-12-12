@@ -41,34 +41,40 @@ interface SourceService {
   fun createSource(
     sourceCreateRequest: SourceCreateRequest,
     sourceDefinitionId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): SourceResponse
 
   fun updateSource(
     sourceId: UUID,
     sourcePutRequest: SourcePutRequest,
+    authorization: String?,
     userInfo: String?,
   ): SourceResponse
 
   fun partialUpdateSource(
     sourceId: UUID,
     sourcePatchRequest: SourcePatchRequest,
+    authorization: String?,
     userInfo: String?,
   ): SourceResponse
 
   fun deleteSource(
     sourceId: UUID,
+    authorization: String?,
     userInfo: String?,
   )
 
   fun getSource(
     sourceId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): SourceResponse
 
   fun getSourceSchema(
     sourceId: UUID,
     disableCache: Boolean,
+    authorization: String?,
     userInfo: String?,
   ): SourceDiscoverSchemaRead
 
@@ -77,11 +83,13 @@ interface SourceService {
     includeDeleted: Boolean = false,
     limit: Int = 20,
     offset: Int = 0,
+    authorization: String?,
     userInfo: String?,
   ): SourcesResponse
 
   fun controllerInitiateOAuth(
     initiateOauthRequest: InitiateOauthRequest?,
+    authorization: String?,
     userInfo: String?,
   ): Response
 }
@@ -105,6 +113,7 @@ open class SourceServiceImpl(
   override fun createSource(
     sourceCreateRequest: SourceCreateRequest,
     sourceDefinitionId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): SourceResponse {
     val sourceCreateOss = SourceCreate()
@@ -116,7 +125,7 @@ open class SourceServiceImpl(
 
     val response =
       try {
-        configApiClient.createSource(sourceCreateOss, userInfo)
+        configApiClient.createSource(sourceCreateOss, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for createSource: ", e)
         e.response as HttpResponse<SourceRead>
@@ -133,6 +142,7 @@ open class SourceServiceImpl(
   override fun updateSource(
     sourceId: UUID,
     sourcePutRequest: SourcePutRequest,
+    authorization: String?,
     userInfo: String?,
   ): SourceResponse {
     val sourceUpdate =
@@ -143,7 +153,7 @@ open class SourceServiceImpl(
 
     val response =
       try {
-        configApiClient.updateSource(sourceUpdate, userInfo)
+        configApiClient.updateSource(sourceUpdate, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for updateSource: ", e)
         e.response as HttpResponse<SourceRead>
@@ -160,6 +170,7 @@ open class SourceServiceImpl(
   override fun partialUpdateSource(
     sourceId: UUID,
     sourcePatchRequest: SourcePatchRequest,
+    authorization: String?,
     userInfo: String?,
   ): SourceResponse {
     val sourceUpdate =
@@ -171,7 +182,7 @@ open class SourceServiceImpl(
 
     val response =
       try {
-        configApiClient.partialUpdateSource(sourceUpdate, userInfo)
+        configApiClient.partialUpdateSource(sourceUpdate, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for partialUpdateSource: ", e)
         e.response as HttpResponse<SourceRead>
@@ -187,12 +198,13 @@ open class SourceServiceImpl(
    */
   override fun deleteSource(
     sourceId: UUID,
+    authorization: String?,
     userInfo: String?,
   ) {
     val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceId)
     val response =
       try {
-        configApiClient.deleteSource(sourceIdRequestBody, userInfo)
+        configApiClient.deleteSource(sourceIdRequestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for source delete: ", e)
         e.response as HttpResponse<String>
@@ -206,13 +218,14 @@ open class SourceServiceImpl(
    */
   override fun getSource(
     sourceId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): SourceResponse {
     val sourceIdRequestBody = SourceIdRequestBody()
     sourceIdRequestBody.sourceId = sourceId
     val response =
       try {
-        configApiClient.getSource(sourceIdRequestBody, userInfo)
+        configApiClient.getSource(sourceIdRequestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for getSource: ", e)
         e.response as HttpResponse<SourceRead>
@@ -228,13 +241,14 @@ open class SourceServiceImpl(
   override fun getSourceSchema(
     sourceId: UUID,
     disableCache: Boolean,
+    authorization: String?,
     userInfo: String?,
   ): SourceDiscoverSchemaRead {
     val sourceDiscoverSchemaRequestBody = SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(disableCache)
 
     val response: HttpResponse<SourceDiscoverSchemaRead> =
       try {
-        configApiClient.getSourceSchema(sourceDiscoverSchemaRequestBody, userInfo)
+        configApiClient.getSourceSchema(sourceDiscoverSchemaRequestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for getSourceSchema: ", e)
         e.response as HttpResponse<SourceDiscoverSchemaRead>
@@ -272,6 +286,7 @@ open class SourceServiceImpl(
     includeDeleted: Boolean,
     limit: Int,
     offset: Int,
+    authorization: String?,
     userInfo: String?,
   ): SourcesResponse {
     val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
@@ -283,7 +298,7 @@ open class SourceServiceImpl(
 
     val response =
       try {
-        configApiClient.listSourcesForWorkspaces(listResourcesForWorkspacesRequestBody, userInfo)
+        configApiClient.listSourcesForWorkspaces(listResourcesForWorkspacesRequestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for listWorkspaces: ", e)
         e.response as HttpResponse<SourceReadList>
@@ -302,6 +317,7 @@ open class SourceServiceImpl(
 
   override fun controllerInitiateOAuth(
     initiateOauthRequest: InitiateOauthRequest?,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     return Response.status(Response.Status.NOT_IMPLEMENTED).build()
