@@ -221,13 +221,6 @@ public class CustomerioNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifySchemaChange(final UUID connectionId,
-                                    final boolean isBreaking,
-                                    final String url) {
-    throw new NotImplementedException();
-  }
-
-  @Override
   public boolean notifySchemaPropagated(final UUID workspaceId,
                                         final String workspaceName,
                                         final UUID connectionId,
@@ -235,7 +228,6 @@ public class CustomerioNotificationClient extends NotificationClient {
                                         final String connectionUrl,
                                         final String sourceName,
                                         final List<String> changes,
-                                        final String url,
                                         final String recipient,
                                         final boolean isBreaking)
       throws IOException {

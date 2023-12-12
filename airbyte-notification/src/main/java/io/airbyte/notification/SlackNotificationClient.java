@@ -147,20 +147,6 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifySchemaChange(final UUID connectionId, final boolean isBreaking, final String url)
-      throws IOException, InterruptedException {
-    final String message = renderTemplate(
-        isBreaking ? "slack/breaking_schema_change_slack_notification_template.txt"
-            : "slack/non_breaking_schema_change_slack_notification_template.txt",
-        connectionId.toString(), url);
-    final String webhookUrl = config.getWebhook();
-    if (!Strings.isEmpty(webhookUrl)) {
-      return notify(message);
-    }
-    return false;
-  }
-
-  @Override
   public boolean notifySchemaPropagated(final UUID workspaceId,
                                         final String workspaceName,
                                         final UUID connectionId,
@@ -168,7 +154,6 @@ public class SlackNotificationClient extends NotificationClient {
                                         final String connectionUrl,
                                         final String sourceName,
                                         final List<String> changes,
-                                        final String url,
                                         final String recipient,
                                         boolean isBreaking)
       throws IOException, InterruptedException {
@@ -178,8 +163,9 @@ public class SlackNotificationClient extends NotificationClient {
       summary.append(change);
       summary.append("\n");
     }
-    final String message = isBreaking ? renderTemplate("slack/breaking_schema_change_slack_notification_template.txt", connectionId.toString(), url)
-        : renderTemplate("slack/schema_propagation_slack_notification_template.txt", connectionName, summary.toString(), connectionUrl);
+    final String message =
+        isBreaking ? renderTemplate("slack/breaking_schema_change_slack_notification_template.txt", connectionId.toString(), connectionUrl)
+            : renderTemplate("slack/schema_propagation_slack_notification_template.txt", connectionName, summary.toString(), connectionUrl);
     final String webhookUrl = config.getWebhook();
     if (!Strings.isEmpty(webhookUrl)) {
       return notify(message);

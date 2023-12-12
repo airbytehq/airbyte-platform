@@ -488,7 +488,6 @@ public class SchedulerHandler {
                 connectionUrl,
                 source.getName(),
                 result.changeDescription(),
-                item.getSlackConfiguration().getWebhook(),
                 email,
                 isBreakingChange);
           }
@@ -502,7 +501,6 @@ public class SchedulerHandler {
                 connectionUrl,
                 source.getName(),
                 result.changeDescription(),
-                null,
                 email,
                 isBreakingChange);
           }
