@@ -8,10 +8,9 @@ import { Button } from "components/ui/Button";
 import { Icon } from "components/ui/Icon";
 
 import { useSuggestedSources } from "area/connector/utils";
-import { useSourceDefinitionList } from "core/api";
+import { useSourceDefinitionList, useCreateSource } from "core/api";
 import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
-import { useCreateSource } from "hooks/services/useSourceHook";
 import { SourceForm, SourceFormValues } from "pages/source/CreateSourcePage/SourceForm";
 
 import { SOURCE_ID_PARAM, SOURCE_TYPE_PARAM } from "./SelectSource";

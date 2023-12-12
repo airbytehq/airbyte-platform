@@ -16,10 +16,10 @@ import {
   useSourceDefinitionVersion,
   useSourceDefinition,
   useDestinationDefinition,
+  useGetDestination,
+  useGetSource,
 } from "core/api";
 import { SupportLevel } from "core/request/AirbyteClient";
-import { useGetDestination } from "hooks/services/useDestinationHook";
-import { useGetSource } from "hooks/services/useSourceHook";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./CreateConnectionTitleBlock.module.scss";

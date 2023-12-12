@@ -9,8 +9,8 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { PageHeader } from "components/ui/PageHeader";
 
+import { useSourceList } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useSourceList } from "hooks/services/useSourceHook";
 
 import { SourcesTable } from "./SourcesTable";
 import { SourcePaths } from "../../routePaths";

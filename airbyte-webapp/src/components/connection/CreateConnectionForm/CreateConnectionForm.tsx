@@ -7,7 +7,7 @@ import { FlexContainer } from "components/ui/Flex";
 
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useCreateConnection } from "core/api";
+import { useCreateConnection, useDiscoverSchema } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import {
   ConnectionFormServiceProvider,
@@ -15,7 +15,6 @@ import {
 } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperimentContext } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
-import { useDiscoverSchema } from "hooks/services/useSourceHook";
 
 import { ConnectionNameCard } from "./ConnectionNameCard";
 import styles from "./CreateConnectionForm.module.scss";

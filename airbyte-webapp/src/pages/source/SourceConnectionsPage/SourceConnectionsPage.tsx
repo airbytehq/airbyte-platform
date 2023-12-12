@@ -8,8 +8,7 @@ import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex/FlexContainer";
 
 import { useGetSourceFromParams } from "area/connector/utils";
-import { useCurrentWorkspace, useConnectionList } from "core/api";
-import { useDestinationList } from "hooks/services/useDestinationHook";
+import { useCurrentWorkspace, useConnectionList, useDestinationList } from "core/api";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 const SourceConnectionTable = React.lazy(() => import("./SourceConnectionTable"));

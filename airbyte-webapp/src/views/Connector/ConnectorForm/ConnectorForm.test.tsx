@@ -21,11 +21,8 @@ import { DocumentationPanelContext } from "../ConnectorDocumentationLayout/Docum
 // hack to fix tests. https://github.com/remarkjs/react-markdown/issues/635
 jest.mock("components/ui/Markdown", () => ({ children }: React.PropsWithChildren<unknown>) => <>{children}</>);
 
-jest.mock("../../../hooks/services/useDestinationHook", () => ({
-  useDestinationList: () => ({ destinations: [] }),
-}));
-
 jest.mock("core/api", () => ({
+  useDestinationList: () => ({ destinations: [] }),
   useConsentUrls: () => ({ getSourceConsentUrl: () => "http://example.com" }),
   useCompleteOAuth: jest.fn(() => ({
     completeSourceOAuth: () => Promise.resolve({}),

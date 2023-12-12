@@ -11,6 +11,7 @@ import {
   useGetDestinationDefinitionSpecification,
   useSourceDefinition,
   useDestinationDefinition,
+  SchemaError,
 } from "core/api";
 import {
   ActorDefinitionVersionRead,
@@ -21,8 +22,6 @@ import {
   WebBackendConnectionRead,
 } from "core/request/AirbyteClient";
 import { FormError, generateMessageFromError } from "core/utils/errorStatusMessage";
-
-import { SchemaError } from "../useSourceHook";
 
 export type ConnectionFormMode = "create" | "edit" | "readonly";
 

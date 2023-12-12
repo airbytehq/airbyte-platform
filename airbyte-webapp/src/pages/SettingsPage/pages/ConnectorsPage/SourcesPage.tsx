@@ -1,11 +1,10 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { useListBuilderProjects, useSourceDefinitionList, useUpdateSourceDefinition } from "core/api";
+import { useListBuilderProjects, useSourceDefinitionList, useUpdateSourceDefinition, useSourceList } from "core/api";
 import { SourceDefinitionRead } from "core/request/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
-import { useSourceList } from "hooks/services/useSourceHook";
 
 import ConnectorsView, { ConnectorsViewProps } from "./components/ConnectorsView";
 

@@ -2,7 +2,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 
 import { StepsTypes } from "components/ConnectorBlocks";
 
-import { useGetDestination } from "hooks/services/useDestinationHook";
+import { useGetDestination } from "core/api";
 
 export const useGetDestinationFromParams = () => {
   const params = useParams<{ "*": StepsTypes | "" | undefined; destinationId: string }>();

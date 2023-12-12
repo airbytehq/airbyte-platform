@@ -9,8 +9,7 @@ import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
 
 import { useGetDestinationFromParams } from "area/connector/utils";
-import { useCurrentWorkspace, useConnectionList } from "core/api";
-import { useSourceList } from "hooks/services/useSourceHook";
+import { useCurrentWorkspace, useConnectionList, useSourceList } from "core/api";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 export const DestinationConnectionsPage = () => {
