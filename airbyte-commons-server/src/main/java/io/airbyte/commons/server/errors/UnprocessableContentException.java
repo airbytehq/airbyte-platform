@@ -4,6 +4,10 @@
 
 package io.airbyte.commons.server.errors;
 
+/**
+ * Thrown when the server understands the content type of the request entity, and the syntax of the
+ * request entity is correct, but it was unable to process the contained instructions.
+ */
 public class UnprocessableContentException extends KnownException {
 
   public UnprocessableContentException(final String msg) {

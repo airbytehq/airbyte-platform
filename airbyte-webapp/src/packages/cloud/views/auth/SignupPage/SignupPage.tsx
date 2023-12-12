@@ -1,19 +1,15 @@
-import { faGoogle } from "@fortawesome/free-brands-svg-icons";
-import { faCheckCircle, faEnvelope } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import React, { useEffect } from "react";
+import React from "react";
 import { FormattedMessage } from "react-intl";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 import { HeadTitle } from "components/common/HeadTitle";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
-import { trackPageview } from "core/utils/fathom";
-import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 
 import { SignupForm } from "./components/SignupForm";
 import styles from "./SignupPage.module.scss";
@@ -27,7 +23,7 @@ interface SignupPageProps {
 const Detail: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   return (
     <FlexContainer gap="sm" alignItems="center" className={styles.detailTextContainer}>
-      <FontAwesomeIcon icon={faCheckCircle} className={styles.checkIcon} />
+      <Icon type="statusSuccess" className={styles.checkIcon} />
       {children}
     </FlexContainer>
   );
@@ -37,16 +33,15 @@ const SignupPage: React.FC<SignupPageProps> = () => {
   const { loginWithOAuth, signUp } = useAuthService();
   useTrackPage(PageTrackingCodes.SIGNUP);
 
-  useEffect(() => {
-    trackPageview();
-  }, []);
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [searchParams] = useSearchParams();
-
-  const navigate = useNavigate();
-
-  const switchSignupMethod = () => {
-    navigate(searchParams.get("method") ? CloudRoutes.Signup : `${CloudRoutes.Signup}?method=email`);
+  const setSignupMethod = (method?: "email") => {
+    if (method) {
+      searchParams.set("method", method);
+    } else {
+      searchParams.delete("method");
+    }
+    setSearchParams(searchParams);
   };
 
   return (
@@ -70,14 +65,14 @@ const SignupPage: React.FC<SignupPageProps> = () => {
       {searchParams.get("method") === "email" ? (
         <>
           {signUp && <SignupForm signUp={signUp} />}
-          <Button onClick={switchSignupMethod} variant="clear" size="sm" icon={<FontAwesomeIcon icon={faGoogle} />}>
+          <Button onClick={() => setSignupMethod()} variant="clear" size="sm" icon={<Icon type="google" />}>
             <FormattedMessage id="signup.method.oauth" />
           </Button>
         </>
       ) : (
         <>
           {loginWithOAuth && <OAuthLogin loginWithOAuth={loginWithOAuth} />}
-          <Button onClick={switchSignupMethod} variant="clear" size="sm" icon={<FontAwesomeIcon icon={faEnvelope} />}>
+          <Button onClick={() => setSignupMethod("email")} variant="clear" size="sm" icon={<Icon type="ticket" />}>
             <FormattedMessage id="signup.method.email" />
           </Button>
         </>
@@ -85,7 +80,7 @@ const SignupPage: React.FC<SignupPageProps> = () => {
 
       <Disclaimer />
 
-      <LoginSignupNavigation to="login" />
+      <LoginSignupNavigation type="login" />
     </FlexContainer>
   );
 };

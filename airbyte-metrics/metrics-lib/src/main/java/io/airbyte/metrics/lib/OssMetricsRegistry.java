@@ -28,6 +28,9 @@ import com.google.api.client.util.Preconditions;
  * - Add units at name end if applicable. This is especially relevant for time units.
  * <p>
  * - Include the time period in the name if the metric is meant to be run at a certain interval.
+ * <p>
+ * Note: These names are used as metric name prefixes. Changing these names will affect
+ * dashboard/alerts and our public Datadog integration. Please consult the platform teams if unsure.
  */
 public enum OssMetricsRegistry implements MetricsRegistry {
 
@@ -201,6 +204,11 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   OLDEST_RUNNING_JOB_AGE_SECS(MetricEmittingApps.METRICS_REPORTER,
       "oldest_running_job_age_secs",
       "oldest running job in seconds"),
+
+  ORCHESTRATOR_OUT_OF_MEMORY(MetricEmittingApps.WORKER,
+      "orchestrator_out_of_memory",
+      "orchestrator out of memory error"),
+
   OVERALL_JOB_RUNTIME_IN_LAST_HOUR_BY_TERMINAL_STATE_SECS(MetricEmittingApps.METRICS_REPORTER,
       "overall_job_runtime_in_last_hour_by_terminal_state_secs",
       "overall job runtime - scheduling and execution for all attempts - for jobs that reach terminal states in the last hour. "
@@ -313,9 +321,17 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "worker_destination_message_sent",
       "whenever a message is sent to the destination"),
 
+  WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT(MetricEmittingApps.WORKER,
+      "notify_end_of_input_timeout",
+      "destination call to notify end of input has timed out"),
+
   WORKER_SOURCE_BUFFER_SIZE(MetricEmittingApps.WORKER,
       "worker_source_buffer_size",
       "the size of the replication worker source buffer queue"),
+
+  WORKER_DESTINATION_ACCEPT_TIMEOUT(MetricEmittingApps.WORKER,
+      "accept_timeout",
+      "destination call to accept has timed out"),
 
   WORKER_SOURCE_MESSAGE_READ(MetricEmittingApps.WORKER,
       "worker_source_message_read",
@@ -326,9 +342,30 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   WORKFLOWS_HEALED(MetricEmittingApps.CRON,
       "workflows_healed",
       "number of workflow the self healing cron healed"),
+  WORKLOAD_MONITOR_RUN(MetricEmittingApps.CRON,
+      "workload_monitor_run",
+      "number of cron run for the workload_monitor"),
+  WORKLOADS_CANCEL(MetricEmittingApps.CRON,
+      "workload_cancel",
+      "number of workloads canceled"),
   NOTIFICATIONS_SENT(MetricEmittingApps.WORKER,
       "notifications_sent",
-      "number of notifications sent");
+      "number of notifications sent"),
+  NON_AIRBYTE_MESSAGE_LOG_LINE(MetricEmittingApps.WORKER,
+      "non_airbyte_message_log_line",
+      "non airbyte message log"),
+  LINE_SKIPPED_WITH_RECORD(MetricEmittingApps.WORKER,
+      "line_skipped_with_record",
+      "malformated line with a record"),
+  LINE_SKIPPED_TOO_LONG(MetricEmittingApps.WORKER,
+      "line_skipped_too_long",
+      "Skip the line because of its size"),
+  TOO_LONG_LINES_DISTRIBUTION(MetricEmittingApps.WORKER,
+      "too_long_lines_distribution",
+      "Too long line distribution"),
+  WORKLOAD_LAUNCHER_KUBE_ERROR(MetricEmittingApps.WORKLOAD_LAUNCHER,
+      "workload_kube_error",
+      "Number of kube error in the workload launcher");
 
   private final MetricEmittingApp application;
   private final String metricName;

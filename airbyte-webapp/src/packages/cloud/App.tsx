@@ -4,6 +4,8 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ThemeProvider } from "styled-components";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
+import { DeployPreviewMessage } from "components/DeployPreviewMessage";
+import { DevToolsToggle } from "components/DevToolsToggle";
 import LoadingPage from "components/LoadingPage";
 
 import { ConfigServiceProvider, config } from "config";
@@ -12,6 +14,7 @@ import { AnalyticsProvider } from "core/services/analytics";
 import { defaultCloudFeatures, FeatureService } from "core/services/features";
 import { I18nProvider } from "core/services/i18n";
 import { BlockerService } from "core/services/navigation";
+import { isDevelopment } from "core/utils/isDevelopment";
 import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";
@@ -20,7 +23,6 @@ import { NotificationService } from "hooks/services/Notification";
 import { AirbyteThemeProvider } from "hooks/theme/useAirbyteTheme";
 import en from "locales/en.json";
 import { Routing } from "packages/cloud/cloudRoutes";
-import { AuthenticationProvider } from "packages/cloud/services/auth/AuthService";
 import { theme } from "packages/cloud/theme";
 import { ConnectorBuilderTestInputProvider } from "services/connectorBuilder/ConnectorBuilderTestInputService";
 
@@ -38,13 +40,11 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
         <FeatureService features={defaultCloudFeatures}>
           <AppServicesProvider>
             <ModalServiceProvider>
-              <AuthenticationProvider>
-                <ConnectorBuilderTestInputProvider>
-                  <HelmetProvider>
-                    <ZendeskProvider>{children}</ZendeskProvider>
-                  </HelmetProvider>
-                </ConnectorBuilderTestInputProvider>
-              </AuthenticationProvider>
+              <ConnectorBuilderTestInputProvider>
+                <HelmetProvider>
+                  <ZendeskProvider>{children}</ZendeskProvider>
+                </HelmetProvider>
+              </ConnectorBuilderTestInputProvider>
             </ModalServiceProvider>
           </AppServicesProvider>
         </FeatureService>
@@ -67,6 +67,7 @@ const App: React.FC = () => {
                       <AppMonitoringServiceProvider>
                         <ApiErrorBoundary>
                           <Services>
+                            <DeployPreviewMessage />
                             <Routing />
                           </Services>
                         </ApiErrorBoundary>
@@ -79,6 +80,7 @@ const App: React.FC = () => {
           </I18nProvider>
         </StyleProvider>
       </AirbyteThemeProvider>
+      {isDevelopment() && <DevToolsToggle />}
     </React.StrictMode>
   );
 };

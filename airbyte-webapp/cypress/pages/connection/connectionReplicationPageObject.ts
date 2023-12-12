@@ -11,18 +11,18 @@ const saveStreamChangesButton = "button[data-testid='resetModal-save']";
 const schemaChangesDetectedBanner = "[data-testid='schemaChangesDetected']";
 const schemaChangesReviewButton = "[data-testid='schemaChangesDetected-button']";
 const schemaChangesBackdrop = "[data-testid='schemaChangesBackdrop']";
-export const nonBreakingChangesPreference = "[data-testid='nonBreakingChangesPreference']";
-const nonBreakingChangesPreferenceValue = (value: string) => `div[data-testid='nonBreakingChangesPreference-${value}']`;
+export const nonBreakingChangesPreference = "[data-testid='nonBreakingChangesPreference-listbox-button']";
+const nonBreakingChangesPreferenceValue = (value: string) => `[data-testid='${value}-option']`;
 const noDiffToast = "[data-testid='notification-connection.noDiff']";
 const cancelButton = getTestId("cancel-edit-button", "button");
 const saveButton = getTestId("save-edit-button", "button");
-const refreshSourceSchemaBtn = getTestId("refresh-source-schema-btn", "button");
+export const refreshSourceSchemaBtn = getTestId("refresh-source-schema-btn", "button");
 
 export const checkSchemaChangesDetected = ({ breaking }: { breaking: boolean }) => {
   cy.get(schemaChangesDetectedBanner).should("exist");
   cy.get(schemaChangesDetectedBanner)
     .invoke("attr", "class")
-    .should("match", breaking ? /error/ : /warning/);
+    .should("match", breaking ? /error/ : /info/);
   cy.get(schemaChangesBackdrop).should(breaking ? "exist" : "not.exist");
 };
 

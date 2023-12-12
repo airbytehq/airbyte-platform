@@ -10,10 +10,12 @@ import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Geography;
+import io.airbyte.config.SsoConfig;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.init.PostLoadExecutor;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
+import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.db.init.DatabaseInitializationException;
 import io.airbyte.db.init.DatabaseInitializer;
 import io.airbyte.db.instance.DatabaseMigrator;
@@ -50,9 +52,11 @@ public class Bootloader {
   private final DatabaseInitializer jobsDatabaseInitializer;
   private final DatabaseMigrator jobsDatabaseMigrator;
   private final JobPersistence jobPersistence;
+  private final OrganizationPersistence organizationPersistence;
   private final PostLoadExecutor postLoadExecution;
   private final ProtocolVersionChecker protocolVersionChecker;
   private final boolean runMigrationOnStartup;
+  private final String defaultRealm;
 
   public Bootloader(
                     @Value("${airbyte.bootloader.auto-upgrade-connectors}") final boolean autoUpgradeConnectors,
@@ -64,8 +68,10 @@ public class Bootloader {
                     @Named("jobsDatabaseInitializer") final DatabaseInitializer jobsDatabaseInitializer,
                     @Named("jobsDatabaseMigrator") final DatabaseMigrator jobsDatabaseMigrator,
                     final JobPersistence jobPersistence,
+                    final OrganizationPersistence organizationPersistence,
                     final ProtocolVersionChecker protocolVersionChecker,
                     @Value("${airbyte.bootloader.run-migration-on-startup}") final boolean runMigrationOnStartup,
+                    @Value("${airbyte.auth.default-realm}") final String defaultRealm,
                     final PostLoadExecutor postLoadExecution) {
     this.autoUpgradeConnectors = autoUpgradeConnectors;
     this.configRepository = configRepository;
@@ -76,8 +82,10 @@ public class Bootloader {
     this.jobsDatabaseInitializer = jobsDatabaseInitializer;
     this.jobsDatabaseMigrator = jobsDatabaseMigrator;
     this.jobPersistence = jobPersistence;
+    this.organizationPersistence = organizationPersistence;
     this.protocolVersionChecker = protocolVersionChecker;
     this.runMigrationOnStartup = runMigrationOnStartup;
+    this.defaultRealm = defaultRealm;
     this.postLoadExecution = postLoadExecution;
   }
 
@@ -113,6 +121,9 @@ public class Bootloader {
 
     log.info("Creating deployment (if none exists)...");
     createDeploymentIfNoneExists(jobPersistence);
+
+    log.info("assign default organization to sso realm config...");
+    createSsoConfigForDefaultOrgIfNoneExists(organizationPersistence);
 
     final String airbyteVersion = currentAirbyteVersion.serialize();
     log.info("Setting Airbyte version to '{}'...", airbyteVersion);
@@ -174,6 +185,20 @@ public class Bootloader {
     }
   }
 
+  private void createSsoConfigForDefaultOrgIfNoneExists(final OrganizationPersistence organizationPersistence) throws IOException {
+    if (organizationPersistence.getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID).isPresent()) {
+      log.info("SsoConfig already exists for the default organization.");
+      return;
+    }
+    if (organizationPersistence.getSsoConfigByRealmName(defaultRealm).isPresent()) {
+      log.info("An SsoConfig with realm {} already exists, so one cannot be created for the default organization.", defaultRealm);
+      return;
+    }
+    organizationPersistence.createSsoConfig(new SsoConfig().withSsoConfigId(UUID.randomUUID())
+        .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
+        .withKeycloakRealm(defaultRealm));
+  }
+
   private void createWorkspaceIfNoneExists(final ConfigRepository configRepository) throws JsonValidationException, IOException {
     if (!configRepository.listStandardWorkspaces(true).isEmpty()) {
       log.info("Workspace already exists for the deployment.");
@@ -183,8 +208,14 @@ public class Bootloader {
     final UUID workspaceId = UUID.randomUUID();
     final StandardWorkspace workspace = new StandardWorkspace()
         .withWorkspaceId(workspaceId)
+        // NOTE: we made a change to set this to the default User ID. It was reverted back to a random UUID
+        // because we discovered that our Segment Tracking Client uses distinct customer IDs to track the
+        // number of OSS instances deployed. this is flawed because now, a single OSS instance can have
+        // multiple workspaces. The long term fix is to update our analytics stack to use an instance-level
+        // identifier, like deploymentId, instead of a workspace-level identifier. For a quick fix though,
+        // we're reverting back to a randomized customer ID for the default workspace.
         .withCustomerId(UUID.randomUUID())
-        .withName(workspaceId.toString())
+        .withName(WorkspacePersistence.DEFAULT_WORKSPACE_NAME)
         .withSlug(workspaceId.toString())
         .withInitialSetupComplete(false)
         .withDisplaySetupWizard(true)

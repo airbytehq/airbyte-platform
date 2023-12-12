@@ -296,30 +296,6 @@ public interface Configs {
   boolean connectorSpecificResourceDefaultsEnabled();
 
   /**
-   * Define the job container's minimum CPU usage. Units follow either Docker or Kubernetes, depending
-   * on the deployment. Defaults to none.
-   */
-  String getJobMainContainerCpuRequest();
-
-  /**
-   * Define the job container's maximum CPU usage. Units follow either Docker or Kubernetes, depending
-   * on the deployment. Defaults to none.
-   */
-  String getJobMainContainerCpuLimit();
-
-  /**
-   * Define the job container's minimum RAM usage. Units follow either Docker or Kubernetes, depending
-   * on the deployment. Defaults to none.
-   */
-  String getJobMainContainerMemoryRequest();
-
-  /**
-   * Define the job container's maximum RAM usage. Units follow either Docker or Kubernetes, depending
-   * on the deployment. Defaults to none.
-   */
-  String getJobMainContainerMemoryLimit();
-
-  /**
    * Get datadog or OTEL metric client for Airbyte to emit metrics. Allows empty value
    */
   String getMetricClient();
@@ -364,54 +340,6 @@ public interface Configs {
   int getMaxDaysOfOnlyFailedJobsBeforeConnectionDisable();
 
   // Jobs - Kube only
-
-  /**
-   * Define the check job container's minimum CPU request. Defaults to
-   * {@link #getJobMainContainerCpuRequest()} if not set. Internal-use only.
-   */
-  String getCheckJobMainContainerCpuRequest();
-
-  /**
-   * Define the check job container's maximum CPU usage. Defaults to
-   * {@link #getJobMainContainerCpuLimit()} if not set. Internal-use only.
-   */
-  String getCheckJobMainContainerCpuLimit();
-
-  /**
-   * Define the check job container's minimum RAM usage. Defaults to
-   * {@link #getJobMainContainerMemoryRequest()} if not set. Internal-use only.
-   */
-  String getCheckJobMainContainerMemoryRequest();
-
-  /**
-   * Define the check job container's maximum RAM usage. Defaults to
-   * {@link #getJobMainContainerMemoryLimit()} if not set. Internal-use only.
-   */
-  String getCheckJobMainContainerMemoryLimit();
-
-  /**
-   * Define the normalization job container's minimum CPU request. Defaults to
-   * {@link #getJobMainContainerCpuRequest()} if not set. Internal-use only.
-   */
-  String getNormalizationJobMainContainerCpuRequest();
-
-  /**
-   * Define the normalization job container's maximum CPU usage. Defaults to
-   * {@link #getJobMainContainerCpuLimit()} if not set. Internal-use only.
-   */
-  String getNormalizationJobMainContainerCpuLimit();
-
-  /**
-   * Define the normalization job container's minimum RAM usage. Defaults to
-   * {@link #getJobMainContainerMemoryRequest()} if not set. Internal-use only.
-   */
-  String getNormalizationJobMainContainerMemoryRequest();
-
-  /**
-   * Define the normalization job container's maximum RAM usage. Defaults to
-   * {@link #getJobMainContainerMemoryLimit()} if not set. Internal-use only.
-   */
-  String getNormalizationJobMainContainerMemoryLimit();
 
   /**
    * Define one or more Job pod tolerations. Tolerations are separated by ';'. Each toleration
@@ -583,11 +511,6 @@ public interface Configs {
    * Example: airbyte_instance:dev,k8s-cluster:aws-dev
    */
   List<String> getDDConstantTags();
-
-  /**
-   * Define whether to publish tracking events to Segment or log-only. Airbyte internal use.
-   */
-  TrackingStrategy getTrackingStrategy();
 
   /**
    * Define whether to send job failure events to Sentry or log-only. Airbyte internal use.
@@ -768,14 +691,6 @@ public interface Configs {
   String getCdkEntrypoint();
 
   String getCustomerIoKey();
-
-  /**
-   * Tracking strategy.
-   */
-  enum TrackingStrategy {
-    SEGMENT,
-    LOGGING
-  }
 
   /**
    * Job error reporting strategy.

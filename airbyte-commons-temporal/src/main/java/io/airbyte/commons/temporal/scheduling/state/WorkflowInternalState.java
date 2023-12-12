@@ -21,6 +21,10 @@ import lombok.Setter;
 public class WorkflowInternalState {
 
   private Long jobId = null;
+
+  /**
+   * 0-based incrementing sequence.
+   */
   private Integer attemptNumber = null;
 
   // StandardSyncOutput standardSyncOutput = null;

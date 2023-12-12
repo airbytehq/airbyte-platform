@@ -19,12 +19,12 @@ export const ExistingConnectorButton = <T extends SourceRead | DestinationRead>(
   connector,
   onClick,
 }: ExistingConnectorButtonProps<T>) => {
-  const { connectionsByConnectorId } = useConnectionList();
+  const connectionList = useConnectionList();
   const testId = `select-existing-${isSource(connector) ? "source" : "destination"}-${connector.name}`;
 
   const connectorId = isSource(connector) ? connector.sourceId : connector.destinationId;
 
-  const connectionCount = connectionsByConnectorId.get(connectorId)?.length ?? 0;
+  const connectionCount = connectionList?.connectionsByConnectorId?.get(connectorId)?.length ?? 0;
 
   return (
     <button onClick={() => onClick(connectorId)} className={styles.existingConnectorButton} data-testid={testId}>

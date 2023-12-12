@@ -1,8 +1,11 @@
 .dockerignore
 .git
 .idea
-.gradle
+**/.gradle
 **/build
 **/node_modules
-Dockerfile.*
-docker-compose*.yaml
+**/build
+**/Dockerfile.*
+**/docker-compose*.yaml
+**/.terraform
+tools/bin/workflow/*

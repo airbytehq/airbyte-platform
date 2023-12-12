@@ -1,11 +1,10 @@
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { createColumnHelper } from "@tanstack/react-table";
 import React, { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
 import { Table } from "components/ui/Table";
 
 import { useListUsers, useUserHook } from "core/api/cloud";
@@ -60,11 +59,7 @@ const Header: React.VFC = () => {
       <Heading as="h1" size="sm">
         <FormattedMessage id="userSettings.table.title" />
       </Heading>
-      <Button
-        onClick={onOpenInviteUsersModal}
-        icon={<FontAwesomeIcon icon={faPlus} />}
-        data-testid="userSettings.button.addNewUser"
-      >
+      <Button onClick={onOpenInviteUsersModal} icon={<Icon type="plus" />} data-testid="userSettings.button.addNewUser">
         <FormattedMessage id="userSettings.button.addNewUser" />
       </Button>
     </div>

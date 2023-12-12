@@ -3,10 +3,25 @@
 
 .container {
   min-height: 100vh;
-  padding-bottom: 40px;
   background-color: colors.$foreground;
 }
 
+.header {
+  margin: 0 variables.$spacing-xl;
+  padding: variables.$spacing-lg variables.$spacing-xl;
+  border-bottom: 1px solid colors.$grey-100;
+}
+
 .content {
-  padding: 0 variables.$spacing-2xl variables.$spacing-2xl;
+  padding: variables.$spacing-md variables.$spacing-2xl;
+}
+
+.focusable {
+  scroll-margin-top: variables.$spacing-2xl;
+  transition: background-color 1s, box-shadow 1s ease;
+
+  &--focused {
+    background-color: colors.$yellow-50;
+    box-shadow: 0 0 0 variables.$spacing-md colors.$yellow-50;
+  }
 }

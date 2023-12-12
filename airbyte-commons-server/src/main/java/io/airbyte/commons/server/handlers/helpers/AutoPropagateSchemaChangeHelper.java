@@ -8,15 +8,14 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.model.generated.CatalogDiff;
+import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.featureflag.AutoPropagateNewStreams;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Workspace;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +41,7 @@ public class AutoPropagateSchemaChangeHelper {
    * Return value for `getUpdatedSchema` method. Returns the updated catalog and a description of the
    * changes
    */
-  public record UpdateSchemaResult(AirbyteCatalog catalog, List<String> changeDescription) {}
+  public record UpdateSchemaResult(AirbyteCatalog catalog, CatalogDiff appliedDiff, List<String> changeDescription) {}
 
   /**
    * Generate a summary of the changes that will be applied to the destination if the schema is
@@ -51,29 +50,48 @@ public class AutoPropagateSchemaChangeHelper {
    * @param transform the transformation to be applied to the destination
    * @return a list of strings describing the changes that will be applied to the destination.
    */
-  private static String staticFormatDiff(final StreamTransform transform) {
+  @VisibleForTesting
+  static String staticFormatDiff(final StreamTransform transform) {
+    String namespace = transform.getStreamDescriptor().getNamespace();
+    String nsPrefix = namespace != null ? String.format("%s.", namespace) : "";
+    String streamName = transform.getStreamDescriptor().getName();
     switch (transform.getTransformType()) {
       case ADD_STREAM -> {
-        return String.format("Added new stream %s", transform.getStreamDescriptor().getName());
+        return String.format("Added new stream '%s%s'", nsPrefix, streamName);
       }
       case REMOVE_STREAM -> {
-        return String.format("Removed stream %s", transform.getStreamDescriptor().getName());
+        return String.format("Removed stream '%s%s'", nsPrefix, streamName);
       }
       case UPDATE_STREAM -> {
-        String returnValue = String.format("Modified stream %s", transform.getStreamDescriptor().getName());
+        StringBuilder returnValue = new StringBuilder(String.format("Modified stream '%s%s': ", nsPrefix, streamName));
         if (transform.getUpdateStream() == null) {
-          return returnValue;
+          return returnValue.toString();
         }
+        List<String> addedFields = new ArrayList<>();
+        List<String> removedFields = new ArrayList<>();
+        List<String> updatedFields = new ArrayList<>();
+
         for (final FieldTransform fieldTransform : transform.getUpdateStream()) {
           final String fieldName = String.join(".", fieldTransform.getFieldName());
           switch (fieldTransform.getTransformType()) {
-            case ADD_FIELD -> returnValue += String.format("Added field: %s,", fieldName);
-            case REMOVE_FIELD -> returnValue += String.format("Removed field: %s,", fieldName);
-            case UPDATE_FIELD_SCHEMA -> returnValue += String.format("Field type changed: %s,", fieldName);
+            case ADD_FIELD -> addedFields.add(String.format("'%s'", fieldName));
+            case REMOVE_FIELD -> removedFields.add(String.format("'%s'", fieldName));
+            case UPDATE_FIELD_SCHEMA -> updatedFields.add(String.format("'%s'", fieldName));
             default -> throw new NotSupportedException("Not supported transformation.");
           }
         }
-        return returnValue;
+        List<String> detailedUpdates = new ArrayList<>();
+        if (!addedFields.isEmpty()) {
+          detailedUpdates.add(String.format("Added fields [%s]", String.join(", ", addedFields)));
+        }
+        if (!removedFields.isEmpty()) {
+          detailedUpdates.add(String.format("Removed fields [%s]", String.join(", ", removedFields)));
+        }
+        if (!updatedFields.isEmpty()) {
+          detailedUpdates.add(String.format("Altered fields [%s]", String.join(", ", updatedFields)));
+        }
+        returnValue.append(String.join(", ", detailedUpdates));
+        return returnValue.toString();
       }
       default -> {
         return "Unknown Transformation";
@@ -104,6 +122,7 @@ public class AutoPropagateSchemaChangeHelper {
     final Map<StreamDescriptor, AirbyteStreamAndConfiguration> newCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(newCatalog);
 
     final List<String> changes = new ArrayList<>();
+    final CatalogDiff appliedDiff = new CatalogDiff();
 
     transformations.forEach(transformation -> {
       final StreamDescriptor streamDescriptor = transformation.getStreamDescriptor();
@@ -113,37 +132,38 @@ public class AutoPropagateSchemaChangeHelper {
             oldCatalogPerStream.get(streamDescriptor)
                 .stream(newCatalogPerStream.get(streamDescriptor).getStream());
             changes.add(staticFormatDiff(transformation));
+            appliedDiff.addTransformsItem(transformation);
           }
         }
         case ADD_STREAM -> {
           if (nonBreakingChangesPreference.equals(NonBreakingChangesPreference.PROPAGATE_FULLY)) {
             final var streamAndConfigurationToAdd = newCatalogPerStream.get(streamDescriptor);
-            if (featureFlagClient.boolVariation(AutoPropagateNewStreams.INSTANCE, new Workspace(workspaceId))) {
-              // If we're propagating it, we want to enable it! Otherwise, it'll just get dropped when we update
-              // the catalog.
-              streamAndConfigurationToAdd.getConfig()
-                  .selected(true);
-              CatalogConverter.configureDefaultSyncModesForNewStream(streamAndConfigurationToAdd.getStream(),
-                  streamAndConfigurationToAdd.getConfig());
-              CatalogConverter.ensureCompatibleDestinationSyncMode(streamAndConfigurationToAdd, supportedDestinationSyncModes);
-            }
+            // If we're propagating it, we want to enable it! Otherwise, it'll just get dropped when we update
+            // the catalog.
+            streamAndConfigurationToAdd.getConfig()
+                .selected(true);
+            CatalogConverter.configureDefaultSyncModesForNewStream(streamAndConfigurationToAdd.getStream(),
+                streamAndConfigurationToAdd.getConfig());
+            CatalogConverter.ensureCompatibleDestinationSyncMode(streamAndConfigurationToAdd, supportedDestinationSyncModes);
             // TODO(mfsiega-airbyte): handle the case where the chosen sync mode isn't actually one of the
             // supported sync modes.
             oldCatalogPerStream.put(streamDescriptor, streamAndConfigurationToAdd);
             changes.add(staticFormatDiff(transformation));
+            appliedDiff.addTransformsItem(transformation);
           }
         }
         case REMOVE_STREAM -> {
           if (nonBreakingChangesPreference.equals(NonBreakingChangesPreference.PROPAGATE_FULLY)) {
             oldCatalogPerStream.remove(streamDescriptor);
             changes.add(staticFormatDiff(transformation));
+            appliedDiff.addTransformsItem(transformation);
           }
         }
         default -> throw new NotSupportedException("Not supported transformation.");
       }
     });
 
-    return new UpdateSchemaResult(new AirbyteCatalog().streams(List.copyOf(oldCatalogPerStream.values())), changes);
+    return new UpdateSchemaResult(new AirbyteCatalog().streams(List.copyOf(oldCatalogPerStream.values())), appliedDiff, changes);
   }
 
   @VisibleForTesting
@@ -155,13 +175,31 @@ public class AutoPropagateSchemaChangeHelper {
   }
 
   /**
+   * Tests whether auto-propagation should be applied based on the connection/workspace configs and
+   * the diff.
+   *
+   * @param diff the diff to be applied
+   * @param connectionRead the connection info
+   * @return whether the diff should be propagated
+   */
+  public static boolean shouldAutoPropagate(final CatalogDiff diff,
+                                            final ConnectionRead connectionRead) {
+    final boolean hasDiff = !diff.getTransforms().isEmpty();
+    final boolean nonBreakingChange = !AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
+    final boolean autoPropagationIsEnabledForConnection =
+        connectionRead.getNonBreakingChangesPreference() != null
+            && (connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_COLUMNS)
+                || connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_FULLY));
+    return hasDiff && nonBreakingChange && autoPropagationIsEnabledForConnection;
+  }
+
+  /**
    * Tests whether the provided catalog diff contains a breaking change.
    *
    * @param diff A {@link CatalogDiff}.
    * @return {@code true} if any breaking field transforms are included in the diff, {@code false}
    *         otherwise.
    */
-  @VisibleForTesting
   public static boolean containsBreakingChange(final CatalogDiff diff) {
     for (final StreamTransform streamTransform : diff.getTransforms()) {
       if (streamTransform.getTransformType() != StreamTransform.TransformTypeEnum.UPDATE_STREAM) {

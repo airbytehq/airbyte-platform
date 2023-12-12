@@ -74,9 +74,7 @@ export function useGroupsAndSections(
         if (section.displayType === "expanded") {
           return section;
         }
-        const hasError = section.blocks.some(
-          (block) => Boolean(get(formState.errors, block.path)) && Boolean(get(formState.touchedFields, block.path))
-        );
+        const hasError = section.blocks.some((block) => Boolean(get(formState.errors, block.path)));
         const initiallyOpen = section.blocks
           .filter((block) => block.const === undefined) // ignore const blocks because they are hidden
           .some((block) => {

@@ -6,7 +6,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
-import { SupportLevel } from "core/request/AirbyteClient";
+import { SupportLevel } from "core/api/types/AirbyteClient";
 
 import styles from "./FilterSupportLevel.module.scss";
 
@@ -53,6 +53,8 @@ export const FilterSupportLevel: React.FC<FilterSupportLevelProps> = ({
                 </Text>,
               ]
             : []),
+          // rule doesn't understand SupportLevelBadge renders text
+          // eslint-disable-next-line jsx-a11y/label-has-associated-control
           <label htmlFor={id} className={styles.checkboxLabel} key={id}>
             <FlexContainer alignItems="center" gap="sm">
               <CheckBox

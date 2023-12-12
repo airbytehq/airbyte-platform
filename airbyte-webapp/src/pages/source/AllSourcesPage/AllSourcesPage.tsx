@@ -1,5 +1,3 @@
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -8,10 +6,11 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { MainPageWithScroll } from "components/common/MainPageWithScroll";
 import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
 import { PageHeader } from "components/ui/PageHeader";
 
+import { useSourceList } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useSourceList } from "hooks/services/useSourceHook";
 
 import { SourcesTable } from "./SourcesTable";
 import { SourcePaths } from "../../routePaths";
@@ -34,7 +33,7 @@ const AllSourcesPage: React.FC = () => {
             </Heading>
           }
           endComponent={
-            <Button icon={<FontAwesomeIcon icon={faPlus} />} onClick={onCreateSource} size="sm" data-id="new-source">
+            <Button icon={<Icon type="plus" />} onClick={onCreateSource} size="sm" data-id="new-source">
               <FormattedMessage id="sources.newSource" />
             </Button>
           }

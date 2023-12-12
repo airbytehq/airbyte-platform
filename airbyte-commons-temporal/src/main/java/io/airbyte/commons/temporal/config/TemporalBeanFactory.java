@@ -5,9 +5,9 @@
 package io.airbyte.commons.temporal.config;
 
 import io.airbyte.commons.temporal.TemporalUtils;
-import io.airbyte.commons.temporal.TemporalWorkflowUtils;
 import io.airbyte.commons.temporal.WorkflowClientWrapped;
 import io.airbyte.commons.temporal.WorkflowServiceStubsWrapped;
+import io.airbyte.commons.temporal.factories.WorkflowClientFactory;
 import io.airbyte.metrics.lib.MetricClient;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
@@ -43,7 +43,7 @@ public class TemporalBeanFactory {
   WorkflowClient workflowClient(
                                 final TemporalUtils temporalUtils,
                                 final WorkflowServiceStubs temporalService) {
-    return TemporalWorkflowUtils.createWorkflowClient(temporalService, temporalUtils.getNamespace());
+    return new WorkflowClientFactory().createWorkflowClient(temporalService, temporalUtils.getNamespace());
   }
 
   @Singleton

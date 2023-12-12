@@ -8,7 +8,10 @@ $border-width: variables.$border-thick;
 .container {
   min-height: $title-height;
   position: relative;
-  padding-top: calc($title-height / 2);
+
+  &--title {
+    padding-top: calc($title-height / 2);
+  }
 }
 
 .title {
@@ -58,7 +61,13 @@ $border-width: variables.$border-thick;
 
   // only apply padding when there are children, so that empty group sections border is just a single line
   > :first-child {
-    padding-top: calc($group-spacing + variables.$spacing-md);
+    padding-top: $group-spacing;
+  }
+
+  &.content--title {
+    > :first-child {
+      padding-top: calc($group-spacing + variables.$spacing-md);
+    }
   }
 
   > div {

@@ -10,17 +10,16 @@ import static io.airbyte.workers.process.Metadata.SYNC_JOB;
 import static io.airbyte.workers.process.Metadata.SYNC_STEP_KEY;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.logging.LoggingHelper;
 import io.airbyte.commons.logging.LoggingHelper.Color;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.logging.MdcScope.Builder;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
-import io.airbyte.config.OperatorDbt;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.persistence.job.errorreporter.SentryExceptionHelper;
 import io.airbyte.persistence.job.errorreporter.SentryExceptionHelper.ErrorMapKeys;
@@ -53,7 +52,7 @@ public class DefaultNormalizationRunner implements NormalizationRunner {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultNormalizationRunner.class);
   private static final MdcScope.Builder CONTAINER_LOG_MDC_BUILDER = new Builder()
-      .setLogPrefix("normalization")
+      .setLogPrefix(LoggingHelper.NORMALIZATION_LOGGER_PREFIX)
       .setPrefixColor(Color.GREEN_BACKGROUND);
 
   private final String normalizationIntegrationType;
@@ -71,37 +70,6 @@ public class DefaultNormalizationRunner implements NormalizationRunner {
     this.processFactory = processFactory;
     this.normalizationImageName = normalizationImage;
     this.normalizationIntegrationType = normalizationIntegrationType;
-  }
-
-  @Override
-  public boolean configureDbt(final String jobId,
-                              final int attempt,
-                              final UUID connectionId,
-                              final UUID workspaceId,
-                              final Path jobRoot,
-                              final JsonNode config,
-                              final ResourceRequirements resourceRequirements,
-                              final OperatorDbt dbtConfig)
-      throws Exception {
-    final Map<String, String> files = ImmutableMap.of(
-        WorkerConstants.DESTINATION_CONFIG_JSON_FILENAME, Jsons.serialize(config));
-    final String gitRepoUrl = dbtConfig.getGitRepoUrl();
-    if (Strings.isNullOrEmpty(gitRepoUrl)) {
-      throw new WorkerException("Git Repo Url is required");
-    }
-    final String gitRepoBranch = dbtConfig.getGitRepoBranch();
-    if (Strings.isNullOrEmpty(gitRepoBranch)) {
-      return runProcess(jobId, attempt, connectionId, workspaceId, jobRoot, files, resourceRequirements, "configure-dbt",
-          "--integration-type", normalizationIntegrationType.toLowerCase(),
-          "--config", WorkerConstants.DESTINATION_CONFIG_JSON_FILENAME,
-          "--git-repo", gitRepoUrl);
-    } else {
-      return runProcess(jobId, attempt, connectionId, workspaceId, jobRoot, files, resourceRequirements, "configure-dbt",
-          "--integration-type", normalizationIntegrationType.toLowerCase(),
-          "--config", WorkerConstants.DESTINATION_CONFIG_JSON_FILENAME,
-          "--git-repo", gitRepoUrl,
-          "--git-branch", gitRepoBranch);
-    }
   }
 
   @Override

@@ -10,7 +10,12 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 
 interface NotificationSender<T> {
-  fun sendNotification(config: T, subject: String, message: String)
+  fun sendNotification(
+    config: T,
+    subject: String,
+    message: String,
+  )
+
   fun notificationType(): NotificationType
 }
 
@@ -18,18 +23,22 @@ interface NotificationSender<T> {
 class WebhookNotificationSender(
   @Named("webhookHttpClient") private val okHttpClient: OkHttpClient,
 ) : NotificationSender<WebhookConfig> {
-
   companion object {
     private val log = LoggerFactory.getLogger(WebhookNotificationSender::class.java)
   }
 
-  override fun sendNotification(config: WebhookConfig, subject: String, message: String) {
+  override fun sendNotification(
+    config: WebhookConfig,
+    subject: String,
+    message: String,
+  ) {
     val requestBody: RequestBody = """{"text": "$message"}""".toRequestBody("application/json".toMediaType())
 
-    val request: okhttp3.Request = okhttp3.Request.Builder()
-      .url(config.webhookUrl)
-      .post(requestBody)
-      .build()
+    val request: okhttp3.Request =
+      okhttp3.Request.Builder()
+        .url(config.webhookUrl)
+        .post(requestBody)
+        .build()
 
     okHttpClient.newCall(request).execute().use { response ->
       if (response.isSuccessful) {

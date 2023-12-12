@@ -2,7 +2,7 @@ import { JSONSchema7Type } from "json-schema";
 import intersection from "lodash/intersection";
 import pick from "lodash/pick";
 
-import { FormBlock } from "core/form/types";
+import { FormBlock, FormGroupItem } from "core/form/types";
 import { AirbyteJSONSchemaDefinition, AirbyteJSONSchema } from "core/jsonSchema/types";
 import { isDefined } from "core/utils/common";
 
@@ -98,7 +98,7 @@ export const jsonSchemaToFormBlock = (
       _type: "objectArray",
       path: path || key,
       fieldKey: key,
-      properties: jsonSchemaToFormBlock(jsonSchema.items, key, path),
+      properties: jsonSchemaToFormBlock(jsonSchema.items, key, path) as FormGroupItem,
       isRequired,
     };
   }

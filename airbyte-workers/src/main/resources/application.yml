@@ -59,7 +59,6 @@ airbyte:
           secret-access-key: ${STATE_STORAGE_S3_SECRET_ACCESS_KEY:}
   connector:
     specific-resource-defaults-enabled: ${CONNECTOR_SPECIFIC_RESOURCE_DEFAULTS_ENABLED:false}
-    datadog-support-names: ${CONNECTOR_DATADOG_SUPPORT_NAMES:}
   connector-registry:
     remote:
       base-url: ${CONNECTOR_REGISTRY_BASE_URL:}
@@ -93,13 +92,6 @@ airbyte:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
-  flyway:
-    configs:
-      initialization-timeout-ms: ${CONFIGS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
-      minimum-migration-version: ${CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION}
-    jobs:
-      initialization-timeout-ms: ${JOBS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
-      minimum-migration-version: ${JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION}
   internal:
     api:
       auth-header:
@@ -213,14 +205,6 @@ airbyte:
           container:
             image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
         tolerations: ${JOB_KUBE_TOLERATIONS:}
-      main:
-        container:
-          cpu:
-            limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:}
-            request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
-          memory:
-            limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
-            request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
     replication:
       persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:60}
     spec:
@@ -235,6 +219,8 @@ airbyte:
     notify:
       enabled: ${SHOULD_RUN_NOTIFY_WORKFLOWS:true}
       max-workers: ${MAX_NOTIFY_WORKERS:5}
+  workload:
+    enabled: false
   role: ${AIRBYTE_ROLE:}
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
@@ -242,6 +228,7 @@ airbyte:
       aws:
         access-key: ${AWS_ACCESS_KEY:}
         secret-key: ${AWS_SECRET_ACCESS_KEY:}
+        region: ${AWS_REGION:}
       gcp:
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
@@ -252,13 +239,23 @@ airbyte:
   temporal:
     worker:
       ports: ${TEMPORAL_WORKER_PORTS:}
-  tracking-strategy: ${TRACKING_STRATEGY:LOGGING}
+  tracking:
+    strategy: ${TRACKING_STRATEGY:LOGGING}
+    write-key: ${SEGMENT_WRITE_KEY:}
   version: ${AIRBYTE_VERSION}
   web-app:
     url: ${WEBAPP_URL:}
   workflow:
     failure:
       restart-delay: ${WORKFLOW_FAILURE_RESTART_DELAY_SECONDS:600}
+  workload-api:
+    base-path: ${WORKLOAD_API_HOST:}
+    bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
+    connect-timeout-seconds: ${WORKLOAD_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${WORKLOAD_API_READ_TIMEOUT_SECONDS:300}
+    retries:
+      delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
+      max: ${WORKLOAD_API_MAX_RETRIES:5}
   workspace:
     docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
     root: ${WORKSPACE_ROOT}

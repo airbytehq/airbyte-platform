@@ -1,11 +1,11 @@
+import { config } from "config";
+
 import { Action, EventParams, Namespace } from "./types";
 
 type Context = Record<string, unknown>;
 
 export class AnalyticsService {
   private context: Context = {};
-
-  constructor(private version?: string) {}
 
   private getSegmentAnalytics = (): SegmentAnalytics.AnalyticsJS | undefined => window.analytics;
 
@@ -20,37 +20,45 @@ export class AnalyticsService {
     keys.forEach((key) => delete this.context[key]);
   }
 
-  alias = (newId: string): void => this.getSegmentAnalytics()?.alias?.(newId);
+  public alias(newId: string): void {
+    this.getSegmentAnalytics()?.alias?.(newId);
+  }
 
-  page = (name: string): void => {
+  public page(name: string, params: EventParams = {}): void {
     if (process.env.NODE_ENV === "development") {
-      console.debug(`%c[Analytics.Page] ${name}`, "color: teal");
+      console.debug(`%c[Analytics.Page] ${name}`, "color: teal", params);
     }
-    this.getSegmentAnalytics()?.page?.(name, { ...this.context });
-  };
+    this.getSegmentAnalytics()?.page?.(name, { ...params, ...this.context });
+  }
 
-  reset = (): void => this.getSegmentAnalytics()?.reset?.();
+  public reset(): void {
+    this.getSegmentAnalytics()?.reset?.();
+  }
 
-  track = (namespace: Namespace, action: Action, params: EventParams & { actionDescription?: string }) => {
+  public track(namespace: Namespace, action: Action, params: EventParams & { actionDescription?: string }) {
     if (process.env.NODE_ENV === "development") {
       console.debug(`%c[Analytics.Track] Airbyte.UI.${namespace}.${action}`, "color: teal", params);
     }
     this.getSegmentAnalytics()?.track(`Airbyte.UI.${namespace}.${action}`, {
       ...params,
       ...this.context,
-      airbyte_version: this.version,
-      environment: this.version === "dev" ? "dev" : "prod",
+      airbyte_version: config.version,
+      environment: config.version === "dev" ? "dev" : "prod",
     });
-  };
+  }
 
-  identify = (userId: string, traits: Record<string, unknown> = {}): void => {
+  public identify(userId: string, traits: Record<string, unknown> = {}): void {
     if (process.env.NODE_ENV === "development") {
       console.debug(`%c[Analytics.Identify] ${userId}`, "color: teal", traits);
     }
     this.getSegmentAnalytics()?.identify?.(userId, traits);
-  };
+  }
 
-  group = (organisationId: string, traits: Record<string, unknown> = {}): void =>
+  public group(organisationId: string, traits: Record<string, unknown> = {}): void {
     this.getSegmentAnalytics()?.group?.(organisationId, traits);
-  setAnonymousId = (anonymousId: string) => this.getSegmentAnalytics()?.setAnonymousId(anonymousId);
+  }
+
+  public setAnonymousId(anonymousId: string) {
+    this.getSegmentAnalytics()?.setAnonymousId(anonymousId);
+  }
 }

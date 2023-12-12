@@ -7,38 +7,33 @@ package io.airbyte.workers.general;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
 import datadog.trace.api.Trace;
-import io.airbyte.commons.concurrency.VoidCallable;
-import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.config.ReplicationOutput;
-import io.airbyte.config.StandardSyncInput;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
 import io.airbyte.workers.exception.WorkerException;
-import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.AirbyteDestination;
-import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
-import io.airbyte.workers.internal.FieldSelector;
+import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
-import io.airbyte.workers.internal.book_keeping.MessageTracker;
-import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessageEventPublishingHelper;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
-import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
+import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -72,14 +67,13 @@ public class DefaultReplicationWorker implements ReplicationWorker {
 
   private final String jobId;
   private final int attempt;
+  private final DestinationTimeoutMonitor destinationTimeoutMonitor;
   private final ReplicationWorkerHelper replicationWorkerHelper;
   private final AirbyteSource source;
   private final AirbyteDestination destination;
   private final SyncPersistence syncPersistence;
   private final ExecutorService executors;
-  private final AtomicBoolean cancelled;
   private final AtomicBoolean hasFailed;
-  private final AtomicBoolean shouldStop;
   private final RecordSchemaValidator recordSchemaValidator;
   private final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone;
   private final ReplicationFeatureFlagReader replicationFeatureFlagReader;
@@ -89,32 +83,28 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   public DefaultReplicationWorker(final String jobId,
                                   final int attempt,
                                   final AirbyteSource source,
-                                  final AirbyteMapper mapper,
                                   final AirbyteDestination destination,
-                                  final MessageTracker messageTracker,
                                   final SyncPersistence syncPersistence,
                                   final RecordSchemaValidator recordSchemaValidator,
-                                  final FieldSelector fieldSelector,
                                   final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
                                   final ReplicationFeatureFlagReader replicationFeatureFlagReader,
-                                  final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
-                                  final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
-                                  final VoidCallable onReplicationRunning) {
+                                  final ReplicationWorkerHelper replicationWorkerHelper,
+                                  final DestinationTimeoutMonitor destinationTimeoutMonitor) {
     this.jobId = jobId;
     this.attempt = attempt;
-    this.replicationWorkerHelper = new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
-        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning);
+    this.destinationTimeoutMonitor = destinationTimeoutMonitor;
+    this.replicationWorkerHelper = replicationWorkerHelper;
     this.source = source;
     this.destination = destination;
     this.syncPersistence = syncPersistence;
-    this.executors = Executors.newFixedThreadPool(2);
+    // readFromSrcAndWriteToDstRunnable + readFromDstThread
+    // + source heartbeat + dest timeout monitor + workload timeout = 5
+    this.executors = Executors.newFixedThreadPool(5);
     this.recordSchemaValidator = recordSchemaValidator;
     this.srcHeartbeatTimeoutChaperone = srcHeartbeatTimeoutChaperone;
     this.replicationFeatureFlagReader = replicationFeatureFlagReader;
 
-    this.cancelled = new AtomicBoolean(false);
     this.hasFailed = new AtomicBoolean(false);
-    this.shouldStop = new AtomicBoolean(false);
   }
 
   /**
@@ -124,33 +114,33 @@ public class DefaultReplicationWorker implements ReplicationWorker {
    * should be treated as state that is safe to return from run. In the case when the destination
    * emits no state, we fall back on whatever state is pass in as an argument to this method.
    *
-   * @param syncInput all configuration for running replication
+   * @param replicationInput all configuration for running replication
    * @param jobRoot file root that worker is allowed to use
    * @return output of the replication attempt (including state)
    * @throws WorkerException exception from worker
    */
   @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
-  public final ReplicationOutput run(final StandardSyncInput syncInput, final Path jobRoot) throws WorkerException {
+  public final ReplicationOutput run(final ReplicationInput replicationInput, final Path jobRoot) throws WorkerException {
     LOGGER.info("start sync worker. job id: {} attempt id: {}", jobId, attempt);
 
     LineGobbler.startSection("REPLICATION");
 
     try {
-      LOGGER.info("configured sync modes: {}", syncInput.getCatalog().getStreams()
+      LOGGER.info("configured sync modes: {}", replicationInput.getCatalog().getStreams()
           .stream()
           .collect(Collectors.toMap(s -> s.getStream().getNamespace() + "." + s.getStream().getName(),
               s -> String.format("%s - %s", s.getSyncMode(), s.getDestinationSyncMode()))));
 
       final ReplicationContext replicationContext =
-          new ReplicationContext(syncInput.getIsReset(), syncInput.getConnectionId(), syncInput.getSourceId(),
-              syncInput.getDestinationId(), Long.parseLong(jobId),
-              attempt, syncInput.getWorkspaceId());
+          new ReplicationContext(replicationInput.getIsReset(), replicationInput.getConnectionId(), replicationInput.getSourceId(),
+              replicationInput.getDestinationId(), Long.parseLong(jobId),
+              attempt, replicationInput.getWorkspaceId());
 
-      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(syncInput);
+      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags();
       replicationWorkerHelper.initialize(replicationContext, flags, jobRoot);
 
-      replicate(jobRoot, syncInput);
+      replicate(jobRoot, replicationInput, flags);
 
       return replicationWorkerHelper.getReplicationOutput();
     } catch (final Exception e) {
@@ -161,21 +151,29 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   }
 
   private void replicate(final Path jobRoot,
-                         final StandardSyncInput syncInput) {
+                         final ReplicationInput replicationInput,
+                         final ReplicationFeatureFlags flags) {
     final Map<String, String> mdc = MDC.getCopyOfContextMap();
 
+    final CloseableWithTimeout destinationWithCloseTimeout = new CloseableWithTimeout(destination, mdc, flags);
     // note: resources are closed in the opposite order in which they are declared. thus source will be
     // closed first (which is what we want).
-    try (recordSchemaValidator; syncPersistence; srcHeartbeatTimeoutChaperone; destination; source) {
-      replicationWorkerHelper.startDestination(destination, syncInput, jobRoot);
-      replicationWorkerHelper.startSource(source, syncInput, jobRoot);
+    try (recordSchemaValidator; syncPersistence; srcHeartbeatTimeoutChaperone; source; destinationTimeoutMonitor; destinationWithCloseTimeout) {
+      replicationWorkerHelper.startDestination(destination, replicationInput, jobRoot);
+      replicationWorkerHelper.startSource(source, replicationInput, jobRoot);
 
       replicationWorkerHelper.markReplicationRunning();
+
+      if (replicationWorkerHelper.isWorkerV2TestEnabled()) {
+        CompletableFuture.runAsync(
+            replicationWorkerHelper.getWorkloadStatusHeartbeat(),
+            executors);
+      }
 
       // note: `whenComplete` is used instead of `exceptionally` so that the original exception is still
       // thrown
       final CompletableFuture<?> readFromDstThread = CompletableFuture.runAsync(
-          readFromDstRunnable(destination, shouldStop, cancelled, replicationWorkerHelper, mdc),
+          readFromDstRunnable(destination, replicationWorkerHelper, mdc),
           executors)
           .whenComplete((msg, ex) -> {
             if (ex != null) {
@@ -188,8 +186,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           source,
           destination,
           replicationWorkerHelper,
-          shouldStop,
-          cancelled,
           mdc), executors)
           .whenComplete((msg, ex) -> {
             if (ex != null) {
@@ -198,11 +194,16 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             }
           });
 
-      try {
-        srcHeartbeatTimeoutChaperone.runWithHeartbeatThread(readSrcAndWriteDstThread);
-      } catch (final HeartbeatTimeoutChaperone.HeartbeatTimeoutException ex) {
-        ApmTraceUtils.addExceptionToTrace(ex);
-        replicationWorkerHelper.trackFailure(ex);
+      if (flags.isDestinationTimeoutEnabled()) {
+        attachHeartbeatCheck(readSrcAndWriteDstThread, srcHeartbeatTimeoutChaperone, mdc);
+        attachDestinationTimeout(readSrcAndWriteDstThread, mdc);
+      } else {
+        try {
+          srcHeartbeatTimeoutChaperone.runWithHeartbeatThread(readSrcAndWriteDstThread);
+        } catch (final HeartbeatTimeoutChaperone.HeartbeatTimeoutException ex) {
+          ApmTraceUtils.addExceptionToTrace(ex);
+          replicationWorkerHelper.trackFailure(ex);
+        }
       }
 
       LOGGER.info("Waiting for source and destination threads to complete.");
@@ -214,7 +215,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       CompletableFuture.allOf(readSrcAndWriteDstThread, readFromDstThread).get();
       LOGGER.info("Source and destination threads complete.");
 
-      if (!cancelled.get()) {
+      if (!replicationWorkerHelper.getCancelled()) {
+        // We don't call endOfReplication on cancelled because it should be called from the cancel method.
         replicationWorkerHelper.endOfReplication();
       }
     } catch (final Exception e) {
@@ -239,17 +241,58 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     }
   }
 
+  private void attachHeartbeatCheck(
+                                    final CompletableFuture<Void> completableFuture,
+                                    final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone,
+                                    final Map<String, String> mdc) {
+    // new thread since heartbeatTimeoutChaperone.runWithHeartbeatThread is blocking
+    CompletableFuture.runAsync(() -> {
+      MDC.setContextMap(mdc);
+      try {
+        heartbeatTimeoutChaperone.runWithHeartbeatThread(completableFuture);
+      } catch (final HeartbeatTimeoutChaperone.HeartbeatTimeoutException e) {
+        ApmTraceUtils.addExceptionToTrace(e);
+        replicationWorkerHelper.trackFailure(e);
+      } catch (final ExecutionException e) {
+        throw new RuntimeException(e);
+      }
+    }, executors);
+  }
+
+  private void attachDestinationTimeout(final CompletableFuture<Void> completableFuture, final Map<String, String> mdc) {
+    CompletableFuture.runAsync(() -> {
+      MDC.setContextMap(mdc);
+      try {
+        destinationTimeoutMonitor.runWithTimeoutThread(completableFuture);
+      } catch (final DestinationTimeoutMonitor.TimeoutException e) {
+        ApmTraceUtils.addExceptionToTrace(e);
+        replicationWorkerHelper.trackFailure(e);
+      } catch (final ExecutionException e) {
+        throw new RuntimeException(e);
+      }
+    }, executors);
+  }
+
+  private CompletableFuture<?> runAsyncWithTimeout(final Runnable runnable, final Map<String, String> mdc) {
+    final CompletableFuture<Void> runnableFuture = CompletableFuture.runAsync(() -> {
+      MDC.setContextMap(mdc);
+      runnable.run();
+    }, executors);
+
+    attachDestinationTimeout(runnableFuture, mdc);
+
+    return runnableFuture;
+  }
+
   @SuppressWarnings("PMD.AvoidInstanceofChecksInCatchClause")
   private static Runnable readFromDstRunnable(final AirbyteDestination destination,
-                                              final AtomicBoolean shouldStop,
-                                              final AtomicBoolean cancelled,
                                               final ReplicationWorkerHelper replicationWorkerHelper,
                                               final Map<String, String> mdc) {
     return () -> {
       MDC.setContextMap(mdc);
       LOGGER.info("Destination output thread started.");
       try {
-        while (!shouldStop.get() && !cancelled.get() && !destination.isFinished()) {
+        while (!replicationWorkerHelper.getShouldAbort() && !destination.isFinished()) {
           final Optional<AirbyteMessage> messageOptional;
           try {
             messageOptional = destination.attemptRead();
@@ -260,13 +303,13 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             replicationWorkerHelper.processMessageFromDestination(messageOptional.get());
           }
         }
-        if (!cancelled.get() && destination.getExitValue() != 0) {
+        if (!replicationWorkerHelper.getShouldAbort() && destination.getExitValue() != 0) {
           throw new DestinationException("Destination process exited with non-zero exit code " + destination.getExitValue());
         } else {
           replicationWorkerHelper.endOfDestination();
         }
       } catch (final Exception e) {
-        if (!cancelled.get()) {
+        if (!replicationWorkerHelper.getCancelled()) {
           // Although this thread is closed first, it races with the destination's closure and can attempt one
           // final read after the destination is closed before it's terminated.
           // This read will fail and throw an exception. Because of this, throw exceptions only if the worker
@@ -287,15 +330,13 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private static Runnable readFromSrcAndWriteToDstRunnable(final AirbyteSource source,
                                                            final AirbyteDestination destination,
                                                            final ReplicationWorkerHelper replicationWorkerHelper,
-                                                           final AtomicBoolean shouldStop,
-                                                           final AtomicBoolean cancelled,
                                                            final Map<String, String> mdc) {
     return () -> {
       MDC.setContextMap(mdc);
       LOGGER.info("Replication thread started.");
 
       try {
-        while (!shouldStop.get() && !cancelled.get() && !source.isFinished()) {
+        while (!replicationWorkerHelper.getShouldAbort() && !source.isFinished()) {
           final Optional<AirbyteMessage> messageOptional;
           try {
             messageOptional = source.attemptRead();
@@ -327,6 +368,9 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             }
           }
         }
+        if (replicationWorkerHelper.isWorkerV2TestEnabled() && replicationWorkerHelper.getShouldAbort()) {
+          source.cancel();
+        }
         replicationWorkerHelper.endOfSource();
 
         try {
@@ -334,23 +378,27 @@ public class DefaultReplicationWorker implements ReplicationWorker {
         } catch (final Exception e) {
           throw new DestinationException("Destination process end of stream notification failed", e);
         }
-        if (!cancelled.get() && source.getExitValue() != 0) {
+        if (!replicationWorkerHelper.getShouldAbort() && source.getExitValue() != 0) {
           throw new SourceException("Source process exited with non-zero exit code " + source.getExitValue());
         }
       } catch (final Exception e) {
         // If we exit this function with an exception, we should assume failure and stop the other thread.
-        shouldStop.set(true);
+        replicationWorkerHelper.abort();
 
-        if (!cancelled.get()) {
+        if (!replicationWorkerHelper.getCancelled()) {
           // Although this thread is closed first, it races with the source's closure and can attempt one
           // final read after the source is closed before it's terminated.
           // This read will fail and throw an exception. Because of this, throw exceptions only if the worker
           // was not cancelled.
 
-          if (e instanceof SourceException || e instanceof DestinationException) {
+          if (e instanceof SourceException) {
             // Surface Source and Destination exceptions directly so that they can be classified properly by the
             // worker
-            throw e;
+            throw (SourceException) e;
+          } else if (e instanceof DestinationException) {
+            // Surface Source and Destination exceptions directly so that they can be classified properly by the
+            // worker
+            throw (DestinationException) e;
           } else {
             throw new RuntimeException(e);
           }
@@ -373,7 +421,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       LOGGER.error("Unable to cancel due to interruption.", e);
       wasInterrupted = true;
     }
-    cancelled.set(true);
     replicationWorkerHelper.markCancelled();
 
     LOGGER.info("Cancelling destination...");
@@ -398,6 +445,35 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       // Preserve the interrupt flag if we were interrupted
       Thread.currentThread().interrupt();
     }
+  }
+
+  private class CloseableWithTimeout implements AutoCloseable {
+
+    AutoCloseable autoCloseable;
+    private final Map<String, String> mdc;
+    private final ReplicationFeatureFlags flags;
+
+    public CloseableWithTimeout(final AutoCloseable autoCloseable, final Map<String, String> mdc, final ReplicationFeatureFlags flags) {
+      this.autoCloseable = autoCloseable;
+      this.mdc = mdc;
+      this.flags = flags;
+    }
+
+    @Override
+    public void close() throws Exception {
+      if (flags.isDestinationTimeoutEnabled()) {
+        runAsyncWithTimeout(() -> {
+          try {
+            autoCloseable.close();
+          } catch (final Exception e) {
+            throw new RuntimeException(e);
+          }
+        }, mdc).join();
+      } else {
+        autoCloseable.close();
+      }
+    }
+
   }
 
 }

@@ -36,9 +36,10 @@ object ConnectionCreateMapper {
     connectionCreateOss.sourceId = connectionCreateRequest.sourceId
     connectionCreateOss.destinationId = connectionCreateRequest.destinationId
     connectionCreateOss.name = connectionCreateRequest.name
-    connectionCreateOss.nonBreakingChangesPreference = ConnectionHelper.convertNonBreakingSchemaUpdatesBehaviorEnum(
-      connectionCreateRequest.nonBreakingSchemaUpdatesBehavior,
-    )
+    connectionCreateOss.nonBreakingChangesPreference =
+      ConnectionHelper.convertNonBreakingSchemaUpdatesBehaviorEnum(
+        connectionCreateRequest.nonBreakingSchemaUpdatesBehavior,
+      )
     connectionCreateOss.namespaceDefinition = ConnectionHelper.convertNamespaceDefinitionEnum(connectionCreateRequest.namespaceDefinition)
     if (connectionCreateRequest.namespaceFormat != null) {
       connectionCreateOss.namespaceFormat = connectionCreateRequest.namespaceFormat

@@ -29,8 +29,8 @@ testing {
         implementation(libs.postgresql)
 
         // needed for fabric to connect to k8s.
-        runtimeOnly("org.bouncycastle:bcprov-jdk15on:1.66")
-        runtimeOnly("org.bouncycastle:bcpkix-jdk15on:1.66")
+        runtimeOnly(libs.bouncycastle.bcpkix)
+        runtimeOnly(libs.bouncycastle.bcprov)
     }
 }
 
@@ -84,6 +84,8 @@ configurations.configureEach {
 dependencies {
     implementation(project(":airbyte-api"))
     implementation(project(":airbyte-container-orchestrator"))
+
+    testImplementation("com.airbyte:api:0.39.2")
 
     implementation(libs.bundles.kubernetes.client)
     implementation(libs.platform.testcontainers)

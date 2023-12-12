@@ -1,6 +1,10 @@
 import { ConnectorIds } from "@src/area/connector/utils/constants";
-import { WebBackendConnectionCreate } from "@src/core/api/types/AirbyteClient";
-import { DestinationCreate, SourceCreate, WebBackendConnectionUpdate } from "@src/core/api/types/AirbyteClient";
+import {
+  WebBackendConnectionCreate,
+  DestinationCreate,
+  SourceCreate,
+  WebBackendConnectionUpdate,
+} from "@src/core/api/types/AirbyteClient";
 
 import { getWorkspaceId } from "./workspace";
 
@@ -24,9 +28,9 @@ export const getPostgresCreateSourceBody = (name: string): SourceCreate => ({
     tunnel_method: { tunnel_method: "NO_TUNNEL" },
     replication_method: { method: "Standard" },
     ssl: false,
-    port: 5433,
+    port: Cypress.env("SOURCE_DB_PORT") || 5433,
     schemas: ["public"],
-    host: "localhost",
+    host: Cypress.env("SOURCE_DB_HOST") || "localhost",
     database: "airbyte_ci_source",
     username: "postgres",
     password: "secret_password",
@@ -54,9 +58,9 @@ export const getPostgresCreateDestinationBody = (name: string): DestinationCreat
     ssl_mode: { mode: "disable" },
     tunnel_method: { tunnel_method: "NO_TUNNEL" },
     ssl: false,
-    port: 5434,
+    port: Cypress.env("DESTINATION_DB_PORT") || 5434,
     schema: "public",
-    host: "localhost",
+    host: Cypress.env("DESTINATION_DB_HOST") || "localhost",
     database: "airbyte_ci_destination",
     username: "postgres",
     password: "secret_password",

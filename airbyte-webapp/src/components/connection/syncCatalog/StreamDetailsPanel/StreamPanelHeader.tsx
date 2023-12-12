@@ -3,17 +3,16 @@ import { FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
-import { DropDownOptionDataItem } from "components/ui/DropDown";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
-import { AirbyteStream, AirbyteStreamConfiguration } from "core/request/AirbyteClient";
+import { AirbyteStream, AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./StreamPanelHeader.module.scss";
-import { SyncModeOption, SyncModeSelect, SyncModeValue } from "../SyncModeSelect";
+import { SyncModeSelect, SyncModeValue } from "../SyncModeSelect";
 
 interface StreamPanelHeaderProps {
   config?: AirbyteStreamConfiguration;
@@ -21,9 +20,8 @@ interface StreamPanelHeaderProps {
   onClose: () => void;
   onSelectedChange: () => void;
   stream?: AirbyteStream;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onSelectSyncMode: (option: DropDownOptionDataItem<SyncModeValue, any>) => void;
-  availableSyncModes: SyncModeOption[];
+  onSelectSyncMode: (option: SyncModeValue) => void;
+  availableSyncModes: SyncModeValue[];
 }
 
 interface StreamPropertyProps {
@@ -71,8 +69,12 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
   onSelectSyncMode,
 }) => {
   const isSimplifiedCatalogRowEnabled = useExperiment("connection.syncCatalog.simplifiedCatalogRow", true);
-  const syncSchema = useMemo(() => {
-    const { syncMode, destinationSyncMode } = config || {};
+
+  const syncSchema: SyncModeValue | undefined = useMemo(() => {
+    if (!config) {
+      return undefined;
+    }
+    const { syncMode, destinationSyncMode } = config;
     return { syncMode, destinationSyncMode };
   }, [config]);
 

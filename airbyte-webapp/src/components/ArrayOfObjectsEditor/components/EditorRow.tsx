@@ -52,7 +52,7 @@ export const EditorRow: React.FC<EditorRowProps> = ({ name, id, description, onE
   return (
     <div className={styles.container}>
       {description ? (
-        <Tooltip control={body} placement="top">
+        <Tooltip control={body} placement="top" containerClassName={styles.tooltipContainer}>
           {description}
         </Tooltip>
       ) : (

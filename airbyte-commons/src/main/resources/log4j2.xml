@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="INFO" packages="io.airbyte.commons.logging">
     <Properties>
-
+        <Property name="ciMode">${sys:ciMode:-false}</Property>
         <!-- Mask the string apikey=<string> to apikey=***** to prevent secrets leaking. -->
         <Property name="default-pattern">%d{yyyy-MM-dd HH:mm:ss}{GMT+0} %highlight{%p} %C{1.}(%M):%L - %replace{%m}{apikey=[\w\-]*}{apikey=*****}%n</Property>
         <!--Logs the timestamp and log_source/application name in the beginning of the line if it exists with a > separator, and then always the rest of the line.-->
@@ -21,9 +21,17 @@
 
     <Appenders>
         <Console name="Default" target="SYSTEM_OUT">
-            <ContextMapFilter onMatch="DENY" onMismatch="ACCEPT">
-                <KeyValuePair key="simple" value="true"/>
-            </ContextMapFilter>
+            <If condition="${sys:ciMode} == 'true'">
+                <Then>
+                    <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+                </Then>
+                <Else>
+                    <!-- Existing ContextMapFilter behavior when ciMode is not true -->
+                    <ContextMapFilter onMatch="DENY" onMismatch="ACCEPT">
+                        <KeyValuePair key="simple" value="true"/>
+                    </ContextMapFilter>
+                </Else>
+            </If>
             <PatternLayout pattern="${default-pattern}"/>
         </Console>
 
@@ -33,6 +41,16 @@
             </ContextMapFilter>
             <PatternLayout pattern="${simple-pattern}"/>
         </Console>
+
+        <File name="LogFile" fileName="build.log">
+            <Filters>
+                <!-- Only log to file when ciMode is true -->
+                <If condition="${sys:ciMode} == 'true'">
+                    <ThresholdFilter level="${log-level}" onMatch="ACCEPT" onMismatch="DENY"/>
+                </If>
+            </Filters>
+            <PatternLayout pattern="${default-pattern}"/>
+        </File>
 
         <Rewrite name="SecretMaskRewrite">
             <MaskedDataInterceptor></MaskedDataInterceptor>
@@ -44,6 +62,7 @@
             <AppenderRef ref="SimpleLogSplitCloud"/>
             <AppenderRef ref="AppLogSplit"/>
             <AppenderRef ref="AppLogSplitCloud"/>
+            <AppenderRef ref="LogFile"/>
         </Rewrite>
 
         <Routing name="LogSplit">

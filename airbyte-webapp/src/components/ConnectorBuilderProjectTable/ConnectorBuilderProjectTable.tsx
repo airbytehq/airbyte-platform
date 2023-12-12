@@ -1,5 +1,3 @@
-import { faTrashCan, faPenToSquare, faCaretDown } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { createColumnHelper } from "@tanstack/react-table";
 import classNames from "classnames";
 import { useMemo, useState } from "react";
@@ -8,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Modal, ModalBody } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
 import { Table } from "components/ui/Table";
@@ -20,8 +19,7 @@ import {
   useDeleteBuilderProject,
   useListBuilderProjectVersions,
 } from "core/api";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useNotificationService } from "hooks/services/Notification";
 import { getEditPath } from "pages/connectorBuilder/ConnectorBuilderRoutes";
@@ -160,7 +158,7 @@ const VersionChanger = ({ project }: { project: BuilderProject }) => {
         onClick={() => {
           setChangeInProgress(true);
         }}
-        icon={<FontAwesomeIcon icon={faCaretDown} />}
+        icon={<Icon type="chevronDown" />}
         iconPosition="right"
         data-testid={`version-changer-${project.name}`}
       >
@@ -212,7 +210,7 @@ export const ConnectorBuilderProjectTable = ({
             <Button
               variant="clear"
               data-testid={`edit-project-button-${props.row.original.name}`}
-              icon={<FontAwesomeIcon icon={faPenToSquare} />}
+              icon={<Icon type="pencil" />}
               onClick={() => {
                 const editPath = getEditPath(props.row.original.id);
                 navigate(basePath ? `${basePath}${editPath}` : editPath);
@@ -225,7 +223,7 @@ export const ConnectorBuilderProjectTable = ({
                   type="button"
                   variant="clear"
                   disabled={Boolean(props.row.original.sourceDefinitionId)}
-                  icon={<FontAwesomeIcon icon={faTrashCan} />}
+                  icon={<Icon type="trash" />}
                   onClick={() => {
                     unregisterNotificationById(NOTIFICATION_ID);
                     openConfirmationModal({

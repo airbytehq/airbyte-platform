@@ -1,7 +1,7 @@
-import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import React from "react";
+
+import { Icon } from "components/ui/Icon";
 
 import styles from "./Button.module.scss";
 import { ButtonProps } from "./types";
@@ -47,11 +47,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
       {...buttonProps}
     >
       {isLoading && (
-        <FontAwesomeIcon
+        <Icon
+          type="loading"
           className={classNames(styles.buttonIcon, {
             [styles.isSpinnerIcon]: true,
           })}
-          icon={faCircleNotch}
         />
       )}
       {icon &&
@@ -63,7 +63,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
             [styles.withLabel]: Boolean(children),
           }),
         })}
-      <div className={styles.childrenContainer}>{children}</div>
+      <span className={styles.childrenContainer}>{children}</span>
       {icon &&
         iconPosition === "right" &&
         React.cloneElement(icon, {

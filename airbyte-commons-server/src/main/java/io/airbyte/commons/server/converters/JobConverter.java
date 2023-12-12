@@ -57,7 +57,6 @@ import javax.annotation.Nullable;
 /**
  * Convert between API and internal versions of job models.
  */
-@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class JobConverter {
 

@@ -19,7 +19,6 @@ import org.keycloak.representations.idm.UserRepresentation;
  */
 @Singleton
 @Slf4j
-@SuppressWarnings("MissingJavadocMethod")
 public class UserCreator {
 
   public static final int HTTP_STATUS_CREATED = 201;

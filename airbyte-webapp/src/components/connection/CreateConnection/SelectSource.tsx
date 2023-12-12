@@ -9,8 +9,7 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
-import { useSourceList } from "hooks/services/useSourceHook";
-import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
+import { useSourceDefinitionList, useSourceList } from "core/api";
 
 import { CreateNewSource, SOURCE_DEFINITION_PARAM } from "./CreateNewSource";
 import { RadioButtonTiles } from "./RadioButtonTiles";

@@ -5,8 +5,11 @@
 package io.airbyte.workers.general;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.spy;
 
+import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.workers.internal.FieldSelector;
+import io.airbyte.workers.workload.WorkloadIdGenerator;
 
 /**
  * DefaultReplicationWorkerTests. Tests in this class should be implementation specific, general
@@ -16,22 +19,21 @@ class DefaultReplicationWorkerTest extends ReplicationWorkerTest {
 
   @Override
   ReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled) {
-    final FieldSelector fieldSelector = new FieldSelector(recordSchemaValidator, workerMetricReporter, fieldSelectionEnabled, false);
+    final var fieldSelector = new FieldSelector(recordSchemaValidator, workerMetricReporter, fieldSelectionEnabled, false);
+    replicationWorkerHelper = spy(new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
+        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApi,
+        new WorkloadIdGenerator(), false));
     return new DefaultReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,
         source,
-        mapper,
         destination,
-        messageTracker,
         syncPersistence,
         recordSchemaValidator,
-        fieldSelector,
         heartbeatTimeoutChaperone,
-        new ReplicationFeatureFlagReader(),
-        airbyteMessageDataExtractor,
-        replicationAirbyteMessageEventPublishingHelper,
-        onReplicationRunning);
+        replicationFeatureFlagReader,
+        replicationWorkerHelper,
+        destinationTimeoutMonitor);
   }
 
   // DefaultReplicationWorkerTests.

@@ -1,11 +1,9 @@
-import { faAngleDown, faAngleRight } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classnames from "classnames";
 import { useIntl } from "react-intl";
 
-import { ModificationIcon } from "components/icons/ModificationIcon";
+import { Icon } from "components/ui/Icon";
 
-import { StreamDescriptor } from "core/request/AirbyteClient";
+import { StreamDescriptor } from "core/api/types/AirbyteClient";
 
 import styles from "./DiffAccordionHeader.module.scss";
 import { DiffIconBlock } from "./DiffIconBlock";
@@ -34,9 +32,9 @@ export const DiffAccordionHeader: React.FC<DiffAccordionHeaderProps> = ({
 
   return (
     <>
-      <ModificationIcon />
+      <Icon type="modification" />
       <div className={namespaceCellStyles} aria-labelledby={formatMessage({ id: "connection.updateSchema.namespace" })}>
-        <FontAwesomeIcon icon={open ? faAngleDown : faAngleRight} fixedWidth />
+        <Icon type={open ? "chevronDown" : "chevronRight"} />
         <div title={namespace} className={classnames(styles.text, { [styles.grey]: !streamDescriptor.namespace })}>
           {namespace}
         </div>

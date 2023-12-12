@@ -1,59 +1,56 @@
-import { Form, Formik, FormikHelpers } from "formik";
-import React, { Suspense, useCallback, useState } from "react";
+import React, { Suspense, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { ConnectionFormFields } from "components/connection/ConnectionForm/ConnectionFormFields";
-import { CreateControls } from "components/connection/ConnectionForm/CreateControls";
-import {
-  FormikConnectionFormValues,
-  useConnectionValidationSchema,
-} from "components/connection/ConnectionForm/formConfig";
-import { OperationsSection } from "components/connection/ConnectionForm/OperationsSection";
+import { Form } from "components/forms";
 import LoadingSchema from "components/LoadingSchema";
+import { FlexContainer } from "components/ui/Flex";
 
+import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useCreateConnection } from "core/api";
+import { useCreateConnection, useDiscoverSchema } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useGetDestinationFromSearchParams } from "hooks/domain/connector/useGetDestinationFromParams";
-import { useGetSourceFromSearchParams } from "hooks/domain/connector/useGetSourceFromParams";
 import {
   ConnectionFormServiceProvider,
-  tidyConnectionFormValues,
   useConnectionFormService,
 } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperimentContext } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
-import { SchemaError as SchemaErrorType, useDiscoverSchema } from "hooks/services/useSourceHook";
 
+import { ConnectionNameCard } from "./ConnectionNameCard";
 import styles from "./CreateConnectionForm.module.scss";
-import { CreateConnectionNameField } from "./CreateConnectionNameField";
-import { DataResidency } from "./DataResidency";
+import { DataResidencyCard } from "./DataResidencyCard";
 import { SchemaError } from "./SchemaError";
+import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
+import { ConnectionConfigurationCard } from "../ConnectionForm/ConnectionConfigurationCard";
+import { CreateConnectionFormControls } from "../ConnectionForm/CreateConnectionFormControls";
+import { FormConnectionFormValues, useConnectionValidationSchema } from "../ConnectionForm/formConfig";
+import { OperationsSectionCard } from "../ConnectionForm/OperationsSectionCard";
+import { SyncCatalogCard } from "../ConnectionForm/SyncCatalogCard";
+import { mapFormValuesToOperations } from "../ConnectionForm/utils";
 
-interface CreateConnectionPropsInner {
-  schemaError: SchemaErrorType;
-}
-
-const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schemaError }) => {
+const CreateConnectionFormInner: React.FC = () => {
   const navigate = useNavigate();
-  const canEditDataGeographies = useFeature(FeatureItem.AllowChangeDataGeographies);
-  const { mutateAsync: createConnection } = useCreateConnection();
-  const { clearFormChange } = useFormChangeTrackerService();
-
   const workspaceId = useCurrentWorkspaceId();
-
-  const { connection, initialValues, mode, formId, getErrorMessage, setSubmitError } = useConnectionFormService();
-  const [editingTransformation, setEditingTransformation] = useState(false);
-  const validationSchema = useConnectionValidationSchema({ mode });
+  const { clearAllFormChanges } = useFormChangeTrackerService();
+  const { mutateAsync: createConnection } = useCreateConnection();
+  const { connection, initialValues, setSubmitError } = useConnectionFormService();
+  const canEditDataGeographies = useFeature(FeatureItem.AllowChangeDataGeographies);
   useExperimentContext("source-definition", connection.source?.sourceDefinitionId);
 
-  const onFormSubmit = useCallback(
-    async (formValues: FormikConnectionFormValues, formikHelpers: FormikHelpers<FormikConnectionFormValues>) => {
-      const values = tidyConnectionFormValues(formValues, workspaceId, validationSchema);
+  const validationSchema = useConnectionValidationSchema();
 
+  const onSubmit = useCallback(
+    async ({ normalization, transformations, ...restFormValues }: FormConnectionFormValues) => {
       try {
         const createdConnection = await createConnection({
-          values,
+          values: {
+            ...restFormValues,
+            // don't add operations if normalization and transformations are undefined
+            ...((normalization !== undefined || transformations !== undefined) && {
+              // combine the normalization and transformations into operations[]
+              operations: mapFormValuesToOperations(workspaceId, normalization, transformations),
+            }),
+          },
           source: connection.source,
           destination: connection.destination,
           sourceDefinition: {
@@ -65,56 +62,41 @@ const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schem
           },
           sourceCatalogId: connection.catalogId,
         });
-
-        formikHelpers.resetForm();
-        // We need to clear the form changes otherwise the dirty form intercept service will prevent navigation
-        clearFormChange(formId);
-
+        clearAllFormChanges();
         navigate(`../../connections/${createdConnection.connectionId}`);
       } catch (e) {
         setSubmitError(e);
       }
     },
     [
-      workspaceId,
-      validationSchema,
-      createConnection,
-      connection.source,
-      connection.destination,
+      clearAllFormChanges,
       connection.catalogId,
-      clearFormChange,
-      formId,
+      connection.destination,
+      connection.source,
+      createConnection,
       navigate,
       setSubmitError,
+      workspaceId,
     ]
   );
 
-  if (schemaError) {
-    return <SchemaError schemaError={schemaError} />;
-  }
-
   return (
     <Suspense fallback={<LoadingSchema />}>
-      <div className={styles.connectionFormContainer}>
-        <Formik initialValues={initialValues} validationSchema={validationSchema} onSubmit={onFormSubmit}>
-          {({ isSubmitting, isValid, dirty, errors, validateForm }) => (
-            <Form>
-              <CreateConnectionNameField />
-              {canEditDataGeographies && <DataResidency />}
-              <ConnectionFormFields isSubmitting={isSubmitting} dirty={dirty} validateForm={validateForm} />
-              <OperationsSection
-                onStartEditTransformation={() => setEditingTransformation(true)}
-                onEndEditTransformation={() => setEditingTransformation(false)}
-              />
-              <CreateControls
-                isSubmitting={isSubmitting}
-                isValid={isValid && !editingTransformation}
-                errorMessage={getErrorMessage(isValid, errors)}
-              />
-            </Form>
-          )}
-        </Formik>
-      </div>
+      <Form<FormConnectionFormValues>
+        defaultValues={initialValues}
+        schema={validationSchema}
+        onSubmit={onSubmit}
+        trackDirtyChanges
+      >
+        <FlexContainer direction="column" className={styles.formContainer}>
+          <ConnectionNameCard />
+          {canEditDataGeographies && <DataResidencyCard />}
+          <ConnectionConfigurationCard />
+          <SyncCatalogCard />
+          <OperationsSectionCard />
+          <CreateConnectionFormControls />
+        </FlexContainer>
+      </Form>
     </Suspense>
   );
 };
@@ -122,11 +104,24 @@ const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schem
 export const CreateConnectionForm: React.FC = () => {
   const source = useGetSourceFromSearchParams();
   const destination = useGetDestinationFromSearchParams();
+  const { trackFailure } = useAnalyticsTrackFunctions();
 
   const { schema, isLoading, schemaErrorStatus, catalogId, onDiscoverSchema } = useDiscoverSchema(
     source.sourceId,
     true
   );
+
+  useEffect(() => {
+    if (schemaErrorStatus) {
+      trackFailure(source, destination, schemaErrorStatus);
+    }
+    // we need to track the schemaErrorStatus changes only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schemaErrorStatus]);
+
+  if (!schema) {
+    return <LoadingSchema />;
+  }
 
   const partialConnection = {
     syncCatalog: schema,
@@ -142,7 +137,13 @@ export const CreateConnectionForm: React.FC = () => {
       refreshSchema={onDiscoverSchema}
       schemaError={schemaErrorStatus}
     >
-      {isLoading ? <LoadingSchema /> : <CreateConnectionFormInner schemaError={schemaErrorStatus} />}
+      {isLoading ? (
+        <LoadingSchema />
+      ) : schemaErrorStatus ? (
+        <SchemaError schemaError={schemaErrorStatus} />
+      ) : (
+        <CreateConnectionFormInner />
+      )}
     </ConnectionFormServiceProvider>
   );
 };

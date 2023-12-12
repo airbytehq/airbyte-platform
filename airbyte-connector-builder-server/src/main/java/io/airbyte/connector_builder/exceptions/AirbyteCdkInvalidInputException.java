@@ -10,6 +10,7 @@ import io.airbyte.protocol.models.AirbyteTraceMessage;
 /**
  * Thrown when the CDK processed the request, but the result contains an error.
  */
+@SuppressWarnings("PMD.NonSerializableClass")
 public class AirbyteCdkInvalidInputException extends KnownException {
 
   AirbyteTraceMessage trace;

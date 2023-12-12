@@ -33,17 +33,17 @@ import {
   useBuilderResolvedManifest,
   useBuilderResolvedManifestSuspense,
 } from "core/api";
-import { ConnectorConfig, StreamRead } from "core/api/types/ConnectorBuilderClient";
+import { useIsForeignWorkspace } from "core/api/cloud";
+import { SourceDefinitionIdBody } from "core/api/types/AirbyteClient";
+import { ConnectorConfig, KnownExceptionInfo, StreamRead } from "core/api/types/ConnectorBuilderClient";
 import { ConnectorManifest, DeclarativeComponentSchema, Spec } from "core/api/types/ConnectorManifest";
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { FormGroupItem } from "core/form/types";
-import { SourceDefinitionIdBody } from "core/request/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Blocker, useBlocker } from "core/services/navigation";
 import { removeEmptyProperties } from "core/utils/form";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useIsForeignWorkspace } from "packages/cloud/services/auth/AuthService";
 import { setDefaultValues } from "views/Connector/ConnectorForm/useBuildForm";
 
 import { useConnectorBuilderLocalStorage } from "./ConnectorBuilderLocalStorageService";
@@ -82,6 +82,7 @@ interface FormStateContext {
 interface TestReadContext {
   resolvedManifest: ConnectorManifest;
   resolveErrorMessage: string | undefined;
+  resolveError: Error | KnownExceptionInfo | null;
   streamRead: UseQueryResult<StreamRead, unknown>;
   isResolving: boolean;
   testInputJson: ConnectorConfig;
@@ -622,6 +623,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const ctx = {
     resolvedManifest,
     resolveErrorMessage,
+    resolveError,
     streamRead,
     isResolving,
     testInputJson: testInputWithDefaults,

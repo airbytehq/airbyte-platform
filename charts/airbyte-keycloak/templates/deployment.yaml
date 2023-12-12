@@ -1,4 +1,5 @@
-{{- if and (eq .Values.global.deploymentMode "oss") (eq .Values.global.edition "pro") }}
+# if Cloud or Pro, render the keycloak deployment template.
+{{- if or (eq .Values.global.deploymentMode "cloud") (eq .Values.global.edition "pro") }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -10,6 +11,13 @@ metadata:
       {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    {{- if gt (int .Values.replicaCount) 1 }}
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    {{- end }}
   selector:
     matchLabels:
       {{- include "airbyte.selectorLabels" . | nindent 6 }}
@@ -50,6 +58,7 @@ spec:
           image: {{ printf "%s:%s" .Values.image.repository (include "keycloak.imageTag" .) }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
+            {{- if eq .Values.global.deploymentMode "oss"  }}
             - name: KEYCLOAK_ADMIN_USER
               valueFrom:
                 secretKeyRef:
@@ -85,31 +94,39 @@ spec:
                 configMapKeyRef:
                   name: {{ .Release.Name }}-airbyte-env
                   key: KEYCLOAK_HOSTNAME_URL
-          {{- if .Values.extraEnv }}
-          {{ .Values.extraEnv | toYaml | nindent 12 }}
-          {{- end }}
-          # Values from secret
-          {{- if .Values.secrets }}
-          {{- range $k, $v := .Values.secrets }}
-          - name: {{ $k }}
-            valueFrom:
-              secretKeyRef:
-                name: keycloak-secrets
-                key: {{ $k }}
-          {{- end }}
-          {{- end }}
+            - name: JAVA_OPTS_APPEND
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-airbyte-env
+                  key: KEYCLOAK_JAVA_OPTS_APPEND
+            {{- end }}
+            {{- if .Values.extraEnv }}
+            {{ .Values.extraEnv | toYaml | nindent 12 }}
+            {{- end }}
 
-          # Values from env
-          {{- if .Values.env_vars }}
-          {{- range $k, $v := mergeOverwrite .Values.env_vars .Values.global.env_vars }}
-          - name: {{ $k }}
-            value: {{ $v | quote }}
-          {{- end }}
-          {{- end }}
+            # Values from secret
+            {{- if .Values.secrets }}
+            {{- range $k, $v := .Values.secrets }}
+            - name: {{ $k }}
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secrets
+                  key: {{ $k }}
+            {{- end }}
+            {{- end }}
+
+            # Values from env
+            {{- if .Values.env_vars }}
+            {{- range $k, $v := mergeOverwrite .Values.env_vars .Values.global.env_vars }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            {{- end }}
           ports:
             - name: http
-              containerPort: 8180
+              containerPort: {{ .Values.service.port }}
               protocol: TCP
+            - containerPort: 7800
           {{- if .Values.containerSecurityContext }}
           securityContext: {{- toYaml .Values.containerSecurityContext | nindent 12 }}
           {{- end }}
@@ -124,7 +141,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /auth/health/live
-              port: 8180
+              port: {{ .Values.service.port }}
             initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
@@ -135,7 +152,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /auth/health/ready
-              port: 8180
+              port: {{ .Values.service.port }}
             initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}

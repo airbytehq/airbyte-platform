@@ -8,7 +8,7 @@ import com.github.slugify.Slugify;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import io.airbyte.analytics.TrackingClientSingleton;
+import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationRead;
@@ -21,13 +21,16 @@ import io.airbyte.api.model.generated.NotificationSettings;
 import io.airbyte.api.model.generated.NotificationType;
 import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
+import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.WorkspaceCreate;
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.model.generated.WorkspaceOrganizationInfoRead;
 import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
+import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
@@ -35,18 +38,20 @@ import io.airbyte.commons.server.converters.NotificationSettingsConverter;
 import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
+import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.UserPermission;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
+import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
-import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.WorkspacePersistence;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
-import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
@@ -62,7 +67,6 @@ import org.slf4j.LoggerFactory;
 /**
  * WorkspacesHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class WorkspacesHandler {
 
@@ -70,48 +74,68 @@ public class WorkspacesHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(WorkspacesHandler.class);
   private final ConfigRepository configRepository;
   private final WorkspacePersistence workspacePersistence;
+  private final OrganizationPersistence organizationPersistence;
   private final SecretsRepositoryWriter secretsRepositoryWriter;
   private final PermissionPersistence permissionPersistence;
   private final ConnectionsHandler connectionsHandler;
   private final DestinationHandler destinationHandler;
   private final SourceHandler sourceHandler;
   private final Supplier<UUID> uuidSupplier;
+  private final WorkspaceService workspaceService;
   private final Slugify slugify;
+  private final TrackingClient trackingClient;
 
-  @Inject
+  @VisibleForTesting
   public WorkspacesHandler(final ConfigRepository configRepository,
                            final WorkspacePersistence workspacePersistence,
+                           final OrganizationPersistence organizationPersistence,
                            final SecretsRepositoryWriter secretsRepositoryWriter,
                            final PermissionPersistence permissionPersistence,
                            final ConnectionsHandler connectionsHandler,
                            final DestinationHandler destinationHandler,
-                           final SourceHandler sourceHandler) {
-    this(configRepository, workspacePersistence, secretsRepositoryWriter, permissionPersistence, connectionsHandler, destinationHandler,
-        sourceHandler, UUID::randomUUID);
-  }
-
-  @VisibleForTesting
-  WorkspacesHandler(final ConfigRepository configRepository,
-                    final WorkspacePersistence workspacePersistence,
-                    final SecretsRepositoryWriter secretsRepositoryWriter,
-                    final PermissionPersistence permissionPersistence,
-                    final ConnectionsHandler connectionsHandler,
-                    final DestinationHandler destinationHandler,
-                    final SourceHandler sourceHandler,
-                    final Supplier<UUID> uuidSupplier) {
+                           final SourceHandler sourceHandler,
+                           @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
+                           final WorkspaceService workspaceService,
+                           final TrackingClient trackingClient) {
     this.configRepository = configRepository;
     this.workspacePersistence = workspacePersistence;
+    this.organizationPersistence = organizationPersistence;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.permissionPersistence = permissionPersistence;
     this.connectionsHandler = connectionsHandler;
     this.destinationHandler = destinationHandler;
     this.sourceHandler = sourceHandler;
     this.uuidSupplier = uuidSupplier;
+    this.workspaceService = workspaceService;
     this.slugify = new Slugify();
+    this.trackingClient = trackingClient;
+  }
+
+  private static WorkspaceRead buildWorkspaceRead(final StandardWorkspace workspace) {
+    final WorkspaceRead result = new WorkspaceRead()
+        .workspaceId(workspace.getWorkspaceId())
+        .customerId(workspace.getCustomerId())
+        .email(workspace.getEmail())
+        .name(workspace.getName())
+        .slug(workspace.getSlug())
+        .initialSetupComplete(workspace.getInitialSetupComplete())
+        .displaySetupWizard(workspace.getDisplaySetupWizard())
+        .anonymousDataCollection(workspace.getAnonymousDataCollection())
+        .news(workspace.getNews())
+        .securityUpdates(workspace.getSecurityUpdates())
+        .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
+        .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
+        .defaultGeography(Enums.convertTo(workspace.getDefaultGeography(), Geography.class))
+        .organizationId(workspace.getOrganizationId());
+    // Add read-only webhook configs.
+    if (workspace.getWebhookOperationConfigs() != null) {
+      result.setWebhookConfigs(WorkspaceWebhookConfigsConverter.toApiReads(workspace.getWebhookOperationConfigs()));
+    }
+    return result;
   }
 
   public WorkspaceRead createWorkspace(final WorkspaceCreate workspaceCreate)
-      throws JsonValidationException, IOException, ValueConflictKnownException {
+      throws JsonValidationException, IOException, ValueConflictKnownException, ConfigNotFoundException {
 
     final String email = workspaceCreate.getEmail();
     final Boolean anonymousDataCollection = workspaceCreate.getAnonymousDataCollection();
@@ -129,7 +153,7 @@ public class WorkspacesHandler {
 
     final StandardWorkspace workspace = new StandardWorkspace()
         .withWorkspaceId(uuidSupplier.get())
-        .withCustomerId(uuidSupplier.get())
+        .withCustomerId(uuidSupplier.get()) // "customer_id" should be deprecated
         .withName(workspaceCreate.getName())
         .withSlug(generateUniqueSlug(workspaceCreate.getName()))
         .withInitialSetupComplete(false)
@@ -149,6 +173,46 @@ public class WorkspacesHandler {
     }
 
     return persistStandardWorkspace(workspace);
+  }
+
+  public WorkspaceRead createDefaultWorkspaceForUser(final UserRead user, final Optional<Organization> organization)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
+    // if user already had a default workspace, throw an exception
+    if (user.getDefaultWorkspaceId() != null) {
+      throw new IllegalArgumentException(
+          String.format("User %s already has a default workspace %s", user.getUserId(), user.getDefaultWorkspaceId()));
+    }
+    final String companyName = user.getCompanyName();
+    final String email = user.getEmail();
+    final Boolean news = user.getNews();
+    // otherwise, create a default workspace for this user
+    final WorkspaceCreate workspaceCreate = new WorkspaceCreate()
+        .name(getDefaultWorkspaceName(organization, companyName, email))
+        .organizationId(organization.map(Organization::getOrganizationId).orElse(null))
+        .email(email)
+        .news(news)
+        .anonymousDataCollection(false)
+        .securityUpdates(false)
+        .displaySetupWizard(true);
+    return createWorkspace(workspaceCreate);
+  }
+
+  private String getDefaultWorkspaceName(final Optional<Organization> organization, final String companyName, final String email) {
+    String defaultWorkspaceName = "";
+    if (organization.isPresent()) {
+      // use organization name as default workspace name
+      defaultWorkspaceName = organization.get().getName().trim();
+    }
+    // if organization name is not available or empty, use user's company name (note: this is an
+    // optional field)
+    if (defaultWorkspaceName.isEmpty() && companyName != null) {
+      defaultWorkspaceName = companyName.trim();
+    }
+    // if company name is still empty, use user's email (note: this is a required field)
+    if (defaultWorkspaceName.isEmpty()) {
+      defaultWorkspaceName = email;
+    }
+    return defaultWorkspaceName;
   }
 
   public void deleteWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
@@ -254,8 +318,19 @@ public class WorkspacesHandler {
   public WorkspaceRead getWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
-    final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, false);
+    final boolean includeTombstone = workspaceIdRequestBody.getIncludeTombstone() != null ? workspaceIdRequestBody.getIncludeTombstone() : false;
+    final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, includeTombstone);
     return buildWorkspaceRead(workspace);
+  }
+
+  public WorkspaceOrganizationInfoRead getWorkspaceOrganizationInfo(final WorkspaceIdRequestBody workspaceIdRequestBody)
+      throws IOException, ConfigNotFoundException {
+    final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
+    final Optional<Organization> organization = organizationPersistence.getOrganizationByWorkspaceId(workspaceId);
+    if (organization.isEmpty()) {
+      throw new ConfigNotFoundException("ORGANIZATION_FOR_WORKSPACE", workspaceId.toString());
+    }
+    return buildWorkspaceOrganizationInfoRead(organization.get());
   }
 
   @SuppressWarnings("unused")
@@ -271,20 +346,20 @@ public class WorkspacesHandler {
   }
 
   public WorkspaceReadList listWorkspacesInOrganization(final ListWorkspacesInOrganizationRequestBody request) throws IOException {
-    Optional<String> keyword = StringUtils.isBlank(request.getKeyword()) ? Optional.empty() : Optional.of(request.getKeyword());
-    List<WorkspaceRead> standardWorkspaces;
+    final Optional<String> nameContains = StringUtils.isBlank(request.getNameContains()) ? Optional.empty() : Optional.of(request.getNameContains());
+    final List<WorkspaceRead> standardWorkspaces;
     if (request.getPagination() != null) {
       standardWorkspaces = workspacePersistence
           .listWorkspacesByOrganizationIdPaginated(
               new ResourcesByOrganizationQueryPaginated(request.getOrganizationId(),
                   false, request.getPagination().getPageSize(), request.getPagination().getRowOffset()),
-              keyword)
+              nameContains)
           .stream()
           .map(WorkspacesHandler::buildWorkspaceRead)
           .collect(Collectors.toList());
     } else {
       standardWorkspaces = workspacePersistence
-          .listWorkspacesByOrganizationId(request.getOrganizationId(), false, keyword)
+          .listWorkspacesByOrganizationId(request.getOrganizationId(), false, nameContains)
           .stream()
           .map(WorkspacesHandler::buildWorkspaceRead)
           .collect(Collectors.toList());
@@ -293,19 +368,19 @@ public class WorkspacesHandler {
   }
 
   private WorkspaceReadList listWorkspacesByInstanceAdminUser(final ListWorkspacesByUserRequestBody request) throws IOException {
-    Optional<String> keyword = StringUtils.isBlank(request.getKeyword()) ? Optional.empty() : Optional.of(request.getKeyword());
-    List<WorkspaceRead> standardWorkspaces;
+    final Optional<String> nameContains = StringUtils.isBlank(request.getNameContains()) ? Optional.empty() : Optional.of(request.getNameContains());
+    final List<WorkspaceRead> standardWorkspaces;
     if (request.getPagination() != null) {
       standardWorkspaces = workspacePersistence
           .listWorkspacesByInstanceAdminUserPaginated(
               false, request.getPagination().getPageSize(), request.getPagination().getRowOffset(),
-              keyword)
+              nameContains)
           .stream()
           .map(WorkspacesHandler::buildWorkspaceRead)
           .collect(Collectors.toList());
     } else {
       standardWorkspaces = workspacePersistence
-          .listWorkspacesByInstanceAdminUser(false, keyword)
+          .listWorkspacesByInstanceAdminUser(false, nameContains)
           .stream()
           .map(WorkspacesHandler::buildWorkspaceRead)
           .collect(Collectors.toList());
@@ -316,25 +391,24 @@ public class WorkspacesHandler {
   public WorkspaceReadList listWorkspacesByUser(final ListWorkspacesByUserRequestBody request)
       throws IOException {
     // If user has instance_admin permission, list all workspaces.
-    final UserPermission userInstanceAdminPermission = permissionPersistence.getUserInstanceAdminPermission(request.getUserId());
-    if (userInstanceAdminPermission != null) {
+    if (permissionPersistence.isUserInstanceAdmin(request.getUserId())) {
       return listWorkspacesByInstanceAdminUser(request);
     }
     // User has no instance_admin permission.
-    Optional<String> keyword = StringUtils.isBlank(request.getKeyword()) ? Optional.empty() : Optional.of(request.getKeyword());
-    List<WorkspaceRead> standardWorkspaces;
+    final Optional<String> nameContains = StringUtils.isBlank(request.getNameContains()) ? Optional.empty() : Optional.of(request.getNameContains());
+    final List<WorkspaceRead> standardWorkspaces;
     if (request.getPagination() != null) {
       standardWorkspaces = workspacePersistence
           .listWorkspacesByUserIdPaginated(
               new ResourcesByUserQueryPaginated(request.getUserId(),
                   false, request.getPagination().getPageSize(), request.getPagination().getRowOffset()),
-              keyword)
+              nameContains)
           .stream()
           .map(WorkspacesHandler::buildWorkspaceRead)
           .collect(Collectors.toList());
     } else {
       standardWorkspaces = workspacePersistence
-          .listWorkspacesByUserId(request.getUserId(), false, keyword)
+          .listActiveWorkspacesByUserId(request.getUserId(), nameContains)
           .stream()
           .map(WorkspacesHandler::buildWorkspaceRead)
           .collect(Collectors.toList());
@@ -369,7 +443,7 @@ public class WorkspacesHandler {
     }
 
     // after updating email or tracking info, we need to re-identify the instance.
-    TrackingClientSingleton.get().identify(workspaceId);
+    trackingClient.identify(workspaceId);
 
     return buildWorkspaceReadFromId(workspaceId);
   }
@@ -391,6 +465,22 @@ public class WorkspacesHandler {
     return buildWorkspaceReadFromId(workspaceId);
   }
 
+  @SuppressWarnings("PMD.PreserveStackTrace")
+  public WorkspaceRead updateWorkspaceOrganization(final WorkspaceUpdateOrganization workspaceUpdateOrganization)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final UUID workspaceId = workspaceUpdateOrganization.getWorkspaceId();
+
+    try {
+      final StandardWorkspace persistedWorkspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false);
+      persistedWorkspace
+          .withOrganizationId(workspaceUpdateOrganization.getOrganizationId());
+      workspaceService.writeStandardWorkspaceNoSecrets(persistedWorkspace);
+      return buildWorkspaceReadFromId(workspaceId);
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    }
+  }
+
   public void setFeedbackDone(final WorkspaceGiveFeedback workspaceGiveFeedback)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     configRepository.setFeedback(workspaceGiveFeedback.getWorkspaceId());
@@ -399,6 +489,14 @@ public class WorkspacesHandler {
   private WorkspaceRead buildWorkspaceReadFromId(final UUID workspaceId) throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, false);
     return buildWorkspaceRead(workspace);
+  }
+
+  private WorkspaceOrganizationInfoRead buildWorkspaceOrganizationInfoRead(final Organization organization) {
+    return new WorkspaceOrganizationInfoRead()
+        .organizationId(organization.getOrganizationId())
+        .organizationName(organization.getName())
+        .pba(organization.getPba())
+        .sso(organization.getSsoRealm() != null && !organization.getSsoRealm().isEmpty());
   }
 
   private String generateUniqueSlug(final String workspaceName) throws IOException {
@@ -422,29 +520,6 @@ public class WorkspacesHandler {
     }
 
     return resolvedSlug;
-  }
-
-  private static WorkspaceRead buildWorkspaceRead(final StandardWorkspace workspace) {
-    final WorkspaceRead result = new WorkspaceRead()
-        .workspaceId(workspace.getWorkspaceId())
-        .customerId(workspace.getCustomerId())
-        .email(workspace.getEmail())
-        .name(workspace.getName())
-        .slug(workspace.getSlug())
-        .initialSetupComplete(workspace.getInitialSetupComplete())
-        .displaySetupWizard(workspace.getDisplaySetupWizard())
-        .anonymousDataCollection(workspace.getAnonymousDataCollection())
-        .news(workspace.getNews())
-        .securityUpdates(workspace.getSecurityUpdates())
-        .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
-        .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
-        .defaultGeography(Enums.convertTo(workspace.getDefaultGeography(), Geography.class))
-        .organizationId(workspace.getOrganizationId());
-    // Add read-only webhook configs.
-    if (workspace.getWebhookOperationConfigs() != null) {
-      result.setWebhookConfigs(WorkspaceWebhookConfigsConverter.toApiReads(workspace.getWebhookOperationConfigs()));
-    }
-    return result;
   }
 
   private void validateWorkspacePatch(final StandardWorkspace persistedWorkspace, final WorkspaceUpdate workspacePatch) {
@@ -484,8 +559,14 @@ public class WorkspacesHandler {
     }
   }
 
-  private WorkspaceRead persistStandardWorkspace(final StandardWorkspace workspace) throws JsonValidationException, IOException {
-    secretsRepositoryWriter.writeWorkspace(workspace);
+  @SuppressWarnings("PMD.PreserveStackTrace")
+  private WorkspaceRead persistStandardWorkspace(final StandardWorkspace workspace)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+    try {
+      workspaceService.writeWorkspaceWithSecrets(workspace);
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    }
     return buildWorkspaceRead(workspace);
   }
 

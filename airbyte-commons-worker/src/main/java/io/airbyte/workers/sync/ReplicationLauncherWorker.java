@@ -11,10 +11,11 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.ResourceRequirements;
-import io.airbyte.config.StandardSyncInput;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import java.util.Map;
 import java.util.UUID;
@@ -24,10 +25,10 @@ import java.util.UUID;
  * step. This step configs onto the container-orchestrator and retrieves logs and the output from
  * the container-orchestrator.
  */
-public class ReplicationLauncherWorker extends LauncherWorker<StandardSyncInput, ReplicationOutput> {
+public class ReplicationLauncherWorker extends LauncherWorker<ReplicationInput, ReplicationOutput> {
 
   public static final String REPLICATION = "replication-orchestrator";
-  private static final String POD_NAME_PREFIX = "orchestrator-repl";
+  public static final String POD_NAME_PREFIX = "orchestrator-repl";
   public static final String INIT_FILE_SOURCE_LAUNCHER_CONFIG = "sourceLauncherConfig.json";
   public static final String INIT_FILE_DESTINATION_LAUNCHER_CONFIG = "destinationLauncherConfig.json";
 
@@ -40,7 +41,8 @@ public class ReplicationLauncherWorker extends LauncherWorker<StandardSyncInput,
                                    final ResourceRequirements resourceRequirements,
                                    final Integer serverPort,
                                    final WorkerConfigs workerConfigs,
-                                   final FeatureFlagClient featureFlagClient) {
+                                   final FeatureFlagClient featureFlagClient,
+                                   final MetricClient metricClient) {
     super(
         connectionId,
         workspaceId,
@@ -56,12 +58,18 @@ public class ReplicationLauncherWorker extends LauncherWorker<StandardSyncInput,
         serverPort,
         workerConfigs,
         featureFlagClient,
-        sourceLauncherConfig.getIsCustomConnector() || destinationLauncherConfig.getIsCustomConnector());
+        sourceLauncherConfig.getIsCustomConnector() || destinationLauncherConfig.getIsCustomConnector(),
+        metricClient);
   }
 
   @Override
   protected Map<String, String> generateCustomMetadataLabels() {
     return Map.of(SYNC_STEP_KEY, ORCHESTRATOR_REPLICATION_STEP);
+  }
+
+  @Override
+  protected String getLauncherType() {
+    return "Replication";
   }
 
 }

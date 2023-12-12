@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { FormattedMessage } from "react-intl";
+import { useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
@@ -28,6 +28,7 @@ export const RadioButtonTiles = <T extends string>({
   selectedValue,
   name,
 }: RadioButtonTilesProps<T>) => {
+  const { formatMessage } = useIntl();
   return (
     <FlexContainer>
       {options.map((option) => (
@@ -55,11 +56,11 @@ export const RadioButtonTiles = <T extends string>({
             <div>
               <Box mb="sm">
                 <Text size="lg" color={option.disabled ? "grey" : "darkBlue"}>
-                  <FormattedMessage id={option.label} />
+                  {formatMessage({ id: option.label })}
                 </Text>
               </Box>
               <Text size="sm" color={option.disabled ? "grey" : "darkBlue"}>
-                <FormattedMessage id={option.description} />
+                {formatMessage({ id: option.description })}
               </Text>
             </div>
           </label>

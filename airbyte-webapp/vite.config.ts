@@ -3,8 +3,7 @@ import path from "path";
 import viteYaml from "@modyfi/vite-plugin-yaml";
 import basicSsl from "@vitejs/plugin-basic-ssl";
 import react from "@vitejs/plugin-react";
-import { UserConfig } from "vite";
-import { defineConfig } from "vite";
+import { UserConfig, defineConfig } from "vite";
 import checker from "vite-plugin-checker";
 import svgrPlugin from "vite-plugin-svgr";
 import viteTsconfigPaths from "vite-tsconfig-paths";
@@ -15,6 +14,7 @@ import {
   docMiddleware,
   environmentVariables,
   experimentOverwrites,
+  preloadTags,
 } from "./packages/vite-plugins";
 
 export default defineConfig(() => {
@@ -29,7 +29,24 @@ export default defineConfig(() => {
       viteYaml(),
       svgrPlugin({
         svgrOptions: {
+          plugins: ["@svgr/plugin-svgo", "@svgr/plugin-jsx"],
           titleProp: true,
+          svgoConfig: {
+            plugins: [
+              {
+                name: "preset-default",
+                params: {
+                  overrides: {
+                    removeViewBox: false,
+                    cleanupIds: false,
+                    removeUnknownsAndDefaults: {
+                      keepRoleAttr: true,
+                    },
+                  },
+                },
+              },
+            ],
+          },
         },
       }),
       checker({
@@ -39,9 +56,9 @@ export default defineConfig(() => {
           initialIsOpen: false,
           position: "br",
           // Align error popover button with the react-query dev tool button
-          badgeStyle: "transform: translate(-75px,-11px)",
+          badgeStyle: "transform: translate(-75px,-11px); display: var(--show-dev-tools)",
         },
-        eslint: { lintCommand: `eslint --max-warnings=0 --ext .js,.ts,.tsx src` },
+        eslint: { lintCommand: `eslint --max-warnings=0 --ext .js,.ts,.tsx --ignore-path .gitignore .` },
         stylelint: {
           lintCommand: 'stylelint "src/**/*.{css,scss}"',
           // We need to overwrite this during development, since otherwise `files` are wrongly
@@ -52,6 +69,7 @@ export default defineConfig(() => {
       }),
       docMiddleware(),
       experimentOverwrites(),
+      preloadTags(),
     ],
     // Use `REACT_APP_` as a prefix for environment variables that should be accessible from within FE code.
     envPrefix: ["REACT_APP_"],

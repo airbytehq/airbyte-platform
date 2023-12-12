@@ -11,6 +11,7 @@ import { Text } from "components/ui/Text";
 import { TextWithHTML } from "components/ui/TextWithHTML";
 
 import { FormConditionItem } from "core/form/types";
+import { useOptionalDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 
 import styles from "./ConditionSection.module.scss";
 import { FormSection } from "./FormSection";
@@ -29,6 +30,7 @@ interface ConditionSectionProps {
  */
 export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, path, disabled }) => {
   const { setValue, clearErrors } = useFormContext();
+  const setFocusedField = useOptionalDocumentationPanelContext()?.setFocusedField;
   const value = useWatch({ name: path });
 
   const { conditions, selectionConstValues } = formField;
@@ -54,9 +56,10 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
       setDefaultValues(newSelectedFormBlock, conditionValues, { respectExistingValues: true });
       // do not validate the new oneOf part of the form as the user didn't have a chance to fill it out yet.
       setValue(path, conditionValues, { shouldDirty: true, shouldTouch: true });
+      setFocusedField?.(`${path}[${selectionConstValues[selectedItem.value]}]`);
       clearErrors(path);
     },
-    [conditions, value, formField.selectionKey, selectionConstValues, path, setValue, clearErrors]
+    [conditions, value, formField.selectionKey, selectionConstValues, setValue, path, setFocusedField, clearErrors]
   );
 
   const options = useMemo(
@@ -69,8 +72,7 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
     [conditions]
   );
 
-  const selectionKeyPath = `${path}.${formField.selectionKey}`;
-  const error = get(useFormState({ name: selectionKeyPath }).errors, selectionKeyPath);
+  const error = get(useFormState({ name: path }).errors, path);
 
   return (
     <SectionContainer>
@@ -83,7 +85,7 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
               options={options}
               onChange={onOptionChange}
               value={currentlySelectedCondition}
-              name={formField.path}
+              name={path}
               isDisabled={disabled || formField.readOnly}
               error={error !== undefined}
             />

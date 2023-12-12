@@ -187,6 +187,21 @@ public class FailureHelper {
   }
 
   /**
+   * Create destination timeout failure.
+   *
+   * @param t throwable that caused the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
+  public static FailureReason destinationTimeoutFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
+    return connectorCommandFailure(t, jobId, attemptNumber, ConnectorCommand.WRITE)
+        .withFailureOrigin(FailureOrigin.DESTINATION)
+        .withFailureType(FailureType.DESTINATION_TIMEOUT)
+        .withExternalMessage("Something went wrong when calling the destination. The destination seems stuck");
+  }
+
+  /**
    * Create destination failure.
    *
    * @param t throwable that caused the failure

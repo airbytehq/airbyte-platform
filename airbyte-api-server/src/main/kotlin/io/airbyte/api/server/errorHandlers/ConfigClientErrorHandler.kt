@@ -26,23 +26,28 @@ object ConfigClientErrorHandler {
    * @param response response from ConfigApiClient
    * @param resourceId resource ID passed in with the request
    */
-  fun handleError(response: HttpResponse<*>, resourceId: String?) {
+  fun handleError(
+    response: HttpResponse<*>,
+    resourceId: String?,
+  ) {
     when (response.status) {
       HttpStatus.NOT_FOUND -> throw ResourceNotFoundProblem(resourceId)
       HttpStatus.CONFLICT -> {
         val couldNotFulfillRequest = "Could not fulfill request"
-        val message: String = response.getBody(MutableMap::class.java)
-          .orElseGet { mutableMapOf(Pair(MESSAGE, couldNotFulfillRequest)) }
-          .getOrDefault(MESSAGE, couldNotFulfillRequest).toString()
+        val message: String =
+          response.getBody(MutableMap::class.java)
+            .orElseGet { mutableMapOf(Pair(MESSAGE, couldNotFulfillRequest)) }
+            .getOrDefault(MESSAGE, couldNotFulfillRequest).toString()
         throw SyncConflictProblem(message)
       }
 
       HttpStatus.UNAUTHORIZED -> throw InvalidApiKeyProblem()
       HttpStatus.UNPROCESSABLE_ENTITY -> {
         val defaultErrorMessage = "The body of the request was not understood"
-        val message: String = response.getBody(MutableMap::class.java)
-          .orElseGet { mutableMapOf(Pair(MESSAGE, defaultErrorMessage)) }
-          .getOrDefault(MESSAGE, defaultErrorMessage).toString()
+        val message: String =
+          response.getBody(MutableMap::class.java)
+            .orElseGet { mutableMapOf(Pair(MESSAGE, defaultErrorMessage)) }
+            .getOrDefault(MESSAGE, defaultErrorMessage).toString()
         // Exclude the part of a schema validation message that's ugly if it's there
         throw UnprocessableEntityProblem(message.split("\nSchema".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0])
       }

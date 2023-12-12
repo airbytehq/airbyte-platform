@@ -1,6 +1,6 @@
 import React from "react";
 
-import { SchemaChange, WebBackendConnectionListItem } from "core/request/AirbyteClient";
+import { SchemaChange, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 
 import { ChangesStatusIcon } from "./ChangesStatusIcon";
@@ -38,7 +38,7 @@ export const StatusCell: React.FC<StatusCellProps> = ({
         hasBreakingChange={hasBreakingChange}
         connection={connection}
       />
-      {allowAutoDetectSchema && <ChangesStatusIcon schemaChange={schemaChange} />}
+      {allowAutoDetectSchema && hasBreakingChange && <ChangesStatusIcon schemaChange={schemaChange} />}
     </div>
   );
 };

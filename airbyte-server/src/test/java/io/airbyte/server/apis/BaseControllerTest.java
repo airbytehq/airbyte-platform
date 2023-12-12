@@ -11,6 +11,7 @@ import io.airbyte.commons.server.handlers.ActorDefinitionVersionHandler;
 import io.airbyte.commons.server.handlers.AttemptHandler;
 import io.airbyte.commons.server.handlers.ConnectionsHandler;
 import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler;
+import io.airbyte.commons.server.handlers.DeploymentMetadataHandler;
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler;
 import io.airbyte.commons.server.handlers.DestinationHandler;
 import io.airbyte.commons.server.handlers.HealthCheckHandler;
@@ -32,6 +33,7 @@ import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler;
 import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler;
 import io.airbyte.commons.server.handlers.WorkspacesHandler;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
+import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.db.Database;
 import io.airbyte.persistence.job.JobNotifier;
@@ -43,13 +45,13 @@ import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.annotation.Client;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import io.micronaut.runtime.server.EmbeddedServer;
+import io.micronaut.security.utils.SecurityService;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
-import javax.sql.DataSource;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Condition;
 import org.assertj.core.api.InstanceOfAssertFactory;
@@ -210,6 +212,14 @@ abstract class BaseControllerTest {
     return sourceDefinitionsHandler;
   }
 
+  ActorDefinitionAccessValidator actorDefinitionAccessValidator = Mockito.mock(ActorDefinitionAccessValidator.class);
+
+  @MockBean(ActorDefinitionAccessValidator.class)
+  @Replaces(ActorDefinitionAccessValidator.class)
+  ActorDefinitionAccessValidator mmActorDefinitionAccessValidator() {
+    return actorDefinitionAccessValidator;
+  }
+
   SourceHandler sourceHandler = Mockito.mock(SourceHandler.class);
 
   @MockBean(SourceHandler.class)
@@ -266,6 +276,14 @@ abstract class BaseControllerTest {
     return organizationsHandler;
   }
 
+  DeploymentMetadataHandler deploymentMetadataHandler = Mockito.mock(DeploymentMetadataHandler.class);
+
+  @MockBean(DeploymentMetadataHandler.class)
+  @Replaces(DeploymentMetadataHandler.class)
+  DeploymentMetadataHandler mmDeploymentMetadataHandler() {
+    return deploymentMetadataHandler;
+  }
+
   @MockBean(SynchronousSchedulerClient.class)
   @Replaces(SynchronousSchedulerClient.class)
   SynchronousSchedulerClient mmSynchronousSchedulerClient() {
@@ -277,12 +295,6 @@ abstract class BaseControllerTest {
   @Named("configDatabase")
   Database mmDatabase() {
     return Mockito.mock(Database.class);
-  }
-
-  @MockBean(DataSource.class)
-  @Replaces(DataSource.class)
-  DataSource mmDataSource() {
-    return Mockito.mock(DataSource.class);
   }
 
   @MockBean(TrackingClient.class)
@@ -307,6 +319,12 @@ abstract class BaseControllerTest {
   @Replaces(TemporalClient.class)
   TemporalClient mmTemporalClient() {
     return Mockito.mock(TemporalClient.class);
+  }
+
+  @MockBean(SecurityService.class)
+  @Replaces(SecurityService.class)
+  SecurityService mmSecurityService() {
+    return Mockito.mock(SecurityService.class);
   }
 
   @MockBean(JobNotifier.class)

@@ -1,9 +1,8 @@
 import { useCallback } from "react";
 
+import { SynchronousJobRead } from "core/api/types/AirbyteClient";
 import { Connector, ConnectorDefinition } from "core/domain/connector";
-import { SynchronousJobRead } from "core/request/AirbyteClient";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 
 export const useAnalyticsTrackFunctions = (connectorType: "source" | "destination") => {
   const analytics = useAnalyticsService();

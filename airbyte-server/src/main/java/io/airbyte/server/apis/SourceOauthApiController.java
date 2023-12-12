@@ -6,6 +6,8 @@ package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 
 import io.airbyte.api.generated.SourceOauthApi;
 import io.airbyte.api.model.generated.CompleteOAuthResponse;
@@ -24,7 +26,6 @@ import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
-@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/source_oauths")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class SourceOauthApiController implements SourceOauthApi {
@@ -37,7 +38,7 @@ public class SourceOauthApiController implements SourceOauthApi {
   }
 
   @Post("/complete_oauth")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -46,7 +47,7 @@ public class SourceOauthApiController implements SourceOauthApi {
   }
 
   @Post("/get_consent_url")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -55,7 +56,7 @@ public class SourceOauthApiController implements SourceOauthApi {
   }
 
   @Post("/revoke")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public void revokeSourceOAuthTokens(@Body final RevokeSourceOauthTokensRequest revokeSourceOauthTokensRequest) {

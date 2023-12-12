@@ -11,9 +11,11 @@ import com.google.auth.oauth2.ServiceAccountCredentials;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.generated.ConnectionApi;
+import io.airbyte.api.client.generated.DeploymentMetadataApi;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.JobRetryStatesApi;
 import io.airbyte.api.client.generated.JobsApi;
+import io.airbyte.api.client.generated.SecretsPersistenceConfigApi;
 import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.api.client.generated.StateApi;
@@ -48,7 +50,6 @@ public class ApiClientBeanFactory {
   private static final String INTERNAL_API_AUTH_TOKEN_BEAN_NAME = "internalApiAuthToken";
   private static final int JWT_TTL_MINUTES = 5;
 
-  @SuppressWarnings("MissingJavadocMethod")
   @Singleton
   @Named("apiClient")
   public ApiClient apiClient(
@@ -62,7 +63,6 @@ public class ApiClientBeanFactory {
         .setHost(parseHostName(airbyteApiHost))
         .setPort(parsePort(airbyteApiHost))
         .setBasePath("/api")
-        .setHttpClientBuilder(HttpClient.newBuilder().version(Version.HTTP_1_1))
         .setConnectTimeout(Duration.ofSeconds(30))
         .setReadTimeout(Duration.ofSeconds(300))
         .setRequestInterceptor(builder -> {
@@ -88,6 +88,11 @@ public class ApiClientBeanFactory {
   @Singleton
   public JobsApi jobsApi(@Named("apiClient") final ApiClient apiClient) {
     return new JobsApi(apiClient);
+  }
+
+  @Singleton
+  public DeploymentMetadataApi deploymentMetadataApi(final ApiClient apiClient) {
+    return new DeploymentMetadataApi(apiClient);
   }
 
   @Singleton
@@ -126,11 +131,15 @@ public class ApiClientBeanFactory {
   }
 
   @Singleton
+  public SecretsPersistenceConfigApi secretsPersistenceConfigApi(final ApiClient apiClient) {
+    return new SecretsPersistenceConfigApi(apiClient);
+  }
+
+  @Singleton
   public HttpClient httpClient() {
     return HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
   }
 
-  @SuppressWarnings("MissingJavadocMethod")
   @Singleton
   @Named("internalApiScheme")
   public String internalApiScheme(@Value("${airbyte.acceptance.test.enabled}") final boolean isInTestMode, final Environment environment) {

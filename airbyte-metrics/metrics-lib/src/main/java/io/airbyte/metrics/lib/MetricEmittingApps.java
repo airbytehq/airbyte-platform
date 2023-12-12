@@ -17,6 +17,9 @@ import lombok.AllArgsConstructor;
  * - Use dashes to delimit application names with multiple words.
  * <p>
  * - Use lowercase.
+ * <p>
+ * Note: These names are used as metric name prefixes. Changing these names will affect
+ * dashboard/alerts and our public Datadog integration. Please consult the platform teams if unsure.
  */
 @AllArgsConstructor
 public enum MetricEmittingApps implements MetricEmittingApp {
@@ -25,7 +28,9 @@ public enum MetricEmittingApps implements MetricEmittingApp {
   METRICS_REPORTER("metrics-reporter"),
   ORCHESTRATOR("orchestrator"),
   SERVER("server"),
-  WORKER("worker");
+  WORKER("worker"),
+  WORKLOAD_API("workload-api"),
+  WORKLOAD_LAUNCHER("workload-launcher");
 
   private final String applicationName;
 

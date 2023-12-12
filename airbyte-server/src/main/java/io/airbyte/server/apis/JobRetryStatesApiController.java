@@ -20,13 +20,11 @@ import io.micronaut.http.annotation.Status;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 
-@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/jobs/retry_states")
 public class JobRetryStatesApiController implements JobRetryStatesApi {
 
   private final RetryStatesHandler handler;
 
-  @SuppressWarnings("MissingJavadocType")
   public JobRetryStatesApiController(final RetryStatesHandler handler) {
     this.handler = handler;
   }

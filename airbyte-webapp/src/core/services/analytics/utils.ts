@@ -1,4 +1,4 @@
-import { ConnectionScheduleData } from "core/request/AirbyteClient";
+import { ConnectionScheduleData } from "core/api/types/AirbyteClient";
 
 export const getFrequencyFromScheduleData = (scheduleData?: ConnectionScheduleData) => {
   if (!scheduleData) {

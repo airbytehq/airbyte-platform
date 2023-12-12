@@ -4,9 +4,9 @@
 #
 #    pip-compile
 #
-airbyte-cdk==0.51.16
+airbyte-cdk==0.57.0
     # via -r requirements.in
-airbyte-protocol-models==0.4.0
+airbyte-protocol-models==0.4.2
     # via airbyte-cdk
 attrs==23.1.0
     # via
@@ -17,23 +17,23 @@ backoff==2.2.1
     # via airbyte-cdk
 bracex==2.4
     # via wcmatch
-cachetools==5.3.1
+cachetools==5.3.2
     # via airbyte-cdk
-cattrs==23.1.2
+cattrs==23.2.3
     # via requests-cache
-certifi==2023.7.22
+certifi==2023.11.17
     # via requests
-charset-normalizer==3.2.0
+charset-normalizer==3.3.2
     # via requests
 deprecated==1.2.14
     # via airbyte-cdk
 dpath==2.0.8
     # via airbyte-cdk
-exceptiongroup==1.1.3
+exceptiongroup==1.2.0
     # via cattrs
 genson==1.2.2
     # via airbyte-cdk
-idna==3.4
+idna==3.6
     # via requests
 isodate==0.6.1
     # via airbyte-cdk
@@ -47,13 +47,15 @@ markupsafe==2.1.3
     # via jinja2
 pendulum==2.1.2
     # via airbyte-cdk
-platformdirs==3.10.0
+platformdirs==4.1.0
     # via requests-cache
-pydantic==1.10.12
+pydantic==1.10.13
     # via
     #   airbyte-cdk
     #   airbyte-protocol-models
-pyrsistent==0.19.3
+pyrate-limiter==3.1.0
+    # via airbyte-cdk
+pyrsistent==0.20.0
     # via jsonschema
 python-dateutil==2.8.2
     # via
@@ -67,7 +69,7 @@ requests==2.31.0
     # via
     #   airbyte-cdk
     #   requests-cache
-requests-cache==1.1.0
+requests-cache==1.1.1
     # via airbyte-cdk
 six==1.16.0
     # via
@@ -75,19 +77,19 @@ six==1.16.0
     #   jsonschema
     #   python-dateutil
     #   url-normalize
-typing-extensions==4.7.1
+typing-extensions==4.8.0
     # via
     #   cattrs
     #   pydantic
 url-normalize==1.4.3
     # via requests-cache
-urllib3==2.0.4
+urllib3==2.1.0
     # via
     #   requests
     #   requests-cache
 wcmatch==8.4
     # via airbyte-cdk
-wrapt==1.15.0
+wrapt==1.16.0
     # via deprecated
 
 # The following packages are considered to be unsafe in a requirements file:

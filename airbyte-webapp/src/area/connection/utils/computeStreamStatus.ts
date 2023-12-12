@@ -7,20 +7,25 @@ import {
   AirbyteStreamAndConfiguration,
   ConnectionScheduleData,
   ConnectionScheduleType,
+  ConnectionSyncResultRead,
   StreamStatusIncompleteRunCause,
   StreamStatusJobType,
   StreamStatusRead,
   StreamStatusRunState,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
 export type AirbyteStreamAndConfigurationWithEnforcedStream = AirbyteStreamAndConfiguration & { stream: AirbyteStream };
 
-export function getStreamKey(streamStatus: StreamStatusRead | AirbyteStream) {
+export function getStreamKey(streamStatus: StreamStatusRead | AirbyteStream | ConnectionSyncResultRead) {
   let name: string;
   let namespace: string | undefined;
 
   if ("connectionId" in streamStatus) {
     // StreamStatusRead
+    name = streamStatus.streamName;
+    namespace = streamStatus.streamNamespace;
+  } else if ("streamName" in streamStatus) {
+    // ConnectionSyncResultRead
     name = streamStatus.streamName;
     namespace = streamStatus.streamNamespace;
   } else {

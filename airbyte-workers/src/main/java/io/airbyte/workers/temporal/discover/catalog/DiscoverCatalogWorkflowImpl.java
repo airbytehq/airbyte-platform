@@ -10,13 +10,13 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME;
 
 import datadog.trace.api.Trace;
+import io.airbyte.commons.temporal.annotations.TemporalActivityStub;
 import io.airbyte.commons.temporal.scheduling.DiscoverCatalogWorkflow;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
 import java.util.Map;
 
 /**

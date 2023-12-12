@@ -10,7 +10,6 @@ import com.fasterxml.jackson.annotation.JsonValue;
 /**
  * An immutable representation of an Airbyte License.
  */
-@SuppressWarnings({"MissingJavadocMethod", "MissingJavadocType"})
 public record AirbyteLicense(LicenseType type) {
 
   public enum LicenseType {

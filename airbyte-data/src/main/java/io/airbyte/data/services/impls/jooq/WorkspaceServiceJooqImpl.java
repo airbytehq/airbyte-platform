@@ -20,21 +20,28 @@ import static org.jooq.impl.DSL.noCondition;
 import static org.jooq.impl.DSL.select;
 import static org.jooq.impl.SQLDataType.VARCHAR;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.yaml.Yamls;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfigWithMetadata;
 import io.airbyte.config.Geography;
+import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.config.helpers.ScheduleHelpers;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.DbConverter;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
+import io.airbyte.data.services.shared.StandardSyncQuery;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
@@ -42,7 +49,11 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Organization;
+import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.time.OffsetDateTime;
@@ -53,6 +64,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
@@ -62,14 +74,27 @@ import org.jooq.Record1;
 import org.jooq.Result;
 import org.jooq.SelectJoinStep;
 
+@Slf4j
 @Singleton
 public class WorkspaceServiceJooqImpl implements WorkspaceService {
 
   private final ExceptionWrappingDatabase database;
+  private final FeatureFlagClient featureFlagClient;
+  private final SecretsRepositoryReader secretsRepositoryReader;
+  private final SecretsRepositoryWriter secretsRepositoryWriter;
+  private final SecretPersistenceConfigService secretPersistenceConfigService;
 
   @VisibleForTesting
-  public WorkspaceServiceJooqImpl(final Database database) {
+  public WorkspaceServiceJooqImpl(@Named("configDatabase") final Database database,
+                                  final FeatureFlagClient featureFlagClient,
+                                  final SecretsRepositoryReader secretsRepositoryReader,
+                                  final SecretsRepositoryWriter secretsRepositoryWriter,
+                                  final SecretPersistenceConfigService secretPersistenceConfigService) {
     this.database = new ExceptionWrappingDatabase(database);
+    this.featureFlagClient = featureFlagClient;
+    this.secretsRepositoryReader = secretsRepositoryReader;
+    this.secretsRepositoryWriter = secretsRepositoryWriter;
+    this.secretPersistenceConfigService = secretPersistenceConfigService;
   }
 
   /**
@@ -85,7 +110,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   @Override
   public StandardWorkspace getStandardWorkspaceNoSecrets(final UUID workspaceId, final boolean includeTombstone)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    return listWorkspaceQuery(Optional.of(workspaceId), includeTombstone)
+    return listWorkspaceQuery(Optional.of(List.of(workspaceId)), includeTombstone)
         .findFirst()
         .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.STANDARD_WORKSPACE, workspaceId));
   }
@@ -163,11 +188,11 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   }
 
   @Override
-  public Stream<StandardWorkspace> listWorkspaceQuery(final Optional<UUID> workspaceId, final boolean includeTombstone) throws IOException {
+  public Stream<StandardWorkspace> listWorkspaceQuery(final Optional<List<UUID>> workspaceIds, final boolean includeTombstone) throws IOException {
     return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
         .from(WORKSPACE)
         .where(includeTombstone ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
-        .and(workspaceId.map(WORKSPACE.ID::eq).orElse(noCondition()))
+        .and(workspaceIds.map(WORKSPACE.ID::in).orElse(noCondition()))
         .fetch())
         .stream()
         .map(DbConverter::buildStandardWorkspace);
@@ -486,6 +511,45 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   }
 
   /**
+   * List connection IDs for active syncs based on the given query.
+   *
+   * @param standardSyncQuery query
+   * @return list of connection IDs
+   * @throws IOException if there is an issue while interacting with db.
+   */
+  @Override
+  public List<UUID> listWorkspaceActiveSyncIds(final StandardSyncQuery standardSyncQuery)
+      throws IOException {
+    return database.query(ctx -> ctx
+        .select(CONNECTION.ID)
+        .from(CONNECTION)
+        .join(ACTOR).on(CONNECTION.SOURCE_ID.eq(ACTOR.ID))
+        .where(ACTOR.WORKSPACE_ID.eq(standardSyncQuery.workspaceId())
+            .and(standardSyncQuery.destinationId() == null || standardSyncQuery.destinationId().isEmpty() ? noCondition()
+                : CONNECTION.DESTINATION_ID.in(standardSyncQuery.destinationId()))
+            .and(standardSyncQuery.sourceId() == null || standardSyncQuery.sourceId().isEmpty() ? noCondition()
+                : CONNECTION.SOURCE_ID.in(standardSyncQuery.sourceId()))
+            // includeDeleted is not relevant here because it refers to connection status deprecated,
+            // and we are only retrieving active syncs anyway
+            .and(CONNECTION.STATUS.eq(StatusType.active)))
+        .groupBy(CONNECTION.ID)).fetchInto(UUID.class);
+  }
+
+  /**
+   * List workspaces with given ids.
+   *
+   * @param includeTombstone include tombstoned workspaces
+   * @return workspaces
+   * @throws IOException - you never know when you IO
+   */
+  @Override
+  public List<StandardWorkspace> listStandardWorkspacesWithIds(final List<UUID> workspaceIds,
+                                                               final boolean includeTombstone)
+      throws IOException {
+    return listWorkspaceQuery(Optional.of(workspaceIds), includeTombstone).toList();
+  }
+
+  /**
    * Write workspace service account.
    *
    * @param configs list of workspace service account
@@ -605,7 +669,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
 
   /**
    * Returns source with a given id. Does not contain secrets. To hydrate with secrets see { @link
-   * SecretsRepositoryReader#getSourceConnectionWithSecrets(final UUID sourceId) }.
+   * SourceService#getSourceConnectionWithSecrets(final UUID sourceId) }.
    *
    * @param sourceId - id of source to fetch.
    * @return sources
@@ -676,10 +740,98 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
         .fetch());
   }
 
-  private Optional<UUID> getOrganizationIdFromWorkspaceId(final UUID scopeId) throws IOException {
+  @Override
+  public Optional<UUID> getOrganizationIdFromWorkspaceId(final UUID scopeId) throws IOException {
+    if (scopeId == null) {
+      return Optional.empty();
+    }
     final Optional<Record1<UUID>> optionalRecord = database.query(ctx -> ctx.select(WORKSPACE.ORGANIZATION_ID).from(WORKSPACE)
         .where(WORKSPACE.ID.eq(scopeId)).fetchOptional());
     return optionalRecord.map(Record1::value1);
+  }
+
+  /**
+   * Get workspace with secrets.
+   *
+   * @param workspaceId workspace id
+   * @param includeTombstone include workspace even if it is tombstoned
+   * @return workspace with secrets
+   * @throws JsonValidationException if the workspace is or contains invalid json
+   * @throws ConfigNotFoundException if the config does not exist
+   * @throws IOException if there is an issue while interacting with the secrets store or db.
+   */
+  @Override
+  public StandardWorkspace getWorkspaceWithSecrets(
+                                                   final UUID workspaceId,
+                                                   final boolean includeTombstone)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final StandardWorkspace workspace = getStandardWorkspaceNoSecrets(workspaceId, includeTombstone);
+    final JsonNode webhookConfigs;
+    final UUID organizationId = workspace.getOrganizationId();
+    if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
+      final SecretPersistenceConfig secretPersistenceConfig =
+          secretPersistenceConfigService.getSecretPersistenceConfig(io.airbyte.config.ScopeType.ORGANIZATION, organizationId);
+      webhookConfigs =
+          secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(workspace.getWebhookOperationConfigs(),
+              new RuntimeSecretPersistence(secretPersistenceConfig));
+    } else {
+      webhookConfigs = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(workspace.getWebhookOperationConfigs());
+    }
+    workspace.withWebhookOperationConfigs(webhookConfigs);
+    return workspace;
+  }
+
+  @Override
+  public void writeWorkspaceWithSecrets(final StandardWorkspace workspace) throws JsonValidationException, IOException, ConfigNotFoundException {
+    // Get the schema for the webhook config, so we can split out any secret fields.
+    final JsonNode webhookConfigSchema =
+        Yamls.deserialize(ConfigSchema.WORKSPACE_WEBHOOK_OPERATION_CONFIGS.getConfigSchemaFile());
+    // Check if there's an existing config, so we can re-use the secret coordinates.
+    final Optional<StandardWorkspace> previousWorkspace = getWorkspaceIfExists(workspace.getWorkspaceId(), false);
+    Optional<JsonNode> previousWebhookConfigs = Optional.empty();
+    if (previousWorkspace.isPresent() && previousWorkspace.get().getWebhookOperationConfigs() != null) {
+      previousWebhookConfigs = Optional.of(previousWorkspace.get().getWebhookOperationConfigs());
+    }
+    // Split out the secrets from the webhook config.
+    final JsonNode partialConfig;
+    if (workspace.getWebhookOperationConfigs() == null) {
+      partialConfig = null;
+    } else {
+      // strip secrets
+      final UUID organizationId = workspace.getOrganizationId();
+      if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
+        final SecretPersistenceConfig secretPersistenceConfig =
+            secretPersistenceConfigService.getSecretPersistenceConfig(io.airbyte.config.ScopeType.ORGANIZATION, organizationId);
+        partialConfig = secretsRepositoryWriter.statefulUpdateSecretsToRuntimeSecretPersistence(
+            workspace.getWorkspaceId(),
+            previousWebhookConfigs,
+            workspace.getWebhookOperationConfigs(),
+            webhookConfigSchema,
+            true,
+            new RuntimeSecretPersistence(secretPersistenceConfig));
+      } else {
+        partialConfig = secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(
+            workspace.getWorkspaceId(),
+            previousWebhookConfigs,
+            workspace.getWebhookOperationConfigs(),
+            webhookConfigSchema,
+            true);
+      }
+    }
+    final StandardWorkspace partialWorkspace = Jsons.clone(workspace);
+    if (partialConfig != null) {
+      partialWorkspace.withWebhookOperationConfigs(partialConfig);
+    }
+    writeStandardWorkspaceNoSecrets(partialWorkspace);
+  }
+
+  private Optional<StandardWorkspace> getWorkspaceIfExists(final UUID workspaceId, final boolean tombstone) {
+    try {
+      return Optional.of(getStandardWorkspaceNoSecrets(workspaceId, tombstone));
+    } catch (final ConfigNotFoundException | JsonValidationException | IOException e) {
+      log.warn("Unable to find workspace with ID {}", workspaceId);
+      return Optional.empty();
+    }
   }
 
 }

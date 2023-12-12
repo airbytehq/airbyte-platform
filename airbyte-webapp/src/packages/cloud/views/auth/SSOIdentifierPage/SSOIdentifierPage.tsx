@@ -1,21 +1,21 @@
-import { faComments, faLightbulb } from "@fortawesome/free-regular-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ReactNode } from "react";
-import { useWatch } from "react-hook-form";
+import { useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import { useNavigate } from "react-router-dom";
 import * as yup from "yup";
 
 import { Form, FormControl } from "components/forms";
+import { FormSubmissionHandler } from "components/forms/Form";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { links } from "core/utils/links";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
+import { useKeycloakService } from "packages/cloud/services/auth/KeycloakService";
 
 import styles from "./SSOIdentifierPage.module.scss";
 
@@ -28,13 +28,16 @@ const schema = yup.object().shape({
 });
 
 export const SSOIdentifierPage = () => {
+  const { changeRealmAndRedirectToSignin } = useKeycloakService();
   const { formatMessage } = useIntl();
-  const navigate = useNavigate();
 
-  const handleSubmit = (values: CompanyIdentifierValues) => {
-    // TODO: instead of navigating, we could register the realm here with react-oidc-context and then redirect directly to keycloak
-    navigate(`${CloudRoutes.Sso}/${values.companyIdentifier}`);
-    return Promise.resolve();
+  const handleSubmit: FormSubmissionHandler<CompanyIdentifierValues> = async ({ companyIdentifier }, methods) => {
+    try {
+      return await changeRealmAndRedirectToSignin(companyIdentifier);
+    } catch (e) {
+      methods.setError("companyIdentifier", { message: "login.sso.invalidCompanyIdentifier" });
+      return Promise.reject();
+    }
   };
 
   return (
@@ -56,22 +59,13 @@ export const SSOIdentifierPage = () => {
           placeholder={formatMessage({ id: "login.sso.companyIdentifier.placeholder" })}
           label={formatMessage({ id: "login.sso.companyIdentifier.label" })}
         />
-        <FlexContainer justifyContent="space-between" alignItems="center">
-          <Link to={CloudRoutes.Login}>
-            <Text color="grey">
-              <FormattedMessage id="login.backLogin" />
-            </Text>
-          </Link>
-          <Button type="submit">
-            <FormattedMessage id="login.sso.continueWithSSO" />
-          </Button>
-        </FlexContainer>
+        <FormSubmissionButton />
         <Box my="xl">
           <BookmarkableUrl />
         </Box>
         <FlexContainer gap="md">
           <FlexItem grow={false}>
-            <FontAwesomeIcon icon={faComments} size="xs" />
+            <Icon type="comments" />
           </FlexItem>
           <Text>
             <FormattedMessage
@@ -85,6 +79,23 @@ export const SSOIdentifierPage = () => {
   );
 };
 
+const FormSubmissionButton = () => {
+  const { isSubmitting } = useFormState<CompanyIdentifierValues>();
+
+  return (
+    <FlexContainer justifyContent="space-between" alignItems="center">
+      <Link to={CloudRoutes.Login}>
+        <Text color="grey">
+          <FormattedMessage id="login.backLogin" />
+        </Text>
+      </Link>
+      <Button type="submit" isLoading={isSubmitting}>
+        <FormattedMessage id="login.sso.continueWithSSO" />
+      </Button>
+    </FlexContainer>
+  );
+};
+
 const BookmarkableUrl = () => {
   const fieldValue = useWatch<CompanyIdentifierValues>({ name: "companyIdentifier" });
   const { formatMessage } = useIntl();
@@ -94,7 +105,7 @@ const BookmarkableUrl = () => {
   return (
     <FlexContainer gap="md">
       <FlexItem grow={false}>
-        <FontAwesomeIcon icon={faLightbulb} size="xs" />
+        <Icon type="lightbulb" />
       </FlexItem>
       <Text>
         <FormattedMessage

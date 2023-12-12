@@ -8,7 +8,7 @@ import { DatePicker, toEquivalentLocalTime } from "./DatePicker";
 
 describe("Timezones", () => {
   it("should always be US/Pacific", () => {
-    expect(new Date().getTimezoneOffset()).toBe(420);
+    expect(process.env.TZ).toEqual("US/Pacific");
   });
 });
 

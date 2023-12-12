@@ -1,10 +1,13 @@
 import { useCallback } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
-import { RotateIcon } from "components/icons/RotateIcon";
 import { Button, ButtonVariant } from "components/ui/Button";
+import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
+import { Icon } from "components/ui/Icon";
 
+import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import styles from "./ConnectionSyncButtons.module.scss";
 import { useConnectionSyncContext } from "./ConnectionSyncContext";
@@ -15,11 +18,16 @@ interface ConnectionSyncButtonsProps {
   buttonClassName?: string;
 }
 
+enum ContextMenuOptions {
+  ResetData = "ResetData",
+}
+
 export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
   buttonText,
   variant,
   buttonClassName,
 }) => {
+  const { formatMessage } = useIntl();
   const {
     syncStarting,
     cancelStarting,
@@ -31,6 +39,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
     jobSyncRunning,
     jobResetRunning,
   } = useConnectionSyncContext();
+  const { mode, connection } = useConnectionFormService();
 
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
@@ -41,41 +50,35 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
       submitButtonText: "form.reset",
       cancelButtonText: "form.noNeed",
       onSubmit: async () => {
-        closeConfirmationModal();
         await resetStreams();
+        closeConfirmationModal();
       },
       submitButtonDataId: "reset",
     });
   }, [closeConfirmationModal, openConfirmationModal, resetStreams]);
 
+  const handleDropdownMenuOptionClick = (optionClicked: DropdownMenuOptionType) => {
+    switch (optionClicked.value) {
+      case ContextMenuOptions.ResetData:
+        resetWithModal();
+        break;
+    }
+  };
+
   return (
     <div className={styles.buttons}>
       {!jobSyncRunning && !jobResetRunning && (
-        <>
-          <Button
-            onClick={resetWithModal}
-            variant="secondary"
-            className={buttonClassName}
-            isLoading={resetStarting}
-            data-testid="manual-reset-button"
-            disabled={syncStarting || resetStarting || !connectionEnabled}
-          >
-            <FormattedMessage id="connection.resetData" />
-          </Button>
-          <Button
-            onClick={syncConnection}
-            icon={
-              syncStarting ? undefined : <RotateIcon height={styles.syncIconHeight} width={styles.syncIconHeight} />
-            }
-            variant={variant}
-            className={buttonClassName}
-            isLoading={syncStarting}
-            data-testid="manual-sync-button"
-            disabled={syncStarting || resetStarting || !connectionEnabled}
-          >
-            {buttonText}
-          </Button>
-        </>
+        <Button
+          onClick={syncConnection}
+          icon={syncStarting ? undefined : <Icon type="sync" />}
+          variant={variant}
+          className={buttonClassName}
+          isLoading={syncStarting}
+          data-testid="manual-sync-button"
+          disabled={syncStarting || resetStarting || !connectionEnabled}
+        >
+          {buttonText}
+        </Button>
       )}
       {(jobSyncRunning || jobResetRunning) && (
         <Button
@@ -90,6 +93,22 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
           />
         </Button>
       )}
+      <DropdownMenu
+        placement="bottom-end"
+        data-testid="job-history-dropdown-menu"
+        options={[
+          {
+            displayName: formatMessage({ id: "connection.resetData" }),
+            value: ContextMenuOptions.ResetData,
+            disabled:
+              jobSyncRunning || jobResetRunning || connection.status !== ConnectionStatus.active || mode === "readonly",
+            "data-testid": "reset-data-dropdown-option",
+          },
+        ]}
+        onChange={handleDropdownMenuOptionClick}
+      >
+        {() => <Button variant="clear" icon={<Icon type="options" />} />}
+      </DropdownMenu>
     </div>
   );
 };

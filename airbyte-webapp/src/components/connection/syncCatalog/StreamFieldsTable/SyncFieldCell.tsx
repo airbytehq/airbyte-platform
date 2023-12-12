@@ -1,5 +1,4 @@
-import { useCallback } from "react";
-import React from "react";
+import React, { useCallback } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
@@ -7,8 +6,8 @@ import { Icon } from "components/ui/Icon";
 import { Switch } from "components/ui/Switch";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { SyncMode, DestinationSyncMode } from "core/api/types/AirbyteClient";
 import { SyncSchemaField, SyncSchemaFieldObject } from "core/domain/catalog";
-import { SyncMode, DestinationSyncMode } from "core/request/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 interface SyncFieldCellProps {
@@ -21,6 +20,7 @@ interface SyncFieldCellProps {
   handleFieldToggle: (fieldPath: string[], isSelected: boolean) => void;
   syncMode?: SyncMode;
   destinationSyncMode?: DestinationSyncMode;
+  streamIsDisabled: boolean;
   className?: string;
 }
 
@@ -34,6 +34,7 @@ export const SyncFieldCell: React.FC<SyncFieldCellProps> = ({
   handleFieldToggle,
   syncMode,
   destinationSyncMode,
+  streamIsDisabled,
   className,
 }) => {
   const { mode } = useConnectionFormService();
@@ -43,11 +44,12 @@ export const SyncFieldCell: React.FC<SyncFieldCellProps> = ({
   const isPrimaryKey = checkIsPrimaryKey(field.path);
   const isChildFieldPrimaryKey = checkIsChildFieldPrimaryKey(field.path);
   const isDisabled =
+    streamIsDisabled ||
     mode === "readonly" ||
     (syncMode === SyncMode.incremental && (isCursor || isChildFieldCursor)) ||
     (destinationSyncMode === DestinationSyncMode.append_dedup && (isPrimaryKey || isChildFieldPrimaryKey)) ||
     isNestedField;
-  const showTooltip = isDisabled && mode !== "readonly";
+  const showTooltip = isDisabled && mode !== "readonly" && !streamIsDisabled;
 
   const renderDisabledReasonMessage = useCallback(() => {
     if (isPrimaryKey || isChildFieldPrimaryKey) {
@@ -68,6 +70,7 @@ export const SyncFieldCell: React.FC<SyncFieldCellProps> = ({
           checked={isFieldSelected}
           disabled={isDisabled}
           onChange={() => handleFieldToggle(field.path, !isFieldSelected)}
+          data-testid="sync-field-switch"
         />
       )}
       {showTooltip && !isNestedField && (

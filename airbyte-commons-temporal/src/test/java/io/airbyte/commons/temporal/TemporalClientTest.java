@@ -30,6 +30,7 @@ import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow.JobInfor
 import io.airbyte.commons.temporal.scheduling.DiscoverCatalogWorkflow;
 import io.airbyte.commons.temporal.scheduling.SpecWorkflow;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
+import io.airbyte.config.ActorContext;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobCheckConnectionConfig;
@@ -252,7 +253,7 @@ public class TemporalClientTest {
       final StandardCheckConnectionInput input = new StandardCheckConnectionInput()
           .withConnectionConfiguration(checkConnectionConfig.getConnectionConfiguration());
 
-      temporalClient.submitCheckConnection(JOB_UUID, ATTEMPT_ID, WORKSPACE_ID, CHECK_TASK_QUEUE, checkConnectionConfig);
+      temporalClient.submitCheckConnection(JOB_UUID, ATTEMPT_ID, WORKSPACE_ID, CHECK_TASK_QUEUE, checkConnectionConfig, new ActorContext());
       checkConnectionWorkflow.run(JOB_RUN_CONFIG, UUID_LAUNCHER_CONFIG, input);
       verify(workflowClient).newWorkflowStub(CheckConnectionWorkflow.class,
           TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.CHECK_CONNECTION));
@@ -269,7 +270,7 @@ public class TemporalClientTest {
       final StandardDiscoverCatalogInput input = new StandardDiscoverCatalogInput()
           .withConnectionConfiguration(checkConnectionConfig.getConnectionConfiguration());
 
-      temporalClient.submitDiscoverSchema(JOB_UUID, ATTEMPT_ID, WORKSPACE_ID, DISCOVER_TASK_QUEUE, checkConnectionConfig);
+      temporalClient.submitDiscoverSchema(JOB_UUID, ATTEMPT_ID, WORKSPACE_ID, DISCOVER_TASK_QUEUE, checkConnectionConfig, new ActorContext());
       discoverCatalogWorkflow.run(JOB_RUN_CONFIG, UUID_LAUNCHER_CONFIG, input);
       verify(workflowClient).newWorkflowStub(DiscoverCatalogWorkflow.class,
           TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.DISCOVER_SCHEMA));

@@ -75,6 +75,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
   private final FeatureFlags featureFlags;
 
   private final Map<String, String> additionalEnvironmentVariables;
+  private final Map<String, String> additionalLabels;
 
   /**
    * If true, launcher will use a separated isolated pool to run the job.
@@ -95,7 +96,8 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
                                     final AllowedHosts allowedHosts,
                                     final boolean useIsolatedPool,
                                     final FeatureFlags featureFlags,
-                                    final Map<String, String> additionalEnvironmentVariables) {
+                                    final Map<String, String> additionalEnvironmentVariables,
+                                    final Map<String, String> additionalLabels) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.connectionId = connectionId;
@@ -108,6 +110,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
     this.featureFlags = featureFlags;
     this.useIsolatedPool = useIsolatedPool;
     this.additionalEnvironmentVariables = additionalEnvironmentVariables;
+    this.additionalLabels = additionalLabels;
   }
 
   @Trace(operationName = WORKER_OPERATION_NAME)
@@ -233,7 +236,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         null,
         buildSourceConnectorResourceRequirements(resourceRequirement, syncResourceRequirements),
         allowedHosts,
-        Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, READ_STEP),
+        getLabels(Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, READ_STEP)),
         getWorkerMetadata(),
         Collections.emptyMap(),
         additionalEnvironmentVariables,
@@ -268,13 +271,20 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         null,
         buildDestinationConnectorResourceRequirements(resourceRequirement, syncResourceRequirements),
         allowedHosts,
-        Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, WRITE_STEP),
+        getLabels(Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, WRITE_STEP)),
         getWorkerMetadata(),
         Collections.emptyMap(),
         additionalEnvironmentVariables,
         "write",
         CONFIG, configFilename,
         "--catalog", catalogFilename);
+  }
+
+  private Map<String, String> getLabels(final Map<String, String> labels) {
+    final var mergedLabels = new HashMap<String, String>();
+    mergedLabels.putAll(additionalLabels);
+    mergedLabels.putAll(labels);
+    return mergedLabels;
   }
 
   private Map<String, String> getWorkerMetadata() {
@@ -286,10 +296,12 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
             .put(WorkerEnvConstants.WORKER_CONNECTOR_IMAGE, imageName)
             .put(WorkerEnvConstants.WORKER_JOB_ID, jobId)
             .put(WorkerEnvConstants.WORKER_JOB_ATTEMPT, String.valueOf(attempt))
-            .put(EnvVariableFeatureFlags.USE_STREAM_CAPABLE_STATE, String.valueOf(featureFlags.useStreamCapableState()))
             .put(EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA, String.valueOf(featureFlags.autoDetectSchema()))
             .put(EnvVariableFeatureFlags.APPLY_FIELD_SELECTION, String.valueOf(featureFlags.applyFieldSelection()))
             .put(EnvVariableFeatureFlags.FIELD_SELECTION_WORKSPACES, featureFlags.fieldSelectionWorkspaces())
+            // The platform doesn't support this env-var anymore, however the connectors still depend on it,
+            // defaulting to false if not supplied.
+            .put("USE_STREAM_CAPABLE_STATE", "true")
             .put(EnvConfigs.SOCAT_KUBE_CPU_LIMIT, configs.getSocatSidecarKubeCpuLimit())
             .put(EnvConfigs.SOCAT_KUBE_CPU_REQUEST, configs.getSocatSidecarKubeCpuRequest())
             .put(EnvConfigs.LAUNCHDARKLY_KEY, configs.getLaunchDarklyKey())

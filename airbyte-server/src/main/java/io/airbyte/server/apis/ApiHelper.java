@@ -9,6 +9,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.ENDPOINT_EXECUTION_OPERAT
 import datadog.trace.api.Trace;
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
+import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.validation.json.JsonValidationException;
@@ -18,6 +19,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Helpers for executing api code to and handling exceptions it might throw.
  */
+@SuppressWarnings("PMD.IdenticalCatchBranches")
 public class ApiHelper {
 
   @Trace(operationName = ENDPOINT_EXECUTION_OPERATION_NAME)
@@ -28,10 +30,17 @@ public class ApiHelper {
       ApmTraceUtils.recordErrorOnRootSpan(e);
       throw new IdNotFoundKnownException(String.format("Could not find configuration for %s: %s.", e.getType(), e.getConfigId()),
           e.getConfigId(), e);
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      ApmTraceUtils.recordErrorOnRootSpan(e);
+      throw new IdNotFoundKnownException(String.format("Could not find configuration for %s: %s.", e.getType(), e.getConfigId()),
+          e.getConfigId(), e);
     } catch (final JsonValidationException e) {
       ApmTraceUtils.recordErrorOnRootSpan(e);
       throw new BadObjectSchemaKnownException(
           String.format("The provided configuration does not fulfill the specification. Errors: %s", e.getMessage()), e);
+    } catch (final OperationNotAllowedException e) {
+      ApmTraceUtils.recordErrorOnRootSpan(e);
+      throw e;
     } catch (final IOException e) {
       ApmTraceUtils.recordErrorOnRootSpan(e);
       throw new RuntimeException(e);
@@ -44,7 +53,7 @@ public class ApiHelper {
 
   interface HandlerCall<T> {
 
-    T call() throws ConfigNotFoundException, IOException, JsonValidationException;
+    T call() throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException;
 
   }
 

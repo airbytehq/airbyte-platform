@@ -4,9 +4,9 @@
 
 package io.airbyte.workers.temporal.scheduling;
 
+import io.airbyte.commons.temporal.annotations.TemporalActivityStub;
 import io.airbyte.commons.temporal.scheduling.NotificationWorkflow;
 import io.airbyte.notification.NotificationEvent;
-import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
 import io.airbyte.workers.temporal.scheduling.activities.NotifyActivity;
 import java.util.UUID;
 

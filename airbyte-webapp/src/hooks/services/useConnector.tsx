@@ -2,28 +2,19 @@ import { useMutation } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { ConnectionConfiguration } from "area/connector/types";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useConfig } from "config";
-import { DestinationService } from "core/domain/connector/DestinationService";
-import { SourceService } from "core/domain/connector/SourceService";
-import { useGetOutOfDateConnectorsCount } from "services/connector/ConnectorDefinitions";
 import {
+  useGetOutOfDateConnectorsCount,
   useDestinationDefinitionList,
   useLatestDestinationDefinitionList,
   useUpdateDestinationDefinition,
-} from "services/connector/DestinationDefinitionService";
-import {
   useLatestSourceDefinitionList,
   useSourceDefinitionList,
   useUpdateSourceDefinition,
-} from "services/connector/SourceDefinitionService";
-import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
-import { useInitService } from "services/useInitService";
+} from "core/api";
 
 import { useAppMonitoringService } from "./AppMonitoringService";
 import { useNotificationService } from "./Notification";
-import { CheckConnectionRead } from "../../core/request/AirbyteClient";
 
 export const useUpdateAllConnectors = (connectorType: "sources" | "destinations") => {
   const { formatMessage } = useIntl();
@@ -37,10 +28,15 @@ export const useUpdateAllConnectors = (connectorType: "sources" | "destinations"
     ["updateAllConnectors", workspaceId],
     async () => (connectorType === "sources" ? updateAllSourceVersions() : updateAllDestinationVersions()),
     {
-      onSuccess: () => {
+      onSuccess: (numberUpdated: number) => {
         registerNotification({
           id: `workspace.connectorUpdateSuccess.${connectorType}.${workspaceId}`,
-          text: <FormattedMessage id="admin.upgradeAll.success" values={{ type: connectorType }} />,
+          text: (
+            <FormattedMessage
+              id="admin.upgradeAll.success"
+              values={{ count: numberUpdated, type: connectorType === "sources" ? "source" : "destination" }}
+            />
+          ),
           type: "success",
         });
       },
@@ -77,7 +73,11 @@ export const useUpdateSourceDefinitions = () => {
     [sourceDefinitions, latestSourceDefinitions]
   );
 
-  const updateAllSourceVersions = async () => {
+  const updateAllSourceVersions = async (): Promise<number> => {
+    if (!sourceDefinitionsWithUpdates) {
+      return 0;
+    }
+
     await Promise.all(
       sourceDefinitionsWithUpdates?.map((item) =>
         updateSourceDefinition({
@@ -86,6 +86,7 @@ export const useUpdateSourceDefinitions = () => {
         })
       )
     );
+    return sourceDefinitionsWithUpdates.length;
   };
 
   return { updateAllSourceVersions };
@@ -110,7 +111,10 @@ export const useUpdateDestinationDefinitions = () => {
     [destinationDefinitions, latestDestinationDefinitions]
   );
 
-  const updateAllDestinationVersions = async () => {
+  const updateAllDestinationVersions = async (): Promise<number> => {
+    if (!newDestinationDefinitionsWithUpdates) {
+      return 0;
+    }
     await Promise.all(
       newDestinationDefinitionsWithUpdates?.map((item) =>
         updateDestinationDefinition({
@@ -119,6 +123,7 @@ export const useUpdateDestinationDefinitions = () => {
         })
       )
     );
+    return newDestinationDefinitionsWithUpdates.length;
   };
 
   return { updateAllDestinationVersions };
@@ -150,79 +155,4 @@ export const useGetConnectorsOutOfDate = () => {
     countNewDestinationVersion: outOfDateConnectors.destinationDefinitions,
     outOfDateConnectors,
   };
-};
-
-function useGetDestinationService(): DestinationService {
-  const { apiUrl } = useConfig();
-  const requestAuthMiddleware = useDefaultRequestMiddlewares();
-
-  return useInitService(() => new DestinationService(apiUrl, requestAuthMiddleware), [apiUrl, requestAuthMiddleware]);
-}
-
-function useGetSourceService(): SourceService {
-  const { apiUrl } = useConfig();
-  const requestAuthMiddleware = useDefaultRequestMiddlewares();
-
-  return useInitService(() => new SourceService(apiUrl, requestAuthMiddleware), [apiUrl, requestAuthMiddleware]);
-}
-
-export type CheckConnectorParams = { signal: AbortSignal } & (
-  | { selectedConnectorId: string }
-  | {
-      selectedConnectorId: string;
-      name: string;
-      connectionConfiguration: ConnectionConfiguration;
-    }
-  | {
-      selectedConnectorDefinitionId: string;
-      connectionConfiguration: ConnectionConfiguration;
-      workspaceId: string;
-    }
-);
-
-export const useCheckConnector = (formType: "source" | "destination") => {
-  const destinationService = useGetDestinationService();
-  const sourceService = useGetSourceService();
-
-  return useMutation<CheckConnectionRead, Error, CheckConnectorParams>(async (params: CheckConnectorParams) => {
-    const payload: Record<string, unknown> = {};
-
-    if ("connectionConfiguration" in params) {
-      payload.connectionConfiguration = params.connectionConfiguration;
-    }
-
-    if ("name" in params) {
-      payload.name = params.name;
-    }
-
-    if ("workspaceId" in params) {
-      payload.workspaceId = params.workspaceId;
-    }
-
-    if (formType === "destination") {
-      if ("selectedConnectorId" in params) {
-        payload.destinationId = params.selectedConnectorId;
-      }
-
-      if ("selectedConnectorDefinitionId" in params) {
-        payload.destinationDefinitionId = params.selectedConnectorDefinitionId;
-      }
-
-      return await destinationService.check_connection(payload, {
-        signal: params.signal,
-      });
-    }
-
-    if ("selectedConnectorId" in params) {
-      payload.sourceId = params.selectedConnectorId;
-    }
-
-    if ("selectedConnectorDefinitionId" in params) {
-      payload.sourceDefinitionId = params.selectedConnectorDefinitionId;
-    }
-
-    return await sourceService.check_connection(payload, {
-      signal: params.signal,
-    });
-  });
 };

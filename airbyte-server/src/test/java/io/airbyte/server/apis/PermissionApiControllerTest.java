@@ -15,6 +15,7 @@ import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest;
 import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import java.io.IOException;
@@ -26,12 +27,12 @@ import org.mockito.Mockito;
 class PermissionApiControllerTest extends BaseControllerTest {
 
   @Test
-  void testCreatePermission() throws ConfigNotFoundException, IOException {
+  void testCreatePermission() throws IOException, JsonValidationException {
     Mockito.when(permissionHandler.createPermission(Mockito.any()))
         .thenReturn(new PermissionRead());
     final String path = "/api/v1/permissions/create";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new PermissionCreate())),
+        HttpRequest.POST(path, Jsons.serialize(new PermissionCreate().workspaceId(UUID.randomUUID()))),
         HttpStatus.OK);
   }
 
@@ -46,7 +47,7 @@ class PermissionApiControllerTest extends BaseControllerTest {
   }
 
   @Test
-  void testUpdatePermission() throws ConfigNotFoundException, IOException {
+  void testUpdatePermission() throws ConfigNotFoundException, IOException, JsonValidationException {
     final UUID userId = UUID.randomUUID();
     Mockito.when(permissionHandler.getPermission(Mockito.any()))
         .thenReturn(new PermissionRead().userId(userId));
@@ -54,7 +55,7 @@ class PermissionApiControllerTest extends BaseControllerTest {
         .thenReturn(new PermissionRead().userId(userId));
     final String path = "/api/v1/permissions/update";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new PermissionUpdate().userId(userId))),
+        HttpRequest.POST(path, Jsons.serialize(new PermissionUpdate().permissionId(UUID.randomUUID()))),
         HttpStatus.OK);
   }
 

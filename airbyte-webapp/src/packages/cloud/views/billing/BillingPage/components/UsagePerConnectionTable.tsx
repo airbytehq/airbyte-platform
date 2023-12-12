@@ -4,8 +4,8 @@ import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
-import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Table } from "components/ui/Table";
@@ -13,7 +13,7 @@ import { TextWithOverflowTooltip } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
 import { useCurrentWorkspace } from "core/api";
-import { ConnectionScheduleType, ConnectionStatus } from "core/request/AirbyteClient";
+import { ConnectionScheduleType, ConnectionStatus } from "core/api/types/AirbyteClient";
 import { RoutePaths } from "pages/routePaths";
 
 import { ConnectionFreeAndPaidUsage } from "./calculateUsageDataObjects";
@@ -82,8 +82,6 @@ export const UsagePerConnectionTable: React.FC = () => {
               <SupportLevelBadge
                 supportLevel={props.row.original.connection.sourceSupportLevel}
                 custom={props.row.original.connection.sourceCustom}
-                size="small"
-                releaseStage={props.row.original.connection.sourceReleaseStage}
               />
             </FlexContainer>
           </Link>
@@ -97,12 +95,11 @@ export const UsagePerConnectionTable: React.FC = () => {
               [styles.deleted]: props.row.original.connection.status === ConnectionStatus.deprecated,
             })}
           >
-            <ArrowRightIcon />
+            <Icon type="arrowRight" />
           </div>
         ),
         enableSorting: false,
         meta: {
-          thClassName: classNames(styles.header, styles["header--light"]),
           responsive: true,
         },
       }),
@@ -133,8 +130,6 @@ export const UsagePerConnectionTable: React.FC = () => {
               <SupportLevelBadge
                 supportLevel={props.row.original.connection.destinationSupportLevel}
                 custom={props.row.original.connection.destinationCustom}
-                size="small"
-                releaseStage={props.row.original.connection.destinationReleaseStage}
               />
             </FlexContainer>
           </Link>
@@ -144,7 +139,7 @@ export const UsagePerConnectionTable: React.FC = () => {
         id: "schedule",
         header: () => <FormattedMessage id="credits.schedule" />,
         cell: (props) => (
-          <FlexContainer className={styles.cell} alignItems="center">
+          <FlexContainer alignItems="center">
             <TextWithOverflowTooltip size="sm" className={styles.cellText}>
               {props.row.original.connection.connectionScheduleType ===
               (ConnectionScheduleType.manual || ConnectionScheduleType.cron) ? (
@@ -169,7 +164,7 @@ export const UsagePerConnectionTable: React.FC = () => {
         meta: {
           responsive: true,
         },
-        sortingFn: "alphanumeric",
+        sortingFn: "basic",
         cell: (props) => (
           <FlexContainer
             alignItems="center"
@@ -206,7 +201,7 @@ export const UsagePerConnectionTable: React.FC = () => {
         variant="white"
         columns={columns}
         data={freeAndPaidUsageByConnection}
-        initialSortBy={[{ id: "connection_connectionName", desc: false }]}
+        initialSortBy={[{ id: "totalUsage", desc: true }]}
       />
     </div>
   );

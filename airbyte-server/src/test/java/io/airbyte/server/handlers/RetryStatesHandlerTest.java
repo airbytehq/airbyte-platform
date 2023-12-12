@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 
-@SuppressWarnings("MissingJavadocType")
 class RetryStatesHandlerTest {
 
   @Mock

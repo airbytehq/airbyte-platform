@@ -19,11 +19,13 @@ dependencies {
     implementation libs.bundles.micronaut
     implementation libs.micronaut.inject
     implementation libs.micronaut.jaxrs.server
+    implementation libs.micronaut.security
 
 
     implementation libs.flyway.core
     implementation libs.s3
     implementation libs.aws.java.sdk.s3
+    implementation libs.sts
     implementation project(':airbyte-analytics')
     implementation project(':airbyte-api')
     implementation project(':airbyte-commons')
@@ -31,11 +33,14 @@ dependencies {
     implementation project(':airbyte-commons-converters')
     implementation project(':airbyte-commons-license')
     implementation project(':airbyte-commons-temporal')
+    implementation project(':airbyte-commons-temporal-core')
     implementation project(':airbyte-commons-with-dependencies')
     implementation project(':airbyte-config:init')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
+    implementation project(':airbyte-config:config-secrets')
     implementation project(':airbyte-config:specs')
+    implementation project(':airbyte-data')
     implementation project(':airbyte-featureflag')
     implementation project(':airbyte-metrics:metrics-lib')
     implementation project(':airbyte-db:db-lib')

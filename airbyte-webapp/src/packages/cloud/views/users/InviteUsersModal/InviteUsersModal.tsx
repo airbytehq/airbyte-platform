@@ -9,8 +9,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 
 import { useUserHook } from "core/api/cloud";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { trackError } from "core/utils/datadog";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";

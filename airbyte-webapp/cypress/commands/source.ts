@@ -1,12 +1,12 @@
 import { goToSourcePage, openNewSourcePage } from "pages/sourcePage";
 
 import { deleteEntity, openConnectorPage, submitButtonClick, updateField } from "./common";
-import { fillDummyApiForm, fillPostgresForm, fillPokeAPIForm } from "./connector";
+import { fillDummyApiForm, fillPokeAPIForm, fillPostgresForm } from "./connector";
 
 export const createPostgresSource = (
   name: string,
-  host = "localhost",
-  port = "5433",
+  host = Cypress.env("SOURCE_DB_HOST") || "localhost",
+  port = Cypress.env("SOURCE_DB_PORT") || "5433",
   database = "airbyte_ci_source",
   username = "postgres",
   password = "secret_password",
@@ -46,17 +46,17 @@ export const createDummyApiSource = (name: string) => {
   fillDummyApiForm(name, "theauthkey");
   submitButtonClick();
 
-  cy.wait("@checkSourceUpdateConnection");
+  cy.wait("@checkSourceUpdateConnection", { timeout: 60000 });
   cy.wait("@createSource");
 };
 
-export const updateSource = (name: string, field: string, value: string) => {
+export const updateSource = (name: string, field: string, value: string, isDropdown = false) => {
   cy.intercept("/api/v1/sources/check_connection_for_update").as("checkSourceConnection");
   cy.intercept("/api/v1/sources/update").as("updateSource");
 
   goToSourcePage();
   openConnectorPage(name);
-  updateField(field, value);
+  updateField(field, value, isDropdown);
   submitButtonClick();
 
   cy.wait("@checkSourceConnection");

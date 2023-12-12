@@ -18,10 +18,13 @@ function useTypesafeReducer<StateShape, Actions extends Record<string, (...args:
       };
     }
 
-    const newActions = Object.keys(actions).reduce((a, action) => {
-      a[action] = bindActionCreator(actions[action], dispatch);
-      return a;
-    }, {} as Record<string, (...args: any[]) => any>);
+    const newActions = Object.keys(actions).reduce(
+      (a, action) => {
+        a[action] = bindActionCreator(actions[action], dispatch);
+        return a;
+      },
+      {} as Record<string, (...args: any[]) => any>
+    );
     return newActions;
   }, [dispatch, actions]);
   return [state, boundActions as Actions];

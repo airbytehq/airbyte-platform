@@ -1,19 +1,14 @@
 import React, { useMemo } from "react";
 
-import { JobItem } from "components/JobItem";
-import { JobWithAttempts } from "components/JobItem/types";
-import { NewJobItem } from "components/NewJobItem";
-
-import { JobWithAttemptsRead } from "core/request/AirbyteClient";
-import { useExperiment } from "hooks/services/Experiment";
+import { JobHistoryItem } from "area/connection/components/JobHistoryItem";
+import { JobWithAttempts } from "area/connection/types/jobs";
+import { JobWithAttemptsRead } from "core/api/types/AirbyteClient";
 
 interface JobsListProps {
   jobs: JobWithAttemptsRead[];
 }
 
 const JobsList: React.FC<JobsListProps> = ({ jobs }) => {
-  const searchableJobLogsEnabled = useExperiment("connection.searchableJobLogs", true);
-
   const sortJobReads: JobWithAttempts[] = useMemo(
     () =>
       jobs
@@ -24,12 +19,9 @@ const JobsList: React.FC<JobsListProps> = ({ jobs }) => {
 
   return (
     <div>
-      {searchableJobLogsEnabled &&
-        sortJobReads.map((jobWithAttempts) => (
-          <NewJobItem key={`newJobItem_${jobWithAttempts.job.id}`} jobWithAttempts={jobWithAttempts} />
-        ))}
-      {!searchableJobLogsEnabled &&
-        sortJobReads.map((jobWithAttempts) => <JobItem key={jobWithAttempts.job.id} job={jobWithAttempts} />)}
+      {sortJobReads.map((jobWithAttempts) => (
+        <JobHistoryItem key={jobWithAttempts.job.id} jobWithAttempts={jobWithAttempts} />
+      ))}
     </div>
   );
 };

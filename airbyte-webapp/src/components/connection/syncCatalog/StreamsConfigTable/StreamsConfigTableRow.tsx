@@ -1,29 +1,31 @@
 import classNames from "classnames";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { memo, useMemo, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useEffectOnce } from "react-use";
 
-import { DropDownOptionDataItem } from "components/ui/DropDown";
 import { FlexContainer } from "components/ui/Flex";
 import { Switch } from "components/ui/Switch";
 import { Text, TextWithOverflowTooltip } from "components/ui/Text";
 
-import { Path, SyncSchemaField, SyncSchemaStream } from "core/domain/catalog";
+import { Path, SyncSchemaField } from "core/domain/catalog";
 
 import { FieldSelectionStatus, FieldSelectionStatusVariant } from "./FieldSelectionStatus";
 import styles from "./StreamsConfigTableRow.module.scss";
 import { StreamsConfigTableRowStatus } from "./StreamsConfigTableRowStatus";
-import { useRedirectedReplicationStream } from "./useRedirectedReplicationStream";
 import { useStreamsConfigTableRowProps } from "./useStreamsConfigTableRowProps";
+import { SyncStreamFieldWithId } from "../../ConnectionForm/formConfig";
+import { LocationWithState } from "../../ConnectionForm/SyncCatalogCard";
 import { CellText } from "../CellText";
-import { SyncModeOption, SyncModeSelect } from "../SyncModeSelect";
+import { SyncModeSelect, SyncModeValue } from "../SyncModeSelect";
 import { FieldPathType } from "../utils";
 
-interface StreamsConfigTableRowProps {
-  stream: SyncSchemaStream;
+interface StreamsConfigTableRowInnerProps {
+  stream: SyncStreamFieldWithId;
   destName: string;
   destNamespace: string;
-  availableSyncModes: SyncModeOption[];
-  onSelectSyncMode: (selectedMode: DropDownOptionDataItem) => void;
+  availableSyncModes: SyncModeValue[];
+  onSelectSyncMode: (data: SyncModeValue) => void;
   onSelectStream: () => void;
   primitiveFields: SyncSchemaField[];
   pkType: FieldPathType;
@@ -32,12 +34,14 @@ interface StreamsConfigTableRowProps {
   onCursorChange: (cursorPath: Path) => void;
   fields: SyncSchemaField[];
   openStreamDetailsPanel: () => void;
-  hasError: boolean;
   configErrors?: Record<string, string>;
   disabled?: boolean;
 }
 
-export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
+/**
+ * react-hook-form sync catalog table row component
+ */
+const StreamsConfigTableRowInner: React.FC<StreamsConfigTableRowInnerProps & { className?: string }> = ({
   stream,
   destName,
   destNamespace,
@@ -50,6 +54,7 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
   openStreamDetailsPanel,
   disabled,
   configErrors,
+  className,
 }) => {
   const { primaryKey, cursorField, syncMode, destinationSyncMode, selectedFields } = stream.config ?? {};
 
@@ -92,13 +97,15 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
     return primaryKey.map(pathDisplayName).join(", ");
   }, [primaryKey]);
 
-  const syncSchema = useMemo(
-    () => ({
+  const syncSchema: SyncModeValue | undefined = useMemo(() => {
+    if (!syncMode || !destinationSyncMode) {
+      return undefined;
+    }
+    return {
       syncMode,
       destinationSyncMode,
-    }),
-    [syncMode, destinationSyncMode]
-  );
+    };
+  }, [syncMode, destinationSyncMode]);
 
   const fieldCount = fields?.length ?? 0;
   const selectedFieldCount = selectedFields?.length ?? fieldCount;
@@ -122,49 +129,54 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
 
   const { streamHeaderContentStyle, pillButtonVariant } = useStreamsConfigTableRowProps(stream);
 
+  const { state: locationState, pathname } = useLocation() as LocationWithState;
+  const navigate = useNavigate();
   const rowRef = useRef<HTMLDivElement>(null);
   const [highlighted, setHighlighted] = useState(false);
-  const { doesStreamExist, redirectionAction } = useRedirectedReplicationStream(stream);
 
-  useEffect(() => {
+  useEffectOnce(() => {
     let highlightTimeout: number;
     let openTimeout: number;
 
-    // Scroll to the stream and highlight it
-    if (doesStreamExist && (redirectionAction === "showInReplicationTable" || redirectionAction === "openDetails")) {
-      rowRef.current?.scrollIntoView({ block: "center" });
-      setHighlighted(true);
-      highlightTimeout = window.setTimeout(() => {
-        setHighlighted(false);
-      }, 1500);
-    }
+    // Is it the stream we are looking for?
+    if (locationState?.streamName === stream.stream?.name && locationState?.namespace === stream.stream?.namespace) {
+      // Scroll to the stream and highlight it
+      if (locationState?.action === "showInReplicationTable" || locationState?.action === "openDetails") {
+        setHighlighted(true);
+        highlightTimeout = window.setTimeout(() => {
+          setHighlighted(false);
+        }, 1500);
+      }
 
-    // Open the stream details
-    if (doesStreamExist && redirectionAction === "openDetails") {
-      openTimeout = window.setTimeout(() => {
-        rowRef.current?.click();
-      }, 750);
+      // Open the stream details
+      if (locationState?.action === "openDetails") {
+        openTimeout = window.setTimeout(() => {
+          rowRef.current?.click();
+        }, 750);
+      }
+      // remove the redirection info from the location state
+      navigate(pathname, { replace: true });
     }
 
     return () => {
       window.clearTimeout(highlightTimeout);
       window.clearTimeout(openTimeout);
     };
-  }, [rowRef, redirectionAction, doesStreamExist]);
+  });
 
   return (
     <FlexContainer
       justifyContent="flex-start"
       alignItems="center"
       onClick={onRowClick}
-      className={classNames(streamHeaderContentStyle, { [styles.highlighted]: highlighted })}
+      className={classNames(streamHeaderContentStyle, className, { [styles.highlighted]: highlighted })}
       data-testid={`catalog-tree-table-row-${stream.stream?.namespace || "no-namespace"}-${stream.stream?.name}`}
       ref={rowRef}
     >
       <CellText size="fixed" className={styles.syncCell} data-noexpand>
         <Switch
           size="sm"
-          checked={stream.config?.selected}
+          checked={stream.config?.selected} // stream sync enabled or disabled
           onChange={onSelectStream}
           disabled={disabled}
           data-testid="selected-switch"
@@ -234,3 +246,5 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
     </FlexContainer>
   );
 };
+
+export const StreamsConfigTableRow = memo(StreamsConfigTableRowInner);

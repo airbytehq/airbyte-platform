@@ -28,6 +28,7 @@ function start_container () {
   echo $CMD
   eval $CMD
   wait_for_docker $NAME-$1;
+  sleep 2
 }
 
 function stop_container () {

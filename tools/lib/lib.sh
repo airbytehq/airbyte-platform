@@ -19,15 +19,6 @@ project_root() {
   git rev-parse --show-toplevel
 }
 
-ensure_image_exists() {
-  local image=$1
-  docker inspect $image &> /dev/null
-  if [[ $? != 0 ]]; then
-    echo "Image $image was not found. Please build or pull as necessary"
-    exit 1
-  fi
-}
-
 _script_directory() {
   local base; base=$(dirname $0)
 

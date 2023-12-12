@@ -11,7 +11,7 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { JobStatus } from "core/request/AirbyteClient";
+import { JobStatus } from "core/api/types/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import styles from "./ConnectionStatusOverview.module.scss";
@@ -38,7 +38,11 @@ export const ConnectionStatusOverview: React.FC = () => {
           <FormattedMessage id={MESSAGE_BY_STATUS[status]} />
         </span>
         {status === ConnectionStatusIndicatorStatus.OnTrack && (
-          <Tooltip control={<Icon type="info" color="action" className={styles.onTrackInfo} />} placement="top">
+          <Tooltip
+            containerClassName={styles.onTrackInfo}
+            control={<Icon type="infoOutline" color="action" size="sm" />}
+            placement="top"
+          >
             <FormattedMessage
               id={
                 lastSyncJobStatus === JobStatus.failed

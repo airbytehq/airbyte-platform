@@ -1,5 +1,13 @@
+import { config } from "config";
+
 import { AnalyticsService } from "./AnalyticsService";
 import { Action, Namespace } from "./types";
+
+jest.mock("config", () => ({
+  config: {
+    version: "1.0.0",
+  },
+}));
 
 describe("AnalyticsService", () => {
   beforeEach(() => {
@@ -32,7 +40,8 @@ describe("AnalyticsService", () => {
   });
 
   it("should send version and environment for prod", () => {
-    const service = new AnalyticsService("0.42.13");
+    config.version = "0.42.13";
+    const service = new AnalyticsService();
     service.track(Namespace.CONNECTION, Action.CREATE, {});
     expect(window.analytics.track).toHaveBeenCalledWith(
       expect.anything(),
@@ -41,7 +50,8 @@ describe("AnalyticsService", () => {
   });
 
   it("should send version and environment for dev", () => {
-    const service = new AnalyticsService("dev");
+    config.version = "dev";
+    const service = new AnalyticsService();
     service.track(Namespace.CONNECTION, Action.CREATE, {});
     expect(window.analytics.track).toHaveBeenCalledWith(
       expect.anything(),

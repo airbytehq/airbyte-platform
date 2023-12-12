@@ -19,37 +19,31 @@ jest.mock("core/api", () => ({
   useTryNotificationWebhook: () => jest.fn(),
 }));
 
+const mockUpdateNotificationSettings = jest.fn();
+jest.mock("hooks/services/useWorkspace", () => ({
+  useUpdateNotificationSettings: () => mockUpdateNotificationSettings,
+}));
+
 describe(`${NotificationSettingsForm.name}`, () => {
   it("should render", async () => {
-    const { getByTestId } = await render(<NotificationSettingsForm updateNotificationSettings={jest.fn()} />);
+    const { getByTestId } = await render(<NotificationSettingsForm />);
     await waitFor(() => expect(getByTestId("notification-settings-form")).toBeInTheDocument());
   });
 
   it("should display not display email toggles if the feature is disabled", async () => {
-    const { queryByTestId } = await render(
-      <NotificationSettingsForm updateNotificationSettings={jest.fn()} />,
-      undefined,
-      []
-    );
+    const { queryByTestId } = await render(<NotificationSettingsForm />, undefined, []);
     await waitFor(() => expect(queryByTestId("sendOnFailure.email")).toEqual(null));
   });
 
   it("should display display email toggles if the feature is enabled", async () => {
-    const { getByTestId } = await render(
-      <NotificationSettingsForm updateNotificationSettings={jest.fn()} />,
-      undefined,
-      [FeatureItem.EmailNotifications]
-    );
+    const { getByTestId } = await render(<NotificationSettingsForm />, undefined, [FeatureItem.EmailNotifications]);
     await waitFor(() => expect(getByTestId("sendOnFailure.email")).toBeDefined());
   });
 
   it("calls updateNotificationSettings with the correct values", async () => {
-    const mockUpdateNotificationSettings = jest.fn();
-    const { getByText, getByTestId } = await render(
-      <NotificationSettingsForm updateNotificationSettings={mockUpdateNotificationSettings} />,
-      undefined,
-      [FeatureItem.EmailNotifications]
-    );
+    const { getByText, getByTestId } = await render(<NotificationSettingsForm />, undefined, [
+      FeatureItem.EmailNotifications,
+    ]);
     const sendOnSuccessToggle = getByTestId("sendOnConnectionUpdate.email");
     await userEvent.click(sendOnSuccessToggle);
     const submitButton = getByText(messages["form.saveChanges"]);

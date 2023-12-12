@@ -6,7 +6,7 @@ import {
   SourceRead,
   SourceSnippetRead,
   WebBackendConnectionListItem,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
 import { EntityTableDataItem, ConnectionTableDataItem, Status as ConnectionSyncStatus } from "./types";
 
@@ -21,7 +21,7 @@ const getConnectorTypeId = (connectorSpec: DestinationSnippetRead | SourceSnippe
 // TODO: types in next methods look a bit ugly
 export function getEntityTableData<
   S extends "source" | "destination",
-  SoD extends S extends "source" ? SourceRead : DestinationRead
+  SoD extends S extends "source" ? SourceRead : DestinationRead,
 >(entities: SoD[], connections: WebBackendConnectionListItem[], type: S): EntityTableDataItem[] {
   const connectType = type === "source" ? "destination" : "source";
 
@@ -80,14 +80,8 @@ export const getConnectionTableData = (
   return connections.map((connection) => ({
     connectionId: connection.connectionId,
     name: connection.name,
-    entityName:
-      type === "connection"
-        ? `${connection.source?.sourceName} - ${connection.source?.name}`
-        : connection[connectType]?.name || "",
-    connectorName:
-      type === "connection"
-        ? `${connection.destination?.destinationName} - ${connection.destination?.name}`
-        : getConnectorTypeName(connection[connectType]),
+    entityName: type === "connection" ? connection.source?.name : connection[connectType]?.name || "",
+    connectorName: type === "connection" ? connection.destination?.name : getConnectorTypeName(connection[connectType]),
     lastSync: connection.latestSyncJobCreatedAt,
     enabled: connection.status === ConnectionStatus.active,
     schemaChange: connection.schemaChange,

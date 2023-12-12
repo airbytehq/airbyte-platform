@@ -30,7 +30,6 @@ import java.util.stream.Stream;
  * DeclarativeSourceDefinitionsHandler. Javadocs suppressed because api docs should be used as
  * source of truth.
  */
-@SuppressWarnings({"MissingJavadocMethod"})
 @Singleton
 public class DeclarativeSourceDefinitionsHandler {
 

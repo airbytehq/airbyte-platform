@@ -2,12 +2,12 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
-import { ReactComponent as CaretDownIcon } from "components/ui/ListBox/CaretDownIcon.svg";
 import { Text } from "components/ui/Text";
 
+import { DestinationId, SourceId } from "core/api/types/AirbyteClient";
 import { ConsumptionTimeWindow } from "core/api/types/CloudApi";
-import { DestinationId, SourceId } from "core/request/AirbyteClient";
 
 import { useCreditsContext } from "./CreditsUsageContext";
 import styles from "./CreditsUsageFilters.module.scss";
@@ -25,7 +25,7 @@ const CustomControlButton = <T,>({ selectedOption }: ListBoxControlButtonProps<T
         </Text>
       )}
 
-      <CaretDownIcon className={styles.caret} />
+      <Icon type="caretDown" color="action" />
     </>
   );
 };

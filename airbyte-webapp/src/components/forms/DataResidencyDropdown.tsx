@@ -4,7 +4,7 @@ import { Path } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { useAvailableGeographies } from "core/api";
-import { Geography } from "core/request/AirbyteClient";
+import { Geography } from "core/api/types/AirbyteClient";
 
 import styles from "./DataResidencyDropdown.module.scss";
 import { FormValues } from "./Form";

@@ -1,7 +1,7 @@
 import toLower from "lodash/toLower";
 
-import { FormBaseItem, FormBlock } from "core/form/types";
-import { AdvancedAuth } from "core/request/AirbyteClient";
+import { AdvancedAuth } from "core/api/types/AirbyteClient";
+import { FormBlock } from "core/form/types";
 import { naturalComparator } from "core/utils/objects";
 
 import { ConnectorDefinitionSpecification } from "../../../core/domain/connector";
@@ -63,29 +63,29 @@ export function OrderComparator(a: FormBlock, b: FormBlock): number {
   }
 }
 
-export function getPatternDescriptor(formItem: FormBaseItem): string | undefined {
-  if (formItem.pattern_descriptor !== undefined) {
-    return formItem.pattern_descriptor;
+export function getPatternDescriptor(schema: { pattern?: string; pattern_descriptor?: string }): string | undefined {
+  if (schema.pattern_descriptor !== undefined) {
+    return schema.pattern_descriptor;
   }
-  if (formItem.pattern === undefined) {
+  if (schema.pattern === undefined) {
     return undefined;
   }
-  if (formItem.pattern.includes("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")) {
+  if (schema.pattern.includes("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")) {
     return "YYYY-MM-DDTHH:mm:ssZ";
   }
-  if (formItem.pattern.includes("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$")) {
+  if (schema.pattern.includes("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$")) {
     return "YYYY-MM-DDTHH:mm:ss";
   }
-  if (formItem.pattern.includes("^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$")) {
+  if (schema.pattern.includes("^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$")) {
     return "YYYY-MM-DD HH:mm:ss";
   }
-  if (formItem.pattern.includes("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")) {
+  if (schema.pattern.includes("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")) {
     return "YYYY-MM-DD";
   }
-  if (formItem.pattern.includes("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z$")) {
+  if (schema.pattern.includes("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z$")) {
     return "YYYY-MM-DDTHH:mm:ss.SSSZ";
   }
-  if (formItem.pattern.includes("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{6}Z$")) {
+  if (schema.pattern.includes("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{6}Z$")) {
     return "YYYY-MM-DDTHH:mm:ss.SSSSSSZ";
   }
   return undefined;

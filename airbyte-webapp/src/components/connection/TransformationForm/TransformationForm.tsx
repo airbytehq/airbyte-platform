@@ -1,173 +1,91 @@
-import type { FormikErrors } from "formik/dist/types";
-
-import { getIn, useFormik } from "formik";
 import React from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { useIntl } from "react-intl";
 
-import { FormChangeTracker } from "components/common/FormChangeTracker";
-import { ControlLabels } from "components/LabeledControl";
-import { Button } from "components/ui/Button";
-import { DropDown } from "components/ui/DropDown";
-import { Input } from "components/ui/Input";
+import { Form, FormControl } from "components/forms";
+import { ModalFormSubmissionButtons } from "components/forms/ModalFormSubmissionButtons";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 
 import { useOperationsCheck } from "core/api";
-import { OperationCreate, OperationRead } from "core/request/AirbyteClient";
-import { links } from "core/utils/links";
-import { equal } from "core/utils/objects";
-import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 
-import styles from "./TransformationForm.module.scss";
-import { validationSchema } from "./utils";
+import { dbtOperationReadOrCreateSchema } from "./schema";
+import { DbtOperationReadOrCreate } from "./types";
 
-interface TransformationProps {
-  transformation: OperationCreate;
+interface TransformationFormProps {
+  transformation: DbtOperationReadOrCreate;
+  onDone: (tr: DbtOperationReadOrCreate) => void;
   onCancel: () => void;
-  onDone: (tr: OperationCreate) => void;
-  isNewTransformation?: boolean;
 }
-
-function prepareLabelFields(
-  errors: FormikErrors<OperationRead>,
-  name: string
-): { error?: boolean; message?: React.ReactNode } {
-  const error = getIn(errors, name);
-
-  const fields: { error?: boolean; message?: React.ReactNode } = {};
-
-  if (error) {
-    fields.error = true;
-    fields.message = <FormattedMessage id={error} />;
-  }
-
-  return fields;
-}
-
-// enum with only one value for the moment
-const TransformationTypes = [{ value: "custom", label: "Custom DBT" }];
 
 /**
- * @deprecated it's Formik version of TransformationForm
- * the new version is TransformationHookForm:
- * @see TransformationHookForm
+ * react-hook-form Form for create/update transformation
+ * @see TransformationForm
  * @param transformation
- * @param onCancel
  * @param onDone
- * @param isNewTransformation
- * @constructor
+ * @param onCancel
  */
-const TransformationForm: React.FC<TransformationProps> = ({
-  transformation,
-  onCancel,
-  onDone,
-  isNewTransformation,
-}) => {
+export const TransformationForm: React.FC<TransformationFormProps> = ({ transformation, onDone, onCancel }) => {
   const { formatMessage } = useIntl();
   const operationCheck = useOperationsCheck();
-  const { clearFormChange } = useFormChangeTrackerService();
-  const formId = useUniqueFormId();
 
-  const formik = useFormik({
-    initialValues: transformation,
-    validationSchema,
-    onSubmit: async (values) => {
-      await operationCheck(values);
-      clearFormChange(formId);
-      onDone(values);
-    },
-  });
-
-  const onFormCancel: React.MouseEventHandler<HTMLButtonElement> = () => {
-    clearFormChange(formId);
-    onCancel?.();
+  const onSubmit = async (values: DbtOperationReadOrCreate) => {
+    await operationCheck(values);
+    onDone(values);
   };
 
   return (
-    <>
-      <FormChangeTracker changed={isNewTransformation || formik.dirty} formId={formId} />
+    <Form<DbtOperationReadOrCreate>
+      onSubmit={onSubmit}
+      schema={dbtOperationReadOrCreateSchema}
+      defaultValues={transformation}
+    >
       <ModalBody maxHeight={400}>
-        <div className={styles.content}>
-          <div className={styles.column}>
-            <ControlLabels
-              className={styles.label}
-              {...prepareLabelFields(formik.errors, "name")}
-              label={<FormattedMessage id="form.transformationName" />}
-            >
-              <Input {...formik.getFieldProps("name")} />
-            </ControlLabels>
-
-            <ControlLabels
-              className={styles.label}
-              {...prepareLabelFields(formik.errors, "operatorConfiguration.dbt.dockerImage")}
-              label={<FormattedMessage id="form.dockerUrl" />}
-            >
-              <Input {...formik.getFieldProps("operatorConfiguration.dbt.dockerImage")} />
-            </ControlLabels>
-            <ControlLabels
-              className={styles.label}
-              {...prepareLabelFields(formik.errors, "operatorConfiguration.dbt.gitRepoUrl")}
-              label={<FormattedMessage id="form.repositoryUrl" />}
-            >
-              <Input
-                {...formik.getFieldProps("operatorConfiguration.dbt.gitRepoUrl")}
-                placeholder={formatMessage(
-                  {
-                    id: "form.repositoryUrl.placeholder",
-                  },
-                  { angle: (node: React.ReactNode) => `<${node}>` }
-                )}
-              />
-            </ControlLabels>
-          </div>
-
-          <div className={styles.column}>
-            <ControlLabels className={styles.label} label={<FormattedMessage id="form.transformationType" />}>
-              <DropDown
-                options={TransformationTypes}
-                value="custom"
-                placeholder={formatMessage({ id: "form.selectType" })}
-              />
-            </ControlLabels>
-            <ControlLabels
-              className={styles.label}
-              {...prepareLabelFields(formik.errors, "operatorConfiguration.dbt.dbtArguments")}
-              label={
-                <FormattedMessage
-                  id="form.entrypoint.linked.old"
-                  values={{
-                    a: (node: React.ReactNode) => (
-                      <a href={links.dbtCommandsReference} target="_blank" rel="noreferrer">
-                        {node}
-                      </a>
-                    ),
-                  }}
-                />
-              }
-            >
-              <Input {...formik.getFieldProps("operatorConfiguration.dbt.dbtArguments")} />
-            </ControlLabels>
-            <ControlLabels className={styles.label} label={<FormattedMessage id="form.gitBranch" />}>
-              <Input {...formik.getFieldProps("operatorConfiguration.dbt.gitRepoBranch")} />
-            </ControlLabels>
-          </div>
-        </div>
+        <FlexContainer gap="lg">
+          <FlexItem grow>
+            <FormControl
+              name="name"
+              fieldType="input"
+              type="text"
+              label={formatMessage({ id: "form.transformationName" })}
+            />
+            <FormControl
+              name="operatorConfiguration.dbt.dockerImage"
+              fieldType="input"
+              type="text"
+              label={formatMessage({ id: "form.dockerUrl" })}
+            />
+            <FormControl
+              name="operatorConfiguration.dbt.gitRepoUrl"
+              fieldType="input"
+              type="text"
+              label={formatMessage({ id: "form.repositoryUrl" })}
+              placeholder={formatMessage(
+                {
+                  id: "form.repositoryUrl.placeholder",
+                },
+                { angle: (node: React.ReactNode) => `<${node}>` }
+              )}
+            />
+          </FlexItem>
+          <FlexItem grow>
+            <FormControl
+              name="operatorConfiguration.dbt.dbtArguments"
+              fieldType="input"
+              type="text"
+              label={formatMessage({ id: "form.entrypoint.linked" })}
+            />
+            <FormControl
+              name="operatorConfiguration.dbt.gitRepoBranch"
+              fieldType="input"
+              type="text"
+              label={formatMessage({ id: "form.gitBranch" })}
+            />
+          </FlexItem>
+        </FlexContainer>
       </ModalBody>
       <ModalFooter>
-        <Button onClick={onFormCancel} type="button" variant="secondary">
-          <FormattedMessage id="form.cancel" />
-        </Button>
-        <Button
-          onClick={() => formik.handleSubmit()}
-          type="button"
-          data-testid="done-button"
-          isLoading={formik.isSubmitting}
-          disabled={!formik.isValid || !formik.dirty || equal(transformation, formik.values)}
-        >
-          <FormattedMessage id="form.saveTransformation" />
-        </Button>
+        <ModalFormSubmissionButtons submitKey="form.saveTransformation" onCancelClickCallback={onCancel} />
       </ModalFooter>
-    </>
+    </Form>
   );
 };
-
-export default TransformationForm;

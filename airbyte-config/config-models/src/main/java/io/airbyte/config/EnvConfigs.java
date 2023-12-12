@@ -58,7 +58,6 @@ public class EnvConfigs implements Configs {
   public static final String LOCAL_DOCKER_MOUNT = "LOCAL_DOCKER_MOUNT";
   public static final String CONFIG_ROOT = "CONFIG_ROOT";
   public static final String DOCKER_NETWORK = "DOCKER_NETWORK";
-  public static final String TRACKING_STRATEGY = "TRACKING_STRATEGY";
   public static final String JOB_ERROR_REPORTING_STRATEGY = "JOB_ERROR_REPORTING_STRATEGY";
   public static final String JOB_ERROR_REPORTING_SENTRY_DSN = "JOB_ERROR_REPORTING_SENTRY_DSN";
   public static final String DEPLOYMENT_MODE = "DEPLOYMENT_MODE";
@@ -187,16 +186,6 @@ public class EnvConfigs implements Configs {
   private static final String REPLICATION_ORCHESTRATOR_CPU_LIMIT = "REPLICATION_ORCHESTRATOR_CPU_LIMIT";
   private static final String REPLICATION_ORCHESTRATOR_MEMORY_REQUEST = "REPLICATION_ORCHESTRATOR_MEMORY_REQUEST";
   private static final String REPLICATION_ORCHESTRATOR_MEMORY_LIMIT = "REPLICATION_ORCHESTRATOR_MEMORY_LIMIT";
-
-  static final String CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST = "CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST";
-  static final String CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT = "CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT";
-  static final String CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST = "CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST";
-  static final String CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT = "CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT";
-
-  static final String NORMALIZATION_JOB_MAIN_CONTAINER_CPU_REQUEST = "NORMALIZATION_JOB_MAIN_CONTAINER_CPU_REQUEST";
-  static final String NORMALIZATION_JOB_MAIN_CONTAINER_CPU_LIMIT = "NORMALIZATION_JOB_MAIN_CONTAINER_CPU_LIMIT";
-  static final String NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_REQUEST = "NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_REQUEST";
-  static final String NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_LIMIT = "NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_LIMIT";
 
   private static final String VAULT_ADDRESS = "VAULT_ADDRESS";
   private static final String VAULT_PREFIX = "VAULT_PREFIX";
@@ -835,26 +824,6 @@ public class EnvConfigs implements Configs {
   }
 
   @Override
-  public String getJobMainContainerCpuRequest() {
-    return getEnvOrDefault(JOB_MAIN_CONTAINER_CPU_REQUEST, DEFAULT_JOB_CPU_REQUIREMENT);
-  }
-
-  @Override
-  public String getJobMainContainerCpuLimit() {
-    return getEnvOrDefault(JOB_MAIN_CONTAINER_CPU_LIMIT, DEFAULT_JOB_CPU_REQUIREMENT);
-  }
-
-  @Override
-  public String getJobMainContainerMemoryRequest() {
-    return getEnvOrDefault(JOB_MAIN_CONTAINER_MEMORY_REQUEST, DEFAULT_JOB_MEMORY_REQUIREMENT);
-  }
-
-  @Override
-  public String getJobMainContainerMemoryLimit() {
-    return getEnvOrDefault(JOB_MAIN_CONTAINER_MEMORY_LIMIT, DEFAULT_JOB_MEMORY_REQUIREMENT);
-  }
-
-  @Override
   public String getMetricClient() {
     return getEnvOrDefault(METRIC_CLIENT, "");
   }
@@ -906,46 +875,6 @@ public class EnvConfigs implements Configs {
   }
 
   @Override
-  public String getCheckJobMainContainerCpuRequest() {
-    return getEnvOrDefault(CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST, getJobMainContainerCpuRequest());
-  }
-
-  @Override
-  public String getCheckJobMainContainerCpuLimit() {
-    return getEnvOrDefault(CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT, getJobMainContainerCpuLimit());
-  }
-
-  @Override
-  public String getCheckJobMainContainerMemoryRequest() {
-    return getEnvOrDefault(CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST, getJobMainContainerMemoryRequest());
-  }
-
-  @Override
-  public String getCheckJobMainContainerMemoryLimit() {
-    return getEnvOrDefault(CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT, getJobMainContainerMemoryLimit());
-  }
-
-  @Override
-  public String getNormalizationJobMainContainerCpuRequest() {
-    return getEnvOrDefault(NORMALIZATION_JOB_MAIN_CONTAINER_CPU_REQUEST, getJobMainContainerCpuRequest());
-  }
-
-  @Override
-  public String getNormalizationJobMainContainerCpuLimit() {
-    return getEnvOrDefault(NORMALIZATION_JOB_MAIN_CONTAINER_CPU_LIMIT, getJobMainContainerCpuLimit());
-  }
-
-  @Override
-  public String getNormalizationJobMainContainerMemoryRequest() {
-    return getEnvOrDefault(NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_REQUEST, getJobMainContainerMemoryRequest());
-  }
-
-  @Override
-  public String getNormalizationJobMainContainerMemoryLimit() {
-    return getEnvOrDefault(NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_LIMIT, getJobMainContainerMemoryLimit());
-  }
-
-  @Override
   public LogConfigs getLogConfigs() {
     return logConfigs;
   }
@@ -982,18 +911,6 @@ public class EnvConfigs implements Configs {
         .splitToStream(tagsString)
         .filter(s -> !s.trim().isBlank())
         .collect(Collectors.toList());
-  }
-
-  @Override
-  public TrackingStrategy getTrackingStrategy() {
-    return getEnvOrDefault(TRACKING_STRATEGY, TrackingStrategy.LOGGING, s -> {
-      try {
-        return TrackingStrategy.valueOf(s.toUpperCase());
-      } catch (final IllegalArgumentException e) {
-        LOGGER.info(s + " not recognized, defaulting to " + TrackingStrategy.LOGGING);
-        return TrackingStrategy.LOGGING;
-      }
-    });
   }
 
   @Override

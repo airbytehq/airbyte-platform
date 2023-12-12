@@ -1,3 +1,4 @@
+import { MessageDescriptor } from "react-intl";
 import * as yup from "yup";
 
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
@@ -5,6 +6,10 @@ import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { jsonSchemaToFormBlock } from "./schemaToFormBlock";
 import { buildYupFormForJsonSchema } from "./schemaToYup";
 import { FORM_PATTERN_ERROR } from "./types";
+
+const formatMessage = (message: MessageDescriptor, values?: Record<string, string | number>) => {
+  return `${message.id}${values ? `: ${JSON.stringify(values)}` : ""}`;
+};
 
 // Note: We have to check yup schema with JSON.stringify
 // as exactly same objects throw now equality due to `Received: serializes to the same string` error
@@ -46,7 +51,7 @@ it("should build schema for simple case", () => {
     },
     additionalProperties: false,
   };
-  const yupSchema = buildYupFormForJsonSchema(schema, jsonSchemaToFormBlock(schema));
+  const yupSchema = buildYupFormForJsonSchema(schema, jsonSchemaToFormBlock(schema), formatMessage);
 
   const expectedSchema = yup.object().shape({
     host: yup.string().trim().required("form.empty.error").transform(String),
@@ -116,23 +121,30 @@ const simpleConditionalSchema: AirbyteJSONSchema = {
 };
 
 it("should build correct mixed schema structure for conditional case", () => {
-  const yupSchema = buildYupFormForJsonSchema(simpleConditionalSchema, jsonSchemaToFormBlock(simpleConditionalSchema));
+  const yupSchema = buildYupFormForJsonSchema(
+    simpleConditionalSchema,
+    jsonSchemaToFormBlock(simpleConditionalSchema),
+    formatMessage
+  );
 
   const expectedSchema = yup.object().shape({
     start_date: yup.string().trim().required("form.empty.error").transform(String),
     max_objects: yup.number().transform((x) => x),
-    credentials: yup.object().shape({
-      type: yup.mixed().required("form.empty.error"),
-      api_key: yup
-        .mixed()
-        // Using dummy callbacks for then and otherwise as this test only checks whether the yup schema is structured as expected, it's not asserting that it validates form values as expected.
-        .when("type", { is: "", then: (x) => x, otherwise: (x) => x })
-        .when("type", { is: "", then: (x) => x, otherwise: (x) => x }),
-      redirect_uri: yup
-        .mixed()
-        .when("type", { is: "", then: (x) => x, otherwise: (x) => x })
-        .when("type", { is: "", then: (x) => x, otherwise: (x) => x }),
-    }),
+    credentials: yup
+      .object()
+      .shape({
+        type: yup.mixed(),
+        api_key: yup
+          .mixed()
+          // Using dummy callbacks for then and otherwise as this test only checks whether the yup schema is structured as expected, it's not asserting that it validates form values as expected.
+          .when("type", { is: "", then: (x) => x, otherwise: (x) => x })
+          .when("type", { is: "", then: (x) => x, otherwise: (x) => x }),
+        redirect_uri: yup
+          .mixed()
+          .when("type", { is: "", then: (x) => x, otherwise: (x) => x })
+          .when("type", { is: "", then: (x) => x, otherwise: (x) => x }),
+      })
+      .required("form.empty.error"),
   });
 
   expect(JSON.parse(JSON.stringify(yupSchema))).toEqual(JSON.parse(JSON.stringify(expectedSchema)));
@@ -140,7 +152,12 @@ it("should build correct mixed schema structure for conditional case", () => {
 
 // These tests check whether the built yup schema validates as expected, it is not checking the structure
 describe("yup schema validations", () => {
-  const yupSchema = buildYupFormForJsonSchema(simpleConditionalSchema, jsonSchemaToFormBlock(simpleConditionalSchema));
+  const yupSchema = buildYupFormForJsonSchema(
+    simpleConditionalSchema,
+    jsonSchemaToFormBlock(simpleConditionalSchema),
+    formatMessage
+  );
+
   it("enforces required props for selected condition", () => {
     expect(() => {
       yupSchema.validateSync({
@@ -152,7 +169,7 @@ describe("yup schema validations", () => {
           redirect_uri: "test",
         },
       });
-    }).toThrowError("form.empty.error");
+    }).toThrow("form.empty.error");
   });
 
   it("does not enforce additional contraints if the condition is selected", () => {
@@ -167,7 +184,7 @@ describe("yup schema validations", () => {
           api_key: "X",
         },
       });
-    }).not.toThrowError();
+    }).not.toThrow();
   });
 
   it("enforces additional contraints only if the condition is selected", () => {
@@ -181,7 +198,7 @@ describe("yup schema validations", () => {
           api_key: "X",
         },
       });
-    }).toThrowError(FORM_PATTERN_ERROR);
+    }).toThrow(`${FORM_PATTERN_ERROR}: {"pattern":"\\\\w{5}"}`);
   });
 
   it("strips out properties belonging to other conditions", () => {

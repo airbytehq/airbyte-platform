@@ -6,7 +6,7 @@ import { EntityTableDataItem } from "components/EntityTable/types";
 import { getEntityTableData } from "components/EntityTable/utils";
 
 import { useConnectionList } from "core/api";
-import { SourceRead } from "core/request/AirbyteClient";
+import { SourceRead } from "core/api/types/AirbyteClient";
 
 interface SourcesTableProps {
   sources: SourceRead[];
@@ -15,7 +15,8 @@ interface SourcesTableProps {
 export const SourcesTable: React.FC<SourcesTableProps> = ({ sources }) => {
   const navigate = useNavigate();
 
-  const { connections } = useConnectionList({ sourceId: sources.map(({ sourceId }) => sourceId) });
+  const connectionList = useConnectionList({ sourceId: sources.map(({ sourceId }) => sourceId) });
+  const connections = connectionList?.connections ?? [];
 
   const data = getEntityTableData(sources, connections, "source");
 

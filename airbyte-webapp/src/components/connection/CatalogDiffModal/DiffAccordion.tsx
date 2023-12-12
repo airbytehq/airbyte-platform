@@ -1,7 +1,7 @@
 import { Disclosure } from "@headlessui/react";
 import { useMemo } from "react";
 
-import { StreamTransform } from "core/request/AirbyteClient";
+import { StreamTransform } from "core/api/types/AirbyteClient";
 
 import styles from "./DiffAccordion.module.scss";
 import { DiffAccordionHeader } from "./DiffAccordionHeader";

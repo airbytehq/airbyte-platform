@@ -7,8 +7,9 @@ package io.airbyte.data.services;
 import io.airbyte.config.Geography;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkspaceServiceAccount;
-import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
+import io.airbyte.data.services.shared.StandardSyncQuery;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
@@ -32,7 +33,7 @@ public interface WorkspaceService {
 
   List<StandardWorkspace> listAllWorkspacesPaginated(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException;
 
-  Stream<StandardWorkspace> listWorkspaceQuery(Optional<UUID> workspaceId, boolean includeTombstone) throws IOException;
+  Stream<StandardWorkspace> listWorkspaceQuery(Optional<List<UUID>> workspaceId, boolean includeTombstone) throws IOException;
 
   List<StandardWorkspace> listStandardWorkspacesPaginated(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException;
 
@@ -61,5 +62,16 @@ public interface WorkspaceService {
   Geography getGeographyForWorkspace(UUID workspaceId) throws IOException;
 
   boolean getWorkspaceHasAlphaOrBetaConnector(UUID workspaceId) throws IOException;
+
+  List<UUID> listWorkspaceActiveSyncIds(final StandardSyncQuery standardSyncQuery) throws IOException;
+
+  List<StandardWorkspace> listStandardWorkspacesWithIds(final List<UUID> workspaceIds, final boolean includeTombstone) throws IOException;
+
+  Optional<UUID> getOrganizationIdFromWorkspaceId(UUID scopeId) throws IOException;
+
+  StandardWorkspace getWorkspaceWithSecrets(UUID workspaceId, boolean includeTombstone)
+      throws JsonValidationException, IOException, ConfigNotFoundException;
+
+  void writeWorkspaceWithSecrets(StandardWorkspace workspace) throws JsonValidationException, IOException, ConfigNotFoundException;
 
 }

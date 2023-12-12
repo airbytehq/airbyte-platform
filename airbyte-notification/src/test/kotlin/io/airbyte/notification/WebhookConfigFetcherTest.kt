@@ -48,9 +48,10 @@ class WebhookConfigFetcherTest {
     val notification = Notification()
     notification.notificationType = NotificationType.CUSTOMERIO
     val workspaceRead = WorkspaceRead()
-    workspaceRead.notifications = listOf(
-      notification,
-    )
+    workspaceRead.notifications =
+      listOf(
+        notification,
+      )
 
     every {
       workspaceApiClient.getWorkspaceByConnectionId(connectionIdRequestBody)
@@ -68,9 +69,10 @@ class WebhookConfigFetcherTest {
     val webhook = "http://webhook"
     notification.slackConfiguration = SlackNotificationConfiguration().webhook(webhook)
     val workspaceRead = WorkspaceRead()
-    workspaceRead.notifications = listOf(
-      notification,
-    )
+    workspaceRead.notifications =
+      listOf(
+        notification,
+      )
 
     every {
       workspaceApiClient.getWorkspaceByConnectionId(connectionIdRequestBody)

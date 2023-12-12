@@ -33,8 +33,8 @@ class StreamsController(
   private val userService: UserService,
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
+  private val trackingHelper: TrackingHelper,
 ) : StreamsApi {
-
   companion object {
     private val log: org.slf4j.Logger? = LoggerFactory.getLogger(StreamsController::class.java)
   }
@@ -43,35 +43,41 @@ class StreamsController(
     sourceId: UUID,
     destinationId: UUID?,
     ignoreCache: Boolean?,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
-    val httpResponse = TrackingHelper.callWithTracker(
-      {
-        sourceService.getSourceSchema(
-          sourceId,
-          ignoreCache!!,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      STREAMS_PATH,
-      GET,
-      userId,
-    )
-    val destinationSyncModes = TrackingHelper.callWithTracker(
-      {
-        destinationService.getDestinationSyncModes(
-          destinationId!!,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      STREAMS_PATH,
-      GET,
-      userId,
-    )
-    val streamList = httpResponse.catalog!!.streams.stream()
-      .map { obj: AirbyteStreamAndConfiguration -> obj.stream }
-      .toList()
+    val httpResponse =
+      trackingHelper.callWithTracker(
+        {
+          sourceService.getSourceSchema(
+            sourceId,
+            ignoreCache!!,
+            authorization,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        STREAMS_PATH,
+        GET,
+        userId,
+      )
+    val destinationSyncModes =
+      trackingHelper.callWithTracker(
+        {
+          destinationService.getDestinationSyncModes(
+            destinationId!!,
+            authorization,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        STREAMS_PATH,
+        GET,
+        userId,
+      )
+    val streamList =
+      httpResponse.catalog!!.streams.stream()
+        .map { obj: AirbyteStreamAndConfiguration -> obj.stream }
+        .toList()
     val listOfStreamProperties: MutableList<StreamProperties> = emptyList<StreamProperties>().toMutableList()
     for (airbyteStream in streamList) {
       val streamProperties = StreamProperties()
@@ -88,7 +94,7 @@ class StreamsController(
       streamProperties.propertyFields = getStreamFields(airbyteStream.jsonSchema)
       listOfStreamProperties.add(streamProperties)
     }
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       STREAMS_PATH,
       GET,
       userId,
@@ -111,12 +117,13 @@ class StreamsController(
   private fun getStreamFields(connectorSchema: JsonNode?): List<List<String>> {
     val yamlMapper = ObjectMapper(YAMLFactory())
     val streamFields: MutableList<List<String>> = ArrayList()
-    val spec: JsonNode = try {
-      yamlMapper.readTree<JsonNode>(connectorSchema!!.traverse())
-    } catch (e: IOException) {
-      log?.error("Error getting stream fields from schema", e)
-      throw UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR)
-    }
+    val spec: JsonNode =
+      try {
+        yamlMapper.readTree<JsonNode>(connectorSchema!!.traverse())
+      } catch (e: IOException) {
+        log?.error("Error getting stream fields from schema", e)
+        throw UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR)
+      }
     val fields = spec.fields()
     while (fields.hasNext()) {
       val (key, paths) = fields.next()

@@ -5,8 +5,10 @@
 package io.airbyte.notification;
 
 import io.airbyte.commons.resources.MoreResources;
-import io.airbyte.config.SlackNotificationConfiguration;
+import io.airbyte.config.ActorDefinitionBreakingChange;
+import io.airbyte.config.ActorType;
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -52,14 +54,37 @@ public abstract class NotificationClient {
                                                          UUID connectionId)
       throws IOException, InterruptedException;
 
+  public abstract boolean notifyBreakingChangeWarning(List<String> receiverEmails,
+                                                      String connectorName,
+                                                      ActorType actorType,
+                                                      ActorDefinitionBreakingChange breakingChange)
+      throws IOException, InterruptedException;
+
+  public abstract boolean notifyBreakingChangeSyncsDisabled(List<String> receiverEmails,
+                                                            String connectorName,
+                                                            final ActorType actorType,
+                                                            final ActorDefinitionBreakingChange breakingChange)
+      throws IOException, InterruptedException;
+
   public abstract boolean notifySuccess(String message) throws IOException, InterruptedException;
 
   public abstract boolean notifyFailure(String message) throws IOException, InterruptedException;
 
   public abstract boolean notifySchemaChange(final UUID connectionId,
                                              final boolean isBreaking,
-                                             final SlackNotificationConfiguration config,
                                              final String url)
+      throws IOException, InterruptedException;
+
+  public abstract boolean notifySchemaPropagated(final UUID workspaceId,
+                                                 final String workspaceName,
+                                                 final UUID connectionId,
+                                                 final String connectionName,
+                                                 final String connectionUrl,
+                                                 final String sourceName,
+                                                 final List<String> changes,
+                                                 final String url,
+                                                 final String recipient,
+                                                 boolean isBreaking)
       throws IOException, InterruptedException;
 
   public abstract String getNotificationClientType();

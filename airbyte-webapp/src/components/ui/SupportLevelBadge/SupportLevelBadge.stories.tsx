@@ -5,14 +5,6 @@ import { SupportLevelBadge } from "./SupportLevelBadge";
 export default {
   title: "UI/SupportLevelBadge",
   component: SupportLevelBadge,
-  argTypes: {
-    size: {
-      options: ["small", "medium"],
-      control: {
-        type: "radio",
-      },
-    },
-  },
 } as Meta<typeof SupportLevelBadge>;
 
 const Template: StoryFn<typeof SupportLevelBadge> = (args) => <SupportLevelBadge {...args} />;
@@ -20,6 +12,5 @@ const Template: StoryFn<typeof SupportLevelBadge> = (args) => <SupportLevelBadge
 export const Primary = Template.bind({});
 Primary.args = {
   supportLevel: "certified",
-  size: "medium",
   tooltip: true,
 };

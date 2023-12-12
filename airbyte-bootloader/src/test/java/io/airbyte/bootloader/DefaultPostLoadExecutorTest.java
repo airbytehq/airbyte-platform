@@ -11,11 +11,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.config.init.ApplyDefinitionsHelper;
 import io.airbyte.config.init.DeclarativeSourceUpdater;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import org.junit.jupiter.api.Test;
@@ -29,13 +27,11 @@ class DefaultPostLoadExecutorTest {
   void testPostLoadExecution()
       throws Exception {
     final ApplyDefinitionsHelper applyDefinitionsHelper = mock(ApplyDefinitionsHelper.class);
-    final FeatureFlags featureFlags = mock(FeatureFlags.class);
-    final JobPersistence jobPersistence = mock(JobPersistence.class);
 
     final DeclarativeSourceUpdater declarativeSourceUpdater = mock(DeclarativeSourceUpdater.class);
 
     final DefaultPostLoadExecutor postLoadExecution =
-        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, featureFlags, jobPersistence);
+        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
 
     assertDoesNotThrow(() -> postLoadExecution.execute());
     verify(applyDefinitionsHelper, times(1)).apply();
@@ -45,13 +41,11 @@ class DefaultPostLoadExecutorTest {
   void testPostLoadExecutionWithException() throws JsonValidationException, IOException, ConfigNotFoundException {
     final ApplyDefinitionsHelper applyDefinitionsHelper = mock(ApplyDefinitionsHelper.class);
     final DeclarativeSourceUpdater declarativeSourceUpdater = mock(DeclarativeSourceUpdater.class);
-    final FeatureFlags featureFlags = mock(FeatureFlags.class);
-    final JobPersistence jobPersistence = mock(JobPersistence.class);
 
     doThrow(new IOException("test")).when(applyDefinitionsHelper).apply();
 
     final DefaultPostLoadExecutor postLoadExecution =
-        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, featureFlags, jobPersistence);
+        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
 
     assertThrows(IOException.class, () -> postLoadExecution.execute());
   }

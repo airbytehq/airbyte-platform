@@ -27,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Factory
 @Slf4j
-@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "LineLength", "MissingJavadocMethod"})
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "LineLength"})
 public class ConfigurationBeanFactory {
 
   private static final String AIRBYTE_ROLE = "AIRBYTE_ROLE";

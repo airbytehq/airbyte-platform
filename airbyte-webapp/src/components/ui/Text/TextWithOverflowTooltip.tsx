@@ -1,6 +1,5 @@
 import classNames from "classnames";
-import { useCallback, useRef, useState } from "react";
-import React from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { useResizeDetector } from "react-resize-detector";
 

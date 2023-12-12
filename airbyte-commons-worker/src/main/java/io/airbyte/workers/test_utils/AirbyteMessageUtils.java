@@ -7,6 +7,7 @@ package io.airbyte.workers.test_utils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.protocol.models.AirbyteAnalyticsTraceMessage;
 import io.airbyte.protocol.models.AirbyteControlConnectorConfigMessage;
 import io.airbyte.protocol.models.AirbyteControlMessage;
 import io.airbyte.protocol.models.AirbyteErrorTraceMessage;
@@ -24,6 +25,8 @@ import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamS
 import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.protocol.models.Config;
 import io.airbyte.protocol.models.StreamDescriptor;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +35,6 @@ import java.util.Map;
 /**
  * Static utility methods for creating {@link AirbyteMessage}s.
  */
-@SuppressWarnings("MissingJavadocMethod")
 public class AirbyteMessageUtils {
 
   public static AirbyteMessage createRecordMessage(final String tableName,
@@ -56,6 +58,18 @@ public class AirbyteMessageUtils {
   public static AirbyteMessage createRecordMessage(final String tableName,
                                                    final String key,
                                                    final Integer value) {
+    return createRecordMessage(tableName, ImmutableMap.of(key, value));
+  }
+
+  public static AirbyteMessage createRecordMessage(final String tableName,
+                                                   final String key,
+                                                   final BigInteger value) {
+    return createRecordMessage(tableName, ImmutableMap.of(key, value));
+  }
+
+  public static AirbyteMessage createRecordMessage(final String tableName,
+                                                   final String key,
+                                                   final BigDecimal value) {
     return createRecordMessage(tableName, ImmutableMap.of(key, value));
   }
 
@@ -189,6 +203,56 @@ public class AirbyteMessageUtils {
         .withEmittedAt(Long.valueOf(System.currentTimeMillis()).doubleValue())
         .withType(AirbyteTraceMessage.Type.STREAM_STATUS)
         .withStreamStatus(airbyteStreamStatusTraceMessage);
+
+    return new AirbyteMessage()
+        .withType(Type.TRACE)
+        .withTrace(airbyteTraceMessage);
+  }
+
+  public static AirbyteMessage createStatusTraceMessage(final StreamDescriptor stream, final AirbyteTraceMessage.Type type) {
+    final AirbyteStreamStatusTraceMessage airbyteStreamStatusTraceMessage = new AirbyteStreamStatusTraceMessage()
+        .withStatus(AirbyteStreamStatus.STARTED)
+        .withStreamDescriptor(stream);
+
+    final AirbyteTraceMessage airbyteTraceMessage = new AirbyteTraceMessage()
+        .withEmittedAt(Long.valueOf(System.currentTimeMillis()).doubleValue())
+        .withType(type)
+        .withStreamStatus(airbyteStreamStatusTraceMessage);
+
+    if (type != null) {
+      switch (type) {
+        case ERROR -> {
+          final var error = new AirbyteErrorTraceMessage();
+          airbyteTraceMessage.withError(error);
+        }
+        case ESTIMATE -> {
+          final var estimate = new AirbyteEstimateTraceMessage();
+          airbyteTraceMessage.withEstimate(estimate);
+        }
+        case STREAM_STATUS -> {
+          final var streamStatus = new AirbyteStreamStatusTraceMessage();
+          airbyteTraceMessage.withStreamStatus(streamStatus);
+        }
+        default -> {
+          // Do nothing.
+        }
+      }
+    }
+
+    return new AirbyteMessage()
+        .withType(Type.TRACE)
+        .withTrace(airbyteTraceMessage);
+  }
+
+  public static AirbyteMessage createAnalyticsTraceMessage(final String type, final String value) {
+    final AirbyteAnalyticsTraceMessage airbyteAnalyticsTraceMessage = new AirbyteAnalyticsTraceMessage()
+        .withType(type)
+        .withValue(value);
+
+    final AirbyteTraceMessage airbyteTraceMessage = new AirbyteTraceMessage()
+        .withEmittedAt(Long.valueOf(System.currentTimeMillis()).doubleValue())
+        .withType(AirbyteTraceMessage.Type.ANALYTICS)
+        .withAnalytics(airbyteAnalyticsTraceMessage);
 
     return new AirbyteMessage()
         .withType(Type.TRACE)

@@ -1,8 +1,6 @@
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import React, { useEffect, useRef, useState } from "react";
-import { FormattedMessage, FormattedNumber } from "react-intl";
+import { FormattedMessage, FormattedNumber, useIntl } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
@@ -10,25 +8,26 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { ExternalLink } from "components/ui/Link";
+import { Icon } from "components/ui/Icon";
+import { ExternalLink, Link } from "components/ui/Link";
+import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
-import { useIsFCPEnabled, useStripeCheckout } from "core/api/cloud";
 import { useGetCloudWorkspace, useInvalidateCloudWorkspace } from "core/api/cloud";
 import { CloudWorkspaceRead } from "core/api/types/CloudApi";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 import { links } from "core/utils/links";
+import { useExperiment } from "hooks/services/Experiment";
+import { useModalService } from "hooks/services/Modal";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 
+import { CheckoutCreditsModal } from "./CheckoutCreditsModal";
 import { EmailVerificationHint } from "./EmailVerificationHint";
 import { LowCreditBalanceHint } from "./LowCreditBalanceHint";
 import styles from "./RemainingCredits.module.scss";
 import { useBillingPageBanners } from "../useBillingPageBanners";
-import { useDeprecatedBillingPageBanners } from "../useDeprecatedBillingPageBanners";
 
-const STRIPE_SUCCESS_QUERY = "stripeCheckoutSuccess";
+export const STRIPE_SUCCESS_QUERY = "stripeCheckoutSuccess";
 
 /**
  * Checks whether the given cloud workspace had a recent increase in credits.
@@ -39,20 +38,19 @@ function hasRecentCreditIncrease(cloudWorkspace: CloudWorkspaceRead): boolean {
 }
 
 export const RemainingCredits: React.FC = () => {
+  const { formatMessage } = useIntl();
   const { sendEmailVerification } = useAuthService();
   const retryIntervalId = useRef<number>();
   const currentWorkspace = useCurrentWorkspace();
   const cloudWorkspace = useGetCloudWorkspace(currentWorkspace.workspaceId);
   const [searchParams, setSearchParams] = useSearchParams();
   const invalidateCloudWorkspace = useInvalidateCloudWorkspace(currentWorkspace.workspaceId);
-  const { isLoading, mutateAsync: createCheckout } = useStripeCheckout();
-  const analytics = useAnalyticsService();
   const [isWaitingForCredits, setIsWaitingForCredits] = useState(false);
-  const billingPageBannerHook = useBillingPageBanners;
-  const deprecatedBillingPageBannerHook = useDeprecatedBillingPageBanners;
+  const { openModal } = useModalService();
 
-  const isFCPEnabled = useIsFCPEnabled();
-  const { bannerVariant } = isFCPEnabled ? deprecatedBillingPageBannerHook() : billingPageBannerHook();
+  const isAutoRechargeEnabled = useExperiment("billing.autoRecharge", false);
+
+  const { bannerVariant } = useBillingPageBanners();
 
   const { emailVerified } = useAuthService();
 
@@ -87,21 +85,12 @@ export const RemainingCredits: React.FC = () => {
     }
   }, [cloudWorkspace]);
 
-  const startStripeCheckout = async () => {
-    // Use the current URL as a success URL but attach the STRIPE_SUCCESS_QUERY to it
-    const successUrl = new URL(window.location.href);
-    successUrl.searchParams.set(STRIPE_SUCCESS_QUERY, "true");
-    const { stripeUrl } = await createCheckout({
-      workspaceId: currentWorkspace.workspaceId,
-      successUrl: successUrl.href,
-      cancelUrl: window.location.href,
-      stripeMode: "payment",
+  const showCreditsModal = async () => {
+    await openModal({
+      title: formatMessage({ id: "credits.checkoutModalTitle" }),
+      size: "md",
+      content: CheckoutCreditsModal,
     });
-    analytics.track(Namespace.CREDITS, Action.CHECKOUT_START, {
-      actionDescription: "Checkout Start",
-    });
-    // Forward to stripe as soon as we created a checkout session successfully
-    window.location.assign(stripeUrl);
   };
 
   return (
@@ -140,9 +129,9 @@ export const RemainingCredits: React.FC = () => {
               disabled={!emailVerified}
               type="button"
               size="xs"
-              onClick={startStripeCheckout}
-              isLoading={isLoading || isWaitingForCredits}
-              icon={<FontAwesomeIcon icon={faPlus} />}
+              onClick={showCreditsModal}
+              isLoading={isWaitingForCredits}
+              icon={<Icon type="plus" />}
             >
               <FormattedMessage id="credits.buyCredits" />
             </Button>
@@ -152,10 +141,26 @@ export const RemainingCredits: React.FC = () => {
           </FlexContainer>
         </FlexContainer>
         <FlexContainer direction="column">
+          {isAutoRechargeEnabled && (
+            <Message
+              text={
+                <FormattedMessage
+                  id="credits.autoRechargeEnabled"
+                  values={{
+                    contact: (node: React.ReactNode) => (
+                      <Link opensInNewTab to="mailto:billing@airbyte.io" variant="primary">
+                        {node}
+                      </Link>
+                    ),
+                  }}
+                />
+              }
+            />
+          )}
           {!emailVerified && sendEmailVerification && (
             <EmailVerificationHint variant={bannerVariant} sendEmailVerification={sendEmailVerification} />
           )}
-          <LowCreditBalanceHint variant={bannerVariant} />
+          {!isAutoRechargeEnabled && <LowCreditBalanceHint variant={bannerVariant} />}
         </FlexContainer>
       </Box>
     </Card>

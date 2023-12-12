@@ -10,23 +10,31 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.State;
 import io.airbyte.persistence.job.errorreporter.SentryExceptionHelper.SentryExceptionPlatform;
 import io.airbyte.persistence.job.errorreporter.SentryExceptionHelper.SentryParsedException;
 import io.sentry.IHub;
 import io.sentry.NoOpHub;
+import io.sentry.Scope;
+import io.sentry.ScopeCallback;
 import io.sentry.SentryEvent;
 import io.sentry.protocol.Message;
 import io.sentry.protocol.SentryException;
 import io.sentry.protocol.User;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -34,6 +42,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 class SentryJobErrorReportingClientTest {
 
@@ -42,14 +51,24 @@ class SentryJobErrorReportingClientTest {
   private static final String DOCKER_IMAGE = "airbyte/source-stripe:1.2.3";
   private static final String ERROR_MESSAGE = "RuntimeError: Something went wrong";
 
+  private final ObjectMapper objectMapper = new ObjectMapper();
   private final StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME);
   private SentryJobErrorReportingClient sentryErrorReportingClient;
   private IHub mockSentryHub;
+  private Scope mockScope;
+
   private SentryExceptionHelper mockSentryExceptionHelper;
 
   @BeforeEach
   void setup() {
     mockSentryHub = mock(IHub.class);
+    mockScope = mock(Scope.class);
+    doAnswer(invocation -> {
+      final ScopeCallback scopeCallback = invocation.getArgument(0);
+      scopeCallback.run(mockScope);
+      return null; // Return null for void methods
+    }).when(mockSentryHub).configureScope(any(ScopeCallback.class));
+
     mockSentryExceptionHelper = mock(SentryExceptionHelper.class);
     sentryErrorReportingClient = new SentryJobErrorReportingClient(mockSentryHub, mockSentryExceptionHelper);
   }
@@ -78,16 +97,24 @@ class SentryJobErrorReportingClientTest {
   }
 
   @Test
-  void testReportJobFailureReason() {
+  void testReportJobFailureReason() throws Exception {
     final ArgumentCaptor<SentryEvent> eventCaptor = ArgumentCaptor.forClass(SentryEvent.class);
 
     final FailureReason failureReason = new FailureReason()
         .withFailureOrigin(FailureOrigin.SOURCE)
         .withFailureType(FailureType.SYSTEM_ERROR)
-        .withInternalMessage(ERROR_MESSAGE);
+        .withInternalMessage(ERROR_MESSAGE)
+        .withTimestamp(System.currentTimeMillis());
     final Map<String, String> metadata = Map.of("some_metadata", "some_metadata_value");
+    final ObjectMapper objectMapper = new ObjectMapper();
+    final JsonNode sourceConfig = objectMapper.readTree("{\"sourceKey\": \"sourceValue\"}");
+    final JsonNode destinationConfig = objectMapper.readTree("{\"destinationKey\": \"destinationValue\"}");
+    final State state = new State();
+    state.withAdditionalProperty("stateKey", "stateValue");
 
-    sentryErrorReportingClient.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, metadata);
+    final AttemptConfigReportingContext attemptConfig = new AttemptConfigReportingContext(sourceConfig, destinationConfig, state);
+
+    sentryErrorReportingClient.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, metadata, attemptConfig);
 
     verify(mockSentryHub).captureEvent(eventCaptor.capture());
     final SentryEvent actualEvent = eventCaptor.getValue();
@@ -97,6 +124,12 @@ class SentryJobErrorReportingClientTest {
     assertEquals("some_metadata_value", actualEvent.getTag("some_metadata"));
     assertNull(actualEvent.getTag(STACKTRACE_PARSE_ERROR_TAG_KEY));
     assertNull(actualEvent.getExceptions());
+
+    // verify that scope setContexts is called with the correct arguments
+    verify(mockScope).setContexts(Mockito.eq("Failure Reason"), any(Object.class));
+    verify(mockScope).setContexts(Mockito.eq("Source Configuration"), any(Object.class));
+    verify(mockScope).setContexts(Mockito.eq("Destination Configuration"), any(Object.class));
+    verify(mockScope).setContexts(Mockito.eq("State"), any(Object.class));
 
     final User sentryUser = actualEvent.getUser();
     assertNotNull(sentryUser);
@@ -109,15 +142,35 @@ class SentryJobErrorReportingClientTest {
   }
 
   @Test
+  void testReportJobNoErrorOnNullAttemptConfig() {
+    final ArgumentCaptor<SentryEvent> eventCaptor = ArgumentCaptor.forClass(SentryEvent.class);
+
+    final FailureReason failureReason = new FailureReason()
+        .withFailureOrigin(FailureOrigin.SOURCE)
+        .withFailureType(FailureType.SYSTEM_ERROR)
+        .withInternalMessage(ERROR_MESSAGE)
+        .withTimestamp(System.currentTimeMillis());
+    final Map<String, String> metadata = Map.of("some_metadata", "some_metadata_value");
+
+    sentryErrorReportingClient.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, metadata, null);
+
+    verify(mockSentryHub).captureEvent(eventCaptor.capture());
+  }
+
+  @Test
   void testReportJobFailureReasonWithNoWorkspace() {
     final ArgumentCaptor<SentryEvent> eventCaptor = ArgumentCaptor.forClass(SentryEvent.class);
 
     final FailureReason failureReason = new FailureReason()
         .withFailureOrigin(FailureOrigin.SOURCE)
         .withFailureType(FailureType.SYSTEM_ERROR)
-        .withInternalMessage(ERROR_MESSAGE);
+        .withInternalMessage(ERROR_MESSAGE)
+        .withTimestamp(System.currentTimeMillis());
+    final ObjectMapper objectMapper = new ObjectMapper();
+    final AttemptConfigReportingContext attemptConfig =
+        new AttemptConfigReportingContext(objectMapper.createObjectNode(), objectMapper.createObjectNode(), new State());
 
-    sentryErrorReportingClient.reportJobFailureReason(null, failureReason, DOCKER_IMAGE, Map.of());
+    sentryErrorReportingClient.reportJobFailureReason(null, failureReason, DOCKER_IMAGE, Map.of(), attemptConfig);
 
     verify(mockSentryHub).captureEvent(eventCaptor.capture());
     final SentryEvent actualEvent = eventCaptor.getValue();
@@ -144,9 +197,13 @@ class SentryJobErrorReportingClientTest {
 
     final FailureReason failureReason = new FailureReason()
         .withInternalMessage(ERROR_MESSAGE)
+        .withTimestamp(System.currentTimeMillis())
         .withStacktrace("Some valid stacktrace");
+    final ObjectMapper objectMapper = new ObjectMapper();
+    final AttemptConfigReportingContext attemptConfig =
+        new AttemptConfigReportingContext(objectMapper.createObjectNode(), objectMapper.createObjectNode(), new State());
 
-    sentryErrorReportingClient.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, Map.of());
+    sentryErrorReportingClient.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, Map.of(), attemptConfig);
 
     verify(mockSentryHub).captureEvent(eventCaptor.capture());
     final SentryEvent actualEvent = eventCaptor.getValue();
@@ -165,9 +222,13 @@ class SentryJobErrorReportingClientTest {
 
     final FailureReason failureReason = new FailureReason()
         .withInternalMessage("Something went wrong")
+        .withTimestamp(System.currentTimeMillis())
         .withStacktrace(invalidStacktrace);
+    final ObjectMapper objectMapper = new ObjectMapper();
+    final AttemptConfigReportingContext attemptConfig =
+        new AttemptConfigReportingContext(objectMapper.createObjectNode(), objectMapper.createObjectNode(), new State());
 
-    sentryErrorReportingClient.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, Map.of());
+    sentryErrorReportingClient.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, Map.of(), attemptConfig);
 
     verify(mockSentryHub).captureEvent(eventCaptor.capture());
     final SentryEvent actualEvent = eventCaptor.getValue();
@@ -176,6 +237,64 @@ class SentryJobErrorReportingClientTest {
     assertNotNull(exceptions);
     assertEquals(1, exceptions.size());
     assertEquals("Invalid stacktrace, RuntimeError: ", exceptions.get(0).getValue());
+  }
+
+  @Test
+  void testEmptyJsonNode() {
+    JsonNode node = objectMapper.createObjectNode();
+    Map<String, String> flatMap = new HashMap<>();
+    SentryJobErrorReportingClient.flattenJsonNode("", node, flatMap);
+
+    assertEquals(0, flatMap.size());
+  }
+
+  @Test
+  void testSimpleFlatJson() throws Exception {
+    JsonNode node = objectMapper.readTree("{\"key1\":\"value1\", \"key2\":\"value2\"}");
+    Map<String, String> flatMap = new HashMap<>();
+    SentryJobErrorReportingClient.flattenJsonNode("", node, flatMap);
+
+    assertEquals(2, flatMap.size());
+    assertEquals("value1", flatMap.get("key1"));
+    assertEquals("value2", flatMap.get("key2"));
+  }
+
+  @Test
+  void testJsonWithArray() throws Exception {
+    JsonNode node = objectMapper.readTree("{\"a\": { \"b\": [{\"c\": 1}, {\"c\": 2}]}}");
+    Map<String, String> flatMap = new HashMap<>();
+    SentryJobErrorReportingClient.flattenJsonNode("", node, flatMap);
+
+    assertEquals(2, flatMap.size());
+    assertEquals("1", flatMap.get("a.b[0].c"));
+    assertEquals("2", flatMap.get("a.b[1].c"));
+  }
+
+  @Test
+  void testJsonWithNestedObject() throws Exception {
+    JsonNode node = objectMapper.readTree(
+        "{\"key1\":\"value1\", \"nestedObject\":{\"nestedKey1\":\"nestedValue1\", \"nestedKey2\":\"nestedValue2\"}}");
+    Map<String, String> flatMap = new HashMap<>();
+    SentryJobErrorReportingClient.flattenJsonNode("", node, flatMap);
+
+    assertEquals(3, flatMap.size());
+    assertEquals("value1", flatMap.get("key1"));
+    assertEquals("nestedValue1", flatMap.get("nestedObject.nestedKey1"));
+    assertEquals("nestedValue2", flatMap.get("nestedObject.nestedKey2"));
+  }
+
+  @Test
+  void testJsonWithNestedObjectsAndArray() throws Exception {
+    JsonNode node = objectMapper.readTree(
+        "{\"key1\":\"value1\", \"nested\":{\"nestedKey1\":\"nestedValue1\", \"array\":[{\"item\":\"value2\"}, {\"item\":\"value3\"}]}}");
+    Map<String, String> flatMap = new HashMap<>();
+    SentryJobErrorReportingClient.flattenJsonNode("", node, flatMap);
+
+    assertEquals(4, flatMap.size());
+    assertEquals("value1", flatMap.get("key1"));
+    assertEquals("nestedValue1", flatMap.get("nested.nestedKey1"));
+    assertEquals("value2", flatMap.get("nested.array[0].item"));
+    assertEquals("value3", flatMap.get("nested.array[1].item"));
   }
 
 }

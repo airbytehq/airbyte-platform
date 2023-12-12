@@ -1,16 +1,12 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { DestinationDefinitionRead } from "core/request/AirbyteClient";
+import { useDestinationDefinitionList, useUpdateDestinationDefinition, useDestinationList } from "core/api";
+import { DestinationDefinitionRead } from "core/api/types/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
-import {
-  useDestinationDefinitionList,
-  useUpdateDestinationDefinition,
-} from "services/connector/DestinationDefinitionService";
 
 import ConnectorsView from "./components/ConnectorsView";
-import { useDestinationList } from "../../../../hooks/services/useDestinationHook";
 
 const DestinationsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_DESTINATION);

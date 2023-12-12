@@ -14,6 +14,7 @@ export interface DropdownMenuOptionBaseType {
   value?: unknown;
   className?: string;
   disabled?: boolean;
+  "data-testid"?: string;
 }
 
 interface DropdownMenuSeparator {
@@ -42,4 +43,5 @@ export interface DropdownMenuProps {
   onChange?: (data: DropdownMenuOptionType) => void;
   placement?: Placement;
   displacement?: DisplacementType;
+  "data-testid"?: string;
 }

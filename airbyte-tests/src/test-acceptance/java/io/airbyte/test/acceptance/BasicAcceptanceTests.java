@@ -94,6 +94,7 @@ import io.airbyte.test.utils.SchemaTableNamePair;
 import io.airbyte.test.utils.TestConnectionCreate;
 import io.temporal.client.WorkflowQueryException;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -152,6 +153,7 @@ class BasicAcceptanceTests {
   // NOTE: this is just a base64 encoding of a jwt representing a test user in some deployments.
   private static final String AIRBYTE_AUTH_HEADER = "eyJ1c2VyX2lkIjogImNsb3VkLWFwaSIsICJlbWFpbF92ZXJpZmllZCI6ICJ0cnVlIn0K";
   private static final String AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID = "AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID";
+  private static final String AIRBYTE_SERVER_HOST = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001");
   private static final UUID POSTGRES_SOURCE_DEF_ID = UUID.fromString("decd338e-5647-4c0b-adf4-da0e75f5a750");
   private static final UUID POSTGRES_DEST_DEF_ID = UUID.fromString("25c5221d-dce2-4163-ade9-739ef790f503");
   public static final String IS_GKE = "IS_GKE";
@@ -192,9 +194,10 @@ class BasicAcceptanceTests {
     // TODO(mfsiega-airbyte): clean up and centralize the way we do config.
     final boolean isGke = System.getenv().containsKey(IS_GKE);
     // Set up the API client.
-    final var underlyingApiClient = new ApiClient().setScheme("http")
-        .setHost("localhost")
-        .setPort(8001)
+    final URI url = new URI(AIRBYTE_SERVER_HOST);
+    final var underlyingApiClient = new ApiClient().setScheme(url.getScheme())
+        .setHost(url.getHost())
+        .setPort(url.getPort())
         .setBasePath("/api");
     if (isGke) {
       underlyingApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
@@ -202,9 +205,9 @@ class BasicAcceptanceTests {
     apiClient = new AirbyteApiClient(underlyingApiClient);
 
     // Set up the WebBackend API client.
-    final var underlyingWebBackendApiClient = new ApiClient().setScheme("http")
-        .setHost("localhost")
-        .setPort(8001)
+    final var underlyingWebBackendApiClient = new ApiClient().setScheme(url.getScheme())
+        .setHost(url.getHost())
+        .setPort(url.getPort())
         .setBasePath("/api");
     if (isGke) {
       underlyingWebBackendApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
@@ -557,7 +560,7 @@ class BasicAcceptanceTests {
 
   @Test
   void testMultipleSchemasAndTablesSync() throws Exception {
-    // create tables in another schema
+    // create tables in the staging schema
     testHarness.runSqlScriptInSource("postgres_second_schema_multiple_tables.sql");
 
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
@@ -578,9 +581,8 @@ class BasicAcceptanceTests {
     final var connectionId = conn.getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
-    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
-        conn.getNamespaceFormat(),
-        false, false);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(),
+        Set.of(PUBLIC_SCHEMA_NAME, "staging"), conn.getNamespaceFormat(), false, false);
     Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
@@ -612,8 +614,7 @@ class BasicAcceptanceTests {
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
-        conn.getNamespaceFormat(),
-        false, WITHOUT_SCD_TABLE);
+        conn.getNamespaceFormat().replace("${SOURCE_NAMESPACE}", PUBLIC), false, WITHOUT_SCD_TABLE);
     Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
@@ -1395,13 +1396,15 @@ class BasicAcceptanceTests {
             catalog,
             discoverResult.getCatalogId())
                 .build());
+
     final var connectionId = conn.getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
-    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC,
-        conn.getNamespaceFormat(), true, false);
+
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
+        conn.getNamespaceFormat().replace("${SOURCE_NAMESPACE}", PUBLIC), false, WITHOUT_SCD_TABLE);
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), "staging",
-        conn.getNamespaceFormat(), true, false);
+        conn.getNamespaceFormat().replace("${SOURCE_NAMESPACE}", "staging"), false, false);
     final JobInfoRead connectionResetRead = apiClient.getConnectionApi().resetConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionResetRead.getJob());
     assertDestinationDbEmpty(testHarness.getDestinationDatabase());
@@ -1448,8 +1451,7 @@ class BasicAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), syncRead.getJob());
 
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
-        connection.getNamespaceFormat(),
-        false, WITHOUT_SCD_TABLE);
+        connection.getNamespaceFormat(), false, WITHOUT_SCD_TABLE);
     assertStreamStateContainsStream(connection.getConnectionId(), List.of(
         new StreamDescriptor().name(ID_AND_NAME).namespace(PUBLIC),
         new StreamDescriptor().name(additionalTable).namespace(PUBLIC)));
@@ -1503,8 +1505,7 @@ class BasicAcceptanceTests {
     // We do not check that the source and the dest are in sync here because removing a stream doesn't
     // remove that
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
-        connection.getNamespaceFormat(),
-        false, WITHOUT_SCD_TABLE);
+        connection.getNamespaceFormat(), true, WITHOUT_SCD_TABLE);
     assertStreamStateContainsStream(connection.getConnectionId(), List.of(
         new StreamDescriptor().name(ID_AND_NAME).namespace(PUBLIC),
         new StreamDescriptor().name(additionalTable).namespace(PUBLIC)));
@@ -1537,8 +1538,7 @@ class BasicAcceptanceTests {
     // We do not check that the source and the dest are in sync here because removing a stream doesn't
     // remove that
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
-        connection.getNamespaceFormat(),
-        false, WITHOUT_SCD_TABLE);
+        connection.getNamespaceFormat(), true, WITHOUT_SCD_TABLE);
     assertStreamStateContainsStream(connection.getConnectionId(), List.of(
         new StreamDescriptor().name(ID_AND_NAME).namespace(PUBLIC),
         new StreamDescriptor().name(additionalTable).namespace(PUBLIC)));

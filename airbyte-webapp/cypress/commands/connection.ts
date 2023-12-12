@@ -1,10 +1,16 @@
-import { ConnectionStatus, WebBackendConnectionRead } from "@src/core/api/generated/AirbyteClient.schemas";
-import { WebBackendConnectionCreate, DestinationRead, SourceRead } from "@src/core/api/types/AirbyteClient";
+import * as statusPage from "@cy/pages/connection/statusPageObject";
+import {
+  DestinationRead,
+  SourceRead,
+  WebBackendConnectionCreate,
+  ConnectionStatus,
+  WebBackendConnectionRead,
+} from "@src/core/api/types/AirbyteClient";
 
 import {
-  selectSchedule,
-  setupDestinationNamespaceSourceFormat,
   enterConnectionName,
+  selectScheduleType,
+  setupDestinationNamespaceSourceFormat,
 } from "pages/connection/connectionFormPageObject";
 import { openCreateConnection } from "pages/destinationPage";
 
@@ -66,7 +72,7 @@ export const createTestConnection = (sourceName: string, destinationName: string
   cy.get("div").contains(sourceName).click();
   cy.wait("@discoverSchema");
   enterConnectionName("Connection name");
-  selectSchedule("Manual");
+  selectScheduleType("Manual");
 
   setupDestinationNamespaceSourceFormat();
   submitButtonClick();
@@ -79,7 +85,8 @@ export const startManualSync = () => {
 };
 
 export const startManualReset = () => {
-  cy.get("[data-testid='manual-reset-button']").click();
+  cy.get(statusPage.jobHistoryDropdownMenu).click();
+  cy.get(statusPage.resetDataDropdownOption).click();
   cy.get("[data-id='reset']").click();
 };
 
@@ -137,7 +144,10 @@ export const createNewConnectionViaApi = (
   let connectionRequestBody: WebBackendConnectionCreate;
 
   const myConnection = requestWorkspaceId().then(() => {
-    requestSourceDiscoverSchema({ sourceId: source.sourceId, disable_cache: true }).then(({ catalog, catalogId }) => {
+    requestSourceDiscoverSchema({
+      sourceId: source.sourceId,
+      disable_cache: true,
+    }).then(({ catalog, catalogId }) => {
       if (options.enableAllStreams) {
         catalog?.streams.forEach((stream) => {
           if (stream.config) {

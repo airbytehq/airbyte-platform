@@ -84,13 +84,14 @@ airbyte:
     jobs:
       initialization-timeout-ms: ${JOBS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
       minimum-migration-version: ${JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION}
-  version: ${AIRBYTE_VERSION}
+  version: ${AIRBYTE_VERSION:dev}
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:
       aws:
         access-key: ${AWS_ACCESS_KEY:}
         secret-key: ${AWS_SECRET_ACCESS_KEY:}
+        region: ${AWS_REGION:}
       gcp:
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
@@ -99,7 +100,9 @@ airbyte:
         prefix: ${VAULT_PREFIX:}
         token: ${VAULT_AUTH_TOKEN:}
   role: ${AIRBYTE_ROLE:dev}
-  tracking-strategy: ${TRACKING_STRATEGY:LOGGING}
+  tracking:
+    strategy: ${TRACKING_STRATEGY:LOGGING}
+    write-key: ${SEGMENT_WRITE_KEY:}
   worker:
     kube-job-configs:
       default:
@@ -133,25 +136,25 @@ airbyte:
         memory-request: 25Mi
       # Default base sync values
       destination:
-        cpu-limit: 1
-        cpu-request: 0.5
-        memory-limit: 2Gi
-        memory-request: 1Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.5}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
       destination-stdin:
         cpu-limit: 1
         cpu-request: 0.5
         memory-limit: 50Mi
         memory-request: 25Mi
       orchestrator:
-        cpu-limit: 1
-        cpu-request: 0.5
-        memory-limit: 2Gi
-        memory-request: 2Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.5}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       source:
-        cpu-limit: 1
-        cpu-request: 0.5
-        memory-limit: 2Gi
-        memory-request: 1Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.5}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
       source-stdout:
         cpu-limit: 1
         cpu-request: 0.5
@@ -159,25 +162,25 @@ airbyte:
         memory-request: 25Mi
       # API syncs
       source-api:
-        cpu-limit: 1
-        cpu-request: 0.2
-        memory-limit: 2Gi
-        memory-request: 1Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.2}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
       source-stdout-api:
         cpu-limit: 1
         cpu-request: 0.2
         memory-limit: 50Mi
         memory-request: 25Mi
       orchestrator-api:
-        cpu-limit: 1
-        cpu-request: 0.3
-        memory-limit: 2Gi
-        memory-request: 2Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.3}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       destination-api:
-        cpu-limit: 1
-        cpu-request: 0.2
-        memory-limit: 2Gi
-        memory-request: 1Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.2}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
       destination-stdin-api:
         cpu-limit: 1
         cpu-request: 0.1
@@ -185,25 +188,25 @@ airbyte:
         memory-request: 25Mi
       # Database syncs resource override
       source-database:
-        cpu-limit: 2
-        cpu-request: 1
-        memory-limit: 2Gi
-        memory-request: 1Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:2}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
       source-stdout-database:
         cpu-limit: 1
         cpu-request: 0.5
         memory-limit: 50Mi
         memory-request: 25Mi
       orchestrator-database:
-        cpu-limit: 2
-        cpu-request: 1
-        memory-limit: 2Gi
-        memory-request: 2Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:2}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       destination-database:
-        cpu-limit: 2
-        cpu-request: 1
-        memory-limit: 2Gi
-        memory-request: 1Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:2}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
       destination-stdin-database:
         cpu-limit: 2
         cpu-request: 0.5
@@ -236,7 +239,7 @@ airbyte:
     connection:
       disable:
         max-days: ${MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE:14}
-        max-jobs: ${MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE:100}
+        max-jobs: ${MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE:20}
   web-app:
     url: ${WEBAPP_URL:}
   workspace:
@@ -282,6 +285,18 @@ datasources:
     username: ${DATABASE_USER}
     password: ${DATABASE_PASSWORD}
     leak-detection-threshold: 40000 # This should be slightly higher than the connection-timeout setting but not too high to avoid false positives and negatives.
+  local-secrets:
+    connection-test-query: SELECT 1
+    connection-timeout: 30000
+    idle-timeout: 600000
+    initialization-fail-timeout: -1 # Disable fail fast checking to avoid issues due to other pods not being started in time
+    maximum-pool-size: 20
+    minimum-idle: 0
+    url: ${DATABASE_URL}
+    driverClassName: org.postgresql.Driver
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}
+    pool-name: config-pool
 
 endpoints:
   beans:
@@ -329,6 +344,9 @@ jooq:
       jackson-converter-enabled: true
       sql-dialect: POSTGRES
     jobs:
+      jackson-converter-enabled: true
+      sql-dialect: POSTGRES
+    local-secrets:
       jackson-converter-enabled: true
       sql-dialect: POSTGRES
 

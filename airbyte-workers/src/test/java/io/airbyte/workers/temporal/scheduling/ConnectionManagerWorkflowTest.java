@@ -27,6 +27,7 @@ import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardSyncInput;
+import io.airbyte.micronaut.temporal.TemporalProxyHelper;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.JobInput;
@@ -74,7 +75,6 @@ import io.airbyte.workers.temporal.scheduling.testsyncworkflow.ReplicateFailureS
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.SleepingSyncWorkflow;
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.SourceAndDestinationFailureSyncWorkflow;
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.SyncWorkflowFailingOutputWorkflow;
-import io.airbyte.workers.temporal.support.TemporalProxyHelper;
 import io.micronaut.context.BeanRegistration;
 import io.micronaut.inject.BeanIdentifier;
 import io.temporal.activity.ActivityOptions;
@@ -1519,7 +1519,7 @@ class ConnectionManagerWorkflowTest {
              unit = TimeUnit.SECONDS)
     @DisplayName("We hydrate, persist and use retry manager.")
     @MethodSource("coreFailureTypesMatrix")
-    @Disabled("This test depends on another test. Disabling until it doesn't")
+    @Disabled("Flaky in CI.")
     void hydratePersistRetryManagerFlow(final Class<? extends SyncWorkflow> failureCase) throws Exception {
       final var connectionId = UUID.randomUUID();
       final var jobId = 32198714L;
@@ -1597,7 +1597,7 @@ class ConnectionManagerWorkflowTest {
     }
 
     @ParameterizedTest
-    @Timeout(value = 10,
+    @Timeout(value = 30,
              unit = TimeUnit.SECONDS)
     @DisplayName("We use attempt-based retries when retry manager not present.")
     @MethodSource("coreFailureTypesMatrix")
@@ -1774,7 +1774,7 @@ class ConnectionManagerWorkflowTest {
              unit = TimeUnit.SECONDS)
     @DisplayName("Jobs can be cancelled during the backoff.")
     @ValueSource(longs = {1, 5, 20, 30, 1439, 21})
-    @Disabled("Flaky test, temporarily disabled")
+    @Disabled("Flaky in CI")
     void cancelWorksDuringBackoff(final long minutes) throws Exception {
       final var backoff = Duration.ofMinutes(minutes);
       final var policy = BackoffPolicy.builder()

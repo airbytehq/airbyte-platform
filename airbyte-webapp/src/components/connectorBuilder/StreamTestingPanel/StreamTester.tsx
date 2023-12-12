@@ -1,17 +1,20 @@
 import partition from "lodash/partition";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 import { NumberBadge } from "components/ui/NumberBadge";
+import { Pre } from "components/ui/Pre";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { CommonRequestError } from "core/api";
+import { KnownExceptionInfo } from "core/api/types/ConnectorBuilderClient";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
@@ -35,6 +38,7 @@ export const StreamTester: React.FC<{
     resolvedManifest,
     isResolving,
     resolveErrorMessage,
+    resolveError,
     streamRead: {
       data: streamReadData,
       refetch: readStream,
@@ -58,14 +62,14 @@ export const StreamTester: React.FC<{
 
   const analyticsService = useAnalyticsService();
 
-  const [logsFlex, setLogsFlex] = useState(0);
-
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const errorMessage = isError
     ? error instanceof Error
       ? error.message || unknownErrorMessage
       : unknownErrorMessage
     : undefined;
+
+  const errorExceptionStack = (resolveError as CommonRequestError<KnownExceptionInfo>)?.payload?.exceptionStack;
 
   const [errorLogs, nonErrorLogs] = useMemo(
     () =>
@@ -75,13 +79,13 @@ export const StreamTester: React.FC<{
     [streamReadData]
   );
 
-  useEffect(() => {
-    if (isError || errorLogs.length > 0) {
-      setLogsFlex(0.75);
-    } else {
-      setLogsFlex(0);
-    }
-  }, [isError, errorLogs]);
+  const hasAuxiliaryRequests = auxiliaryRequests && auxiliaryRequests.length > 0;
+  const hasRegularRequests =
+    streamReadData !== undefined && !isError && streamReadData.slices && streamReadData.slices.length > 0;
+
+  const SECONDARY_PANEL_SIZE = 0.5;
+  const logsFlex = isError || errorLogs.length > 0 ? SECONDARY_PANEL_SIZE : 0;
+  const auxiliaryRequestsFlex = hasAuxiliaryRequests && !hasRegularRequests ? SECONDARY_PANEL_SIZE : 0;
 
   useEffect(() => {
     // This will only be true if the data was manually refetched by the user clicking the Test button,
@@ -140,9 +144,14 @@ export const StreamTester: React.FC<{
       {resolveErrorMessage !== undefined && (
         <div className={styles.listErrorDisplay}>
           <Text>
-            <FormattedMessage id="connectorBuilder.couldNotDetectStreams" />
+            <FormattedMessage id="connectorBuilder.couldNotValidateConnectorSpec" />
           </Text>
           <Text bold>{resolveErrorMessage}</Text>
+          {errorExceptionStack && (
+            <Collapsible label={formatMessage({ id: "connectorBuilder.tracebackLabel" })} className={styles.traceback}>
+              <Pre longLines>{errorExceptionStack}</Pre>
+            </Collapsible>
+          )}
           <Text>
             <FormattedMessage
               id="connectorBuilder.ensureProperYaml"
@@ -180,12 +189,9 @@ export const StreamTester: React.FC<{
             {
               children: (
                 <>
-                  {streamReadData !== undefined &&
-                    !isError &&
-                    streamReadData.slices &&
-                    streamReadData.slices.length > 0 && (
-                      <ResultDisplay slices={streamReadData.slices} inferredSchema={streamReadData.inferred_schema} />
-                    )}
+                  {hasRegularRequests && (
+                    <ResultDisplay slices={streamReadData.slices} inferredSchema={streamReadData.inferred_schema} />
+                  )}
                 </>
               ),
               minWidth: 40,
@@ -196,17 +202,23 @@ export const StreamTester: React.FC<{
                     children: <LogsDisplay logs={streamReadData?.logs ?? []} error={errorMessage} />,
                     minWidth: 0,
                     flex: logsFlex,
-                    splitter: <Splitter label="Connector Logs" num={nonErrorLogs.length} errorNum={errorLogs.length} />,
+                    splitter: (
+                      <Splitter
+                        label={formatMessage({ id: "connectorBuilder.connectorLogs" })}
+                        num={nonErrorLogs.length}
+                        errorNum={errorLogs.length}
+                      />
+                    ),
                     className: styles.secondaryPanel,
                   },
                 ]
               : []),
-            ...(auxiliaryRequests && auxiliaryRequests.length > 0
+            ...(hasAuxiliaryRequests
               ? [
                   {
                     children: <GlobalRequestsDisplay requests={auxiliaryRequests} />,
                     minWidth: 0,
-                    flex: 0,
+                    flex: auxiliaryRequestsFlex,
                     splitter: (
                       <Splitter
                         label={formatMessage({ id: "connectorBuilder.auxiliaryRequests" })}

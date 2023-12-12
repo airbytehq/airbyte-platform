@@ -6,16 +6,18 @@ package io.airbyte.workers.process;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.temporal.sync.OrchestratorConstants;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.storage.CloudStorageConfigs;
 import io.airbyte.config.storage.MinioS3ClientFactory;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.storage.S3DocumentStoreClient;
+import io.airbyte.workers.sync.OrchestratorConstants;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -51,7 +53,7 @@ class AsyncOrchestratorPodProcessIntegrationTest {
 
     final var minioContainer = new ContainerBuilder()
         .withName("minio")
-        .withImage("minio/minio:latest")
+        .withImage("minio/minio:RELEASE.2023-11-15T20-43-25Z")
         .withArgs("server", "/home/shared")
         .withEnv(
             new EnvVar("MINIO_ACCESS_KEY", "minio", null),
@@ -116,11 +118,13 @@ class AsyncOrchestratorPodProcessIntegrationTest {
         null,
         null,
         null,
-        Map.of(EnvVariableFeatureFlags.USE_STREAM_CAPABLE_STATE, "true", EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA, "true"),
+        Map.of(EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA, "true"),
         Map.of("k8s.io/example", "true"),
         serverPort,
         "airbyte-admin",
-        null);
+        null,
+        mock(MetricClient.class),
+        "test");
 
     final Map<Integer, Integer> portMap = Map.of(
         serverPort, serverPort,

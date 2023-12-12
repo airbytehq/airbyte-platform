@@ -1,5 +1,6 @@
 import React, { PropsWithChildren, Suspense, useMemo } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { createSearchParams, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { useEffectOnce } from "react-use";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
@@ -10,6 +11,7 @@ import { usePrefetchCloudWorkspaceData } from "core/api/cloud";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
 import { useAuthService } from "core/services/auth";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
+import { storeUtmFromQuery } from "core/utils/utmStorage";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
@@ -20,7 +22,6 @@ import { CloudRoutes } from "./cloudRoutePaths";
 import { LDExperimentServiceProvider } from "./services/thirdParty/launchdarkly";
 import { SSOBookmarkPage } from "./views/auth/SSOBookmarkPage";
 import { SSOIdentifierPage } from "./views/auth/SSOIdentifierPage";
-import { SSOPageGuard } from "./views/auth/SSOPageGuard";
 import { FirebaseActionRoute } from "./views/FirebaseActionRoute";
 
 const LoginPage = React.lazy(() => import("./views/auth/LoginPage"));
@@ -48,9 +49,8 @@ const SelectSourcePage = React.lazy(() => import("pages/source/SelectSourcePage"
 const SourceItemPage = React.lazy(() => import("pages/source/SourceItemPage"));
 const SourceConnectionsPage = React.lazy(() => import("pages/source/SourceConnectionsPage"));
 const SourceSettingsPage = React.lazy(() => import("pages/source/SourceSettingsPage"));
-
+const CloudDefaultView = React.lazy(() => import("./views/CloudDefaultView"));
 const CloudSettingsPage = React.lazy(() => import("./views/settings/CloudSettingsPage"));
-const DefaultView = React.lazy(() => import("./views/DefaultView"));
 
 const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
@@ -97,14 +97,15 @@ const MainRoutes: React.FC = () => {
 };
 
 const CloudMainViewRoutes = () => {
-  const query = useQuery<{ from: string }>();
+  const { loginRedirect } = useQuery<{ loginRedirect: string }>();
+
+  if (loginRedirect) {
+    return <Navigate to={loginRedirect} replace />;
+  }
 
   return (
     <Routes>
       <Route path={RoutePaths.SpeakeasyRedirect} element={<SpeakeasyRedirectPage />} />
-      {[CloudRoutes.Login, CloudRoutes.Signup, CloudRoutes.FirebaseAction].map((r) => (
-        <Route key={r} path={`${r}/*`} element={query.from ? <Navigate to={query.from} replace /> : <DefaultView />} />
-      ))}
       <Route path={RoutePaths.Workspaces} element={<CloudWorkspacesPage />} />
       <Route path={CloudRoutes.AuthFlow} element={<CompleteOauthRequest />} />
       <Route
@@ -117,7 +118,7 @@ const CloudMainViewRoutes = () => {
           </CloudWorkspaceDataPrefetcher>
         }
       />
-      <Route path="*" element={<DefaultView />} />
+      <Route path="*" element={<CloudDefaultView />} />
     </Routes>
   );
 };
@@ -128,10 +129,18 @@ const CloudWorkspaceDataPrefetcher: React.FC<PropsWithChildren<unknown>> = ({ ch
 };
 
 export const Routing: React.FC = () => {
-  const { login, requirePasswordReset } = useAuthService();
-  const { user, inited, providers, loggedOut } = useAuthService();
+  const { user, inited, providers, loggedOut, requirePasswordReset } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
-  const { pathname } = useLocation();
+  const { pathname: originalPathname, search, hash } = useLocation();
+
+  const loginRedirectSearchParam = `${createSearchParams({
+    loginRedirect: `${originalPathname}${search}${hash}`,
+  })}`;
+
+  const loginRedirectTo =
+    loggedOut && (originalPathname === "/" || originalPathname.includes("/settings/account"))
+      ? { pathname: CloudRoutes.Login }
+      : { pathname: CloudRoutes.Login, search: loginRedirectSearchParam };
 
   useBuildUpdateCheck();
 
@@ -149,15 +158,23 @@ export const Routing: React.FC = () => {
   );
 
   const userTraits = useMemo(
-    () => (user ? { providers, email: user.email, isCorporate: isCorporateEmail(user.email) } : {}),
-    [providers, user]
+    () =>
+      user
+        ? { providers, email: user.email, isCorporate: isCorporateEmail(user.email), currentWorkspaceId: workspaceId }
+        : {},
+    [providers, user, workspaceId]
   );
+
+  useEffectOnce(() => {
+    storeUtmFromQuery(search);
+  });
 
   useAnalyticsRegisterValues(analyticsContext);
   useAnalyticsIdentifyUser(user?.userId, userTraits);
 
   if (!inited) {
-    return <LoadingPage />;
+    // Using <LoadingPage /> here causes flickering, because Suspense will immediately render it again
+    return null;
   }
 
   return (
@@ -178,11 +195,9 @@ export const Routing: React.FC = () => {
                   <AuthLayout>
                     <Suspense fallback={<LoadingPage />}>
                       <Routes>
-                        <Route path={CloudRoutes.Sso} element={<SSOPageGuard />}>
-                          <Route path={CloudRoutes.SsoBookmark} element={<SSOBookmarkPage />} />
-                          <Route path={CloudRoutes.Sso} element={<SSOIdentifierPage />} />
-                        </Route>
-                        {login && <Route path={CloudRoutes.Login} element={<LoginPage login={login} />} />}
+                        <Route path={CloudRoutes.SsoBookmark} element={<SSOBookmarkPage />} />
+                        <Route path={CloudRoutes.Sso} element={<SSOIdentifierPage />} />
+                        <Route path={CloudRoutes.Login} element={<LoginPage />} />
                         <Route path={CloudRoutes.Signup} element={<SignupPage />} />
                         {requirePasswordReset && (
                           <Route
@@ -191,16 +206,7 @@ export const Routing: React.FC = () => {
                           />
                         )}
                         {/* In case a not logged in user tries to access anything else navigate them to login */}
-                        <Route
-                          path="*"
-                          element={
-                            <Navigate
-                              to={`${CloudRoutes.Login}${
-                                loggedOut && pathname.includes("/settings/account") ? "" : `?from=${pathname}`
-                              }`}
-                            />
-                          }
-                        />
+                        <Route path="*" element={<Navigate to={loginRedirectTo} />} />
                       </Routes>
                     </Suspense>
                   </AuthLayout>

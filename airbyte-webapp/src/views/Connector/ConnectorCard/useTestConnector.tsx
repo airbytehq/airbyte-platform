@@ -1,10 +1,9 @@
 import { useEffect, useRef } from "react";
 
-import { useCurrentWorkspace } from "core/api";
+import { ConnectorCheckParams, useCurrentWorkspace, useCheckConnector } from "core/api";
+import { CheckConnectionRead } from "core/api/types/AirbyteClient";
 import { ConnectorHelper } from "core/domain/connector";
 import { ConnectorT } from "core/domain/connector/types";
-import { CheckConnectionRead } from "core/request/AirbyteClient";
-import { CheckConnectorParams, useCheckConnector } from "hooks/services/useConnector";
 
 import { ConnectorCardValues } from "../ConnectorForm";
 
@@ -51,30 +50,33 @@ export const useTestConnector = (
 
       abortControllerRef.current = controller;
 
-      let payload: CheckConnectorParams | null = null;
+      let payload: ConnectorCheckParams | null = null;
 
       if (props.isEditMode) {
         // When we are editing current connector
         if (values) {
           payload = {
+            type: "modify",
             connectionConfiguration: values.connectionConfiguration,
             name: values.name,
-            selectedConnectorId: ConnectorHelper.id(props.connector),
+            connectorId: ConnectorHelper.id(props.connector),
             signal: controller.signal,
           };
         } else {
           // just testing current connection
           payload = {
-            selectedConnectorId: ConnectorHelper.id(props.connector),
+            type: "retest",
+            connectorId: ConnectorHelper.id(props.connector),
             signal: controller.signal,
           };
         }
       } else if (values) {
         // creating new connection
         payload = {
+          type: "create",
           connectionConfiguration: values.connectionConfiguration,
           signal: controller.signal,
-          selectedConnectorDefinitionId: values.serviceType,
+          connectorDefinitionId: values.serviceType,
           workspaceId: workspace.workspaceId,
         };
       }

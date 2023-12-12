@@ -12,6 +12,7 @@ import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.NormalizationSummary;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
@@ -34,7 +35,8 @@ public class NormalizationLauncherWorker extends LauncherWorker<NormalizationInp
                                      final WorkerConfigs workerConfigs,
                                      final ContainerOrchestratorConfig containerOrchestratorConfig,
                                      final Integer serverPort,
-                                     final FeatureFlagClient featureFlagClient) {
+                                     final FeatureFlagClient featureFlagClient,
+                                     final MetricClient metricClient) {
     super(
         connectionId,
         workspaceId,
@@ -51,13 +53,19 @@ public class NormalizationLauncherWorker extends LauncherWorker<NormalizationInp
         featureFlagClient,
         // Normalization process will happen only on a fixed set of connectors,
         // thus they are not going to be run under custom connectors. Setting this to false.
-        false);
+        false,
+        metricClient);
 
   }
 
   @Override
   protected Map<String, String> generateCustomMetadataLabels() {
     return Map.of(SYNC_STEP_KEY, ORCHESTRATOR_NORMALIZATION_STEP);
+  }
+
+  @Override
+  protected String getLauncherType() {
+    return "Normalization";
   }
 
 }

@@ -3,7 +3,7 @@ import { useContext, useState, createContext, useCallback } from "react";
 import { useIntl } from "react-intl";
 import { useAsyncFn } from "react-use";
 
-import { useGetConnection, useGetConnectionQuery, useUpdateConnection } from "core/api";
+import { SchemaError, useGetConnection, useGetConnectionQuery, useUpdateConnection } from "core/api";
 import {
   AirbyteCatalog,
   ConnectionStatus,
@@ -12,8 +12,7 @@ import {
 } from "core/api/types/AirbyteClient";
 
 import { ConnectionFormServiceProvider } from "../ConnectionForm/ConnectionFormService";
-import { useNotificationService } from "../Notification/NotificationService";
-import { SchemaError } from "../useSourceHook";
+import { useNotificationService } from "../Notification";
 
 interface ConnectionEditProps {
   connectionId: string;
@@ -123,7 +122,6 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
     discardRefreshedSchema,
   };
 };
-
 const ConnectionEditContext = createContext<Omit<ConnectionEditHook, "refreshSchema" | "schemaError"> | null>(null);
 
 export const ConnectionEditServiceProvider: React.FC<React.PropsWithChildren<ConnectionEditProps>> = ({

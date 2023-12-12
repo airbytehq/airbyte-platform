@@ -1,62 +1,91 @@
-import { useState } from "react";
+import classNames from "classnames";
+import path from "path-browserify";
+import React, { useEffect, useMemo, useRef } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
 import { useUpdateEffect } from "react-use";
-import { match } from "ts-pattern";
 
 import { LoadingPage } from "components";
-import { Box } from "components/ui/Box";
+import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
+import { ExternalLink } from "components/ui/Link";
 import { Markdown } from "components/ui/Markdown";
-import { Tabs } from "components/ui/Tabs";
-import { ButtonTab } from "components/ui/Tabs/ButtonTab";
 
-import { isSourceDefinition } from "core/domain/connector/source";
+import {
+  GITHUB_DOCS_DESTINATIONS_URL,
+  GITHUB_DOCS_SOURCES_URL,
+  LOCAL_DOCS_DESTINATIONS_PATH,
+  LOCAL_DOCS_SOURCES_PATH,
+  REMOTE_DOCS_DESTINATIONS_URL,
+  REMOTE_DOCS_SOURCES_URL,
+  useConnectorDocumentation,
+} from "core/api";
 import { isCloudApp } from "core/utils/app";
-import { links } from "core/utils/links";
-import { useExperiment } from "hooks/services/Experiment";
-import { EMBEDDED_DOCS_PATH, useDocumentation } from "hooks/services/useDocumentation";
+import { isDevelopment } from "core/utils/isDevelopment";
+import { useGetActorIdFromParams } from "core/utils/useGetActorIdFromParams";
 import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 
 import styles from "./DocumentationPanel.module.scss";
-import { ResourceNotAvailable } from "./ResourceNotAvailable";
 
 const OSS_ENV_MARKERS = /<!-- env:oss -->([\s\S]*?)<!-- \/env:oss -->/gm;
 const CLOUD_ENV_MARKERS = /<!-- env:cloud -->([\s\S]*?)<!-- \/env:cloud -->/gm;
 
 export const prepareMarkdown = (markdown: string, env: "oss" | "cloud"): string => {
-  return env === "oss" ? markdown.replaceAll(CLOUD_ENV_MARKERS, "") : markdown.replaceAll(OSS_ENV_MARKERS, "");
-};
-type TabsType = "setupGuide" | "schema" | "erd";
+  // Remove any empty lines between <FieldAnchor> tags and their content, as this causes
+  // the content to be rendered as a raw string unless it contains a list, for reasons
+  // unknown.
+  const preprocessed = markdown.replace(/(<FieldAnchor.*?>)\n{2,}/g, "$1\n");
 
-const ImgRelativePathReplacer: React.FC<React.ImgHTMLAttributes<HTMLImageElement>> = ({ src, alt, ...props }) => {
-  const newSrc = src && src.startsWith("../../") ? src.replace("../../", `${EMBEDDED_DOCS_PATH}/`) : src;
+  return env === "oss" ? preprocessed.replaceAll(CLOUD_ENV_MARKERS, "") : preprocessed.replaceAll(OSS_ENV_MARKERS, "");
+};
+
+const ImgRelativePathReplacer: React.FC<
+  React.ImgHTMLAttributes<HTMLImageElement> & { actorType?: "source" | "destination" }
+> = ({ src, alt, actorType, ...props }) => {
+  const isDev = isDevelopment();
+  let newSrc: string | undefined;
+
+  if (src === undefined || actorType === undefined) {
+    newSrc = src;
+  } else if (src.startsWith("../")) {
+    if (isDev) {
+      newSrc =
+        actorType === "source" ? path.join(LOCAL_DOCS_SOURCES_PATH, src) : path.join(LOCAL_DOCS_DESTINATIONS_PATH, src);
+    } else {
+      const url =
+        actorType === "source" ? new URL(src, GITHUB_DOCS_SOURCES_URL) : new URL(src, GITHUB_DOCS_DESTINATIONS_URL);
+      newSrc = url.toString();
+    }
+  } else {
+    newSrc = src;
+  }
+
   return <img src={newSrc} alt={alt} {...props} />;
 };
 
-const LinkRelativePathReplacer: React.FC<React.AnchorHTMLAttributes<HTMLAnchorElement>> = ({
-  href,
-  children,
-  ...props
-}) => {
-  // Relative URLs pointing to another place within the documentation.
-  if (href && href.startsWith("../../")) {
-    // In links replace with a link to the external documentation instead
-    // The external path is the markdown URL without the "../../" prefix and the .md extension
-    const docPath = href.replace(/^\.\.\/\.\.\/(.*?)(\.md)?$/, "$1");
-    const docLink = `${links.docsLink}/${docPath}`;
-    return (
-      <a {...props} href={docLink} target="_blank" rel="noreferrer">
-        {children}
-      </a>
-    );
-  } else if (href && href.startsWith("#")) {
+const LinkRelativePathReplacer: React.FC<
+  React.AnchorHTMLAttributes<HTMLAnchorElement> & { actorType?: "source" | "destination" }
+> = ({ href, children, actorType, ...props }) => {
+  if (href && href.startsWith("#")) {
     return (
       <a {...props} href={href}>
         {children}
       </a>
     );
+  } else if (href && href.startsWith("../")) {
+    const docPath = href.replace(/\.md$/, "");
+    const url =
+      actorType === "source"
+        ? new URL(docPath, REMOTE_DOCS_SOURCES_URL)
+        : new URL(docPath, REMOTE_DOCS_DESTINATIONS_URL);
+    return (
+      <a {...props} href={url.toString()} target="_blank" rel="noreferrer">
+        {children}
+      </a>
+    );
   }
-
   return (
     <a {...props} href={href} target="_blank" rel="noreferrer">
       {children}
@@ -64,19 +93,46 @@ const LinkRelativePathReplacer: React.FC<React.AnchorHTMLAttributes<HTMLAnchorEl
   );
 };
 
+const FieldAnchor: React.FC<React.PropsWithChildren<{ field: string }>> = ({ field, children }) => {
+  if (field === "username,password") {
+    console.log(children);
+  }
+  const ref = useRef<HTMLDivElement>(null);
+  const { focusedField } = useDocumentationPanelContext();
+  const isFieldFocused = field
+    .split(",")
+    .some((currentField) => focusedField === `connectionConfiguration.${currentField.trim()}`);
+
+  useEffect(() => {
+    if (isFieldFocused && ref.current) {
+      ref.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [isFieldFocused]);
+
+  return (
+    <div ref={ref} className={classNames(styles.focusable, { [styles["focusable--focused"]]: isFieldFocused })}>
+      {children}
+    </div>
+  );
+};
+
 export const DocumentationPanel: React.FC = () => {
   const { formatMessage } = useIntl();
-  const { setDocumentationPanelOpen, documentationUrl, selectedConnectorDefinition } = useDocumentationPanelContext();
-  const sourceType =
-    selectedConnectorDefinition &&
-    "sourceType" in selectedConnectorDefinition &&
-    selectedConnectorDefinition.sourceType;
-  const { supportLevel } = selectedConnectorDefinition || {};
-  const showRequestSchemaButton = useExperiment("connector.showRequestSchemabutton", false) && sourceType === "api";
-  const [isSchemaRequested, setIsSchemaRequested] = useState(false);
-  const [isERDRequested, setIsERDRequested] = useState(false);
+  const { setDocumentationPanelOpen, selectedConnectorDefinition } = useDocumentationPanelContext();
+  const actorId = useGetActorIdFromParams();
+  const { type: actorType, defId: actorDefinitionId } = selectedConnectorDefinition
+    ? "sourceDefinitionId" in selectedConnectorDefinition
+      ? { type: "source" as const, defId: selectedConnectorDefinition.sourceDefinitionId }
+      : { type: "destination" as const, defId: selectedConnectorDefinition.destinationDefinitionId }
+    : { type: undefined, defId: undefined };
 
-  const { data: docs, isLoading, error } = useDocumentation(documentationUrl, supportLevel);
+  const { data, isLoading, error } = useConnectorDocumentation(
+    actorType,
+    actorDefinitionId,
+    actorId,
+    selectedConnectorDefinition?.documentationUrl
+  );
+  const doc = data?.doc;
 
   const location = useLocation();
 
@@ -84,78 +140,51 @@ export const DocumentationPanel: React.FC = () => {
     setDocumentationPanelOpen(false);
   }, [setDocumentationPanelOpen, location.pathname, location.search]);
 
-  const [activeTab, setActiveTab] = useState<TabsType>("setupGuide");
-  const tabs: Array<{ id: TabsType; name: JSX.Element }> = [
-    {
-      id: "setupGuide",
-      name: <FormattedMessage id="sources.documentationPanel.tabs.setupGuide" />,
-    },
-    {
-      id: "schema",
-      name: <FormattedMessage id="sources.documentationPanel.tabs.schema" />,
-    },
-    {
-      id: "erd",
-      name: <FormattedMessage id="sources.documentationPanel.tabs.erd" />,
-    },
-  ];
+  const docsContent = useMemo(
+    () =>
+      doc && !error
+        ? prepareMarkdown(doc, isCloudApp() ? "cloud" : "oss")
+        : formatMessage({ id: "connector.setupGuide.notFound" }),
+    [doc, error, formatMessage]
+  );
 
-  return isLoading || documentationUrl === "" ? (
+  const markdownOptions = useMemo(() => {
+    return {
+      overrides: {
+        img: {
+          component: ImgRelativePathReplacer,
+          props: {
+            actorType,
+          },
+        },
+        a: {
+          component: LinkRelativePathReplacer,
+          props: {
+            actorType,
+          },
+        },
+        FieldAnchor: {
+          component: FieldAnchor,
+        },
+      },
+    };
+  }, [actorType]);
+
+  return isLoading || !selectedConnectorDefinition?.documentationUrl ? (
     <LoadingPage />
   ) : (
-    <div className={styles.container}>
-      {selectedConnectorDefinition && isSourceDefinition(selectedConnectorDefinition) && showRequestSchemaButton && (
-        <Box pt="md" pl="lg">
-          <Tabs>
-            {tabs.map((tabItem) => {
-              return (
-                <ButtonTab
-                  id={tabItem.id}
-                  key={tabItem.id}
-                  name={tabItem.name}
-                  isActive={activeTab === tabItem.id}
-                  onSelect={(val) => {
-                    setActiveTab(val as TabsType);
-                  }}
-                />
-              );
-            })}
-          </Tabs>
-        </Box>
-      )}
-
-      {match(activeTab)
-        .with("setupGuide", () => (
-          <Markdown
-            className={styles.content}
-            content={
-              docs && !error
-                ? prepareMarkdown(docs, isCloudApp() ? "cloud" : "oss")
-                : formatMessage({ id: "connector.setupGuide.notFound" })
-            }
-            options={{
-              overrides: {
-                img: {
-                  component: ImgRelativePathReplacer,
-                },
-                a: {
-                  component: LinkRelativePathReplacer,
-                },
-              },
-            }}
-          />
-        ))
-        .with("schema", () => (
-          <ResourceNotAvailable
-            activeTab="schema"
-            setRequested={setIsSchemaRequested}
-            isRequested={isSchemaRequested}
-          />
-        ))
-        .with("erd", () => (
-          <ResourceNotAvailable activeTab="erd" setRequested={setIsERDRequested} isRequested={isERDRequested} />
-        ))
-        .exhaustive()}
-    </div>
+    <FlexContainer className={styles.container} direction="column" gap="none">
+      <FlexContainer alignItems="center" className={styles.header} justifyContent="space-between">
+        <Heading as="h1">
+          <FormattedMessage id="connector.setupGuide" />
+        </Heading>
+        <ExternalLink href={selectedConnectorDefinition.documentationUrl}>
+          <Button variant="secondary" icon={<Icon type="share" />}>
+            <FormattedMessage id="connector.setupGuide.fullDocs" />
+          </Button>
+        </ExternalLink>
+      </FlexContainer>
+      <Markdown className={styles.content} content={docsContent} options={markdownOptions} />
+    </FlexContainer>
   );
 };

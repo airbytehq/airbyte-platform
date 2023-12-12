@@ -7,7 +7,6 @@ package io.airbyte.oauth.flows.google;
 import io.airbyte.oauth.BaseOAuthFlow;
 import io.airbyte.oauth.flows.BaseOAuthFlowTest;
 
-@SuppressWarnings("MissingJavadocType")
 public class GoogleAnalyticsOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override

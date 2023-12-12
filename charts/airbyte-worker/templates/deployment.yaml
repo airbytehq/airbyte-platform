@@ -96,6 +96,11 @@ spec:
             secretKeyRef:
               name: {{ .Release.Name }}-airbyte-secrets
               key: DATABASE_USER
+        - name: SEGMENT_WRITE_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: SEGMENT_WRITE_KEY
         - name: TRACKING_STRATEGY
           valueFrom:
             configMapKeyRef:
@@ -293,6 +298,16 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: INTERNAL_API_HOST
+        - name: WORKLOAD_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKLOAD_API_HOST
+        - name: WORKLOAD_API_BEARER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ index .Values "workloadApi" "bearerTokenSecretName" | default (printf "%s-airbyte-secrets" .Release.Name ) }}
+              key: {{ index .Values "workloadApi" "bearerTokenSecretKey" | default "WORKLOAD_API_BEARER_TOKEN" }}
         - name: CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
           valueFrom:
             configMapKeyRef:
@@ -338,11 +353,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: AUTO_DETECT_SCHEMA
-        - name: USE_STREAM_CAPABLE_STATE
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: USE_STREAM_CAPABLE_STATE
         - name: SHOULD_RUN_NOTIFY_WORKFLOWS
           valueFrom:
             configMapKeyRef:

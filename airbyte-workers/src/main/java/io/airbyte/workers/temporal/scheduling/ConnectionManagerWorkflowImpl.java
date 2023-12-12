@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.temporal.TemporalWorkflowUtils;
+import io.airbyte.commons.temporal.annotations.TemporalActivityStub;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.temporal.scheduling.CheckConnectionWorkflow;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
@@ -38,9 +39,9 @@ import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.helper.FailureHelper;
+import io.airbyte.workers.helpers.ContextConversionHelper;
 import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.SyncJobCheckConnectionInputs;
-import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity.LogInput;
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity.LogLevel;
@@ -111,16 +112,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
   private static final String GENERATE_CHECK_INPUT_TAG = "generate_check_input";
   private static final String SYNC_TASK_QUEUE_ROUTE_RENAME_TAG = "sync_task_queue_route_rename";
-  private static final String CHECK_RUN_PROGRESS_TAG = "check_run_progress";
-  private static final String NEW_RETRIES_TAG = "new_retries";
-  private static final String APPEND_ATTEMPT_LOG_TAG = "append_attempt_log";
-  private static final String DONT_FAIL_FOR_BACKOFF_SCHEDULE_CONFLICT_TAG = "dont_fail_for_backoff_schedule_conflict";
   private static final int GENERATE_CHECK_INPUT_CURRENT_VERSION = 1;
   private static final int SYNC_TASK_QUEUE_ROUTE_RENAME_CURRENT_VERSION = 1;
-  private static final int CHECK_RUN_PROGRESS_VERSION = 1;
-  private static final int NEW_RETRIES_VERSION = 1;
-  private static final int APPEND_ATTEMPT_LOG_VERSION = 1;
-  private static final int DONT_FAIL_FOR_BACKOFF_SCHEDULE_CONFLICT_VERSION = 1;
 
   private final WorkflowState workflowState = new WorkflowState(UUID.randomUUID(), new NoopStateListener());
 
@@ -244,7 +237,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       final Duration timeToWait;
       if (connectionUpdaterInput.isFromFailure()) {
         // note this can fail the job if the backoff is longer than scheduled time to wait
-        timeToWait = resolveBackoff(connectionUpdaterInput, timeTilScheduledRun);
+        timeToWait = resolveBackoff();
       } else {
         timeToWait = timeTilScheduledRun;
       }
@@ -468,15 +461,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     return retryManager.shouldRetry();
   }
 
-  private boolean shouldCheckRunProgress() {
-    final int version = Workflow.getVersion(CHECK_RUN_PROGRESS_TAG, Workflow.DEFAULT_VERSION, CHECK_RUN_PROGRESS_VERSION);
-    return version >= CHECK_RUN_PROGRESS_VERSION;
-  }
-
   private boolean checkRunProgress() {
-    if (!shouldCheckRunProgress()) {
-      return false;
-    }
 
     // we don't use `runMandatoryActivity` to prevent an infinite loop (reportFailure ->
     // runMandatoryActivity -> reportFailure...)
@@ -514,12 +499,14 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     final StandardCheckConnectionInput standardCheckInputSource = new StandardCheckConnectionInput()
         .withActorType(ActorType.SOURCE)
         .withActorId(syncInput.getSourceId())
-        .withConnectionConfiguration(sourceConfig);
+        .withConnectionConfiguration(sourceConfig)
+        .withActorContext(ContextConversionHelper.connectionContextToSourceContext(syncInput.getConnectionContext()));
 
     final StandardCheckConnectionInput standardCheckInputDestination = new StandardCheckConnectionInput()
         .withActorType(ActorType.DESTINATION)
         .withActorId(syncInput.getDestinationId())
-        .withConnectionConfiguration(destinationConfig);
+        .withConnectionConfiguration(destinationConfig)
+        .withActorContext(ContextConversionHelper.connectionContextToDestinationContext(syncInput.getConnectionContext()));
 
     return new SyncJobCheckConnectionInputs(
         sourceLauncherConfig,
@@ -562,7 +549,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
           .withActorType(ActorType.SOURCE)
           .withActorId(checkInputs.getSourceCheckConnectionInput().getActorId())
           .withConnectionConfiguration(checkInputs.getSourceCheckConnectionInput().getConnectionConfiguration())
-          .withResourceRequirements(checkInputs.getSourceCheckConnectionInput().getResourceRequirements()));
+          .withResourceRequirements(checkInputs.getSourceCheckConnectionInput().getResourceRequirements())
+          .withActorContext(ContextConversionHelper.buildSourceContextFrom(jobInputs, checkInputs)));
 
       if (SyncCheckConnectionResult.isOutputFailed(sourceCheckResponse)) {
         checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.SOURCE);
@@ -582,7 +570,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
           new StandardCheckConnectionInput()
               .withActorType(ActorType.DESTINATION)
               .withActorId(checkInputs.getDestinationCheckConnectionInput().getActorId())
-              .withConnectionConfiguration(checkInputs.getDestinationCheckConnectionInput().getConnectionConfiguration()));
+              .withConnectionConfiguration(checkInputs.getDestinationCheckConnectionInput().getConnectionConfiguration())
+              .withActorContext(ContextConversionHelper.buildDestinationContextFrom(jobInputs, checkInputs)));
       if (SyncCheckConnectionResult.isOutputFailed(destinationCheckResponse)) {
         checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.DESTINATION);
         checkConnectionResult.setFailureOutput(destinationCheckResponse);
@@ -1084,46 +1073,19 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId));
   }
 
-  private boolean isBeforeNewRetriesVersion() {
-    final int version = Workflow.getVersion(NEW_RETRIES_TAG, Workflow.DEFAULT_VERSION, NEW_RETRIES_VERSION);
-    return version < NEW_RETRIES_VERSION;
-  }
-
   private boolean useAttemptCountRetries() {
     // the manager can be null if
     // - the activity failed unexpectedly
-    // - we haven't enabled the rollout flag yet
     // in which case we fall back to simple attempt count retries (attempt count < 3)
-    if (retryManager == null) {
-      return true;
-    }
-
-    return isBeforeNewRetriesVersion();
+    return retryManager == null;
   }
 
-  private boolean isBeforeDontFailForBackoffScheduleConflictVersion() {
-    final int version =
-        Workflow.getVersion(DONT_FAIL_FOR_BACKOFF_SCHEDULE_CONFLICT_TAG, Workflow.DEFAULT_VERSION, DONT_FAIL_FOR_BACKOFF_SCHEDULE_CONFLICT_VERSION);
-    return version < DONT_FAIL_FOR_BACKOFF_SCHEDULE_CONFLICT_VERSION;
-  }
-
-  private Duration resolveBackoff(final ConnectionUpdaterInput input, final Duration timeTilScheduledRun) {
+  private Duration resolveBackoff() {
     if (useAttemptCountRetries()) {
       return Duration.ZERO;
     }
 
     final Duration backoff = retryManager.getBackoff();
-
-    if (isBeforeDontFailForBackoffScheduleConflictVersion()) {
-      // Backoff goes beyond next scheduled run time, so we fail the attempt and let the connection resume
-      // with the next job.
-      if (backoff.compareTo(timeTilScheduledRun) >= 0) {
-        failJob(input, "Retry backoff period is longer than time until the next schedule run.");
-        resetNewConnectionInput(input);
-        prepareForNextRunAndContinueAsNew(input);
-        return Duration.ZERO; // unreachable
-      }
-    }
 
     runAppendToAttemptLogActivity(String.format("Backing off for: %s.", retryManager.getBackoffString()), LogLevel.WARN);
 
@@ -1131,10 +1093,6 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   }
 
   private RetryManager hydrateRetryManager() {
-    if (isBeforeNewRetriesVersion()) {
-      return null;
-    }
-
     final var result = runActivityWithFallback(
         retryStatePersistenceActivity::hydrateRetryState,
         new HydrateInput(workflowInternalState.getJobId(), connectionId),
@@ -1218,16 +1176,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     hydrateIdsFromPreviousRun(input, workflowInternalState);
   }
 
-  private boolean isBeforeAttemptLogVersion() {
-    final int version = Workflow.getVersion(APPEND_ATTEMPT_LOG_TAG, Workflow.DEFAULT_VERSION, APPEND_ATTEMPT_LOG_VERSION);
-    return version < APPEND_ATTEMPT_LOG_VERSION;
-  }
-
   private boolean runAppendToAttemptLogActivity(final String logMsg, final LogLevel level) {
-    if (isBeforeAttemptLogVersion()) {
-      return false;
-    }
-
     final var result = runActivityWithFallback(
         appendToAttemptLogActivity::log,
         new LogInput(workflowInternalState.getJobId(), workflowInternalState.getAttemptNumber(), logMsg, level),

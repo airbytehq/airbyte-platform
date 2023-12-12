@@ -1,18 +1,12 @@
-import { FormikErrors, getIn } from "formik";
-import React, { memo, useCallback, useMemo } from "react";
+import get from "lodash/get";
+import set from "lodash/set";
+import React, { useCallback, useMemo } from "react";
+import { FieldErrors } from "react-hook-form";
 import { useToggle } from "react-use";
 
-import { ConnectionFormValues, SUPPORTED_MODES } from "components/connection/ConnectionForm/formConfig";
-import { DropDownOptionDataItem } from "components/ui/DropDown";
-
-import { SyncSchemaField, SyncSchemaFieldObject, SyncSchemaStream } from "core/domain/catalog";
+import { AirbyteStreamConfiguration, DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
+import { SyncSchemaField, SyncSchemaFieldObject } from "core/domain/catalog";
 import { traverseSchemaToField } from "core/domain/catalog/traverseSchemaToField";
-import {
-  AirbyteStreamConfiguration,
-  DestinationSyncMode,
-  NamespaceDefinitionType,
-  SyncMode,
-} from "core/request/AirbyteClient";
 import { naturalComparatorBy } from "core/utils/objects";
 import { useDestinationNamespace } from "hooks/connection/useDestinationNamespace";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -25,27 +19,30 @@ import {
   toggleAllFieldsSelected,
 } from "./streamConfigHelpers";
 import { updateStreamSyncMode } from "./updateStreamSyncMode";
+import { FormConnectionFormValues, SyncStreamFieldWithId, SUPPORTED_MODES } from "../../ConnectionForm/formConfig";
 import { StreamDetailsPanel } from "../StreamDetailsPanel/StreamDetailsPanel";
-import { StreamsConfigTableRow } from "../StreamsConfigTable";
+import { StreamsConfigTableRow } from "../StreamsConfigTable/StreamsConfigTableRow";
 import { SyncModeValue } from "../SyncModeSelect";
 import { flattenSyncSchemaFields, getFieldPathType } from "../utils";
 
-interface SyncCatalogRowProps {
-  streamNode: SyncSchemaStream;
-  errors: FormikErrors<ConnectionFormValues>;
-  namespaceDefinition: NamespaceDefinitionType;
-  namespaceFormat: string;
-  prefix: string;
-  updateStream: (id: string | undefined, newConfiguration: Partial<AirbyteStreamConfiguration>) => void;
+interface SyncCatalogRowProps
+  extends Pick<FormConnectionFormValues, "namespaceDefinition" | "namespaceFormat" | "prefix"> {
+  streamNode: SyncStreamFieldWithId;
+  updateStreamNode: (newStreamNode: SyncStreamFieldWithId) => void;
+  errors: FieldErrors<FormConnectionFormValues>;
 }
 
-const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
+/**
+ * react-hook-form sync catalog row component
+ */
+export const SyncCatalogRow: React.FC<SyncCatalogRowProps & { className?: string }> = ({
   streamNode,
-  updateStream,
+  updateStreamNode,
   namespaceDefinition,
   namespaceFormat,
   prefix,
   errors,
+  className,
 }) => {
   const { stream, config } = streamNode;
 
@@ -67,18 +64,28 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
   const [isStreamDetailsPanelOpened, setIsStreamDetailsPanelOpened] = useToggle(false);
 
   const updateStreamWithConfig = useCallback(
-    (config: Partial<AirbyteStreamConfiguration>) => updateStream(streamNode.id, config),
-    [updateStream, streamNode]
+    (configObj: Partial<AirbyteStreamConfiguration>) => {
+      const updatedStreamNode = set(streamNode, "config", {
+        ...streamNode.config,
+        ...configObj,
+      });
+
+      // config.selectedFields must be removed if fieldSelection is disabled
+      if (!updatedStreamNode.config?.fieldSelectionEnabled) {
+        delete updatedStreamNode.config?.selectedFields;
+      }
+
+      updateStreamNode(updatedStreamNode);
+    },
+    [streamNode, updateStreamNode]
   );
 
   const onSelectSyncMode = useCallback(
-    (data: DropDownOptionDataItem) => {
+    (syncMode: SyncModeValue) => {
       if (!streamNode.config || !streamNode.stream) {
         return;
       }
-      // todo: Remove once new stream table design is released. The old dropdown types data.value as any, hence the cast here.
-      const syncModes = data.value as SyncModeValue;
-      const updatedConfig = updateStreamSyncMode(streamNode.stream, streamNode.config, syncModes);
+      const updatedConfig = updateStreamSyncMode(streamNode.stream, streamNode.config, syncMode);
       updateStreamWithConfig(updatedConfig);
     },
     [streamNode, updateStreamWithConfig]
@@ -149,13 +156,14 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
   const shouldDefinePk = stream?.sourceDefinedPrimaryKey?.length === 0 && pkRequired;
   const shouldDefineCursor = !stream?.sourceDefinedCursor && cursorRequired;
 
-  const availableSyncModes = useMemo(
+  const availableSyncModes: SyncModeValue[] = useMemo(
     () =>
       SUPPORTED_MODES.filter(
         ([syncMode, destinationSyncMode]) =>
           stream?.supportedSyncModes?.includes(syncMode) && supportedDestinationSyncModes?.includes(destinationSyncMode)
       ).map(([syncMode, destinationSyncMode]) => ({
-        value: { syncMode, destinationSyncMode },
+        syncMode,
+        destinationSyncMode,
       })),
     [stream?.supportedSyncModes, supportedDestinationSyncModes]
   );
@@ -176,9 +184,8 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
     [flattenedFields]
   );
 
-  const destName = prefix + (streamNode.stream?.name ?? "");
-  const configErrors = getIn(errors, `syncCatalog.streams[${streamNode.id}].config`);
-  const hasError = configErrors && Object.keys(configErrors).length > 0;
+  const destName = `${prefix ? prefix : ""}${streamNode.stream?.name ?? ""}`;
+  const configErrors = get(errors, `syncCatalog.streams[${stream?.name}_${stream?.namespace}].config`);
   const pkType = getFieldPathType(pkRequired, shouldDefinePk);
   const cursorType = getFieldPathType(cursorRequired, shouldDefineCursor);
   const hasFields = fields?.length > 0;
@@ -200,11 +207,10 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
         onCursorChange={onCursorSelect}
         fields={fields}
         openStreamDetailsPanel={setIsStreamDetailsPanelOpened}
-        hasError={hasError}
         configErrors={configErrors}
         disabled={disabled}
+        className={className}
       />
-
       {isStreamDetailsPanelOpened && hasFields && (
         <StreamDetailsPanel
           config={config}
@@ -228,5 +234,3 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
     </>
   );
 };
-
-export const SyncCatalogRow = memo(SyncCatalogRowInner);

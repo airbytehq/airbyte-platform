@@ -43,7 +43,6 @@ public class JobErrorReportingBeanFactory {
     return new LoggingJobErrorReportingClient();
   }
 
-  @SuppressWarnings("MissingJavadocMethod")
   @Singleton
   public JobErrorReporter jobErrorReporter(
                                            @Value("${airbyte.version}") final String airbyteVersion,

@@ -33,9 +33,9 @@ import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
+import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.persistence.SupportStateUpdater;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -44,6 +44,7 @@ import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
@@ -62,7 +63,7 @@ import java.util.stream.Stream;
  * DestinationDefinitionsHandler. Javadocs suppressed because api docs should be used as source of
  * truth.
  */
-@SuppressWarnings({"PMD.AvoidCatchingNPE", "MissingJavadocMethod", "LineLength"})
+@SuppressWarnings({"PMD.AvoidCatchingNPE", "LineLength"})
 @Singleton
 public class DestinationDefinitionsHandler {
 
@@ -76,7 +77,7 @@ public class DestinationDefinitionsHandler {
 
   @VisibleForTesting
   public DestinationDefinitionsHandler(final ConfigRepository configRepository,
-                                       final Supplier<UUID> uuidSupplier,
+                                       @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
                                        final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
                                        final RemoteDefinitionsProvider remoteDefinitionsProvider,
                                        final DestinationHandler destinationHandler,

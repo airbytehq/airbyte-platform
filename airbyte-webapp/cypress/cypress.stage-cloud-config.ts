@@ -5,6 +5,7 @@ import baseConfig from "./cypress.cloud-config";
 
 export default defineConfig(
   merge({}, baseConfig, {
+    projectId: "8qdqa1",
     e2e: {
       baseUrl: "https://stage-cloud.airbyte.com",
       env: {

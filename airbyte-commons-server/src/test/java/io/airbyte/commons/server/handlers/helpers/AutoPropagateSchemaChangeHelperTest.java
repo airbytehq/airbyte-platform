@@ -7,7 +7,6 @@ package io.airbyte.commons.server.handlers.helpers;
 import static io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.extractStreamAndConfigPerStreamDescriptor;
 import static io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.getUpdatedSchema;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -17,12 +16,12 @@ import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.model.generated.DestinationSyncMode;
+import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.featureflag.AutoPropagateNewStreams;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import java.util.List;
@@ -32,6 +31,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class AutoPropagateSchemaChangeHelperTest {
 
   private static final String NAME1 = "name1";
@@ -143,7 +143,6 @@ class AutoPropagateSchemaChangeHelperTest {
 
   @Test
   void applyAdd() {
-    when(featureFlagClient.boolVariation(eq(AutoPropagateNewStreams.INSTANCE), any())).thenReturn(true);
     final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
     final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
 
@@ -174,7 +173,6 @@ class AutoPropagateSchemaChangeHelperTest {
 
   @Test
   void applyAddWithSourceDefinedCursor() {
-    when(featureFlagClient.boolVariation(eq(AutoPropagateNewStreams.INSTANCE), any())).thenReturn(true);
     final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
     final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
 
@@ -206,7 +204,6 @@ class AutoPropagateSchemaChangeHelperTest {
 
   @Test
   void applyAddWithSourceDefinedCursorNoPrimaryKey() {
-    when(featureFlagClient.boolVariation(eq(AutoPropagateNewStreams.INSTANCE), any())).thenReturn(true);
     final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
     final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
 
@@ -231,7 +228,6 @@ class AutoPropagateSchemaChangeHelperTest {
 
   @Test
   void applyAddWithSourceDefinedCursorNoPrimaryKeyNoFullRefresh() {
-    when(featureFlagClient.boolVariation(eq(AutoPropagateNewStreams.INSTANCE), any())).thenReturn(true);
     final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
     final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
 
@@ -316,6 +312,77 @@ class AutoPropagateSchemaChangeHelperTest {
     Assertions.assertThat(result.getStreams().get(0).getStream().getJsonSchema()).isEqualTo(oldSchema);
   }
 
+  @Test
+  void addStreamFormat() {
+    StreamTransform transform = new StreamTransform()
+        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
+        .streamDescriptor(new StreamDescriptor().name("foo").namespace("bar"));
+    Assertions.assertThat(AutoPropagateSchemaChangeHelper.staticFormatDiff(transform)).isEqualTo("Added new stream 'bar.foo'");
+
+    StreamTransform transformNoNS = new StreamTransform()
+        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
+        .streamDescriptor(new StreamDescriptor().name("foo"));
+    Assertions.assertThat(AutoPropagateSchemaChangeHelper.staticFormatDiff(transformNoNS)).isEqualTo("Added new stream 'foo'");
+  }
+
+  @Test
+  void removeStreamFormat() {
+    StreamTransform transform = new StreamTransform()
+        .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
+        .streamDescriptor(new StreamDescriptor().name("foo").namespace("bar"));
+    Assertions.assertThat(AutoPropagateSchemaChangeHelper.staticFormatDiff(transform)).isEqualTo("Removed stream 'bar.foo'");
+
+    StreamTransform transformNoNS = new StreamTransform()
+        .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
+        .streamDescriptor(new StreamDescriptor().name("foo"));
+    Assertions.assertThat(AutoPropagateSchemaChangeHelper.staticFormatDiff(transformNoNS)).isEqualTo("Removed stream 'foo'");
+  }
+
+  @Test
+  void newColumnInStreamFormat() {
+    StreamTransform transform = new StreamTransform()
+        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+        .streamDescriptor(new StreamDescriptor().name("foo").namespace("bar"))
+        .updateStream(List.of(
+            new FieldTransform().fieldName(List.of("path", "new_field"))
+                .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD),
+            new FieldTransform().fieldName(List.of("path", "other_field"))
+                .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)));
+
+    Assertions.assertThat(AutoPropagateSchemaChangeHelper.staticFormatDiff(transform))
+        .isEqualTo("Modified stream 'bar.foo': Added fields ['path.new_field', 'path.other_field']");
+  }
+
+  @Test
+  void updatedColumnInStreamFormat() {
+    StreamTransform transform = new StreamTransform()
+        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+        .streamDescriptor(new StreamDescriptor().name("foo").namespace("bar"))
+        .updateStream(List.of(
+            new FieldTransform().fieldName(List.of("path", "new_field"))
+                .transformType(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA),
+            new FieldTransform().fieldName(List.of("path", "other_field"))
+                .transformType(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA)));
+
+    Assertions.assertThat(AutoPropagateSchemaChangeHelper.staticFormatDiff(transform))
+        .isEqualTo("Modified stream 'bar.foo': Altered fields ['path.new_field', 'path.other_field']");
+  }
+
+  @Test
+  void removedColumnsInStreamFormat() {
+    StreamTransform transform = new StreamTransform()
+        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+        .streamDescriptor(new StreamDescriptor().name("foo").namespace("bar"))
+        .updateStream(List.of(
+            new FieldTransform().fieldName(List.of("path", "new_field"))
+                .transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD),
+            new FieldTransform().fieldName(List.of("other_field"))
+                .transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD)));
+
+    Assertions.assertThat(AutoPropagateSchemaChangeHelper.staticFormatDiff(transform))
+        .isEqualTo("Modified stream 'bar.foo': Removed fields ['path.new_field', 'other_field']");
+  }
+
   private AirbyteCatalog createAirbyteCatalogWithSchema(final String name, final JsonNode schema) {
     final AirbyteCatalog airbyteCatalog = new AirbyteCatalog();
 
@@ -326,6 +393,27 @@ class AutoPropagateSchemaChangeHelperTest {
     airbyteCatalog.streams(List.of(airbyteStreamConfiguration1));
 
     return airbyteCatalog;
+  }
+
+  @SuppressWarnings("LineLength")
+  @Test
+  void mixedChangesInStreamFormat() {
+    StreamTransform transform = new StreamTransform()
+        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+        .streamDescriptor(new StreamDescriptor().name("foo").namespace("bar"))
+        .updateStream(List.of(
+            new FieldTransform().fieldName(List.of("path", "new_field"))
+                .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD),
+            new FieldTransform().fieldName(List.of("old_field"))
+                .transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD),
+            new FieldTransform().fieldName(List.of("old_path", "deprecated"))
+                .transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD),
+            new FieldTransform().fieldName(List.of("properties", "changed_type"))
+                .transformType(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA)));
+
+    Assertions.assertThat(AutoPropagateSchemaChangeHelper.staticFormatDiff(transform))
+        .isEqualTo(
+            "Modified stream 'bar.foo': Added fields ['path.new_field'], Removed fields ['old_field', 'old_path.deprecated'], Altered fields ['properties.changed_type']");
   }
 
 }

@@ -1,12 +1,11 @@
-import { faExclamationCircle } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classnames from "classnames";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
+import { Icon } from "components/ui/Icon";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { SchemaChange } from "core/request/AirbyteClient";
+import { SchemaChange } from "core/api/types/AirbyteClient";
 import { convertSnakeToCamel } from "core/utils/strings";
 
 import styles from "./ChangesStatusIcon.module.scss";
@@ -28,10 +27,10 @@ export const ChangesStatusIcon: React.FC<ChangesStatusIconProps> = ({ schemaChan
       placement="left"
       containerClassName={styles.tooltipContainer}
       control={
-        <FontAwesomeIcon
+        <Icon
           className={iconStyle}
-          icon={faExclamationCircle}
-          size="2x"
+          type={schemaChange === "breaking" ? "statusWarning" : "infoFilled"}
+          size="lg"
           data-testid={`changesStatusIcon-${schemaChange}`}
         />
       }

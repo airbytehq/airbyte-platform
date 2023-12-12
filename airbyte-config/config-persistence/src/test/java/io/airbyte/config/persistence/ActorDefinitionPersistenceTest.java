@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
@@ -21,6 +20,22 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.HealthCheckServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -44,7 +59,39 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   void setup() throws SQLException {
     truncateAllTables();
 
-    configRepository = spy(new ConfigRepository(database, mock(StandardSyncPersistence.class), MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
+    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
+    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
+    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+
+    configRepository = spy(
+        new ConfigRepository(
+            new ActorDefinitionServiceJooqImpl(database),
+            new CatalogServiceJooqImpl(database),
+            new ConnectionServiceJooqImpl(database),
+            new ConnectorBuilderServiceJooqImpl(database),
+            new DestinationServiceJooqImpl(database,
+                featureFlagClient,
+                secretsRepositoryReader,
+                secretsRepositoryWriter,
+                secretPersistenceConfigService),
+            new HealthCheckServiceJooqImpl(database),
+            new OAuthServiceJooqImpl(database,
+                featureFlagClient,
+                secretsRepositoryReader,
+                secretPersistenceConfigService),
+            new OperationServiceJooqImpl(database),
+            new OrganizationServiceJooqImpl(database),
+            new SourceServiceJooqImpl(database,
+                featureFlagClient,
+                secretsRepositoryReader,
+                secretsRepositoryWriter,
+                secretPersistenceConfigService),
+            new WorkspaceServiceJooqImpl(database,
+                featureFlagClient,
+                secretsRepositoryReader,
+                secretsRepositoryWriter,
+                secretPersistenceConfigService)));
   }
 
   @Test
@@ -106,22 +153,28 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void testGetSourceDefinitionsFromConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardWorkspace workspace = createBaseStandardWorkspace();
+    final StandardDestinationDefinition destDef = createBaseDestDef().withTombstone(false);
+    final ActorDefinitionVersion destActorDefinitionVersion = createBaseActorDefVersion(destDef.getDestinationDefinitionId());
+    final DestinationConnection dest = createDest(destDef.getDestinationDefinitionId(), workspace.getWorkspaceId());
     final StandardSourceDefinition srcDef = createBaseSourceDef().withTombstone(false);
     final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(srcDef.getSourceDefinitionId());
     final SourceConnection source = createSource(srcDef.getSourceDefinitionId(), workspace.getWorkspaceId());
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
     configRepository.writeConnectorMetadata(srcDef, actorDefinitionVersion);
     configRepository.writeSourceConnectionNoSecrets(source);
+    configRepository.writeConnectorMetadata(destDef, destActorDefinitionVersion);
+    configRepository.writeDestinationConnectionNoSecrets(dest);
 
     final UUID connectionId = UUID.randomUUID();
     final StandardSync connection = new StandardSync()
+        .withName("Test Sync")
+        .withDestinationId(dest.getDestinationId())
+        .withConnectionId(connectionId)
         .withSourceId(source.getSourceId())
-        .withConnectionId(connectionId);
+        .withBreakingChange(false)
+        .withGeography(Geography.US);
 
-    // todo (cgardens) - remove this mock and replace with record in db
-    doReturn(connection)
-        .when(configRepository)
-        .getStandardSync(connectionId);
+    configRepository.writeStandardSync(connection);
 
     assertEquals(srcDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
         configRepository.getSourceDefinitionFromConnection(connectionId));
@@ -191,21 +244,27 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   void testGetDestinationDefinitionsFromConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardWorkspace workspace = createBaseStandardWorkspace();
     final StandardDestinationDefinition destDef = createBaseDestDef().withTombstone(false);
+    final StandardSourceDefinition sourceDefinition = createBaseSourceDef().withTombstone(false);
     final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(destDef.getDestinationDefinitionId());
+    final ActorDefinitionVersion sourceActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId());
     final DestinationConnection dest = createDest(destDef.getDestinationDefinitionId(), workspace.getWorkspaceId());
+    final SourceConnection source = createSource(sourceDefinition.getSourceDefinitionId(), workspace.getWorkspaceId());
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
     configRepository.writeConnectorMetadata(destDef, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(sourceDefinition, sourceActorDefinitionVersion);
     configRepository.writeDestinationConnectionNoSecrets(dest);
+    configRepository.writeSourceConnectionNoSecrets(source);
 
     final UUID connectionId = UUID.randomUUID();
     final StandardSync connection = new StandardSync()
+        .withName("Test Sync")
         .withDestinationId(dest.getDestinationId())
-        .withConnectionId(connectionId);
+        .withConnectionId(connectionId)
+        .withSourceId(source.getSourceId())
+        .withBreakingChange(false)
+        .withGeography(Geography.US);
 
-    // todo (cgardens) - remove this mock and replace with record in db
-    doReturn(connection)
-        .when(configRepository)
-        .getStandardSync(connectionId);
+    configRepository.writeStandardSync(connection);
 
     assertEquals(destDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
         configRepository.getDestinationDefinitionFromConnection(connectionId));

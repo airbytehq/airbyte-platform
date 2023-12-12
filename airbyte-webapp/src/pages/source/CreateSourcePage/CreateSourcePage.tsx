@@ -12,12 +12,10 @@ import { Icon } from "components/ui/Icon";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { ConnectionConfiguration } from "area/connector/types";
+import { useSourceDefinitionList, useCreateSource } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
-import { useCreateSource } from "hooks/services/useSourceHook";
-import { SourcePaths } from "pages/routePaths";
-import { RoutePaths } from "pages/routePaths";
-import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
+import { SourcePaths, RoutePaths } from "pages/routePaths";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
 
 import { SourceForm } from "./SourceForm";
@@ -65,27 +63,24 @@ export const CreateSourcePage: React.FC = () => {
   };
 
   return (
-    <>
+    <ConnectorDocumentationWrapper>
       <HeadTitle titles={[{ id: "sources.newSourceTitle" }]} />
       <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
-
-      <ConnectorDocumentationWrapper>
-        <FormPageContent>
-          <FlexContainer justifyContent="flex-start">
-            <Box mb="md">
-              <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
-                <FormattedMessage id="connectorBuilder.backButtonLabel" />
-              </Button>
-            </Box>
-          </FlexContainer>
-          <SourceForm
-            onSubmit={onSubmitSourceStep}
-            sourceDefinitions={sourceDefinitions}
-            selectedSourceDefinitionId={sourceDefinitionId}
-          />
-          <CloudInviteUsersHint connectorType="source" />
-        </FormPageContent>
-      </ConnectorDocumentationWrapper>
-    </>
+      <FormPageContent>
+        <FlexContainer justifyContent="flex-start">
+          <Box mb="md">
+            <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
+              <FormattedMessage id="connectorBuilder.backButtonLabel" />
+            </Button>
+          </Box>
+        </FlexContainer>
+        <SourceForm
+          onSubmit={onSubmitSourceStep}
+          sourceDefinitions={sourceDefinitions}
+          selectedSourceDefinitionId={sourceDefinitionId}
+        />
+        <CloudInviteUsersHint connectorType="source" />
+      </FormPageContent>
+    </ConnectorDocumentationWrapper>
   );
 };

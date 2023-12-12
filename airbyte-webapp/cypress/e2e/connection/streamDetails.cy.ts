@@ -106,6 +106,18 @@ describe("Connection - Stream details", () => {
     });
   });
 
+  describe("column selection", () => {
+    it("disables column selection if a stream is disabled", () => {
+      streamRow.showStreamDetails();
+      streamDetails.disableSyncStream();
+      streamDetails.isSyncStreamDisabled();
+      streamDetails.areFieldsDeselected();
+      streamDetails.close();
+
+      streamRow.isStreamSyncEnabled(false);
+    });
+  });
+
   describe("cursor / primary key", () => {
     const userCarsStreamRow = new StreamRowPageObject("public", "user_cars");
 
@@ -153,8 +165,14 @@ describe("Connection - Stream details", () => {
       columnsStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append);
       columnsStreamRow.showStreamDetails();
 
-      streamDetails.selectCursor("field_49");
-      streamDetails.selectCursor("field_0"); // todo: is this correct?  there cannot be a composite cursor... so we end up with `field_` as the cursor?
+      streamDetails.scrollToBottom().then(() => {
+        streamDetails.selectCursor("field_49");
+      });
+
+      streamDetails.scrollToTop().then(() => {
+        streamDetails.selectCursor("field_0"); // todo: is this correct?  there cannot be a composite cursor... so we end up with `field_` as the cursor?
+      });
+
       streamDetails.close();
       columnsStreamRow.verifyCursor("field_0");
     });

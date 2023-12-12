@@ -14,6 +14,7 @@ data:
   AIRBYTE_EDITION: {{ .Values.global.edition | default "community" | quote }}
   API_URL: {{ .Values.webapp.api.url }}
   CONNECTOR_BUILDER_API_URL: {{ index .Values.webapp "connector-builder-server" "url" | quote }}
+  CONFIG_API_HOST: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }} # temporary solution for oss kube deploys for airbyte api server until that server is wrapped into the config server
   CONFIG_ROOT: /configs
   CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: "0.35.15.001"
   DATA_DOCKER_MOUNT: airbyte_data
@@ -25,10 +26,18 @@ data:
   GCS_LOG_BUCKET: {{ .Values.global.logs.gcs.bucket | quote }}
   GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.gcpLogCredentialsPath" . | quote }}
   INTERNAL_API_HOST: {{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
+{{- if eq (index .Values "workload-api-server" "enabled") true }}
+  # Temporary conditional for OSS deploys.  Eventually, the workload-api will be present in OSS deploys and the else
+  # block can be removed
+  WORKLOAD_API_HOST: http://{{ .Release.Name }}-workload-api-server-svc:{{ index .Values "workload-api-server" "service" "port" }}
+{{- else }}
+  WORKLOAD_API_HOST: http://localhost # placeholder value
+{{- end }}
 {{- if eq .Values.global.edition "pro" }}
   KEYCLOAK_INTERNAL_HOST: {{ .Release.Name }}-airbyte-keycloak-svc:{{ .Values.keycloak.service.port }}
   KEYCLOAK_PORT: {{ .Values.keycloak.service.port | quote }}
   KEYCLOAK_HOSTNAME_URL: {{ printf "%s/auth" (index $airbyteYmlDict "webapp-url") | quote }}
+  KEYCLOAK_JAVA_OPTS_APPEND: -Djgroups.dns.query={{ .Release.Name }}-airbyte-keycloak-headless-svc
 {{- else }}
   KEYCLOAK_INTERNAL_HOST: localhost # just a placeholder so that nginx template is valid - shouldn't be used when edition isn't "pro"
 {{- end }}
@@ -69,7 +78,8 @@ data:
   S3_LOG_BUCKET_REGION: {{ .Values.global.logs.s3.bucketRegion | quote }}
   S3_MINIO_ENDPOINT: {{ include "airbyte.minio.endpoint" . | quote }}
   S3_PATH_STYLE_ACCESS: {{ include "airbyte.s3PathStyleAccess" . | quote }}
-  STATE_STORAGE_MINIO_BUCKET_NAME: airbyte-state-storage
+  SEGMENT_WRITE_KEY: 7UDdp5K55CyiGgsauOr2pNNujGvmhaeu
+  STATE_STORAGE_MINIO_BUCKET_NAME: state-storage
   STATE_STORAGE_MINIO_ENDPOINT: {{ include "airbyte.minio.endpoint" . | quote }}
   TEMPORAL_HOST: {{ .Release.Name }}-temporal:{{ .Values.temporal.service.port }}
   TEMPORAL_WORKER_PORTS: 9001,9002,9003,9004,9005,9006,9007,9008,9009,9010,9011,9012,9013,9014,9015,9016,9017,9018,9019,9020,9021,9022,9023,9024,9025,9026,9027,9028,9029,9030,9031,9032,9033,9034,9035,9036,9037,9038,9039,9040
@@ -84,10 +94,9 @@ data:
   ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ .Values.worker.activityInitialDelayBetweenAttemptsSeconds | default "" | quote  }}
   ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ .Values.worker.activityMaxDelayBetweenAttemptsSeconds | default "" | quote  }}
   WORKFLOW_FAILURE_RESTART_DELAY_SECONDS: ""
-  USE_STREAM_CAPABLE_STATE: "true"
   AUTO_DETECT_SCHEMA: "true"
-  CONTAINER_ORCHESTRATOR_ENABLED: {{ .Values.worker.containerOrchestrator.enabled | quote }}
   CONTAINER_ORCHESTRATOR_IMAGE: {{ .Values.worker.containerOrchestrator.image | quote }}
+  LAUNCHER_MICRONAUT_ENVIRONMENTS: "control-plane,oss"
   WORKERS_MICRONAUT_ENVIRONMENTS: "control-plane"
   CRON_MICRONAUT_ENVIRONMENTS: "control-plane"
   WORKER_LOGS_STORAGE_TYPE: {{ .Values.global.logs.storage.type | quote }}

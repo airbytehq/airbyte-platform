@@ -1,9 +1,8 @@
-import { faWarning } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
+import { Icon } from "components/ui/Icon";
 import { Tooltip } from "components/ui/Tooltip";
 
 import {
@@ -11,6 +10,7 @@ import {
   useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
+import styles from "./PublishButton.module.scss";
 import { PublishModal } from "./PublishModal";
 import { useBuilderWatch } from "./types";
 
@@ -57,7 +57,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
       }}
       disabled={buttonDisabled}
       data-testid="publish-button"
-      icon={showWarningIcon ? <FontAwesomeIcon icon={faWarning} /> : undefined}
+      icon={showWarningIcon ? <Icon type="warningOutline" /> : undefined}
       type="button"
     >
       <FormattedMessage
@@ -69,7 +69,11 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
   return (
     <div className={className}>
       {tooltipContent !== undefined ? (
-        <Tooltip control={publishButton} placement={mode === "yaml" ? "left" : "top"}>
+        <Tooltip
+          containerClassName={styles.tooltipContainer}
+          control={publishButton}
+          placement={mode === "yaml" ? "left" : "top"}
+        >
           {tooltipContent}
         </Tooltip>
       ) : (

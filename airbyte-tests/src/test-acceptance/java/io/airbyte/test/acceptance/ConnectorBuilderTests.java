@@ -34,8 +34,10 @@ import io.airbyte.test.utils.AcceptanceTestHarness;
 import io.airbyte.test.utils.Databases;
 import io.airbyte.test.utils.SchemaTableNamePair;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
@@ -64,6 +66,7 @@ import org.testcontainers.utility.DockerImageName;
 public class ConnectorBuilderTests {
 
   private static final String ECHO_SERVER_IMAGE = "mendhak/http-https-echo:29";
+  private static final String AIRBYTE_SERVER_HOST = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001");
 
   private static AirbyteApiClient apiClient;
   private static UUID workspaceId;
@@ -165,9 +168,10 @@ public class ConnectorBuilderTests {
 
   @BeforeAll
   static void init() throws URISyntaxException, IOException, InterruptedException, ApiException, SQLException {
-    final var underlyingApiClient = new ApiClient().setScheme("http")
-        .setHost("localhost")
-        .setPort(8001)
+    final URI url = new URI(AIRBYTE_SERVER_HOST);
+    final var underlyingApiClient = new ApiClient().setScheme(url.getScheme())
+        .setHost(url.getHost())
+        .setPort(url.getPort())
         .setBasePath("/api");
     apiClient = new AirbyteApiClient(underlyingApiClient);
     workspaceId = apiClient.getWorkspaceApi()

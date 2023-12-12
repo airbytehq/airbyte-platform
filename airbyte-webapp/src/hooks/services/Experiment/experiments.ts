@@ -11,12 +11,14 @@ export interface Experiments {
   "authPage.signup.hideCompanyName": boolean;
   "authPage.signup.hideName": boolean;
   "autopropagation.enabled": boolean;
+  "billing.early-sync-enabled": boolean;
   "billing.newTrialPolicy": boolean;
+  "billing.autoRecharge": boolean;
+  "connections.summaryView": boolean;
   "connection.autoDetectSchemaChanges": boolean;
   "connection.columnSelection": boolean;
   "connection.onboarding.destinations": string;
   "connection.onboarding.sources": string;
-  "connection.searchableJobLogs": boolean;
   "connection.streamCentricUI.errorMultiplier": number;
   "connection.streamCentricUI.lateMultiplier": number;
   "connection.streamCentricUI.numberOfLogsToLoad": number;
@@ -34,8 +36,5 @@ export interface Experiments {
   "settings.emailNotifications": boolean;
   "settings.breakingChangeNotifications": boolean;
   "upcomingFeaturesPage.url": string;
-  "workspaces.newWorkspacesUI": boolean;
   "settings.accessManagement": boolean;
-  "platform.sunset-fcp": boolean;
-  "form.createConnectionHookForm": boolean;
 }

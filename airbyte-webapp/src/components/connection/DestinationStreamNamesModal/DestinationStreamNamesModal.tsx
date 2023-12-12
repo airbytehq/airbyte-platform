@@ -1,9 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
 
-import { FormikConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 import { Form, FormControl } from "components/forms";
 import { ModalFormSubmissionButtons } from "components/forms/ModalFormSubmissionButtons";
 import { Box } from "components/ui/Box";
@@ -12,7 +11,7 @@ import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
-import { HookFormConnectionFormValues } from "../ConnectionForm/hookFormConfig";
+import { FormConnectionFormValues } from "../ConnectionForm/formConfig";
 import { LabeledRadioButtonFormControl } from "../ConnectionForm/LabeledRadioButtonFormControl";
 
 export const enum StreamNameDefinitionValueType {
@@ -27,8 +26,12 @@ export interface DestinationStreamNamesFormValues {
 
 const StreamNamePrefixInput: React.FC = () => {
   const { formatMessage } = useIntl();
-  const { watch } = useFormContext<DestinationStreamNamesFormValues>();
+  const { watch, trigger } = useFormContext<DestinationStreamNamesFormValues>();
   const watchedStreamNameDefinition = watch("streamNameDefinition");
+
+  useEffect(() => {
+    trigger("prefix");
+  }, [trigger, watchedStreamNameDefinition]);
 
   return (
     <FormControl
@@ -51,17 +54,16 @@ const destinationStreamNamesValidationSchema = yup.object().shape({
     .required("form.empty.error"),
   prefix: yup.string().when("streamNameDefinition", {
     is: StreamNameDefinitionValueType.Prefix,
-    then: yup.string().trim().required("form.empty.error"),
+    then: yup
+      .string()
+      .trim()
+      .required("form.empty.error")
+      .matches(/^[a-zA-Z0-9_]*$/, "form.invalidCharacters.alphanumericunder.error"),
   }),
 });
 
 interface DestinationStreamNamesModalProps {
-  /**
-   * temporary extend this interface since we use modal in Formik and react-hook-form forms
-   *TODO: remove FormikConnectionFormValues after successful CreateConnectionForm migration
-   *https://github.com/airbytehq/airbyte-platform-internal/issues/8639
-   */
-  initialValues: Pick<FormikConnectionFormValues | HookFormConnectionFormValues, "prefix">;
+  initialValues: Pick<FormConnectionFormValues, "prefix">;
   onCloseModal: () => void;
   onSubmit: (value: DestinationStreamNamesFormValues) => void;
 }

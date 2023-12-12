@@ -4,14 +4,19 @@ import { FormattedMessage } from "react-intl";
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
-import { useConnectionList, useSourceDefinitionVersion } from "core/api";
+import { useGetSourceFromParams } from "area/connector/utils";
+import {
+  useConnectionList,
+  useSourceDefinitionVersion,
+  useGetSourceDefinitionSpecification,
+  useSourceDefinition,
+  useDeleteSource,
+  useInvalidateSource,
+  useUpdateSource,
+} from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useGetSourceFromParams } from "hooks/domain/connector/useGetSourceFromParams";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
-import { useDeleteSource, useInvalidateSource, useUpdateSource } from "hooks/services/useSourceHook";
 import { useDeleteModal } from "hooks/useDeleteModal";
-import { useSourceDefinition } from "services/connector/SourceDefinitionService";
-import { useGetSourceDefinitionSpecification } from "services/connector/SourceDefinitionSpecificationService";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm";
 
@@ -19,7 +24,8 @@ import styles from "./SourceSettingsPage.module.scss";
 
 export const SourceSettingsPage: React.FC = () => {
   const source = useGetSourceFromParams();
-  const { connections: connectionsWithSource } = useConnectionList({ sourceId: [source.sourceId] });
+  const connectionList = useConnectionList({ sourceId: [source.sourceId] });
+  const connectionsWithSource = useMemo(() => connectionList?.connections ?? [], [connectionList]);
   const sourceDefinition = useSourceDefinition(source.sourceDefinitionId);
   const sourceDefinitionVersion = useSourceDefinitionVersion(source.sourceId);
   const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(source.sourceDefinitionId, source.sourceId);

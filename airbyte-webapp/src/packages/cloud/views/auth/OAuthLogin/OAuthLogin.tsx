@@ -1,16 +1,15 @@
-import { faIdCardClip } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useRef, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+import { createSearchParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useUnmount } from "react-use";
 import { Subscription } from "rxjs";
 
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { Spinner } from "components/ui/Spinner";
 
 import { OAuthProviders, AuthOAuthLogin } from "core/services/auth";
-import { useLocalStorage } from "core/utils/useLocalStorage";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 
 import githubLogo from "./assets/github-logo.svg";
@@ -36,9 +35,15 @@ const GoogleButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
 };
 
 const SsoButton: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const loginRedirectString = searchParams.get("loginRedirect");
+  const linkLocation = loginRedirectString
+    ? { pathname: CloudRoutes.Sso, search: createSearchParams({ loginRedirect: loginRedirectString }).toString() }
+    : CloudRoutes.Sso;
+
   return (
-    <Link className={styles.sso} to={CloudRoutes.Sso}>
-      <FontAwesomeIcon icon={faIdCardClip} />
+    <Link className={styles.sso} to={linkLocation}>
+      <Icon type="idCard" />
       <FormattedMessage id="login.sso.continueWithSSO" tagName="span" />
     </Link>
   );
@@ -53,7 +58,9 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth }) => {
   const stateSubscription = useRef<Subscription>();
   const [errorCode, setErrorCode] = useState<string>();
   const [isLoading, setLoading] = useState(false);
-  const [showSsoLogin] = useLocalStorage("airbyte_show-sso-login", false);
+  const [searchParams] = useSearchParams();
+  const loginRedirect = searchParams.get("loginRedirect");
+  const navigate = useNavigate();
 
   useUnmount(() => {
     stateSubscription.current?.unsubscribe();
@@ -85,6 +92,7 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth }) => {
         }
         if (value === "done") {
           setLoading(false);
+          navigate(loginRedirect ?? "/", { replace: true });
         }
       },
       error: (error) => {
@@ -108,7 +116,7 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth }) => {
         <>
           <GoogleButton onClick={() => login("google")} />
           <GitHubButton onClick={() => login("github")} />
-          {showSsoLogin && <SsoButton />}
+          <SsoButton />
         </>
       )}
       {errorMessage && <div className={styles.error}>{errorMessage}</div>}

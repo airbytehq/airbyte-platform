@@ -6,8 +6,8 @@ import { Heading } from "components/ui/Heading";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
+import { DestinationRead, SourceRead, ActorDefinitionVersionRead } from "core/api/types/AirbyteClient";
 import { shouldDisplayBreakingChangeBanner, ConnectorDefinition } from "core/domain/connector";
-import { DestinationRead, SourceRead, ActorDefinitionVersionRead } from "core/request/AirbyteClient";
 
 import { BreakingChangeBanner } from "./BreakingChangeBanner";
 import styles from "./ConnectorTitleBlock.module.scss";
@@ -43,11 +43,7 @@ export const ConnectorTitleBlock = <T extends Connector>({
           </Heading>
           <FlexContainer alignItems="center">
             <Text color="grey">{titleInfo}</Text>
-            <SupportLevelBadge
-              supportLevel={actorDefinitionVersion.supportLevel}
-              custom={connectorDefinition.custom}
-              releaseStage={connectorDefinition.releaseStage}
-            />
+            <SupportLevelBadge supportLevel={actorDefinitionVersion.supportLevel} custom={connectorDefinition.custom} />
           </FlexContainer>
         </FlexContainer>
       </FlexContainer>

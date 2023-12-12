@@ -1,7 +1,7 @@
 import isEqual from "lodash/isEqual";
 
+import { AirbyteStreamConfiguration, SelectedFieldInfo } from "core/api/types/AirbyteClient";
 import { SyncSchemaField } from "core/domain/catalog";
-import { AirbyteStreamConfiguration, SelectedFieldInfo } from "core/request/AirbyteClient";
 
 /**
  * Merges arrays of SelectedFieldInfo, ensuring there are no duplicates
@@ -97,10 +97,10 @@ export function toggleAllFieldsSelected(config: AirbyteStreamConfiguration): Par
 
   // When deselecting all fields, we need to be careful not to deselect any primary keys or the cursor field
   if (!wasFieldSelectionEnabled) {
-    if (config?.primaryKey && config.destinationSyncMode === "append_dedup") {
+    if (config?.primaryKey && config.primaryKey.length > 0 && config.destinationSyncMode === "append_dedup") {
       selectedFields.push(...config.primaryKey);
     }
-    if (config?.cursorField && config.syncMode === "incremental") {
+    if (config?.cursorField && config.cursorField.length > 0 && config.syncMode === "incremental") {
       selectedFields.push(config.cursorField);
     }
   }

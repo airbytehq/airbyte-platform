@@ -11,8 +11,6 @@ global:
   database:
     secretName: ""
     secretValue: ""
-    host: "example.com"
-    port: "5432"
   secrets: {}
 
 enabled: true
@@ -215,6 +213,10 @@ secrets: {}
 env_vars: {}
 
 
+## workloadApi:
+##   bearerTokenSecretName: workload-api-bearer-token-name kubernetes secret name where bearer token is stored
+##   bearerTokenSecretKey: workload-api-bearer-token-key kubernetes secret key where bearer token is stored
+workloadApi: {}
 
 
 ## extraSelectorLables [object] - use to specify own additional selector labels for deployment

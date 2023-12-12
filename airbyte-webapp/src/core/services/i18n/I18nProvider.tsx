@@ -1,5 +1,6 @@
 import type { IntlConfig } from "react-intl";
 
+import isEqual from "lodash/isEqual";
 import React, { useContext, useMemo, useState } from "react";
 import { IntlProvider } from "react-intl";
 
@@ -21,12 +22,12 @@ interface I18nProviderProps {
 }
 
 export const I18nProvider: React.FC<React.PropsWithChildren<I18nProviderProps>> = ({ children, messages, locale }) => {
-  const [overwrittenMessages, setOvewrittenMessages] = useState<Messages>();
+  const [overwrittenMessages, setOvewrittenMessages] = useState<Messages>({});
 
   const i18nOverwriteContext = useMemo<I18nContext>(
     () => ({
       setMessageOverwrite: (messages) => {
-        setOvewrittenMessages(messages);
+        setOvewrittenMessages((prevMessages) => (isEqual(prevMessages, messages) ? prevMessages : messages));
       },
     }),
     []

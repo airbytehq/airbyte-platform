@@ -1,27 +1,23 @@
-import { faCircleQuestion } from "@fortawesome/free-regular-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { ConnectorIds, SvgIcon } from "area/connector/utils";
-import { useCurrentWorkspace } from "core/api";
-import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
+import { useCurrentWorkspace, useSourceDefinitionList, useDestinationDefinitionList } from "core/api";
+import { DestinationDefinitionRead, SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { links } from "core/utils/links";
 import { useExperiment } from "hooks/services/Experiment";
 import { ConnectionRoutePaths, DestinationPaths, RoutePaths } from "pages/routePaths";
-import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
-import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 
 import { AirbyteIllustration, HighlightIndex } from "./AirbyteIllustration";
 import styles from "./ConnectionOnboarding.module.scss";
-import { ReactComponent as PlusIcon } from "./plusIcon.svg";
 import { SOURCE_DEFINITION_PARAM } from "../CreateConnection/CreateNewSource";
 import { NEW_SOURCE_TYPE, SOURCE_TYPE_PARAM } from "../CreateConnection/SelectSource";
 
@@ -136,7 +132,7 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
             <Tooltip
               control={
                 <span>
-                  <FormattedMessage id="connection.onboarding.sources" /> <FontAwesomeIcon icon={faCircleQuestion} />
+                  <FormattedMessage id="connection.onboarding.sources" /> <Icon type="question" size="sm" />
                 </span>
               }
             >
@@ -184,7 +180,7 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
                   alignItems="center"
                   justifyContent="center"
                 >
-                  <PlusIcon className={styles.moreIcon} />
+                  <Icon type="plus" className={styles.moreIcon} />
                 </FlexContainer>
               </Link>
             }
@@ -204,8 +200,7 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
             <Tooltip
               control={
                 <span>
-                  <FormattedMessage id="connection.onboarding.destinations" />{" "}
-                  <FontAwesomeIcon icon={faCircleQuestion} />
+                  <FormattedMessage id="connection.onboarding.destinations" /> <Icon type="question" size="sm" />
                 </span>
               }
             >
@@ -259,7 +254,7 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
                   alignItems="center"
                   justifyContent="center"
                 >
-                  <PlusIcon className={styles.moreIcon} />
+                  <Icon type="plus" className={styles.moreIcon} />
                 </FlexContainer>
               </Link>
             }

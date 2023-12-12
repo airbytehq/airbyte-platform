@@ -4,15 +4,15 @@ import isEqual from "lodash/isEqual";
 import React, { useCallback, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Switch } from "components/ui/Switch";
 import { Table } from "components/ui/Table";
 import { TextWithOverflowTooltip } from "components/ui/Text";
 
 import { getDataType } from "area/connection/utils";
+import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaField, SyncSchemaFieldObject } from "core/domain/catalog";
-import { AirbyteStreamConfiguration } from "core/request/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 
@@ -83,6 +83,11 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
 
   const checkIsFieldSelected = useCallback(
     (field: SyncSchemaField): boolean => {
+      // If the stream is disabled, effectively each field is unselected
+      if (!config?.selected) {
+        return false;
+      }
+
       // All fields are implicitly selected if field selection is disabled
       if (!config?.fieldSelectionEnabled) {
         return true;
@@ -91,7 +96,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
       // path[0] is the top-level field name for all nested fields
       return !!config?.selectedFields?.find((f) => isEqual(f.fieldPath, [field.path[0]]));
     },
-    [config]
+    [config?.selected, config?.fieldSelectionEnabled, config?.selectedFields]
   );
 
   // header group icons:
@@ -126,10 +131,10 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
               <FlexContainer className={styles.columnSelectionSwitchContainer}>
                 <Switch
                   size="xs"
-                  indeterminate={config?.fieldSelectionEnabled && !!config?.selectedFields?.length}
-                  checked={!config?.fieldSelectionEnabled}
+                  indeterminate={config?.fieldSelectionEnabled && !!config?.selectedFields?.length && config.selected}
+                  checked={!config?.fieldSelectionEnabled && config?.selected}
                   onChange={toggleAllFieldsSelected}
-                  disabled={mode === "readonly"}
+                  disabled={mode === "readonly" || !config?.selected}
                 />
               </FlexContainer>
             )}
@@ -142,6 +147,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
               {isColumnSelectionEnabled && (
                 <SyncFieldCell
                   field={row.original.field}
+                  streamIsDisabled={!config?.selected}
                   isFieldSelected={row.original.isFieldSelected}
                   handleFieldToggle={handleFieldToggle}
                   checkIsCursor={checkIsCursor}
@@ -227,6 +233,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
       onCursorSelect,
       onPkSelect,
       toggleAllFieldsSelected,
+      config?.selected,
       config?.syncMode,
       config?.destinationSyncMode,
       mode,
@@ -266,11 +273,11 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
       }),
       columnHelper.group({
         id: "arrow",
-        header: () => <ArrowRightIcon />,
+        header: () => <Icon type="arrowRight" />,
         columns: [
           {
             id: "_", // leave the column name empty
-            cell: () => <ArrowRightIcon />,
+            cell: () => <Icon type="arrowRight" />,
             meta: {
               thClassName: styles.headerCell,
               tdClassName: styles.arrowCell,
@@ -301,6 +308,17 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
       data={tableData}
       className={styles.customTableStyle}
       sorting={false}
+      virtualized
+      virtualizedProps={{
+        /**
+         * improve performance: since all rows have the same height - there is no need to recalculate the height
+         */
+        fixedItemHeight: 28,
+        /**
+         * reduce the number of rendered rows to improve performance
+         */
+        increaseViewportBy: 50,
+      }}
     />
   );
 };

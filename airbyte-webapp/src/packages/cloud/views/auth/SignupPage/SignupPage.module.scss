@@ -3,6 +3,7 @@
 
 .container {
   max-width: variables.$width-login-form;
+  margin: auto;
 }
 
 .checkIcon {
@@ -11,7 +12,7 @@
 
 .details {
   align-self: center;
-  @media (min-width: 500px) {
+  @media (width >= 500px) {
     flex-direction: row;
   }
 }

@@ -6,6 +6,7 @@ package io.airbyte.config.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
 
 import io.airbyte.config.Geography;
 import io.airbyte.config.OperatorDbt;
@@ -15,6 +16,22 @@ import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.HealthCheckServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
@@ -70,7 +87,38 @@ class SyncOperationPersistenceTest extends BaseConfigDatabaseTest {
   void beforeEach() throws Exception {
     truncateAllTables();
 
-    configRepository = new ConfigRepository(database, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
+    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
+    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
+    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+
+    configRepository = new ConfigRepository(
+        new ActorDefinitionServiceJooqImpl(database),
+        new CatalogServiceJooqImpl(database),
+        new ConnectionServiceJooqImpl(database),
+        new ConnectorBuilderServiceJooqImpl(database),
+        new DestinationServiceJooqImpl(database,
+            featureFlagClient,
+            secretsRepositoryReader,
+            secretsRepositoryWriter,
+            secretPersistenceConfigService),
+        new HealthCheckServiceJooqImpl(database),
+        new OAuthServiceJooqImpl(database,
+            featureFlagClient,
+            secretsRepositoryReader,
+            secretPersistenceConfigService),
+        new OperationServiceJooqImpl(database),
+        new OrganizationServiceJooqImpl(database),
+        new SourceServiceJooqImpl(database,
+            featureFlagClient,
+            secretsRepositoryReader,
+            secretsRepositoryWriter,
+            secretPersistenceConfigService),
+        new WorkspaceServiceJooqImpl(database,
+            featureFlagClient,
+            secretsRepositoryReader,
+            secretsRepositoryWriter,
+            secretPersistenceConfigService));
     createWorkspace();
 
     for (final StandardSyncOperation op : OPS) {

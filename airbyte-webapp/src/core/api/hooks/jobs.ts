@@ -1,7 +1,6 @@
 import { Updater, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useExperiment } from "hooks/services/Experiment";
-import { SCOPE_WORKSPACE } from "services/Scope";
 
 import {
   cancelJob,
@@ -10,6 +9,7 @@ import {
   getJobInfoWithoutLogs,
   listJobsFor,
 } from "../generated/AirbyteClient";
+import { SCOPE_WORKSPACE } from "../scopes";
 import { JobListRequestBody, JobReadList, JobStatus } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
@@ -44,7 +44,7 @@ export const useListJobsForConnectionStatus = (connectionId: string) => {
     configId: connectionId,
     configTypes: ["sync", "reset_connection"],
     pagination: {
-      pageSize: useExperiment("connection.streamCentricUI.numberOfLogsToLoad", 10),
+      pageSize: useExperiment("connection.streamCentricUI.numberOfLogsToLoad", 15),
     },
   });
 };
@@ -61,32 +61,6 @@ export const useGetDebugInfoJobManual = (id: number) => {
   return useQuery([SCOPE_WORKSPACE, "jobs", "getDebugInfo", id], () => getJobDebugInfo({ id }, requestOptions), {
     enabled: false,
   });
-};
-
-export const useGetDebugInfoJob = (id: number, enabled = true, refetchWhileRunning = false) => {
-  const requestOptions = useRequestOptions();
-
-  return useSuspenseQuery(
-    [SCOPE_WORKSPACE, "jobs", "getDebugInfo", id],
-    () => getJobDebugInfo({ id }, requestOptions),
-    {
-      refetchInterval: !refetchWhileRunning
-        ? false
-        : (data) => {
-            // If refetchWhileRunning was true, we keep refetching debug info (including logs), while the job is still
-            // running or hasn't ended too long ago. We need some time after the last attempt has stopped, since logs
-            // keep incoming for some time after the job has already been marked as finished.
-            const lastAttemptEndTimestamp =
-              data?.attempts.length && data.attempts[data.attempts.length - 1].attempt.endedAt;
-            // While no attempt ended timestamp exists yet (i.e. the job is still running) or it hasn't ended
-            // more than 2 minutes (2 * 60 * 1000ms) ago, keep refetching
-            return lastAttemptEndTimestamp && Date.now() - lastAttemptEndTimestamp * 1000 > 2 * 60 * 1000
-              ? false
-              : 2500;
-          },
-      enabled,
-    }
-  );
 };
 
 export const useCancelJob = () => {

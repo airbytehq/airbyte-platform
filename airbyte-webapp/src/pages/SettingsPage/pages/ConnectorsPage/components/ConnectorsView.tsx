@@ -1,6 +1,5 @@
 import { createColumnHelper } from "@tanstack/react-table";
-import { useCallback, useMemo, useState } from "react";
-import React from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { HeadTitle } from "components/common/HeadTitle";
@@ -8,11 +7,13 @@ import { ConnectorBuilderProjectTable } from "components/ConnectorBuilderProject
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Table } from "components/ui/Table";
+import { InfoTooltip } from "components/ui/Tooltip";
 
 import { BuilderProject } from "core/api";
+import { DestinationDefinitionRead, SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector, ConnectorDefinition } from "core/domain/connector";
-import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
+import { useIntent } from "core/utils/rbac";
 import { RoutePaths } from "pages/routePaths";
 
 import { ConnectorCell } from "./ConnectorCell";
@@ -65,7 +66,8 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   connectorBuilderProjects,
 }) => {
   const [updatingAllConnectors, setUpdatingAllConnectors] = useState(false);
-  const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors);
+  const hasUpdateConnectorsPermissions = useIntent("UpdateConnectorVersions");
+  const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors) && hasUpdateConnectorsPermissions;
   const allowUploadCustomImage = useFeature(FeatureItem.AllowUploadCustomImage);
 
   const showVersionUpdateColumn = useCallback(
@@ -98,7 +100,6 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
             custom={props.row.original.custom}
             id={Connector.id(props.row.original)}
             type={type}
-            releaseStage={props.row.original.releaseStage}
           />
         ),
       }),
@@ -111,7 +112,16 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
         cell: (props) => <ImageCell imageName={props.cell.getValue()} link={props.row.original.documentationUrl} />,
       }),
       columnHelper.accessor("dockerImageTag", {
-        header: () => <FormattedMessage id="admin.currentVersion" />,
+        header: () => (
+          <FlexContainer alignItems="center" gap="none">
+            <FormattedMessage id="admin.defaultVersion" />
+            {allowUpdateConnectors && (
+              <InfoTooltip>
+                <FormattedMessage id="admin.defaultVersionDescription" values={{ type }} />
+              </InfoTooltip>
+            )}
+          </FlexContainer>
+        ),
         meta: {
           thClassName: styles.thCurrentVersion,
         },

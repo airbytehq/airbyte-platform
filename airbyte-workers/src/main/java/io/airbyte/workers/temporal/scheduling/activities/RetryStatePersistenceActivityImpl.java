@@ -14,15 +14,9 @@ import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.exception.RetryableException;
-import io.airbyte.featureflag.Connection;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.UseNewRetries;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.workers.helpers.RetryStateClient;
 import jakarta.inject.Singleton;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -34,14 +28,11 @@ import java.util.UUID;
 public class RetryStatePersistenceActivityImpl implements RetryStatePersistenceActivity {
 
   final RetryStateClient client;
-  final FeatureFlagClient featureFlagClient;
   final WorkspaceApi workspaceApi;
 
   public RetryStatePersistenceActivityImpl(final RetryStateClient client,
-                                           final FeatureFlagClient featureFlagClient,
                                            final WorkspaceApi workspaceApi) {
     this.client = client;
-    this.featureFlagClient = featureFlagClient;
     this.workspaceApi = workspaceApi;
   }
 
@@ -51,14 +42,6 @@ public class RetryStatePersistenceActivityImpl implements RetryStatePersistenceA
     ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, input.getConnectionId()));
     final var workspaceId = getWorkspaceId(input.getConnectionId());
     ApmTraceUtils.addTagsToTrace(Map.of(WORKSPACE_ID_KEY, workspaceId));
-
-    final var enabled = featureFlagClient.boolVariation(UseNewRetries.INSTANCE, new Multi(List.of(
-        new Connection(input.getConnectionId()),
-        new Workspace(workspaceId))));
-
-    if (!enabled) {
-      return new HydrateOutput(null);
-    }
 
     final var manager = client.hydrateRetryState(input.getJobId(), workspaceId);
 

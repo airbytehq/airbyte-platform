@@ -5,13 +5,15 @@ import { mockAirbyteStream } from "test-utils/mock-data/mockAirbyteStream";
 import { mockStreamStatusRead } from "test-utils/mock-data/mockStreamStatusRead";
 
 import {
+  AirbyteStream,
   ConnectionScheduleData,
   ConnectionScheduleType,
+  ConnectionSyncResultRead,
   StreamStatusIncompleteRunCause,
   StreamStatusJobType,
   StreamStatusRead,
   StreamStatusRunState,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
 import { computeStreamStatus, getStreamKey } from "./computeStreamStatus";
 
@@ -31,7 +33,9 @@ describe("getStreamKey", () => {
       ${"foo"} | ${""}        | ${"foo-"}
       ${"foo"} | ${undefined} | ${"foo-"}
     `("$name, $namespace", ({ name, namespace, expected }) =>
-      expect(getStreamKey({ ...mockStreamStatusRead, streamName: name, streamNamespace: namespace })).toBe(expected)
+      expect(
+        getStreamKey({ ...mockStreamStatusRead, streamName: name, streamNamespace: namespace } as StreamStatusRead)
+      ).toBe(expected)
     );
   });
 
@@ -42,7 +46,18 @@ describe("getStreamKey", () => {
       ${"foo"} | ${""}        | ${"foo-"}
       ${"foo"} | ${undefined} | ${"foo-"}
     `("$name, $namespace", ({ name, namespace, expected }) =>
-      expect(getStreamKey({ ...mockAirbyteStream, name, namespace })).toBe(expected)
+      expect(getStreamKey({ ...mockAirbyteStream, name, namespace } as AirbyteStream)).toBe(expected)
+    );
+  });
+
+  describe("when streamStatus is a ConnectionSyncResultRead", () => {
+    it.each`
+      name     | namespace    | expected
+      ${"foo"} | ${"bar"}     | ${"foo-bar"}
+      ${"foo"} | ${""}        | ${"foo-"}
+      ${"foo"} | ${undefined} | ${"foo-"}
+    `("$name, $namespace", ({ name, namespace, expected }) =>
+      expect(getStreamKey({ streamName: name, streamNamespace: namespace } as ConnectionSyncResultRead)).toBe(expected)
     );
   });
 });

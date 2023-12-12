@@ -3,8 +3,8 @@ import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
 import { SchemaOf } from "yup";
 
-import { getInitialNormalization, mapFormPropsToOperation } from "components/connection/ConnectionForm/formConfig";
-import { NormalizationHookFormField } from "components/connection/ConnectionForm/NormalizationHookFormField";
+import { getInitialNormalization } from "components/connection/ConnectionForm/formConfig";
+import { NormalizationFormField } from "components/connection/ConnectionForm/NormalizationFormField";
 import { Form } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { CollapsibleCard } from "components/ui/CollapsibleCard";
@@ -12,6 +12,7 @@ import { CollapsibleCard } from "components/ui/CollapsibleCard";
 import { NormalizationType } from "area/connection/types";
 import { isNormalizationTransformation } from "area/connection/utils";
 import { useCurrentWorkspace } from "core/api";
+import { OperatorType } from "core/api/types/AirbyteClient";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -44,14 +45,30 @@ export const NormalizationForm: React.FC = () => {
     [operations]
   );
 
-  const onSubmit = async (values: NormalizationFormValues) => {
-    const normalizationOperation = mapFormPropsToOperation(values, operations, workspaceId);
-
+  const onSubmit = async ({ normalization }: NormalizationFormValues) => {
     const operationsWithoutNormalization = (operations ?? [])?.filter((op) => !isNormalizationTransformation(op));
 
     await updateConnection({
       connectionId,
-      operations: [...normalizationOperation, ...operationsWithoutNormalization],
+      operations: [
+        // if normalization is "basic", add normalization operation
+        ...(normalization === NormalizationType.basic
+          ? [
+              {
+                name: "Normalization",
+                workspaceId,
+                operatorConfiguration: {
+                  operatorType: OperatorType.normalization,
+                  normalization: {
+                    option: normalization,
+                  },
+                },
+              },
+            ]
+          : // if normalization is "raw", remove normalization operation
+            []),
+        ...operationsWithoutNormalization,
+      ],
     });
   };
 
@@ -81,9 +98,10 @@ export const NormalizationForm: React.FC = () => {
       onError={onError}
       disabled={mode === "readonly"}
       trackDirtyChanges
+      dataTestId="normalization-form"
     >
       <CollapsibleCard title={<FormattedMessage id="connection.normalization" />} collapsible>
-        <NormalizationHookFormField />
+        <NormalizationFormField />
         <FormSubmissionButtons submitKey="form.saveChanges" />
       </CollapsibleCard>
     </Form>

@@ -39,7 +39,6 @@ public class ContainerOrchestratorConfigBeanFactory {
   private static final String DD_ENV_ENV_VAR = "DD_ENV";
   private static final String DD_SERVICE_ENV_VAR = "DD_SERVICE";
   private static final String DD_VERSION_ENV_VAR = "DD_VERSION";
-  private static final String DD_SUPPORT_CONNECTOR_NAMES_VAR = "CONNECTOR_DATADOG_SUPPORT_NAMES";
   private static final String JAVA_OPTS_ENV_VAR = "JAVA_OPTS";
   private static final String PUBLISH_METRICS_ENV_VAR = "PUBLISH_METRICS";
   private static final String CONTROL_PLANE_AUTH_ENDPOINT_ENV_VAR = "CONTROL_PLANE_AUTH_ENDPOINT";
@@ -53,9 +52,9 @@ public class ContainerOrchestratorConfigBeanFactory {
 
   // IMPORTANT: Changing the storage location will orphan already existing kube pods when the new
   // version is deployed!
-  private static final Path STATE_STORAGE_PREFIX = Path.of("/state");
+  public static final Path STATE_STORAGE_PREFIX = Path.of("/state");
 
-  @SuppressWarnings({"LineLength", "MissingJavadocMethod"})
+  @SuppressWarnings("LineLength")
   @Singleton
   @Requires(property = "airbyte.container.orchestrator.enabled",
             value = "true")
@@ -72,7 +71,6 @@ public class ContainerOrchestratorConfigBeanFactory {
                                                                            @Value("${airbyte.metric.client}") final String metricClient,
                                                                            @Value("${datadog.agent.host}") final String dataDogAgentHost,
                                                                            @Value("${datadog.agent.port}") final String dataDogStatsdPort,
-                                                                           @Value("${airbyte.connector.datadog-support-names}") final String datadogSupportConnectors,
                                                                            @Value("${airbyte.metric.should-publish}") final String shouldPublishMetrics,
                                                                            final FeatureFlags featureFlags,
                                                                            @Value("${airbyte.container.orchestrator.java-opts}") final String containerOrchestratorJavaOpts,
@@ -100,9 +98,7 @@ public class ContainerOrchestratorConfigBeanFactory {
     environmentVariables.put(DD_AGENT_HOST_ENV_VAR, dataDogAgentHost);
     environmentVariables.put(DD_SERVICE_ENV_VAR, "airbyte-container-orchestrator");
     environmentVariables.put(DD_DOGSTATSD_PORT_ENV_VAR, dataDogStatsdPort);
-    environmentVariables.put(DD_SUPPORT_CONNECTOR_NAMES_VAR, datadogSupportConnectors);
     environmentVariables.put(PUBLISH_METRICS_ENV_VAR, shouldPublishMetrics);
-    environmentVariables.put(EnvVariableFeatureFlags.USE_STREAM_CAPABLE_STATE, Boolean.toString(featureFlags.useStreamCapableState()));
     environmentVariables.put(EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA, Boolean.toString(featureFlags.autoDetectSchema()));
     environmentVariables.put(EnvVariableFeatureFlags.APPLY_FIELD_SELECTION, Boolean.toString(featureFlags.applyFieldSelection()));
     environmentVariables.put(EnvVariableFeatureFlags.FIELD_SELECTION_WORKSPACES, featureFlags.fieldSelectionWorkspaces());

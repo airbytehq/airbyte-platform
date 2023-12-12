@@ -8,6 +8,8 @@ import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationUserReadList;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
+import io.airbyte.api.model.generated.UserEmailRequestBody;
+import io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse;
 import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserUpdate;
@@ -62,6 +64,16 @@ class UserApiControllerTest extends BaseControllerTest {
   }
 
   @Test
+  void testGetUserByEmail() throws JsonValidationException, ConfigNotFoundException, IOException {
+    Mockito.when(userHandler.getUserByEmail(Mockito.any()))
+        .thenReturn(new UserRead());
+    final String path = "/api/v1/users/get_by_email";
+    testEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new UserEmailRequestBody())),
+        HttpStatus.OK);
+  }
+
+  @Test
   void testDeleteUser() throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.doNothing().when(userHandler).deleteUser(Mockito.any());
     final String path = "/api/v1/users/delete";
@@ -107,6 +119,16 @@ class UserApiControllerTest extends BaseControllerTest {
     final String path = "/api/v1/users/list_instance_admin";
     testEndpointStatus(
         HttpRequest.POST(path, Jsons.emptyObject()),
+        HttpStatus.OK);
+  }
+
+  @Test
+  void testGetOrCreateUser() throws Exception {
+    Mockito.when(userHandler.getOrCreateUserByAuthId(Mockito.any()))
+        .thenReturn(new UserGetOrCreateByAuthIdResponse().userRead(new UserRead()));
+    final String path = "/api/v1/users/get_or_create_by_auth_id";
+    testEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new UserAuthIdRequestBody())),
         HttpStatus.OK);
   }
 

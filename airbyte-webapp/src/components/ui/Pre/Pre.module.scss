@@ -4,5 +4,15 @@
 .content {
   margin: 0;
   color: colors.$dark-blue;
-  font-size: variables.$font-size-lg;
+  font-size: inherit;
+}
+
+.longLines {
+  overflow-x: auto;
+  border-right: 1em solid transparent; /* Set the right border to the desired width */
+
+  /* Define the border-image using the inline SVG */
+  border-image-source: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='22' viewBox='0 0 20 22'><text x='5' y='22' font-size='14' fill='rgba(0,0,0,0.2)'>%26%2310148;</text></svg>");
+  border-image-slice: 0 100% 0 0; /* Slice the entire border for the image */
+  border-image-repeat: repeat; /* Repeat the image */
 }

@@ -8,10 +8,9 @@ import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 
-import { useCurrentWorkspace, useUpdateOrganization } from "core/api";
-import { useOrganization } from "core/api";
-import { OrganizationUpdateRequestBody } from "core/request/AirbyteClient";
-import { useIntent } from "core/utils/rbac/intent";
+import { useCurrentWorkspace, useUpdateOrganization, useOrganization } from "core/api";
+import { OrganizationUpdateRequestBody } from "core/api/types/AirbyteClient";
+import { useIntent } from "core/utils/rbac";
 import { useNotificationService } from "hooks/services/Notification";
 
 const ORGANIZATION_UPDATE_NOTIFICATION_ID = "organization-update-notification";

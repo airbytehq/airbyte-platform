@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.constants;
 
+import java.time.Duration;
+
 /**
  * Worker constants.
  */
@@ -20,10 +22,21 @@ public class WorkerConstants {
 
   public static final String WORKER_ENVIRONMENT = "WORKER_ENVIRONMENT";
 
-  public static final String DD_ENV_VAR = "-XX:+ExitOnOutOfMemoryError -javaagent:/airbyte/dd-java-agent.jar "
+  public static final String DD_ENV_VAR = "-XX:+ExitOnOutOfMemoryError "
+      + "-XX:MaxRAMPercentage=75.0 "
+      + "-javaagent:/airbyte/dd-java-agent.jar "
       + "-Ddd.profiling.enabled=true "
       + "-XX:FlightRecorderOptions=stackdepth=256 "
       + "-Ddd.trace.sample.rate=0.5 "
       + "-Ddd.trace.request_header.tags=User-Agent:http.useragent";
+
+  public static class KubeConstants {
+
+    public static final Duration INIT_CONTAINER_STARTUP_TIMEOUT = Duration.ofMinutes(5);
+    public static final Duration INIT_CONTAINER_TERMINATION_TIMEOUT = Duration.ofMinutes(2);
+    public static final Duration POD_READY_TIMEOUT = Duration.ofMinutes(2);
+    public static final Duration FULL_POD_TIMEOUT = INIT_CONTAINER_STARTUP_TIMEOUT.plus(INIT_CONTAINER_TERMINATION_TIMEOUT).plus(POD_READY_TIMEOUT);
+
+  }
 
 }

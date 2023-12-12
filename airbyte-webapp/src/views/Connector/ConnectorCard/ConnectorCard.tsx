@@ -12,6 +12,8 @@ import { Pre } from "components/ui/Pre";
 import { Spinner } from "components/ui/Spinner";
 
 import { useAirbyteCloudIps } from "area/connector/utils/useAirbyteCloudIps";
+import { LogsRequestError } from "core/api";
+import { DestinationRead, SourceRead, SupportLevel, SynchronousJobRead } from "core/api/types/AirbyteClient";
 import {
   Connector,
   ConnectorDefinition,
@@ -19,8 +21,6 @@ import {
   ConnectorSpecification,
   ConnectorT,
 } from "core/domain/connector";
-import { DestinationRead, SourceRead, SupportLevel, SynchronousJobRead } from "core/request/AirbyteClient";
-import { LogsRequestError } from "core/request/LogsRequestError";
 import { isCloudApp } from "core/utils/app";
 import { generateMessageFromError } from "core/utils/errorStatusMessage";
 import { links } from "core/utils/links";
@@ -91,8 +91,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
 }) => {
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
 
-  const { setDocumentationUrl, setDocumentationPanelOpen, setSelectedConnectorDefinition } =
-    useDocumentationPanelContext();
+  const { setDocumentationPanelOpen, setSelectedConnectorDefinition } = useDocumentationPanelContext();
   const {
     testConnector,
     isTestConnectionInProgress,
@@ -127,14 +126,12 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       return;
     }
 
-    setDocumentationUrl(selectedConnectorDefinition?.documentationUrl ?? "");
     setDocumentationPanelOpen(true);
     setSelectedConnectorDefinition(selectedConnectorDefinition);
   }, [
     selectedConnectorDefinitionSpecification,
     selectedConnectorDefinition,
     setDocumentationPanelOpen,
-    setDocumentationUrl,
     setSelectedConnectorDefinition,
   ]);
 
@@ -203,7 +200,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       headerBlock={
         <FlexContainer direction="column" className={styles.header}>
           {headerBlock}
-          <WarningMessage supportLevel={supportLevel} releaseStage={selectedConnectorDefinition?.releaseStage} />
+          <WarningMessage supportLevel={supportLevel} />
           {props.isLoading && (
             <div className={styles.loaderContainer}>
               <Spinner />

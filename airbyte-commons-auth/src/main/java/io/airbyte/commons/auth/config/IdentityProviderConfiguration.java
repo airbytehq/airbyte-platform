@@ -19,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 @Slf4j
 @ToString
-@SuppressWarnings({"MissingJavadocType"})
 public class IdentityProviderConfiguration {
 
   public enum ProviderType {

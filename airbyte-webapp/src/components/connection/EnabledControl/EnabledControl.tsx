@@ -1,17 +1,16 @@
 import classNames from "classnames";
 import React from "react";
-import { FormattedMessage } from "react-intl";
+import { useIntl } from "react-intl";
 import { useAsyncFn } from "react-use";
 
 import { Switch } from "components/ui/Switch";
 
-import { ConnectionStatus } from "core/request/AirbyteClient";
-import { getFrequencyFromScheduleData } from "core/services/analytics";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { ConnectionStatus } from "core/api/types/AirbyteClient";
+import { getFrequencyFromScheduleData, Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import styles from "./EnabledControl.module.scss";
+import { FreeHistoricalSyncIndicator } from "./FreeHistoricalSyncIndicator";
 
 interface EnabledControlProps {
   disabled?: boolean;
@@ -19,6 +18,7 @@ interface EnabledControlProps {
 
 export const EnabledControl: React.FC<EnabledControlProps> = ({ disabled }) => {
   const analyticsService = useAnalyticsService();
+  const { formatMessage } = useIntl();
 
   const { connection, updateConnection, connectionUpdating } = useConnectionEditService();
 
@@ -53,11 +53,12 @@ export const EnabledControl: React.FC<EnabledControlProps> = ({ disabled }) => {
 
   return (
     <div className={styles.container} data-testid="enabledControl">
+      <FreeHistoricalSyncIndicator />
       <label
         htmlFor="toggle-enabled-source"
         className={classNames(styles.label, { [styles.disabled]: isSwitchDisabled })}
       >
-        <FormattedMessage id={connection.status === ConnectionStatus.active ? "tables.enabled" : "tables.disabled"} />
+        {formatMessage({ id: connection.status === ConnectionStatus.active ? "tables.enabled" : "tables.disabled" })}
       </label>
       <Switch
         disabled={isSwitchDisabled}

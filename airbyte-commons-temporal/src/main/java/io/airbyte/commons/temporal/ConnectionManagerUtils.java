@@ -103,7 +103,7 @@ public class ConnectionManagerUtils {
   // Keeping this private and only exposing the above methods outside this class provides a strict
   // type enforcement for external calls, and means this method can assume consistent type
   // implementations for both cases.
-  @SuppressWarnings({"MissingJavadocMethod", "LineLength"})
+  @SuppressWarnings("LineLength")
   private <T> ConnectionManagerWorkflow signalWorkflowAndRepairIfNecessary(final UUID connectionId,
                                                                            final Function<ConnectionManagerWorkflow, ? extends TemporalFunctionalInterfaceMarker> signalMethod,
                                                                            final Optional<T> signalArgument)

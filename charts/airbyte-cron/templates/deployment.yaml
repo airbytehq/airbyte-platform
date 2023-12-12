@@ -92,6 +92,11 @@ spec:
               configMapKeyRef:
                 name: {{ .Release.Name }}-airbyte-env
                 key: TEMPORAL_HOST
+          - name: SEGMENT_WRITE_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-airbyte-env
+                key: SEGMENT_WRITE_KEY
           - name: TRACKING_STRATEGY
             valueFrom:
               configMapKeyRef:
@@ -102,6 +107,16 @@ spec:
               configMapKeyRef:
                 name: {{ .Release.Name }}-airbyte-env
                 key: WORKFLOW_FAILURE_RESTART_DELAY_SECONDS
+          - name: WORKLOAD_API_BEARER_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: {{ index .Values "workloadApi" "bearerTokenSecretName" | default (printf "%s-airbyte-secrets" .Release.Name ) }}
+                key: {{ index .Values "workloadApi" "bearerTokenSecretKey" | default "WORKLOAD_API_BEARER_TOKEN" }}
+          - name: WORKLOAD_API_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-airbyte-env
+                key: WORKLOAD_API_HOST
           - name: WORKSPACE_DOCKER_MOUNT
             valueFrom:
               configMapKeyRef:

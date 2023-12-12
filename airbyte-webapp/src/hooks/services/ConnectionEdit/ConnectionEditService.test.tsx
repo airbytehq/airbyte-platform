@@ -1,3 +1,5 @@
+/* eslint-disable check-file/filename-blocklist */
+// temporary disable eslint rule for this file during form cleanup
 import { act, renderHook } from "@testing-library/react";
 import React from "react";
 
@@ -25,25 +27,11 @@ import {
 import { ConnectionEditServiceProvider, useConnectionEditService } from "./ConnectionEditService";
 import { useConnectionFormService } from "../ConnectionForm/ConnectionFormService";
 
-jest.mock("services/connector/SourceDefinitionService", () => ({
-  useSourceDefinition: () => mockSourceDefinition,
-}));
-
-jest.mock("services/connector/SourceDefinitionSpecificationService", () => ({
-  useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
-}));
-
-jest.mock("services/connector/DestinationDefinitionSpecificationService", () => ({
-  useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
-}));
-
-jest.mock("services/connector/DestinationDefinitionService", () => ({
-  useDestinationDefinition: () => mockDestinationDefinition,
-}));
-
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
   useGetConnection: () => mockConnection,
+  useSourceDefinition: () => mockSourceDefinition,
+  useDestinationDefinition: () => mockDestinationDefinition,
   useGetConnectionQuery:
     () =>
     async ({ withRefreshedCatalog }: WebBackendConnectionRequestBody) =>
@@ -57,6 +45,8 @@ jest.mock("core/api", () => ({
   }),
   useSourceDefinitionVersion: () => mockSourceDefinitionVersion,
   useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
+  useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
+  useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
 }));
 
 const utils = {
@@ -67,7 +57,7 @@ const utils = {
   }),
 };
 
-describe("ConnectionEditService", () => {
+describe("ConnectionEditServiceProvider", () => {
   const Wrapper: React.FC<React.PropsWithChildren> = ({ children }) => (
     <TestWrapper>
       <ConnectionEditServiceProvider connectionId={mockConnection.connectionId}>
@@ -144,7 +134,7 @@ describe("ConnectionEditService", () => {
   it("should refresh schema only if the sync catalog has diffs", async () => {
     // Need to combine the hooks so both can be used.
     const useMyTestHook = () =>
-      ({ editService: useConnectionEditService(), formService: useConnectionFormService() } as const);
+      ({ editService: useConnectionEditService(), formService: useConnectionFormService() }) as const;
 
     const { result } = renderHook(useMyTestHook, {
       wrapper: Wrapper,
@@ -180,7 +170,7 @@ describe("ConnectionEditService", () => {
 
   it("should discard the refreshed schema", async () => {
     const useMyTestHook = () =>
-      ({ editService: useConnectionEditService(), formService: useConnectionFormService() } as const);
+      ({ editService: useConnectionEditService(), formService: useConnectionFormService() }) as const;
 
     const { result } = renderHook(useMyTestHook, {
       wrapper: Wrapper,

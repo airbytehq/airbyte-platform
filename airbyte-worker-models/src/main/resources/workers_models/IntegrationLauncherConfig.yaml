@@ -40,3 +40,6 @@ properties:
   additionalEnvironmentVariables:
     type: object
     existingJavaType: "java.util.Map<String,String>"
+  additionalLabels:
+    type: object
+    existingJavaType: "java.util.Map<String,String>"

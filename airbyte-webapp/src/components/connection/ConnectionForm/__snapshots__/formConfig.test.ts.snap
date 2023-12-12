@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`#useInitialValues should generate initial values w/ 'not create' mode: false 1`] = `
+exports[`#useInitialFormValues should generate initial values w/ 'not create' mode: false 1`] = `
 {
   "geography": "auto",
   "name": "Scrafty <> Heroku Postgres",
@@ -8,8 +8,6 @@ exports[`#useInitialValues should generate initial values w/ 'not create' mode: 
   "namespaceFormat": "\${SOURCE_NAMESPACE}",
   "nonBreakingChangesPreference": "ignore",
   "normalization": "basic",
-  "prefix": "",
-  "scheduleData": null,
   "scheduleType": "manual",
   "syncCatalog": {
     "streams": [
@@ -22,7 +20,6 @@ exports[`#useInitialValues should generate initial values w/ 'not create' mode: 
           "selected": true,
           "syncMode": "full_refresh",
         },
-        "id": "0",
         "stream": {
           "defaultCursorField": [],
           "jsonSchema": {
@@ -537,7 +534,6 @@ exports[`#useInitialValues should generate initial values w/ 'not create' mode: 
           "selected": false,
           "syncMode": "full_refresh",
         },
-        "id": "1",
         "stream": {
           "defaultCursorField": [],
           "jsonSchema": {
@@ -1052,7 +1048,6 @@ exports[`#useInitialValues should generate initial values w/ 'not create' mode: 
           "selected": true,
           "syncMode": "full_refresh",
         },
-        "id": "2",
         "stream": {
           "defaultCursorField": [],
           "jsonSchema": {
@@ -1564,15 +1559,13 @@ exports[`#useInitialValues should generate initial values w/ 'not create' mode: 
 }
 `;
 
-exports[`#useInitialValues should generate initial values w/ 'not create' mode: true 1`] = `
+exports[`#useInitialFormValues should generate initial values w/ 'not create' mode: true 1`] = `
 {
   "geography": "auto",
   "namespaceDefinition": "source",
   "namespaceFormat": "\${SOURCE_NAMESPACE}",
   "nonBreakingChangesPreference": "ignore",
   "normalization": "basic",
-  "prefix": "",
-  "scheduleData": null,
   "scheduleType": "manual",
   "syncCatalog": {
     "streams": [
@@ -1585,7 +1578,6 @@ exports[`#useInitialValues should generate initial values w/ 'not create' mode: 
           "selected": true,
           "syncMode": "full_refresh",
         },
-        "id": "0",
         "stream": {
           "defaultCursorField": [],
           "jsonSchema": {
@@ -2100,7 +2092,6 @@ exports[`#useInitialValues should generate initial values w/ 'not create' mode: 
           "selected": false,
           "syncMode": "full_refresh",
         },
-        "id": "1",
         "stream": {
           "defaultCursorField": [],
           "jsonSchema": {
@@ -2615,7 +2606,6 @@ exports[`#useInitialValues should generate initial values w/ 'not create' mode: 
           "selected": true,
           "syncMode": "full_refresh",
         },
-        "id": "2",
         "stream": {
           "defaultCursorField": [],
           "jsonSchema": {
@@ -3127,7 +3117,7 @@ exports[`#useInitialValues should generate initial values w/ 'not create' mode: 
 }
 `;
 
-exports[`#useInitialValues should generate initial values w/ no 'not create' mode 1`] = `
+exports[`#useInitialFormValues should generate initial values w/ no 'not create' mode 1`] = `
 {
   "geography": "auto",
   "name": "Scrafty <> Heroku Postgres",
@@ -3135,8 +3125,6 @@ exports[`#useInitialValues should generate initial values w/ no 'not create' mod
   "namespaceFormat": "\${SOURCE_NAMESPACE}",
   "nonBreakingChangesPreference": "ignore",
   "normalization": "basic",
-  "prefix": "",
-  "scheduleData": null,
   "scheduleType": "manual",
   "syncCatalog": {
     "streams": [
@@ -3149,7 +3137,6 @@ exports[`#useInitialValues should generate initial values w/ no 'not create' mod
           "selected": true,
           "syncMode": "full_refresh",
         },
-        "id": "0",
         "stream": {
           "defaultCursorField": [],
           "jsonSchema": {
@@ -3664,7 +3651,6 @@ exports[`#useInitialValues should generate initial values w/ no 'not create' mod
           "selected": false,
           "syncMode": "full_refresh",
         },
-        "id": "1",
         "stream": {
           "defaultCursorField": [],
           "jsonSchema": {
@@ -4179,7 +4165,6 @@ exports[`#useInitialValues should generate initial values w/ no 'not create' mod
           "selected": true,
           "syncMode": "full_refresh",
         },
-        "id": "2",
         "stream": {
           "defaultCursorField": [],
           "jsonSchema": {

@@ -46,6 +46,11 @@ export function setDefaultValues(
           options.respectExistingValues && values[property.fieldKey] ? values[property.fieldKey] : {};
         setDefaultValues(property, values[property.fieldKey] as Record<string, unknown>, options);
         break;
+      case "objectArray":
+        if (property.isRequired && !(options.respectExistingValues && values[property.fieldKey])) {
+          values[property.fieldKey] = [];
+        }
+        break;
       case "formCondition":
         values[property.fieldKey] = {};
         let chosenCondition = property.conditions[0];
@@ -119,7 +124,10 @@ export function useBuildForm(
       throw new FormBuildError("connectorForm.error.topLevelNonObject");
     }
 
-    const validationSchema = useMemo(() => buildYupFormForJsonSchema(jsonSchema, formBlock), [formBlock, jsonSchema]);
+    const validationSchema = useMemo(
+      () => buildYupFormForJsonSchema(jsonSchema, formBlock, formatMessage),
+      [formBlock, formatMessage, jsonSchema]
+    );
 
     const startValues = useMemo<ConnectorFormValues>(() => {
       let baseValues = {

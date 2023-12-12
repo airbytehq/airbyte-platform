@@ -152,6 +152,7 @@ public class WorkspaceHelper {
     return swallowExecutionException(() -> jobToWorkspaceCache.get(jobId));
   }
 
+  // ORGANIZATION ID
   public UUID getOrganizationForWorkspace(final UUID workspaceId) {
     return swallowExecutionException(() -> workspaceToOrganizationCache.get(workspaceId));
   }
@@ -178,7 +179,7 @@ public class WorkspaceHelper {
    * Get workspace id from source and destination. Verify that the source and destination are from the
    * same workspace. Always compares source and destination workspaces even if there are errors while
    * fetching them.
-   *
+   * <p>
    * I don't know why we want this.
    *
    * @param sourceId source id

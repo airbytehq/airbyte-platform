@@ -1,0 +1,20 @@
+micrometer:
+  metrics:
+    enabled: false
+
+airbyte:
+  secret:
+    persistence: TESTING_CONFIG_DB_TABLE
+
+datasources:
+  local-secrets:
+    url: jdbc:h2:mem:default
+    driverClassName: org.h2.Driver
+    username: sa
+    password: ""
+
+jooq:
+  datasources:
+    local-secrets:
+      jackson-converter-enabled: true
+      sql-dialect: H2

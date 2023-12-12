@@ -1,5 +1,3 @@
-import { faClose, faRefresh } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
@@ -7,10 +5,11 @@ import { JobFailure } from "components/JobFailure";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { ProgressBar } from "components/ui/ProgressBar";
 import { Text } from "components/ui/Text";
 
-import { SynchronousJobRead } from "core/request/AirbyteClient";
+import { SynchronousJobRead } from "core/api/types/AirbyteClient";
 
 import styles from "./TestCard.module.scss";
 import TestingConnectionSuccess from "./TestingConnectionSuccess";
@@ -64,7 +63,7 @@ export const TestCard: React.FC<IProps> = ({
           </FlexItem>
           {isTestConnectionInProgress || !isEditMode ? (
             <Button
-              icon={<FontAwesomeIcon icon={faClose} />}
+              icon={<Icon type="cross" />}
               variant="secondary"
               type="button"
               disabled={!isTestConnectionInProgress}
@@ -77,7 +76,7 @@ export const TestCard: React.FC<IProps> = ({
               type="button"
               onClick={onRetestClick}
               variant="secondary"
-              icon={<FontAwesomeIcon icon={faRefresh} />}
+              icon={<Icon type="reset" />}
               // disable if there are changes in edit mode because the retest API can currently only test the saved state
               disabled={!isValid || dirty}
             >

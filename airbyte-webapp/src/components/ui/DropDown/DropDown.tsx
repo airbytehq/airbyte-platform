@@ -50,7 +50,7 @@ function DropDownInner<T = unknown>(
         MultiValueRemove: null,
         ...(propsComponents ?? {}),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any),
+      }) as any,
     [propsComponents]
   );
 

@@ -11,11 +11,13 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
+import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.commons.temporal.TemporalResponse;
 import io.airbyte.commons.temporal.scheduling.RouterService;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorContext;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.ConnectorJobOutput;
@@ -61,6 +63,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
 
   private final RouterService routerService;
   private final ConfigInjector configInjector;
+  private final ContextBuilder contextBuilder;
 
   @SuppressWarnings("ParameterName")
   public DefaultSynchronousSchedulerClient(final TemporalClient temporalClient,
@@ -68,13 +71,15 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
                                            final JobErrorReporter jobErrorReporter,
                                            final OAuthConfigSupplier oAuthConfigSupplier,
                                            final RouterService routerService,
-                                           final ConfigInjector configInjector) {
+                                           final ConfigInjector configInjector,
+                                           final ContextBuilder contextBuilder) {
     this.temporalClient = temporalClient;
     this.jobTracker = jobTracker;
     this.jobErrorReporter = jobErrorReporter;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
     this.routerService = routerService;
     this.configInjector = configInjector;
+    this.contextBuilder = contextBuilder;
   }
 
   @Override
@@ -103,11 +108,13 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
     final ConnectorJobReportingContext jobReportingContext = new ConnectorJobReportingContext(jobId, dockerImage, sourceVersion.getReleaseStage());
     final String taskQueue = routerService.getTaskQueueForWorkspace(source.getWorkspaceId(), TemporalJobType.CHECK_CONNECTION);
 
+    final ActorContext context = contextBuilder.fromSource(source);
+
     return execute(
         ConfigType.CHECK_CONNECTION_SOURCE,
         jobReportingContext,
         source.getSourceDefinitionId(),
-        () -> temporalClient.submitCheckConnection(UUID.randomUUID(), 0, source.getWorkspaceId(), taskQueue, jobCheckConnectionConfig),
+        () -> temporalClient.submitCheckConnection(UUID.randomUUID(), 0, source.getWorkspaceId(), taskQueue, jobCheckConnectionConfig, context),
         ConnectorJobOutput::getCheckConnection,
         source.getWorkspaceId(),
         source.getSourceId());
@@ -140,11 +147,13 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         new ConnectorJobReportingContext(jobId, dockerImage, destinationVersion.getReleaseStage());
     final String taskQueue = routerService.getTaskQueueForWorkspace(destination.getWorkspaceId(), TemporalJobType.CHECK_CONNECTION);
 
+    final ActorContext context = contextBuilder.fromDestination(destination);
+
     return execute(
         ConfigType.CHECK_CONNECTION_DESTINATION,
         jobReportingContext,
         destination.getDestinationDefinitionId(),
-        () -> temporalClient.submitCheckConnection(jobId, 0, destination.getWorkspaceId(), taskQueue, jobCheckConnectionConfig),
+        () -> temporalClient.submitCheckConnection(jobId, 0, destination.getWorkspaceId(), taskQueue, jobCheckConnectionConfig, context),
         ConnectorJobOutput::getCheckConnection,
         destination.getWorkspaceId(),
         destination.getDestinationId());
@@ -178,11 +187,13 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
 
     final String taskQueue = routerService.getTaskQueueForWorkspace(source.getWorkspaceId(), TemporalJobType.DISCOVER_SCHEMA);
 
+    final ActorContext context = contextBuilder.fromSource(source);
+
     return execute(
         ConfigType.DISCOVER_SCHEMA,
         jobReportingContext,
         source.getSourceDefinitionId(),
-        () -> temporalClient.submitDiscoverSchema(jobId, 0, source.getWorkspaceId(), taskQueue, jobDiscoverCatalogConfig),
+        () -> temporalClient.submitDiscoverSchema(jobId, 0, source.getWorkspaceId(), taskQueue, jobDiscoverCatalogConfig, context),
         ConnectorJobOutput::getDiscoverCatalogId,
         source.getWorkspaceId(),
         source.getSourceId());

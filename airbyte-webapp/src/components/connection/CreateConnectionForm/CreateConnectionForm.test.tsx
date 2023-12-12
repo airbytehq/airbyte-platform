@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { act, render as tlr } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import selectEvent from "react-select-event";
+import { VirtuosoMockContext } from "react-virtuoso";
 
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
@@ -16,28 +15,21 @@ import {
   mockSourceDefinitionVersion,
 } from "test-utils/mock-data/mockSource";
 import { mockTheme } from "test-utils/mock-data/mockTheme";
-import { TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
+import { mocked, TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
+import type { SchemaError } from "core/api";
+import { useDiscoverSchema } from "core/api";
 import { defaultOssFeatures, FeatureItem } from "core/services/features";
-import * as sourceHook from "hooks/services/useSourceHook";
 
 import { CreateConnectionForm } from "./CreateConnectionForm";
 
-jest.mock("services/connector/SourceDefinitionService", () => ({
-  useSourceDefinition: () => mockSourceDefinition,
-}));
-
-jest.mock("services/connector/SourceDefinitionSpecificationService", () => ({
-  useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
-}));
-
-jest.mock("services/connector/DestinationDefinitionSpecificationService", () => ({
-  useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
-}));
-
-jest.mock("services/connector/DestinationDefinitionService", () => ({
-  useDestinationDefinition: () => mockDestinationDefinition,
-}));
+const mockBaseUseDiscoverSchema = {
+  schemaErrorStatus: null,
+  isLoading: false,
+  schema: mockConnection.syncCatalog,
+  catalogId: "",
+  onDiscoverSchema: () => Promise.resolve(),
+};
 
 jest.mock("area/workspace/utils", () => ({
   useCurrentWorkspaceId: () => "workspace-id",
@@ -49,14 +41,18 @@ jest.mock("core/api", () => ({
   useCreateConnection: () => async () => null,
   useSourceDefinitionVersion: () => mockSourceDefinitionVersion,
   useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
+  useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
+  useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
+  useSourceDefinition: () => mockSourceDefinition,
+  useDestinationDefinition: () => mockDestinationDefinition,
+  useDiscoverSchema: jest.fn(() => mockBaseUseDiscoverSchema),
+  LogsRequestError: jest.requireActual("core/api/errors").LogsRequestError,
 }));
 
-jest.mock("hooks/domain/connector/useGetSourceFromParams", () => ({
+jest.mock("area/connector/utils", () => ({
   useGetSourceFromSearchParams: () => mockConnection.source,
-}));
-
-jest.mock("hooks/domain/connector/useGetDestinationFromParams", () => ({
   useGetDestinationFromSearchParams: () => mockConnection.destination,
+  ConnectorIds: jest.requireActual("area/connector/utils").ConnectorIds,
 }));
 
 jest.mock("hooks/theme/useAirbyteTheme", () => ({
@@ -66,7 +62,13 @@ jest.mock("hooks/theme/useAirbyteTheme", () => ({
 jest.setTimeout(40000);
 
 describe("CreateConnectionForm", () => {
-  const Wrapper: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => <TestWrapper>{children}</TestWrapper>;
+  const Wrapper: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
+    <TestWrapper>
+      <VirtuosoMockContext.Provider value={{ viewportHeight: 1000, itemHeight: 50 }}>
+        {children}
+      </VirtuosoMockContext.Provider>
+    </TestWrapper>
+  );
   const render = async () => {
     let renderResult: ReturnType<typeof tlr>;
 
@@ -80,38 +82,26 @@ describe("CreateConnectionForm", () => {
     return renderResult!;
   };
 
-  const baseUseDiscoverSchema = {
-    schemaErrorStatus: null,
-    isLoading: false,
-    schema: mockConnection.syncCatalog,
-    catalogId: "",
-    onDiscoverSchema: () => Promise.resolve(),
-  };
-
   beforeEach(() => {
     useMockIntersectionObserver();
   });
 
   it("should render", async () => {
-    jest.spyOn(sourceHook, "useDiscoverSchema").mockImplementationOnce(() => baseUseDiscoverSchema);
     const renderResult = await render();
     expect(renderResult).toMatchSnapshot();
     expect(renderResult.queryByText("Please wait a little bit more…")).toBeFalsy();
   });
 
   it("should render when loading", async () => {
-    jest
-      .spyOn(sourceHook, "useDiscoverSchema")
-      .mockImplementationOnce(() => ({ ...baseUseDiscoverSchema, isLoading: true }));
-
+    mocked(useDiscoverSchema).mockImplementationOnce(() => ({ ...mockBaseUseDiscoverSchema, isLoading: true }));
     const renderResult = await render();
     expect(renderResult).toMatchSnapshot();
   });
 
   it("should render with an error", async () => {
-    jest.spyOn(sourceHook, "useDiscoverSchema").mockImplementationOnce(() => ({
-      ...baseUseDiscoverSchema,
-      schemaErrorStatus: new Error("Test Error") as sourceHook.SchemaError,
+    mocked(useDiscoverSchema).mockImplementationOnce(() => ({
+      ...mockBaseUseDiscoverSchema,
+      schemaErrorStatus: new Error("Test Error") as SchemaError,
     }));
 
     const renderResult = await render();
@@ -123,15 +113,14 @@ describe("CreateConnectionForm", () => {
     const CRON_EXPRESSION_EVERY_MINUTE = "* * * * * * ?";
 
     it("should display an error for an invalid cron expression", async () => {
-      jest.spyOn(sourceHook, "useDiscoverSchema").mockImplementationOnce(() => baseUseDiscoverSchema);
-
       const container = tlr(
         <TestWrapper>
           <CreateConnectionForm />
         </TestWrapper>
       );
 
-      await selectEvent.select(container.getByTestId("scheduleData"), /cron/i);
+      await userEvent.click(container.getByTestId("schedule-type-listbox-button"));
+      await userEvent.click(container.getByTestId("cron-option"));
 
       const cronExpressionInput = container.getByTestId("cronExpression");
 
@@ -144,15 +133,14 @@ describe("CreateConnectionForm", () => {
     });
 
     it("should allow cron expressions under one hour when feature enabled", async () => {
-      jest.spyOn(sourceHook, "useDiscoverSchema").mockImplementationOnce(() => baseUseDiscoverSchema);
-
       const container = tlr(
         <TestWrapper>
           <CreateConnectionForm />
         </TestWrapper>
       );
 
-      await selectEvent.select(container.getByTestId("scheduleData"), /cron/i);
+      await userEvent.click(container.getByTestId("schedule-type-listbox-button"));
+      await userEvent.click(container.getByTestId("cron-option"));
 
       const cronExpressionField = container.getByTestId("cronExpression");
 
@@ -165,8 +153,6 @@ describe("CreateConnectionForm", () => {
     });
 
     it("should not allow cron expressions under one hour when feature not enabled", async () => {
-      jest.spyOn(sourceHook, "useDiscoverSchema").mockImplementationOnce(() => baseUseDiscoverSchema);
-
       const featuresToInject = defaultOssFeatures.filter((f) => f !== FeatureItem.AllowSyncSubOneHourCronExpressions);
 
       const container = tlr(
@@ -175,7 +161,8 @@ describe("CreateConnectionForm", () => {
         </TestWrapper>
       );
 
-      await selectEvent.select(container.getByTestId("scheduleData"), /cron/i);
+      await userEvent.click(container.getByTestId("schedule-type-listbox-button"));
+      await userEvent.click(container.getByTestId("cron-option"));
 
       const cronExpressionField = container.getByTestId("cronExpression");
 

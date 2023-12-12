@@ -10,7 +10,7 @@ import io.airbyte.oauth.BaseOAuthFlow;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "MissingJavadocType"})
+@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class MicrosoftBingAdsOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override

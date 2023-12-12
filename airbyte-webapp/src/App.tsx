@@ -4,15 +4,16 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ThemeProvider } from "styled-components";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
+import { DevToolsToggle } from "components/DevToolsToggle";
 
-import { config } from "config";
+import { config, ConfigServiceProvider } from "config";
 import { QueryProvider, useGetInstanceConfiguration } from "core/api";
 import { AnalyticsProvider } from "core/services/analytics";
 import { OSSAuthService } from "core/services/auth";
 import { defaultOssFeatures, FeatureService } from "core/services/features";
 import { I18nProvider } from "core/services/i18n";
 import { BlockerService } from "core/services/navigation";
-import { ServicesProvider } from "core/servicesProvider";
+import { isDevelopment } from "core/utils/isDevelopment";
 import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";
@@ -22,7 +23,6 @@ import { AirbyteThemeProvider } from "hooks/theme/useAirbyteTheme";
 import { ConnectorBuilderTestInputProvider } from "services/connectorBuilder/ConnectorBuilderTestInputService";
 
 import LoadingPage from "./components/LoadingPage";
-import { ConfigServiceProvider } from "./config";
 import en from "./locales/en.json";
 import { Routing } from "./pages/routes";
 import { theme } from "./theme";
@@ -33,8 +33,8 @@ const StyleProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children })
 
 const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
   <FeatureService features={defaultOssFeatures} instanceConfig={useGetInstanceConfiguration()}>
-    <OSSAuthService>
-      <NotificationService>
+    <NotificationService>
+      <OSSAuthService>
         <ConfirmationModalService>
           <ModalServiceProvider>
             <FormChangeTrackerService>
@@ -44,8 +44,8 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
             </FormChangeTrackerService>
           </ModalServiceProvider>
         </ConfirmationModalService>
-      </NotificationService>
-    </OSSAuthService>
+      </OSSAuthService>
+    </NotificationService>
   </FeatureService>
 );
 
@@ -57,26 +57,25 @@ const App: React.FC = () => {
           <I18nProvider locale="en" messages={en}>
             <QueryProvider>
               <BlockerService>
-                <ServicesProvider>
-                  <Suspense fallback={<LoadingPage />}>
-                    <ConfigServiceProvider config={config}>
-                      <AnalyticsProvider>
-                        <AppMonitoringServiceProvider>
-                          <ApiErrorBoundary>
-                            <Services>
-                              <Routing />
-                            </Services>
-                          </ApiErrorBoundary>
-                        </AppMonitoringServiceProvider>
-                      </AnalyticsProvider>
-                    </ConfigServiceProvider>
-                  </Suspense>
-                </ServicesProvider>
+                <Suspense fallback={<LoadingPage />}>
+                  <ConfigServiceProvider config={config}>
+                    <AnalyticsProvider>
+                      <AppMonitoringServiceProvider>
+                        <ApiErrorBoundary>
+                          <Services>
+                            <Routing />
+                          </Services>
+                        </ApiErrorBoundary>
+                      </AppMonitoringServiceProvider>
+                    </AnalyticsProvider>
+                  </ConfigServiceProvider>
+                </Suspense>
               </BlockerService>
             </QueryProvider>
           </I18nProvider>
         </StyleProvider>
       </AirbyteThemeProvider>
+      {isDevelopment() && <DevToolsToggle />}
     </React.StrictMode>
   );
 };

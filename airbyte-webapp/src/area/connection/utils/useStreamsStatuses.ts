@@ -9,7 +9,7 @@ import {
 } from "components/connection/StreamStatus/streamStatusUtils";
 
 import { useListStreamsStatuses, useGetConnection } from "core/api";
-import { StreamStatusRead } from "core/api/types/AirbyteClient";
+import { StreamStatusJobType, StreamStatusRead } from "core/api/types/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useExperiment } from "hooks/services/Experiment";
 
@@ -69,7 +69,12 @@ export const useStreamsStatuses = (
     // and that's correct for new streams; as soon as one statuses exists
     // each stream status will be initialized with Pending - instead of the
     // connection status - and it has its individual stream status computed
-    const hasPerStreamStatuses = data.streamStatuses.length > 0;
+    const hasPerStreamStatuses =
+      // there are stream statuses
+      data.streamStatuses.length > 0 &&
+      // and not all stream statuses are RESET, as the platform emits RESET statuses
+      // but unknown if connector is emitting other statuses
+      !data.streamStatuses.every((status) => status.jobType === StreamStatusJobType.RESET);
 
     // map stream statuses to enabled streams
     // naively, this is O(m*n) where m=enabledStreams and n=streamStatuses

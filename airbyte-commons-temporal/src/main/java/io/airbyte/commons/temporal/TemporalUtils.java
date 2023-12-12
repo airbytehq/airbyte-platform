@@ -4,49 +4,29 @@
 
 package io.airbyte.commons.temporal;
 
-import com.uber.m3.tally.RootScopeBuilder;
-import com.uber.m3.tally.Scope;
-import com.uber.m3.tally.StatsReporter;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.temporal.config.TemporalSdkTimeouts;
+import io.airbyte.commons.temporal.factories.TemporalCloudConfig;
+import io.airbyte.commons.temporal.factories.TemporalSelfHostedConfig;
+import io.airbyte.commons.temporal.factories.WorkflowServiceStubsFactory;
+import io.airbyte.commons.temporal.factories.WorkflowServiceStubsTimeouts;
 import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.micrometer.core.instrument.MeterRegistry;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Value;
-import io.temporal.activity.ActivityExecutionContext;
-import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.api.namespace.v1.NamespaceConfig;
 import io.temporal.api.namespace.v1.NamespaceInfo;
 import io.temporal.api.workflowservice.v1.DescribeNamespaceRequest;
 import io.temporal.api.workflowservice.v1.UpdateNamespaceRequest;
-import io.temporal.client.ActivityCompletionException;
-import io.temporal.client.WorkflowClient;
-import io.temporal.client.WorkflowStub;
-import io.temporal.common.RetryOptions;
-import io.temporal.common.reporter.MicrometerClientStatsReporter;
-import io.temporal.serviceclient.SimpleSslContextBuilder;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
-import io.temporal.workflow.Functions;
 import jakarta.inject.Singleton;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.Objects;
 import java.util.function.Supplier;
-import javax.net.ssl.SSLException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.DurationFormatUtils;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 
 /**
  * Temporal Utility functions.
@@ -60,18 +40,11 @@ public class TemporalUtils {
   private static final Duration MAX_TIME_TO_CONNECT = Duration.ofMinutes(2);
   private static final Duration WAIT_TIME_AFTER_CONNECT = Duration.ofSeconds(5);
   public static final String DEFAULT_NAMESPACE = "default";
-  public static final Duration SEND_HEARTBEAT_INTERVAL = Duration.ofSeconds(20);
-  public static final Duration HEARTBEAT_TIMEOUT = Duration.ofSeconds(30);
-  public static final Duration HEARTBEAT_SHUTDOWN_GRACE_PERIOD = Duration.ofSeconds(30);
-  public static final RetryOptions NO_RETRY = RetryOptions.newBuilder().setMaximumAttempts(1).build();
   private static final double REPORT_INTERVAL_SECONDS = 120.0;
 
-  private final String temporalCloudClientCert;
-  private final String temporalCloudClientKey;
+  private final TemporalCloudConfig temporalCloudConfig;
+  private final WorkflowServiceStubsFactory workflowServiceStubsFactory;
   private final Boolean temporalCloudEnabled;
-  private final String temporalCloudHost;
-  private final String temporalCloudNamespace;
-  private final String temporalHost;
   private final Integer temporalRetentionInDays;
 
   public TemporalUtils(@Property(name = "temporal.cloud.client.cert") final String temporalCloudClientCert,
@@ -83,12 +56,12 @@ public class TemporalUtils {
                        @Value("${temporal.host}") final String temporalHost,
                        @Property(name = "temporal.retention",
                                  defaultValue = "30") final Integer temporalRetentionInDays) {
-    this.temporalCloudClientCert = temporalCloudClientCert;
-    this.temporalCloudClientKey = temporalCloudClientKey;
-    this.temporalCloudEnabled = temporalCloudEnabled;
-    this.temporalCloudHost = temporalCloudHost;
-    this.temporalCloudNamespace = temporalCloudNamespace;
-    this.temporalHost = temporalHost;
+    this.temporalCloudEnabled = Objects.requireNonNullElse(temporalCloudEnabled, false);
+    this.temporalCloudConfig = new TemporalCloudConfig(temporalCloudClientCert, temporalCloudClientKey, temporalCloudHost, temporalCloudNamespace);
+    this.workflowServiceStubsFactory = new WorkflowServiceStubsFactory(
+        temporalCloudConfig,
+        new TemporalSelfHostedConfig(temporalHost, this.temporalCloudEnabled ? temporalCloudNamespace : DEFAULT_NAMESPACE),
+        this.temporalCloudEnabled);
     this.temporalRetentionInDays = temporalRetentionInDays;
   }
 
@@ -111,57 +84,21 @@ public class TemporalUtils {
   /**
    * Create temporal service client.
    *
-   * @param isCloud is a cloud deployment
    * @return temporal service client
    */
-  // TODO consider consolidating this method's logic into createTemporalService() after the Temporal
-  // Cloud migration is complete.
-  // The Temporal Migration migrator is the only reason this public method exists.
-  public WorkflowServiceStubs createTemporalService(final boolean isCloud, final TemporalSdkTimeouts temporalSdkTimeouts) {
-    final WorkflowServiceStubsOptions options =
-        isCloud ? getCloudTemporalOptions(temporalSdkTimeouts) : TemporalWorkflowUtils.getAirbyteTemporalOptions(temporalHost, temporalSdkTimeouts);
-    final String namespace = isCloud ? temporalCloudNamespace : DEFAULT_NAMESPACE;
+  public WorkflowServiceStubs createTemporalService(final TemporalSdkTimeouts temporalSdkTimeouts) {
+    final var timeouts = new WorkflowServiceStubsTimeouts(temporalSdkTimeouts.getRpcTimeout(),
+        temporalSdkTimeouts.getRpcLongPollTimeout(),
+        temporalSdkTimeouts.getRpcQueryTimeout(),
+        MAX_TIME_TO_CONNECT);
+    final WorkflowServiceStubsOptions options = workflowServiceStubsFactory.createWorkflowServiceStubsOptions(timeouts);
+    final String namespace = temporalCloudEnabled ? temporalCloudConfig.getNamespace() : DEFAULT_NAMESPACE;
 
     return createTemporalService(options, namespace);
   }
 
-  public WorkflowServiceStubs createTemporalService(final TemporalSdkTimeouts temporalSdkTimeouts) {
-    return createTemporalService(temporalCloudEnabled, temporalSdkTimeouts);
-  }
-
-  private WorkflowServiceStubsOptions getCloudTemporalOptions(final TemporalSdkTimeouts temporalSdkTimeouts) {
-    final InputStream clientCert = new ByteArrayInputStream(temporalCloudClientCert.getBytes(StandardCharsets.UTF_8));
-    final InputStream clientKey = new ByteArrayInputStream(temporalCloudClientKey.getBytes(StandardCharsets.UTF_8));
-    final WorkflowServiceStubsOptions.Builder optionBuilder;
-    try {
-      optionBuilder = WorkflowServiceStubsOptions.newBuilder()
-          .setRpcTimeout(temporalSdkTimeouts.getRpcTimeout())
-          .setRpcLongPollTimeout(temporalSdkTimeouts.getRpcLongPollTimeout())
-          .setRpcQueryTimeout(temporalSdkTimeouts.getRpcQueryTimeout())
-          .setSslContext(SimpleSslContextBuilder.forPKCS8(clientCert, clientKey).build())
-          .setTarget(temporalCloudHost);
-    } catch (final SSLException e) {
-      log.error("SSL Exception occurred attempting to establish Temporal Cloud options.");
-      throw new RuntimeException(e);
-    }
-
-    configureTemporalMeterRegistry(optionBuilder);
-    return optionBuilder.build();
-  }
-
-  private void configureTemporalMeterRegistry(final WorkflowServiceStubsOptions.Builder optionalBuilder) {
-    final MeterRegistry registry = MetricClientFactory.getMeterRegistry();
-    if (registry != null) {
-      final StatsReporter reporter = new MicrometerClientStatsReporter(registry);
-      final Scope scope = new RootScopeBuilder()
-          .reporter(reporter)
-          .reportEvery(com.uber.m3.util.Duration.ofSeconds(REPORT_INTERVAL_SECONDS));
-      optionalBuilder.setMetricsScope(scope);
-    }
-  }
-
   public String getNamespace() {
-    return temporalCloudEnabled ? temporalCloudNamespace : DEFAULT_NAMESPACE;
+    return temporalCloudEnabled ? temporalCloudConfig.getNamespace() : DEFAULT_NAMESPACE;
   }
 
   /**
@@ -194,34 +131,6 @@ public class TemporalUtils {
           + humanReadableWorkflowExecutionTtl + "). ");
       client.updateNamespace(updateNamespaceRequest);
     }
-  }
-
-  /**
-   * Allows running a given temporal workflow stub asynchronously. This method only works for
-   * workflows that take one argument. Because of the iface that Temporal supplies, in order to handle
-   * other method signatures, if we need to support them, we will need to add another helper with that
-   * number of args. For a reference on how Temporal recommends to do this see their docs:
-   * https://docs.temporal.io/docs/java/workflows#asynchronous-start
-   *
-   * @param workflowStub - workflow stub to be executed
-   * @param function - function on the workflow stub to be executed
-   * @param arg1 - argument to be supplied to the workflow function
-   * @param outputType - class of the output type of the workflow function
-   * @param <STUB> - type of the workflow stub
-   * @param <A1> - type of the argument of the workflow stub
-   * @param <R> - type of the return of the workflow stub
-   * @return pair of the workflow execution (contains metadata on the asynchronously running job) and
-   *         future that can be used to await the result of the workflow stub's function
-   */
-  @SuppressWarnings("MethodTypeParameterName")
-  public <STUB, A1, R> ImmutablePair<WorkflowExecution, CompletableFuture<R>> asyncExecute(final STUB workflowStub,
-                                                                                           final Functions.Func1<A1, R> function,
-                                                                                           final A1 arg1,
-                                                                                           final Class<R> outputType) {
-    final WorkflowStub untyped = WorkflowStub.fromTyped(workflowStub);
-    final WorkflowExecution workflowExecution = WorkflowClient.start(function, arg1);
-    final CompletableFuture<R> resultAsync = untyped.getResultAsync(outputType);
-    return ImmutablePair.of(workflowExecution, resultAsync);
   }
 
   /**
@@ -273,73 +182,6 @@ public class TemporalUtils {
     return temporalService.blockingStub()
         .describeNamespace(DescribeNamespaceRequest.newBuilder().setNamespace(namespace).build())
         .getNamespaceInfo();
-  }
-
-  /**
-   * Run a callable. If while it is running the temporal activity is cancelled, the provided callback
-   * is triggered.
-   *
-   * It manages this by regularly calling back to temporal in order to check whether the activity has
-   * been cancelled. If it is cancelled it calls the callback.
-   *
-   * @param afterCancellationCallbackRef callback to be triggered if the temporal activity is
-   *        cancelled before the callable completes
-   * @param callable callable to run with cancellation
-   * @param activityContext context used to check whether the activity has been cancelled
-   * @param <T> type of variable returned by the callable
-   * @return if the callable succeeds without being cancelled, returns the value returned by the
-   *         callable
-   */
-  public <T> T withBackgroundHeartbeat(final AtomicReference<Runnable> afterCancellationCallbackRef,
-                                       final Callable<T> callable,
-                                       final Supplier<ActivityExecutionContext> activityContext) {
-    final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
-
-    try {
-      // Schedule the cancellation handler.
-      scheduledExecutor.scheduleAtFixedRate(() -> {
-        final CancellationHandler cancellationHandler = new CancellationHandler.TemporalCancellationHandler(activityContext.get());
-
-        cancellationHandler.checkAndHandleCancellation(() -> {
-          // After cancellation cleanup.
-          if (afterCancellationCallbackRef != null) {
-            final Runnable cancellationCallback = afterCancellationCallbackRef.get();
-            if (cancellationCallback != null) {
-              cancellationCallback.run();
-            }
-          }
-        });
-      }, 0, SEND_HEARTBEAT_INTERVAL.toSeconds(), TimeUnit.SECONDS);
-
-      return callable.call();
-    } catch (final ActivityCompletionException e) {
-      log.warn("Job either timed out or was cancelled.");
-      throw new RuntimeException(e);
-    } catch (final Exception e) {
-      throw new RuntimeException(e);
-    } finally {
-      log.info("Stopping temporal heartbeating...");
-      // At this point we are done, we should try to stop all heartbeat ASAP.
-      // We can safely ignore the list of tasks that didn't start since we are exiting regardless.
-      scheduledExecutor.shutdownNow();
-
-      try {
-        // Making sure the heartbeat executor is terminated to avoid heartbeat attempt after we're done with
-        // the activity.
-        if (scheduledExecutor.awaitTermination(HEARTBEAT_SHUTDOWN_GRACE_PERIOD.toSeconds(), TimeUnit.SECONDS)) {
-          log.info("Temporal heartbeating stopped.");
-        } else {
-          // Heartbeat thread failed to stop, we may leak a thread if this happens.
-          // We should not fail the execution because of this.
-          log.info("Temporal heartbeating didn't stop within {} seconds, continuing the shutdown.", HEARTBEAT_SHUTDOWN_GRACE_PERIOD.toSeconds());
-        }
-      } catch (InterruptedException e) {
-        // We got interrupted while attempting to shutdown the executor. Not much more we can do.
-        log.info("Interrupted while stopping the Temporal heartbeating, continuing the shutdown.");
-        // Preserve the interrupt status
-        Thread.currentThread().interrupt();
-      }
-    }
   }
 
   /**

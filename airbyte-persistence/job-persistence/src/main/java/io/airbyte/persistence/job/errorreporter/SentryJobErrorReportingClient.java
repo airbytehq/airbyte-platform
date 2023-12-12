@@ -4,6 +4,7 @@
 
 package io.airbyte.persistence.job.errorreporter;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.Metadata;
@@ -18,6 +19,7 @@ import io.sentry.protocol.Message;
 import io.sentry.protocol.SentryException;
 import io.sentry.protocol.User;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -65,7 +67,8 @@ public class SentryJobErrorReportingClient implements JobErrorReportingClient {
   public void reportJobFailureReason(@Nullable final StandardWorkspace workspace,
                                      final FailureReason failureReason,
                                      @Nullable final String dockerImage,
-                                     final Map<String, String> metadata) {
+                                     final Map<String, String> metadata,
+                                     @Nullable final AttemptConfigReportingContext attemptConfig) {
     final SentryEvent event = new SentryEvent();
 
     if (dockerImage != null) {
@@ -138,10 +141,53 @@ public class SentryJobErrorReportingClient implements JobErrorReportingClient {
         failureReasonContext.put("metadata", failureReasonMeta.toString());
       }
 
+      if (attemptConfig != null) {
+        final Map<String, String> stateContext = new HashMap<>();
+        stateContext.put("state", attemptConfig.state() != null ? attemptConfig.state().toString() : "null");
+        scope.setContexts("State", stateContext);
+        scope.setContexts("Source Configuration", getContextFromNode(attemptConfig.sourceConfig()));
+        scope.setContexts("Destination Configuration", getContextFromNode(attemptConfig.destinationConfig()));
+      }
+
       scope.setContexts("Failure Reason", failureReasonContext);
     });
 
     sentryHub.captureEvent(event);
+  }
+
+  private static Map<String, String> getContextFromNode(@Nullable JsonNode node) {
+    Map<String, String> flatMap = new HashMap<>();
+    if (node != null) {
+      flattenJsonNode("", node, flatMap);
+    }
+    return flatMap;
+  }
+
+  /**
+   * This flattens a JsonNode into its related dot paths.
+   *
+   * e.g. {"a": { "b": [{"c": 1}]}} -> {"a.b[0].c": 1}
+   */
+  public static void flattenJsonNode(String currentPath, JsonNode node, Map<String, String> flatMap) {
+    if (node.isArray()) {
+      for (int i = 0; i < node.size(); i++) {
+        JsonNode item = node.get(i);
+        String newPath = String.format("%s[%d]", currentPath, i);
+        flattenJsonNode(newPath, item, flatMap);
+      }
+    } else if (node.isObject()) {
+      Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
+      while (fields.hasNext()) {
+        Map.Entry<String, JsonNode> field = fields.next();
+        String fieldName = field.getKey();
+        JsonNode fieldValue = field.getValue();
+
+        String newPath = currentPath.isEmpty() ? fieldName : currentPath + "." + fieldName;
+        flattenJsonNode(newPath, fieldValue, flatMap);
+      }
+    } else {
+      flatMap.put(currentPath, node.asText());
+    }
   }
 
 }

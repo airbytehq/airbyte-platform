@@ -4,7 +4,7 @@ import { FormattedMessage } from "react-intl";
 
 import { Table } from "components/ui/Table";
 
-import { ConnectionScheduleType, SchemaChange } from "core/request/AirbyteClient";
+import { ConnectionScheduleType, SchemaChange } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 
 import ConnectionSettingsCell from "./components/ConnectionSettingsCell";
@@ -21,9 +21,10 @@ interface ConnectionTableProps {
   data: ConnectionTableDataItem[];
   entity: "source" | "destination" | "connection";
   onClickRow?: (data: ConnectionTableDataItem) => void;
+  variant?: React.ComponentProps<typeof Table>["variant"];
 }
 
-const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClickRow }) => {
+const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClickRow, variant }) => {
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
   const streamCentricUIEnabled = false;
 
@@ -64,6 +65,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
         cell: (props) => (
           <ConnectorNameCell
             value={props.cell.getValue()}
+            actualName={props.row.original.connection.source?.sourceName ?? ""}
             icon={props.row.original.entityIcon}
             enabled={props.row.original.enabled}
             hideIcon={entity !== "connection"}
@@ -82,6 +84,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
         cell: (props) => (
           <ConnectorNameCell
             value={props.cell.getValue()}
+            actualName={props.row.original.connection.destination?.destinationName ?? ""}
             icon={props.row.original.connectorIcon}
             enabled={props.row.original.enabled}
           />
@@ -139,6 +142,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
 
   return (
     <Table
+      variant={variant}
       columns={columns}
       data={data}
       onClickRow={onClickRow}

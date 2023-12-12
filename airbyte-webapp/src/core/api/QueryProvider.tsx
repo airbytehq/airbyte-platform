@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import React from "react";
 
+import styles from "./QueryProvider.module.scss";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -14,13 +16,15 @@ const queryClient = new QueryClient({
 
 export const QueryProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
   <QueryClientProvider client={queryClient}>
-    <ReactQueryDevtools
-      initialIsOpen={false}
-      position="bottom-right"
-      toggleButtonProps={{
-        id: "react-query-devtool-btn",
-      }}
-    />
+    <div className={styles.devToolsWrapper}>
+      <ReactQueryDevtools
+        initialIsOpen={false}
+        position="bottom-right"
+        toggleButtonProps={{
+          id: "react-query-devtool-btn",
+        }}
+      />
+    </div>
     {children}
   </QueryClientProvider>
 );

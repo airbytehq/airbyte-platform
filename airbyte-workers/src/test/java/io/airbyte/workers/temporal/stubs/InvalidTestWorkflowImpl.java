@@ -4,10 +4,10 @@
 
 package io.airbyte.workers.temporal.stubs;
 
+import io.airbyte.commons.temporal.annotations.TemporalActivityStub;
 import io.airbyte.commons.temporal.exception.RetryableException;
-import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
 
-@SuppressWarnings({"PMD.UnusedPrivateField", "MissingJavadocType"})
+@SuppressWarnings("PMD.UnusedPrivateField")
 public class InvalidTestWorkflowImpl implements TestWorkflow {
 
   @TemporalActivityStub(activityOptionsBeanName = "missingActivityOptions")

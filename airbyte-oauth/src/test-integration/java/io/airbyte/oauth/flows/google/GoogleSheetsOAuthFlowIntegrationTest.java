@@ -5,6 +5,7 @@
 package io.airbyte.oauth.flows.google;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -26,8 +27,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,7 +36,6 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@SuppressWarnings("MissingJavadocType")
 public class GoogleSheetsOAuthFlowIntegrationTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(GoogleSheetsOAuthFlowIntegrationTest.class);
@@ -48,7 +48,6 @@ public class GoogleSheetsOAuthFlowIntegrationTest {
   private ServerHandler serverHandler;
   private HttpClient httpClient;
 
-  @SuppressWarnings("MissingJavadocMethod")
   @BeforeEach
   public void setup() throws IOException {
     if (!Files.exists(CREDENTIALS_PATH)) {
@@ -86,7 +85,7 @@ public class GoogleSheetsOAuthFlowIntegrationTest {
             .put("client_id", credentialsJson.get("credentials").get("client_id").asText())
             .put("client_secret", credentialsJson.get("credentials").get("client_secret").asText())
             .build())));
-    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(sourceOAuthParameter));
+    when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
     final String url = googleSheetsOAuthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null,
         sourceOAuthParameter.getConfiguration());
     LOGGER.info("Waiting for user consent at: {}", url);

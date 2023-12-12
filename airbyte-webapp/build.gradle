@@ -101,8 +101,13 @@ tasks.register("e2etest", PnpmTask) {
 
 tasks.register("cloudE2eTest", PnpmTask) {
     dependsOn tasks.named("pnpmInstall")
-
-    args = ['run', 'cloud-test:stage']
+    def recordCypress = project.hasProperty('cypressCloudWebappKey') && project.getProperty('cypressCloudWebappKey')
+    if (recordCypress) {
+        environment = [CYPRESS_KEY: project.getProperty('cypressCloudWebappKey')]
+        args = ['run', 'cloud-test:stage:record']
+    } else {
+        args = ['run', 'cloud-test:stage']
+    }
 
     // Mark the outputs as never up to date, to ensure we always run the tests.
     // We want this because they are e2e tests and can depend on other factors e.g., external dependencies.

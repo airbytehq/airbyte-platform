@@ -1,6 +1,7 @@
 import React from "react";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
+import { createSearchParams, useSearchParams } from "react-router-dom";
 import * as yup from "yup";
 import { SchemaOf } from "yup";
 
@@ -47,6 +48,15 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ requirePas
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
+  const [searchParams] = useSearchParams();
+
+  const loginRedirectString = searchParams.get("loginRedirect");
+
+  const reStringifiedLoginRedirect = loginRedirectString && createSearchParams({ loginRedirect: loginRedirectString });
+  const loginTo = loginRedirectString
+    ? { pathname: CloudRoutes.Login, search: `${reStringifiedLoginRedirect}` }
+    : CloudRoutes.Login;
+
   useTrackPage(PageTrackingCodes.RESET_PASSWORD);
 
   const onSubmit = async ({ email }: ResetPasswordFormValues) => {
@@ -98,7 +108,7 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ requirePas
         <Box mt="2xl">
           <FlexContainer direction="row" justifyContent="space-between" alignItems="center">
             <Text size="sm" color="grey300">
-              <Link to={CloudRoutes.Login}>
+              <Link to={loginTo}>
                 <FormattedMessage id="login.backLogin" />
               </Link>
             </Text>
@@ -106,7 +116,7 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ requirePas
           </FlexContainer>
         </Box>
       </Form>
-      <LoginSignupNavigation to="signup" />
+      <LoginSignupNavigation type="signup" />
     </FlexContainer>
   );
 };

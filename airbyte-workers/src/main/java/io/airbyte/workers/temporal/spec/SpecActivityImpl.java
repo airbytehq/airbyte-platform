@@ -15,7 +15,7 @@ import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
-import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.temporal.HeartbeatUtils;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.version.Version;
 import io.airbyte.commons.workers.config.WorkerConfigs;
@@ -32,6 +32,7 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.general.DefaultGetSpecWorker;
+import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncher;
@@ -68,7 +69,7 @@ public class SpecActivityImpl implements SpecActivity {
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
-  private final TemporalUtils temporalUtils;
+  private final GsonPksExtractor gsonPksExtractor;
 
   public SpecActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                           final ProcessFactory processFactory,
@@ -80,7 +81,7 @@ public class SpecActivityImpl implements SpecActivity {
                           final AirbyteMessageSerDeProvider serDeProvider,
                           final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                           final FeatureFlags featureFlags,
-                          final TemporalUtils temporalUtils) {
+                          final GsonPksExtractor gsonPksExtractor) {
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.workspaceRoot = workspaceRoot;
@@ -91,7 +92,7 @@ public class SpecActivityImpl implements SpecActivity {
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
     this.featureFlags = featureFlags;
-    this.temporalUtils = temporalUtils;
+    this.gsonPksExtractor = gsonPksExtractor;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -108,7 +109,7 @@ public class SpecActivityImpl implements SpecActivity {
     final ActivityExecutionContext context = Activity.getExecutionContext();
     final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
 
-    return temporalUtils.withBackgroundHeartbeat(
+    return HeartbeatUtils.withBackgroundHeartbeat(
         cancellationCallback,
         () -> {
           final var worker = getWorkerFactory(launcherConfig).get();
@@ -126,7 +127,7 @@ public class SpecActivityImpl implements SpecActivity {
 
           return temporalAttemptExecution.get();
         },
-        () -> context);
+        context);
   }
 
   private CheckedSupplier<Worker<JobGetSpecConfig, ConnectorJobOutput>, Exception> getWorkerFactory(
@@ -146,6 +147,7 @@ public class SpecActivityImpl implements SpecActivity {
           launcherConfig.getAllowedHosts(),
           launcherConfig.getIsCustomConnector(),
           featureFlags,
+          Collections.emptyMap(),
           Collections.emptyMap());
 
       return new DefaultGetSpecWorker(integrationLauncher, streamFactory);
@@ -156,8 +158,9 @@ public class SpecActivityImpl implements SpecActivity {
     final Version protocolVersion =
         launcherConfig.getProtocolVersion() != null ? launcherConfig.getProtocolVersion() : migratorFactory.getMostRecentVersion();
     // Try to detect version from the stream
-    return new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(), Optional.empty())
-        .withDetectVersion(true);
+    return new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(),
+        Optional.empty(), new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false), gsonPksExtractor)
+            .withDetectVersion(true);
   }
 
 }

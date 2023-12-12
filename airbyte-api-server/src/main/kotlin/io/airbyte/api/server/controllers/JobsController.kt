@@ -12,6 +12,7 @@ import io.airbyte.airbyte_api.model.generated.JobTypeEnum
 import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByFieldEnum
 import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByMethodEnum
 import io.airbyte.api.server.apiTracking.TrackingHelper
+import io.airbyte.api.server.constants.AUTH_HEADER
 import io.airbyte.api.server.constants.DELETE
 import io.airbyte.api.server.constants.ENDPOINT_API_USER_INFO_HEADER
 import io.airbyte.api.server.constants.GET
@@ -25,6 +26,7 @@ import io.airbyte.api.server.problems.UnprocessableEntityProblem
 import io.airbyte.api.server.services.ConnectionService
 import io.airbyte.api.server.services.JobService
 import io.airbyte.api.server.services.UserService
+import io.airbyte.commons.enums.Enums
 import io.micronaut.http.annotation.Controller
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -40,29 +42,32 @@ open class JobsController(
   private val jobService: JobService,
   private val userService: UserService,
   private val connectionService: ConnectionService,
+  private val trackingHelper: TrackingHelper,
 ) : JobsApi {
-
   @DELETE
   @Path("/{jobId}")
   override fun cancelJob(
     @PathParam("jobId") jobId: Long,
+    @HeaderParam(AUTH_HEADER) authorization: String?,
     @HeaderParam(ENDPOINT_API_USER_INFO_HEADER) userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    val jobResponse: Any? = TrackingHelper.callWithTracker(
-      {
-        jobService.cancelJob(
-          jobId,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      JOBS_WITH_ID_PATH,
-      DELETE,
-      userId,
-    )
+    val jobResponse: Any? =
+      trackingHelper.callWithTracker(
+        {
+          jobService.cancelJob(
+            jobId,
+            authorization,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        JOBS_WITH_ID_PATH,
+        DELETE,
+        userId,
+      )
 
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       JOBS_WITH_ID_PATH,
       DELETE,
       userId,
@@ -73,14 +78,19 @@ open class JobsController(
       .build()
   }
 
-  override fun createJob(jobCreateRequest: JobCreateRequest, userInfo: String?): Response {
+  override fun createJob(
+    jobCreateRequest: JobCreateRequest,
+    authorization: String?,
+    userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val connectionResponse: ConnectionResponse =
-      TrackingHelper.callWithTracker(
+      trackingHelper.callWithTracker(
         {
           connectionService.getConnection(
             jobCreateRequest.connectionId,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -92,13 +102,15 @@ open class JobsController(
 
     return when (jobCreateRequest.jobType) {
       JobTypeEnum.SYNC -> {
-        val jobResponse: Any = TrackingHelper.callWithTracker({
-          jobService.sync(
-            jobCreateRequest.connectionId,
-            getLocalUserInfoIfNull(userInfo),
-          )
-        }, JOBS_PATH, POST, userId)!!
-        TrackingHelper.trackSuccess(
+        val jobResponse: Any =
+          trackingHelper.callWithTracker({
+            jobService.sync(
+              jobCreateRequest.connectionId,
+              authorization,
+              getLocalUserInfoIfNull(userInfo),
+            )
+          }, JOBS_PATH, POST, userId)!!
+        trackingHelper.trackSuccess(
           JOBS_PATH,
           POST,
           userId,
@@ -111,13 +123,15 @@ open class JobsController(
       }
 
       JobTypeEnum.RESET -> {
-        val jobResponse: Any = TrackingHelper.callWithTracker({
-          jobService.reset(
-            jobCreateRequest.connectionId,
-            getLocalUserInfoIfNull(userInfo),
-          )
-        }, JOBS_PATH, POST, userId)!!
-        TrackingHelper.trackSuccess(
+        val jobResponse: Any =
+          trackingHelper.callWithTracker({
+            jobService.reset(
+              jobCreateRequest.connectionId,
+              authorization,
+              getLocalUserInfoIfNull(userInfo),
+            )
+          }, JOBS_PATH, POST, userId)!!
+        trackingHelper.trackSuccess(
           JOBS_PATH,
           POST,
           userId,
@@ -131,7 +145,7 @@ open class JobsController(
 
       else -> {
         val unprocessableEntityProblem = UnprocessableEntityProblem()
-        TrackingHelper.trackFailuresIfAny(
+        trackingHelper.trackFailuresIfAny(
           JOBS_PATH,
           POST,
           userId,
@@ -146,23 +160,26 @@ open class JobsController(
   @Path("/{jobId}")
   override fun getJob(
     @PathParam("jobId") jobId: Long,
+    @HeaderParam(AUTH_HEADER) authorization: String?,
     @HeaderParam(ENDPOINT_API_USER_INFO_HEADER) userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    val jobResponse: Any? = TrackingHelper.callWithTracker(
-      {
-        jobService.getJobInfoWithoutLogs(
-          jobId,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      JOBS_WITH_ID_PATH,
-      GET,
-      userId,
-    )
+    val jobResponse: Any? =
+      trackingHelper.callWithTracker(
+        {
+          jobService.getJobInfoWithoutLogs(
+            jobId,
+            authorization,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        JOBS_WITH_ID_PATH,
+        GET,
+        userId,
+      )
 
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       JOBS_WITH_ID_PATH,
       GET,
       userId,
@@ -185,58 +202,63 @@ open class JobsController(
     updatedAtStart: OffsetDateTime?,
     updatedAtEnd: OffsetDateTime?,
     orderBy: String?,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
     val jobsResponse: Any
-    val filter = JobsFilter(
-      createdAtStart,
-      createdAtEnd,
-      updatedAtStart,
-      updatedAtEnd,
-      limit,
-      offset,
-      jobType,
-      status,
-    )
+    val filter =
+      JobsFilter(
+        createdAtStart,
+        createdAtEnd,
+        updatedAtStart,
+        updatedAtEnd,
+        limit,
+        offset,
+        jobType,
+        status,
+      )
 
     val (orderByField, orderByMethod) = orderByToFieldAndMethod(orderBy)
 
-    jobsResponse = (
-      if (connectionId != null) {
-        TrackingHelper.callWithTracker(
-          {
-            jobService.getJobList(
-              connectionId,
-              filter,
-              orderByField,
-              orderByMethod,
-              getLocalUserInfoIfNull(userInfo),
-            )
-          },
-          JOBS_PATH,
-          GET,
-          userId,
-        )
-      } else {
-        TrackingHelper.callWithTracker(
-          {
-            jobService.getJobList(
-              workspaceIds ?: emptyList(),
-              filter,
-              orderByField,
-              orderByMethod,
-              getLocalUserInfoIfNull(userInfo),
-            )
-          },
-          JOBS_PATH,
-          GET,
-          userId,
-        )
-      }
+    jobsResponse =
+      (
+        if (connectionId != null) {
+          trackingHelper.callWithTracker(
+            {
+              jobService.getJobList(
+                connectionId,
+                filter,
+                orderByField,
+                orderByMethod,
+                authorization,
+                getLocalUserInfoIfNull(userInfo),
+              )
+            },
+            JOBS_PATH,
+            GET,
+            userId,
+          )
+        } else {
+          trackingHelper.callWithTracker(
+            {
+              jobService.getJobList(
+                workspaceIds ?: emptyList(),
+                filter,
+                orderByField,
+                orderByMethod,
+                authorization,
+                getLocalUserInfoIfNull(userInfo),
+              )
+            },
+            JOBS_PATH,
+            GET,
+            userId,
+          )
+        }
       )!!
 
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       JOBS_PATH,
       GET,
       userId,
@@ -256,8 +278,12 @@ open class JobsController(
       if (!matcher.find()) {
         throw BadRequestProblem("Invalid order by clause provided: $orderBy")
       }
-      field = OrderByFieldEnum.valueOf(matcher.group(1))
-      method = OrderByMethodEnum.valueOf(matcher.group(2))
+      field =
+        Enums.toEnum(matcher.group(1), OrderByFieldEnum::class.java)
+          .orElseThrow { BadRequestProblem("Invalid order by clause provided: $orderBy") }
+      method =
+        Enums.toEnum(matcher.group(2), OrderByMethodEnum::class.java)
+          .orElseThrow { BadRequestProblem("Invalid order by clause provided: $orderBy") }
     }
     return Pair(field, method)
   }

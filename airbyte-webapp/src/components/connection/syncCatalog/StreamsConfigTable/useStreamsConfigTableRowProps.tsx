@@ -1,18 +1,19 @@
 /* eslint-disable css-modules/no-unused-class */
 import classNames from "classnames";
-import isEqual from "lodash/isEqual";
 import { useMemo } from "react";
 
-import { PillButtonVariant } from "components/ui/PillSelect/PillButton";
+import { PillButtonVariant } from "components/ui/PillListBox/PillButton";
 
-import { SyncSchemaStream } from "core/domain/catalog";
+import { AirbyteStreamAndConfiguration, AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import styles from "./StreamsConfigTableRow.module.scss";
+import { isSameSyncStream } from "../../ConnectionForm/utils";
+import { compareObjectsByFields } from "../utils";
 
 export type StatusToDisplay = "disabled" | "added" | "removed" | "changed" | "unchanged";
 
-export const useStreamsConfigTableRowProps = (stream: SyncSchemaStream) => {
+export const useStreamsConfigTableRowProps = (stream: AirbyteStreamAndConfiguration) => {
   const { initialValues } = useConnectionFormService();
 
   const isStreamEnabled = stream.config?.selected;
@@ -23,15 +24,12 @@ export const useStreamsConfigTableRowProps = (stream: SyncSchemaStream) => {
         (item) => item.stream?.name === stream.stream?.name && item.stream?.namespace === stream.stream?.namespace
       )?.config?.selected !== stream.config?.selected;
 
-    const rowChanged = !isEqual(
-      initialValues.syncCatalog.streams.find(
-        (item) =>
-          item.stream &&
-          stream.stream &&
-          item.stream.name === stream.stream.name &&
-          item.stream.namespace === stream.stream.namespace
+    const rowChanged = !compareObjectsByFields<AirbyteStreamConfiguration>(
+      initialValues.syncCatalog.streams.find((item) =>
+        isSameSyncStream(item, stream.stream?.name, stream.stream?.namespace)
       )?.config,
-      stream.config
+      stream.config,
+      ["selected", "cursorField", "destinationSyncMode", "primaryKey", "selectedFields", "syncMode", "aliasName"]
     );
 
     if (!isStreamEnabled && !rowStatusChanged) {

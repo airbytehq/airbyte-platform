@@ -6,8 +6,8 @@ import { useState } from "react";
 import { FieldPath, useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
+import { AdvancedAuth, CompleteOAuthResponseAuthPayload } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
-import { AdvancedAuth, CompleteOAuthResponseAuthPayload } from "core/request/AirbyteClient";
 import { useRunOauthFlow } from "hooks/services/useConnectorAuth";
 import { useAuthentication } from "views/Connector/ConnectorForm/useAuthentication";
 
@@ -107,10 +107,13 @@ function useFormOauthAdapter(
       }
 
       const preparedValues = getValues<Credentials>(getRawValues());
-      const oauthInputParams = Object.entries(oauthInputProperties).reduce((acc, property) => {
-        acc[property[0]] = get(preparedValues, makeConnectionConfigurationPath(property[1].path_in_connector_config));
-        return acc;
-      }, {} as Record<string, unknown>);
+      const oauthInputParams = Object.entries(oauthInputProperties).reduce(
+        (acc, property) => {
+          acc[property[0]] = get(preparedValues, makeConnectionConfigurationPath(property[1].path_in_connector_config));
+          return acc;
+        },
+        {} as Record<string, unknown>
+      );
 
       run(oauthInputParams);
     },

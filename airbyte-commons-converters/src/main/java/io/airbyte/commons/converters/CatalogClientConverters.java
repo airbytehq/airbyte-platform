@@ -12,6 +12,7 @@ import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.text.Names;
 import io.airbyte.protocol.models.AirbyteStream;
+import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.validation.json.JsonValidationException;
 import java.util.Collections;
 import java.util.List;
@@ -39,7 +40,29 @@ public class CatalogClientConverters {
         new io.airbyte.protocol.models.AirbyteCatalog();
     final var airbyteStream = catalog.getStreams().stream().map(stream -> {
       try {
-        return toConfiguredProtocol(stream.getStream(), stream.getConfig());
+        return toStreamProtocol(stream.getStream(), stream.getConfig());
+      } catch (final JsonValidationException e) {
+        return null;
+      }
+    }).collect(Collectors.toList());
+
+    protoCatalog.withStreams(airbyteStream);
+    return protoCatalog;
+  }
+
+  /**
+   * Convert the API model to the Protocol model with configuration.
+   *
+   * @param catalog the API catalog
+   * @return the protocol catalog
+   */
+  @SuppressWarnings("checkstyle:LineLength") // the auto-formatter produces a format that conflicts with checkstyle
+  public static io.airbyte.protocol.models.ConfiguredAirbyteCatalog toConfiguredAirbyteProtocol(final io.airbyte.api.client.model.generated.AirbyteCatalog catalog) {
+    final io.airbyte.protocol.models.ConfiguredAirbyteCatalog protoCatalog =
+        new io.airbyte.protocol.models.ConfiguredAirbyteCatalog();
+    final var airbyteStream = catalog.getStreams().stream().map(stream -> {
+      try {
+        return toConfiguredStreamProtocol(stream.getStream(), stream.getConfig());
       } catch (final JsonValidationException e) {
         return null;
       }
@@ -50,8 +73,8 @@ public class CatalogClientConverters {
   }
 
   @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
-  private static io.airbyte.protocol.models.AirbyteStream toConfiguredProtocol(final io.airbyte.api.client.model.generated.AirbyteStream stream,
-                                                                               final AirbyteStreamConfiguration config)
+  private static io.airbyte.protocol.models.AirbyteStream toStreamProtocol(final io.airbyte.api.client.model.generated.AirbyteStream stream,
+                                                                           final AirbyteStreamConfiguration config)
       throws JsonValidationException {
     if (config.getFieldSelectionEnabled() != null && config.getFieldSelectionEnabled()) {
       // Validate the selected field paths.
@@ -105,6 +128,17 @@ public class CatalogClientConverters {
         .withSourceDefinedPrimaryKey(
             Optional.ofNullable(stream.getSourceDefinedPrimaryKey()).orElse(Collections.emptyList()))
         .withNamespace(stream.getNamespace());
+  }
+
+  private static ConfiguredAirbyteStream toConfiguredStreamProtocol(final io.airbyte.api.client.model.generated.AirbyteStream stream,
+                                                                    final AirbyteStreamConfiguration config)
+      throws JsonValidationException {
+    return new ConfiguredAirbyteStream()
+        .withStream(toStreamProtocol(stream, config))
+        .withSyncMode(Enums.convertTo(config.getSyncMode(), io.airbyte.protocol.models.SyncMode.class))
+        .withDestinationSyncMode(Enums.convertTo(config.getDestinationSyncMode(), io.airbyte.protocol.models.DestinationSyncMode.class))
+        .withPrimaryKey(config.getPrimaryKey())
+        .withCursorField(config.getCursorField());
   }
 
   /**

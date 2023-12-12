@@ -1,5 +1,5 @@
 import { createPokeApiSourceViaApi, createPostgresSourceViaApi } from "@cy/commands/connection";
-import { submitButtonClick } from "commands/common";
+import { submitButtonClick, updateField } from "commands/common";
 import { fillPokeAPIForm } from "commands/connector";
 import { createPostgresSource, deleteSource, updateSource } from "commands/source";
 
@@ -32,24 +32,23 @@ describe("Source main actions", () => {
 
   it("Update source", () => {
     createPokeApiSourceViaApi().then((pokeApiSource) => {
-      updateSource(pokeApiSource.name, "connectionConfiguration.pokemon_name", "rattata");
+      updateSource(pokeApiSource.name, "connectionConfiguration.pokemon_name", "ivysaur", true);
     });
 
     cy.get("div[data-id='success-result']").should("exist");
-    cy.get("input[value='rattata']").should("exist");
+    cy.get("input[value='ivysaur']").should("exist");
   });
 
   it("Can edit source again without leaving the page", () => {
     createPokeApiSourceViaApi().then((pokeApiSource) => {
-      updateSource(pokeApiSource.name, "connectionConfiguration.pokemon_name", "rattata");
+      updateSource(pokeApiSource.name, "connectionConfiguration.pokemon_name", "ivysaur", true);
     });
 
     cy.get("div[data-id='success-result']").should("exist");
-    cy.get("input[value='rattata']").should("exist");
+    cy.get("input[value='ivysaur']").should("exist");
     cy.get("button[type=submit]").should("be.disabled");
 
-    cy.get("input[name='connectionConfiguration.pokemon_name']").clear();
-    cy.get("input[name='connectionConfiguration.pokemon_name']").type("ditto");
+    updateField("connectionConfiguration.pokemon_name", "bulbasaur", true);
     cy.get("button[type=submit]").should("be.enabled");
   });
 
@@ -88,7 +87,7 @@ describe("Unsaved changes modal on create source page", () => {
   it("Check leaving Source page without any changes", () => {
     goToSourcePage();
     openNewSourcePage();
-    fillPokeAPIForm("testName", "ditto");
+    fillPokeAPIForm("testName", "bulbasaur");
 
     openHomepage();
 
@@ -100,11 +99,29 @@ describe("Unsaved changes modal on create source page", () => {
   });
 
   it("Check leaving Source page after failing testing", () => {
-    cy.intercept("/api/v1/scheduler/sources/check_connection").as("checkSourceUpdateConnection");
+    cy.intercept("/api/v1/scheduler/sources/check_connection", {
+      statusCode: 200,
+      body: {
+        status: "failed",
+        message: "Something went wrong",
+        jobInfo: {
+          id: "df510ff4-9869-4cdd-bb6b-d73ed6641f2b",
+          configType: "check_connection_source",
+          configId: "Optional[6371b14b-bc68-4236-bfbd-468e8df8e968]",
+          createdAt: 1697449693559,
+          endedAt: 1697449702965,
+          succeeded: true,
+          connectorConfigurationUpdated: false,
+          logs: {
+            logLines: [],
+          },
+        },
+      },
+    }).as("checkSourceUpdateConnection");
 
     goToSourcePage();
     openNewSourcePage();
-    fillPokeAPIForm("testName", "name");
+    fillPokeAPIForm("testName", "bulbasaur");
     submitButtonClick();
 
     cy.wait("@checkSourceUpdateConnection", { timeout: 5000 });

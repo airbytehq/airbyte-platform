@@ -1,78 +1,130 @@
 import classNames from "classnames";
+import kebabCase from "lodash/kebabCase";
 import React from "react";
 
 import styles from "./Icon.module.scss";
-import { ReactComponent as ArrowLeftIcon } from "./icons/arrowLeftIcon.svg";
-import { ReactComponent as ArrowRightIcon } from "./icons/arrowRightIcon.svg";
-import { ReactComponent as ArticleIcon } from "./icons/articleIcon.svg";
-import { ReactComponent as CalendarIcon } from "./icons/calendarIcon.svg";
-import { ReactComponent as CertifiedIcon } from "./icons/certifiedIcon.svg";
-import { ReactComponent as CheckIcon } from "./icons/checkIcon.svg";
-import { ReactComponent as ChevronDownIcon } from "./icons/chevronDownIcon.svg";
-import { ReactComponent as ChevronLeftIcon } from "./icons/chevronLeftIcon.svg";
-import { ReactComponent as ChevronRightIcon } from "./icons/chevronRightIcon.svg";
-import { ReactComponent as ChevronUpIcon } from "./icons/chevronUpIcon.svg";
-import { ReactComponent as ClockIcon } from "./icons/clockIcon.svg";
-import { ReactComponent as ClockOutlineIcon } from "./icons/clockOutlineIcon.svg";
-import { ReactComponent as CopyIcon } from "./icons/copyIcon.svg";
-import { ReactComponent as CreditsIcon } from "./icons/creditsIcon.svg";
-import { ReactComponent as CrossIcon } from "./icons/crossIcon.svg";
-import { ReactComponent as DayIcon } from "./icons/dayIcon.svg";
-import { ReactComponent as DestinationIcon } from "./icons/destinationIcon.svg";
-import { ReactComponent as DisabledIcon } from "./icons/disabledIcon.svg";
-import { ReactComponent as DocsIcon } from "./icons/docsIcon.svg";
-import { ReactComponent as DownloadIcon } from "./icons/downloadIcon.svg";
-import { ReactComponent as DuplicateIcon } from "./icons/duplicateIcon.svg";
-import { ReactComponent as EarthIcon } from "./icons/earthIcon.svg";
-import { ReactComponent as ErrorIcon } from "./icons/errorIcon.svg";
-import { ReactComponent as ExpandIcon } from "./icons/expandIcon.svg";
-import { ReactComponent as EyeIcon } from "./icons/eyeIcon.svg";
-import { ReactComponent as FileIcon } from "./icons/fileIcon.svg";
-import { ReactComponent as FlashIcon } from "./icons/flashIcon.svg";
-import { ReactComponent as FolderIcon } from "./icons/folderIcon.svg";
-import { ReactComponent as GearIcon } from "./icons/gearIcon.svg";
-import { ReactComponent as GlobeIcon } from "./icons/globeIcon.svg";
-import { ReactComponent as GridIcon } from "./icons/gridIcon.svg";
-import { ReactComponent as ImportIcon } from "./icons/importIcon.svg";
-import { ReactComponent as InfoIcon } from "./icons/infoIcon.svg";
-import { ReactComponent as LensIcon } from "./icons/lensIcon.svg";
-import { ReactComponent as LocationIcon } from "./icons/locationIcon.svg";
-import { ReactComponent as LockedIcon } from "./icons/lockedIcon.svg";
-import { ReactComponent as MinusIcon } from "./icons/minusIcon.svg";
-import { ReactComponent as ModificationIcon } from "./icons/modificationIcon.svg";
-import { ReactComponent as MoonIcon } from "./icons/moonIcon.svg";
-import { ReactComponent as MoveHandleIcon } from "./icons/moveHandleIcon.svg";
-import { ReactComponent as NestedIcon } from "./icons/nestedIcon.svg";
-import { ReactComponent as NoteIcon } from "./icons/noteIcon.svg";
-import { ReactComponent as NotificationIcon } from "./icons/notificationIcon.svg";
-import { ReactComponent as OptionsIcon } from "./icons/optionsIcon.svg";
-import { ReactComponent as ParametersIcon } from "./icons/parametersIcon.svg";
-import { ReactComponent as PauseIcon } from "./icons/pauseIcon.svg";
-import { ReactComponent as PauseOutlineIcon } from "./icons/pauseOutlineIcon.svg";
-import { ReactComponent as PencilIcon } from "./icons/pencilIcon.svg";
-import { ReactComponent as PlayIcon } from "./icons/playIcon.svg";
-import { ReactComponent as PlusIcon } from "./icons/plusIcon.svg";
-import { ReactComponent as PodcastIcon } from "./icons/podcastIcon.svg";
-import { ReactComponent as PrefixIcon } from "./icons/prefixIcon.svg";
-import { ReactComponent as ReduceIcon } from "./icons/reduceIcon.svg";
-import { ReactComponent as ResetIcon } from "./icons/resetIcon.svg";
-import { ReactComponent as RotateIcon } from "./icons/rotateIcon.svg";
-import { ReactComponent as ShareIcon } from "./icons/shareIcon.svg";
-import { ReactComponent as ShrinkIcon } from "./icons/shrinkIcon.svg";
-import { ReactComponent as SleepIcon } from "./icons/sleepIcon.svg";
-import { ReactComponent as SourceIcon } from "./icons/sourceIcon.svg";
-import { ReactComponent as StarIcon } from "./icons/starIcon.svg";
-import { ReactComponent as StopIcon } from "./icons/stopIcon.svg";
-import { ReactComponent as StopOutlineIcon } from "./icons/stopOutlineIcon.svg";
-import { ReactComponent as SuccessIcon } from "./icons/successIcon.svg";
-import { ReactComponent as SuccessOutlineIcon } from "./icons/successOutlineIcon.svg";
-import { ReactComponent as SyncIcon } from "./icons/syncIcon.svg";
-import { ReactComponent as TargetIcon } from "./icons/targetIcon.svg";
-import { ReactComponent as TrashIcon } from "./icons/trashIcon.svg";
-import { ReactComponent as UnlockedIcon } from "./icons/unlockedIcon.svg";
-import { ReactComponent as UserIcon } from "./icons/userIcon.svg";
-import { ReactComponent as WarningIcon } from "./icons/warningIcon.svg";
-import { ReactComponent as WarningOutlineIcon } from "./icons/warningOutlineIcon.svg";
+import AddCircleIcon from "./icons/addCircleIcon.svg?react";
+import ArrowLeftIcon from "./icons/arrowLeftIcon.svg?react";
+import ArrowRightIcon from "./icons/arrowRightIcon.svg?react";
+import ArticleIcon from "./icons/articleIcon.svg?react";
+import BellIcon from "./icons/bellIcon.svg?react";
+import CalendarCheckIcon from "./icons/calendarCheckIcon.svg?react";
+import CalendarIcon from "./icons/calendarIcon.svg?react";
+import CaretDownIcon from "./icons/caretDownIcon.svg?react";
+import CastIcon from "./icons/castIcon.svg?react";
+import CertifiedIcon from "./icons/certifiedIcon.svg?react";
+import ChartIcon from "./icons/chartIcon.svg?react";
+import ChatIcon from "./icons/chatIcon.svg?react";
+import CheckIcon from "./icons/checkIcon.svg?react";
+import ChevronDownIcon from "./icons/chevronDownIcon.svg?react";
+import ChevronLeftIcon from "./icons/chevronLeftIcon.svg?react";
+import ChevronRightIcon from "./icons/chevronRightIcon.svg?react";
+import ChevronUpIcon from "./icons/chevronUpIcon.svg?react";
+import ClockFilledIcon from "./icons/clockFilledIcon.svg?react";
+import ClockOutlineIcon from "./icons/clockOutlineIcon.svg?react";
+import CommentsIcon from "./icons/commentsIcon.svg?react";
+import CommunityIcon from "./icons/communityIcon.svg?react";
+import ConnectionIcon from "./icons/connectionIcon.svg?react";
+import ContractIcon from "./icons/contractIcon.svg?react";
+import CopyIcon from "./icons/copyIcon.svg?react";
+import CreditsIcon from "./icons/creditsIcon.svg?react";
+import CrossIcon from "./icons/crossIcon.svg?react";
+import DatabaseIcon from "./icons/databaseIcon.svg?react";
+import DayIcon from "./icons/dayIcon.svg?react";
+import DbtCloudIcon from "./icons/dbtCloudIcon.svg?react";
+import DestinationIcon from "./icons/destinationIcon.svg?react";
+import DisabledIcon from "./icons/disabledIcon.svg?react";
+import DockerIcon from "./icons/dockerIcon.svg?react";
+import DocsIcon from "./icons/docsIcon.svg?react";
+import DownloadIcon from "./icons/downloadIcon.svg?react";
+import DuplicateIcon from "./icons/duplicateIcon.svg?react";
+import EarthIcon from "./icons/earthIcon.svg?react";
+import EqualIcon from "./icons/equalIcon.svg?react";
+import ErrorFilledIcon from "./icons/errorFilledIcon.svg?react";
+import ErrorOutlineIcon from "./icons/errorOutlineIcon.svg?react";
+import ExpandIcon from "./icons/expandIcon.svg?react";
+import EyeIcon from "./icons/eyeIcon.svg?react";
+import EyeSlashIcon from "./icons/eyeSlashIcon.svg?react";
+import FileIcon from "./icons/fileIcon.svg?react";
+import FilesIcon from "./icons/filesIcon.svg?react";
+import FlashIcon from "./icons/flashIcon.svg?react";
+import FolderIcon from "./icons/folderIcon.svg?react";
+import GearIcon from "./icons/gearIcon.svg?react";
+import GlobeIcon from "./icons/globeIcon.svg?react";
+import GoogleIcon from "./icons/googleIcon.svg?react";
+import GridIcon from "./icons/gridIcon.svg?react";
+import HelpIcon from "./icons/helpIcon.svg?react";
+import HouseIcon from "./icons/houseIcon.svg?react";
+import IdCardIcon from "./icons/idCardIcon.svg?react";
+import ImportIcon from "./icons/importIcon.svg?react";
+import InfoFilledIcon from "./icons/infoFilledIcon.svg?react";
+import InfoOutlineIcon from "./icons/infoOutlineIcon.svg?react";
+import IntegrationsIcon from "./icons/integrationsIcon.svg?react";
+import KeyCircleIcon from "./icons/keyCircleIcon.svg?react";
+import LayersIcon from "./icons/layersIcon.svg?react";
+import LensIcon from "./icons/lensIcon.svg?react";
+import LightbulbIcon from "./icons/lightbulbIcon.svg?react";
+import LinkIcon from "./icons/linkIcon.svg?react";
+import LoadingIcon from "./icons/loadingIcon.svg?react";
+import LocationIcon from "./icons/locationIcon.svg?react";
+import LockIcon from "./icons/lockIcon.svg?react";
+import MenuIcon from "./icons/menuIcon.svg?react";
+import MinusCircleIcon from "./icons/minusCircleIcon.svg?react";
+import MinusIcon from "./icons/minusIcon.svg?react";
+import ModificationIcon from "./icons/modificationIcon.svg?react";
+import MonitorIcon from "./icons/monitorIcon.svg?react";
+import MoonIcon from "./icons/moonIcon.svg?react";
+import NestedIcon from "./icons/nestedIcon.svg?react";
+import NoteIcon from "./icons/noteIcon.svg?react";
+import NotificationIcon from "./icons/notificationIcon.svg?react";
+import OnboardingIcon from "./icons/onboardingIcon.svg?react";
+import OptionsIcon from "./icons/optionsIcon.svg?react";
+import ParametersIcon from "./icons/parametersIcon.svg?react";
+import PauseFilledIcon from "./icons/pauseFilledIcon.svg?react";
+import PauseOutlineIcon from "./icons/pauseOutlineIcon.svg?react";
+import PencilIcon from "./icons/pencilIcon.svg?react";
+import PlayIcon from "./icons/playIcon.svg?react";
+import PlusIcon from "./icons/plusIcon.svg?react";
+import PrefixIcon from "./icons/prefixIcon.svg?react";
+import PulseIcon from "./icons/pulseIcon.svg?react";
+import QuestionIcon from "./icons/questionIcon.svg?react";
+import RecipesIcon from "./icons/recipesIcon.svg?react";
+import ResetIcon from "./icons/resetIcon.svg?react";
+import RocketIcon from "./icons/rocketIcon.svg?react";
+import RotateIcon from "./icons/rotateIcon.svg?react";
+import SchemaIcon from "./icons/schemaIcon.svg?react";
+import SelectIcon from "./icons/selectIcon.svg?react";
+import ShareIcon from "./icons/shareIcon.svg?react";
+import ShortVideoIcon from "./icons/shortVideoIcon.svg?react";
+import ShrinkIcon from "./icons/shrinkIcon.svg?react";
+import SimpleCircleIcon from "./icons/simpleCircleIcon.svg?react";
+import SlackIcon from "./icons/slackIcon.svg?react";
+import SleepIcon from "./icons/sleepIcon.svg?react";
+import SourceIcon from "./icons/sourceIcon.svg?react";
+import StarIcon from "./icons/starIcon.svg?react";
+import StarsIcon from "./icons/starsIcon.svg?react";
+import StatusCancelledIcon from "./icons/statusCancelledIcon.svg?react";
+import StatusErrorIcon from "./icons/statusErrorIcon.svg?react";
+import StatusInactiveIcon from "./icons/statusInactiveIcon.svg?react";
+import StatusInProgressIcon from "./icons/statusInProgressIcon.svg?react";
+import StatusSleepIcon from "./icons/statusSleepIcon.svg?react";
+import StatusSuccessIcon from "./icons/statusSuccessIcon.svg?react";
+import StatusWarningIcon from "./icons/statusWarningIcon.svg?react";
+import StopFilledIcon from "./icons/stopFilledIcon.svg?react";
+import StopOutlineIcon from "./icons/stopOutlineIcon.svg?react";
+import SuccessFilledIcon from "./icons/successFilledIcon.svg?react";
+import SuccessOutlineIcon from "./icons/successOutlineIcon.svg?react";
+import SuitcaseIcon from "./icons/suitcaseIcon.svg?react";
+import SyncIcon from "./icons/syncIcon.svg?react";
+import TableIcon from "./icons/tableIcon.svg?react";
+import TargetIcon from "./icons/targetIcon.svg?react";
+import TicketIcon from "./icons/ticketIcon.svg?react";
+import TrashIcon from "./icons/trashIcon.svg?react";
+import UnlockIcon from "./icons/unlockIcon.svg?react";
+import UserIcon from "./icons/userIcon.svg?react";
+import WarningFilledIcon from "./icons/warningFilledIcon.svg?react";
+import WarningOutlineIcon from "./icons/warningOutlineIcon.svg?react";
+import WrenchIcon from "./icons/wrenchIcon.svg?react";
 import { IconColor, IconProps, IconType } from "./types";
 
 const colorMap: Record<IconColor, string> = {
@@ -93,78 +145,129 @@ const sizeMap: Record<NonNullable<IconProps["size"]>, string> = {
   xl: styles.xl,
 };
 
-const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {
+export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {
+  addCircle: AddCircleIcon,
   arrowLeft: ArrowLeftIcon,
   arrowRight: ArrowRightIcon,
   article: ArticleIcon,
+  bell: BellIcon,
+  calendarCheck: CalendarCheckIcon,
   calendar: CalendarIcon,
+  caretDown: CaretDownIcon,
+  cast: CastIcon,
   certified: CertifiedIcon,
+  chart: ChartIcon,
+  chat: ChatIcon,
   check: CheckIcon,
   chevronDown: ChevronDownIcon,
   chevronLeft: ChevronLeftIcon,
   chevronRight: ChevronRightIcon,
   chevronUp: ChevronUpIcon,
-  clock: ClockIcon,
+  clockFilled: ClockFilledIcon,
   clockOutline: ClockOutlineIcon,
+  comments: CommentsIcon,
+  community: CommunityIcon,
+  connection: ConnectionIcon,
+  contract: ContractIcon,
   copy: CopyIcon,
   credits: CreditsIcon,
   cross: CrossIcon,
+  database: DatabaseIcon,
   day: DayIcon,
+  dbtCloud: DbtCloudIcon,
   destination: DestinationIcon,
   disabled: DisabledIcon,
+  docker: DockerIcon,
   docs: DocsIcon,
   download: DownloadIcon,
   duplicate: DuplicateIcon,
   earth: EarthIcon,
-  error: ErrorIcon,
-  eye: EyeIcon,
+  equal: EqualIcon,
+  errorFilled: ErrorFilledIcon,
+  errorOutline: ErrorOutlineIcon,
   expand: ExpandIcon,
+  eye: EyeIcon,
+  eyeSlash: EyeSlashIcon,
   file: FileIcon,
+  files: FilesIcon,
   flash: FlashIcon,
   folder: FolderIcon,
   gear: GearIcon,
   globe: GlobeIcon,
+  google: GoogleIcon,
   grid: GridIcon,
+  help: HelpIcon,
+  house: HouseIcon,
+  idCard: IdCardIcon,
   import: ImportIcon,
-  info: InfoIcon,
+  infoFilled: InfoFilledIcon,
+  infoOutline: InfoOutlineIcon,
+  integrations: IntegrationsIcon,
+  keyCircle: KeyCircleIcon,
+  layers: LayersIcon,
   lens: LensIcon,
+  lightbulb: LightbulbIcon,
+  link: LinkIcon,
+  loading: LoadingIcon,
   location: LocationIcon,
-  locked: LockedIcon,
+  lock: LockIcon,
+  menu: MenuIcon,
+  minusCircle: MinusCircleIcon,
   minus: MinusIcon,
   modification: ModificationIcon,
+  monitor: MonitorIcon,
   moon: MoonIcon,
-  moveHandle: MoveHandleIcon,
   nested: NestedIcon,
   note: NoteIcon,
   notification: NotificationIcon,
+  onboarding: OnboardingIcon,
   options: OptionsIcon,
   parameters: ParametersIcon,
-  pause: PauseIcon,
+  pauseFilled: PauseFilledIcon,
   pauseOutline: PauseOutlineIcon,
   pencil: PencilIcon,
   play: PlayIcon,
   plus: PlusIcon,
-  podcast: PodcastIcon,
   prefix: PrefixIcon,
-  reduce: ReduceIcon,
+  pulse: PulseIcon,
+  question: QuestionIcon,
+  recipes: RecipesIcon,
   reset: ResetIcon,
+  rocket: RocketIcon,
   rotate: RotateIcon,
+  schema: SchemaIcon,
+  select: SelectIcon,
   share: ShareIcon,
+  shortVideo: ShortVideoIcon,
   shrink: ShrinkIcon,
+  simpleCircle: SimpleCircleIcon,
+  slack: SlackIcon,
   sleep: SleepIcon,
   source: SourceIcon,
   star: StarIcon,
-  stop: StopIcon,
+  stars: StarsIcon,
+  statusCancelled: StatusCancelledIcon,
+  statusError: StatusErrorIcon,
+  statusInactive: StatusInactiveIcon,
+  statusInProgress: StatusInProgressIcon,
+  statusSleep: StatusSleepIcon,
+  statusSuccess: StatusSuccessIcon,
+  statusWarning: StatusWarningIcon,
+  stopFilled: StopFilledIcon,
   stopOutline: StopOutlineIcon,
-  success: SuccessIcon,
+  successFilled: SuccessFilledIcon,
   successOutline: SuccessOutlineIcon,
+  suitcase: SuitcaseIcon,
   sync: SyncIcon,
+  table: TableIcon,
   target: TargetIcon,
+  ticket: TicketIcon,
   trash: TrashIcon,
-  unlocked: UnlockedIcon,
+  unlock: UnlockIcon,
   user: UserIcon,
-  warning: WarningIcon,
+  warningFilled: WarningFilledIcon,
   warningOutline: WarningOutlineIcon,
+  wrench: WrenchIcon,
 };
 
 export const Icon: React.FC<IconProps> = React.memo(
@@ -179,6 +282,8 @@ export const Icon: React.FC<IconProps> = React.memo(
 
     return React.createElement(Icons[type], {
       ...props,
+      // @ts-expect-error data-* attributes aren't allowed outside a JSX tag
+      "data-icon": kebabCase(type),
       className: classes,
     });
   }

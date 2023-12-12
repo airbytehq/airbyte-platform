@@ -1,5 +1,3 @@
-import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import React, { useState } from "react";
 import { FieldPath, useFormContext, useWatch } from "react-hook-form";
@@ -69,7 +67,7 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
               rel="noreferrer"
               className={styles.docLink}
             >
-              <Icon type="docs" size="lg" />
+              <Icon type="docs" />
             </a>
           )}
         </FlexContainer>
@@ -100,7 +98,7 @@ const CardToggle = ({ path, defaultValue }: { path: FieldPath<BuilderState>; def
   return (
     <CheckBox
       id={path}
-      data-testid="toggle"
+      data-testid={`toggle-${path}`}
       checked={value !== undefined}
       onChange={(event) => {
         if (event.target.checked) {
@@ -134,7 +132,7 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
         onClick={() => {
           setCopyFromOpen(true);
         }}
-        icon={<FontAwesomeIcon icon={faArrowUpRightFromSquare} rotation={180} />}
+        icon={<Icon type="import" />}
       />
       {currentRelevantConfig && (
         <Button
@@ -143,7 +141,7 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
           onClick={() => {
             setCopyToOpen(true);
           }}
-          icon={<FontAwesomeIcon icon={faArrowUpRightFromSquare} />}
+          icon={<Icon type="share" />}
         />
       )}
       {isCopyToOpen && (

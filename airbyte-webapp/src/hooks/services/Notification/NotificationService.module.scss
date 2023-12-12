@@ -8,7 +8,8 @@
   gap: variables.$spacing-xl;
   position: fixed;
   bottom: variables.$spacing-xl;
-  width: 400px;
-  left: calc(50vw - 200px);
+  max-width: 600px;
+  left: 50%;
+  transform: translate(-50%, 0);
   z-index: z-indices.$notification;
 }

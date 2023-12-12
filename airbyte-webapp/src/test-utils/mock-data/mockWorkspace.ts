@@ -1,4 +1,4 @@
-import { WorkspaceRead } from "core/request/AirbyteClient";
+import { WorkspaceRead } from "core/api/types/AirbyteClient";
 
 export const mockWorkspace: WorkspaceRead = {
   workspaceId: "47c74b9b-9b89-4af1-8331-4865af6c4e4d",

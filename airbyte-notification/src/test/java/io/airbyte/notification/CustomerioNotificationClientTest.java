@@ -5,24 +5,28 @@
 package io.airbyte.notification;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionBreakingChange;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.StandardWorkspace;
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
+import org.apache.http.HttpHeaders;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.Mockito;
 
 class CustomerioNotificationClientTest {
 
+  private static final String API_ENDPOINT = "v1/send";
   private static final String API_KEY = "api-key";
-  private static final String URI_BASE = "https://customer.io";
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID CONNECTION_ID = UUID.randomUUID();
   private static final StandardWorkspace WORKSPACE = new StandardWorkspace()
@@ -30,39 +34,139 @@ class CustomerioNotificationClientTest {
       .withName("workspace-name")
       .withEmail("test@airbyte.io");
   private static final String RANDOM_INPUT = "input";
+  private static final List<String> EMAIL_LIST = List.of(
+      "email1@airbyte.com",
+      "email2@airbyte.com");
 
-  @Mock
-  private HttpClient mHttpClient;
+  private MockWebServer mockWebServer;
+  private CustomerioNotificationClient customerioNotificationClient;
 
   @BeforeEach
   void setUp() {
-    mHttpClient = mock(HttpClient.class);
+    mockWebServer = new MockWebServer();
+
+    final String baseUrl = mockWebServer.url("/").toString();
+    customerioNotificationClient = new CustomerioNotificationClient(API_KEY, baseUrl);
+  }
+
+  @Test
+  void testSendNotifyRequest() throws IOException, InterruptedException {
+    mockWebServer.enqueue(new MockResponse());
+
+    final boolean result =
+        customerioNotificationClient.sendNotifyRequest(API_ENDPOINT, "{}");
+
+    assertTrue(result);
+
+    final RecordedRequest recordedRequest = mockWebServer.takeRequest();
+    assertEquals("POST", recordedRequest.getMethod());
+    assertEquals("/" + API_ENDPOINT, recordedRequest.getPath());
+    assertEquals("Bearer " + API_KEY, recordedRequest.getHeader(HttpHeaders.AUTHORIZATION));
+    assertEquals("application/json; charset=utf-8", recordedRequest.getHeader(HttpHeaders.CONTENT_TYPE));
+    assertEquals("{}", recordedRequest.getBody().readUtf8());
+  }
+
+  @Test
+  void testSendNotifyRequestFailureThrowsException() {
+    mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+    assertThrows(IOException.class, () -> customerioNotificationClient.sendNotifyRequest(API_ENDPOINT, ""));
+  }
+
+  @Test
+  void testNotifyByEmailBroadcast() throws IOException, InterruptedException {
+    mockWebServer.enqueue(new MockResponse());
+
+    final boolean result = customerioNotificationClient.notifyByEmailBroadcast("123", EMAIL_LIST, Map.of("key", "value"));
+    assertTrue(result);
+
+    final RecordedRequest recordedRequest = mockWebServer.takeRequest();
+    assertEquals("/v1/campaigns/123/triggers", recordedRequest.getPath());
+    assertEquals("Bearer " + API_KEY, recordedRequest.getHeader(HttpHeaders.AUTHORIZATION));
+
+    final JsonNode reqBody = Jsons.deserialize(recordedRequest.getBody().readUtf8());
+    reqBody.get("emails").forEach(email -> assertTrue(EMAIL_LIST.contains(email.asText())));
+    assertEquals("value", reqBody.get("data").get("key").asText());
+    assertTrue(reqBody.get("email_add_duplicates").asBoolean());
+    assertTrue(reqBody.get("email_ignore_missing").asBoolean());
+    assertTrue(reqBody.get("id_ignore_missing").asBoolean());
+  }
+
+  @Test
+  void testNotifyBreakingChangeWarning() throws IOException, InterruptedException {
+    mockWebServer.enqueue(new MockResponse());
+
+    final String connectorName = "MyConnector";
+    final ActorDefinitionBreakingChange breakingChange = new ActorDefinitionBreakingChange()
+        .withUpgradeDeadline("2021-01-01")
+        .withMessage("my **breaking** change message [link](https://airbyte.io/)")
+        .withVersion(new Version("2.0.0"))
+        .withMigrationDocumentationUrl("https://airbyte.io/docs/migration-guide");
+
+    final boolean result = customerioNotificationClient.notifyBreakingChangeWarning(EMAIL_LIST, connectorName, ActorType.SOURCE, breakingChange);
+    assertTrue(result);
+
+    final RecordedRequest recordedRequest = mockWebServer.takeRequest();
+    assertEquals("/v1/campaigns/32/triggers", recordedRequest.getPath());
+
+    final Map<String, String> expectedData = Map.of(
+        "connector_type", "source",
+        "connector_name", connectorName,
+        "connector_version_new", breakingChange.getVersion().serialize(),
+        "connector_version_change_description", "<p>my <strong>breaking</strong> change message <a href=\"https://airbyte.io/\">link</a></p>\n",
+        "connector_version_upgrade_deadline", "January 1, 2021",
+        "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl());
+
+    final JsonNode reqBody = Jsons.deserialize(recordedRequest.getBody().readUtf8());
+    assertEquals(expectedData, Jsons.object(reqBody.get("data"), Map.class));
+  }
+
+  @Test
+  void testNotifyBreakingChangeSyncsDisabled() throws IOException, InterruptedException {
+    mockWebServer.enqueue(new MockResponse().setResponseCode(429));
+    mockWebServer.enqueue(new MockResponse().setResponseCode(429));
+    mockWebServer.enqueue(new MockResponse());
+
+    final String connectorName = "MyConnector";
+    final ActorDefinitionBreakingChange breakingChange = new ActorDefinitionBreakingChange()
+        .withUpgradeDeadline("2021-01-01")
+        .withMessage("my breaking change message")
+        .withVersion(new Version("2.0.0"))
+        .withMigrationDocumentationUrl("https://airbyte.io/docs/migration-guide");
+
+    final boolean result =
+        customerioNotificationClient.notifyBreakingChangeSyncsDisabled(EMAIL_LIST, connectorName, ActorType.DESTINATION, breakingChange);
+    assertTrue(result);
+
+    final RecordedRequest recordedRequest = mockWebServer.takeRequest();
+    assertEquals("/v1/campaigns/33/triggers", recordedRequest.getPath());
+
+    final Map<String, String> expectedData = Map.of(
+        "connector_type", "destination",
+        "connector_name", connectorName,
+        "connector_version_new", breakingChange.getVersion().serialize(),
+        "connector_version_change_description", "<p>my breaking change message</p>\n",
+        "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl());
+
+    final JsonNode reqBody = Jsons.deserialize(recordedRequest.getBody().readUtf8());
+    assertEquals(expectedData, Jsons.object(reqBody.get("data"), Map.class));
   }
 
   // this only tests that the headers are set correctly and that a http post request is sent to the
   // correct URI
   // this test does _not_ check the body of the request.
   @Test
-  void notifyConnectionDisabled() throws IOException, InterruptedException {
-    final CustomerioNotificationClient customerioNotificationClient = new CustomerioNotificationClient(API_KEY, URI_BASE, mHttpClient);
-
-    final HttpRequest expectedRequest = HttpRequest.newBuilder()
-        .POST(HttpRequest.BodyPublishers.ofString(""))
-        .uri(URI.create(URI_BASE))
-        .header("Content-Type", "application/json")
-        .header("Authorization", "Bearer " + API_KEY)
-        .build();
-
-    final HttpResponse httpResponse = mock(HttpResponse.class);
-    Mockito.when(mHttpClient.send(Mockito.any(), Mockito.any())).thenReturn(httpResponse);
-    Mockito.when(httpResponse.statusCode()).thenReturn(200);
+  void testNotifyConnectionDisabled() throws IOException, InterruptedException {
+    mockWebServer.enqueue(new MockResponse());
 
     final boolean result =
         customerioNotificationClient.notifyConnectionDisabled(WORKSPACE.getEmail(), RANDOM_INPUT, RANDOM_INPUT, RANDOM_INPUT, WORKSPACE_ID,
             CONNECTION_ID);
-    Mockito.verify(mHttpClient).send(expectedRequest, HttpResponse.BodyHandlers.ofString());
 
     assertTrue(result);
+
+    final RecordedRequest recordedRequest = mockWebServer.takeRequest();
+    assertEquals("/v1/send/email", recordedRequest.getPath());
+    assertEquals("Bearer " + API_KEY, recordedRequest.getHeader(HttpHeaders.AUTHORIZATION));
   }
 
 }

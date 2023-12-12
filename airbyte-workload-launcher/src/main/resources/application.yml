@@ -1,0 +1,211 @@
+micronaut:
+  application:
+    name: airbyte-workload-launcher
+  server:
+    port: 8016
+    netty:
+      access-logger:
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:false}
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:10m}
+  metrics:
+    enabled: true
+    export:
+      statsd:
+        enabled: true
+        flavor: ${MICROMENTER_METRICS_STATSD_FLAVOR:datadog}
+        step: PT30S
+        host: ${DD_AGENT_HOST:airbyte-datadog}
+        port: ${DD_DOGSTATSD_PORT:8125}
+
+airbyte:
+  control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
+  data-plane-id: ${DATA_PLANE_ID}
+  feature-flag:
+    client: ${FEATURE_FLAG_CLIENT:}
+    path: ${FEATURE_FLAG_PATH:/flags}
+    api-key: ${LAUNCHDARKLY_KEY:}
+  kubernetes:
+    pending-time-limit-sec: ${WORKLOAD_LAUNCHER_POD_PENDING_TIME_LIMIT:600}
+    resource-check-rate: ${WORKLOAD_LAUNCHER_POD_PENDING_RESOURCE_CHECK_RATE:PT30S}
+  workload-api:
+    base-path: ${WORKLOAD_API_HOST:}
+    bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
+    bearer-token-secret-key: ${WORKLOAD_API_BEARER_TOKEN_SECRET_KEY:}
+    bearer-token-secret-name: ${WORKLOAD_API_BEARER_TOKEN_SECRET_NAME:}
+    connect-timeout-seconds: ${WORKLOAD_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${WORKLOAD_API_READ_TIMEOUT_SECONDS:300}
+    retries:
+      delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
+      max: ${WORKLOAD_API_MAX_RETRIES:5}
+  workload-launcher:
+    geography: ${WORKLOAD_LAUNCHER_GEOGRAPHY:auto}
+    workload-start-timeout: ${WORKLOAD_LAUNCHER_WORKLOAD_START_TIMEOUT:PT5H}
+    parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
+  secret:
+    persistence: ${SECRET_PERSISTENCE}
+    store:
+      aws:
+        access-key: ${AWS_ACCESS_KEY:}
+        secret-key: ${AWS_SECRET_ACCESS_KEY:}
+        region: ${AWS_REGION:}
+      gcp:
+        credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
+        project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
+      vault:
+        address: ${VAULT_ADDRESS:}
+        prefix: ${VAULT_PREFIX:}
+        token: ${VAULT_AUTH_TOKEN:}
+  version: ${AIRBYTE_VERSION}
+  container.orchestrator:
+    data-plane-creds:
+      secret-mount-path: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH:}
+      secret-name: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME:}
+    image: ${CONTAINER_ORCHESTRATOR_IMAGE:}
+    java-opts: ${CONTAINER_ORCHESTRATOR_JAVA_OPTS:}
+    secret-mount-path: ${CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH:}
+    secret-name: ${CONTAINER_ORCHESTRATOR_SECRET_NAME:}
+  role: ${AIRBYTE_ROLE:}
+  deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  worker:
+    job:
+      error-reporting:
+        sentry:
+          dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
+        strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
+      kube:
+        images:
+          busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.28`}
+          curl: ${JOB_KUBE_CURL_IMAGE:`curlimages/curl:7.83.1`}
+          socat: ${JOB_KUBE_SOCAT_IMAGE:`alpine/socat:1.7.4.3-r0`}
+        main:
+          container:
+            image-pull-policy: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
+            image-pull-secret: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET:}
+        namespace: ${JOB_KUBE_NAMESPACE:default}
+        serviceAccount: ${JOB_KUBE_SERVICEACCOUNT:airbyte-admin} # by default, Airbyte on Kube ships with the `airbyte-admin` service account. If that ever changes, this default should change with it
+        tolerations: ${JOB_KUBE_TOLERATIONS:}
+        sidecar:
+          container:
+            image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
+    kube-job-configs:
+      default:
+        annotations: ${JOB_KUBE_ANNOTATIONS:}
+        labels: ${JOB_KUBE_LABELS:}
+        node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+    isolated:
+      kube:
+        use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
+        node-selectors: ${JOB_ISOLATED_KUBE_NODE_SELECTORS:}
+  metric:
+    client: ${METRIC_CLIENT:}
+    should-publish: ${PUBLISH_METRICS:false}
+  internal:
+    api:
+      host: ${INTERNAL_API_HOST}
+      auth-header:
+        name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+        value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+  data.plane.service-account:
+    credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
+    email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
+  control.plane.auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
+  acceptance.test.enabled: ${ACCEPTANCE_TEST_ENABLED:false}
+  cloud:
+    storage:
+      logs:
+        type: ${WORKER_LOGS_STORAGE_TYPE:}
+        gcs:
+          application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
+          bucket: ${GCS_LOG_BUCKET:}
+        minio:
+          access-key: ${AWS_ACCESS_KEY_ID:}
+          bucket: ${S3_LOG_BUCKET:}
+          endpoint: ${S3_MINIO_ENDPOINT:}
+          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+        s3:
+          access-key: ${AWS_ACCESS_KEY_ID:}
+          bucket: ${S3_LOG_BUCKET:}
+          region: ${S3_LOG_BUCKET_REGION:}
+          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+      state:
+        type: ${WORKER_STATE_STORAGE_TYPE:}
+        gcs:
+          application-credentials: ${STATE_STORAGE_GCS_APPLICATION_CREDENTIALS:}
+          bucket: ${STATE_STORAGE_GCS_BUCKET_NAME:}
+        minio:
+          access-key: ${STATE_STORAGE_MINIO_ACCESS_KEY:}
+          bucket: ${STATE_STORAGE_MINIO_BUCKET_NAME:}
+          endpoint: ${STATE_STORAGE_MINIO_ENDPOINT:}
+          secret-access-key: ${STATE_STORAGE_MINIO_SECRET_ACCESS_KEY:}
+        s3:
+          access-key: ${STATE_STORAGE_S3_ACCESS_KEY:}
+          bucket: ${STATE_STORAGE_S3_BUCKET_NAME:}
+          region: ${STATE_STORAGE_S3_REGION:}
+          secret-access-key: ${STATE_STORAGE_S3_SECRET_ACCESS_KEY:}
+  workspace:
+    docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
+    root: ${WORKSPACE_ROOT}
+
+datadog:
+  agent:
+    host: ${DD_AGENT_HOST:}
+    port: ${DD_DOGSTATSD_PORT:}
+  orchestrator.disabled.integrations: ${DD_ORCHESTRATOR_DISABLED_INTEGRATIONS:GRPC,GRPC_CLIENT,GRPC_SERVER,NETTY,NETTY_4_1,GOOGLE_HTTP_CLIENT,HTTPURLCONNECTION,URLCONNECTION}
+google.application.credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
+
+endpoints:
+  beans:
+    enabled: true
+    sensitive: false
+  env:
+    enabled: true
+    sensitive: false
+  health:
+    enabled: true
+    jdbc:
+      enabled: false
+    sensitive: false
+  info:
+    enabled: true
+    sensitive: true
+  loggers:
+    enabled: true
+    sensitive: false
+  refresh:
+    enabled: false
+    sensitive: true
+  routes:
+    enabled: true
+    sensitive: false
+  threaddump:
+    enabled: true
+    sensitive: true
+  metrics:
+    enabled: true
+    sensitive: false
+
+temporal:
+  cloud:
+    client:
+      cert: ${TEMPORAL_CLOUD_CLIENT_CERT:}
+      key: ${TEMPORAL_CLOUD_CLIENT_KEY:}
+    enabled: ${TEMPORAL_CLOUD_ENABLED:false}
+    host: ${TEMPORAL_CLOUD_HOST:}
+    namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
+  host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
+  retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}
+  sdk:
+    timeouts:
+      rpc-timeout: ${TEMPORAL_SDK_RPC_TIMEOUT:60s}
+      rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
+      rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
+
+logger:
+  levels:
+#   Uncomment to help resolve issues with conditional beans
+#      io.micronaut.context.condition: DEBUG
+

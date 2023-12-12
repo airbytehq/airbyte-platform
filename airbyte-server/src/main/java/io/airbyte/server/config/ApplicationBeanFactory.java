@@ -13,11 +13,10 @@ import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
-import io.airbyte.config.Configs.TrackingStrategy;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
+import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -35,14 +34,11 @@ import io.airbyte.validation.json.JsonSchemaValidator;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Value;
-import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.http.HttpClient;
 import java.nio.file.Path;
-import java.util.Locale;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -53,6 +49,7 @@ public class ApplicationBeanFactory {
 
   @SuppressWarnings("AbbreviationAsWordInName")
   @Singleton
+  @Named("uuidGenerator")
   public Supplier<UUID> randomUUIDSupplier() {
     return () -> UUID.randomUUID();
   }
@@ -60,11 +57,6 @@ public class ApplicationBeanFactory {
   @Singleton
   public EventRunner eventRunner(final TemporalClient temporalClient) {
     return new TemporalEventRunner(temporalClient);
-  }
-
-  @Singleton
-  public TrackingStrategy trackingStrategy(@Value("${airbyte.tracking-strategy}") final String trackingStrategy) {
-    return convertToEnum(trackingStrategy, TrackingStrategy::valueOf, TrackingStrategy.LOGGING);
   }
 
   @Singleton
@@ -76,7 +68,6 @@ public class ApplicationBeanFactory {
     return new JobTracker(configRepository, jobPersistence, trackingClient, actorDefinitionVersionHelper);
   }
 
-  @SuppressWarnings("MissingJavadocMethod")
   @Singleton
   public JobNotifier jobNotifier(
                                  final ConfigRepository configRepository,
@@ -99,7 +90,7 @@ public class ApplicationBeanFactory {
     return new DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient);
   }
 
-  @SuppressWarnings({"ParameterName", "MissingJavadocMethod"})
+  @SuppressWarnings("ParameterName")
   @Singleton
   public SyncJobFactory jobFactory(
                                    final ConfigRepository configRepository,
@@ -142,12 +133,15 @@ public class ApplicationBeanFactory {
     return Path.of(workspaceRoot);
   }
 
-  @SuppressWarnings("MissingJavadocMethod")
   @Singleton
-  public JsonSecretsProcessor jsonSecretsProcessor(final FeatureFlags featureFlags) {
-    return JsonSecretsProcessor.builder()
-        .copySecrets(false)
-        .build();
+  public JsonSecretsProcessor jsonSecretsProcessor() {
+    return new JsonSecretsProcessor(false);
+  }
+
+  @Singleton
+  @Named("jsonSecretsProcessorWithCopy")
+  public JsonSecretsProcessor jsonSecretsProcessorWithCopy() {
+    return new JsonSecretsProcessor(true);
   }
 
   @Singleton
@@ -166,10 +160,6 @@ public class ApplicationBeanFactory {
   @Named("oauthHttpClient")
   public HttpClient httpClient() {
     return HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
-  }
-
-  private <T> T convertToEnum(final String value, final Function<String, T> creatorFunction, final T defaultValue) {
-    return StringUtils.isNotEmpty(value) ? creatorFunction.apply(value.toUpperCase(Locale.ROOT)) : defaultValue;
   }
 
 }

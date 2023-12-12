@@ -15,10 +15,8 @@ import org.keycloak.representations.idm.RealmRepresentation;
  * This class represents the Keycloak server. It contains methods to register an initial user, web
  * client and identity provider
  */
-
 @Singleton
 @Slf4j
-@SuppressWarnings("MissingJavadocMethod")
 public class KeycloakServer {
 
   private final Keycloak keycloakAdminClient;

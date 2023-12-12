@@ -1,16 +1,18 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { act, getByTestId, screen, waitFor } from "@testing-library/react";
+import { getByTestId, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { BroadcastChannel } from "broadcast-channel";
 import React from "react";
 import selectEvent from "react-select-event";
 
 import { render, useMockIntersectionObserver } from "test-utils/testutils";
 
 import { useCompleteOAuth } from "core/api";
+import { DestinationDefinitionSpecificationRead } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
-import { DestinationDefinitionSpecificationRead } from "core/request/AirbyteClient";
 import { FeatureItem } from "core/services/features";
+import { OAUTH_BROADCAST_CHANNEL_NAME } from "hooks/services/useConnectorAuth";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
 
 import { ConnectorFormValues } from "./types";
@@ -19,11 +21,8 @@ import { DocumentationPanelContext } from "../ConnectorDocumentationLayout/Docum
 // hack to fix tests. https://github.com/remarkjs/react-markdown/issues/635
 jest.mock("components/ui/Markdown", () => ({ children }: React.PropsWithChildren<unknown>) => <>{children}</>);
 
-jest.mock("../../../hooks/services/useDestinationHook", () => ({
-  useDestinationList: () => ({ destinations: [] }),
-}));
-
 jest.mock("core/api", () => ({
+  useDestinationList: () => ({ destinations: [] }),
   useConsentUrls: () => ({ getSourceConsentUrl: () => "http://example.com" }),
   useCompleteOAuth: jest.fn(() => ({
     completeSourceOAuth: () => Promise.resolve({}),
@@ -39,17 +38,22 @@ jest.mock("../ConnectorDocumentationLayout/DocumentationPanelContext", () => {
     documentationPanelOpen: false,
     documentationUrl: "",
     setDocumentationPanelOpen: emptyFn,
-    setDocumentationUrl: emptyFn,
     selectedConnectorDefinition: {} as ConnectorDefinition,
     setSelectedConnectorDefinition: emptyFn,
+    focusedField: undefined,
+    setFocusedField: emptyFn,
   });
 
   return {
     useDocumentationPanelContext,
+    useOptionalDocumentationPanelContext: useDocumentationPanelContext,
   };
 });
 
 jest.setTimeout(40000);
+
+const oauthPopupIdentifier = "123456789";
+jest.mock("uuid", () => ({ v4: () => oauthPopupIdentifier }));
 
 const nextTick = () => new Promise((r) => setTimeout(r, 0));
 
@@ -66,9 +70,8 @@ const useAddPriceListItem = (container: HTMLElement, initialIndex = 0) => {
     const addButton = getByTestId(priceList, "addItemButton");
     await userEvent.click(addButton);
 
-    const arrayOfObjectsEditModal = getByTestId(document.body, "arrayOfObjects-editModal");
     const getPriceListInput = (index: number, key: string) =>
-      arrayOfObjectsEditModal.querySelector(`input[name='connectionConfiguration.priceList.${index}.${key}']`);
+      priceList.querySelector(`input[name='connectionConfiguration.priceList.${index}.${key}']`);
 
     // Type items into input
     const nameInput = getPriceListInput(index, "name");
@@ -77,20 +80,17 @@ const useAddPriceListItem = (container: HTMLElement, initialIndex = 0) => {
     const priceInput = getPriceListInput(index, "price");
     await userEvent.type(priceInput!, price);
 
-    const selectContainer = getByTestId(arrayOfObjectsEditModal, "connectionConfiguration.priceList.origin");
-    await act(async () => {
-      await selectEvent.select(selectContainer, originType, {
-        container: arrayOfObjectsEditModal,
-      });
-    });
+    const selectContainer = getByTestId(priceList, `connectionConfiguration.priceList.${index}.origin`);
+    await waitFor(() =>
+      selectEvent.select(selectContainer, originType, {
+        container: document.body,
+      })
+    );
 
-    const originInput = arrayOfObjectsEditModal.querySelector(
+    const originInput = priceList.querySelector(
       `input[name='connectionConfiguration.priceList.${index}.origin.${originType}']`
     );
     await userEvent.type(originInput!, origin);
-
-    const doneButton = getByTestId(arrayOfObjectsEditModal, "done-button");
-    await waitFor(() => userEvent.click(doneButton));
 
     index++;
   };
@@ -114,12 +114,11 @@ async function executeOAuthFlow(container: HTMLElement) {
   // wait for the mocked consent url call to finish
   await waitFor(nextTick);
   // mock the message coming from the separate oauth window
-  window.postMessage(
-    {
-      airbyte_type: "airbyte_oauth_callback",
-    },
-    "http://localhost"
-  );
+  const bc = new BroadcastChannel(OAUTH_BROADCAST_CHANNEL_NAME);
+  bc.postMessage({
+    airbyte_oauth_popup_identifier: oauthPopupIdentifier,
+    query: {},
+  });
   // mock the complete oauth request
   await waitFor(nextTick);
 }
@@ -192,6 +191,7 @@ const schema: AirbyteJSONSchema = {
       type: "array",
       items: {
         type: "object",
+        required: ["name", "price", "origin"],
         properties: {
           name: {
             type: "string",
@@ -205,7 +205,9 @@ const schema: AirbyteJSONSchema = {
             type: "object",
             oneOf: [
               {
+                type: "object",
                 title: "city",
+                required: ["type", "city"],
                 properties: {
                   type: {
                     type: "string",
@@ -218,7 +220,9 @@ const schema: AirbyteJSONSchema = {
                 },
               },
               {
+                type: "object",
                 title: "country",
+                required: ["type", "country"],
                 properties: {
                   type: {
                     type: "string",
@@ -1019,17 +1023,18 @@ describe("Connector form", () => {
     });
 
     it("should insert values correctly and submit them", async () => {
-      const container = await renderNewOAuthForm();
       (useCompleteOAuth as jest.MockedFunction<typeof useCompleteOAuth>).mockReturnValue({
         completeDestinationOAuth: jest.fn(),
-        completeSourceOAuth: () =>
-          Promise.resolve({
+        completeSourceOAuth: () => {
+          return Promise.resolve({
             request_succeeded: true,
             auth_payload: {
               access_token: "mytoken",
             },
-          }),
+          });
+        },
       });
+      const container = await renderNewOAuthForm();
 
       await executeOAuthFlow(container);
 

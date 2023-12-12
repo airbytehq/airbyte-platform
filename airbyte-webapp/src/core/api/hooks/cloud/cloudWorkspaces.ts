@@ -1,8 +1,7 @@
-import { QueryObserverResult, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
 import { useCurrentUser } from "core/services/auth";
-import { SCOPE_USER } from "services/Scope";
 
 import {
   deleteCloudWorkspace,
@@ -11,15 +10,24 @@ import {
   updateCloudWorkspace,
   webBackendCreatePermissionedCloudWorkspace,
   webBackendListWorkspacesByUser,
+  webBackendListWorkspacesByUserPaginated,
 } from "../../generated/CloudApi";
-import { CloudWorkspaceRead, CloudWorkspaceReadList, ConsumptionTimeWindow } from "../../types/CloudApi";
+import { SCOPE_USER } from "../../scopes";
+import {
+  CloudWorkspaceRead,
+  CloudWorkspaceReadList,
+  ConsumptionTimeWindow,
+  PermissionedCloudWorkspaceCreate,
+} from "../../types/CloudApi";
 import { useRequestOptions } from "../../useRequestOptions";
 import { useSuspenseQuery } from "../../useSuspenseQuery";
+import { useListPermissions } from "../permissions";
+import { useCurrentWorkspace } from "../workspaces";
 
 export const workspaceKeys = {
   all: [SCOPE_USER, "cloud_workspaces"] as const,
   lists: () => [...workspaceKeys.all, "list"] as const,
-  list: (filters: string) => [...workspaceKeys.lists(), { filters }] as const,
+  list: (filters: string | Record<string, string>) => [...workspaceKeys.lists(), { filters }] as const,
   detail: (id: number | string) => [...workspaceKeys.all, "detail", id] as const,
   usage: (id: number | string, timeWindow: string) => [...workspaceKeys.all, id, timeWindow, "usage"] as const,
 };
@@ -33,31 +41,14 @@ export function useListCloudWorkspaces() {
   );
 }
 
-export const getListCloudWorkspacesAsyncQueryKey = () => {
-  return workspaceKeys.lists();
-};
-
-export const useListCloudWorkspacesAsyncQuery = (userId: string) => {
-  const requestOptions = useRequestOptions();
-
-  return () => webBackendListWorkspacesByUser({ userId }, requestOptions);
-};
-
-export function useListCloudWorkspacesAsync(): QueryObserverResult<CloudWorkspaceReadList> {
-  const user = useCurrentUser();
-  const queryKey = getListCloudWorkspacesAsyncQueryKey();
-  const queryFn = useListCloudWorkspacesAsyncQuery(user.userId);
-
-  return useQuery(queryKey, queryFn);
-}
-
 export function useCreateCloudWorkspace() {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const user = useCurrentUser();
 
   return useMutation(
-    async (name: string) => webBackendCreatePermissionedCloudWorkspace({ name, userId: user.userId }, requestOptions),
+    async (values: Omit<PermissionedCloudWorkspaceCreate, "userId">) =>
+      webBackendCreatePermissionedCloudWorkspace({ ...values, userId: user.userId }, requestOptions),
     {
       onSuccess: (result) => {
         queryClient.setQueryData<CloudWorkspaceReadList>(workspaceKeys.lists(), (old) => ({
@@ -67,6 +58,30 @@ export function useCreateCloudWorkspace() {
     }
   );
 }
+
+export const useListCloudWorkspacesInfinite = (pageSize: number, nameContains: string) => {
+  const { userId } = useCurrentUser();
+  const requestOptions = useRequestOptions();
+
+  return useInfiniteQuery(
+    workspaceKeys.list({ pageSize: pageSize.toString(), nameContains }),
+    async ({ pageParam = 0 }: { pageParam?: number }) => {
+      return {
+        data: await webBackendListWorkspacesByUserPaginated(
+          { userId, pagination: { pageSize, rowOffset: pageParam * pageSize }, nameContains },
+          requestOptions
+        ),
+        pageParam,
+      };
+    },
+    {
+      suspense: false,
+      getPreviousPageParam: (firstPage) => (firstPage.pageParam > 0 ? firstPage.pageParam - 1 : undefined),
+      getNextPageParam: (lastPage) => (lastPage.data.workspaces.length < pageSize ? undefined : lastPage.pageParam + 1),
+      cacheTime: 10000,
+    }
+  );
+};
 
 export function useUpdateCloudWorkspace() {
   const requestOptions = useRequestOptions();
@@ -156,3 +171,18 @@ export function useGetCloudWorkspaceUsage(workspaceId: string, timeWindow: Consu
     getCloudWorkspaceUsage({ workspaceId, timeWindow }, requestOptions)
   );
 }
+
+/**
+ * Checks whether a user is in a foreign workspace. A foreign workspace is any workspace the user doesn't
+ * have explicit permissions to via workspace permissions or being part of the organization the workspace is in.
+ */
+export const useIsForeignWorkspace = () => {
+  const { userId } = useCurrentUser();
+  const { permissions } = useListPermissions(userId);
+  const { workspaceId, organizationId } = useCurrentWorkspace();
+
+  return !permissions.some(
+    (permission) =>
+      permission.workspaceId === workspaceId || (organizationId && permission.organizationId === organizationId)
+  );
+};

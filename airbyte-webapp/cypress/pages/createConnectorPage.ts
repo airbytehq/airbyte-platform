@@ -1,3 +1,5 @@
+import { updateField } from "@cy/commands/common";
+
 const nameInput = "input[name=name]";
 const apiKeyInput = "input[name='connectionConfiguration.api_key']";
 const hostInput = "input[name='connectionConfiguration.host']";
@@ -5,14 +7,13 @@ const portInput = "input[name='connectionConfiguration.port']";
 const databaseInput = "input[name='connectionConfiguration.database']";
 const usernameInput = "input[name='connectionConfiguration.username']";
 const passwordInput = "input[name='connectionConfiguration.password']";
-const pokemonNameInput = "input[name='connectionConfiguration.pokemon_name']";
 const schemaInput = "[data-testid='tag-input'] input";
 const destinationPathInput = "input[name='connectionConfiguration.destination_path']";
 const optionalFieldsButton = "button[data-testid='optional-fields']";
 const xminOption = "label[data-testid='radio-option.1']";
 
 export const selectServiceType = (type: string) => {
-  // Make sure alpha connectors are visible in the grid, since they are hidden by default
+  // Make sure community connectors are visible in the grid, since they are hidden by default
   cy.get("#filter-support-level-community").check({ force: true });
   cy.contains("button", type).click();
 };
@@ -48,7 +49,7 @@ export const enterPassword = (password: string) => {
 };
 
 export const enterPokemonName = (pokeName: string) => {
-  cy.get(pokemonNameInput).type(pokeName);
+  updateField("connectionConfiguration.pokemon_name", pokeName, true);
 };
 
 export const enterDestinationPath = (destinationPath: string) => {

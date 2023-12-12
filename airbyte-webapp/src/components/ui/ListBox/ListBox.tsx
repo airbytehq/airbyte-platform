@@ -8,9 +8,9 @@ import { useIntl } from "react-intl";
 
 import { Text } from "components/ui/Text";
 
-import { ReactComponent as CaretDownIcon } from "./CaretDownIcon.svg";
 import styles from "./ListBox.module.scss";
 import { FlexContainer, FlexItem } from "../Flex";
+import { Icon } from "../Icon";
 
 export interface ListBoxControlButtonProps<T> {
   selectedOption?: Option<T>;
@@ -35,7 +35,7 @@ const DefaultControlButton = <T,>({ selectedOption, isDisabled }: ListBoxControl
         </Text>
       )}
 
-      <CaretDownIcon className={styles.caret} />
+      <Icon type="chevronDown" color="action" />
     </>
   );
 };
@@ -45,6 +45,7 @@ export interface Option<T> {
   value: T;
   icon?: React.ReactNode;
   disabled?: boolean;
+  "data-testid"?: string;
 }
 
 export interface ListBoxProps<T> {
@@ -101,7 +102,12 @@ export const ListBox = <T,>({
   };
 
   return (
-    <div className={className} data-testid={testId}>
+    <div
+      className={className}
+      {...(testId && {
+        "data-testid": testId,
+      })}
+    >
       <Listbox value={selectedValue} onChange={onOnSelect} disabled={isDisabled} by={isEqual}>
         <Float
           adaptiveWidth={adaptiveWidth}
@@ -114,19 +120,27 @@ export const ListBox = <T,>({
         >
           <Listbox.Button
             className={classNames(buttonClassName, styles.button, { [styles["button--error"]]: hasError })}
+            onClick={(e) => e.stopPropagation()}
+            {...(testId && {
+              "data-testid": `${testId}-listbox-button`,
+            })}
           >
             <ControlButton selectedOption={selectedOption} isDisabled={isDisabled} />
           </Listbox.Button>
           <Listbox.Options className={classNames(styles.optionsMenu, optionsMenuClassName)}>
             {options.length > 0 && (
               <>
-                {options.map(({ label, value, icon, disabled }, index) => (
+                {options.map(({ label, value, icon, disabled, ...restOptionProps }, index) => (
                   <Listbox.Option
                     key={typeof label === "string" ? label : index}
                     value={value}
                     disabled={disabled}
                     className={classNames(styles.option, optionClassName, {
                       [styles.disabled]: disabled,
+                    })}
+                    onClick={(e) => e.stopPropagation()}
+                    {...(restOptionProps["data-testid"] && {
+                      "data-testid": `${restOptionProps["data-testid"]}-option`,
                     })}
                   >
                     {({ active, selected }) => (

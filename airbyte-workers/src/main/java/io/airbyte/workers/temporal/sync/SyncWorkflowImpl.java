@@ -13,6 +13,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_
 
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
+import io.airbyte.commons.temporal.annotations.TemporalActivityStub;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.NormalizationSummary;
@@ -33,7 +34,9 @@ import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
+import io.airbyte.workers.models.RefreshSchemaActivityInput;
+import io.airbyte.workers.models.RefreshSchemaActivityOutput;
+import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.temporal.workflow.Workflow;
 import java.util.Map;
@@ -83,10 +86,17 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     final String taskQueue = Workflow.getInfo().getTaskQueue();
 
     final Optional<UUID> sourceId = configFetchActivity.getSourceId(connectionId);
+    RefreshSchemaActivityOutput refreshSchemaOutput = null;
     if (!sourceId.isEmpty() && refreshSchemaActivity.shouldRefreshSchema(sourceId.get())) {
       LOGGER.info("Refreshing source schema...");
       try {
-        refreshSchemaActivity.refreshSchema(sourceId.get(), connectionId);
+        final var version = Workflow.getVersion("AUTO_BACKFILL_ON_NEW_COLUMNS", Workflow.DEFAULT_VERSION, 1);
+        if (version == Workflow.DEFAULT_VERSION) {
+          refreshSchemaActivity.refreshSchema(sourceId.get(), connectionId);
+        } else {
+          refreshSchemaOutput =
+              refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(sourceId.get(), connectionId, syncInput.getWorkspaceId()));
+        }
       } catch (final Exception e) {
         ApmTraceUtils.addExceptionToTrace(e);
         return SyncOutputProvider.getRefreshSchemaFailure(e);
@@ -102,8 +112,9 @@ public class SyncWorkflowImpl implements SyncWorkflow {
       return output;
     }
 
-    StandardSyncOutput syncOutput =
-        replicationActivity.replicate(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput, taskQueue);
+    StandardSyncOutput syncOutput = replicationActivity
+        .replicateV2(generateReplicationActivityInput(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, taskQueue,
+            refreshSchemaOutput));
 
     if (syncInput.getOperationSequence() != null && !syncInput.getOperationSequence().isEmpty()) {
       for (final StandardSyncOperation standardSyncOperation : syncInput.getOperationSequence()) {
@@ -130,7 +141,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
               .withConnectionId(syncInput.getConnectionId())
               .withWorkspaceId(syncInput.getWorkspaceId())
               .withDestinationConfiguration(syncInput.getDestinationConfiguration())
-              .withOperatorDbt(standardSyncOperation.getOperatorDbt());
+              .withOperatorDbt(standardSyncOperation.getOperatorDbt())
+              .withConnectionContext(syncInput.getConnectionContext());
 
           dbtTransformationActivity.run(jobRunConfig, destinationLauncherConfig,
               syncInput.getSyncResourceRequirements() != null ? syncInput.getSyncResourceRequirements().getOrchestrator() : null,
@@ -143,7 +155,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                   .withExecutionUrl(standardSyncOperation.getOperatorWebhook().getExecutionUrl())
                   .withExecutionBody(standardSyncOperation.getOperatorWebhook().getExecutionBody())
                   .withWebhookConfigId(standardSyncOperation.getOperatorWebhook().getWebhookConfigId())
-                  .withWorkspaceWebhookConfigs(syncInput.getWebhookOperationConfigs()));
+                  .withWorkspaceWebhookConfigs(syncInput.getWebhookOperationConfigs())
+                  .withConnectionContext(syncInput.getConnectionContext()));
           LOGGER.info("webhook {} completed {}", standardSyncOperation.getOperatorWebhook().getWebhookConfigId(),
               success ? "successfully" : "unsuccessfully");
           // TODO(mfsiega-airbyte): clean up this logic to be returned from the webhook invocation.
@@ -171,7 +184,35 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     return normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(syncInput.getDestinationConfiguration(),
         syncOutput.getOutputCatalog(),
         syncInput.getWorkspaceId(),
-        syncInput.getConnectionId());
+        syncInput.getConnectionId(),
+        syncInput.getConnectionContext().getOrganizationId());
+  }
+
+  private ReplicationActivityInput generateReplicationActivityInput(final StandardSyncInput syncInput,
+                                                                    final JobRunConfig jobRunConfig,
+                                                                    final IntegrationLauncherConfig sourceLauncherConfig,
+                                                                    final IntegrationLauncherConfig destinationLauncherConfig,
+                                                                    final String taskQueue,
+                                                                    final RefreshSchemaActivityOutput refreshSchemaOutput) {
+    return new ReplicationActivityInput(
+        syncInput.getSourceId(),
+        syncInput.getDestinationId(),
+        syncInput.getSourceConfiguration(),
+        syncInput.getDestinationConfiguration(),
+        jobRunConfig,
+        sourceLauncherConfig,
+        destinationLauncherConfig,
+        syncInput.getSyncResourceRequirements(),
+        syncInput.getWorkspaceId(),
+        syncInput.getConnectionId(),
+        syncInput.getNormalizeInDestinationContainer(),
+        taskQueue,
+        syncInput.getIsReset(),
+        syncInput.getNamespaceDefinition(),
+        syncInput.getNamespaceFormat(),
+        syncInput.getPrefix(),
+        refreshSchemaOutput,
+        syncInput.getConnectionContext());
   }
 
 }

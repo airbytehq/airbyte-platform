@@ -1,9 +1,8 @@
 import { renderHook } from "@testing-library/react";
-import * as formik from "formik";
 
-import { FormikConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
+import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 
-import { AirbyteStreamAndConfiguration } from "core/request/AirbyteClient";
+import { AirbyteStreamAndConfiguration } from "core/api/types/AirbyteClient";
 import * as connectionFormService from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { useStreamsConfigTableRowProps } from "./useStreamsConfigTableRowProps";
@@ -16,7 +15,7 @@ const mockStream: Partial<AirbyteStreamAndConfiguration> = {
   config: { selected: true, syncMode: "full_refresh", destinationSyncMode: "overwrite" },
 };
 
-const mockInitialValues: Partial<FormikConnectionFormValues> = {
+const mockInitialValues: Partial<FormConnectionFormValues> = {
   syncCatalog: {
     streams: [
       {
@@ -30,7 +29,7 @@ const mockInitialValues: Partial<FormikConnectionFormValues> = {
   },
 };
 
-const mockDisabledInitialValues: Partial<FormikConnectionFormValues> = {
+const mockDisabledInitialValues: Partial<FormConnectionFormValues> = {
   syncCatalog: {
     streams: [
       {
@@ -42,20 +41,16 @@ const mockDisabledInitialValues: Partial<FormikConnectionFormValues> = {
   },
 };
 
-const testSetup = (initialValues: Partial<FormikConnectionFormValues>, error: unknown) => {
+const testSetup = (initialValues: Partial<FormConnectionFormValues>) => {
   jest.spyOn(connectionFormService, "useConnectionFormService").mockImplementation(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return { initialValues } as any;
-  });
-  jest.spyOn(formik, "useField").mockImplementationOnce(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return [{}, { error }] as any; // no error
   });
 };
 
 describe(`${useStreamsConfigTableRowProps.name}`, () => {
   it("should return default styles for a row that starts enabled", () => {
-    testSetup(mockInitialValues, undefined);
+    testSetup(mockInitialValues);
 
     const { result } = renderHook(() => useStreamsConfigTableRowProps(mockStream));
 
@@ -63,7 +58,7 @@ describe(`${useStreamsConfigTableRowProps.name}`, () => {
     expect(result.current.pillButtonVariant).toEqual("grey");
   });
   it("should return disabled styles for a row that starts disabled", () => {
-    testSetup(mockDisabledInitialValues, undefined);
+    testSetup(mockDisabledInitialValues);
 
     const { result } = renderHook(() =>
       useStreamsConfigTableRowProps({
@@ -77,7 +72,7 @@ describe(`${useStreamsConfigTableRowProps.name}`, () => {
     expect(result.current.pillButtonVariant).toEqual("grey");
   });
   it("should return added styles for a row that is added", () => {
-    testSetup(mockDisabledInitialValues, undefined);
+    testSetup(mockDisabledInitialValues);
 
     const { result } = renderHook(() => useStreamsConfigTableRowProps(mockStream));
 
@@ -85,7 +80,7 @@ describe(`${useStreamsConfigTableRowProps.name}`, () => {
     expect(result.current.pillButtonVariant).toEqual("green");
   });
   it("should return removed styles for a row that is removed", () => {
-    testSetup(mockInitialValues, undefined);
+    testSetup(mockInitialValues);
 
     const { result } = renderHook(() =>
       useStreamsConfigTableRowProps({
@@ -99,8 +94,7 @@ describe(`${useStreamsConfigTableRowProps.name}`, () => {
     expect(result.current.pillButtonVariant).toEqual("red");
   });
   it("should return updated styles for a row that is updated", () => {
-    // eslint-disable-next-line
-    testSetup(mockInitialValues, undefined);
+    testSetup(mockInitialValues);
 
     const { result } = renderHook(() =>
       useStreamsConfigTableRowProps({
@@ -115,7 +109,7 @@ describe(`${useStreamsConfigTableRowProps.name}`, () => {
   });
 
   it("should return added styles for a row that is both added and updated", () => {
-    testSetup(mockDisabledInitialValues, undefined);
+    testSetup(mockDisabledInitialValues);
 
     const { result } = renderHook(() =>
       useStreamsConfigTableRowProps({

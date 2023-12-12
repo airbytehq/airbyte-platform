@@ -9,9 +9,9 @@ import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConnectorJobOutput.OutputType;
 import io.airbyte.config.FailureReason;
-import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.WorkerSourceConfig;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteControlConnectorConfigMessage;
 import io.airbyte.protocol.models.AirbyteControlMessage;
 import io.airbyte.protocol.models.AirbyteMessage;
@@ -19,6 +19,7 @@ import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.protocol.models.Config;
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.helper.FailureHelper.ConnectorCommand;
@@ -125,24 +126,24 @@ public class WorkerUtils {
    * Translates a StandardSyncInput into a WorkerSourceConfig. WorkerSourceConfig is a subset of
    * StandardSyncInput.
    */
-  public static WorkerSourceConfig syncToWorkerSourceConfig(final StandardSyncInput sync) {
+  public static WorkerSourceConfig syncToWorkerSourceConfig(final ReplicationInput replicationInput) {
     return new WorkerSourceConfig()
-        .withSourceId(sync.getSourceId())
-        .withSourceConnectionConfiguration(sync.getSourceConfiguration())
-        .withCatalog(sync.getCatalog())
-        .withState(sync.getState());
+        .withSourceId(replicationInput.getSourceId())
+        .withSourceConnectionConfiguration(replicationInput.getSourceConfiguration())
+        .withCatalog(replicationInput.getCatalog())
+        .withState(replicationInput.getState());
   }
 
   /**
    * Translates a StandardSyncInput into a WorkerDestinationConfig. WorkerDestinationConfig is a
    * subset of StandardSyncInput.
    */
-  public static WorkerDestinationConfig syncToWorkerDestinationConfig(final StandardSyncInput sync) {
+  public static WorkerDestinationConfig syncToWorkerDestinationConfig(final ReplicationInput replicationInput) {
     return new WorkerDestinationConfig()
-        .withDestinationId(sync.getDestinationId())
-        .withDestinationConnectionConfiguration(sync.getDestinationConfiguration())
-        .withCatalog(sync.getCatalog())
-        .withState(sync.getState());
+        .withDestinationId(replicationInput.getDestinationId())
+        .withDestinationConnectionConfiguration(replicationInput.getDestinationConfiguration())
+        .withCatalog(replicationInput.getCatalog())
+        .withState(replicationInput.getState());
   }
 
   private static ConnectorCommand getConnectorCommandFromOutputType(final OutputType outputType) {
@@ -230,11 +231,11 @@ public class WorkerUtils {
   /**
    * Map stream names to their respective schemas.
    *
-   * @param syncInput sync input
+   * @param catalog sync input
    * @return map of stream names to their schemas
    */
-  public static Map<AirbyteStreamNameNamespacePair, JsonNode> mapStreamNamesToSchemas(final StandardSyncInput syncInput) {
-    return syncInput.getCatalog().getStreams().stream().collect(
+  public static Map<AirbyteStreamNameNamespacePair, JsonNode> mapStreamNamesToSchemas(final ConfiguredAirbyteCatalog catalog) {
+    return catalog.getStreams().stream().collect(
         Collectors.toMap(
             k -> AirbyteStreamNameNamespacePair.fromAirbyteStream(k.getStream()),
             v -> v.getStream().getJsonSchema()));

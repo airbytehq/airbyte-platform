@@ -13,12 +13,10 @@ import { Icon } from "components/ui/Icon";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { ConnectionConfiguration } from "area/connector/types";
+import { useDestinationDefinitionList, useCreateDestination } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
-import { useCreateDestination } from "hooks/services/useDestinationHook";
-import { DestinationPaths } from "pages/routePaths";
-import { RoutePaths } from "pages/routePaths";
-import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
+import { DestinationPaths, RoutePaths } from "pages/routePaths";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
 export const CreateDestinationPage: React.FC = () => {
@@ -64,27 +62,24 @@ export const CreateDestinationPage: React.FC = () => {
   };
 
   return (
-    <>
+    <ConnectorDocumentationWrapper>
       <HeadTitle titles={[{ id: "destinations.newDestinationTitle" }]} />
       <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
-
-      <ConnectorDocumentationWrapper>
-        <FormPageContent>
-          <FlexContainer justifyContent="flex-start">
-            <Box mb="md">
-              <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
-                <FormattedMessage id="connectorBuilder.backButtonLabel" />
-              </Button>
-            </Box>
-          </FlexContainer>
-          <DestinationForm
-            onSubmit={onSubmitDestinationForm}
-            destinationDefinitions={destinationDefinitions}
-            selectedDestinationDefinitionId={destinationDefinitionId}
-          />
-          <CloudInviteUsersHint connectorType="destination" />
-        </FormPageContent>
-      </ConnectorDocumentationWrapper>
-    </>
+      <FormPageContent>
+        <FlexContainer justifyContent="flex-start">
+          <Box mb="md">
+            <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
+              <FormattedMessage id="connectorBuilder.backButtonLabel" />
+            </Button>
+          </Box>
+        </FlexContainer>
+        <DestinationForm
+          onSubmit={onSubmitDestinationForm}
+          destinationDefinitions={destinationDefinitions}
+          selectedDestinationDefinitionId={destinationDefinitionId}
+        />
+        <CloudInviteUsersHint connectorType="destination" />
+      </FormPageContent>
+    </ConnectorDocumentationWrapper>
   );
 };

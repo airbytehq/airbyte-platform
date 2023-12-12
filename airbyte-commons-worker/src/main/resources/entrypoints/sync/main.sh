@@ -34,6 +34,8 @@ CHILD_PID=$!
   done
 ) &
 
+SOCAT_COMMANDS
+
 echo "Waiting on CHILD_PID $CHILD_PID"
 wait $CHILD_PID
 EXIT_STATUS=$?

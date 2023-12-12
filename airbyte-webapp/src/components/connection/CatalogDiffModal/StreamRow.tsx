@@ -1,10 +1,8 @@
-import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classnames from "classnames";
 
-import { ModificationIcon } from "components/icons/ModificationIcon";
+import { Icon } from "components/ui/Icon";
 
-import { StreamTransform } from "core/request/AirbyteClient";
+import { StreamTransform } from "core/api/types/AirbyteClient";
 
 import styles from "./StreamRow.module.scss";
 import { DiffVerb } from "./types";
@@ -42,11 +40,11 @@ export const StreamRow: React.FC<StreamRowProps> = ({ streamTransform, syncMode,
         <div className={styles.content}>
           <div className={styles.iconContainer}>
             {diffVerb === "new" ? (
-              <FontAwesomeIcon icon={faPlus} size="1x" className={iconStyle} />
+              <Icon type="plus" className={iconStyle} />
             ) : diffVerb === "removed" ? (
-              <FontAwesomeIcon icon={faMinus} size="1x" className={iconStyle} />
+              <Icon type="minus" className={iconStyle} />
             ) : (
-              <ModificationIcon className={iconStyle} />
+              <Icon type="modification" className={iconStyle} />
             )}
           </div>
           <div title={namespace} className={styles.text}>

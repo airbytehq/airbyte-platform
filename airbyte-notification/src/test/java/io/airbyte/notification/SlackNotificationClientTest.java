@@ -20,6 +20,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.UUID;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -123,7 +124,7 @@ class SlackNotificationClientTest {
   void testNotifyConnectionDisabled() throws IOException, InterruptedException {
     final String expectedNotificationMessage = String.format(
         """
-        Your connection from source-test to destination-test was automatically disabled because it failed 100 times consecutively or has been failing for 14 days in a row.
+        Your connection from source-test to destination-test was automatically disabled because it failed 20 times consecutively or has been failing for 14 days in a row.
 
         Please address the failing issues to ensure your syncs continue to run. The most recent attempted job description.
 
@@ -143,7 +144,7 @@ class SlackNotificationClientTest {
   void testNotifyConnectionDisabledWarning() throws IOException, InterruptedException {
     final String expectedNotificationWarningMessage = String.format(
         """
-        Your connection from source-test to destination-test is scheduled to be automatically disabled because it either failed 50 times consecutively or there were only failed jobs in the past 7 days. Once it has failed 100 times consecutively or has been failing for 14 days in a row, the connection will be automatically disabled.
+        Your connection from source-test to destination-test is scheduled to be automatically disabled because it either failed 10 times consecutively or there were only failed jobs in the past 7 days. Once it has failed 20 times consecutively or has been failing for 14 days in a row, the connection will be automatically disabled.
 
         Please address the failing issues to ensure your syncs continue to run. The most recent attempted job description.
 
@@ -156,6 +157,36 @@ class SlackNotificationClientTest {
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
     assertTrue(client.notifyConnectionDisableWarning("", SOURCE_TEST, DESTINATION_TEST, "job description.", WORKSPACE_ID, CONNECTION_ID));
+  }
+
+  @Test
+  void testNotifySchemaPropagated() throws IOException, InterruptedException {
+    final UUID connectionId = UUID.randomUUID();
+    final List<String> changes = List.of("Change1", "Some other change");
+    String workspaceName = "";
+    String connectionName = "PSQL ->> BigQuery";
+    String sourceName = "";
+    boolean isBreaking = false;
+    String url = "";
+    String connectionUrl = "http://airbyte.io/your_connection";
+    String recipient = "";
+
+    final String expectedNotificationMessage = String.format(
+        """
+        Your source schema has changed for connection '%s' and the following changes were automatically propagated:
+         * Change1
+         * Some other change
+
+        Visit the connection page: %s
+        """, connectionName, connectionUrl);
+    server.createContext(TEST_PATH, new ServerHandler(expectedNotificationMessage));
+    final SlackNotificationClient client =
+        new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
+
+    assertTrue(client.notifySchemaPropagated(UUID.randomUUID(), workspaceName, connectionId, connectionName, connectionUrl, sourceName, changes, url,
+        recipient,
+        isBreaking));
+
   }
 
   static class ServerHandler implements HttpHandler {

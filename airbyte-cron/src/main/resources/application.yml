@@ -35,11 +35,33 @@ airbyte:
   temporal:
     worker:
       ports: ${TEMPORAL_WORKER_PORTS:}
-  tracking-strategy: ${TRACKING_STRATEGY:LOGGING}
+  tracking:
+    strategy: ${TRACKING_STRATEGY:LOGGING}
+    write-key: ${SEGMENT_WRITE_KEY:}
   version: ${AIRBYTE_VERSION}
   workflow:
     failure:
       restart-delay: ${WORKFLOW_FAILURE_RESTART_DELAY_SECONDS:600}
+  workload:
+    monitor:
+      enabled: ${WORKLOAD_MONITOR_ENABLED:false}
+      claim-check-rate: PT1M
+      claim-timeout: ${WORKLOAD_CLAIM_TIMEOUT:PT1H}
+      heartbeat-check-rate: PT1M
+      heartbeat-timeout: PT5M
+      not-started-check-rate: PT1M
+      non-sync-age-check-rate: PT1M
+      sync-age-check-rate: PT1M
+      non-sync-workload-timeout: ${NON_SYNC_WORKLOAD_TIMEOUT:PT9M}
+      sync-workload-timeout: ${SYNC_WORKLOAD_TIMEOUT:P30D}
+  workload-api:
+    base-path: ${WORKLOAD_API_HOST:}
+    bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
+    connect-timeout-seconds: ${WORKLOAD_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${WORKLOAD_API_READ_TIMEOUT_SECONDS:300}
+    retries:
+      delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
+      max: ${WORKLOAD_API_MAX_RETRIES:5}
   workspace:
     docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
     root: ${WORKSPACE_ROOT}

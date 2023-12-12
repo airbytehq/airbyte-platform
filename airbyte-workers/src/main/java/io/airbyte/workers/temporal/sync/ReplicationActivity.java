@@ -4,10 +4,8 @@
 
 package io.airbyte.workers.temporal.sync;
 
-import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
-import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
-import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.workers.models.ReplicationActivityInput;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 
@@ -18,10 +16,6 @@ import io.temporal.activity.ActivityMethod;
 public interface ReplicationActivity {
 
   @ActivityMethod
-  StandardSyncOutput replicate(JobRunConfig jobRunConfig,
-                               IntegrationLauncherConfig sourceLauncherConfig,
-                               IntegrationLauncherConfig destinationLauncherConfig,
-                               StandardSyncInput syncInput,
-                               final String taskQueue);
+  StandardSyncOutput replicateV2(final ReplicationActivityInput replicationInput);
 
 }

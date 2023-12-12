@@ -10,6 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.api.model.Network;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
@@ -69,6 +71,7 @@ import io.airbyte.api.client.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.api.client.model.generated.WebBackendOperationCreateOrUpdate;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
+import io.airbyte.commons.string.Strings;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.TemporalWorkflowUtils;
 import io.airbyte.commons.temporal.config.TemporalSdkTimeouts;
@@ -93,6 +96,7 @@ import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,6 +109,7 @@ import org.jooq.SQLDialect;
 import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.shaded.org.apache.commons.lang3.RandomStringUtils;
 import org.testcontainers.utility.DockerImageName;
@@ -125,7 +130,7 @@ import org.testcontainers.utility.MountableFile;
  * <li>kubernetes client</li>
  * <li>lists of UUIDS representing IDs of sources, destinations, connections, and operations</li>
  */
-@SuppressWarnings({"MissingJavadocMethod", "PMD.AvoidDuplicateLiterals"})
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class AcceptanceTestHarness {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AcceptanceTestHarness.class);
@@ -166,6 +171,10 @@ public class AcceptanceTestHarness {
   // NOTE: we include `INCOMPLETE` here because the job may still retry; see
   // https://docs.airbyte.com/understanding-airbyte/jobs/.
   public static final Set<JobStatus> IN_PROGRESS_JOB_STATUSES = Set.of(JobStatus.PENDING, JobStatus.INCOMPLETE, JobStatus.RUNNING);
+
+  private static final String KUBE_PROCESS_RUNNER_HOST = java.util.Optional.ofNullable(System.getenv("KUBE_PROCESS_RUNNER_HOST")).orElse("");
+
+  private static final String DOCKER_NETWORK = java.util.Optional.ofNullable(System.getenv("DOCKER_NETWORK")).orElse("bridge");
 
   private static boolean isKube;
   private static boolean isMinikube;
@@ -221,12 +230,21 @@ public class AcceptanceTestHarness {
       throw new RuntimeException("KUBE Flag should also be enabled if GKE flag is enabled");
     }
     if (!isGke) {
-      sourcePsql = new PostgreSQLContainer(SOURCE_POSTGRES_IMAGE_NAME)
-          .withUsername(SOURCE_USERNAME)
+      // we attach the container to the appropriate network since there are environments where we use one
+      // other than the default
+      final DockerClient dockerClient = DockerClientFactory.lazyClient();
+      final List<Network> dockerNetworks = dockerClient.listNetworksCmd().withNameFilter(DOCKER_NETWORK).exec();
+      final Network dockerNetwork = dockerNetworks.get(0);
+      final org.testcontainers.containers.Network containerNetwork =
+          org.testcontainers.containers.Network.builder().id(dockerNetwork.getId()).build();
+      sourcePsql = (PostgreSQLContainer) new PostgreSQLContainer(SOURCE_POSTGRES_IMAGE_NAME)
+          .withNetwork(containerNetwork);
+      sourcePsql.withUsername(SOURCE_USERNAME)
           .withPassword(SOURCE_PASSWORD);
       sourcePsql.start();
 
-      destinationPsql = new PostgreSQLContainer(DESTINATION_POSTGRES_IMAGE_NAME);
+      destinationPsql = (PostgreSQLContainer) new PostgreSQLContainer(DESTINATION_POSTGRES_IMAGE_NAME)
+          .withNetwork(containerNetwork);
       destinationPsql.start();
     }
 
@@ -724,7 +742,8 @@ public class AcceptanceTestHarness {
                                           final boolean withSchema) {
     final Map<Object, Object> dbConfig = new HashMap<>();
     // don't use psql.getHost() directly since the ip we need differs depending on environment
-    dbConfig.put(JdbcUtils.HOST_KEY, getHostname());
+    // NOTE: Use the container ip IFF we aren't on the "bridge" network
+    dbConfig.put(JdbcUtils.HOST_KEY, DOCKER_NETWORK.equals("bridge") ? getHostname() : psql.getHost());
 
     if (hiddenPassword) {
       dbConfig.put(JdbcUtils.PASSWORD_KEY, "**********");
@@ -745,6 +764,9 @@ public class AcceptanceTestHarness {
 
   public String getHostname() {
     if (isKube) {
+      if (!KUBE_PROCESS_RUNNER_HOST.equals("")) {
+        return KUBE_PROCESS_RUNNER_HOST;
+      }
       if (isMinikube) {
         // used with minikube driver=none instance
         try {
@@ -901,22 +923,26 @@ public class AcceptanceTestHarness {
   public static void waitForSuccessfulJob(final JobsApi jobsApi, final JobRead originalJob) throws InterruptedException, ApiException {
     final JobRead job = waitWhileJobHasStatus(jobsApi, originalJob, Sets.newHashSet(JobStatus.PENDING, JobStatus.RUNNING, JobStatus.INCOMPLETE));
 
+    final var debugInfo = new ArrayList<String>();
+
     if (!JobStatus.SUCCEEDED.equals(job.getStatus())) {
       // If a job failed during testing, show us why.
       final JobIdRequestBody id = new JobIdRequestBody();
       id.setId(originalJob.getId());
       for (final AttemptInfoRead attemptInfo : jobsApi.getJobInfo(id).getAttempts()) {
-        LOGGER.warn("Unsuccessful job attempt " + attemptInfo.getAttempt().getId()
-            + " with status " + job.getStatus() + " produced log output as follows: " + attemptInfo.getLogs().getLogLines());
+        final var msg = "Unsuccessful job attempt " + attemptInfo.getAttempt().getId()
+            + " with status " + job.getStatus() + " produced log output as follows: " + attemptInfo.getLogs().getLogLines();
+        LOGGER.warn(msg);
+        debugInfo.add(msg);
       }
     }
-    assertEquals(JobStatus.SUCCEEDED, job.getStatus());
+    assertEquals(JobStatus.SUCCEEDED, job.getStatus(), Strings.join(debugInfo, ", "));
     Thread.sleep(200);
   }
 
   public static JobRead waitWhileJobHasStatus(final JobsApi jobsApi, final JobRead originalJob, final Set<JobStatus> jobStatuses)
       throws InterruptedException {
-    return waitWhileJobHasStatus(jobsApi, originalJob, jobStatuses, Duration.ofMinutes(6));
+    return waitWhileJobHasStatus(jobsApi, originalJob, jobStatuses, Duration.ofMinutes(12));
   }
 
   @SuppressWarnings("BusyWait")

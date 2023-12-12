@@ -13,7 +13,7 @@ const getFieldSelectButtonTestId = (type: SyncFieldType) =>
 
 const getSourceDefinedTestId = (type: SyncFieldType) => getTestId(`${type}-text`);
 
-export const syncModeSelectButton = joinTestIds(getTestId("sync-mode-select"), getTestId("pill-select-button"));
+export const syncModeSelectButton = getTestId("sync-mode-select-listbox-button");
 
 const [streamSyncSwitch, destinationStreamNameCell, destinationNamespaceCell, dropDownOverlayContainer] = getTestIds(
   ["selected-switch", "input"],
@@ -25,9 +25,10 @@ const [streamSyncSwitch, destinationStreamNameCell, destinationNamespaceCell, dr
 export class StreamRowPageObject {
   private readonly stream: string;
 
-  constructor(private readonly namespace: string, private readonly streamName: string) {
-    this.namespace = namespace;
-    this.streamName = streamName;
+  constructor(
+    private readonly namespace: string,
+    private readonly streamName: string
+  ) {
     this.stream = streamTableRow(namespace, streamName);
   }
 
@@ -109,7 +110,7 @@ export class StreamRowPageObject {
     cy.get(this.stream).scrollIntoView();
     cy.get(this.stream).within(() => {
       cy.get(syncModeSelectButton).click({ force: true });
-      cy.get(`.react-select__option`)
+      cy.get('li[role="option"]')
         // It's possible that there are multiple options with the same text, so we need to filter by exact text content
         // instead of using .contains(), e.g. "Incremental | Append" and "Incremental | Append + Dedupe"
         .filter((_, element) => Cypress.$(element).text().trim() === syncMode)

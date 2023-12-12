@@ -20,7 +20,6 @@ import org.keycloak.representations.idm.IdentityProviderRepresentation;
  */
 @Singleton
 @Slf4j
-@SuppressWarnings("MissingJavadocMethod")
 public class IdentityProvidersCreator {
 
   // static map of ProviderType to Keycloak provider id

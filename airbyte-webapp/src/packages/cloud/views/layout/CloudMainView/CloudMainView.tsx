@@ -4,14 +4,14 @@ import { FormattedMessage } from "react-intl";
 import { Outlet } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { CreditsIcon } from "components/icons/CreditsIcon";
 import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 import { FlexItem } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { ThemeToggle } from "components/ui/ThemeToggle";
 import { WorkspacesPicker } from "components/workspace/WorkspacesPicker";
 
-import { useCurrentWorkspace } from "core/api";
-import { useGetCloudWorkspaceAsync, useListCloudWorkspacesAsync } from "core/api/cloud";
+import { useCurrentOrganizationInfo, useCurrentWorkspace } from "core/api";
+import { useGetCloudWorkspaceAsync, useListCloudWorkspacesInfinite } from "core/api/cloud";
 import { CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus } from "core/api/types/CloudApi";
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -27,7 +27,6 @@ import { StartOverErrorView } from "views/common/StartOverErrorView";
 import { AirbyteHomeLink } from "views/layout/SideBar/AirbyteHomeLink";
 import { MenuContent } from "views/layout/SideBar/components/MenuContent";
 import { NavItem } from "views/layout/SideBar/components/NavItem";
-import SettingsIcon from "views/layout/SideBar/components/SettingsIcon";
 import { MainNavItems } from "views/layout/SideBar/MainNavItems";
 import { SideBar } from "views/layout/SideBar/SideBar";
 
@@ -39,8 +38,8 @@ import { LOW_BALANCE_CREDIT_THRESHOLD } from "../../billing/BillingPage/componen
 
 const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const workspace = useCurrentWorkspace();
+  const organization = useCurrentOrganizationInfo();
   const cloudWorkspace = useGetCloudWorkspaceAsync(workspace.workspaceId);
-  const { data: workspaces, isLoading } = useListCloudWorkspacesAsync();
 
   const isShowAdminWarningEnabled = useFeature(FeatureItem.ShowAdminWarningInWorkspace);
   const isNewTrialPolicy = useExperiment("billing.newTrialPolicy", false);
@@ -64,24 +63,25 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
         <SideBar>
           <AirbyteHomeLink />
           {isShowAdminWarningEnabled && <AdminWorkspaceWarning />}
-          <WorkspacesPicker loading={isLoading} workspaces={workspaces} />
+          <WorkspacesPicker useFetchWorkspaces={useListCloudWorkspacesInfinite} />
           <MenuContent>
             <MainNavItems />
             <MenuContent>
               <NavItem
                 to={CloudRoutes.Billing}
-                icon={<CreditsIcon />}
+                icon={<Icon type="credits" />}
                 label={<FormattedMessage id="sidebar.billing" />}
                 testId="creditsButton"
                 withNotification={
                   cloudWorkspace &&
+                  (!organization || !organization.pba) &&
                   (!cloudWorkspace.remainingCredits || cloudWorkspace.remainingCredits <= LOW_BALANCE_CREDIT_THRESHOLD)
                 }
               />
               <CloudHelpDropdown />
               <NavItem
                 label={<FormattedMessage id="sidebar.settings" />}
-                icon={<SettingsIcon />}
+                icon={<Icon type="gear" />}
                 to={RoutePaths.Settings}
               />
               <FlexItem className={styles.themeContainer}>

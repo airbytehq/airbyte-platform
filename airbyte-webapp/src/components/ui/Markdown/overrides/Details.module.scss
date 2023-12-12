@@ -1,0 +1,10 @@
+@use "../markdown";
+
+.details {
+  gap: 0;
+  margin: 0;
+}
+
+.detailsButton {
+  font-size: markdown.$font-size;
+}

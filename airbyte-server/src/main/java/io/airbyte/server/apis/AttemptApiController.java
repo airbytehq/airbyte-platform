@@ -5,13 +5,16 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.AttemptApi;
 import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptStats;
 import io.airbyte.api.model.generated.CreateNewAttemptNumberRequest;
 import io.airbyte.api.model.generated.CreateNewAttemptNumberResponse;
+import io.airbyte.api.model.generated.FailAttemptRequest;
 import io.airbyte.api.model.generated.GetAttemptStatsRequestBody;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
@@ -28,7 +31,6 @@ import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
-@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/attempt")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class AttemptApiController implements AttemptApi {
@@ -43,7 +45,7 @@ public class AttemptApiController implements AttemptApi {
   @Post(uri = "/get_for_job",
         processes = MediaType.APPLICATION_JSON)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   public AttemptInfoRead getAttemptForJob(final GetAttemptStatsRequestBody requestBody) {
     return ApiHelper
@@ -55,17 +57,16 @@ public class AttemptApiController implements AttemptApi {
         processes = MediaType.APPLICATION_JSON)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured({ADMIN})
-  @SecuredWorkspace
-  public CreateNewAttemptNumberResponse createNewAttemptNumber(CreateNewAttemptNumberRequest createNewAttemptNumberRequest) {
+  public CreateNewAttemptNumberResponse createNewAttemptNumber(final CreateNewAttemptNumberRequest requestBody) {
     return ApiHelper
-        .execute(() -> attemptHandler.createNewAttemptNumber(createNewAttemptNumberRequest.getJobId()));
+        .execute(() -> attemptHandler.createNewAttemptNumber(requestBody.getJobId()));
   }
 
   @Override
   @Post(uri = "/get_combined_stats",
         processes = MediaType.APPLICATION_JSON)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   public AttemptStats getAttemptCombinedStats(final GetAttemptStatsRequestBody requestBody) {
     return ApiHelper
@@ -96,6 +97,23 @@ public class AttemptApiController implements AttemptApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public InternalOperationResult saveSyncConfig(@Body final SaveAttemptSyncConfigRequestBody requestBody) {
     return ApiHelper.execute(() -> attemptHandler.saveSyncConfig(requestBody));
+  }
+
+  @Override
+  @Post(uri = "/fail",
+        processes = MediaType.APPLICATION_JSON)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured({ADMIN})
+  public void failAttempt(final FailAttemptRequest requestBody) {
+    ApiHelper.execute(() -> {
+      attemptHandler.failAttempt(
+          requestBody.getAttemptNumber(),
+          requestBody.getJobId(),
+          requestBody.getFailureSummary(),
+          requestBody.getStandardSyncOutput());
+      return null;
+    });
+
   }
 
 }

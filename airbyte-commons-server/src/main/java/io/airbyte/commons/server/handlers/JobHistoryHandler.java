@@ -45,6 +45,7 @@ import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
+import io.airbyte.persistence.job.models.JobStatusSummary;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -60,7 +61,6 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * JobHistoryHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 @Slf4j
 public class JobHistoryHandler {
@@ -312,10 +312,8 @@ public class JobHistoryHandler {
     return jobPersistence.getLastSyncJob(connectionId).map(JobConverter::getJobRead);
   }
 
-  public List<JobRead> getLatestSyncJobsForConnections(final List<UUID> connectionIds) throws IOException {
-    return jobPersistence.getLastSyncJobForConnections(connectionIds).stream()
-        .map(JobConverter::getJobRead)
-        .collect(Collectors.toList());
+  public List<JobStatusSummary> getLatestSyncJobsForConnections(final List<UUID> connectionIds) throws IOException {
+    return jobPersistence.getLastSyncJobForConnections(connectionIds);
   }
 
   public AttemptNormalizationStatusReadList getAttemptNormalizationStatuses(final JobIdRequestBody jobIdRequestBody) throws IOException {

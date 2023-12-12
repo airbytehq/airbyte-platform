@@ -1,7 +1,7 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
-import { CommonRequestError } from "core/request/CommonRequestError";
+import { CommonRequestError } from "core/api";
 import { TrackErrorFn } from "hooks/services/AppMonitoringService";
 
 interface BoundaryState {

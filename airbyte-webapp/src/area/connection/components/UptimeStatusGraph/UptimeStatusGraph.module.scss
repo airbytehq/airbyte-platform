@@ -1,0 +1,11 @@
+@use "scss/colors";
+@use "scss/z-indices";
+
+:export {
+  tooltipZindex: z-indices.$tooltip;
+  greenVar: colors.$green;
+  darkBlueVar: colors.$dark-blue-300;
+  redVar: colors.$red;
+  blackVar: colors.$black;
+  emptyVar: colors.$white;
+}

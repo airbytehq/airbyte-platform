@@ -1,0 +1,131 @@
+micronaut:
+  application:
+    name: airbyte-workload-api-server
+  executors:
+    io:
+      type: fixed
+      n-threads: ${IO_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
+    workload:
+      type: fixed
+      n-threads: ${WORKLOAD_TASK_EXECUTOR_THREADS:50}
+  metrics:
+    enabled: true
+    binders:
+      netty:
+        bytebuf-allocators:
+          enabled: true
+        channels:
+          enabled: true
+        queues:
+          enabled: true
+    export:
+      statsd:
+        enabled: true
+        flavor: ${MICROMENTER_METRICS_STATSD_FLAVOR:datadog}
+        step: PT10S
+        host: ${DD_AGENT_HOST:airbyte-datadog}
+        port: ${DD_DOGSTATSD_PORT:8125}
+  security:
+    authentication-provider-strategy: ALL
+    enabled: true
+    token:
+      jwt:
+        bearer:
+          secret: ${WORKLOAD_API_BEARER_TOKEN:}
+  server:
+    port: 8007
+    cors:
+      enabled: true
+      configurations:
+        web:
+          allowed-origins-regex:
+            - ^.*$
+    netty:
+      aggregator:
+        max-content-length: 52428800 # 50MB
+      access-logger:
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
+
+airbyte:
+  feature-flag:
+    client: ${FEATURE_FLAG_CLIENT:}
+    path: ${FEATURE_FLAG_PATH:/flags}
+    api-key: ${LAUNCHDARKLY_KEY:}
+
+endpoints:
+  beans:
+    enabled: true
+    sensitive: false
+  env:
+    enabled: true
+    sensitive: false
+  health:
+    enabled: true
+    jdbc:
+      enabled: false
+    sensitive: false
+  info:
+    enabled: true
+    sensitive: true
+  loggers:
+    enabled: true
+    sensitive: false
+  metrics:
+    enabled: true
+    sensitive: false
+  refresh:
+    enabled: false
+    sensitive: true
+  routes:
+    enabled: true
+    sensitive: false
+  threaddump:
+    enabled: true
+    sensitive: true
+
+datasources:
+  workload:
+    connection-test-query: SELECT 1
+    connection-timeout: 30000
+    maximum-pool-size: ${CONFIG_DB_MAX_POOL_SIZE:10}
+    minimum-idle: 0
+    idle-timeout: 600000
+    initialization-fail-timeout: -1 # Disable fail fast checking to avoid issues due to other pods not being started in time
+    url: ${DATABASE_URL}
+    driverClassName: org.postgresql.Driver
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}
+    leak-detection-threshold: 40000 # This should be slightly higher than the connection-timeout setting but not too high to avoid false positives and negatives.
+
+temporal:
+  cloud:
+    client:
+      cert: ${TEMPORAL_CLOUD_CLIENT_CERT:}
+      key: ${TEMPORAL_CLOUD_CLIENT_KEY:}
+    enabled: ${TEMPORAL_CLOUD_ENABLED:false}
+    host: ${TEMPORAL_CLOUD_HOST:}
+    namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
+  self-hosted:
+    host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
+    namespace: ${TEMPORAL_NAMESPACE:default}
+  sdk:
+    timeouts:
+      max-time-to-connect: 120s
+      rpc-timeout: ${TEMPORAL_SDK_RPC_TIMEOUT:60s}
+      rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
+      rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
+
+logger:
+  levels:
+    # io.micronaut.data.query: TRACE
+    #   Uncomment to help resolve issues with conditional beans
+    # io.micronaut.context.condition: DEBUG
+#   Uncomment to help resolve issues with security beans
+#      io.micronaut.security: DEBUG
+#   Uncomment to help resolve issues with micronaut data
+#      com.zaxxer.hikari.HikariConfig: DEBUG
+#      com.zaxxer.hikari: TRACE
+
+jackson:
+  serialization-inclusion: always

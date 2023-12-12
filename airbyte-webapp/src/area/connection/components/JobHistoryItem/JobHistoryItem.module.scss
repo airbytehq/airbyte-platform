@@ -1,0 +1,41 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.jobHistoryItem {
+  border: variables.$border-thick solid transparent;
+  border-top: variables.$border-thin solid colors.$grey-100;
+  padding: variables.$spacing-xl;
+  display: flex;
+  align-items: center;
+
+  &--linked {
+    border: variables.$border-thick solid colors.$yellow-200;
+  }
+
+  &__main {
+    min-width: 0;
+    flex-grow: 1;
+  }
+
+  // fix for "dancing" scrollbar
+  &__spinnerContainer {
+    overflow: clip;
+  }
+
+  &__summary {
+    overflow: hidden;
+  }
+
+  &__modalLoading {
+    position: relative;
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  &__timestamp {
+    text-align: right;
+    white-space: nowrap;
+  }
+}

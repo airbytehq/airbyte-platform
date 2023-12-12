@@ -1,0 +1,84 @@
+---
+"$schema": http://json-schema.org/draft-07/schema#
+"$id": https://github.com/airbytehq/airbyte/blob/master/airbyte-config/models/src/main/resources/types/ReplicationInput.yaml
+title: ReplicationInput
+description: inputs necessary for the replication step of a sync workflow
+type: object
+additionalProperties: true
+required:
+  - sourceId
+  - sourceConfiguration
+  - destinationId
+  - destinationConfiguration
+  - catalog
+properties:
+  namespaceDefinition:
+    existingJavaType: io.airbyte.config.JobSyncConfig.NamespaceDefinitionType
+  namespaceFormat:
+    type: string
+    default: null
+    example: "${SOURCE_NAMESPACE}"
+  prefix:
+    description: Prefix that will be prepended to the name of each stream when it is written to the destination.
+    type: string
+  sourceId:
+    description: Actor ID for the source used in the sync - this is used to update the actor configuration when requested.
+    type: string
+    format: uuid
+  destinationId:
+    description: Actor ID for the destination used in the sync - this is used to update the actor configuration when requested.
+    type: string
+    format: uuid
+  sourceConfiguration:
+    description: Integration specific blob. Must be a valid JSON string.
+    type: object
+    existingJavaType: com.fasterxml.jackson.databind.JsonNode
+  destinationConfiguration:
+    description: Integration specific blob. Must be a valid JSON string.
+    type: object
+    existingJavaType: com.fasterxml.jackson.databind.JsonNode
+  operationSequence:
+    description: Sequence of configurations of operations to apply as part of the sync
+    type: array
+    items:
+      existingJavaType: io.airbyte.config.StandardSyncOperation
+  webhookOperationConfigs:
+    description: The webhook operation configs belonging to this workspace. See webhookOperationConfigs in StandardWorkspace.yaml.
+    type: object
+    existingJavaType: com.fasterxml.jackson.databind.JsonNode
+  catalog:
+    description: the configured airbyte catalog
+    type: object
+    # necessary because the configuration declaration is in a separate package.
+    existingJavaType: io.airbyte.protocol.models.ConfiguredAirbyteCatalog
+  state:
+    description: optional state of the previous run. this object is defined per integration.
+    existingJavaType: io.airbyte.config.State
+  syncResourceRequirements:
+    description: Resource requirements to use for the sync
+    existingJavaType: io.airbyte.config.SyncResourceRequirements
+  workspaceId:
+    description: The id of the workspace associated with this sync
+    type: string
+    format: uuid
+  connectionId:
+    description: The id of the connection associated with this sync
+    type: string
+    format: uuid
+  normalizeInDestinationContainer:
+    description: whether normalization should be run in the destination container
+    type: boolean
+    default: false
+  isReset:
+    description: whether this 'sync' is performing a logical reset
+    type: boolean
+    default: false
+  jobRunConfig:
+    "$ref": JobRunConfig.yaml
+  sourceLauncherConfig:
+    "$ref": IntegrationLauncherConfig.yaml
+  destinationLauncherConfig:
+    "$ref": IntegrationLauncherConfig.yaml
+  taskQueue:
+    description: the temporal task queue this replication will use
+    type: string

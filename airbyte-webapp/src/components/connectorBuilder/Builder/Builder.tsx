@@ -1,6 +1,5 @@
 import debounce from "lodash/debounce";
-import { useEffect, useMemo } from "react";
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 
 import { removeEmptyProperties } from "core/utils/form";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";

@@ -1,15 +1,14 @@
-import { faAngleDown, faAngleRight, faFileDownload } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useToggle } from "react-use";
 
 import Logs from "components/Logs";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
-import { JobConfigType, SynchronousJobRead } from "core/request/AirbyteClient";
+import { JobConfigType, SynchronousJobRead } from "core/api/types/AirbyteClient";
 import { downloadFile } from "core/utils/file";
 
 import styles from "./JobFailure.module.scss";
@@ -47,7 +46,7 @@ const DisclosureHeader = ({
       <button type="button" onClick={toggle} className={classNames(styles.label)}>
         <FlexContainer alignItems="center" gap="none">
           <FlexItem className={styles.toggleIcon}>
-            {expanded ? <FontAwesomeIcon icon={faAngleDown} /> : <FontAwesomeIcon icon={faAngleRight} />}
+            {expanded ? <Icon type="chevronDown" /> : <Icon type="chevronRight" />}
           </FlexItem>
           <FlexItem grow>
             <FormattedMessage id={messageId} />
@@ -86,7 +85,7 @@ const DownloadButton = ({
         id: "sources.downloadLogs",
       })}
     >
-      <FontAwesomeIcon icon={faFileDownload} />
+      <Icon type="download" />
     </button>
   );
 };

@@ -1,11 +1,11 @@
-import classNames from "classnames";
 import { useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { useIntl } from "react-intl";
 
-import { DropDownOptionDataItem } from "components/ui/DropDown";
-import { PillSelect, PillButtonVariant } from "components/ui/PillSelect";
+import { Option } from "components/ui/ListBox";
+import { PillButtonVariant } from "components/ui/PillListBox";
+import { PillListBox } from "components/ui/PillListBox/PillListBox";
 
-import { DestinationSyncMode, SyncMode } from "core/request/AirbyteClient";
+import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 
 import styles from "./SyncModeSelect.module.scss";
 
@@ -14,49 +14,34 @@ export interface SyncModeValue {
   destinationSyncMode: DestinationSyncMode;
 }
 
-export interface SyncModeOption {
-  value: SyncModeValue;
-}
-
 interface SyncModeSelectProps {
-  className?: string;
-  onChange?: (option: DropDownOptionDataItem<SyncModeValue>) => void;
-  options: SyncModeOption[];
-  value: Partial<SyncModeValue>;
+  onChange: (option: SyncModeValue) => void;
+  options: SyncModeValue[];
+  value: SyncModeValue | undefined;
   variant?: PillButtonVariant;
   disabled?: boolean;
 }
 
-export const SyncModeSelect: React.FC<SyncModeSelectProps> = ({
-  className,
-  options,
-  onChange,
-  value,
-  variant,
-  disabled,
-}) => {
-  const pillSelectOptions = useMemo(() => {
-    return options.map(({ value }) => {
-      const { syncMode, destinationSyncMode } = value;
-      return {
-        label: [
-          <FormattedMessage key={`syncMode.${syncMode}`} id={`syncMode.${syncMode}`} />,
-          <FormattedMessage
-            key={`destinationSyncMode.${destinationSyncMode}`}
-            id={`destinationSyncMode.${destinationSyncMode}`}
-          />,
-        ],
-        value,
-      };
-    });
-  }, [options]);
+export const SyncModeSelect: React.FC<SyncModeSelectProps> = ({ options, onChange, value, variant, disabled }) => {
+  const { formatMessage } = useIntl();
+
+  const syncModeOptions: Array<Option<SyncModeValue>> = useMemo(
+    () =>
+      options.map((option) => ({
+        label: `${formatMessage({ id: `syncMode.${option.syncMode}` })} | ${formatMessage({
+          id: `destinationSyncMode.${option.destinationSyncMode}`,
+        })}`,
+        value: option,
+      })),
+    [formatMessage, options]
+  );
 
   return (
-    <PillSelect
-      options={pillSelectOptions}
-      value={value}
-      onChange={onChange}
-      className={classNames(styles.pillSelect, className)}
+    <PillListBox<SyncModeValue>
+      options={syncModeOptions}
+      selectedValue={value}
+      onSelect={onChange}
+      pillClassName={styles.pillSelect}
       variant={variant}
       disabled={disabled}
       data-testid="sync-mode-select"

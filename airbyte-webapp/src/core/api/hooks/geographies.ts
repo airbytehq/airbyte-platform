@@ -1,6 +1,5 @@
-import { SCOPE_USER } from "services/Scope";
-
 import { webBackendListGeographies } from "../generated/AirbyteClient";
+import { SCOPE_USER } from "../scopes";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 

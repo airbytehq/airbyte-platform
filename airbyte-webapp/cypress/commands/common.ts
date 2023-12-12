@@ -6,9 +6,26 @@ export const submitButtonClick = (force = false) => {
   cy.get("button[type=submit]").click({ force });
 };
 
-export const updateField = (field: string, value: string) => {
-  cy.get(`input[name='${field}']`).clear();
-  cy.get(`input[name='${field}']`).type(value);
+export const updateField = (field: string, value: string, isDropdown = false) => {
+  if (isDropdown) {
+    selectFromDropdown(field, value);
+  } else {
+    setInputValue(field, value);
+  }
+};
+
+const setInputValue = (name: string, value: string) => {
+  cy.get(`input[name='${name}']`).clear();
+  cy.get(`input[name='${name}']`).type(value);
+};
+
+const getDropdownSelector = (name: string) => {
+  return `[data-testid="${name}"] .react-select__dropdown-indicator`;
+};
+
+const selectFromDropdown = (name: string, value: string) => {
+  cy.get(getDropdownSelector(name)).last().click({ force: true });
+  cy.get(`.react-select__option`).contains(value).click();
 };
 
 export const openConnectorPage = (name: string) => {

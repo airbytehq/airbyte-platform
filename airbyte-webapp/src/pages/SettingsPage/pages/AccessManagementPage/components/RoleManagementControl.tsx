@@ -9,38 +9,33 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { useDeletePermissions, useUpdatePermissions } from "core/api";
-import { PermissionType, PermissionUpdate } from "core/request/AirbyteClient";
-import { useIntent } from "core/utils/rbac/intent";
+import { PermissionRead, PermissionType, PermissionUpdate } from "core/api/types/AirbyteClient";
+import { useCurrentUser } from "core/services/auth";
+import { useIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
 import styles from "./RoleManagementControl.module.scss";
 import { ResourceType, permissionStringDictionary, permissionsByResourceType } from "./useGetAccessManagementData";
 
-interface RoleManagementControlProps extends PermissionUpdate {
+interface RoleManagementControlProps {
   userName?: string;
   resourceName: string;
   pageResourceType: ResourceType;
   tableResourceType: ResourceType;
   activeEditRow?: string;
   setActiveEditRow: (permissionId?: string) => void;
+  permission: PermissionRead;
 }
 
 const roleManagementFormSchema = yup.object().shape({
-  userId: yup.string().required(),
   permissionType: yup.mixed<PermissionType>().oneOf(Object.values(PermissionType)).required(),
   permissionId: yup.string().required(),
-  workspaceId: yup.string(),
-  organizationId: yup.string(),
 });
 
 export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
-  userId,
-  permissionType,
-  workspaceId,
-  organizationId,
+  permission,
   pageResourceType,
   tableResourceType,
-  permissionId,
   userName,
   resourceName,
   activeEditRow,
@@ -50,12 +45,19 @@ export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { mutateAsync: deletePermissions } = useDeletePermissions();
   const { formatMessage } = useIntl();
+  const { permissionId, permissionType, userId } = permission;
+
   const isEditMode = activeEditRow === permissionId;
+  const currentUser = useCurrentUser();
+
+  const isCurrentUsersPermission = userId === currentUser.userId;
 
   const intentKey =
     tableResourceType === "organization" ? "UpdateOrganizationPermissions" : "UpdateWorkspacePermissions";
 
-  const intentMeta = tableResourceType === "organization" ? { organizationId } : { workspaceId };
+  const intentMeta = permission.hasOwnProperty("organizationId")
+    ? { organizationId: permission.organizationId }
+    : { workspaceId: permission.workspaceId };
 
   const canUpdateUserPermissions = useIntent(intentKey, intentMeta);
 
@@ -63,7 +65,7 @@ export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
     return null;
   }
 
-  if (pageResourceType !== tableResourceType || !canUpdateUserPermissions) {
+  if (pageResourceType !== tableResourceType || !canUpdateUserPermissions || isCurrentUsersPermission) {
     return (
       <Box py="sm">
         <FormattedMessage id={`${permissionStringDictionary[permissionType]}`} />
@@ -72,8 +74,10 @@ export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
   }
 
   const onSubmitRoleChangeClick = async (values: PermissionUpdate) => {
-    await updatePermissions(values);
-    setActiveEditRow(undefined);
+    const permission = await updatePermissions(values);
+    if (permission) {
+      setActiveEditRow(undefined);
+    }
   };
 
   const onRemoveUserClick = () => {
@@ -105,7 +109,7 @@ export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
       {isEditMode ? (
         <Form<PermissionUpdate>
           schema={roleManagementFormSchema}
-          defaultValues={{ userId, permissionType, workspaceId, organizationId, permissionId }}
+          defaultValues={{ permissionType, permissionId }}
           onSubmit={onSubmitRoleChangeClick}
         >
           <FlexContainer alignItems="center" gap="2xl">
@@ -138,16 +142,22 @@ export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
             <FormattedMessage id={`${permissionStringDictionary[permissionType]}`} />
           </Text>
           <FlexContainer>
-            <Button
-              variant="secondary"
-              onClick={() => setActiveEditRow(permissionId)}
-              className={styles.roleManagementControl__button}
-            >
-              <FormattedMessage id="settings.accessManagement.changeRole" />
-            </Button>
-            <Button variant="danger" onClick={onRemoveUserClick} className={styles.roleManagementControl__button}>
-              <FormattedMessage id="settings.accessManagement.user.remove" />
-            </Button>
+            {/* for initial release, there is only a single workspace-level role: workspace_admin */}
+            {tableResourceType !== "workspace" && (
+              <Button
+                variant="secondary"
+                onClick={() => setActiveEditRow(permissionId)}
+                className={styles.roleManagementControl__button}
+              >
+                <FormattedMessage id="settings.accessManagement.changeRole" />
+              </Button>
+            )}
+            {/* for initial release, organization-level permission creation + deletion are to be handled in a user's SSO provider */}
+            {tableResourceType !== "organization" && (
+              <Button variant="danger" onClick={onRemoveUserClick} className={styles.roleManagementControl__button}>
+                <FormattedMessage id="settings.accessManagement.user.remove" />
+              </Button>
+            )}
           </FlexContainer>
         </FlexContainer>
       )}

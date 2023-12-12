@@ -11,6 +11,19 @@ services:
   airbyte-temporal:
     ports:
       - 7233:7233
+  airbyte-temporal-ui:
+    image: temporalio/ui:2.20.0
+    logging: *default-logging
+    container_name: airbyte-temporal-ui
+    restart: unless-stopped
+    environment:
+      - TEMPORAL_ADDRESS=airbyte-temporal:7233
+      - TEMPORAL_CORS_ORIGINS=true
+    ports:
+      - 8012:8080
+    networks:
+      - airbyte_internal
+      - airbyte_public
 configs:
   flags:
     file: ./tools/bin/acceptance-test-flags.yml

@@ -124,7 +124,7 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
               );
             })}
           </Bar>
-          {hasFreeUsage && (
+          {(hasFreeUsage || minimized) && (
             <Bar
               key="free"
               stackId="a"

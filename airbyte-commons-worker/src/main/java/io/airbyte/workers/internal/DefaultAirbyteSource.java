@@ -5,7 +5,10 @@
 package io.airbyte.workers.internal;
 
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
+import static io.airbyte.protocol.models.AirbyteMessage.Type.RECORD;
+import static io.airbyte.protocol.models.AirbyteMessage.Type.STATE;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.constants.WorkerConstants;
@@ -13,6 +16,7 @@ import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.logging.LoggingHelper;
 import io.airbyte.commons.logging.LoggingHelper.Color;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.logging.MdcScope.Builder;
@@ -48,7 +52,7 @@ public class DefaultAirbyteSource implements AirbyteSource {
   );
 
   public static final MdcScope.Builder CONTAINER_LOG_MDC_BUILDER = new Builder()
-      .setLogPrefix("source")
+      .setLogPrefix(LoggingHelper.SOURCE_LOGGER_PREFIX)
       .setPrefixColor(Color.BLUE_BACKGROUND);
 
   private final IntegrationLauncher integrationLauncher;
@@ -90,11 +94,20 @@ public class DefaultAirbyteSource implements AirbyteSource {
 
     logInitialStateAsJSON(sourceConfig);
 
-    final List<Type> acceptedMessageTypes = List.of(Type.RECORD, Type.STATE, Type.TRACE, Type.CONTROL);
+    final List<Type> acceptedMessageTypes = List.of(Type.RECORD, STATE, Type.TRACE, Type.CONTROL);
     messageIterator = streamFactory.create(IOs.newBufferedReader(sourceProcess.getInputStream()))
-        .peek(message -> heartbeatMonitor.beat())
+        .peek(message -> {
+          if (shouldBeat(message.getType())) {
+            heartbeatMonitor.beat();
+          }
+        })
         .filter(message -> acceptedMessageTypes.contains(message.getType()))
         .iterator();
+  }
+
+  @VisibleForTesting
+  static boolean shouldBeat(final AirbyteMessage.Type airbyteMessageType) {
+    return airbyteMessageType == STATE || airbyteMessageType == RECORD;
   }
 
   @Override

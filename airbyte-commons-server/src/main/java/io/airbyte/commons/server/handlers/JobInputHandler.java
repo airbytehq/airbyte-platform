@@ -4,9 +4,9 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.config.helpers.ResourceRequirementsUtils.getResourceRequirementsForJobType;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
-import static io.airbyte.persistence.job.ResourceRequirementsUtils.getResourceRequirementsForJobType;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.CheckInput;
@@ -22,11 +22,14 @@ import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.helper.NormalizationInDestinationHelper;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
+import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
 import io.airbyte.commons.temporal.TemporalWorkflowUtils;
 import io.airbyte.commons.temporal.exception.RetryableException;
+import io.airbyte.config.ActorContext;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptSyncConfig;
+import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobResetConnectionConfig;
@@ -92,6 +95,7 @@ public class JobInputHandler {
   private final AttemptHandler attemptHandler;
   private final StateHandler stateHandler;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final ContextBuilder contextBuilder;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JobInputHandler.class);
 
@@ -104,7 +108,8 @@ public class JobInputHandler {
                          final ConfigInjector configInjector,
                          final AttemptHandler attemptHandler,
                          final StateHandler stateHandler,
-                         final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                         final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                         final ContextBuilder contextBuilder) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
     this.featureFlags = featureFlags;
@@ -114,6 +119,7 @@ public class JobInputHandler {
     this.attemptHandler = attemptHandler;
     this.stateHandler = stateHandler;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.contextBuilder = contextBuilder;
   }
 
   /**
@@ -208,6 +214,8 @@ public class JobInputHandler {
         featureFlagContext.add(new Connection(standardSync.getConnectionId()));
       }
 
+      final ConnectionContext connectionContext = contextBuilder.fromConnectionId(connectionId);
+
       final StandardSyncInput syncInput = new StandardSyncInput()
           .withNamespaceDefinition(config.getNamespaceDefinition())
           .withNamespaceFormat(config.getNamespaceFormat())
@@ -224,7 +232,8 @@ public class JobInputHandler {
           .withConnectionId(connectionId)
           .withWorkspaceId(config.getWorkspaceId())
           .withNormalizeInDestinationContainer(shouldNormalizeInDestination)
-          .withIsReset(JobConfig.ConfigType.RESET_CONNECTION.equals(jobConfigType));
+          .withIsReset(JobConfig.ConfigType.RESET_CONNECTION.equals(jobConfigType))
+          .withConnectionContext(connectionContext);
 
       saveAttemptSyncConfig(jobId, attempt, connectionId, attemptSyncConfig);
       return new JobInput(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput);
@@ -284,20 +293,26 @@ public class JobInputHandler {
       final ResourceRequirements sourceCheckResourceRequirements =
           getResourceRequirementsForJobType(sourceDefinition.getResourceRequirements(), JobType.CHECK_CONNECTION).orElse(null);
 
+      ActorContext sourceContext = contextBuilder.fromSource(source);
+
       final StandardCheckConnectionInput sourceCheckConnectionInput = new StandardCheckConnectionInput()
           .withActorType(ActorType.SOURCE)
           .withActorId(source.getSourceId())
           .withConnectionConfiguration(sourceConfiguration)
-          .withResourceRequirements(sourceCheckResourceRequirements);
+          .withResourceRequirements(sourceCheckResourceRequirements)
+          .withActorContext(sourceContext);
 
       final ResourceRequirements destinationCheckResourceRequirements =
           getResourceRequirementsForJobType(destinationDefinition.getResourceRequirements(), JobType.CHECK_CONNECTION).orElse(null);
+
+      ActorContext destinationContext = contextBuilder.fromDestination(destination);
 
       final StandardCheckConnectionInput destinationCheckConnectionInput = new StandardCheckConnectionInput()
           .withActorType(ActorType.DESTINATION)
           .withActorId(destination.getDestinationId())
           .withConnectionConfiguration(destinationConfiguration)
-          .withResourceRequirements(destinationCheckResourceRequirements);
+          .withResourceRequirements(destinationCheckResourceRequirements)
+          .withActorContext(destinationContext);
       return new SyncJobCheckConnectionInputs(
           sourceLauncherConfig,
           destinationLauncherConfig,
@@ -313,7 +328,7 @@ public class JobInputHandler {
     attemptHandler.saveSyncConfig(new SaveAttemptSyncConfigRequestBody()
         .jobId(jobId)
         .attemptNumber(attemptNumber)
-        .syncConfig(ApiPojoConverters.attemptSyncConfigToApi(attemptSyncConfig, connectionId, true)));
+        .syncConfig(ApiPojoConverters.attemptSyncConfigToApi(attemptSyncConfig, connectionId)));
   }
 
   /**

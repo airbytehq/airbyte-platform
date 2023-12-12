@@ -10,6 +10,7 @@ import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.JobTypeResourceLimit;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

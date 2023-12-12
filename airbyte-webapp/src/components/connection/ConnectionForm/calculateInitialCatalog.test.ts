@@ -1,16 +1,16 @@
-import { SyncSchema, SyncSchemaStream } from "core/domain/catalog";
 import {
+  AirbyteCatalog,
+  AirbyteStreamAndConfiguration,
   DestinationSyncMode,
   FieldTransformTransformType,
   StreamDescriptor,
   StreamTransformTransformType,
   SyncMode,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
-import calculateInitialCatalog from "./calculateInitialCatalog";
+import { calculateInitialCatalog } from "./calculateInitialCatalog";
 
-const mockSyncSchemaStream: SyncSchemaStream = {
-  id: "1",
+const mockSyncSchemaStream: AirbyteStreamAndConfiguration = {
   stream: {
     sourceDefinedCursor: true,
     defaultCursorField: ["source_cursor"],
@@ -31,23 +31,6 @@ const mockSyncSchemaStream: SyncSchemaStream = {
 };
 
 describe("calculateInitialCatalog", () => {
-  it("should assign ids to all streams", () => {
-    const { id, ...restProps } = mockSyncSchemaStream;
-
-    const values = calculateInitialCatalog(
-      {
-        streams: [restProps],
-      } as unknown as SyncSchema,
-      [],
-      [],
-      false
-    );
-
-    values.streams.forEach((stream) => {
-      expect(stream).toHaveProperty("id", "0");
-    });
-  });
-
   it("should set default 'FullRefresh' if 'supportedSyncModes' in stream is empty(or null)", () => {
     const { config, stream: sourceDefinedStream } = mockSyncSchemaStream;
 
@@ -63,7 +46,7 @@ describe("calculateInitialCatalog", () => {
             config,
           },
         ],
-      } as unknown as SyncSchema,
+      } as unknown as AirbyteCatalog,
       [],
       [],
       false
@@ -81,7 +64,6 @@ describe("calculateInitialCatalog", () => {
       {
         streams: [
           {
-            id: "1",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -97,7 +79,6 @@ describe("calculateInitialCatalog", () => {
             },
           },
           {
-            id: "2",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -132,7 +113,6 @@ describe("calculateInitialCatalog", () => {
       {
         streams: [
           {
-            id: "1",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -151,7 +131,6 @@ describe("calculateInitialCatalog", () => {
             },
           },
           {
-            id: "2",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -170,7 +149,6 @@ describe("calculateInitialCatalog", () => {
             },
           },
           {
-            id: "3",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -208,7 +186,6 @@ describe("calculateInitialCatalog", () => {
       {
         streams: [
           {
-            id: "1",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -221,7 +198,6 @@ describe("calculateInitialCatalog", () => {
             },
           },
           {
-            id: "2",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -234,7 +210,6 @@ describe("calculateInitialCatalog", () => {
             },
           },
           {
-            id: "3",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -266,7 +241,6 @@ describe("calculateInitialCatalog", () => {
       {
         streams: [
           {
-            id: "1",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -279,7 +253,6 @@ describe("calculateInitialCatalog", () => {
             },
           },
           {
-            id: "2",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -292,7 +265,6 @@ describe("calculateInitialCatalog", () => {
             },
           },
           {
-            id: "3",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -324,7 +296,6 @@ describe("calculateInitialCatalog", () => {
       {
         streams: [
           {
-            id: "1",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -337,7 +308,6 @@ describe("calculateInitialCatalog", () => {
             },
           },
           {
-            id: "2",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -350,7 +320,6 @@ describe("calculateInitialCatalog", () => {
             },
           },
           {
-            id: "3",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -382,7 +351,6 @@ describe("calculateInitialCatalog", () => {
       {
         streams: [
           {
-            id: "1",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -414,7 +382,6 @@ describe("calculateInitialCatalog", () => {
       {
         streams: [
           {
-            id: "1",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -428,7 +395,6 @@ describe("calculateInitialCatalog", () => {
             },
           },
           {
-            id: "2",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -442,7 +408,6 @@ describe("calculateInitialCatalog", () => {
             },
           },
           {
-            id: "3",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -474,7 +439,6 @@ describe("calculateInitialCatalog", () => {
       {
         streams: [
           {
-            id: "1",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -508,7 +472,7 @@ describe("calculateInitialCatalog", () => {
       {
         streams: [
           {
-            id: "1",
+            // id: "1",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -540,7 +504,7 @@ describe("calculateInitialCatalog", () => {
       {
         streams: [
           {
-            id: "1",
+            // id: "1",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -569,7 +533,7 @@ describe("calculateInitialCatalog", () => {
       {
         streams: [
           {
-            id: "1",
+            // id: "1",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -598,7 +562,7 @@ describe("calculateInitialCatalog", () => {
       {
         streams: [
           {
-            id: "1",
+            // id: "1",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -631,7 +595,7 @@ describe("calculateInitialCatalog", () => {
       {
         streams: [
           {
-            id: "1",
+            // id: "1",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -647,7 +611,7 @@ describe("calculateInitialCatalog", () => {
             },
           },
           {
-            id: "1",
+            // id: "1",
             stream: {
               ...sourceDefinedStream,
               name: "test2",
@@ -686,7 +650,7 @@ describe("calculateInitialCatalog", () => {
         streams: [
           // Stream with breaking change
           {
-            id: "1",
+            // id: "1",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -702,7 +666,7 @@ describe("calculateInitialCatalog", () => {
           },
           // Should not be affected
           {
-            id: "2",
+            // id: "2",
             stream: {
               ...sourceDefinedStream,
               name: "test-2",
@@ -718,7 +682,7 @@ describe("calculateInitialCatalog", () => {
           },
           // Has change, but the source-defined primary key will fix it
           {
-            id: "3",
+            // id: "3",
             stream: {
               ...sourceDefinedStream,
               name: "test-3",
@@ -773,7 +737,7 @@ describe("calculateInitialCatalog", () => {
         streams: [
           // With breaking change
           {
-            id: "1",
+            // id: "1",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -790,7 +754,7 @@ describe("calculateInitialCatalog", () => {
           },
           // Will be unaffected
           {
-            id: "2",
+            // id: "2",
             stream: {
               ...sourceDefinedStream,
               name: "test-2",
@@ -808,7 +772,7 @@ describe("calculateInitialCatalog", () => {
           },
           // Has breaking change but the updated stream source-defined cursor will fix it
           {
-            id: "3",
+            // id: "3",
             stream: {
               ...sourceDefinedStream,
               name: "test-3",
@@ -870,7 +834,7 @@ describe("calculateInitialCatalog", () => {
         streams: [
           // Breaking. Should be cleared
           {
-            id: "1",
+            // id: "1",
             stream: {
               ...sourceDefinedStream,
               name: "test",
@@ -889,7 +853,7 @@ describe("calculateInitialCatalog", () => {
           },
           // Should be unaffected
           {
-            id: "2",
+            // id: "2",
             stream: {
               ...sourceDefinedStream,
               name: "test-2",
@@ -908,7 +872,7 @@ describe("calculateInitialCatalog", () => {
           },
           // Should stay unaffected because updated stream will assign new source-defined cursor
           {
-            id: "3",
+            // id: "3",
             stream: {
               ...sourceDefinedStream,
               name: "test-3",

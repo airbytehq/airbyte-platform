@@ -1,6 +1,5 @@
 import classNames from "classnames";
-import React from "react";
-import { PropsWithChildren } from "react";
+import React, { PropsWithChildren } from "react";
 
 import styles from "./Box.module.scss";
 
@@ -23,6 +22,7 @@ interface BoxProps {
   mr?: SpacingSize;
   mb?: SpacingSize;
   ml?: SpacingSize;
+  "data-testid"?: string;
 }
 
 function toClassName(key: keyof Omit<BoxProps, "className">, value: SpacingSize | undefined) {
@@ -42,5 +42,5 @@ export const Box: React.FC<PropsWithChildren<BoxProps>> = ({
 }) => {
   const className = classNames(classNameProp, ...keys.map((key) => toClassName(key, props[key])));
 
-  return React.createElement(as, { className, children });
+  return React.createElement(as, { className, children, "data-testid": props["data-testid"] });
 };

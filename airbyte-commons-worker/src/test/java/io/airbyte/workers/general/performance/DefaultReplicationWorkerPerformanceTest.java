@@ -8,15 +8,17 @@ import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.general.DefaultReplicationWorker;
 import io.airbyte.workers.general.ReplicationFeatureFlagReader;
 import io.airbyte.workers.general.ReplicationWorker;
+import io.airbyte.workers.general.ReplicationWorkerHelper;
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
-import io.airbyte.workers.internal.book_keeping.MessageTracker;
-import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessageEventPublishingHelper;
-import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
+import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
+import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
+import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import java.io.IOException;
 
 /**
@@ -30,17 +32,18 @@ class DefaultReplicationWorkerPerformanceTest extends ReplicationWorkerPerforman
                                                 final AirbyteSource source,
                                                 final AirbyteMapper mapper,
                                                 final AirbyteDestination destination,
-                                                final MessageTracker messageTracker,
+                                                final AirbyteMessageTracker messageTracker,
                                                 final SyncPersistence syncPersistence,
                                                 final RecordSchemaValidator recordSchemaValidator,
                                                 final FieldSelector fieldSelector,
                                                 final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
                                                 final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                                 final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
-                                                final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper) {
-    return new DefaultReplicationWorker(jobId, attempt, source, mapper, destination, messageTracker, syncPersistence, recordSchemaValidator,
-        fieldSelector, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
-        messageEventPublishingHelper, /* we don't care about the onReplicationRunning callback here */ () -> {});
+                                                final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
+                                                final ReplicationWorkerHelper replicationWorkerHelper,
+                                                final DestinationTimeoutMonitor destinationTimeoutMonitor) {
+    return new DefaultReplicationWorker(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator,
+        srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, replicationWorkerHelper, destinationTimeoutMonitor);
   }
 
   public static void main(final String[] args) throws IOException, InterruptedException {

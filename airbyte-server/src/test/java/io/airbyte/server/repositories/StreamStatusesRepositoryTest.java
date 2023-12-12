@@ -19,6 +19,7 @@ import io.airbyte.server.repositories.domain.StreamStatus;
 import io.airbyte.server.repositories.domain.StreamStatus.StreamStatusBuilder;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.env.PropertySource;
+import io.micronaut.inject.qualifiers.Qualifiers;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.transaction.jdbc.DelegatingDataSource;
 import java.io.IOException;
@@ -40,9 +41,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-@SuppressWarnings("MissingJavadocType")
 @MicronautTest
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class StreamStatusesRepositoryTest {
+
+  private static final String DATA_SOURCE_NAME = "config";
+  private static final String DATA_SOURCES = "datasources.";
 
   static ApplicationContext context;
 
@@ -62,15 +66,15 @@ class StreamStatusesRepositoryTest {
     // set the micronaut datasource properties to match our container we started up
     context = ApplicationContext.run(PropertySource.of(
         "test", Map.of(
-            "datasources.default.driverClassName", "org.postgresql.Driver",
-            "datasources.default.db-type", "postgres",
-            "datasources.default.dialect", "POSTGRES",
-            "datasources.default.url", container.getJdbcUrl(),
-            "datasources.default.username", container.getUsername(),
-            "datasources.default.password", container.getPassword())));
+            DATA_SOURCES + DATA_SOURCE_NAME + ".driverClassName", "org.postgresql.Driver",
+            DATA_SOURCES + DATA_SOURCE_NAME + ".db-type", "postgres",
+            DATA_SOURCES + DATA_SOURCE_NAME + ".dialect", "POSTGRES",
+            DATA_SOURCES + DATA_SOURCE_NAME + ".url", container.getJdbcUrl(),
+            DATA_SOURCES + DATA_SOURCE_NAME + ".username", container.getUsername(),
+            DATA_SOURCES + DATA_SOURCE_NAME + ".password", container.getPassword())));
 
     // removes micronaut transactional wrapper that doesn't play nice with our non-micronaut factories
-    final var dataSource = ((DelegatingDataSource) context.getBean(DataSource.class)).getTargetDataSource();
+    final var dataSource = ((DelegatingDataSource) context.getBean(DataSource.class, Qualifiers.byName(DATA_SOURCE_NAME))).getTargetDataSource();
     jooqDslContext = DSLContextFactory.create(dataSource, SQLDialect.POSTGRES);
     final var databaseProviders = new TestDatabaseProviders(dataSource, jooqDslContext);
 
@@ -83,14 +87,19 @@ class StreamStatusesRepositoryTest {
     repo = context.getBean(StreamStatusesRepository.class);
   }
 
-  @BeforeEach
-  void truncate() {
-    jooqDslContext.truncateTable(Tables.STREAM_STATUSES).cascade().execute();
-  }
-
   @AfterAll
   static void dbDown() {
     container.close();
+  }
+
+  // Aliasing to cut down on the verbosity significantly
+  private static <T> void assertContainsSameElements(final List<T> expected, final List<T> actual) {
+    org.assertj.core.api.Assertions.assertThat(actual).containsExactlyInAnyOrderElementsOf(expected);
+  }
+
+  @BeforeEach
+  void truncate() {
+    jooqDslContext.truncateTable(Tables.STREAM_STATUSES).cascade().execute();
   }
 
   @Test
@@ -383,9 +392,42 @@ class StreamStatusesRepositoryTest {
     assertContainsSameElements(List.of(p4, r3, r4, c3, c4, if2), results2);
   }
 
-  // Aliasing to cut down on the verbosity significantly
-  private static <T> void assertContainsSameElements(final List<T> expected, final List<T> actual) {
-    org.assertj.core.api.Assertions.assertThat(expected).containsExactlyInAnyOrderElementsOf(actual);
+  @Test
+  void testFindLatestStatusPerStreamByConnectionIdAndDayAfterTimestamp() {
+    final long now = Instant.now().toEpochMilli();
+    final OffsetDateTime time1 = Fixtures.timestamp(now);
+    final OffsetDateTime time2 = Fixtures.timestamp(now + 1);
+    final OffsetDateTime time3 = Fixtures.timestamp(now + 2);
+
+    // connection 1
+    final var p1 = Fixtures.pending().transitionedAt(time1).connectionId(Fixtures.connectionId1).build();
+    final var c1 = Fixtures.complete().transitionedAt(time3).connectionId(Fixtures.connectionId1).build();
+
+    final var c2 = Fixtures.complete().transitionedAt(time2).connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).build();
+    final var r1 = Fixtures.reset().transitionedAt(time3).connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).build();
+
+    final var p2 = Fixtures.pending().transitionedAt(time1).connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
+    final var f1 = Fixtures.failed().transitionedAt(time2).connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
+    final var r2 = Fixtures.reset().transitionedAt(time3).connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
+
+    // connection 2
+    final var p3 = Fixtures.pending().transitionedAt(time1).connectionId(Fixtures.connectionId2).build();
+
+    final var r3 = Fixtures.reset().transitionedAt(time2).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
+    final var f2 = Fixtures.failed().transitionedAt(time3).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
+
+    final var c3 = Fixtures.complete().transitionedAt(time1).connectionId(Fixtures.connectionId2).streamName(Fixtures.name3).build();
+    final var f3 = Fixtures.failed().transitionedAt(time2).connectionId(Fixtures.connectionId2).streamName(Fixtures.name3).build();
+
+    repo.saveAll(List.of(p1, p2, p3, r1, r2, r3, c1, c2, c3, f1, f2, f3, r1, r2, r3));
+
+    final var results1 = repo.findLatestStatusPerStreamByConnectionIdAndDayAfterTimestamp(Fixtures.connectionId1,
+        time1, ZoneId.systemDefault().getId());
+    final var results2 = repo.findLatestStatusPerStreamByConnectionIdAndDayAfterTimestamp(Fixtures.connectionId2,
+        time1, ZoneId.systemDefault().getId());
+
+    assertContainsSameElements(List.of(c1, r1, r2), results1);
+    assertContainsSameElements(List.of(p3, f2, f3), results2);
   }
 
   private static class Fixtures {

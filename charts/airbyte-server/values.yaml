@@ -13,8 +13,6 @@ global:
   database:
     secretName: ""
     secretValue: ""
-    host: "example.com"
-    port: "5432"
   logs:
     ##  logs.accessKey.password Logs Access Key
     ##  logs.accessKey.existingSecret
@@ -404,8 +402,6 @@ secrets: {}
 #   ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS:
 #   ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS:
 #   WORKFLOW_FAILURE_RESTART_DELAY_SECONDS:
-
-#   USE_STREAM_CAPABLE_STATE: true
 env_vars: {}
 
 

@@ -1,18 +1,47 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { SCOPE_ORGANIZATION, SCOPE_USER } from "services/Scope";
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 
-import { getOrganization, listUsersInOrganization, updateOrganization } from "../generated/AirbyteClient";
+import { useGetWorkspace } from "./workspaces";
+import {
+  getOrganization,
+  getOrganizationInfo,
+  listUsersInOrganization,
+  updateOrganization,
+} from "../generated/AirbyteClient";
 import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
+import { SCOPE_ORGANIZATION, SCOPE_USER } from "../scopes";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const organizationKeys = {
   all: [SCOPE_USER, "organizations"] as const,
-  detail: (organizationId: string) => [...organizationKeys.all, "details", organizationId] as const,
+  lists: () => [...organizationKeys.all, "list"] as const,
+  list: (filters: string[]) => [...organizationKeys.lists(), filters] as const,
+  info: (organizationId = "<none>") => [...organizationKeys.all, "info", organizationId] as const,
+  detail: (organizationId = "<none>") => [...organizationKeys.all, "details", organizationId] as const,
   allListUsers: [SCOPE_ORGANIZATION, "users", "list"] as const,
   listUsers: (organizationId: string) => [SCOPE_ORGANIZATION, "users", "list", organizationId] as const,
-  workspaces: (organizationIds: string[]) => [...organizationKeys.all, "workspaces", organizationIds] as const,
+};
+
+/**
+ * Returns the organization of the workspace the user is currently in. Will return `null` if the
+ * user isn't inside a workspace or the workspace doesn't belong to an organization.
+ */
+export const useCurrentOrganizationInfo = () => {
+  const requestOptions = useRequestOptions();
+  const workspaceId = useCurrentWorkspaceId();
+  const workspace = useGetWorkspace(workspaceId, { enabled: !!workspaceId });
+  return useSuspenseQuery(organizationKeys.info(workspace?.organizationId ?? ""), () => {
+    // TODO: Once all workspaces are in an organization this can be removed, but for now
+    //       we guard against calling the endpoint if the workspace isn't in an organization
+    //       to not cause too many 404 in the getOrganizationInfo endpoint.
+    if (!workspace?.organizationId) {
+      return Promise.resolve(null);
+    }
+
+    return getOrganizationInfo({ workspaceId: workspace.workspaceId }, requestOptions);
+  });
 };
 
 export const useOrganization = (organizationId: string) => {
@@ -36,9 +65,18 @@ export const useUpdateOrganization = () => {
   );
 };
 
-export const useListUsersInOrganization = (organizationId: string) => {
+export const useListOrganizationsById = (organizationIds: string[]) => {
+  const requestOptions = useRequestOptions();
+  const queryKey = organizationKeys.list(organizationIds);
+
+  return useSuspenseQuery(queryKey, () =>
+    Promise.all(organizationIds.map((organizationId) => getOrganization({ organizationId }, requestOptions)))
+  );
+};
+
+export const useListUsersInOrganization = (organizationId: string, enabled: boolean = true) => {
   const requestOptions = useRequestOptions();
   const queryKey = organizationKeys.listUsers(organizationId);
 
-  return useSuspenseQuery(queryKey, () => listUsersInOrganization({ organizationId }, requestOptions));
+  return useSuspenseQuery(queryKey, () => listUsersInOrganization({ organizationId }, requestOptions), { enabled });
 };

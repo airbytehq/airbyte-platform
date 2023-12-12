@@ -5,7 +5,9 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.StreamStatusesApi;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
@@ -28,13 +30,11 @@ import io.micronaut.http.annotation.Status;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 
-@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/stream_statuses")
 public class StreamStatusesApiController implements StreamStatusesApi {
 
   private final StreamStatusesHandler handler;
 
-  @SuppressWarnings("MissingJavadocType")
   public StreamStatusesApiController(final StreamStatusesHandler handler) {
     this.handler = handler;
   }
@@ -60,7 +60,7 @@ public class StreamStatusesApiController implements StreamStatusesApi {
     return handler.updateStreamStatus(req);
   }
 
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Post(uri = "/list")
@@ -71,7 +71,7 @@ public class StreamStatusesApiController implements StreamStatusesApi {
     return handler.listStreamStatus(req);
   }
 
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Post(uri = "/latest_per_run_state")

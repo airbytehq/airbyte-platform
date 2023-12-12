@@ -1,31 +1,35 @@
 import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
+import { useCurrentOrganizationInfo } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
-// import useConnector from "hooks/services/useConnector";
 import { isOsanoActive, showOsanoDrawer } from "core/utils/dataPrivacy";
+import { useIntent } from "core/utils/rbac";
 import { DbtCloudSettingsView } from "packages/cloud/views/settings/integrations/DbtCloudSettingsView";
 import { AccountSettingsView } from "packages/cloud/views/users/AccountSettingsView";
 import { UsersSettingsView } from "packages/cloud/views/users/UsersSettingsView";
 import { DataResidencyView } from "packages/cloud/views/workspaces/DataResidencyView";
 import { WorkspaceSettingsView } from "packages/cloud/views/workspaces/WorkspaceSettingsView";
+import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/GeneralOrganizationSettingsPage";
+import { OrganizationAccessManagementPage } from "pages/SettingsPage/pages/AccessManagementPage/OrganizationAccessManagementPage";
+import { WorkspaceAccessManagementPage } from "pages/SettingsPage/pages/AccessManagementPage/WorkspaceAccessManagementPage";
 import {
   DestinationsPage as SettingsDestinationPage,
   SourcesPage as SettingsSourcesPage,
 } from "pages/SettingsPage/pages/ConnectorsPage";
-// import ConfigurationsPage from "pages/SettingsPage/pages/ConfigurationsPage";
 import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
 import { PageConfig, SettingsPageBase } from "pages/SettingsPage/SettingsPageBase";
 
 import { CloudSettingsRoutePaths } from "./routePaths";
 
-export const CloudSettingsPage: React.FC = () => {
-  // TODO: uncomment when supported in cloud
-  // const { countNewSourceVersion, countNewDestinationVersion } = useConnector();
+const CloudSettingsPage: React.FC = () => {
+  const organization = useCurrentOrganizationInfo();
+  const isSsoEnabled = organization?.sso;
+  const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: organization?.organizationId });
   const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
   const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
 
-  const pageConfig = useMemo<PageConfig>(
+  const ssoPageConfig = useMemo<PageConfig>(
     () => ({
       menuConfig: [
         {
@@ -77,17 +81,23 @@ export const CloudSettingsPage: React.FC = () => {
               // indicatorCount: countNewDestinationVersion,
               component: SettingsDestinationPage,
             },
-            // {
-            //   path: CloudSettingsRoutes.Configuration,
-            //   name: <FormattedMessage id="admin.configuration" />,
-            //   component: ConfigurationsPage,
-            // },
-            {
-              path: CloudSettingsRoutePaths.AccessManagement,
-              name: <FormattedMessage id="settings.accessManagementSettings" />,
-              component: UsersSettingsView,
-              id: "workspaceSettings.accessManagementSettings",
-            },
+            ...(isSsoEnabled
+              ? [
+                  {
+                    path: `${CloudSettingsRoutePaths.Workspace}/${CloudSettingsRoutePaths.AccessManagement}`,
+                    name: <FormattedMessage id="settings.accessManagementSettings" />,
+                    component: WorkspaceAccessManagementPage,
+                    id: "workspaceSettings.accessManagementSettings",
+                  },
+                ]
+              : [
+                  {
+                    path: `${CloudSettingsRoutePaths.Workspace}/${CloudSettingsRoutePaths.AccessManagement}`,
+                    name: <FormattedMessage id="settings.accessManagementSettings" />,
+                    component: UsersSettingsView,
+                    id: "workspaceSettings.accessManagementSettings",
+                  },
+                ]),
             {
               path: CloudSettingsRoutePaths.Notifications,
               name: <FormattedMessage id="settings.notifications" />,
@@ -95,6 +105,31 @@ export const CloudSettingsPage: React.FC = () => {
             },
           ],
         },
+        // TODO: Org check can be removed once all workspaces are in an organization
+        ...(canViewOrgSettings && organization
+          ? [
+              {
+                category: <FormattedMessage id="settings.organizationSettings" />,
+                routes: [
+                  {
+                    path: `${CloudSettingsRoutePaths.Organization}`,
+                    name: <FormattedMessage id="settings.generalSettings" />,
+                    component: GeneralOrganizationSettingsPage,
+                  },
+                  ...(isSsoEnabled
+                    ? [
+                        {
+                          path: `${CloudSettingsRoutePaths.Organization}/${CloudSettingsRoutePaths.AccessManagement}`,
+                          name: <FormattedMessage id="settings.accessManagementSettings" />,
+                          component: OrganizationAccessManagementPage,
+                          id: "organizationSettings.accessManagementSettings",
+                        },
+                      ]
+                    : []),
+                ],
+              },
+            ]
+          : []),
         ...(supportsCloudDbtIntegration
           ? [
               {
@@ -112,9 +147,10 @@ export const CloudSettingsPage: React.FC = () => {
           : []),
       ],
     }),
-    [supportsCloudDbtIntegration, supportsDataResidency]
+    [canViewOrgSettings, isSsoEnabled, organization, supportsCloudDbtIntegration, supportsDataResidency]
   );
 
-  return <SettingsPageBase pageConfig={pageConfig} />;
+  return <SettingsPageBase pageConfig={ssoPageConfig} />;
 };
+
 export default CloudSettingsPage;

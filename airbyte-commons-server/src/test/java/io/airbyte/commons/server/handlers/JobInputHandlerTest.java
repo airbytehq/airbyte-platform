@@ -22,6 +22,8 @@ import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
+import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
+import io.airbyte.config.ActorContext;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptSyncConfig;
@@ -94,6 +96,7 @@ class JobInputHandlerTest {
   private AttemptHandler attemptHandler;
   private StateHandler stateHandler;
   private JobInputHandler jobInputHandler;
+  private ContextBuilder contextBuilder;
 
   @BeforeEach
   void init() throws IOException, JsonValidationException, ConfigNotFoundException {
@@ -111,6 +114,7 @@ class JobInputHandlerTest {
     attemptHandler = mock(AttemptHandler.class);
     stateHandler = mock(StateHandler.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    contextBuilder = mock(ContextBuilder.class);
 
     jobInputHandler = new JobInputHandler(jobPersistence,
         configRepository,
@@ -120,7 +124,7 @@ class JobInputHandlerTest {
         configInjector,
         attemptHandler,
         stateHandler,
-        actorDefinitionVersionHelper);
+        actorDefinitionVersionHelper, contextBuilder);
 
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     when(configInjector.injectConfig(any(), any())).thenAnswer(i -> i.getArguments()[0]);
@@ -230,7 +234,7 @@ class JobInputHandlerTest {
     verify(attemptHandler).saveSyncConfig(new SaveAttemptSyncConfigRequestBody()
         .jobId(JOB_ID)
         .attemptNumber(ATTEMPT_NUMBER)
-        .syncConfig(ApiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID, true)));
+        .syncConfig(ApiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID)));
   }
 
   @Test
@@ -305,7 +309,7 @@ class JobInputHandlerTest {
     verify(attemptHandler).saveSyncConfig(new SaveAttemptSyncConfigRequestBody()
         .jobId(JOB_ID)
         .attemptNumber(ATTEMPT_NUMBER)
-        .syncConfig(ApiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID, true)));
+        .syncConfig(ApiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID)));
   }
 
   @Test
@@ -351,15 +355,23 @@ class JobInputHandlerTest {
         .withDockerImage(jobSyncConfig.getDestinationDockerImage())
         .withAdditionalEnvironmentVariables(Collections.emptyMap());
 
+    ActorContext sourceContext = new ActorContext().withActorId(SOURCE_ID);
+    when(contextBuilder.fromSource(any())).thenReturn(sourceContext);
+
+    ActorContext destinationContext = new ActorContext().withActorId(DESTINATION_ID);
+    when(contextBuilder.fromDestination(any())).thenReturn(destinationContext);
+
     final StandardCheckConnectionInput expectedDestinationCheckInput = new StandardCheckConnectionInput()
         .withActorId(DESTINATION_ID)
         .withActorType(ActorType.DESTINATION)
-        .withConnectionConfiguration(DESTINATION_CONFIG_WITH_OAUTH);
+        .withConnectionConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
+        .withActorContext(destinationContext);
 
     final StandardCheckConnectionInput expectedSourceCheckInput = new StandardCheckConnectionInput()
         .withActorId(SOURCE_ID)
         .withActorType(ActorType.SOURCE)
-        .withConnectionConfiguration(SOURCE_CONFIG_WITH_OAUTH);
+        .withConnectionConfiguration(SOURCE_CONFIG_WITH_OAUTH)
+        .withActorContext(sourceContext);
 
     final SyncJobCheckConnectionInputs expectedCheckInputs = new SyncJobCheckConnectionInputs(
         expectedSourceLauncherConfig,

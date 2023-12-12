@@ -20,7 +20,7 @@
 .sso {
   border: variables.$border-thin solid colors.$grey-300;
   text-decoration: none;
-  color: black;
+  color: colors.$inverse;
 }
 
 .google,
@@ -50,7 +50,7 @@
 }
 
 .sso:hover {
-  color: black;
+  color: colors.$inverse;
 }
 
 .error {

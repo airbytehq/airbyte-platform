@@ -5,6 +5,8 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 
 import io.airbyte.api.generated.DeclarativeSourceDefinitionsApi;
 import io.airbyte.api.model.generated.DeclarativeManifestsReadList;
@@ -26,7 +28,6 @@ import io.micronaut.security.rules.SecurityRule;
 @Controller("/api/v1/declarative_source_definitions")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
-@SuppressWarnings("MissingJavadocType")
 public class DeclarativeSourceDefinitionsApiController implements DeclarativeSourceDefinitionsApi {
 
   private final DeclarativeSourceDefinitionsHandler handler;
@@ -38,7 +39,7 @@ public class DeclarativeSourceDefinitionsApiController implements DeclarativeSou
   @Override
   @Post(uri = "/create_manifest")
   @Status(HttpStatus.CREATED)
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public void createDeclarativeSourceDefinitionManifest(final DeclarativeSourceDefinitionCreateManifestRequestBody requestBody) {
@@ -51,7 +52,7 @@ public class DeclarativeSourceDefinitionsApiController implements DeclarativeSou
   @Override
   @Post(uri = "/update_active_manifest")
   @Status(HttpStatus.NO_CONTENT)
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public void updateDeclarativeManifestVersion(UpdateActiveManifestRequestBody requestBody) {
@@ -64,7 +65,7 @@ public class DeclarativeSourceDefinitionsApiController implements DeclarativeSou
   @Override
   @Post(uri = "/list_manifests")
   @Status(HttpStatus.OK)
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public DeclarativeManifestsReadList listDeclarativeManifests(

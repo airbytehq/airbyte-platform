@@ -21,10 +21,11 @@ import org.keycloak.representations.idm.ClientRepresentation;
  */
 @Singleton
 @Slf4j
-@SuppressWarnings("MissingJavadocMethod")
 public class WebClientCreator {
 
   public static final int HTTP_STATUS_CREATED = 201;
+  private static final String LOCAL_OSS_DEV_URI = "https://localhost:3000/*";
+  private static final String LOCAL_CLOUD_DEV_URI = "https://localhost:3001/*";
 
   private final AirbyteKeycloakConfiguration keycloakConfiguration;
   private final String webappUrl;
@@ -69,7 +70,7 @@ public class WebClientCreator {
 
   private List<String> getWebClientRedirectUris(final String webappUrl) {
     final String normalizedWebappUrl = webappUrl.endsWith("/") ? webappUrl : webappUrl + "/";
-    return List.of(normalizedWebappUrl + "*");
+    return List.of(normalizedWebappUrl + "*", LOCAL_OSS_DEV_URI, LOCAL_CLOUD_DEV_URI);
   }
 
 }

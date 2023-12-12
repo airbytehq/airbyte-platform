@@ -8,6 +8,7 @@ import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
+import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
@@ -26,7 +27,7 @@ import org.mockito.Mockito;
 class WorkspaceApiTest extends BaseControllerTest {
 
   @Test
-  void testCreateWorkspace() throws JsonValidationException, IOException {
+  void testCreateWorkspace() throws JsonValidationException, IOException, ConfigNotFoundException {
     Mockito.when(workspacesHandler.createWorkspace(Mockito.any()))
         .thenReturn(new WorkspaceRead());
     final String path = "/api/v1/workspaces/create";
@@ -98,6 +99,20 @@ class WorkspaceApiTest extends BaseControllerTest {
         HttpStatus.OK);
     testErrorEndpointStatus(
         HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody())),
+        HttpStatus.NOT_FOUND);
+  }
+
+  @Test
+  void testUpdateWorkspaceOrganization() throws JsonValidationException, ConfigNotFoundException, IOException {
+    Mockito.when(workspacesHandler.updateWorkspaceOrganization(Mockito.any()))
+        .thenReturn(new WorkspaceRead())
+        .thenThrow(new ConfigNotFoundException("", ""));
+    final String path = "/api/v1/workspaces/update_organization";
+    testEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new WorkspaceUpdateOrganization())),
+        HttpStatus.OK);
+    testErrorEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new WorkspaceUpdateOrganization())),
         HttpStatus.NOT_FOUND);
   }
 

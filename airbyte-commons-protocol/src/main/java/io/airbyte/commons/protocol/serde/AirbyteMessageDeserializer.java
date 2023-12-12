@@ -14,7 +14,11 @@ import java.util.Optional;
  */
 public interface AirbyteMessageDeserializer<T> {
 
-  Optional<T> deserialize(final String json);
+  /**
+   * Exact deserializes preserves float information by using the Java Big Decimal type. Use this to
+   * preserve numeric precision.
+   */
+  Optional<T> deserializeExact(final String json);
 
   Version getTargetVersion();
 

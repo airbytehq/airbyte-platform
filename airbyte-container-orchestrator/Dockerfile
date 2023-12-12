@@ -1,4 +1,4 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.3
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.1.0
 FROM ${JDK_IMAGE} AS orchestrator
 
 ARG DOCKER_BUILD_ARCH=amd64

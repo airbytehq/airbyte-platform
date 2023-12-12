@@ -3,7 +3,7 @@ import { renderHook } from "@testing-library/react";
 import { mockUser } from "test-utils/mock-data/mockUser";
 
 import { useListPermissions } from "core/api";
-import { PermissionRead } from "core/request/AirbyteClient";
+import { PermissionRead } from "core/api/types/AirbyteClient";
 
 import { useRbac } from "./rbac";
 import { RbacPermission, useRbacPermissionsQuery } from "./rbacPermissionsQuery";
@@ -55,7 +55,10 @@ describe("useRbac", () => {
       mockUseRbacPermissionsQuery.mockClear();
       renderHook(() => useRbac({ resourceType: "INSTANCE", role: "ADMIN" }));
       expect(mockUseRbacPermissionsQuery).toHaveBeenCalledTimes(1);
-      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({ resourceType: "INSTANCE", role: "ADMIN" });
+      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({
+        resourceType: "INSTANCE",
+        role: "ADMIN",
+      });
     });
 
     it("instance admin does not need to add details to the query", () => {
@@ -116,7 +119,7 @@ describe("useRbac", () => {
 
       expect(() =>
         renderHook(() => useRbac({ resourceType: "INSTANCE", role: "ADMIN", resourceId: "some-workspace" }))
-      ).toThrowError("Invalid RBAC query: resource INSTANCE with resourceId some-workspace");
+      ).toThrow("Invalid RBAC query: resource INSTANCE with resourceId some-workspace");
 
       mockUseListPermissions.mockImplementation(() => ({
         permissions: [{ permissionType: "instance_admin" }],
@@ -130,7 +133,7 @@ describe("useRbac", () => {
       }));
 
       mockUseRbacPermissionsQuery.mockClear();
-      expect(() => renderHook(() => useRbac({ resourceType: "WORKSPACE", role: "ADMIN" }))).toThrowError(
+      expect(() => renderHook(() => useRbac({ resourceType: "WORKSPACE", role: "ADMIN" }))).toThrow(
         "Invalid RBAC query: resource WORKSPACE with resourceId undefined"
       );
     });

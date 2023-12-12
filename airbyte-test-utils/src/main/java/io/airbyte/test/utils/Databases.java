@@ -27,7 +27,6 @@ import org.testcontainers.containers.JdbcDatabaseContainer;
 /**
  * Collection of Acceptance test database queries to simplify test set up.
  */
-@SuppressWarnings({"MissingJavadocMethod"})
 public class Databases {
 
   private static final String COLUMN_NAME_DATA = "_airbyte_data";
@@ -92,7 +91,7 @@ public class Databases {
         context -> {
           final Result<Record> fetch =
               context.fetch(
-                  "SELECT tablename, schemaname FROM pg_catalog.pg_tables WHERE schemaname == '" + schema + "'");
+                  "SELECT tablename, schemaname FROM pg_catalog.pg_tables WHERE schemaname = '" + schema + "'");
           return fetch.stream()
               .map(record -> {
                 final var schemaName = (String) record.get("schemaname");

@@ -12,7 +12,7 @@ import io.airbyte.oauth.MoreOAuthParameters;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "MissingJavadocType"})
+@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class SnowflakeOAuthFlowTest extends BaseOAuthFlowTest {
 
   public static final String STRING = "string";

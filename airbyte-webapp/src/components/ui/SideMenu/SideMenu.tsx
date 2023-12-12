@@ -1,8 +1,9 @@
 import React from "react";
-import styled from "styled-components";
 
 import { MenuItem } from "./MenuItem";
-
+import styles from "./SideMenu.module.scss";
+import { Box } from "../Box";
+import { Text } from "../Text";
 export interface SideMenuItem {
   path: string;
   name: string | React.ReactNode;
@@ -26,29 +27,18 @@ interface SideMenuProps {
   onSelect: (id: string) => void;
 }
 
-const Content = styled.nav`
-  min-width: 155px;
-`;
-
-const Category = styled.div`
-  margin-bottom: 30px;
-`;
-
-const CategoryName = styled.div`
-  padding: 5px 8px;
-  font-weight: 500;
-  font-size: 10px;
-  line-height: 12px;
-  opacity: 0.5;
-  text-transform: uppercase;
-`;
-
 export const SideMenu: React.FC<SideMenuProps> = ({ data, onSelect, activeItem }) => {
   return (
-    <Content>
+    <nav className={styles.sideMenu__container}>
       {data.map((categoryItem, index) => (
-        <Category key={index}>
-          {categoryItem.category && <CategoryName>{categoryItem.category}</CategoryName>}
+        <Box pb="lg" key={index}>
+          {categoryItem.category && (
+            <Box pb="sm">
+              <Text size="sm" bold color="grey" className={styles.sideMenu__categoryName}>
+                {categoryItem.category}
+              </Text>
+            </Box>
+          )}
           {categoryItem.routes.map((route) => (
             <MenuItem
               id={route.id}
@@ -59,8 +49,8 @@ export const SideMenu: React.FC<SideMenuProps> = ({ data, onSelect, activeItem }
               onClick={route.onClick ?? (() => onSelect(route.path))}
             />
           ))}
-        </Category>
+        </Box>
       ))}
-    </Content>
+    </nav>
   );
 };

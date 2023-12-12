@@ -6,6 +6,11 @@ set -e
 
 assert_root
 
+
+if [[ ! -z "$CI" ]]; then
+    CI_MODE_FLAG='-DciMode=true'
+fi
+
 ## Helper functions
 
 get_epoch_time() {
@@ -23,7 +28,7 @@ echo "Starting app..."
 # Detach so we can run subsequent commands
 # NOTE: this passes APPLY_FIELD_SELECTION=true, which enables a feature -- field selection -- which is currently disabled by default.
 # We want to run our CI tests against the new feature while we prepare to release it.
-VERSION=dev TRACKING_STRATEGY=logging USE_STREAM_CAPABLE_STATE=true BASIC_AUTH_USERNAME="" BASIC_AUTH_PASSWORD="" APPLY_FIELD_SELECTION=true FEATURE_FLAG_PATH=tools/bin/acceptance-test-flags.yml docker compose -f docker-compose.yaml -f docker-compose.acceptance-test.yaml up -d
+VERSION=dev TRACKING_STRATEGY=logging BASIC_AUTH_USERNAME="" BASIC_AUTH_PASSWORD="" APPLY_FIELD_SELECTION=true FEATURE_FLAG_PATH=tools/bin/acceptance-test-flags.yml docker compose -f docker-compose.yaml -f docker-compose.acceptance-test.yaml up -d
 
 # Sometimes source/dest containers using airbyte volumes survive shutdown, which need to be killed in order to shut down properly.
 shutdown_cmd="docker compose down -v || docker kill \$(docker ps -a -f volume=airbyte_workspace -f volume=airbyte_data -f volume=airbyte_db -q) && docker compose down -v"
@@ -53,4 +58,6 @@ check_success 'init'
 check_success 'airbyte-bootloader'
 
 echo "Running e2e tests via gradle"
-USE_EXTERNAL_DEPLOYMENT=true ./gradlew :airbyte-tests:acceptanceTest --rerun-tasks --scan
+
+USE_EXTERNAL_DEPLOYMENT=true ./gradlew :airbyte-tests:acceptanceTest --rerun-tasks --scan "$CI_MODE_FLAG"
+

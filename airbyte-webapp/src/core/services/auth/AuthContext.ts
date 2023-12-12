@@ -37,9 +37,9 @@ export interface AuthContextApi {
   user: CommonUserRead | null;
   inited: boolean;
   emailVerified: boolean;
-  isLoading: boolean;
   loggedOut: boolean;
   providers: string[] | null;
+  getAccessToken?: () => Promise<string | null>;
   hasPasswordLogin?: () => boolean;
   login?: AuthLogin;
   loginWithOAuth?: AuthOAuthLogin;

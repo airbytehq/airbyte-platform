@@ -6,11 +6,11 @@ package io.airbyte.container_orchestrator.config;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.temporal.sync.OrchestratorConstants;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
 import io.airbyte.workers.process.KubePodInfo;
 import io.airbyte.workers.process.KubePodProcess;
+import io.airbyte.workers.sync.OrchestratorConstants;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
 import jakarta.annotation.Nullable;

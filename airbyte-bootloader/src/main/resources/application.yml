@@ -24,17 +24,20 @@ airbyte:
       initialization-timeout-ms: ${CONFIGS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
     jobs:
       initialization-timeout-ms: ${JOBS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
+  auth:
+    default-realm: ${DEFAULT_REALM:airbyte}
   protocol:
     target:
       range:
         min-version: ${AIRBYTE_PROTOCOL_VERSION_MIN:0.0.0}
         max-version: ${AIRBYTE_PROTOCOL_VERSION_MAX:0.3.0}
   secret:
-    persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
+    persistence: ${SECRET_PERSISTENCE:NO_OP}
     store:
       aws:
         access-key: ${AWS_ACCESS_KEY:}
         secret-key: ${AWS_SECRET_ACCESS_KEY:}
+        region: ${AWS_REGION:}
       gcp:
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}

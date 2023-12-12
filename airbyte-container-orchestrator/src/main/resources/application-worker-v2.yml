@@ -1,0 +1,3 @@
+airbyte:
+  workload:
+    enabled: true

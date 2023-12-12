@@ -1,8 +1,7 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { sourceDefinitionKeys } from "services/connector/SourceDefinitionService";
-import { SCOPE_WORKSPACE } from "services/Scope";
+import { sourceDefinitionKeys } from "core/api";
 
 import { useBuilderResolveManifestQuery } from "./connectorBuilderApi";
 import {
@@ -16,6 +15,7 @@ import {
   updateConnectorBuilderProject,
   updateDeclarativeManifestVersion,
 } from "../generated/AirbyteClient";
+import { SCOPE_WORKSPACE } from "../scopes";
 import {
   ConnectorBuilderProjectIdWithWorkspaceId,
   DeclarativeManifestVersionRead,

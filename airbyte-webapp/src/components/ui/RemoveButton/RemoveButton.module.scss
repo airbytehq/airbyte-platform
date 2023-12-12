@@ -1,0 +1,19 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.removeButton {
+  border: none;
+  background-color: transparent;
+  color: colors.$grey;
+  cursor: pointer;
+  padding: 0;
+  height: 16px;
+  font-size: 18px;
+  transition: variables.$transition;
+  display: flex;
+  align-items: center;
+
+  &:hover {
+    color: colors.$red;
+  }
+}

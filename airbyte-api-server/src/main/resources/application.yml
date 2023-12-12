@@ -1,6 +1,10 @@
 micronaut:
   application:
     name: airbyte-api-server
+  executors:
+    health:
+      type: fixed
+      n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:10}
   security:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
@@ -15,11 +19,18 @@ micronaut:
     netty:
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
-    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:10m}
+    thread-selection: auto
   http:
     client:
-      read-timeout: ${READ_TIMEOUT:150s}
+      read-timeout: ${READ_TIMEOUT:10m}
       max-content-length: 52428800 # 50MB
+      event-loop-group: http-client-event-loop
+  netty:
+    event-loops:
+      http-client-event-loop:
+        num-threads: 10
+        prefer-native-transport: true
 
 airbyte:
   shutdown:
@@ -36,6 +47,7 @@ airbyte:
       aws:
         access-key: ${AWS_ACCESS_KEY:}
         secret-key: ${AWS_SECRET_ACCESS_KEY:}
+        region: ${AWS_REGION:}
       gcp:
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
@@ -43,7 +55,9 @@ airbyte:
         address: ${VAULT_ADDRESS:}
         prefix: ${VAULT_PREFIX:}
   role: ${AIRBYTE_ROLE:dev}
-  tracking-strategy: ${TRACKING_STRATEGY:LOGGING}
+  tracking:
+    strategy: ${TRACKING_STRATEGY:LOGGING}
+    write-key: ${SEGMENT_WRITE_KEY:}
   protocol:
     min-version: ${AIRBYTE_PROTOCOL_VERSION_MIN:0.0.0}
     max-version: ${AIRBYTE_PROTOCOL_VERSION_MAX:0.3.0}

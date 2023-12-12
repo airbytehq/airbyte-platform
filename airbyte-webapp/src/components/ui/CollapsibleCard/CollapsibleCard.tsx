@@ -35,7 +35,7 @@ export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
   }
 
   const headerContainer = (
-    <FlexContainer justifyContent="space-between" alignItems="center">
+    <FlexContainer justifyContent="space-between" alignItems="center" data-testid={`${testId}-card-expand-arrow`}>
       {title && (
         <Heading as="h2" size="sm">
           {title}
@@ -47,7 +47,6 @@ export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
           size="lg"
           color="affordance"
           className={classNames(styles.icon, { [styles.expanded]: !isCollapsed })}
-          data-testid={`${testId}-card-expand-arrow`}
         />
       )}
     </FlexContainer>

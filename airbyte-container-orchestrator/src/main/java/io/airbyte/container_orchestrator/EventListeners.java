@@ -5,10 +5,10 @@
 package io.airbyte.container_orchestrator;
 
 import io.airbyte.commons.temporal.TemporalUtils;
-import io.airbyte.commons.temporal.sync.OrchestratorConstants;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.workers.sync.OrchestratorConstants;
 import io.micronaut.runtime.event.annotation.EventListener;
 import io.micronaut.runtime.server.event.ServerStartupEvent;
 import jakarta.inject.Inject;
@@ -64,7 +64,7 @@ public class EventListeners {
    */
   @EventListener
   void setEnvVars(final ServerStartupEvent unused) {
-    log.info("settings env vars");
+    log.debug("settings env vars");
 
     OrchestratorConstants.ENV_VARS_TO_TRANSFER.stream()
         .filter(envVars::containsKey)
@@ -78,7 +78,7 @@ public class EventListeners {
    */
   @EventListener
   void setLogging(final ServerStartupEvent unused) {
-    log.info("started logging");
+    log.debug("started logging");
 
     // make sure the new configuration is picked up
     final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);

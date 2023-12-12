@@ -21,10 +21,10 @@ import {
   WebhookConfigRead,
   WorkspaceRead,
   WebhookConfigWrite,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
+import { useRequestOptions } from "core/api/useRequestOptions";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useNotificationService } from "hooks/services/Notification";
-import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 
 import { webBackendGetAvailableDbtJobsForWorkspace } from "../../generated/CloudApi";
 import { DbtCloudJobInfo, WorkspaceGetDbtJobsResponse } from "../../types/CloudApi";
@@ -170,8 +170,7 @@ export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
 };
 
 export const useAvailableDbtJobs = () => {
-  const middlewares = useDefaultRequestMiddlewares();
-  const requestOptions = { middlewares };
+  const requestOptions = useRequestOptions();
   const workspace = useCurrentWorkspace();
   const { workspaceId } = workspace;
   const dbtConfigId = workspace.webhookConfigs?.find((config) => config.name?.includes("dbt"))?.id;

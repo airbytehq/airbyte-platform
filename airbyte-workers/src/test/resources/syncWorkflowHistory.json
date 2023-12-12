@@ -572,7 +572,7 @@
       "activityTaskScheduledEventAttributes": {
         "activityId": "1f77ec15-817a-3297-8c0d-d6d0104b71ce",
         "activityType": {
-          "name": "Replicate"
+          "name": "ReplicateV2"
         },
         "namespace": "",
         "taskQueue": {

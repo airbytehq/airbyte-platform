@@ -8,7 +8,7 @@ import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
 
 import { useSuggestedDestinations } from "area/connector/utils";
-import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
+import { useDestinationDefinitionList } from "core/api";
 
 export const SelectDestinationPage: React.FC = () => {
   const navigate = useNavigate();

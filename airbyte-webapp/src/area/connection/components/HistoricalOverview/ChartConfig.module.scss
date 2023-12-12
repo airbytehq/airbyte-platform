@@ -1,0 +1,5 @@
+@use "scss/colors";
+
+:export {
+  labelColor: colors.$grey-400;
+}

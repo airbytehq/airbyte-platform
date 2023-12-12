@@ -1,13 +1,10 @@
-import { faSlack } from "@fortawesome/free-brands-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { DocsIcon } from "components/icons/DocsIcon";
+import { Icon } from "components/ui/Icon";
 
 import { links } from "core/utils/links";
 
 import { NavDropdown } from "./NavDropdown";
-import RecipesIcon from "./RecipesIcon";
 
 export const ResourcesDropdown: React.FC = () => {
   const { formatMessage } = useIntl();
@@ -17,24 +14,24 @@ export const ResourcesDropdown: React.FC = () => {
         {
           as: "a",
           href: links.docsLink,
-          icon: <DocsIcon />,
+          icon: <Icon type="docs" size="lg" />,
           displayName: formatMessage({ id: "sidebar.documentation" }),
         },
         {
           as: "a",
           href: links.slackLink,
-          icon: <FontAwesomeIcon icon={faSlack} />,
+          icon: <Icon type="slack" />,
           displayName: formatMessage({ id: "sidebar.joinSlack" }),
         },
         {
           as: "a",
           href: links.tutorialLink,
-          icon: <RecipesIcon />,
+          icon: <Icon type="recipes" />,
           displayName: formatMessage({ id: "sidebar.recipes" }),
         },
       ]}
       label={<FormattedMessage id="sidebar.resources" />}
-      icon={<DocsIcon />}
+      icon={<Icon type="docs" />}
     />
   );
 };

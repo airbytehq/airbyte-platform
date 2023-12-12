@@ -11,7 +11,7 @@ import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { useCreateOrUpdateState, useGetConnectionState } from "core/api";
-import { AirbyteCatalog, ConnectionState, StreamState } from "core/request/AirbyteClient";
+import { AirbyteCatalog, ConnectionState, StreamState } from "core/api/types/AirbyteClient";
 import { haveSameShape } from "core/utils/objects";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
@@ -131,17 +131,17 @@ export const StateBlock: React.FC<StateBlockProps> = ({ connectionId, syncCatalo
               />
             </FlexContainer>
 
-            <div className={styles.stateEditor}>
-              <CodeEditor
-                value={stateDraft ?? existingStateString}
-                language="json"
-                automaticLayout
-                showSuggestions={false}
-                onChange={(value) => {
-                  setStateDraft(value ?? "");
-                }}
-              />
-            </div>
+            <CodeEditor
+              value={stateDraft ?? existingStateString}
+              height={styles.stateEditorHeight}
+              language="json"
+              automaticLayout
+              showSuggestions={false}
+              onChange={(value) => {
+                setStateDraft(value ?? "");
+              }}
+            />
+
             <FlexContainer direction="column">
               {errorMessage ? (
                 <Message type="error" text={errorMessage} />

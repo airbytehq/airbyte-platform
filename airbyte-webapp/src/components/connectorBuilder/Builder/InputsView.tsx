@@ -7,19 +7,18 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { faGear, faPlus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
+import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { BuilderConfigView } from "./BuilderConfigView";
 import { KeyboardSensor, PointerSensor } from "./dndSensors";
-import { ReactComponent as DragHandleIcon } from "./drag-handle.svg";
+import DragHandleIcon from "./drag-handle.svg?react";
 import { InputForm, InputInEditing, newInputInEditing } from "./InputsForm";
 import styles from "./InputsView.module.scss";
 import { BuilderFormInput, orderInputs, useBuilderWatch } from "../types";
@@ -76,7 +75,7 @@ export const InputsView: React.FC = () => {
         onClick={() => {
           setInputInEditing(newInputInEditing());
         }}
-        icon={<FontAwesomeIcon icon={faPlus} />}
+        icon={<Icon type="plus" />}
         iconPosition="left"
         variant="secondary"
         type="button"
@@ -163,7 +162,7 @@ const SortableInput: React.FC<SortableInputProps> = ({ input, isInferred, id, se
           }}
           data-no-dnd="true"
         >
-          <FontAwesomeIcon className={styles.icon} icon={faGear} />
+          <Icon type="gear" className={styles.icon} />
         </Button>
       </Card>
     </div>

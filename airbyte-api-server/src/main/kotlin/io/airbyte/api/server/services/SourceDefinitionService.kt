@@ -19,10 +19,10 @@ import java.util.Objects
 import java.util.UUID
 
 interface SourceDefinitionService {
-
   fun getSourceDefinitionSpecification(
     sourceDefinitionId: UUID,
     workspaceId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): SourceDefinitionSpecificationRead?
 }
@@ -30,17 +30,21 @@ interface SourceDefinitionService {
 @Singleton
 @Secondary
 class SourceDefinitionServiceImpl(private val configApiClient: ConfigApiClient) : SourceDefinitionService {
-
   companion object {
     private val log = LoggerFactory.getLogger(SourceDefinitionServiceImpl::class.java)
   }
 
-  override fun getSourceDefinitionSpecification(sourceDefinitionId: UUID, workspaceId: UUID, userInfo: String?): SourceDefinitionSpecificationRead? {
+  override fun getSourceDefinitionSpecification(
+    sourceDefinitionId: UUID,
+    workspaceId: UUID,
+    authorization: String?,
+    userInfo: String?,
+  ): SourceDefinitionSpecificationRead? {
     val sourceDefinitionIdWithWorkspaceId = SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(sourceDefinitionId).workspaceId(workspaceId)
 
     var response: HttpResponse<SourceDefinitionSpecificationRead>
     try {
-      response = configApiClient.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId, userInfo!!)
+      response = configApiClient.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId, authorization, userInfo!!)
     } catch (e: HttpClientResponseException) {
       log.error("Config api response error for cancelJob: ", e)
       response = e.response as HttpResponse<SourceDefinitionSpecificationRead>

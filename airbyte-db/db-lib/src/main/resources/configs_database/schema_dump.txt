@@ -102,7 +102,9 @@ create table "public"."actor_definition_version" (
   "support_state" "public"."support_state" not null default cast('supported' as support_state),
   "support_level" "public"."support_level" not null,
   constraint "actor_definition_version_pkey"
-    primary key ("id")
+    primary key ("id"),
+  constraint "actor_definition_version_actor_definition_id_version_key"
+    unique ("actor_definition_id", "docker_image_tag")
 );
 create table "public"."actor_definition_workspace_grant" (
   "actor_definition_id" uuid not null,
@@ -224,6 +226,9 @@ create table "public"."organization" (
   "email" varchar(256) not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "pba" boolean not null default false,
+  "org_level_billing" boolean not null default false,
+  "tombstone" boolean not null default false,
   constraint "organization_pkey"
     primary key ("id")
 );
@@ -246,7 +251,11 @@ create table "public"."permission" (
   "organization_id" uuid,
   "permission_type" "public"."permission_type" not null,
   constraint "permission_pkey"
-    primary key ("id")
+    primary key ("id"),
+  constraint "permission_unique_user_organization"
+    unique ("user_id", "organization_id"),
+  constraint "permission_unique_user_workspace"
+    unique ("user_id", "workspace_id")
 );
 create table "public"."schema_management" (
   "id" uuid not null,
@@ -256,6 +265,19 @@ create table "public"."schema_management" (
   "auto_propagation_status" "public"."auto_propagation_status" not null default cast('ignore' as auto_propagation_status),
   constraint "schema_management_pkey"
     primary key ("id")
+);
+create table "public"."secret_persistence_config" (
+  "id" uuid not null,
+  "scope_id" uuid,
+  "scope_type" "public"."secret_persistence_scope_type" not null default cast('organization' as secret_persistence_scope_type),
+  "secret_persistence_config_coordinate" varchar(256),
+  "secret_persistence_type" "public"."secret_persistence_type" not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "secret_persistence_config_pkey"
+    primary key ("id"),
+  constraint "secret_persistence_config_scope_id_scope_type_key"
+    unique ("scope_id", "scope_type")
 );
 create table "public"."sso_config" (
   "id" uuid not null,
@@ -308,7 +330,9 @@ create table "public"."user" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "auth_provider" "public"."auth_provider" not null,
   constraint "user_pkey"
-    primary key ("id")
+    primary key ("id"),
+  constraint "auth_user_id_auth_provider_key"
+    unique ("auth_user_id", "auth_provider")
 );
 create table "public"."user_invitation" (
   "id" uuid not null,
@@ -325,6 +349,31 @@ create table "public"."user_invitation" (
     primary key ("id"),
   constraint "user_invitation_invite_code_key"
     unique ("invite_code")
+);
+create table "public"."workload" (
+  "id" varchar(256) not null,
+  "dataplane_id" varchar(256),
+  "status" "public"."workload_status" not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "last_heartbeat_at" timestamp(6) with time zone,
+  "input_payload" text not null,
+  "log_path" text not null,
+  "geography" varchar(2147483647) not null default cast('AUTO' as varchar),
+  "mutex_key" varchar(2147483647),
+  "type" "public"."workload_type" not null,
+  constraint "workload_pkey"
+    primary key ("id")
+);
+create table "public"."workload_label" (
+  "id" uuid not null,
+  "workload_id" varchar(256) not null,
+  "key" varchar(256) not null,
+  "value" varchar(256) not null,
+  constraint "workload_label_pkey"
+    primary key ("id"),
+  constraint "workload_label_workload_id_key_key"
+    unique ("workload_id", "key")
 );
 create table "public"."workspace" (
   "id" uuid not null,
@@ -477,6 +526,10 @@ alter table "public"."user_invitation"
   add constraint "user_invitation_workspace_id_fkey"
     foreign key ("workspace_id")
     references "public"."workspace" ("id");
+alter table "public"."workload_label"
+  add constraint "workload_label_workload_id_fkey"
+    foreign key ("workload_id")
+    references "public"."workload" ("id");
 alter table "public"."workspace"
   add constraint "workspace_organization_id_fkey"
     foreign key ("organization_id")
@@ -491,7 +544,6 @@ create index "actor_workspace_id_idx" on "public"."actor"("workspace_id" asc);
 create index "actor_catalog_catalog_hash_id_idx" on "public"."actor_catalog"("catalog_hash" asc);
 create index "actor_catalog_fetch_event_actor_catalog_id_idx" on "public"."actor_catalog_fetch_event"("actor_catalog_id" asc);
 create index "actor_catalog_fetch_event_actor_id_idx" on "public"."actor_catalog_fetch_event"("actor_id" asc);
-create index "actor_definition_version_definition_image_tag_idx" on "public"."actor_definition_version"("actor_definition_id" asc, "docker_image_tag" asc);
 create index "actor_oauth_parameter_workspace_definition_idx" on "public"."actor_oauth_parameter"("workspace_id" asc, "actor_definition_id" asc);
 create index "airbyte_configs_migrations_s_idx" on "public"."airbyte_configs_migrations"("success" asc);
 create index "connection_destination_id_idx" on "public"."connection"("destination_id" asc);
@@ -514,3 +566,4 @@ create index "user_invitation_invite_code_idx" on "public"."user_invitation"("in
 create index "user_invitation_invited_email_idx" on "public"."user_invitation"("invited_email" asc);
 create index "user_invitation_organization_id_idx" on "public"."user_invitation"("organization_id" asc);
 create index "user_invitation_workspace_id_idx" on "public"."user_invitation"("workspace_id" asc);
+create index "workload_label_workload_id_idx" on "public"."workload_label"("workload_id" asc);

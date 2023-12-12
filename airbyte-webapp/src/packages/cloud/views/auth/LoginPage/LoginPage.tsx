@@ -1,7 +1,7 @@
 import React from "react";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import { NavigateOptions, To, useNavigate } from "react-router-dom";
+import { createSearchParams, useNavigate, useSearchParams } from "react-router-dom";
 import * as yup from "yup";
 import { SchemaOf } from "yup";
 
@@ -15,10 +15,9 @@ import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { AuthLogin, useAuthService } from "core/services/auth";
+import { useAuthService } from "core/services/auth";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
-import { useQuery } from "hooks/useQuery";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { LoginFormErrorCodes } from "packages/cloud/services/auth/types";
 
@@ -48,24 +47,29 @@ const LoginButton: React.FC = () => {
   );
 };
 
-interface LoginPageProps {
-  login: AuthLogin;
-}
-
-export const LoginPage: React.FC<LoginPageProps> = ({ login }) => {
-  const { loginWithOAuth } = useAuthService();
+export const LoginPage: React.FC = () => {
+  const { loginWithOAuth, login } = useAuthService();
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
+  const [searchParams] = useSearchParams();
+  const loginRedirectString = searchParams.get("loginRedirect");
 
-  const query = useQuery<{ from?: string }>();
   const navigate = useNavigate();
-  const replace = (path: To, state?: NavigateOptions) => navigate(path, { ...state, replace: true });
+
+  const reStringifiedLoginRedirect = loginRedirectString && createSearchParams({ loginRedirect: loginRedirectString });
+  const resetPasswordTo = loginRedirectString
+    ? { pathname: CloudRoutes.ResetPassword, search: `${reStringifiedLoginRedirect}` }
+    : CloudRoutes.ResetPassword;
+
   useTrackPage(PageTrackingCodes.LOGIN);
 
   const onSubmit = async (values: LoginPageFormValues) => {
+    if (!login) {
+      throw new Error("Login function is not defined");
+    }
     await login(values);
-    return replace(query.from ?? "/");
+    return navigate(loginRedirectString ?? "/", { replace: true });
   };
 
   const onError = (e: Error, { email }: LoginPageFormValues) => {
@@ -134,7 +138,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ login }) => {
         <Box mt="2xl">
           <FlexContainer direction="row" justifyContent="space-between" alignItems="center">
             <Text size="sm" color="grey300">
-              <Link to={CloudRoutes.ResetPassword} data-testid="reset-password-link">
+              <Link to={resetPasswordTo} data-testid="reset-password-link">
                 <FormattedMessage id="login.forgotPassword" />
               </Link>
             </Text>
@@ -143,7 +147,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ login }) => {
         </Box>
       </Form>
       <Disclaimer />
-      <LoginSignupNavigation to="signup" />
+      <LoginSignupNavigation type="signup" />
     </FlexContainer>
   );
 };

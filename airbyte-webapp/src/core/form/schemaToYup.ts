@@ -1,14 +1,17 @@
-import { JSONSchema7, JSONSchema7Type } from "json-schema";
+import { JSONSchema7Type } from "json-schema";
+import { MessageDescriptor } from "react-intl";
 import * as yup from "yup";
 
 import { FormBlock, FormGroupItem, FormObjectArrayItem, FormConditionItem, FORM_PATTERN_ERROR } from "core/form/types";
+import { AirbyteJSONSchema } from "core/jsonSchema/types";
+import { getPatternDescriptor } from "views/Connector/ConnectorForm/utils";
 
 import { FormBuildError } from "./FormBuildError";
 
 /**
  * Returns yup.schema for validation
  *
- * This method builds yup schema based on jsonSchema ${@link JSONSchema7} and the derived ${@link FormBlock}.
+ * This method builds yup schema based on jsonSchema ${@link AirbyteJSONSchema} and the derived ${@link FormBlock}.
  * Every property is walked through recursively in case it is condition | object | array.
  *
  * @param jsonSchema
@@ -18,9 +21,10 @@ import { FormBuildError } from "./FormBuildError";
  * @param propertyPath constructs path of property
  */
 export const buildYupFormForJsonSchema = (
-  jsonSchema: JSONSchema7,
+  jsonSchema: AirbyteJSONSchema,
   formField: FormBlock,
-  parentSchema?: JSONSchema7,
+  formatMessage: (message: MessageDescriptor, values?: Record<string, string | number>) => string,
+  parentSchema?: AirbyteJSONSchema,
   propertyKey?: string,
   propertyPath: string | undefined = propertyKey
 ): yup.AnySchema => {
@@ -69,6 +73,7 @@ export const buildYupFormForJsonSchema = (
               : buildYupFormForJsonSchema(
                   prop,
                   selectionFormField.properties[propertyIndex],
+                  formatMessage,
                   condition,
                   key,
                   propertyPath ? `${propertyPath}.${propertyKey}` : propertyKey
@@ -87,34 +92,47 @@ export const buildYupFormForJsonSchema = (
     //   prop1: number.when(type == "A"), string.when(type == "B"), strip.when(type neither "A" nor "B")
     //   prop2: string.when(type == "A"), string.when(type == "B"), boolean.when(type == "C"), strip.when(type neither "A" nor "B" nor "C")
     // }
-    return yup.object().shape(
-      Object.fromEntries(
-        Array.from(flattenedKeys.entries()).map(([key, schemaByCondition]) => {
-          let mergedSchema = yup.mixed();
-          if (key === selectionKey) {
-            // Set the selection key to required, to ensure that the user has selected a condition
-            return [key, mergedSchema.required("form.empty.error")];
-          }
-          const allSelectionConstValuesWithThisKey = schemaByCondition.map(([constValue]) => constValue);
-          schemaByCondition.forEach(([selectionConstValue, conditionalSchema]) => {
+    const oneOfSchema = yup
+      .object()
+      .shape(
+        Object.fromEntries(
+          Array.from(flattenedKeys.entries()).map(([key, schemaByCondition]) => {
+            let mergedSchema = yup.mixed();
+            if (key === selectionKey) {
+              // do not validate the selectionKey itself, as the user can't change it so it doesn't matter
+              return [key, mergedSchema];
+            }
+            const allSelectionConstValuesWithThisKey = schemaByCondition.map(([constValue]) => constValue);
+            schemaByCondition.forEach(([selectionConstValue, conditionalSchema]) => {
+              mergedSchema = mergedSchema.when(selectionKey, {
+                is: selectionConstValue,
+                then: () => conditionalSchema,
+                otherwise: (schema) => schema,
+              });
+            });
             mergedSchema = mergedSchema.when(selectionKey, {
-              is: selectionConstValue,
-              then: () => conditionalSchema,
+              is: (val: JSONSchema7Type | undefined) =>
+                // if typeof val is actually undefined, we are dealing with an inconsistent configuration which doesn't have any value for the condition key.
+                // in this case, just keep the existing value to prevent data loss.
+                typeof val !== "undefined" && !allSelectionConstValuesWithThisKey.includes(val),
+              then: (schema) => schema.strip(),
               otherwise: (schema) => schema,
             });
-          });
-          mergedSchema = mergedSchema.when(selectionKey, {
-            is: (val: JSONSchema7Type | undefined) =>
-              // if typeof val is actually undefined, we are dealing with an inconsistent configuration which doesn't have any value for the condition key.
-              // in this case, just keep the existing value to prevent data loss.
-              typeof val !== "undefined" && !allSelectionConstValuesWithThisKey.includes(val),
-            then: (schema) => schema.strip(),
-            otherwise: (schema) => schema,
-          });
-          return [key, mergedSchema];
-        })
+            return [key, mergedSchema];
+          })
+        )
       )
-    );
+      // This prevents the object from being re-set on the values during yup cast - see https://github.com/jquense/yup/issues/350 for more details.
+      .default(undefined);
+
+    // If the field is hidden, the user cannot select a value for it, so don't make it required
+    // If the field is not required, it's OK to not have a value for it as well
+    if (formField.airbyte_hidden || !formField.isRequired) {
+      return oneOfSchema;
+    }
+
+    // Otherwise require that all oneOfs have an option selected, as the user has no way to unselect an option.
+    return oneOfSchema.required(formatMessage({ id: "form.empty.error" }));
   }
 
   switch (jsonSchema.type) {
@@ -125,7 +143,10 @@ export const buildYupFormForJsonSchema = (
         .trim();
 
       if (jsonSchema?.pattern !== undefined) {
-        schema = schema.matches(new RegExp(jsonSchema.pattern), FORM_PATTERN_ERROR);
+        schema = schema.matches(
+          new RegExp(jsonSchema.pattern),
+          formatMessage({ id: FORM_PATTERN_ERROR }, { pattern: getPatternDescriptor(jsonSchema) ?? jsonSchema.pattern })
+        );
       }
 
       break;
@@ -137,11 +158,11 @@ export const buildYupFormForJsonSchema = (
       schema = yup.number().transform((value) => (isNaN(value) ? undefined : value));
 
       if (jsonSchema?.minimum !== undefined) {
-        schema = schema.min(jsonSchema?.minimum);
+        schema = schema.min(jsonSchema.minimum, (value) => formatMessage({ id: "form.min.error" }, { min: value.min }));
       }
 
       if (jsonSchema?.maximum !== undefined) {
-        schema = schema.max(jsonSchema?.maximum);
+        schema = schema.max(jsonSchema.maximum, (value) => formatMessage({ id: "form.max.error" }, { max: value.max }));
       }
       break;
     case "array":
@@ -152,6 +173,7 @@ export const buildYupFormForJsonSchema = (
             buildYupFormForJsonSchema(
               jsonSchema.items,
               (formField as FormObjectArrayItem).properties,
+              formatMessage,
               jsonSchema,
               propertyKey,
               propertyPath ? `${propertyPath}.${propertyKey}` : propertyKey
@@ -175,6 +197,7 @@ export const buildYupFormForJsonSchema = (
             ? buildYupFormForJsonSchema(
                 propertySchema,
                 correspondingFormField,
+                formatMessage,
                 jsonSchema,
                 propertyKey,
                 propertyPath ? `${propertyPath}.${propertyKey}` : propertyKey
@@ -204,7 +227,7 @@ export const buildYupFormForJsonSchema = (
       parentSchema.required.find((item) => item === propertyKey);
 
     if (schema && isRequired) {
-      schema = schema.required("form.empty.error");
+      schema = schema.required(formatMessage({ id: "form.empty.error" }));
     }
   }
 

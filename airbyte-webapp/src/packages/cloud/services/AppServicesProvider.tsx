@@ -1,13 +1,7 @@
-import React, { useMemo } from "react";
+import React from "react";
 
-import { LoadingPage } from "components";
-
-import { MissingConfigError, useConfig } from "config";
-import { RequestMiddleware } from "core/request/RequestMiddleware";
-import { RequestAuthMiddleware } from "core/services/auth";
-import { ServicesProvider, useGetService, useInjectServices } from "core/servicesProvider";
-import { useAuth } from "packages/firebaseReact";
-
+import { CloudAuthService } from "./auth/CloudAuthService";
+import { KeycloakService } from "./auth/KeycloakService";
 import { FirebaseSdkProvider } from "./FirebaseSdkProvider";
 
 /**
@@ -17,47 +11,12 @@ import { FirebaseSdkProvider } from "./FirebaseSdkProvider";
  */
 const AppServicesProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   return (
-    <ServicesProvider>
-      <FirebaseSdkProvider>
-        <ServiceOverrides>{children}</ServiceOverrides>
-      </FirebaseSdkProvider>
-    </ServicesProvider>
+    <FirebaseSdkProvider>
+      <KeycloakService>
+        <CloudAuthService>{children}</CloudAuthService>
+      </KeycloakService>
+    </FirebaseSdkProvider>
   );
 };
-
-const ServiceOverrides: React.FC<React.PropsWithChildren<unknown>> = React.memo(({ children }) => {
-  const auth = useAuth();
-
-  const middlewares: RequestMiddleware[] = useMemo(
-    () => [
-      RequestAuthMiddleware({
-        getValue() {
-          return auth.currentUser?.getIdToken() ?? "";
-        },
-      }),
-    ],
-    [auth]
-  );
-
-  const { cloudApiUrl } = useConfig();
-
-  if (!cloudApiUrl) {
-    throw new MissingConfigError("Missing required configuration cloudApiUrl");
-  }
-
-  const inject = useMemo(
-    () => ({
-      DefaultRequestMiddlewares: middlewares,
-    }),
-    [middlewares]
-  );
-
-  useInjectServices(inject);
-
-  const registeredMiddlewares = useGetService("DefaultRequestMiddlewares");
-
-  return registeredMiddlewares ? <>{children}</> : <LoadingPage />;
-});
-ServiceOverrides.displayName = "ServiceOverrides";
 
 export { AppServicesProvider };

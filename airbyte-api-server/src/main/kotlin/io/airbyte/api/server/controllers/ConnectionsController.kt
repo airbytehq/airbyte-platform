@@ -38,12 +38,17 @@ open class ConnectionsController(
   private val userService: UserService,
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
+  private val trackingHelper: TrackingHelper,
 ) : ConnectionsApi {
-  override fun createConnection(connectionCreateRequest: ConnectionCreateRequest?, userInfo: String?): Response {
+  override fun createConnection(
+    connectionCreateRequest: ConnectionCreateRequest?,
+    authorization: String?,
+    userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
     val validUserInfo: String? = getLocalUserInfoIfNull(userInfo)
 
-    TrackingHelper.callWithTracker({
+    trackingHelper.callWithTracker({
       AirbyteCatalogHelper.validateCronConfiguration(
         connectionCreateRequest!!.schedule,
       )
@@ -51,20 +56,21 @@ open class ConnectionsController(
 
     // get destination response to retrieve workspace id as well as input for destination sync modes
     val destinationResponse: DestinationResponse =
-      TrackingHelper.callWithTracker(
-        { destinationService.getDestination(connectionCreateRequest!!.destinationId, validUserInfo) },
+      trackingHelper.callWithTracker(
+        { destinationService.getDestination(connectionCreateRequest!!.destinationId, authorization, validUserInfo) },
         CONNECTIONS_PATH,
         POST,
         userId,
       ) as DestinationResponse
 
     // get source schema for catalog id and airbyte catalog
-    val schemaResponse: SourceDiscoverSchemaRead = TrackingHelper.callWithTracker(
-      { sourceService.getSourceSchema(connectionCreateRequest!!.sourceId, false, validUserInfo) },
-      CONNECTIONS_PATH,
-      POST,
-      userId,
-    )
+    val schemaResponse: SourceDiscoverSchemaRead =
+      trackingHelper.callWithTracker(
+        { sourceService.getSourceSchema(connectionCreateRequest!!.sourceId, false, authorization, validUserInfo) },
+        CONNECTIONS_PATH,
+        POST,
+        userId,
+      )
     val catalogId = schemaResponse.catalogId
 
     val airbyteCatalogFromDiscoverSchema = schemaResponse.catalog
@@ -73,14 +79,15 @@ open class ConnectionsController(
     // https://docs.airbyte.com/understanding-airbyte/airbyte-protocol/#catalog
     var configuredCatalog: AirbyteCatalog? = AirbyteCatalog()
 
-    val validStreams: Map<String, AirbyteStreamAndConfiguration> = AirbyteCatalogHelper.getValidStreams(
-      Objects.requireNonNull<AirbyteCatalog?>(airbyteCatalogFromDiscoverSchema),
-    )
+    val validStreams: Map<String, AirbyteStreamAndConfiguration> =
+      AirbyteCatalogHelper.getValidStreams(
+        Objects.requireNonNull<AirbyteCatalog?>(airbyteCatalogFromDiscoverSchema),
+      )
 
     // check user configs
     if (AirbyteCatalogHelper.hasStreamConfigurations(connectionCreateRequest!!.configurations)) {
       // validate user inputs
-      TrackingHelper.callWithTracker(
+      trackingHelper.callWithTracker(
         {
           AirbyteCatalogHelper.validateStreams(
             airbyteCatalogFromDiscoverSchema!!,
@@ -98,15 +105,16 @@ open class ConnectionsController(
         val schemaStream = validStreamAndConfig!!.stream
         val schemaConfig = validStreamAndConfig.config
 
-        val validDestinationSyncModes = TrackingHelper.callWithTracker(
-          { destinationService.getDestinationSyncModes(destinationResponse, validUserInfo) },
-          CONNECTIONS_PATH,
-          POST,
-          userId,
-        ) as List<DestinationSyncMode>
+        val validDestinationSyncModes =
+          trackingHelper.callWithTracker(
+            { destinationService.getDestinationSyncModes(destinationResponse, authorization, validUserInfo) },
+            CONNECTIONS_PATH,
+            POST,
+            userId,
+          ) as List<DestinationSyncMode>
 
         // set user configs
-        TrackingHelper.callWithTracker(
+        trackingHelper.callWithTracker(
           {
             AirbyteCatalogHelper.setAndValidateStreamConfig(
               streamConfiguration,
@@ -128,16 +136,18 @@ open class ConnectionsController(
     }
 
     val finalConfiguredCatalog = configuredCatalog
-    val connectionResponse: Any = TrackingHelper.callWithTracker({
-      connectionService.createConnection(
-        connectionCreateRequest,
-        catalogId!!,
-        finalConfiguredCatalog!!,
-        destinationResponse.workspaceId,
-        validUserInfo,
-      )
-    }, CONNECTIONS_PATH, POST, userId)!!
-    TrackingHelper.trackSuccess(
+    val connectionResponse: Any =
+      trackingHelper.callWithTracker({
+        connectionService.createConnection(
+          connectionCreateRequest,
+          catalogId!!,
+          finalConfiguredCatalog!!,
+          destinationResponse.workspaceId,
+          authorization,
+          validUserInfo,
+        )
+      }, CONNECTIONS_PATH, POST, userId)!!
+    trackingHelper.trackSuccess(
       CONNECTIONS_PATH,
       POST,
       userId,
@@ -149,21 +159,27 @@ open class ConnectionsController(
       .build()
   }
 
-  override fun deleteConnection(connectionId: UUID, userInfo: String?): Response {
+  override fun deleteConnection(
+    connectionId: UUID,
+    authorization: String?,
+    userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    val connectionResponse: Any = TrackingHelper.callWithTracker(
-      {
-        connectionService.deleteConnection(
-          connectionId,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      CONNECTIONS_WITH_ID_PATH,
-      DELETE,
-      userId,
-    )!!
-    TrackingHelper.trackSuccess(
+    val connectionResponse: Any =
+      trackingHelper.callWithTracker(
+        {
+          connectionService.deleteConnection(
+            connectionId,
+            authorization,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        CONNECTIONS_WITH_ID_PATH,
+        DELETE,
+        userId,
+      )!!
+    trackingHelper.trackSuccess(
       CONNECTIONS_WITH_ID_PATH,
       DELETE,
       userId,
@@ -174,16 +190,22 @@ open class ConnectionsController(
       .build()
   }
 
-  override fun getConnection(connectionId: UUID, userInfo: String?): Response {
+  override fun getConnection(
+    connectionId: UUID,
+    authorization: String?,
+    userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    val connectionResponse: Any = TrackingHelper.callWithTracker({
-      connectionService.getConnection(
-        connectionId,
-        getLocalUserInfoIfNull(userInfo),
-      )
-    }, CONNECTIONS_PATH, GET, userId)!!
-    TrackingHelper.trackSuccess(
+    val connectionResponse: Any =
+      trackingHelper.callWithTracker({
+        connectionService.getConnection(
+          connectionId,
+          authorization,
+          getLocalUserInfoIfNull(userInfo),
+        )
+      }, CONNECTIONS_PATH, GET, userId)!!
+    trackingHelper.trackSuccess(
       CONNECTIONS_WITH_ID_PATH,
       GET,
       userId,
@@ -199,22 +221,24 @@ open class ConnectionsController(
     includeDeleted: Boolean?,
     limit: Int?,
     offset: Int?,
-
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val safeWorkspaceIds = workspaceIds ?: emptyList()
-    val connections = TrackingHelper.callWithTracker({
-      connectionService.listConnectionsForWorkspaces(
-        safeWorkspaceIds,
-        limit!!,
-        offset!!,
-        includeDeleted!!,
-        getLocalUserInfoIfNull(userInfo),
-      )
-    }, CONNECTIONS_PATH, GET, userId)!!
-    TrackingHelper.trackSuccess(
+    val connections =
+      trackingHelper.callWithTracker({
+        connectionService.listConnectionsForWorkspaces(
+          safeWorkspaceIds,
+          limit!!,
+          offset!!,
+          includeDeleted!!,
+          authorization,
+          getLocalUserInfoIfNull(userInfo),
+        )
+      }, CONNECTIONS_PATH, GET, userId)!!
+    trackingHelper.trackSuccess(
       CONNECTIONS_PATH,
       GET,
       userId,
@@ -229,13 +253,14 @@ open class ConnectionsController(
   override fun patchConnection(
     connectionId: UUID,
     connectionPatchRequest: ConnectionPatchRequest,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
     val validUserInfo: String? = getLocalUserInfoIfNull(userInfo)
 
     // validate cron timing configurations
-    TrackingHelper.callWithTracker(
+    trackingHelper.callWithTracker(
       {
         AirbyteCatalogHelper.validateCronConfiguration(
           connectionPatchRequest.schedule,
@@ -247,8 +272,8 @@ open class ConnectionsController(
     )
 
     val currentConnection: ConnectionResponse =
-      TrackingHelper.callWithTracker(
-        { connectionService.getConnection(connectionId, validUserInfo) },
+      trackingHelper.callWithTracker(
+        { connectionService.getConnection(connectionId, authorization, validUserInfo) },
         CONNECTIONS_WITH_ID_PATH,
         PUT,
         userId,
@@ -256,20 +281,21 @@ open class ConnectionsController(
 
     // get destination response to retrieve workspace id as well as input for destination sync modes
     val destinationResponse: DestinationResponse =
-      TrackingHelper.callWithTracker(
-        { destinationService.getDestination(currentConnection.destinationId, validUserInfo) },
+      trackingHelper.callWithTracker(
+        { destinationService.getDestination(currentConnection.destinationId, authorization, validUserInfo) },
         CONNECTIONS_WITH_ID_PATH,
         PUT,
         userId,
       ) as DestinationResponse
 
     // get source schema for catalog id and airbyte catalog
-    val schemaResponse = TrackingHelper.callWithTracker(
-      { sourceService.getSourceSchema(currentConnection.sourceId, false, validUserInfo) },
-      CONNECTIONS_PATH,
-      POST,
-      userId,
-    )
+    val schemaResponse =
+      trackingHelper.callWithTracker(
+        { sourceService.getSourceSchema(currentConnection.sourceId, false, authorization, validUserInfo) },
+        CONNECTIONS_PATH,
+        POST,
+        userId,
+      )
     val catalogId = schemaResponse.catalogId
 
     val airbyteCatalogFromDiscoverSchema = schemaResponse.catalog
@@ -278,14 +304,15 @@ open class ConnectionsController(
     // https://docs.airbyte.com/understanding-airbyte/airbyte-protocol/#catalog
     var configuredCatalog: AirbyteCatalog? = AirbyteCatalog()
 
-    val validStreams: Map<String, AirbyteStreamAndConfiguration> = AirbyteCatalogHelper.getValidStreams(
-      Objects.requireNonNull<AirbyteCatalog?>(airbyteCatalogFromDiscoverSchema),
-    )
+    val validStreams: Map<String, AirbyteStreamAndConfiguration> =
+      AirbyteCatalogHelper.getValidStreams(
+        Objects.requireNonNull<AirbyteCatalog?>(airbyteCatalogFromDiscoverSchema),
+      )
 
     // check user configs
     if (AirbyteCatalogHelper.hasStreamConfigurations(connectionPatchRequest.configurations)) {
       // validate user inputs
-      TrackingHelper.callWithTracker(
+      trackingHelper.callWithTracker(
         {
           AirbyteCatalogHelper.validateStreams(
             airbyteCatalogFromDiscoverSchema!!,
@@ -303,15 +330,16 @@ open class ConnectionsController(
         val schemaStream = validStreamAndConfig!!.stream
         val schemaConfig = validStreamAndConfig.config
 
-        val validDestinationSyncModes = TrackingHelper.callWithTracker(
-          { destinationService.getDestinationSyncModes(destinationResponse, validUserInfo) },
-          CONNECTIONS_PATH,
-          POST,
-          userId,
-        ) as List<DestinationSyncMode>
+        val validDestinationSyncModes =
+          trackingHelper.callWithTracker(
+            { destinationService.getDestinationSyncModes(destinationResponse, authorization, validUserInfo) },
+            CONNECTIONS_PATH,
+            POST,
+            userId,
+          ) as List<DestinationSyncMode>
 
         // set user configs
-        TrackingHelper.callWithTracker(
+        trackingHelper.callWithTracker(
           {
             AirbyteCatalogHelper.setAndValidateStreamConfig(
               streamConfiguration,
@@ -332,23 +360,25 @@ open class ConnectionsController(
     }
 
     val finalConfiguredCatalog = configuredCatalog
-    val connectionResponse: Any = TrackingHelper.callWithTracker(
-      {
-        connectionService.updateConnection(
-          connectionId,
-          connectionPatchRequest,
-          catalogId!!,
-          finalConfiguredCatalog!!,
-          destinationResponse.workspaceId,
-          validUserInfo,
-        )
-      },
-      CONNECTIONS_PATH,
-      POST,
-      userId,
-    )!!
+    val connectionResponse: Any =
+      trackingHelper.callWithTracker(
+        {
+          connectionService.updateConnection(
+            connectionId,
+            connectionPatchRequest,
+            catalogId!!,
+            finalConfiguredCatalog,
+            destinationResponse.workspaceId,
+            authorization,
+            validUserInfo,
+          )
+        },
+        CONNECTIONS_PATH,
+        POST,
+        userId,
+      )!!
 
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       CONNECTIONS_WITH_ID_PATH,
       PUT,
       userId,

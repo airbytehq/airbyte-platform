@@ -19,7 +19,7 @@ import io.airbyte.api.server.constants.PUT
 import io.airbyte.api.server.constants.SOURCES_PATH
 import io.airbyte.api.server.constants.SOURCES_WITH_ID_PATH
 import io.airbyte.api.server.constants.SOURCE_TYPE
-import io.airbyte.api.server.helpers.getIdFromName
+import io.airbyte.api.server.helpers.getActorDefinitionIdFromActorName
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.helpers.removeSourceTypeNode
 import io.airbyte.api.server.mappers.SOURCE_NAME_TO_DEFINITION_ID
@@ -31,37 +31,56 @@ import io.micronaut.http.annotation.Patch
 import java.util.UUID
 import javax.ws.rs.core.Response
 
+// Marked as open because when not marked, micronaut failed to start up because generated beans couldn't extend this one since it was "final"
 @Controller(SOURCES_PATH)
-class SourcesController(
+open class SourcesController(
   private val sourceService: SourceService,
   private val userService: UserService,
+  private val trackingHelper: TrackingHelper,
 ) : SourcesApi {
-  override fun createSource(sourceCreateRequest: SourceCreateRequest?, userInfo: String?): Response {
+  override fun createSource(
+    sourceCreateRequest: SourceCreateRequest,
+    authorization: String?,
+    userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    val configurationJsonNode = sourceCreateRequest!!.configuration as ObjectNode
-    if (configurationJsonNode.findValue(SOURCE_TYPE) == null) {
-      throw UnprocessableEntityProblem()
-    }
-    val sourceName = configurationJsonNode.findValue(SOURCE_TYPE).toString().replace("\"", "")
-    val sourceDefinitionId: UUID = getIdFromName(SOURCE_NAME_TO_DEFINITION_ID, sourceName)
+    val sourceDefinitionId: UUID =
+      sourceCreateRequest.definitionId
+        ?: run {
+          val configurationJsonNode = sourceCreateRequest.configuration as ObjectNode
+          if (configurationJsonNode.findValue(SOURCE_TYPE) == null) {
+            val unprocessableEntityProblem = UnprocessableEntityProblem()
+            trackingHelper.trackFailuresIfAny(
+              SOURCES_PATH,
+              POST,
+              userId,
+              unprocessableEntityProblem,
+            )
+            throw unprocessableEntityProblem
+          }
+          val sourceName = configurationJsonNode.findValue(SOURCE_TYPE).toString().replace("\"", "")
+          getActorDefinitionIdFromActorName(SOURCE_NAME_TO_DEFINITION_ID, sourceName)
+        }
 
     removeSourceTypeNode(sourceCreateRequest)
 
-    val sourceResponse: Any? = TrackingHelper.callWithTracker(
-      {
-        sourceService.createSource(
-          sourceCreateRequest,
-          sourceDefinitionId,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      SOURCES_PATH,
-      POST,
-      userId,
-    )
+    val sourceResponse: Any? =
+      trackingHelper.callWithTracker(
+        {
+          sourceService.createSource(
+            sourceCreateRequest,
+            sourceDefinitionId,
+            authorization,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        SOURCES_PATH,
+        POST,
+        userId,
+      )
 
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       SOURCES_PATH,
       POST,
       userId,
@@ -73,22 +92,28 @@ class SourcesController(
       .build()
   }
 
-  override fun deleteSource(sourceId: UUID?, userInfo: String?): Response {
+  override fun deleteSource(
+    sourceId: UUID,
+    authorization: String?,
+    userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    val sourceResponse: Any? = TrackingHelper.callWithTracker(
-      {
-        sourceService.deleteSource(
-          sourceId!!,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      SOURCES_WITH_ID_PATH,
-      DELETE,
-      userId,
-    )
+    val sourceResponse: Any? =
+      trackingHelper.callWithTracker(
+        {
+          sourceService.deleteSource(
+            sourceId,
+            authorization,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        SOURCES_WITH_ID_PATH,
+        DELETE,
+        userId,
+      )
 
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       SOURCES_WITH_ID_PATH,
       DELETE,
       userId,
@@ -99,22 +124,28 @@ class SourcesController(
       .build()
   }
 
-  override fun getSource(sourceId: UUID?, userInfo: String?): Response {
+  override fun getSource(
+    sourceId: UUID,
+    authorization: String?,
+    userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    val sourceResponse: Any? = TrackingHelper.callWithTracker(
-      {
-        sourceService.getSource(
-          sourceId!!,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      SOURCES_WITH_ID_PATH,
-      GET,
-      userId,
-    )
+    val sourceResponse: Any? =
+      trackingHelper.callWithTracker(
+        {
+          sourceService.getSource(
+            sourceId,
+            authorization,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        SOURCES_WITH_ID_PATH,
+        GET,
+        userId,
+      )
 
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       SOURCES_WITH_ID_PATH,
       GET,
       userId,
@@ -125,8 +156,12 @@ class SourcesController(
       .build()
   }
 
-  override fun initiateOAuth(initiateOauthRequest: InitiateOauthRequest?, userInfo: String?): Response {
-    return Response.status(Response.Status.NOT_IMPLEMENTED).build()
+  override fun initiateOAuth(
+    initiateOauthRequest: InitiateOauthRequest,
+    authorization: String?,
+    userInfo: String?,
+  ): Response {
+    return sourceService.controllerInitiateOAuth(initiateOauthRequest, authorization, userInfo)
   }
 
   override fun listSources(
@@ -134,23 +169,25 @@ class SourcesController(
     includeDeleted: Boolean?,
     limit: Int?,
     offset: Int?,
-
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val safeWorkspaceIds = workspaceIds ?: emptyList()
-    val sources: Any? = TrackingHelper.callWithTracker({
-      sourceService.listSourcesForWorkspaces(
-        safeWorkspaceIds,
-        includeDeleted!!,
-        limit!!,
-        offset!!,
-        getLocalUserInfoIfNull(userInfo),
-      )
-    }, SOURCES_PATH, GET, userId)
+    val sources: Any? =
+      trackingHelper.callWithTracker({
+        sourceService.listSourcesForWorkspaces(
+          safeWorkspaceIds,
+          includeDeleted!!,
+          limit!!,
+          offset!!,
+          authorization,
+          getLocalUserInfoIfNull(userInfo),
+        )
+      }, SOURCES_PATH, GET, userId)
 
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       SOURCES_PATH,
       GET,
       userId,
@@ -162,25 +199,32 @@ class SourcesController(
   }
 
   @Patch
-  override fun patchSource(sourceId: UUID?, sourcePatchRequest: SourcePatchRequest?, userInfo: String?): Response {
+  override fun patchSource(
+    sourceId: UUID,
+    sourcePatchRequest: SourcePatchRequest,
+    authorization: String?,
+    userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    removeSourceTypeNode(sourcePatchRequest!!)
+    removeSourceTypeNode(sourcePatchRequest)
 
-    val sourceResponse: Any? = TrackingHelper.callWithTracker(
-      {
-        sourceService.partialUpdateSource(
-          sourceId!!,
-          sourcePatchRequest,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      SOURCES_WITH_ID_PATH,
-      PATCH,
-      userId,
-    )
+    val sourceResponse: Any? =
+      trackingHelper.callWithTracker(
+        {
+          sourceService.partialUpdateSource(
+            sourceId,
+            sourcePatchRequest,
+            authorization,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        SOURCES_WITH_ID_PATH,
+        PATCH,
+        userId,
+      )
 
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       SOURCES_WITH_ID_PATH,
       PATCH,
       userId,
@@ -191,25 +235,32 @@ class SourcesController(
       .build()
   }
 
-  override fun putSource(sourceId: UUID?, sourcePutRequest: SourcePutRequest?, userInfo: String?): Response {
+  override fun putSource(
+    sourceId: UUID,
+    sourcePutRequest: SourcePutRequest,
+    authorization: String?,
+    userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    removeSourceTypeNode(sourcePutRequest!!)
+    removeSourceTypeNode(sourcePutRequest)
 
-    val sourceResponse: Any? = TrackingHelper.callWithTracker(
-      {
-        sourceService.updateSource(
-          sourceId!!,
-          sourcePutRequest,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      SOURCES_WITH_ID_PATH,
-      PUT,
-      userId,
-    )
+    val sourceResponse: Any? =
+      trackingHelper.callWithTracker(
+        {
+          sourceService.updateSource(
+            sourceId,
+            sourcePutRequest,
+            authorization,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        SOURCES_WITH_ID_PATH,
+        PUT,
+        userId,
+      )
 
-    TrackingHelper.trackSuccess(
+    trackingHelper.trackSuccess(
       SOURCES_WITH_ID_PATH,
       PUT,
       userId,

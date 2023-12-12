@@ -8,7 +8,7 @@ import {
   DestinationSyncMode,
   StreamTransform,
   SyncMode,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 import { ModalServiceProvider } from "hooks/services/Modal";
 
 import { CatalogDiffModal } from "./CatalogDiffModal";
