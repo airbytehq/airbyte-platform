@@ -3,7 +3,7 @@ import React from "react";
 
 import { Overlay } from "components/ui/Overlay";
 
-import { AirbyteStream } from "core/request/AirbyteClient";
+import { AirbyteStream } from "core/api/types/AirbyteClient";
 
 import styles from "./StreamDetailsPanel.module.scss";
 import { StreamPanelHeader } from "./StreamPanelHeader";

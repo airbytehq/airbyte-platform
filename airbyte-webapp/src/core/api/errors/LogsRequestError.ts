@@ -1,4 +1,5 @@
-import { SynchronousJobRead } from "./AirbyteClient";
+import { SynchronousJobRead } from "core/api/types/AirbyteClient";
+
 import { CommonRequestError } from "./CommonRequestError";
 
 export class LogsRequestError extends CommonRequestError {

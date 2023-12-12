@@ -46,6 +46,7 @@ jest.mock("core/api", () => ({
   useSourceDefinition: () => mockSourceDefinition,
   useDestinationDefinition: () => mockDestinationDefinition,
   useDiscoverSchema: jest.fn(() => mockBaseUseDiscoverSchema),
+  LogsRequestError: jest.requireActual("core/api/errors").LogsRequestError,
 }));
 
 jest.mock("area/connector/utils", () => ({

@@ -4,7 +4,7 @@ import {
   ActorDefinitionVersionRead,
   DestinationDefinitionSpecificationRead,
   SourceDefinitionSpecificationRead,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
 import { isSource, isSourceDefinition, isSourceDefinitionSpecification } from "./source";
 import { ConnectorDefinition, ConnectorT } from "./types";

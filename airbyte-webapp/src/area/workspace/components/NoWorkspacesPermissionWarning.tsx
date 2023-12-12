@@ -5,7 +5,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
-import { OrganizationRead } from "core/request/AirbyteClient";
+import { OrganizationRead } from "core/api/types/AirbyteClient";
 
 import styles from "./NoWorkspacesPermissionWarning.module.scss";
 import OctaviaThinking from "./octavia-thinking-no-gears.svg?react";

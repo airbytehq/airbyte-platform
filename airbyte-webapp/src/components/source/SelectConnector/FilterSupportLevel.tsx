@@ -6,7 +6,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
-import { SupportLevel } from "core/request/AirbyteClient";
+import { SupportLevel } from "core/api/types/AirbyteClient";
 
 import styles from "./FilterSupportLevel.module.scss";
 

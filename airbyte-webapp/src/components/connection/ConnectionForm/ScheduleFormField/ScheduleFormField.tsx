@@ -1,7 +1,7 @@
 import React from "react";
 import { useWatch } from "react-hook-form";
 
-import { ConnectionScheduleType } from "core/request/AirbyteClient";
+import { ConnectionScheduleType } from "core/api/types/AirbyteClient";
 
 import { BasicScheduleFormControl } from "./BasicScheduleFormControl";
 import { CronScheduleFormControl } from "./CronScheduleFormControl";

@@ -8,9 +8,9 @@ import selectEvent from "react-select-event";
 import { render, useMockIntersectionObserver } from "test-utils/testutils";
 
 import { useCompleteOAuth } from "core/api";
+import { DestinationDefinitionSpecificationRead } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
-import { DestinationDefinitionSpecificationRead } from "core/request/AirbyteClient";
 import { FeatureItem } from "core/services/features";
 import { OAUTH_BROADCAST_CHANNEL_NAME } from "hooks/services/useConnectorAuth";
 import { ConnectorForm } from "views/Connector/ConnectorForm";

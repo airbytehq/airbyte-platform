@@ -1,7 +1,6 @@
 import { Updater, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useExperiment } from "hooks/services/Experiment";
-import { SCOPE_WORKSPACE } from "services/Scope";
 
 import {
   cancelJob,
@@ -10,6 +9,7 @@ import {
   getJobInfoWithoutLogs,
   listJobsFor,
 } from "../generated/AirbyteClient";
+import { SCOPE_WORKSPACE } from "../scopes";
 import { JobListRequestBody, JobReadList, JobStatus } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";

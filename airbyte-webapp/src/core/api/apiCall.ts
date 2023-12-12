@@ -1,8 +1,8 @@
 import { trackError } from "core/utils/datadog";
 import { shortUuid } from "core/utils/uuid";
 
-import { CommonRequestError } from "../request/CommonRequestError";
-import { VersionError } from "../request/VersionError";
+import { CommonRequestError } from "./errors/CommonRequestError";
+import { VersionError } from "./errors/VersionError";
 
 export interface ApiCallOptions {
   getAccessToken: () => Promise<string | null>;

@@ -6,8 +6,8 @@ import { useState } from "react";
 import { FieldPath, useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
+import { AdvancedAuth, CompleteOAuthResponseAuthPayload } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
-import { AdvancedAuth, CompleteOAuthResponseAuthPayload } from "core/request/AirbyteClient";
 import { useRunOauthFlow } from "hooks/services/useConnectorAuth";
 import { useAuthentication } from "views/Connector/ConnectorForm/useAuthentication";
 

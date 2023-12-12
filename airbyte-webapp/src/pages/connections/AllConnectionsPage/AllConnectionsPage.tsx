@@ -17,7 +17,7 @@ import { PageHeader } from "components/ui/PageHeader";
 import { Text } from "components/ui/Text";
 
 import { useConnectionList } from "core/api";
-import { WebBackendConnectionListItem } from "core/request/AirbyteClient";
+import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { naturalComparatorBy } from "core/utils/objects";
 import { useExperiment } from "hooks/services/Experiment";

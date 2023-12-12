@@ -9,13 +9,13 @@ import { Message, MessageProps, MessageType, isHigherSeverity, MESSAGE_SEVERITY_
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
-import { shouldDisplayBreakingChangeBanner, getHumanReadableUpgradeDeadline } from "core/domain/connector";
 import {
   ActorDefinitionVersionRead,
   FailureOrigin,
   FailureType,
   JobWithAttemptsRead,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
+import { shouldDisplayBreakingChangeBanner, getHumanReadableUpgradeDeadline } from "core/domain/connector";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";

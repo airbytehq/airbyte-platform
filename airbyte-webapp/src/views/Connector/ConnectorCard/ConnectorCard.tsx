@@ -12,6 +12,8 @@ import { Pre } from "components/ui/Pre";
 import { Spinner } from "components/ui/Spinner";
 
 import { useAirbyteCloudIps } from "area/connector/utils/useAirbyteCloudIps";
+import { LogsRequestError } from "core/api";
+import { DestinationRead, SourceRead, SupportLevel, SynchronousJobRead } from "core/api/types/AirbyteClient";
 import {
   Connector,
   ConnectorDefinition,
@@ -19,8 +21,6 @@ import {
   ConnectorSpecification,
   ConnectorT,
 } from "core/domain/connector";
-import { DestinationRead, SourceRead, SupportLevel, SynchronousJobRead } from "core/request/AirbyteClient";
-import { LogsRequestError } from "core/request/LogsRequestError";
 import { isCloudApp } from "core/utils/app";
 import { generateMessageFromError } from "core/utils/errorStatusMessage";
 import { links } from "core/utils/links";

@@ -4,7 +4,7 @@ import {
   DestinationDefinitionRead,
   ActorDefinitionVersionRead,
   SupportState,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
 export const mockDestinationDefinition: DestinationDefinitionRead = {
   destinationDefinitionId: ConnectorIds.Destinations.Postgres,

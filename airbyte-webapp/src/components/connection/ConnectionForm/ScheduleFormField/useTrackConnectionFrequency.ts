@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 
-import { ConnectionScheduleDataBasicSchedule } from "core/request/AirbyteClient";
+import { ConnectionScheduleDataBasicSchedule } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import {
   useConnectionFormService,

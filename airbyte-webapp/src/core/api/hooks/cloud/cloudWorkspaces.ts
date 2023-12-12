@@ -2,7 +2,6 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { useCallback } from "react";
 
 import { useCurrentUser } from "core/services/auth";
-import { SCOPE_USER } from "services/Scope";
 
 import {
   deleteCloudWorkspace,
@@ -13,6 +12,7 @@ import {
   webBackendListWorkspacesByUser,
   webBackendListWorkspacesByUserPaginated,
 } from "../../generated/CloudApi";
+import { SCOPE_USER } from "../../scopes";
 import {
   CloudWorkspaceRead,
   CloudWorkspaceReadList,

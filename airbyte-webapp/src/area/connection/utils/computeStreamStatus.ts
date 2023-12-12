@@ -11,7 +11,7 @@ import {
   StreamStatusJobType,
   StreamStatusRead,
   StreamStatusRunState,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
 export type AirbyteStreamAndConfigurationWithEnforcedStream = AirbyteStreamAndConfiguration & { stream: AirbyteStream };
 

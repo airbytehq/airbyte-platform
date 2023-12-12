@@ -4,16 +4,15 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useAsyncFn, useEffectOnce, useEvent } from "react-use";
 import { v4 as uuid } from "uuid";
 
-import { useCompleteOAuth, useConsentUrls } from "core/api";
-import { ConnectorDefinition, ConnectorDefinitionSpecification, ConnectorSpecification } from "core/domain/connector";
-import { isSourceDefinitionSpecification } from "core/domain/connector/source";
+import { useCompleteOAuth, useConsentUrls, isCommonRequestError } from "core/api";
 import {
   CompleteOAuthResponse,
   CompleteOAuthResponseAuthPayload,
   DestinationOauthConsentRequest,
   SourceOauthConsentRequest,
-} from "core/request/AirbyteClient";
-import { isCommonRequestError } from "core/request/CommonRequestError";
+} from "core/api/types/AirbyteClient";
+import { ConnectorDefinition, ConnectorDefinitionSpecification, ConnectorSpecification } from "core/domain/connector";
+import { isSourceDefinitionSpecification } from "core/domain/connector/source";
 import { useAnalyticsTrackFunctions } from "views/Connector/ConnectorForm/components/Sections/auth/useAnalyticsTrackFunctions";
 import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormContext";
 

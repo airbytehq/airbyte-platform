@@ -5,7 +5,7 @@ import { useIntl } from "react-intl";
 import { FormLabel } from "components/forms/FormControl";
 import { ListBox, Option } from "components/ui/ListBox";
 
-import { ConnectionScheduleType } from "core/request/AirbyteClient";
+import { ConnectionScheduleType } from "core/api/types/AirbyteClient";
 
 import { CRON_DEFAULT_VALUE } from "./CronScheduleFormControl";
 import { BASIC_FREQUENCY_DEFAULT_VALUE } from "./useBasicFrequencyDropdownData";

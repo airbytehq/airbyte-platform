@@ -11,8 +11,6 @@ import {
   OperationCreate,
   SchemaChange,
   SyncMode,
-} from "core/api/types/AirbyteClient";
-import {
   ActorDefinitionVersionRead,
   ConnectionScheduleData,
   ConnectionScheduleType,
@@ -20,7 +18,7 @@ import {
   NamespaceDefinitionType,
   NonBreakingChangesPreference,
   OperationRead,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import {
   ConnectionOrPartialConnection,

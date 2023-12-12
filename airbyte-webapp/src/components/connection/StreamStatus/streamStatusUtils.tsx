@@ -1,5 +1,5 @@
 import { AirbyteStreamAndConfigurationWithEnforcedStream, getStreamKey } from "area/connection/utils";
-import { StreamStatusRead } from "core/request/AirbyteClient";
+import { StreamStatusRead } from "core/api/types/AirbyteClient";
 import { naturalComparatorBy } from "core/utils/objects";
 import { useExperiment } from "hooks/services/Experiment";
 

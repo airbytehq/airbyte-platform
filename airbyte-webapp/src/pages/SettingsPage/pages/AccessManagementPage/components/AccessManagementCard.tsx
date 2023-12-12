@@ -5,7 +5,7 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { OrganizationUserRead, WorkspaceUserRead } from "core/request/AirbyteClient";
+import { OrganizationUserRead, WorkspaceUserRead } from "core/api/types/AirbyteClient";
 
 import { AccessManagementTable } from "./AccessManagementTable";
 import { AddUserControl } from "./AddUserControl";

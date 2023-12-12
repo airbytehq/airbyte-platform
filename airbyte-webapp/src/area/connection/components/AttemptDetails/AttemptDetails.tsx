@@ -5,7 +5,7 @@ import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "re
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { AttemptRead, AttemptStatus, FailureReason, FailureType } from "core/request/AirbyteClient";
+import { AttemptRead, AttemptStatus, FailureReason, FailureType } from "core/api/types/AirbyteClient";
 import { formatBytes } from "core/utils/numberHelper";
 
 import styles from "./AttemptDetails.module.scss";

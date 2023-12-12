@@ -12,7 +12,7 @@ import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace, useTryNotificationWebhook } from "core/api";
-import { NotificationReadStatus, NotificationSettings, NotificationTrigger } from "core/request/AirbyteClient";
+import { NotificationReadStatus, NotificationSettings, NotificationTrigger } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { isFulfilled } from "core/utils/promises";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";

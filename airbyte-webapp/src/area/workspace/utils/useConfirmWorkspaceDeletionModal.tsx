@@ -8,7 +8,7 @@ import { Button } from "components/ui/Button";
 import { Input } from "components/ui/Input";
 import { Text } from "components/ui/Text";
 
-import { WorkspaceRead } from "core/request/AirbyteClient";
+import { WorkspaceRead } from "core/api/types/AirbyteClient";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 import { RoutePaths } from "pages/routePaths";

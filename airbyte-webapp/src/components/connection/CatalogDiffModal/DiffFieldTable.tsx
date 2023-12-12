@@ -1,6 +1,6 @@
 import { FormattedMessage } from "react-intl";
 
-import { FieldTransform } from "core/request/AirbyteClient";
+import { FieldTransform } from "core/api/types/AirbyteClient";
 
 import styles from "./DiffFieldTable.module.scss";
 import { DiffHeader } from "./DiffHeader";

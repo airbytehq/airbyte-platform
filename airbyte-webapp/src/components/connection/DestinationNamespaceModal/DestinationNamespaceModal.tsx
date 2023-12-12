@@ -9,7 +9,7 @@ import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 
-import { NamespaceDefinitionType } from "core/request/AirbyteClient";
+import { NamespaceDefinitionType } from "core/api/types/AirbyteClient";
 
 import { DestinationNamespaceDescription } from "./DestinationNamespaceDescription";
 import styles from "./DestinationNamespaceModal.module.scss";

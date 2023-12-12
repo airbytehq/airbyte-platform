@@ -5,7 +5,7 @@ import { Button, ButtonVariant } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { Icon } from "components/ui/Icon";
 
-import { ConnectionStatus } from "core/request/AirbyteClient";
+import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 

@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { useDestinationDefinitionList, useUpdateDestinationDefinition, useDestinationList } from "core/api";
-import { DestinationDefinitionRead } from "core/request/AirbyteClient";
+import { DestinationDefinitionRead } from "core/api/types/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 

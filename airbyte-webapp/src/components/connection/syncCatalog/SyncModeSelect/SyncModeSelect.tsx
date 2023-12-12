@@ -5,7 +5,7 @@ import { Option } from "components/ui/ListBox";
 import { PillButtonVariant } from "components/ui/PillListBox";
 import { PillListBox } from "components/ui/PillListBox/PillListBox";
 
-import { DestinationSyncMode, SyncMode } from "core/request/AirbyteClient";
+import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 
 import styles from "./SyncModeSelect.module.scss";
 

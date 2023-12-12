@@ -12,8 +12,8 @@ import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
+import { CommonRequestError } from "core/api";
 import { KnownExceptionInfo } from "core/api/types/ConnectorBuilderClient";
-import { CommonRequestError } from "core/request/CommonRequestError";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";

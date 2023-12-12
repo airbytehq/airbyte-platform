@@ -8,7 +8,7 @@ import {
   StreamTransform,
   AirbyteCatalog,
   AirbyteStreamAndConfiguration,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
 const getDefaultCursorField = (streamNode: AirbyteStreamAndConfiguration): string[] => {
   if (streamNode.stream?.defaultCursorField?.length) {

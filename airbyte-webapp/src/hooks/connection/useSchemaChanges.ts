@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { SchemaChange } from "core/request/AirbyteClient";
+import { SchemaChange } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 
 export const useSchemaChanges = (schemaChange: SchemaChange) => {

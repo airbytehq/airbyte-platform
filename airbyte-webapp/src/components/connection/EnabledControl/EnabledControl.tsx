@@ -5,7 +5,7 @@ import { useAsyncFn } from "react-use";
 
 import { Switch } from "components/ui/Switch";
 
-import { ConnectionStatus } from "core/request/AirbyteClient";
+import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { getFrequencyFromScheduleData, Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 

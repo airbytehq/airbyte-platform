@@ -9,7 +9,6 @@ import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { RoutePaths } from "pages/routePaths";
-import { SCOPE_WORKSPACE } from "services/Scope";
 
 import { useCurrentWorkspace, useInvalidateWorkspaceStateQuery } from "./workspaces";
 import {
@@ -25,6 +24,7 @@ import {
   webBackendListConnectionsForWorkspace,
   webBackendUpdateConnection,
 } from "../generated/AirbyteClient";
+import { SCOPE_WORKSPACE } from "../scopes";
 import {
   AirbyteCatalog,
   ConnectionScheduleData,

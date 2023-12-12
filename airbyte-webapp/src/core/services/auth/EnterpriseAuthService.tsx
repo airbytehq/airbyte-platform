@@ -8,7 +8,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { useGetInstanceConfiguration, useGetOrCreateUser } from "core/api";
-import { UserRead } from "core/request/AirbyteClient";
+import { UserRead } from "core/api/types/AirbyteClient";
 import { useNotificationService } from "hooks/services/Notification";
 import { createUriWithoutSsoParams } from "packages/cloud/services/auth/KeycloakService";
 

@@ -1,6 +1,6 @@
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentWorkspace, useUpdateWorkspace } from "core/api";
-import { NotificationSettings } from "core/request/AirbyteClient";
+import { NotificationSettings } from "core/api/types/AirbyteClient";
 
 export const useUpdateNotificationSettings = () => {
   const workspaceId = useCurrentWorkspaceId();

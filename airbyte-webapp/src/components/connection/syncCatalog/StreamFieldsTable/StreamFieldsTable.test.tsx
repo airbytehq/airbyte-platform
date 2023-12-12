@@ -1,6 +1,6 @@
 import { mockStreamConfiguration } from "test-utils/mock-data/mockAirbyteStreamConfiguration";
 
-import { AirbyteStreamConfiguration } from "core/request/AirbyteClient";
+import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 
 import { isChildFieldCursor, isChildFieldPrimaryKey, isCursor, isPrimaryKey } from "./StreamFieldsTable";
 

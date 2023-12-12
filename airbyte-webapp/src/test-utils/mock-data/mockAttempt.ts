@@ -1,4 +1,4 @@
-import { AttemptRead, JobStatus } from "core/request/AirbyteClient";
+import { AttemptRead, JobStatus } from "core/api/types/AirbyteClient";
 
 export const mockAttempt: AttemptRead = {
   id: 1,

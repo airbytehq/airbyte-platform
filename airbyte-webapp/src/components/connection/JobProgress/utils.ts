@@ -1,4 +1,4 @@
-import { AttemptRead, AttemptStatus } from "core/request/AirbyteClient";
+import { AttemptRead, AttemptStatus } from "core/api/types/AirbyteClient";
 
 export const progressBarCalculations = (latestAttempt: AttemptRead) => {
   let numeratorRecords = 0;

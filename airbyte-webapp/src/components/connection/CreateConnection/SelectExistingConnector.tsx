@@ -1,7 +1,7 @@
 import { Card } from "components/ui/Card";
 
+import { DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
 import { isSource } from "core/domain/connector/source";
-import { DestinationRead, SourceRead } from "core/request/AirbyteClient";
 
 import { ExistingConnectorButton } from "./ExistingConnectorButton";
 import styles from "./SelectExistingConnector.module.scss";

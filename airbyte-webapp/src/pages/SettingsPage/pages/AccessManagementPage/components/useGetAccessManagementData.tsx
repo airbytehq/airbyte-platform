@@ -1,5 +1,5 @@
 import { useCurrentWorkspace, useListUsersInOrganization, useListUsersInWorkspace } from "core/api";
-import { OrganizationUserRead, PermissionType, WorkspaceUserRead } from "core/request/AirbyteClient";
+import { OrganizationUserRead, PermissionType, WorkspaceUserRead } from "core/api/types/AirbyteClient";
 import { useIntent } from "core/utils/rbac";
 
 export type ResourceType = "workspace" | "organization" | "instance";

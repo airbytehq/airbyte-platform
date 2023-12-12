@@ -3,7 +3,7 @@ import { renderHook } from "@testing-library/react";
 import { mockUser } from "test-utils/mock-data/mockUser";
 
 import { useListPermissions } from "core/api";
-import { PermissionRead } from "core/request/AirbyteClient";
+import { PermissionRead } from "core/api/types/AirbyteClient";
 
 import { useRbac } from "./rbac";
 import { RbacPermission, useRbacPermissionsQuery } from "./rbacPermissionsQuery";

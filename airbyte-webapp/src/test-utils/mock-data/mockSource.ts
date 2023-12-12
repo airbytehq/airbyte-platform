@@ -3,7 +3,7 @@ import {
   SourceDefinitionRead,
   SourceDefinitionSpecificationRead,
   SupportState,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
 import { ConnectorIds } from "../../area/connector/utils";
 

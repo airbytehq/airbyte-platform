@@ -8,7 +8,7 @@ import { Icon } from "components/ui/Icon";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
-import { JobConfigType, SynchronousJobRead } from "core/request/AirbyteClient";
+import { JobConfigType, SynchronousJobRead } from "core/api/types/AirbyteClient";
 import { downloadFile } from "core/utils/file";
 
 import styles from "./JobFailure.module.scss";

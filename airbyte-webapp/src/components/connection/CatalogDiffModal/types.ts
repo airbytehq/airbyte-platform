@@ -1,4 +1,4 @@
-import { FieldTransform, StreamTransform } from "core/request/AirbyteClient";
+import { FieldTransform, StreamTransform } from "core/api/types/AirbyteClient";
 
 export type DiffVerb = "new" | "removed" | "changed";
 

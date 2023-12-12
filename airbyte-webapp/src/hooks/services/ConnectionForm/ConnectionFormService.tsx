@@ -20,7 +20,7 @@ import {
   SourceDefinitionRead,
   SourceDefinitionSpecificationRead,
   WebBackendConnectionRead,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 import { FormError, generateMessageFromError } from "core/utils/errorStatusMessage";
 
 export type ConnectionFormMode = "create" | "edit" | "readonly";

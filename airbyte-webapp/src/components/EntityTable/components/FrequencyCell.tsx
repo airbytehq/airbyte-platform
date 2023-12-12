@@ -4,7 +4,7 @@ import { FormattedMessage } from "react-intl";
 
 import { Text } from "components/ui/Text";
 
-import { ConnectionScheduleData, ConnectionScheduleType } from "core/request/AirbyteClient";
+import { ConnectionScheduleData, ConnectionScheduleType } from "core/api/types/AirbyteClient";
 
 import styles from "./FrequencyCell.module.scss";
 

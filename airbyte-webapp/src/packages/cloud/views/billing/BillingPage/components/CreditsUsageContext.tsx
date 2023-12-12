@@ -5,8 +5,8 @@ import { Option } from "components/ui/ListBox";
 
 import { useCurrentWorkspace } from "core/api";
 import { useGetCloudWorkspaceUsage } from "core/api/cloud";
+import { DestinationId, SourceId, SupportLevel } from "core/api/types/AirbyteClient";
 import { ConsumptionTimeWindow } from "core/api/types/CloudApi";
-import { DestinationId, SourceId, SupportLevel } from "core/request/AirbyteClient";
 
 import { calculateAvailableSourcesAndDestinations } from "./calculateAvailableSourcesAndDestinations";
 import {

@@ -1,4 +1,4 @@
-import { NotificationItem, NotificationSettings } from "core/request/AirbyteClient";
+import { NotificationItem, NotificationSettings } from "core/api/types/AirbyteClient";
 
 import { NotificationSettingsFormValues, notificationKeys } from "./NotificationSettingsForm";
 

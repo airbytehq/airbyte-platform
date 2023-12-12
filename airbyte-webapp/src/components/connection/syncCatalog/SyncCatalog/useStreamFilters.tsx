@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { AirbyteStreamAndConfiguration } from "core/request/AirbyteClient";
+import { AirbyteStreamAndConfiguration } from "core/api/types/AirbyteClient";
 
 import { SyncStreamFieldWithId } from "../../ConnectionForm/formConfig";
 

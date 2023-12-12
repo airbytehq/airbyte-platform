@@ -5,7 +5,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { FormControl } from "components/forms";
 import { Message } from "components/ui/Message";
 
-import { NonBreakingChangesPreference } from "core/request/AirbyteClient";
+import { NonBreakingChangesPreference } from "core/api/types/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 

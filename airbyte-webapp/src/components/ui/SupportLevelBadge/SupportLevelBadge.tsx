@@ -1,6 +1,6 @@
 import { FormattedMessage } from "react-intl";
 
-import { SupportLevel } from "core/request/AirbyteClient";
+import { SupportLevel } from "core/api/types/AirbyteClient";
 
 import { Badge } from "../Badge";
 import { Tooltip } from "../Tooltip";

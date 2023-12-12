@@ -8,7 +8,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 import { TextInputContainer } from "components/ui/TextInputContainer";
 
-import { NamespaceDefinitionType } from "core/request/AirbyteClient";
+import { NamespaceDefinitionType } from "core/api/types/AirbyteClient";
 import { useModalService } from "hooks/services/Modal";
 
 import { FormConnectionFormValues } from "./formConfig";

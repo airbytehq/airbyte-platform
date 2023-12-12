@@ -19,7 +19,7 @@ import {
   useGetDestination,
   useGetSource,
 } from "core/api";
-import { SupportLevel } from "core/request/AirbyteClient";
+import { SupportLevel } from "core/api/types/AirbyteClient";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./CreateConnectionTitleBlock.module.scss";

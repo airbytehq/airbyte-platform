@@ -34,11 +34,11 @@ import {
   useBuilderResolvedManifestSuspense,
 } from "core/api";
 import { useIsForeignWorkspace } from "core/api/cloud";
+import { SourceDefinitionIdBody } from "core/api/types/AirbyteClient";
 import { ConnectorConfig, KnownExceptionInfo, StreamRead } from "core/api/types/ConnectorBuilderClient";
 import { ConnectorManifest, DeclarativeComponentSchema, Spec } from "core/api/types/ConnectorManifest";
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { FormGroupItem } from "core/form/types";
-import { SourceDefinitionIdBody } from "core/request/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Blocker, useBlocker } from "core/services/navigation";

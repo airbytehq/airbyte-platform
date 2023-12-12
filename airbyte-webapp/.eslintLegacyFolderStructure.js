@@ -5,7 +5,6 @@ module.exports = [
   "src/services/connectorBuilder/ConnectorBuilderStateService.tsx",
   "src/services/connectorBuilder/ConnectorBuilderLocalStorageService.tsx",
   "src/services/connectorBuilder/SchemaWorker.ts",
-  "src/services/Scope.ts",
   // src/hooks
   "src/hooks/useDeleteModal.tsx",
   "src/hooks/useTypesafeReducer.ts",

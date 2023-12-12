@@ -1,6 +1,6 @@
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { StreamTransform } from "core/request/AirbyteClient";
+import { StreamTransform } from "core/api/types/AirbyteClient";
 
 import { DiffAccordion } from "./DiffAccordion";
 import { DiffHeader } from "./DiffHeader";

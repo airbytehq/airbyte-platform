@@ -1,6 +1,6 @@
 import { mockAttempt } from "test-utils/mock-data/mockAttempt";
 
-import { AttemptRead, JobStatus } from "core/request/AirbyteClient";
+import { AttemptRead, JobStatus } from "core/api/types/AirbyteClient";
 
 import { isJobPartialSuccess } from "./jobs";
 

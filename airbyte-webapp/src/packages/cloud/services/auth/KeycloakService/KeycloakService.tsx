@@ -15,7 +15,7 @@ import {
 
 import { config } from "config";
 import { useGetOrCreateUser } from "core/api";
-import { UserRead } from "core/request/AirbyteClient";
+import { UserRead } from "core/api/types/AirbyteClient";
 
 const DEFAULT_KEYCLOAK_REALM = "airbyte";
 const DEFAULT_KEYCLOAK_CLIENT_ID = "airbyte-webapp";

@@ -11,7 +11,7 @@ import {
   StreamStatusJobType,
   StreamStatusRead,
   StreamStatusRunState,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
 import { computeStreamStatus, getStreamKey } from "./computeStreamStatus";
 

@@ -10,9 +10,9 @@ import { Text } from "components/ui/Text";
 
 import { SuggestedConnectors } from "area/connector/components";
 import { useCurrentWorkspace } from "core/api";
+import { SupportLevel } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
-import { SupportLevel } from "core/request/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useModalService } from "hooks/services/Modal";

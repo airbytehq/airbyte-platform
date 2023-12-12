@@ -14,7 +14,7 @@ import { Text } from "components/ui/Text";
 
 import { useListWorkspaces } from "core/api";
 import { useCreateCloudWorkspace } from "core/api/cloud";
-import { OrganizationRead } from "core/request/AirbyteClient";
+import { OrganizationRead } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
 import { useNotificationService } from "hooks/services/Notification";
 import { useOrganizationsToCreateWorkspaces } from "pages/workspaces/components/useOrganizationsToCreateWorkspaces";

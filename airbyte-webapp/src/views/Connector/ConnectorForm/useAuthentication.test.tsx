@@ -2,7 +2,7 @@ import { renderHook } from "@testing-library/react";
 import get from "lodash/get";
 import { FieldError, useFormContext } from "react-hook-form";
 
-import { SourceDefinitionSpecificationRead } from "core/request/AirbyteClient";
+import { SourceDefinitionSpecificationRead } from "core/api/types/AirbyteClient";
 import { FeatureItem, FeatureService } from "core/services/features";
 
 import { useConnectorForm } from "./connectorFormContext";

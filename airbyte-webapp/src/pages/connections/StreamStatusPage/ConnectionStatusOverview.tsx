@@ -11,7 +11,7 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { JobStatus } from "core/request/AirbyteClient";
+import { JobStatus } from "core/api/types/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import styles from "./ConnectionStatusOverview.module.scss";

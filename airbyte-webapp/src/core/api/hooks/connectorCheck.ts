@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 
 import { ConnectionConfiguration } from "area/connector/types";
-import { LogsRequestError } from "core/request/LogsRequestError";
+import { LogsRequestError } from "core/api";
 
 import {
   checkConnectionToDestination,

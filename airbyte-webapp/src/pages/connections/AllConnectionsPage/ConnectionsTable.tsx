@@ -5,7 +5,7 @@ import { ConnectionTable } from "components/EntityTable";
 import { ConnectionTableDataItem } from "components/EntityTable/types";
 import { getConnectionTableData } from "components/EntityTable/utils";
 
-import { WebBackendConnectionListItem } from "core/request/AirbyteClient";
+import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 
 interface ConnectionsTableProps {
   connections: WebBackendConnectionListItem[];

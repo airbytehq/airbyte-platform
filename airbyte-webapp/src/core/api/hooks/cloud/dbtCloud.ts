@@ -13,7 +13,6 @@ import isEmpty from "lodash/isEmpty";
 import { useIntl } from "react-intl";
 import { useAsyncFn } from "react-use";
 
-import { useRequestOptions } from "core/api/useRequestOptions";
 import {
   OperatorType,
   WebBackendConnectionRead,
@@ -22,7 +21,8 @@ import {
   WebhookConfigRead,
   WorkspaceRead,
   WebhookConfigWrite,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
+import { useRequestOptions } from "core/api/useRequestOptions";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useNotificationService } from "hooks/services/Notification";
 

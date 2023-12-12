@@ -3,13 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useSuspenseQuery, useCurrentWorkspace } from "core/api";
 import { isDefined } from "core/utils/common";
 
-import { SCOPE_WORKSPACE } from "../../../services/Scope";
 import {
   getDestinationDefinitionSpecification,
   getSourceDefinitionSpecification,
   getSpecificationForDestinationId,
   getSpecificationForSourceId,
 } from "../generated/AirbyteClient";
+import { SCOPE_WORKSPACE } from "../scopes";
 import { DestinationDefinitionSpecificationRead } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 

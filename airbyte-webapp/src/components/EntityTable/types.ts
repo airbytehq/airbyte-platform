@@ -3,7 +3,7 @@ import {
   ConnectionScheduleType,
   SchemaChange,
   WebBackendConnectionListItem,
-} from "../../core/request/AirbyteClient";
+} from "../../core/api/types/AirbyteClient";
 
 interface EntityTableDataItem {
   entityId: string;

@@ -5,7 +5,6 @@ import { flushSync } from "react-dom";
 import { ConnectionConfiguration } from "area/connector/types";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { isDefined } from "core/utils/common";
-import { SCOPE_WORKSPACE } from "services/Scope";
 
 import { useRemoveConnectionsFromList } from "./connections";
 import { useCurrentWorkspace } from "./workspaces";
@@ -17,6 +16,7 @@ import {
   listSourcesForWorkspace,
   updateSource,
 } from "../generated/AirbyteClient";
+import { SCOPE_WORKSPACE } from "../scopes";
 import { AirbyteCatalog, SourceRead, SynchronousJobRead, WebBackendConnectionListItem } from "../types/AirbyteClient";
 import { useRequestErrorHandler } from "../useRequestErrorHandler";
 import { useRequestOptions } from "../useRequestOptions";

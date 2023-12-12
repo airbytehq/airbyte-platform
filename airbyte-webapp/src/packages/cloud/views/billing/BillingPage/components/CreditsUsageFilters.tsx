@@ -6,8 +6,8 @@ import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
+import { DestinationId, SourceId } from "core/api/types/AirbyteClient";
 import { ConsumptionTimeWindow } from "core/api/types/CloudApi";
-import { DestinationId, SourceId } from "core/request/AirbyteClient";
 
 import { useCreditsContext } from "./CreditsUsageContext";
 import styles from "./CreditsUsageFilters.module.scss";

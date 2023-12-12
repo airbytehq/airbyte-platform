@@ -9,7 +9,7 @@ import { Icon } from "components/ui/Icon";
 import { ProgressBar } from "components/ui/ProgressBar";
 import { Text } from "components/ui/Text";
 
-import { SynchronousJobRead } from "core/request/AirbyteClient";
+import { SynchronousJobRead } from "core/api/types/AirbyteClient";
 
 import styles from "./TestCard.module.scss";
 import TestingConnectionSuccess from "./TestingConnectionSuccess";
