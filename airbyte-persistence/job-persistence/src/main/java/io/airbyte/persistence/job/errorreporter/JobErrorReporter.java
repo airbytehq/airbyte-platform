@@ -84,7 +84,10 @@ public class JobErrorReporter {
    * @param failureSummary - final attempt failure summary
    * @param jobContext - sync job reporting context
    */
-  public void reportSyncJobFailure(final UUID connectionId, final AttemptFailureSummary failureSummary, final SyncJobReportingContext jobContext) {
+  public void reportSyncJobFailure(final UUID connectionId,
+                                   final AttemptFailureSummary failureSummary,
+                                   final SyncJobReportingContext jobContext,
+                                   @Nullable final AttemptConfigReportingContext attemptConfig) {
     Exceptions.swallow(() -> {
       final List<FailureReason> traceMessageFailures = failureSummary.getFailures().stream()
           .filter(failure -> failure.getMetadata() != null && failure.getMetadata().getAdditionalProperties().containsKey(FROM_TRACE_MESSAGE))
@@ -105,7 +108,7 @@ public class JobErrorReporter {
           final Map<String, String> metadata =
               MoreMaps.merge(commonMetadata, getSourceMetadata(sourceDefinition, dockerImage, sourceVersion.getReleaseStage()));
 
-          reportJobFailureReason(workspace, failureReason, dockerImage, metadata);
+          reportJobFailureReason(workspace, failureReason, dockerImage, metadata, attemptConfig);
         } else if (failureOrigin == FailureOrigin.DESTINATION) {
           final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
           final ActorDefinitionVersion destinationVersion = configRepository.getActorDefinitionVersion(jobContext.destinationVersionId());
@@ -113,7 +116,7 @@ public class JobErrorReporter {
           final Map<String, String> metadata =
               MoreMaps.merge(commonMetadata, getDestinationMetadata(destinationDefinition, dockerImage, destinationVersion.getReleaseStage()));
 
-          reportJobFailureReason(workspace, failureReason, dockerImage, metadata);
+          reportJobFailureReason(workspace, failureReason, dockerImage, metadata, attemptConfig);
         } else if (failureOrigin == FailureOrigin.NORMALIZATION) {
           final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
           final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
@@ -148,7 +151,7 @@ public class JobErrorReporter {
               destinationVersion.getNormalizationConfig().getNormalizationRepository() + ":"
                   + destinationVersion.getNormalizationConfig().getNormalizationTag();
 
-          reportJobFailureReason(workspace, failureReason, normalizationDockerImage, metadata);
+          reportJobFailureReason(workspace, failureReason, normalizationDockerImage, metadata, attemptConfig);
         }
       }
     });
@@ -171,7 +174,7 @@ public class JobErrorReporter {
     final Map<String, String> metadata = MoreMaps.merge(
         getSourceMetadata(sourceDefinition, jobContext.dockerImage(), jobContext.releaseStage()),
         Map.of(JOB_ID_KEY, jobContext.jobId().toString()));
-    reportJobFailureReason(workspace, failureReason.withFailureOrigin(FailureOrigin.SOURCE), jobContext.dockerImage(), metadata);
+    reportJobFailureReason(workspace, failureReason.withFailureOrigin(FailureOrigin.SOURCE), jobContext.dockerImage(), metadata, null);
   }
 
   /**
@@ -192,7 +195,7 @@ public class JobErrorReporter {
     final Map<String, String> metadata = MoreMaps.merge(
         getDestinationMetadata(destinationDefinition, jobContext.dockerImage(), jobContext.releaseStage()),
         Map.of(JOB_ID_KEY, jobContext.jobId().toString()));
-    reportJobFailureReason(workspace, failureReason.withFailureOrigin(FailureOrigin.DESTINATION), jobContext.dockerImage(), metadata);
+    reportJobFailureReason(workspace, failureReason.withFailureOrigin(FailureOrigin.DESTINATION), jobContext.dockerImage(), metadata, null);
   }
 
   /**
@@ -212,7 +215,7 @@ public class JobErrorReporter {
     final Map<String, String> metadata = MoreMaps.merge(
         getSourceMetadata(sourceDefinition, jobContext.dockerImage(), jobContext.releaseStage()),
         Map.of(JOB_ID_KEY, jobContext.jobId().toString()));
-    reportJobFailureReason(workspace, failureReason, jobContext.dockerImage(), metadata);
+    reportJobFailureReason(workspace, failureReason, jobContext.dockerImage(), metadata, null);
   }
 
   /**
@@ -227,7 +230,7 @@ public class JobErrorReporter {
     final Map<String, String> metadata = Map.of(
         JOB_ID_KEY, jobContext.jobId().toString(),
         CONNECTOR_REPOSITORY_META_KEY, connectorRepository);
-    reportJobFailureReason(null, failureReason, dockerImage, metadata);
+    reportJobFailureReason(null, failureReason, dockerImage, metadata, null);
   }
 
   private Map<String, String> getConnectionMetadata(final UUID workspaceId, final UUID connectionId) {
@@ -309,7 +312,8 @@ public class JobErrorReporter {
   private void reportJobFailureReason(@Nullable final StandardWorkspace workspace,
                                       final FailureReason failureReason,
                                       final String dockerImage,
-                                      final Map<String, String> metadata) {
+                                      final Map<String, String> metadata,
+                                      @Nullable final AttemptConfigReportingContext attemptConfig) {
     // Failure types associated with a config-error or a manual-cancellation should NOT be reported.
     if (UNSUPPORTED_FAILURETYPES.contains(failureReason.getFailureType())) {
       return;
@@ -329,7 +333,7 @@ public class JobErrorReporter {
         metadata);
 
     try {
-      jobErrorReportingClient.reportJobFailureReason(workspace, failureReason, dockerImage, allMetadata);
+      jobErrorReportingClient.reportJobFailureReason(workspace, failureReason, dockerImage, allMetadata, attemptConfig);
     } catch (final Exception e) {
       LOGGER.error("Error when reporting job failure reason: {}", failureReason, e);
     }
