@@ -1487,7 +1487,7 @@ class ConnectionsHandlerTest {
         final ConnectionDataHistoryRequestBody requestBody = new ConnectionDataHistoryRequestBody()
             .connectionId(connectionRead.getConnectionId())
             .timezone(TIMEZONE_LOS_ANGELES);
-        final LocalDate startDate = Instant.now().atZone(ZoneId.of(requestBody.getTimezone())).minusDays(30).toLocalDate();
+        final LocalDate startDate = Instant.now().atZone(ZoneId.of(requestBody.getTimezone())).minusDays(29).toLocalDate();
         final LocalDate endDate = LocalDate.now(ZoneId.of(requestBody.getTimezone()));
 
         final List<ConnectionDataHistoryReadItem> actual = connectionsHandler.getConnectionDataHistory(requestBody);
@@ -1504,7 +1504,7 @@ class ConnectionsHandlerTest {
       void testDataHistoryAggregation() throws IOException {
         final UUID connectionId = UUID.randomUUID();
         final Instant endTime = Instant.now();
-        final Instant startTime = endTime.minus(30, ChronoUnit.DAYS);
+        final Instant startTime = endTime.minus(29, ChronoUnit.DAYS);
         final long attempt1Bytes = 100L;
         final long attempt2Bytes = 150L;
         final long attempt3Bytes = 200L;
