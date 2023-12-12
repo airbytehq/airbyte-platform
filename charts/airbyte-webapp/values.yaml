@@ -11,8 +11,6 @@ global:
   database:
     secretName: ""
     secretValue: ""
-    host: "example.com"
-    port: "5432"
 
 enabled: true
 ##  webapp.replicaCount Number of webapp replicas
