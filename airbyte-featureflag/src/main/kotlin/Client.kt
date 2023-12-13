@@ -118,12 +118,11 @@ class ConfigFileClient(
     flag: Flag<Boolean>,
     context: Context,
   ): Boolean {
-    return when (flag) {
-      is EnvVar -> flag.enabled(context)
-      else ->
-        lock.read {
-          flags[flag.key]?.serve?.let { it as? Boolean } ?: flag.default
-        }
+    if (flag is EnvVar) {
+      return flag.enabled(context)
+    }
+    return lock.read {
+      flags[flag.key]?.serve(context)?.let { it as? Boolean } ?: flag.default
     }
   }
 
@@ -131,14 +130,14 @@ class ConfigFileClient(
     flag: Flag<String>,
     context: Context,
   ): String {
-    return flags[flag.key]?.serve?.let { it as? String } ?: flag.default
+    return flags[flag.key]?.serve(context)?.let { it as? String } ?: flag.default
   }
 
   override fun intVariation(
     flag: Flag<Int>,
     context: Context,
   ): Int {
-    return flags[flag.key]?.serve?.let { it as? Int } ?: flag.default
+    return flags[flag.key]?.serve(context)?.let { it as? Int } ?: flag.default
   }
 
   companion object {
@@ -249,7 +248,52 @@ private data class ConfigFileFlags(val flags: List<ConfigFileFlag>)
 /**
  * Data wrapper around an individual flag read from the configuration file.
  */
-private data class ConfigFileFlag(val name: String, val serve: Any)
+private data class ConfigFileFlag(
+  val name: String,
+  val serve: Any,
+  val context: List<ConfigFileFlagContext>? = null,
+) {
+  /**
+   * Map of context kind to list of contexts.
+   *
+   * Example:
+   * {
+   *   "workspace": [
+   *     { "serve": "true", include: ["000000-...", "111111-..."] }
+   *   ]
+   * }
+   */
+  private val contextsByType: Map<String, List<ConfigFileFlagContext>> =
+    context?.groupBy { it.type } ?: mapOf()
+
+  /**
+   * Serve checks the [ctx] to see if it matches any contexts that may have
+   * been defined in the flags.yml file.  If it does match, the serve value
+   * from the matching context section will be returned.  If it does not
+   * match, the non-context serve value will be returned.
+   */
+  fun serve(ctx: Context): Any {
+    if (contextsByType.isEmpty()) {
+      return serve
+    }
+    return when (ctx) {
+      is Multi ->
+        ctx.contexts.map { serve(it) }
+          .find { it != serve } ?: serve
+      else ->
+        contextsByType[ctx.kind]
+          ?.findLast { it.include.contains(ctx.key) }
+          ?.serve
+          ?: serve
+    }
+  }
+}
+
+private data class ConfigFileFlagContext(
+  val type: String,
+  val serve: Any,
+  val include: List<String> = listOf(),
+)
 
 /** The yaml mapper is used for reading the feature-flag configuration file. */
 private val yamlMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
@@ -260,9 +304,7 @@ private val yamlMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
  * @param [path] to yaml config file
  * @return map of feature-flag name to feature-flag config
  */
-private fun readConfig(path: Path): Map<String, ConfigFileFlag> =
-  yamlMapper.readValue<ConfigFileFlags>(path.toFile()).flags
-    .associateBy { it.name }
+private fun readConfig(path: Path): Map<String, ConfigFileFlag> = yamlMapper.readValue<ConfigFileFlags>(path.toFile()).flags.associateBy { it.name }
 
 /**
  * Monitors a [Path] for changes, calling [block] when a change is detected.

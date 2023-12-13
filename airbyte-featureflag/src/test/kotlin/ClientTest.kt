@@ -201,6 +201,45 @@ class ConfigFileClientTest {
       assertFalse { boolVariation(evNull, ctx) }
     }
   }
+
+  @Test
+  fun `verify context support`() {
+    val cfg = Path.of("src", "test", "resources", "flags.yml")
+    val client: FeatureFlagClient = ConfigFileClient(cfg)
+
+    // included in one context override
+    val uuidAAAA = UUID.fromString("00000000-aaaa-0000-aaaa-000000000000")
+    // included in one context override
+    val uuidBBBB = UUID.fromString("00000000-bbbb-0000-bbbb-000000000000")
+    // included in no context overrides
+    val uuidCCCC = UUID.fromString("00000000-cccc-0000-cccc-000000000000")
+    // included in two context overrides
+    val uuidDDDD = UUID.fromString("00000000-dddd-0000-dddd-000000000000")
+
+    val flagCtxString = Temporary(key = "test-context-string", default = "default")
+    val flagCtxBoolean = Temporary(key = "test-context-boolean", default = false)
+
+    val ctxAAAA = Workspace(uuidAAAA)
+    val ctxBBBB = Workspace(uuidBBBB)
+    val ctxCCCC = Workspace(uuidCCCC)
+    val ctxDDDD = Workspace(uuidDDDD)
+    val multi = Multi(listOf(ctxAAAA, ctxBBBB))
+    val multiRandom = Multi(listOf(Workspace(UUID.randomUUID()), Workspace(UUID.randomUUID())))
+    val multiFindFirst = Multi(listOf(ctxAAAA, ctxBBBB))
+
+    with(client) {
+      assertFalse("aaaa should be false") { boolVariation(flagCtxBoolean, ctxAAAA) }
+      assertTrue("bbbb should be true") { boolVariation(flagCtxBoolean, ctxBBBB) }
+      assertTrue("cccc should be true") { boolVariation(flagCtxBoolean, ctxCCCC) }
+      assertEquals("aaaa", stringVariation(flagCtxString, ctxAAAA), "aaab should be bbbb")
+      assertEquals("bbbb", stringVariation(flagCtxString, ctxBBBB), "bbbb should be bbbb")
+      assertEquals("all", stringVariation(flagCtxString, ctxCCCC), "cccc should be all (not included anywhere)")
+      assertEquals("bbbb", stringVariation(flagCtxString, ctxDDDD), "dddd should be bbbb")
+      assertEquals("aaaa", stringVariation(flagCtxString, multi), "dddd should be aaaa")
+      assertEquals("all", stringVariation(flagCtxString, multiRandom), "dddd should be aaaa")
+      assertEquals("aaaa", stringVariation(flagCtxString, multiFindFirst), "aaab should be bbbb")
+    }
+  }
 }
 
 class LaunchDarklyClientTest {
