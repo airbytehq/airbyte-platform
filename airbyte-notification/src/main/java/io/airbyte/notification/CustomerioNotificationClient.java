@@ -226,6 +226,7 @@ public class CustomerioNotificationClient extends NotificationClient {
                                         final UUID connectionId,
                                         final String connectionName,
                                         final String connectionUrl,
+                                        final UUID sourceId,
                                         final String sourceName,
                                         final List<String> changes,
                                         final String recipient,
@@ -249,6 +250,8 @@ public class CustomerioNotificationClient extends NotificationClient {
     messageDataNode.put("workspace_name", workspaceName);
     messageDataNode.put("changes_details", String.join("\n", changes));
     messageDataNode.put("source", sourceName);
+    messageDataNode.put("source_name", sourceName);
+    messageDataNode.put("source_id", sourceId.toString());
 
     node.set("message_data", messageDataNode);
 

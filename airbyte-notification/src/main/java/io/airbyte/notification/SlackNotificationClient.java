@@ -152,6 +152,7 @@ public class SlackNotificationClient extends NotificationClient {
                                         final UUID connectionId,
                                         final String connectionName,
                                         final String connectionUrl,
+                                        final UUID sourceId,
                                         final String sourceName,
                                         final List<String> changes,
                                         final String recipient,
