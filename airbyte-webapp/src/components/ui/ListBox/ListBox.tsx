@@ -3,7 +3,7 @@ import { Listbox } from "@headlessui/react";
 import { Float } from "@headlessui-float/react";
 import classNames from "classnames";
 import isEqual from "lodash/isEqual";
-import React from "react";
+import React, { ComponentPropsWithoutRef } from "react";
 import { useIntl } from "react-intl";
 
 import { Text } from "components/ui/Text";
@@ -52,6 +52,7 @@ export interface ListBoxProps<T> {
   className?: string;
   optionsMenuClassName?: string;
   optionClassName?: string;
+  optionTextAs?: ComponentPropsWithoutRef<typeof Text>["as"];
   selectedOptionClassName?: string;
   options: Array<Option<T>>;
   selectedValue?: T;
@@ -87,6 +88,7 @@ export const ListBox = <T,>({
   controlButton: ControlButton = DefaultControlButton,
   optionsMenuClassName,
   optionClassName,
+  optionTextAs,
   selectedOptionClassName,
   "data-testid": testId,
   hasError,
@@ -152,7 +154,9 @@ export const ListBox = <T,>({
                         })}
                       >
                         {icon && <FlexItem className={styles.icon}>{icon}</FlexItem>}
-                        <Text className={styles.label}>{label}</Text>
+                        <Text className={styles.label} as={optionTextAs}>
+                          {label}
+                        </Text>
                       </FlexContainer>
                     )}
                   </Listbox.Option>
