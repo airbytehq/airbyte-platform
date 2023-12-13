@@ -22,6 +22,7 @@ data:
   DATABASE_HOST: {{ include "airbyte.database.host" . }}
   DATABASE_PORT: {{ include "airbyte.database.port" . | quote }}
   DATABASE_URL: {{ include "airbyte.database.url" . | quote }}
+  KEYCLOAK_DATABASE_URL: {{ include "keycloak.database.url" . | quote }}
   DB_DOCKER_MOUNT: airbyte_db
   GCS_LOG_BUCKET: {{ .Values.global.logs.gcs.bucket | quote }}
   GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.gcpLogCredentialsPath" . | quote }}
