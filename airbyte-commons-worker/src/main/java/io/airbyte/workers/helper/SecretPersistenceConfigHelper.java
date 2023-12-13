@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.helpers;
+package io.airbyte.workers.helper;
 
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
 import io.airbyte.commons.enums.Enums;

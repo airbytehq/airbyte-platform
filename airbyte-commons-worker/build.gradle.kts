@@ -80,6 +80,7 @@ dependencies {
     testImplementation(libs.docker.java)
     testImplementation(libs.docker.java.transport.httpclient5)
     testImplementation(libs.reactor.test)
+    testImplementation(libs.mockk)
 
     testCompileOnly(libs.lombok)
     testAnnotationProcessor(libs.lombok)

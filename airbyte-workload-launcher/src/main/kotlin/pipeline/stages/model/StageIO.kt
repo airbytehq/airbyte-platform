@@ -1,5 +1,6 @@
 package io.airbyte.workload.launcher.pipeline.stages.model
 
+import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 
@@ -18,5 +19,15 @@ sealed class StageIO {
 data class LaunchStageIO(
   override val msg: LauncherInput,
   override val logCtx: Map<String, String> = mapOf(),
-  var replicationInput: ReplicationInput? = null,
+  var payload: WorkloadPayload? = null,
 ) : StageIO()
+
+sealed class WorkloadPayload
+
+data class SyncPayload(
+  var input: ReplicationInput? = null,
+) : WorkloadPayload()
+
+data class CheckPayload(
+  var input: StandardCheckConnectionInput? = null,
+) : WorkloadPayload()

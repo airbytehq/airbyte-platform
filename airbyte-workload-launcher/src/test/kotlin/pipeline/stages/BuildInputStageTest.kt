@@ -6,48 +6,104 @@ package io.airbyte.workload.launcher.pipeline.stages
 
 import com.fasterxml.jackson.databind.node.POJONode
 import fixtures.RecordFixtures
+import io.airbyte.config.ActorType
+import io.airbyte.config.StandardCheckConnectionInput
+import io.airbyte.config.WorkloadType
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.models.ReplicationActivityInput
+import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
+import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.serde.PayloadDeserializer
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
+import java.util.UUID
 
 class BuildInputStageTest {
   @Test
-  fun `parses input and hydrates`() {
-    val msgStr = "foo"
+  fun `parses sync input and hydrates`() {
+    val inputStr = "foo"
     val sourceConfig = POJONode("bar")
     val destConfig = POJONode("baz")
-    val replActivityInput = ReplicationActivityInput()
-    val replInput =
+    val unhydrated = ReplicationActivityInput()
+    val hydrated =
       ReplicationInput()
         .withSourceConfiguration(sourceConfig)
         .withDestinationConfiguration(destConfig)
 
+    val checkInputHydrator: CheckConnectionInputHydrator = mockk()
     val replicationInputHydrator: ReplicationInputHydrator = mockk()
     val deserializer: PayloadDeserializer = mockk()
-    every { deserializer.toReplicationActivityInput(msgStr) } returns replActivityInput
-    every { replicationInputHydrator.getHydratedReplicationInput(replActivityInput) } returns replInput
+    every { deserializer.toReplicationActivityInput(inputStr) } returns unhydrated
+    every { replicationInputHydrator.getHydratedReplicationInput(unhydrated) } returns hydrated
 
     val stage =
       BuildInputStage(
+        checkInputHydrator,
         replicationInputHydrator,
         deserializer,
         mockk(),
       )
-    val io = LaunchStageIO(msg = RecordFixtures.launcherInput("1", msgStr, mapOf("label_key" to "label_value"), "/log/path"))
+    val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.SYNC))
 
     val result = stage.applyStage(io)
 
     verify {
-      deserializer.toReplicationActivityInput(msgStr)
-      replicationInputHydrator.getHydratedReplicationInput(replActivityInput)
+      deserializer.toReplicationActivityInput(inputStr)
+      replicationInputHydrator.getHydratedReplicationInput(unhydrated)
     }
 
-    assert(result.replicationInput == replInput)
+    when (val payload = result.payload) {
+      is SyncPayload -> assert(hydrated == payload.input)
+      else -> "Incorrect payload type: ${payload?.javaClass?.name}"
+    }
+  }
+
+  @Test
+  fun `parses check input and hydrates`() {
+    val inputStr = "foo"
+    val unhydrated =
+      StandardCheckConnectionInput()
+        .withActorId(UUID.randomUUID())
+        .withAdditionalProperty("whatever", "random value")
+        .withActorType(ActorType.DESTINATION)
+
+    val hydrated =
+      StandardCheckConnectionInput()
+        .withActorId(UUID.randomUUID())
+        .withAdditionalProperty("whatever", "random value")
+        .withActorType(ActorType.DESTINATION)
+        .withConnectionConfiguration(POJONode("bar"))
+
+    val checkInputHydrator: CheckConnectionInputHydrator = mockk()
+    val replicationInputHydrator: ReplicationInputHydrator = mockk()
+    val deserializer: PayloadDeserializer = mockk()
+    every { deserializer.toStandardCheckConnectionInput(inputStr) } returns unhydrated
+    every { checkInputHydrator.getHydratedCheckInput(unhydrated) } returns hydrated
+
+    val stage =
+      BuildInputStage(
+        checkInputHydrator,
+        replicationInputHydrator,
+        deserializer,
+        mockk(),
+      )
+    val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.CHECK))
+
+    val result = stage.applyStage(io)
+
+    verify {
+      deserializer.toStandardCheckConnectionInput(inputStr)
+      checkInputHydrator.getHydratedCheckInput(unhydrated)
+    }
+
+    when (val payload = result.payload) {
+      is CheckPayload -> assert(hydrated == payload.input)
+      else -> "Incorrect payload type: ${payload?.javaClass?.name}"
+    }
   }
 }

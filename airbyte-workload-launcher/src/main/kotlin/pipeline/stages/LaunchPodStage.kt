@@ -5,6 +5,7 @@ import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
+import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pods.KubePodClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
@@ -26,9 +27,12 @@ class LaunchPodStage(private val launcher: KubePodClient, metricPublisher: Custo
   }
 
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
-    val replInput = input.replicationInput!!
+    val payload = input.payload!!
 
-    launcher.launchReplication(replInput, input.msg)
+    when (payload) {
+      is SyncPayload -> launcher.launchReplication(payload.input!!, input.msg)
+      else -> throw NotImplementedError("")
+    }
 
     return input
   }

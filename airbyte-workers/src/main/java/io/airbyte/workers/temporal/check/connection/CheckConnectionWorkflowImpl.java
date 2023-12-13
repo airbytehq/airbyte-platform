@@ -21,7 +21,7 @@ import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity.CheckConnectionInput;
+import io.airbyte.workers.models.CheckConnectionInput;
 import io.temporal.workflow.Workflow;
 import java.util.Map;
 
