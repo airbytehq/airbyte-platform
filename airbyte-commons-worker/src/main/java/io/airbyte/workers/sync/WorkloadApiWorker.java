@@ -48,6 +48,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.openapitools.client.infrastructure.ClientException;
+import org.openapitools.client.infrastructure.ServerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,6 +57,7 @@ import org.slf4j.LoggerFactory;
  */
 public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOutput> {
 
+  private static final int HTTP_CONFLICT_CODE = 409;
   private static final String DESTINATION = "destination";
   private static final String SOURCE = "source";
 
@@ -96,23 +98,29 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
 
     log.info("Creating workload {}", workloadId);
 
-    // TODO worker may resume, check if job exists first
-
     // Ideally, this should be passed down to avoid the extra API call.
     final Geography geo = getGeography(replicationInput.getConnectionId());
 
     // Create the workload
-    createWorkload(new WorkloadCreateRequest(
-        workloadId,
-        List.of(
-            new WorkloadLabel("connectionId", replicationInput.getConnectionId().toString()),
-            new WorkloadLabel("jobId", replicationInput.getJobRunConfig().getJobId()),
-            new WorkloadLabel("attemptNumber", replicationInput.getJobRunConfig().getAttemptId().toString())),
-        serializedInput,
-        fullLogPath(jobRoot),
-        geo.getValue(),
-        replicationInput.getConnectionId().toString(),
-        WorkloadType.SYNC));
+    try {
+      createWorkload(new WorkloadCreateRequest(
+          workloadId,
+          List.of(
+              new WorkloadLabel("connectionId", replicationInput.getConnectionId().toString()),
+              new WorkloadLabel("jobId", replicationInput.getJobRunConfig().getJobId()),
+              new WorkloadLabel("attemptNumber", replicationInput.getJobRunConfig().getAttemptId().toString())),
+          serializedInput,
+          fullLogPath(jobRoot),
+          geo.getValue(),
+          replicationInput.getConnectionId().toString(),
+          WorkloadType.SYNC));
+    } catch (final ServerException e) {
+      if (e.getStatusCode() != HTTP_CONFLICT_CODE) {
+        throw e;
+      } else {
+        log.info("Workload {} has already been created, reconnecting...", workloadId);
+      }
+    }
 
     // Wait until workload reaches a terminal status
     int i = 0;

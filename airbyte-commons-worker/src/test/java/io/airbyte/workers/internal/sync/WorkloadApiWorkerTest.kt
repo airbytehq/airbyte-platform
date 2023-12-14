@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.openapitools.client.infrastructure.ServerException
 import java.nio.file.Path
 import java.util.Optional
 import java.util.UUID
@@ -79,6 +80,29 @@ internal class WorkloadApiWorkerTest {
 
     every { connectionApi.getConnection(any()) } returns ConnectionRead().geography(Geography.US)
     every { workloadApi.workloadCreate(any()) } returns Unit
+    every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.SUCCESS)
+
+    every { documentStoreClient.read("$expectedDocPrefix/SUCCEEDED") } returns Optional.of(Jsons.serialize(expectedOutput))
+
+    val output = workloadApiWorker.run(replicationInput, jobRoot)
+    assertEquals(expectedOutput, output)
+  }
+
+  @Test
+  fun testResumeReplicationThatAlreadyStarted() {
+    val jobId = 313L
+    val attemptNumber = 37
+    val workloadId = "my-workload"
+    val expectedDocPrefix = "testNs/orchestrator-repl-job-$jobId-attempt-$attemptNumber"
+    val expectedOutput =
+      ReplicationOutput()
+        .withReplicationAttemptSummary(ReplicationAttemptSummary().withStatus(StandardSyncSummary.ReplicationStatus.COMPLETED))
+    initializeReplicationInput(jobId, attemptNumber)
+
+    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
+
+    every { connectionApi.getConnection(any()) } returns ConnectionRead().geography(Geography.US)
+    every { workloadApi.workloadCreate(any()) } throws ServerException(statusCode = 409)
     every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.SUCCESS)
 
     every { documentStoreClient.read("$expectedDocPrefix/SUCCEEDED") } returns Optional.of(Jsons.serialize(expectedOutput))
