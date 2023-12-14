@@ -174,3 +174,5 @@ object WorkloadApiRouting : Permanent<String>(key = "workload-api-routing", defa
 object FailMissingPks : Temporary<Boolean>(key = "platform.fail-missing-pks", default = false)
 
 object PrintLongRecordPks : Temporary<Boolean>(key = "platform.print-long-record-pks", default = false)
+
+object TrackCommittedStatsWhenUsingGlobalState : Temporary<Boolean>(key = "global-state-committed-stats-tracking-enabled", default = false)

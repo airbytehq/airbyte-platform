@@ -28,6 +28,7 @@ import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout;
 import io.airbyte.featureflag.Source;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.SourceType;
+import io.airbyte.featureflag.TrackCommittedStatsWhenUsingGlobalState;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
@@ -163,7 +164,7 @@ public class ReplicationWorkerFactory {
 
     log.info("Setting up replication worker...");
     final SyncPersistence syncPersistence = createSyncPersistence(syncPersistenceFactory, replicationInput, sourceLauncherConfig);
-    final AirbyteMessageTracker messageTracker = createMessageTracker(syncPersistence, featureFlags, replicationInput);
+    final AirbyteMessageTracker messageTracker = createMessageTracker(featureFlagClient, syncPersistence, featureFlags, replicationInput);
 
     return createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
         syncPersistence, recordSchemaValidator, fieldSelector, heartbeatTimeoutChaperone,
@@ -255,11 +256,14 @@ public class ReplicationWorkerFactory {
   /**
    * Create MessageTracker.
    */
-  private static AirbyteMessageTracker createMessageTracker(final SyncPersistence syncPersistence,
+  private static AirbyteMessageTracker createMessageTracker(final FeatureFlagClient featureFlagClient,
+                                                            final SyncPersistence syncPersistence,
                                                             final FeatureFlags featureFlags,
                                                             final ReplicationInput replicationInput) {
+    Context context = new Multi(List.of(new Workspace(replicationInput.getWorkspaceId()), new Connection(replicationInput.getConnectionId())));
+    boolean trackCommittedStatsWhenUsingGlobalState = featureFlagClient.boolVariation(TrackCommittedStatsWhenUsingGlobalState.INSTANCE, context);
     return new AirbyteMessageTracker(syncPersistence, featureFlags, replicationInput.getSourceLauncherConfig().getDockerImage(),
-        replicationInput.getDestinationLauncherConfig().getDockerImage());
+        replicationInput.getDestinationLauncherConfig().getDockerImage(), trackCommittedStatsWhenUsingGlobalState);
   }
 
   /**

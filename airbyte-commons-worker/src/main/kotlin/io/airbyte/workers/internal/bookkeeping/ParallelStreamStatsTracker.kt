@@ -8,6 +8,7 @@ import io.airbyte.protocol.models.AirbyteEstimateTraceMessage.Type
 import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair
+import io.airbyte.protocol.models.StreamDescriptor
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Prototype
 import jakarta.inject.Named
@@ -60,14 +61,50 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
     }
   }
 
-  override fun updateSourceStatesStats(stateMessage: AirbyteStateMessage) {
-    getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
-      .trackStateFromSource(stateMessage)
+  override fun updateSourceStatesStats(
+    stateMessage: AirbyteStateMessage,
+    trackCommittedStatsWhenUsingGlobalState: Boolean,
+  ) {
+    if (trackCommittedStatsWhenUsingGlobalState) {
+      when (stateMessage.type) {
+        AirbyteStateMessage.AirbyteStateType.GLOBAL -> {
+          stateMessage.global.streamStates.forEach {
+            getOrCreateStreamStatsTracker(getNameNamespacePair(it.streamDescriptor))
+              .trackStateFromSource(stateMessage)
+          }
+        }
+        else -> {
+          getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
+            .trackStateFromSource(stateMessage)
+        }
+      }
+    } else {
+      getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
+        .trackStateFromSource(stateMessage)
+    }
   }
 
-  override fun updateDestinationStateStats(stateMessage: AirbyteStateMessage) {
-    getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
-      .trackStateFromDestination(stateMessage)
+  override fun updateDestinationStateStats(
+    stateMessage: AirbyteStateMessage,
+    trackCommittedStatsWhenUsingGlobalState: Boolean,
+  ) {
+    if (trackCommittedStatsWhenUsingGlobalState) {
+      when (stateMessage.type) {
+        AirbyteStateMessage.AirbyteStateType.GLOBAL -> {
+          stateMessage.global.streamStates.forEach {
+            getOrCreateStreamStatsTracker(getNameNamespacePair(it.streamDescriptor))
+              .trackStateFromDestination(stateMessage)
+          }
+        }
+        else -> {
+          getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
+            .trackStateFromDestination(stateMessage)
+        }
+      }
+    } else {
+      getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
+        .trackStateFromDestination(stateMessage)
+    }
   }
 
   /**
@@ -316,7 +353,10 @@ private inline fun <reified T : Any> getNameNamespacePair(type: T): AirbyteStrea
     is AirbyteEstimateTraceMessage -> AirbyteStreamNameNamespacePair(type.name, type.namespace)
     is AirbyteStateMessage ->
       type.stream?.streamDescriptor
-        ?.let { AirbyteStreamNameNamespacePair(it.name, it.namespace) }
+        ?.let { getNameNamespacePair(it) }
         ?: AirbyteStreamNameNamespacePair(null, null)
     else -> throw IllegalArgumentException("Unsupported type ${type::class.java}")
   }
+
+private fun getNameNamespacePair(streamDescriptor: StreamDescriptor): AirbyteStreamNameNamespacePair =
+  AirbyteStreamNameNamespacePair(streamDescriptor.name, streamDescriptor.namespace)

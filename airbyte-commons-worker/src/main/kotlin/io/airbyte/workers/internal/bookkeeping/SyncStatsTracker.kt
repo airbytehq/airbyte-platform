@@ -32,12 +32,18 @@ interface SyncStatsTracker {
   /**
    * Update the stats count from the source state message.
    */
-  fun updateSourceStatesStats(stateMessage: AirbyteStateMessage)
+  fun updateSourceStatesStats(
+    stateMessage: AirbyteStateMessage,
+    trackCommittedStatsWhenUsingGlobalState: Boolean,
+  )
 
   /**
    * Update the stats count from the source state message.
    */
-  fun updateDestinationStateStats(stateMessage: AirbyteStateMessage)
+  fun updateDestinationStateStats(
+    stateMessage: AirbyteStateMessage,
+    trackCommittedStatsWhenUsingGlobalState: Boolean,
+  )
 
   /**
    * Get the per-stream committed bytes count.

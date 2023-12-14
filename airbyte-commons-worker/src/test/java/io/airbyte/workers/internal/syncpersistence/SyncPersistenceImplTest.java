@@ -466,12 +466,12 @@ class SyncPersistenceImplTest {
     verify(syncStatsTracker).updateEstimates(new AirbyteEstimateTraceMessage());
     clearInvocations();
 
-    syncPersistence.updateDestinationStateStats(new AirbyteStateMessage());
-    verify(syncStatsTracker).updateDestinationStateStats(new AirbyteStateMessage());
+    syncPersistence.updateDestinationStateStats(new AirbyteStateMessage(), false);
+    verify(syncStatsTracker).updateDestinationStateStats(new AirbyteStateMessage(), false);
     clearInvocations();
 
-    syncPersistence.updateSourceStatesStats(new AirbyteStateMessage());
-    verify(syncStatsTracker).updateSourceStatesStats(new AirbyteStateMessage());
+    syncPersistence.updateSourceStatesStats(new AirbyteStateMessage(), false);
+    verify(syncStatsTracker).updateSourceStatesStats(new AirbyteStateMessage(), false);
     clearInvocations();
 
     syncPersistence.getStreamToCommittedBytes();
