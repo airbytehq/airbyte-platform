@@ -69,6 +69,7 @@ create table "public"."actor_definition_breaking_change" (
   "message" text not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "scoped_impact" jsonb,
   constraint "actor_definition_breaking_change_pkey"
     primary key ("actor_definition_id", "version")
 );
