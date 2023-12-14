@@ -4,8 +4,9 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
 import { getUtmFromStorage } from "core/utils/utmStorage";
 
+import { useGetInstanceConfiguration } from "./instanceConfiguration";
 import { getOrCreateUserByAuthId, getUser } from "../generated/AirbyteClient";
-import { useGetInstanceConfiguration, useSuspenseQuery } from "../index";
+import { useSuspenseQuery } from "../useSuspenseQuery";
 
 const userKeys = {
   all: ["users"] as const,
