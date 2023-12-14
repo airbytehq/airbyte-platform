@@ -27,13 +27,7 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.featureflag.Connection;
-import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.Organization;
-import io.airbyte.featureflag.UseWorkloadApi;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
@@ -56,12 +50,10 @@ import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -163,10 +155,9 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         () -> {
           final ReplicationInput hydratedReplicationInput = replicationInputHydrator.getHydratedReplicationInput(replicationActivityInput);
           final Worker<ReplicationInput, ReplicationOutput> worker;
-          final Context ffContext = buildUseWorkloadApiFeatureFlagContext(replicationActivityInput.getWorkspaceId(),
-              replicationActivityInput.getConnectionId(),
-              replicationActivityInput.getConnectionContext().getOrganizationId());
-          if (featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, ffContext)) {
+
+          // TODO: remove this once migration to workloads complete
+          if (useWorkloadApi(replicationActivityInput)) {
             worker = new WorkloadApiWorker(documentStoreClient, orchestratorNameGenerator, airbyteApiClient, workloadApi, workloadIdGenerator,
                 replicationActivityInput, featureFlagClient);
           } else {
@@ -214,16 +205,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         context);
   }
 
-  private Context buildUseWorkloadApiFeatureFlagContext(final UUID workspaceId, final UUID connectionId, final UUID organizationId) {
-    List<Context> contexts = new ArrayList<>();
-    contexts.add(new Workspace(workspaceId));
-    contexts.add(new Connection(connectionId));
-    if (organizationId != null) {
-      contexts.add(new Organization(organizationId));
-    }
-    return new Multi(contexts);
-  }
-
   private StandardSyncOutput reduceReplicationOutput(final ReplicationOutput output, final Map<String, Object> metricAttributes) {
     final StandardSyncOutput standardSyncOutput = new StandardSyncOutput();
     final StandardSyncSummary syncSummary = new StandardSyncSummary();
@@ -246,6 +227,15 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     standardSyncOutput.setFailures(output.getFailures());
 
     return standardSyncOutput;
+  }
+
+  private boolean useWorkloadApi(final ReplicationActivityInput input) {
+    // TODO: remove this once active workloads finish
+    if (input.getUseWorkloadApi() == null) {
+      return false;
+    } else {
+      return input.getUseWorkloadApi();
+    }
   }
 
   private void traceReplicationSummary(final ReplicationAttemptSummary replicationSummary, final Map<String, Object> metricAttributes) {

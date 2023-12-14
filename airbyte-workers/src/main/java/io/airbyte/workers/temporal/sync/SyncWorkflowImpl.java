@@ -52,8 +52,8 @@ import org.slf4j.LoggerFactory;
 public class SyncWorkflowImpl implements SyncWorkflow {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SyncWorkflowImpl.class);
-  private static final String AUTO_DETECT_SCHEMA_TAG = "auto_detect_schema";
-  private static final int AUTO_DETECT_SCHEMA_VERSION = 2;
+  private static final String USE_WORKLOAD_API_FF_CHECK_TAG = "use_workload_api_ff_check";
+  private static final int USE_WORKLOAD_API_FF_CHECK_VERSION = 1;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
   private ReplicationActivity replicationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
@@ -68,6 +68,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private RefreshSchemaActivity refreshSchemaActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private ConfigFetchActivity configFetchActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private WorkloadFeatureFlagActivity workloadFeatureFlagActivity;
 
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
@@ -77,11 +79,17 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                                 final StandardSyncInput syncInput,
                                 final UUID connectionId) {
 
+    // TODO: Remove this once Workload API rolled out
+    final var useWorkloadApi = checkUseWorkloadApiFlag(syncInput);
+
     ApmTraceUtils
-        .addTagsToTrace(Map.of(ATTEMPT_NUMBER_KEY, jobRunConfig.getAttemptId(), CONNECTION_ID_KEY, connectionId.toString(), JOB_ID_KEY,
-            jobRunConfig.getJobId(), SOURCE_DOCKER_IMAGE_KEY,
-            sourceLauncherConfig.getDockerImage(),
-            DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage()));
+        .addTagsToTrace(Map.of(
+            ATTEMPT_NUMBER_KEY, jobRunConfig.getAttemptId(),
+            CONNECTION_ID_KEY, connectionId.toString(),
+            JOB_ID_KEY, jobRunConfig.getJobId(),
+            SOURCE_DOCKER_IMAGE_KEY, sourceLauncherConfig.getDockerImage(),
+            DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage(),
+            "USE_WORKLOAD_API", useWorkloadApi));
 
     final String taskQueue = Workflow.getInfo().getTaskQueue();
 
@@ -114,7 +122,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
     StandardSyncOutput syncOutput = replicationActivity
         .replicateV2(generateReplicationActivityInput(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, taskQueue,
-            refreshSchemaOutput));
+            refreshSchemaOutput, useWorkloadApi));
 
     if (syncInput.getOperationSequence() != null && !syncInput.getOperationSequence().isEmpty()) {
       for (final StandardSyncOperation standardSyncOperation : syncInput.getOperationSequence()) {
@@ -193,7 +201,9 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                                                                     final IntegrationLauncherConfig sourceLauncherConfig,
                                                                     final IntegrationLauncherConfig destinationLauncherConfig,
                                                                     final String taskQueue,
-                                                                    final RefreshSchemaActivityOutput refreshSchemaOutput) {
+                                                                    final RefreshSchemaActivityOutput refreshSchemaOutput,
+                                                                    final boolean useWorkloadApi) {
+
     return new ReplicationActivityInput(
         syncInput.getSourceId(),
         syncInput.getDestinationId(),
@@ -212,7 +222,22 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         syncInput.getNamespaceFormat(),
         syncInput.getPrefix(),
         refreshSchemaOutput,
-        syncInput.getConnectionContext());
+        syncInput.getConnectionContext(),
+        useWorkloadApi);
+  }
+
+  private boolean checkUseWorkloadApiFlag(final StandardSyncInput syncInput) {
+    final int version = Workflow.getVersion(USE_WORKLOAD_API_FF_CHECK_TAG, Workflow.DEFAULT_VERSION, USE_WORKLOAD_API_FF_CHECK_VERSION);
+    final boolean shouldCheckFlag = version >= USE_WORKLOAD_API_FF_CHECK_VERSION;
+
+    if (!shouldCheckFlag) {
+      return false;
+    }
+
+    return workloadFeatureFlagActivity.useWorkloadApi(new WorkloadFeatureFlagActivity.Input(
+        syncInput.getWorkspaceId(),
+        syncInput.getConnectionId(),
+        syncInput.getConnectionContext().getOrganizationId()));
   }
 
 }
