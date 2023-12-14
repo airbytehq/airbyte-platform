@@ -9,8 +9,8 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { useConfig } from "config";
 import { useSetupInstanceConfiguration } from "core/api";
+import { useConfig } from "core/config";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 
 import { SecurityCheck } from "./SecurityCheck";

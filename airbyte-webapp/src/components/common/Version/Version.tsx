@@ -2,7 +2,7 @@ import React from "react";
 
 import { Text } from "components/ui/Text";
 
-import { useConfig } from "config";
+import { useConfig } from "core/config";
 
 export const Version: React.FC = () => {
   const config = useConfig();

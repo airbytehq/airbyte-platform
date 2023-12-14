@@ -3,7 +3,7 @@
 import React from "react";
 import { useEffectOnce } from "react-use";
 
-import { config } from "config";
+import { config } from "core/config";
 
 export const AnalyticsProvider: React.FC<React.PropsWithChildren> = React.memo(({ children }) => {
   useEffectOnce(() => {

@@ -3,7 +3,7 @@
 This folder contains all the code to talk to the backend APIs of Airbyte.
 
 **Outside of this folder you must only ever import from either `core/api`, `core/api/cloud`(for
-cloud specific APIs), `core/api/errors` (for error classes) or `core/api/types/*` (for the
+cloud specific APIs), or `core/api/types/*` (for the
 request/response types).**
 
 All other files should be considered local to the API implementation and only used inside

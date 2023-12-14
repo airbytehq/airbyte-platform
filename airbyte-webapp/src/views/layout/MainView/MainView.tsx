@@ -9,8 +9,8 @@ import { Icon } from "components/ui/Icon";
 import { ThemeToggle } from "components/ui/ThemeToggle";
 import { WorkspacesPicker } from "components/workspace/WorkspacesPicker";
 
-import { useConfig } from "config";
 import { useListWorkspacesInfinite } from "core/api";
+import { useConfig } from "core/config";
 import { FeatureItem, useFeature } from "core/services/features";
 import { links } from "core/utils/links";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";

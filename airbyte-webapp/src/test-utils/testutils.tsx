@@ -5,7 +5,6 @@ import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
 import { ThemeProvider } from "styled-components";
 
-import { ConfigContext, config } from "config";
 import {
   ConnectionStatus,
   DestinationRead,
@@ -13,6 +12,7 @@ import {
   SourceRead,
   WebBackendConnectionRead,
 } from "core/api/types/AirbyteClient";
+import { ConfigContext, config } from "core/config";
 import { AnalyticsProvider } from "core/services/analytics";
 import { defaultOssFeatures, FeatureItem, FeatureService } from "core/services/features";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";

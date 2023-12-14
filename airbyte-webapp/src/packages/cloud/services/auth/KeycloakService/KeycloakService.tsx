@@ -13,9 +13,9 @@ import {
   useState,
 } from "react";
 
-import { config } from "config";
 import { useGetOrCreateUser } from "core/api";
 import { UserRead } from "core/api/types/AirbyteClient";
+import { config } from "core/config";
 
 const DEFAULT_KEYCLOAK_REALM = "airbyte";
 const DEFAULT_KEYCLOAK_CLIENT_ID = "airbyte-webapp";

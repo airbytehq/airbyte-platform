@@ -1,6 +1,6 @@
 import { datadogRum } from "@datadog/browser-rum";
 
-import { config } from "config";
+import { config } from "core/config";
 
 export const loadDatadog = (): void => {
   const {

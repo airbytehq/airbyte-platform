@@ -7,8 +7,8 @@ import { finalize, Subject } from "rxjs";
 import { LoadingPage } from "components";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useConfig } from "config";
 import { useCurrentOrganizationInfo } from "core/api";
+import { useConfig } from "core/config";
 import { useAnalyticsService } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 import { FeatureSet, FeatureItem, useFeatureService } from "core/services/features";

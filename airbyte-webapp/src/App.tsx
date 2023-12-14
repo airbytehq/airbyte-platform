@@ -6,8 +6,8 @@ import { ThemeProvider } from "styled-components";
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import { DevToolsToggle } from "components/DevToolsToggle";
 
-import { config, ConfigServiceProvider } from "config";
 import { QueryProvider, useGetInstanceConfiguration } from "core/api";
+import { config, ConfigServiceProvider } from "core/config";
 import { AnalyticsProvider } from "core/services/analytics";
 import { OSSAuthService } from "core/services/auth";
 import { defaultOssFeatures, FeatureService } from "core/services/features";
