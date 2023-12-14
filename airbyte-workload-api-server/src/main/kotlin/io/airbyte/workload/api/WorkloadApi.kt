@@ -139,7 +139,7 @@ open class WorkloadApi(
     ) workloadFailureRequest: WorkloadFailureRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadFailureRequest.workloadId) as Map<String, Any>?)
-    workloadHandler.failWorkload(workloadFailureRequest.workloadId)
+    workloadHandler.failWorkload(workloadFailureRequest.workloadId, workloadFailureRequest.source, workloadFailureRequest.reason)
   }
 
   @PUT
@@ -244,7 +244,7 @@ open class WorkloadApi(
         WORKLOAD_CANCEL_SOURCE_TAG to workloadCancelRequest.source,
       ) as Map<String, Any>?,
     )
-    workloadHandler.cancelWorkload(workloadCancelRequest.workloadId)
+    workloadHandler.cancelWorkload(workloadCancelRequest.workloadId, workloadCancelRequest.source, workloadCancelRequest.reason)
   }
 
   @PUT

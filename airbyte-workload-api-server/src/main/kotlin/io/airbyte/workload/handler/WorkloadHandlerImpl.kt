@@ -95,7 +95,11 @@ class WorkloadHandlerImpl(
     return true
   }
 
-  override fun cancelWorkload(workloadId: String) {
+  override fun cancelWorkload(
+    workloadId: String,
+    source: String?,
+    reason: String?,
+  ) {
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
@@ -103,6 +107,8 @@ class WorkloadHandlerImpl(
         workloadRepository.update(
           workloadId,
           WorkloadStatus.CANCELLED,
+          source,
+          reason,
         )
       WorkloadStatus.CANCELLED -> logger.info { "Workload $workloadId is already cancelled. Cancelling an already cancelled workload is a noop" }
       else -> throw InvalidStatusTransitionException(
@@ -111,7 +117,11 @@ class WorkloadHandlerImpl(
     }
   }
 
-  override fun failWorkload(workloadId: String) {
+  override fun failWorkload(
+    workloadId: String,
+    source: String?,
+    reason: String?,
+  ) {
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
@@ -119,6 +129,8 @@ class WorkloadHandlerImpl(
         workloadRepository.update(
           workloadId,
           WorkloadStatus.FAILURE,
+          source,
+          reason,
         )
       WorkloadStatus.FAILURE -> logger.info { "Workload $workloadId is already marked as failed. Failing an already failed workload is a noop" }
       else -> throw InvalidStatusTransitionException(

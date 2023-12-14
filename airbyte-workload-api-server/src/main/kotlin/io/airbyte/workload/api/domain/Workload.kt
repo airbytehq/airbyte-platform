@@ -15,4 +15,6 @@ data class Workload(
   var geography: String = DEFAULT_GEOGRAPHY,
   var mutexKey: String? = null,
   var type: WorkloadType = WorkloadType.SYNC,
+  var terminationSource: String? = null,
+  var terminationReason: String? = null,
 )

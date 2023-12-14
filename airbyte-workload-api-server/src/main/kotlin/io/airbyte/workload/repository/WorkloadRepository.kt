@@ -58,6 +58,13 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
   fun update(
     @Id id: String,
     status: WorkloadStatus,
+    terminationSource: String?,
+    terminationReason: String?,
+  )
+
+  fun update(
+    @Id id: String,
+    status: WorkloadStatus,
     lastHeartbeatAt: OffsetDateTime,
   )
 
