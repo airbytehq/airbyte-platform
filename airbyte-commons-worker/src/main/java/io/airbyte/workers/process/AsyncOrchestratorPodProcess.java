@@ -7,6 +7,7 @@ package io.airbyte.workers.process;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.TolerationPOJO;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
@@ -21,6 +22,8 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.SecretVolumeSourceBuilder;
 import io.fabric8.kubernetes.api.model.StatusDetails;
+import io.fabric8.kubernetes.api.model.Toleration;
+import io.fabric8.kubernetes.api.model.TolerationBuilder;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMount;
@@ -413,7 +416,8 @@ public class AsyncOrchestratorPodProcess implements KubePod {
                      final ResourceRequirements resourceRequirements,
                      final Map<String, String> fileMap,
                      final Map<Integer, Integer> portMap,
-                     final Map<String, String> nodeSelectors) {
+                     final Map<String, String> nodeSelectors,
+                     final List<TolerationPOJO> tolerations) {
     final List<Volume> volumes = new ArrayList<>();
     final List<VolumeMount> volumeMounts = new ArrayList<>();
     final List<EnvVar> envVars = new ArrayList<>();
@@ -523,6 +527,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
         .withInitContainers(initContainer)
         .withVolumes(volumes)
         .withNodeSelector(nodeSelectors)
+        .withTolerations(buildPodTolerations(tolerations))
         .endSpec()
         .build();
 
@@ -560,6 +565,19 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     updatedFileMap.put(KUBE_POD_INFO, Jsons.serialize(kubePodInfo));
 
     copyFilesToKubeConfigVolumeMain(createdPod, updatedFileMap);
+  }
+
+  private Toleration[] buildPodTolerations(final List<TolerationPOJO> tolerations) {
+    if (tolerations == null || tolerations.isEmpty()) {
+      return null;
+    }
+    return tolerations.stream().map(workerPodToleration -> new TolerationBuilder()
+        .withKey(workerPodToleration.getKey())
+        .withEffect(workerPodToleration.getEffect())
+        .withOperator(workerPodToleration.getOperator())
+        .withValue(workerPodToleration.getValue())
+        .build())
+        .toArray(Toleration[]::new);
   }
 
   private static void copyFilesToKubeConfigVolumeMain(final Pod podDefinition, final Map<String, String> files) {

@@ -198,6 +198,7 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
         final var nodeSelectors =
             isCustomConnector ? workerConfigs.getWorkerIsolatedKubeNodeSelectors().orElse(workerConfigs.getworkerKubeNodeSelectors())
                 : workerConfigs.getworkerKubeNodeSelectors();
+        final var tolerations = workerConfigs.getWorkerKubeTolerations();
 
         try {
           process.create(
@@ -205,7 +206,8 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
               resourceRequirements,
               fileMap,
               portMap,
-              nodeSelectors);
+              nodeSelectors,
+              tolerations);
         } catch (final KubernetesClientException e) {
           ApmTraceUtils.addExceptionToTrace(e);
           throw new WorkerException(
