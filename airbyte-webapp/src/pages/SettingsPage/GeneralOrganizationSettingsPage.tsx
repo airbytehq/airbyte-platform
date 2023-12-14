@@ -17,9 +17,10 @@ const ORGANIZATION_UPDATE_NOTIFICATION_ID = "organization-update-notification";
 
 const organizationValidationSchema = yup.object().shape<Record<keyof OrganizationFormValues, AnySchema>>({
   organizationName: yup.string().trim().required("form.empty.error"),
+  email: yup.string().email("form.email.error").trim().required("form.empty.error"),
 });
 
-type OrganizationFormValues = Pick<OrganizationUpdateRequestBody, "organizationName">;
+type OrganizationFormValues = Pick<OrganizationUpdateRequestBody, "organizationName" | "email">;
 
 export const GeneralOrganizationSettingsPage: React.FC = () => {
   const { organizationId } = useCurrentWorkspace();
@@ -71,13 +72,19 @@ const OrganizationSettingsForm = ({ organizationId }: { organizationId: string }
         });
       }}
       schema={organizationValidationSchema}
-      defaultValues={{ organizationName: organization.organizationName }}
+      defaultValues={{ organizationName: organization.organizationName, email: organization.email }}
       disabled={!canUpdateOrganization}
     >
       <FormControl<OrganizationFormValues>
         label={formatMessage({ id: "settings.organizationSettings.organizationName" })}
         fieldType="input"
         name="organizationName"
+      />
+      <FormControl<OrganizationFormValues>
+        label={formatMessage({ id: "settings.organizationSettings.email" })}
+        fieldType="input"
+        name="email"
+        labelTooltip={formatMessage({ id: "settings.organizationSettings.email.description" })}
       />
       {canUpdateOrganization && <FormSubmissionButtons submitKey="form.saveChanges" />}
     </Form>
