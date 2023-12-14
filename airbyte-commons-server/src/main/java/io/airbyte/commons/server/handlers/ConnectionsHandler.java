@@ -966,7 +966,7 @@ public class ConnectionsHandler {
     for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
       connectionDataHistoryReadItemsByDate.put(date, new ConnectionDataHistoryReadItem()
           .timestamp(Math.toIntExact(date.atStartOfDay(requestZone).toEpochSecond()))
-          .bytes(0));
+          .recordsCommitted(0L));
     }
 
     for (final AttemptWithJobInfo attempt : attempts) {
@@ -979,15 +979,15 @@ public class ConnectionsHandler {
             .toLocalDate();
 
         // Merge it with the bytes synced from the attempt
-        int bytesSynced = 0;
+        long recordsCommitted = 0;
         final Optional<JobOutput> attemptOutput = attempt.getAttempt().getOutput();
         if (attemptOutput.isPresent()) {
-          bytesSynced = Math.toIntExact(attemptOutput.get().getSync().getStandardSyncSummary().getTotalStats().getBytesCommitted());
+          recordsCommitted = attemptOutput.get().getSync().getStandardSyncSummary().getTotalStats().getRecordsCommitted();
         }
 
         // Update the bytes synced for the corresponding day
         final ConnectionDataHistoryReadItem existingItem = connectionDataHistoryReadItemsByDate.get(attemptDateInUserTimeZone);
-        existingItem.setBytes(existingItem.getBytes() + bytesSynced);
+        existingItem.setRecordsCommitted(existingItem.getRecordsCommitted() + recordsCommitted);
       }
     }
 

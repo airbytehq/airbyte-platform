@@ -1,8 +1,9 @@
-import byteSize from "byte-size";
 import { useMemo } from "react";
+import { FormattedMessage } from "react-intl";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
 import { Box } from "components/ui/Box";
+import { Text } from "components/ui/Text";
 
 import { useGetConnectionDataHistory } from "core/api";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
@@ -15,9 +16,12 @@ import { NoDataMessage } from "../HistoricalOverview/NoDataMessage";
 export const DataMovedGraph: React.FC = () => {
   const { connection } = useConnectionEditService();
   const data = useGetConnectionDataHistory(connection.connectionId);
-  const hasData = data.some(({ bytes }) => bytes > 0);
+  const hasData = data.some(({ recordsCommitted }) => recordsCommitted > 0);
 
-  const formattedData = useMemo(() => data.map(({ timestamp, bytes }) => ({ date: timestamp * 1000, bytes })), [data]);
+  const formattedData = useMemo(
+    () => data.map(({ timestamp, recordsCommitted }) => ({ date: timestamp * 1000, recordsCommitted })),
+    [data]
+  );
 
   const chartHeight = Math.max(
     CHART_MIN_HEIGHT,
@@ -33,24 +37,27 @@ export const DataMovedGraph: React.FC = () => {
       <BarChart data={formattedData}>
         <XAxis dataKey="date" {...xAxisConfig} />
 
-        <Bar dataKey="bytes" fill={xAxisConfig.stroke} isAnimationActive={false} />
+        <Bar dataKey="recordsCommitted" fill={xAxisConfig.stroke} isAnimationActive={false} />
 
         <Tooltip
           cursor={{ fill: styles.chartHoverFill, opacity: 0.65 }}
           labelStyle={{ color: styles.tooltipLabelColor }}
           itemStyle={{ color: styles.tooltipItemColor }}
           wrapperClassName={styles.tooltipWrapper}
-          labelFormatter={(value: number) => <Box pb="sm">{new Date(value).toLocaleDateString()}</Box>}
+          labelFormatter={(value: number) => (
+            <Box pb="sm">
+              <Text size="md">{new Date(value).toLocaleDateString()}</Text>
+            </Box>
+          )}
           formatter={(value: number) => {
             // The type cast is unfortunately necessary, due to broken typing in recharts.
             // What we return is a [string, undefined], and the library accepts this as well, but the types
             // require the first element to be of the same type as value, which isn't what the formatter
             // is supposed to do: https://github.com/recharts/recharts/issues/3008
-            const prettyvalues = byteSize(value);
             return [
-              <>
-                <strong>{prettyvalues.value}</strong> {prettyvalues.long}
-              </>,
+              <Text>
+                <FormattedMessage id="connection.overview.graph.dataMoved.tooltipLabel" values={{ value }} />
+              </Text>,
               undefined,
             ] as unknown as [number, string];
           }}

@@ -6237,14 +6237,14 @@ components:
       type: object
       required:
         - timestamp
-        - bytes
+        - recordsCommitted
       properties:
         timestamp:
           type: integer
           format: int
-        bytes:
+        recordsCommitted:
           type: integer
-          format: int
+          format: int64
     ConnectionStreamHistoryRead:
       type: array
       items:

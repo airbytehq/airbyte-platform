@@ -607,6 +607,7 @@
   "connection.overview.graph.noData": "No data from the last 30 days",
   "connection.overview.graph.uptimeStatus": "Streams",
   "connection.overview.graph.dataMoved": "Records",
+  "connection.overview.graph.dataMoved.tooltipLabel": "{value, plural, one {<b>#</b> record} other {<b>#</b> records}} committed",
 
   "form.scheduleType": "Schedule type",
   "form.scheduleType.message": "Set how often data should sync to the destination",

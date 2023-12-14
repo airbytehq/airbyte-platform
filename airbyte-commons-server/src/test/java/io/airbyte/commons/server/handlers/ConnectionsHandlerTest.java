@@ -1430,8 +1430,8 @@ class ConnectionsHandlerTest {
           MAX_FAILURE_JOBS_IN_A_ROW);
     }
 
-    private Attempt generateMockAttempt(final Instant attemptTime, final long bytesSynced) {
-      final StandardSyncSummary standardSyncSummary = new StandardSyncSummary().withTotalStats(new SyncStats().withBytesCommitted(bytesSynced));
+    private Attempt generateMockAttempt(final Instant attemptTime, final long recordsSynced) {
+      final StandardSyncSummary standardSyncSummary = new StandardSyncSummary().withTotalStats(new SyncStats().withRecordsCommitted(recordsSynced));
       final StandardSyncOutput standardSyncOutput = new StandardSyncOutput().withStandardSyncSummary(standardSyncSummary);
       final JobOutput jobOutput = new JobOutput().withOutputType(OutputType.SYNC).withSync(standardSyncOutput);
       return new Attempt(0, 0, null, null, jobOutput, AttemptStatus.FAILED, null, null, 0, 0, attemptTime.getEpochSecond());
@@ -1468,7 +1468,7 @@ class ConnectionsHandlerTest {
       for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
         connectionDataHistoryReadList.add(new ConnectionDataHistoryReadItem()
             .timestamp(Math.toIntExact(date.atStartOfDay(ZoneId.of(timezone)).toEpochSecond()))
-            .bytes(0));
+            .recordsCommitted(0L));
       }
       return connectionDataHistoryReadList;
     }
@@ -1480,7 +1480,7 @@ class ConnectionsHandlerTest {
       @DisplayName("Handles empty history response")
       void testDataHistoryWithEmptyResponse() throws IOException {
         // test that when getConnectionDataHistory is returned an empty list of attempts, the response
-        // contains 30 entries all set to 0 bytesCommitted
+        // contains 30 entries all set to 0 recordsCommitted
         final ConnectionRead connectionRead = new ConnectionRead()
             .connectionId(UUID.randomUUID())
             .syncCatalog(new AirbyteCatalog().streams(Collections.emptyList()));
@@ -1491,7 +1491,8 @@ class ConnectionsHandlerTest {
         final LocalDate endDate = LocalDate.now(ZoneId.of(requestBody.getTimezone()));
 
         final List<ConnectionDataHistoryReadItem> actual = connectionsHandler.getConnectionDataHistory(requestBody);
-        // expected should be a list of items that has 30 entries, all with 0 bytesCommitted and each with a
+        // expected should be a list of items that has 30 entries, all with 0 recordsCommitted and each with
+        // a
         // timestamp that is 1 day apart
         final List<ConnectionDataHistoryReadItem> expected = generateEmptyConnectionDataHistoryReadList(startDate, endDate,
             requestBody.getTimezone());
@@ -1505,20 +1506,20 @@ class ConnectionsHandlerTest {
         final UUID connectionId = UUID.randomUUID();
         final Instant endTime = Instant.now();
         final Instant startTime = endTime.minus(29, ChronoUnit.DAYS);
-        final long attempt1Bytes = 100L;
-        final long attempt2Bytes = 150L;
-        final long attempt3Bytes = 200L;
+        final long attempt1Records = 100L;
+        final long attempt2Records = 150L;
+        final long attempt3Records = 200L;
 
         // First Attempt - Day 1
-        final Attempt attempt1 = generateMockAttempt(startTime.plus(1, ChronoUnit.DAYS), attempt1Bytes); // 100 bytes
+        final Attempt attempt1 = generateMockAttempt(startTime.plus(1, ChronoUnit.DAYS), attempt1Records); // 100 records
         final AttemptWithJobInfo attemptWithJobInfo1 = new AttemptWithJobInfo(attempt1, generateMockJob(connectionId, attempt1));
 
         // Second Attempt - Same Day as First
-        final Attempt attempt2 = generateMockAttempt(startTime.plus(1, ChronoUnit.DAYS), attempt2Bytes); // 150 bytes
+        final Attempt attempt2 = generateMockAttempt(startTime.plus(1, ChronoUnit.DAYS), attempt2Records); // 150 records
         final AttemptWithJobInfo attemptWithJobInfo2 = new AttemptWithJobInfo(attempt2, generateMockJob(connectionId, attempt2));
 
         // Third Attempt - Different Day
-        final Attempt attempt3 = generateMockAttempt(startTime.plus(2, ChronoUnit.DAYS), attempt3Bytes); // 200 bytes
+        final Attempt attempt3 = generateMockAttempt(startTime.plus(2, ChronoUnit.DAYS), attempt3Records); // 200 records
         final AttemptWithJobInfo attemptWithJobInfo3 = new AttemptWithJobInfo(attempt3, generateMockJob(connectionId, attempt3));
 
         final List<AttemptWithJobInfo> attempts = Arrays.asList(attemptWithJobInfo1, attemptWithJobInfo2, attemptWithJobInfo3);
@@ -1535,8 +1536,8 @@ class ConnectionsHandlerTest {
             startTime.atZone(ZoneId.of(requestBody.getTimezone())).toLocalDate(),
             endTime.atZone(ZoneId.of(requestBody.getTimezone())).toLocalDate(),
             requestBody.getTimezone());
-        expected.get(1).setBytes(Math.toIntExact(attempt1Bytes + attempt2Bytes));
-        expected.get(2).setBytes(Math.toIntExact(attempt3Bytes));
+        expected.get(1).setRecordsCommitted(attempt1Records + attempt2Records);
+        expected.get(2).setRecordsCommitted(attempt3Records);
 
         assertEquals(actual, expected);
       }
