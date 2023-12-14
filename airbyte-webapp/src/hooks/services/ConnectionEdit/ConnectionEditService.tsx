@@ -3,7 +3,7 @@ import { useContext, useState, createContext, useCallback } from "react";
 import { useIntl } from "react-intl";
 import { useAsyncFn } from "react-use";
 
-import { useGetConnection, useGetConnectionQuery, useUpdateConnection } from "core/api";
+import { SchemaError, useGetConnection, useGetConnectionQuery, useUpdateConnection } from "core/api";
 import {
   AirbyteCatalog,
   ConnectionStatus,
@@ -13,7 +13,6 @@ import {
 
 import { ConnectionFormServiceProvider } from "../ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "../Notification";
-import { SchemaError } from "../useSourceHook";
 
 interface ConnectionEditProps {
   connectionId: string;

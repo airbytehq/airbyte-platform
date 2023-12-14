@@ -2,7 +2,7 @@ import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { Text } from "components/ui/Text";
 
 import { useSourceDefinitionList, useDestinationDefinitionList } from "core/api";
-import { DestinationDefinitionId, SourceDefinitionId } from "core/request/AirbyteClient";
+import { DestinationDefinitionId, SourceDefinitionId } from "core/api/types/AirbyteClient";
 
 import styles from "./ConnectorDefinitionBranding.module.scss";
 import { FlexContainer } from "../Flex";

@@ -83,6 +83,8 @@ tags:
     description: Interactions with organizations.
   - name: deployment_metadata
     description: Metadata about the Airbyte deployment
+  - name: applications
+    description: Applications can be used to provide api access for Users
 
 paths:
   /v1/workspaces/create:
@@ -4279,6 +4281,84 @@ paths:
                 $ref: "#/components/schemas/DeploymentMetadataRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/applications/list:
+    post:
+      tags:
+        - applications
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationReadList"
+          description: Successful operation
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+      operationId: listApplications
+      summary: Returns all Applications for a User.
+      description: List Applications for a User.
+  /v1/applications/delete:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationId"
+        required: true
+      tags:
+        - applications
+      responses:
+        "200":
+          description: Successful operation
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+      operationId: deleteApplication
+      summary: Deletes an Application.
+      description: Deletes an Application.
+  /v1/applications/create:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationCreate"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationRead"
+          description: Successful operation
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+      operationId: createApplication
+      summary: Creates a new Application.
+      description: Creates a new Application.
+  /v1/applications/token:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationTokenRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessToken"
+          description: Successful operation
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+      operationId: applicationTokenRequest
+      summary: Grant an Access Token for an Application.
+      description: Takes the client_id and client_secret for an application and returns an Access Token.
 
 components:
   securitySchemes:
@@ -8962,6 +9042,57 @@ components:
           $ref: "#/components/schemas/ScopeId"
     SecretPersistenceConfigurationJson:
       type: object
+    ApplicationCreate:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
+    ApplicationId:
+      type: string
+    ApplicationReadList:
+      required:
+        - applications
+      type: object
+      properties:
+        applications:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApplicationRead"
+    ApplicationRead:
+      required:
+        - id
+        - name
+        - client_id
+        - client_secret
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        client_id:
+          type: string
+        client_secret:
+          type: string
+    ApplicationTokenRequest:
+      required:
+        - client_id
+        - client_secret
+      type: object
+      properties:
+        client_id:
+          type: string
+        client_secret:
+          type: string
+    AccessToken:
+      required:
+        - access_token
+      type: object
+      properties:
+        access_token:
+          type: string
 
   responses:
     NotFoundResponse:

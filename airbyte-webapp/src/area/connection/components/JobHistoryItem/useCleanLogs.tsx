@@ -1,7 +1,7 @@
 import Anser from "anser";
 import { useMemo } from "react";
 
-import { AttemptInfoRead } from "core/request/AirbyteClient";
+import { AttemptInfoRead } from "core/api/types/AirbyteClient";
 
 export type CleanedLogLines = Array<{
   original: string;

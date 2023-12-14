@@ -1,7 +1,7 @@
 package io.airbyte.workload.launcher.serde
 
 import io.airbyte.commons.json.Jsons
-import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.workers.models.ReplicationActivityInput
 import jakarta.inject.Singleton
 
@@ -11,7 +11,7 @@ class PayloadDeserializer {
     return Jsons.deserialize(payload, ReplicationActivityInput::class.java)
   }
 
-  fun toReplicationInput(payload: String): ReplicationInput {
-    return Jsons.deserialize(payload, ReplicationInput::class.java)
+  fun toStandardCheckConnectionInput(payload: String): StandardCheckConnectionInput {
+    return Jsons.deserialize(payload, StandardCheckConnectionInput::class.java)
   }
 }

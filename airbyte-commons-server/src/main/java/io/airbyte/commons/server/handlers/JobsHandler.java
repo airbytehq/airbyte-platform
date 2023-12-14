@@ -15,6 +15,7 @@ import io.airbyte.commons.server.JobStatus;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.config.AttemptFailureSummary;
+import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
@@ -23,6 +24,7 @@ import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
+import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
 import io.airbyte.persistence.job.errorreporter.SyncJobReportingContext;
 import io.airbyte.persistence.job.models.Attempt;
@@ -30,6 +32,7 @@ import io.airbyte.persistence.job.models.Job;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,14 +93,37 @@ public class JobsHandler {
         destinationDefinitionVersionId = jobSyncConfig.getDestinationDefinitionVersionId();
       }
       final SyncJobReportingContext jobContext = new SyncJobReportingContext(jobId, sourceDefinitionVersionId, destinationDefinitionVersionId);
-      job.getLastFailedAttempt().flatMap(Attempt::getFailureSummary)
-          .ifPresent(failureSummary -> jobErrorReporter.reportSyncJobFailure(connectionId, failureSummary, jobContext));
+      reportIfLastFailedAttempt(job, connectionId, jobContext);
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.FAILED);
       return new InternalOperationResult().succeeded(true);
     } catch (final IOException e) {
       jobCreationAndStatusUpdateHelper.trackCompletionForInternalFailure(input.getJobId(), input.getConnectionId(), input.getAttemptNumber(),
           JobStatus.FAILED, e);
       throw new RuntimeException(e);
+    }
+  }
+
+  private void reportIfLastFailedAttempt(Job job, UUID connectionId, SyncJobReportingContext jobContext) {
+    Optional<Attempt> lastFailedAttempt = job.getLastFailedAttempt();
+    if (lastFailedAttempt.isPresent()) {
+      Attempt attempt = lastFailedAttempt.get();
+      Optional<AttemptFailureSummary> failureSummaryOpt = attempt.getFailureSummary();
+
+      if (failureSummaryOpt.isPresent()) {
+        AttemptFailureSummary failureSummary = failureSummaryOpt.get();
+        AttemptConfigReportingContext attemptConfig = null;
+
+        Optional<AttemptSyncConfig> syncConfigOpt = attempt.getSyncConfig();
+        if (syncConfigOpt.isPresent()) {
+          AttemptSyncConfig syncConfig = syncConfigOpt.get();
+          attemptConfig = new AttemptConfigReportingContext(
+              syncConfig.getSourceConfiguration(),
+              syncConfig.getDestinationConfiguration(),
+              syncConfig.getState());
+        }
+
+        jobErrorReporter.reportSyncJobFailure(connectionId, failureSummary, jobContext, attemptConfig);
+      }
     }
   }
 

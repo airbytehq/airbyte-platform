@@ -6,7 +6,7 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 
-import { AttemptFailureSummary, FailureType } from "core/request/AirbyteClient";
+import { AttemptFailureSummary, FailureType } from "core/api/types/AirbyteClient";
 import { copyToClipboard } from "core/utils/clipboard";
 import { useNotificationService } from "hooks/services/Notification";
 

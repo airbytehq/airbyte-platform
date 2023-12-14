@@ -946,9 +946,11 @@ public class ConnectionsHandler {
   public List<ConnectionDataHistoryReadItem> getConnectionDataHistory(final ConnectionDataHistoryRequestBody connectionDataHistoryRequestBody)
       throws IOException {
 
+    final ZoneId requestZone = ZoneId.of(connectionDataHistoryRequestBody.getTimezone());
+
     // Start time in designated timezone
     final ZonedDateTime endTimeInUserTimeZone = Instant.now().atZone(ZoneId.of(connectionDataHistoryRequestBody.getTimezone()));
-    final ZonedDateTime startTimeInUserTimeZone = endTimeInUserTimeZone.minusDays(30);
+    final ZonedDateTime startTimeInUserTimeZone = endTimeInUserTimeZone.toLocalDate().atStartOfDay(requestZone).minusDays(29);
     // Convert start time to UTC (since that's what the database uses)
     final Instant startTimeInUTC = startTimeInUserTimeZone.toInstant();
 
@@ -963,7 +965,7 @@ public class ConnectionsHandler {
     final LocalDate endDate = endTimeInUserTimeZone.toLocalDate();
     for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
       connectionDataHistoryReadItemsByDate.put(date, new ConnectionDataHistoryReadItem()
-          .timestamp(Math.toIntExact(date.atStartOfDay(ZoneId.of(connectionDataHistoryRequestBody.getTimezone())).toEpochSecond()))
+          .timestamp(Math.toIntExact(date.atStartOfDay(requestZone).toEpochSecond()))
           .bytes(0));
     }
 
@@ -973,7 +975,7 @@ public class ConnectionsHandler {
       if (endedAtOptional.isPresent()) {
         // Convert the endedAt timestamp from the database to the designated timezone
         final Instant attemptEndedAt = Instant.ofEpochSecond(endedAtOptional.get());
-        final LocalDate attemptDateInUserTimeZone = attemptEndedAt.atZone(ZoneId.of(connectionDataHistoryRequestBody.getTimezone()))
+        final LocalDate attemptDateInUserTimeZone = attemptEndedAt.atZone(requestZone)
             .toLocalDate();
 
         // Merge it with the bytes synced from the attempt

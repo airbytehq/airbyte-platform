@@ -6,7 +6,7 @@ import { Badge } from "components/ui/Badge";
 import { FlexContainer } from "components/ui/Flex";
 import { Table } from "components/ui/Table";
 
-import { OrganizationUserRead, WorkspaceUserRead } from "core/request/AirbyteClient";
+import { OrganizationUserRead, WorkspaceUserRead } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 
 import { RoleManagementControl } from "./RoleManagementControl";

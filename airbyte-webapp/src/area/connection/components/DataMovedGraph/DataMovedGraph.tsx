@@ -1,20 +1,36 @@
 import byteSize from "byte-size";
+import { useMemo } from "react";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
 import { Box } from "components/ui/Box";
 
+import { useGetConnectionDataHistory } from "core/api";
+import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+
+import { CHART_BASE_HEIGHT, CHART_MAX_HEIGHT, CHART_MIN_HEIGHT, CHART_STREAM_ROW_HEIGHT } from "./constants";
 import styles from "./DataMovedGraph.module.scss";
 import { tooltipConfig, xAxisConfig } from "../HistoricalOverview/ChartConfig";
-
-const sampleData: Array<{ date: number; bytes: number }> = [];
-for (let i = 1; i <= 30; i++) {
-  sampleData.push({ date: Date.UTC(2023, 7, i), bytes: Math.round(Math.random() * 1000 + 200) });
-}
+import { NoDataMessage } from "../HistoricalOverview/NoDataMessage";
 
 export const DataMovedGraph: React.FC = () => {
+  const { connection } = useConnectionEditService();
+  const data = useGetConnectionDataHistory(connection.connectionId);
+  const hasData = data.some(({ bytes }) => bytes > 0);
+
+  const formattedData = useMemo(() => data.map(({ timestamp, bytes }) => ({ date: timestamp * 1000, bytes })), [data]);
+
+  const chartHeight = Math.max(
+    CHART_MIN_HEIGHT,
+    Math.min(CHART_MAX_HEIGHT, connection.syncCatalog.streams.length * CHART_STREAM_ROW_HEIGHT + CHART_BASE_HEIGHT)
+  );
+
+  if (!hasData) {
+    return <NoDataMessage />;
+  }
+
   return (
-    <ResponsiveContainer width="100%" height={100}>
-      <BarChart data={sampleData}>
+    <ResponsiveContainer width="100%" height={chartHeight}>
+      <BarChart data={formattedData}>
         <XAxis dataKey="date" {...xAxisConfig} />
 
         <Bar dataKey="bytes" fill={xAxisConfig.stroke} isAnimationActive={false} />

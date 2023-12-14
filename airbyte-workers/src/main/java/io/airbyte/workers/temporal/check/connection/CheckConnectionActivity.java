@@ -5,35 +5,16 @@
 package io.airbyte.workers.temporal.check.connection;
 
 import io.airbyte.config.ConnectorJobOutput;
-import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardCheckConnectionOutput;
-import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
-import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.workers.models.CheckConnectionInput;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  * Check connection activity temporal interface.
  */
 @ActivityInterface
 public interface CheckConnectionActivity {
-
-  /**
-   * CheckConnectionInput.
-   */
-  @Data
-  @NoArgsConstructor
-  @AllArgsConstructor
-  class CheckConnectionInput {
-
-    private JobRunConfig jobRunConfig;
-    private IntegrationLauncherConfig launcherConfig;
-    private StandardCheckConnectionInput connectionConfiguration;
-
-  }
 
   @ActivityMethod
   ConnectorJobOutput runWithJobOutput(CheckConnectionInput input);

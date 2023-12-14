@@ -5,6 +5,8 @@ import { ConnectionStatusIndicatorStatus } from "components/connection/Connectio
 
 // Rough idea for the data structure we'll get from API
 export interface ChartStream {
+  streamNamespace?: string;
+  streamName: string;
   status: ConnectionStatusIndicatorStatus;
 }
 export interface UptimeDayEntry {
@@ -34,7 +36,8 @@ interface InjectedStreamWaffleChartProps extends StreamWaffleChartProps {
   isTooltipActive: boolean;
 }
 
-const getCellColor = (streamStatus: ConnectionStatusIndicatorStatus) => {
+type WaffleColor = "green" | "darkBlue" | "red" | "black" | "empty";
+const getCellColor = (streamStatus: ConnectionStatusIndicatorStatus): WaffleColor => {
   switch (streamStatus) {
     case ConnectionStatusIndicatorStatus.OnTime:
     case ConnectionStatusIndicatorStatus.OnTrack:

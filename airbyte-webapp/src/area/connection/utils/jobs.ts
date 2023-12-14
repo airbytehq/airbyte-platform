@@ -1,4 +1,4 @@
-import { AttemptRead, JobStatus, SynchronousJobRead } from "core/request/AirbyteClient";
+import { AttemptRead, JobStatus, SynchronousJobRead } from "core/api/types/AirbyteClient";
 
 import { JobWithAttempts } from "../types/jobs";
 

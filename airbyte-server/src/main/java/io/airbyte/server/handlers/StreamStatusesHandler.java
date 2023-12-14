@@ -22,7 +22,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -100,11 +99,10 @@ public class StreamStatusesHandler {
         .minusDays(30)
         .toLocalDate()
         .atStartOfDay(ZoneId.of(req.getTimezone()))
-        .withZoneSameInstant(ZoneOffset.UTC)
         .toOffsetDateTime();
 
-    final var streamStatuses = repo.findLatestStatusPerRunStateByConnectionIdAndDayAfterTimestamp(req.getConnectionId(),
-        thirtyDaysAgoInUTC)
+    final var streamStatuses = repo.findLatestStatusPerStreamByConnectionIdAndDayAfterTimestamp(req.getConnectionId(),
+        thirtyDaysAgoInUTC, req.getTimezone())
         .stream()
         .map(mapper::map)
         .toList();

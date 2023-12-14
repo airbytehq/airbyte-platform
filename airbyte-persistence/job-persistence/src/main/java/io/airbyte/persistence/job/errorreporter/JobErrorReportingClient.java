@@ -20,6 +20,7 @@ public interface JobErrorReportingClient {
   void reportJobFailureReason(@Nullable StandardWorkspace workspace,
                               final FailureReason reason,
                               @Nullable final String dockerImage,
-                              Map<String, String> metadata);
+                              Map<String, String> metadata,
+                              @Nullable final AttemptConfigReportingContext attemptConfig);
 
 }

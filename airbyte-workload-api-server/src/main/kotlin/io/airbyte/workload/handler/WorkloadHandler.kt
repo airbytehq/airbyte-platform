@@ -35,9 +35,17 @@ interface WorkloadHandler {
     dataplaneId: String,
   ): Boolean
 
-  fun cancelWorkload(workloadId: String)
+  fun cancelWorkload(
+    workloadId: String,
+    source: String?,
+    reason: String?,
+  )
 
-  fun failWorkload(workloadId: String)
+  fun failWorkload(
+    workloadId: String,
+    source: String?,
+    reason: String?,
+  )
 
   fun succeedWorkload(workloadId: String)
 

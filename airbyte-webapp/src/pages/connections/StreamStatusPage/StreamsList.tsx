@@ -13,7 +13,7 @@ import { Icon } from "components/ui/Icon";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 
-import { ConnectionStatus } from "core/request/AirbyteClient";
+import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import { StreamActionsMenu } from "./StreamActionsMenu";

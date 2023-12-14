@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=airbyte/airbyte-base-java-python-image:1.0
+ARG BASE_IMAGE=airbyte/airbyte-base-java-python-image:1.1.0
 FROM ${BASE_IMAGE} AS connector-builder-server
 
 # Set up CDK requirements

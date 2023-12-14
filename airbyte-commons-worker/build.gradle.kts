@@ -72,6 +72,7 @@ dependencies {
     testImplementation(libs.bundles.micronaut.test)
     testImplementation(libs.json.path)
     testImplementation(libs.mockito.inline)
+    testImplementation(libs.mockk)
     testImplementation(variantOf(libs.opentracing.util.test) { classifier("tests") })
     testImplementation(libs.postgresql)
     testImplementation(libs.platform.testcontainers.postgresql)
@@ -80,6 +81,7 @@ dependencies {
     testImplementation(libs.docker.java)
     testImplementation(libs.docker.java.transport.httpclient5)
     testImplementation(libs.reactor.test)
+    testImplementation(libs.mockk)
 
     testCompileOnly(libs.lombok)
     testAnnotationProcessor(libs.lombok)

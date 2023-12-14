@@ -10,7 +10,7 @@ import { ExternalLink } from "components/ui/Link";
 import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
-import { ConnectionScheduleDataCron } from "core/request/AirbyteClient";
+import { ConnectionScheduleDataCron } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { links } from "core/utils/links";
 

@@ -6,9 +6,8 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 
-import { LogsRequestError } from "core/request/LogsRequestError";
+import { SchemaError as SchemaErrorType, LogsRequestError } from "core/api";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { SchemaError as SchemaErrorType } from "hooks/services/useSourceHook";
 
 import styles from "./SchemaError.module.scss";
 

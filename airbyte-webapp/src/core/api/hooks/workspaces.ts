@@ -3,7 +3,6 @@ import { useCallback, useLayoutEffect } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentUser } from "core/services/auth";
-import { SCOPE_USER, SCOPE_WORKSPACE } from "services/Scope";
 
 import {
   createWorkspace,
@@ -16,6 +15,7 @@ import {
   updateWorkspaceName,
   webBackendGetWorkspaceState,
 } from "../generated/AirbyteClient";
+import { SCOPE_USER, SCOPE_WORKSPACE } from "../scopes";
 import {
   WorkspaceCreate,
   WorkspaceRead,

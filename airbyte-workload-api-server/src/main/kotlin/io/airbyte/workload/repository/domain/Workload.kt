@@ -39,6 +39,10 @@ data class Workload(
   var mutexKey: String?,
   @field:TypeDef(type = DataType.OBJECT)
   var type: WorkloadType,
+  @Nullable
+  var terminationSource: String? = null,
+  @Nullable
+  var terminationReason: String? = null,
 ) {
   @JvmOverloads
   constructor(
@@ -64,6 +68,8 @@ data class Workload(
     lastHeartbeatAt = null,
     createdAt = null,
     updatedAt = null,
+    terminationSource = null,
+    terminationReason = null,
   )
 }
 

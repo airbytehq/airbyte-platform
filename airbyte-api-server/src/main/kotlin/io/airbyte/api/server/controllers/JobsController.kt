@@ -12,6 +12,7 @@ import io.airbyte.airbyte_api.model.generated.JobTypeEnum
 import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByFieldEnum
 import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByMethodEnum
 import io.airbyte.api.server.apiTracking.TrackingHelper
+import io.airbyte.api.server.constants.AUTH_HEADER
 import io.airbyte.api.server.constants.DELETE
 import io.airbyte.api.server.constants.ENDPOINT_API_USER_INFO_HEADER
 import io.airbyte.api.server.constants.GET
@@ -47,6 +48,7 @@ open class JobsController(
   @Path("/{jobId}")
   override fun cancelJob(
     @PathParam("jobId") jobId: Long,
+    @HeaderParam(AUTH_HEADER) authorization: String?,
     @HeaderParam(ENDPOINT_API_USER_INFO_HEADER) userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -56,6 +58,7 @@ open class JobsController(
         {
           jobService.cancelJob(
             jobId,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -77,6 +80,7 @@ open class JobsController(
 
   override fun createJob(
     jobCreateRequest: JobCreateRequest,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -86,6 +90,7 @@ open class JobsController(
         {
           connectionService.getConnection(
             jobCreateRequest.connectionId,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -101,6 +106,7 @@ open class JobsController(
           trackingHelper.callWithTracker({
             jobService.sync(
               jobCreateRequest.connectionId,
+              authorization,
               getLocalUserInfoIfNull(userInfo),
             )
           }, JOBS_PATH, POST, userId)!!
@@ -121,6 +127,7 @@ open class JobsController(
           trackingHelper.callWithTracker({
             jobService.reset(
               jobCreateRequest.connectionId,
+              authorization,
               getLocalUserInfoIfNull(userInfo),
             )
           }, JOBS_PATH, POST, userId)!!
@@ -153,6 +160,7 @@ open class JobsController(
   @Path("/{jobId}")
   override fun getJob(
     @PathParam("jobId") jobId: Long,
+    @HeaderParam(AUTH_HEADER) authorization: String?,
     @HeaderParam(ENDPOINT_API_USER_INFO_HEADER) userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -162,6 +170,7 @@ open class JobsController(
         {
           jobService.getJobInfoWithoutLogs(
             jobId,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -193,6 +202,7 @@ open class JobsController(
     updatedAtStart: OffsetDateTime?,
     updatedAtEnd: OffsetDateTime?,
     orderBy: String?,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -221,6 +231,7 @@ open class JobsController(
                 filter,
                 orderByField,
                 orderByMethod,
+                authorization,
                 getLocalUserInfoIfNull(userInfo),
               )
             },
@@ -236,6 +247,7 @@ open class JobsController(
                 filter,
                 orderByField,
                 orderByMethod,
+                authorization,
                 getLocalUserInfoIfNull(userInfo),
               )
             },

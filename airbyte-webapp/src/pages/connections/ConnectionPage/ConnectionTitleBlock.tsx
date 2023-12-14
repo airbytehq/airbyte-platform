@@ -11,7 +11,7 @@ import { Message } from "components/ui/Message";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
-import { ConnectionStatus, SupportLevel } from "core/request/AirbyteClient";
+import { ConnectionStatus, SupportLevel } from "core/api/types/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";

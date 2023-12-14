@@ -9,8 +9,7 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
-import { useConnectionList } from "core/api";
-import { useDestinationList } from "hooks/services/useDestinationHook";
+import { useConnectionList, useDestinationList } from "core/api";
 
 import { CreateNewDestination, DESTINATION_DEFINITION_PARAM } from "./CreateNewDestination";
 import { RadioButtonTiles } from "./RadioButtonTiles";

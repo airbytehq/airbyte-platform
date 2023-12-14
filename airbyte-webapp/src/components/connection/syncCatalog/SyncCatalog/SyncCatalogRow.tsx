@@ -4,9 +4,9 @@ import React, { useCallback, useMemo } from "react";
 import { FieldErrors } from "react-hook-form";
 import { useToggle } from "react-use";
 
+import { AirbyteStreamConfiguration, DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 import { SyncSchemaField, SyncSchemaFieldObject } from "core/domain/catalog";
 import { traverseSchemaToField } from "core/domain/catalog/traverseSchemaToField";
-import { AirbyteStreamConfiguration, DestinationSyncMode, SyncMode } from "core/request/AirbyteClient";
 import { naturalComparatorBy } from "core/utils/objects";
 import { useDestinationNamespace } from "hooks/connection/useDestinationNamespace";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";

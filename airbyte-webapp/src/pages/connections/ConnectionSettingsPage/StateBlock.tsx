@@ -11,7 +11,7 @@ import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { useCreateOrUpdateState, useGetConnectionState } from "core/api";
-import { AirbyteCatalog, ConnectionState, StreamState } from "core/request/AirbyteClient";
+import { AirbyteCatalog, ConnectionState, StreamState } from "core/api/types/AirbyteClient";
 import { haveSameShape } from "core/utils/objects";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 

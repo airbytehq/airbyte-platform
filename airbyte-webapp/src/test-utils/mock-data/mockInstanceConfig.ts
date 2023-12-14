@@ -1,4 +1,4 @@
-import { InstanceConfigurationResponse } from "core/request/AirbyteClient";
+import { InstanceConfigurationResponse } from "core/api/types/AirbyteClient";
 
 export const mockProInstanceConfig: InstanceConfigurationResponse = {
   auth: {

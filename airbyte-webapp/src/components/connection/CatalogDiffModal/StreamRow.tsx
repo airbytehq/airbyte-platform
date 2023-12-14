@@ -2,7 +2,7 @@ import classnames from "classnames";
 
 import { Icon } from "components/ui/Icon";
 
-import { StreamTransform } from "core/request/AirbyteClient";
+import { StreamTransform } from "core/api/types/AirbyteClient";
 
 import styles from "./StreamRow.module.scss";
 import { DiffVerb } from "./types";

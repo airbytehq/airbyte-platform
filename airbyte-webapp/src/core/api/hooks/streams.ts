@@ -1,8 +1,8 @@
 import { getStreamKey, sortStreamStatuses } from "area/connection/utils";
-import { SCOPE_WORKSPACE } from "services/Scope";
 
 import { getStreamStatusesByRunState } from "../generated/AirbyteClient";
 import { ConnectionIdRequestBody, StreamStatusRead, StreamStatusRunState } from "../generated/AirbyteClient.schemas";
+import { SCOPE_WORKSPACE } from "../scopes";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 

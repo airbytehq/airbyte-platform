@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
 
 import { ConnectorCheckParams, useCurrentWorkspace, useCheckConnector } from "core/api";
+import { CheckConnectionRead } from "core/api/types/AirbyteClient";
 import { ConnectorHelper } from "core/domain/connector";
 import { ConnectorT } from "core/domain/connector/types";
-import { CheckConnectionRead } from "core/request/AirbyteClient";
 
 import { ConnectorCardValues } from "../ConnectorForm";
 

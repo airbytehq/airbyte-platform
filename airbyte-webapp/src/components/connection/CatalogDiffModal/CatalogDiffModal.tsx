@@ -4,7 +4,7 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 
-import { AirbyteCatalog, CatalogDiff } from "core/request/AirbyteClient";
+import { AirbyteCatalog, CatalogDiff } from "core/api/types/AirbyteClient";
 
 import styles from "./CatalogDiffModal.module.scss";
 import { DiffSection } from "./DiffSection";

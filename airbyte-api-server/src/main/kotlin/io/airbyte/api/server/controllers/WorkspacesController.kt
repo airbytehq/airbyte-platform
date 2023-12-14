@@ -23,34 +23,39 @@ open class WorkspacesController(
   override fun createOrUpdateWorkspaceOAuthCredentials(
     workspaceId: UUID?,
     workspaceOAuthCredentialsRequest: WorkspaceOAuthCredentialsRequest?,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     return workspaceService.controllerSetWorkspaceOverrideOAuthParams(
       workspaceId!!,
       workspaceOAuthCredentialsRequest,
+      authorization,
       userInfo,
     )
   }
 
   override fun createWorkspace(
     workspaceCreateRequest: WorkspaceCreateRequest?,
+    authorization: String?,
     userInfo: String?,
   ): Response {
-    return workspaceService.controllerCreateWorkspace(workspaceCreateRequest!!, userInfo)
+    return workspaceService.controllerCreateWorkspace(workspaceCreateRequest!!, authorization, userInfo)
   }
 
   override fun deleteWorkspace(
     workspaceId: UUID?,
+    authorization: String?,
     userInfo: String?,
   ): Response {
-    return workspaceService.controllerDeleteWorkspace(workspaceId!!, userInfo)
+    return workspaceService.controllerDeleteWorkspace(workspaceId!!, authorization, userInfo)
   }
 
   override fun getWorkspace(
     workspaceId: UUID?,
+    authorization: String?,
     userInfo: String?,
   ): Response {
-    return workspaceService.controllerGetWorkspace(workspaceId!!, userInfo)
+    return workspaceService.controllerGetWorkspace(workspaceId!!, authorization, userInfo)
   }
 
   override fun listWorkspaces(
@@ -58,6 +63,7 @@ open class WorkspacesController(
     includeDeleted: Boolean?,
     limit: Int?,
     offset: Int?,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     return workspaceService.controllerListWorkspaces(
@@ -65,6 +71,7 @@ open class WorkspacesController(
       includeDeleted!!,
       limit!!,
       offset!!,
+      authorization,
       userInfo,
     )
   }
@@ -74,8 +81,9 @@ open class WorkspacesController(
   override fun updateWorkspace(
     workspaceId: UUID?,
     workspaceUpdateRequest: WorkspaceUpdateRequest?,
+    authorization: String?,
     userInfo: String?,
   ): Response {
-    return workspaceService.controllerUpdateWorkspace(workspaceId!!, workspaceUpdateRequest!!, userInfo)
+    return workspaceService.controllerUpdateWorkspace(workspaceId!!, workspaceUpdateRequest!!, authorization, userInfo)
   }
 }

@@ -1,6 +1,6 @@
 # airbyte
 
-![Version: 0.50.9](https://img.shields.io/badge/Version-0.50.9-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: dev](https://img.shields.io/badge/AppVersion-dev-informational?style=flat-square)
+![Version: 0.50.14](https://img.shields.io/badge/Version-0.50.14-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: dev](https://img.shields.io/badge/AppVersion-dev-informational?style=flat-square)
 
 Helm chart to deploy airbyte
 
@@ -8,20 +8,20 @@ Helm chart to deploy airbyte
 
 | Repository | Name | Version |
 |------------|------|---------|
-| https://airbytehq.github.io/helm-charts/ | airbyte-api-server | 0.50.9 |
-| https://airbytehq.github.io/helm-charts/ | airbyte-bootloader | 0.50.9 |
-| https://airbytehq.github.io/helm-charts/ | connector-builder-server | 0.50.9 |
-| https://airbytehq.github.io/helm-charts/ | cron | 0.50.9 |
-| https://airbytehq.github.io/helm-charts/ | keycloak | 0.50.9 |
-| https://airbytehq.github.io/helm-charts/ | keycloak-setup | 0.50.9 |
-| https://airbytehq.github.io/helm-charts/ | metrics | 0.50.9 |
-| https://airbytehq.github.io/helm-charts/ | pod-sweeper | 0.50.9 |
-| https://airbytehq.github.io/helm-charts/ | server | 0.50.9 |
-| https://airbytehq.github.io/helm-charts/ | temporal | 0.50.9 |
-| https://airbytehq.github.io/helm-charts/ | webapp | 0.50.9 |
-| https://airbytehq.github.io/helm-charts/ | worker | 0.50.9 |
-| https://airbytehq.github.io/helm-charts/ | workload-api-server | 0.50.9 |
-| https://airbytehq.github.io/helm-charts/ | workload-launcher | 0.50.9 |
+| https://airbytehq.github.io/helm-charts/ | airbyte-api-server | 0.50.14 |
+| https://airbytehq.github.io/helm-charts/ | airbyte-bootloader | 0.50.14 |
+| https://airbytehq.github.io/helm-charts/ | connector-builder-server | 0.50.14 |
+| https://airbytehq.github.io/helm-charts/ | cron | 0.50.14 |
+| https://airbytehq.github.io/helm-charts/ | keycloak | 0.50.14 |
+| https://airbytehq.github.io/helm-charts/ | keycloak-setup | 0.50.14 |
+| https://airbytehq.github.io/helm-charts/ | metrics | 0.50.14 |
+| https://airbytehq.github.io/helm-charts/ | pod-sweeper | 0.50.14 |
+| https://airbytehq.github.io/helm-charts/ | server | 0.50.14 |
+| https://airbytehq.github.io/helm-charts/ | temporal | 0.50.14 |
+| https://airbytehq.github.io/helm-charts/ | webapp | 0.50.14 |
+| https://airbytehq.github.io/helm-charts/ | worker | 0.50.14 |
+| https://airbytehq.github.io/helm-charts/ | workload-api-server | 0.50.14 |
+| https://airbytehq.github.io/helm-charts/ | workload-launcher | 0.50.14 |
 | https://charts.bitnami.com/bitnami | common | 1.x.x |
 
 ## Values
@@ -133,8 +133,6 @@ Helm chart to deploy airbyte
 | externalDatabase.port | int | `5432` | Database port number |
 | externalDatabase.user | string | `"airbyte"` | non-root Username for Airbyte Database |
 | fullnameOverride | string | `""` | String to fully override airbyte.fullname template with a string |
-| global.database.host | string | `"example.com"` | Database host |
-| global.database.port | string | `"5432"` | Database port |
 | global.database.secretName | string | `""` | Secret name where database credentials are stored |
 | global.database.secretValue | string | `""` | Secret value for database password |
 | global.deploymentMode | string | `"oss"` | Deployment mode, whether or not render the default env vars and volumes in deployment spec |

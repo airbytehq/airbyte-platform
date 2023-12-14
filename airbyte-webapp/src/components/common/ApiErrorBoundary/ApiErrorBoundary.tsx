@@ -5,9 +5,8 @@ import { NavigateFunction, useNavigate } from "react-router-dom";
 import { useLocation } from "react-use";
 import { LocationSensorState } from "react-use/lib/useLocation";
 
+import { CommonRequestError, isVersionError } from "core/api";
 import { isFormBuildError } from "core/form/FormBuildError";
-import { CommonRequestError } from "core/request/CommonRequestError";
-import { isVersionError } from "core/request/VersionError";
 import { TrackErrorFn, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { ErrorOccurredView } from "views/common/ErrorOccurredView";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";

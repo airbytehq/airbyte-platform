@@ -3,7 +3,7 @@ import { useIntl } from "react-intl";
 
 import { Icon } from "components/ui/Icon";
 
-import { StreamDescriptor } from "core/request/AirbyteClient";
+import { StreamDescriptor } from "core/api/types/AirbyteClient";
 
 import styles from "./DiffAccordionHeader.module.scss";
 import { DiffIconBlock } from "./DiffIconBlock";

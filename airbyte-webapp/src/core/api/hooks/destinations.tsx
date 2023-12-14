@@ -2,19 +2,23 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
 import { ConnectionConfiguration } from "area/connector/types";
-import { useRemoveConnectionsFromList, useSuspenseQuery } from "core/api";
-// eslint-disable-next-line import/no-restricted-paths
-import { useRequestOptions } from "core/api/useRequestOptions";
-import { DestinationService } from "core/domain/connector/DestinationService";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { isDefined } from "core/utils/common";
-import { useInitService } from "services/useInitService";
 
-import { useRequestErrorHandler } from "./useRequestErrorHandler";
-import { useCurrentWorkspace } from "./useWorkspace";
-import { useConfig } from "../../config";
-import { DestinationRead, WebBackendConnectionListItem } from "../../core/request/AirbyteClient";
-import { SCOPE_WORKSPACE } from "../../services/Scope";
+import { useRemoveConnectionsFromList } from "./connections";
+import { useCurrentWorkspace } from "./workspaces";
+import {
+  createDestination,
+  deleteDestination,
+  getDestination,
+  listDestinationsForWorkspace,
+  updateDestination,
+} from "../generated/AirbyteClient";
+import { SCOPE_WORKSPACE } from "../scopes";
+import { DestinationRead, WebBackendConnectionListItem } from "../types/AirbyteClient";
+import { useRequestErrorHandler } from "../useRequestErrorHandler";
+import { useRequestOptions } from "../useRequestOptions";
+import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const destinationsKeys = {
   all: [SCOPE_WORKSPACE, "destinations"] as const,
@@ -34,31 +38,31 @@ interface ConnectorProps {
   destinationDefinitionId: string;
 }
 
-function useDestinationService() {
-  const { apiUrl } = useConfig();
-  const requestOptions = useRequestOptions();
-  return useInitService(() => new DestinationService(requestOptions), [apiUrl, requestOptions]);
-}
-
 interface DestinationList {
   destinations: DestinationRead[];
 }
 
 const useDestinationList = (): DestinationList => {
+  const requestOptions = useRequestOptions();
   const workspace = useCurrentWorkspace();
-  const service = useDestinationService();
 
-  return useSuspenseQuery(destinationsKeys.lists(), () => service.list(workspace.workspaceId));
+  return useSuspenseQuery(destinationsKeys.lists(), () =>
+    listDestinationsForWorkspace({ workspaceId: workspace.workspaceId }, requestOptions)
+  );
 };
 
 const useGetDestination = <T extends string | undefined | null>(
   destinationId: T
 ): T extends string ? DestinationRead : DestinationRead | undefined => {
-  const service = useDestinationService();
+  const requestOptions = useRequestOptions();
 
-  return useSuspenseQuery(destinationsKeys.detail(destinationId ?? ""), () => service.get(destinationId ?? ""), {
-    enabled: isDefined(destinationId),
-  });
+  return useSuspenseQuery(
+    destinationsKeys.detail(destinationId ?? ""),
+    () => getDestination({ destinationId: destinationId ?? "" }, requestOptions),
+    {
+      enabled: isDefined(destinationId),
+    }
+  );
 };
 
 export const useInvalidateDestination = <T extends string | undefined | null>(destinationId: T): (() => void) => {
@@ -70,7 +74,7 @@ export const useInvalidateDestination = <T extends string | undefined | null>(de
 };
 
 const useCreateDestination = () => {
-  const service = useDestinationService();
+  const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const workspace = useCurrentWorkspace();
   const onError = useRequestErrorHandler("destinations.createError");
@@ -83,12 +87,15 @@ const useCreateDestination = () => {
         throw new Error("No Destination Definition Provided");
       }
 
-      return service.create({
-        name: values.name,
-        destinationDefinitionId: destinationConnector?.destinationDefinitionId,
-        workspaceId: workspace.workspaceId,
-        connectionConfiguration: values.connectionConfiguration,
-      });
+      return createDestination(
+        {
+          name: values.name,
+          destinationDefinitionId: destinationConnector?.destinationDefinitionId,
+          workspaceId: workspace.workspaceId,
+          connectionConfiguration: values.connectionConfiguration,
+        },
+        requestOptions
+      );
     },
     {
       onSuccess: (data) => {
@@ -102,7 +109,7 @@ const useCreateDestination = () => {
 };
 
 const useDeleteDestination = () => {
-  const service = useDestinationService();
+  const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
   const removeConnectionsFromList = useRemoveConnectionsFromList();
@@ -110,7 +117,7 @@ const useDeleteDestination = () => {
 
   return useMutation(
     (payload: { destination: DestinationRead; connectionsWithDestination: WebBackendConnectionListItem[] }) =>
-      service.delete(payload.destination.destinationId),
+      deleteDestination({ destinationId: payload.destination.destinationId }, requestOptions),
     {
       onSuccess: (_data, ctx) => {
         analyticsService.track(Namespace.DESTINATION, Action.DELETE, {
@@ -138,17 +145,20 @@ const useDeleteDestination = () => {
 };
 
 const useUpdateDestination = () => {
-  const service = useDestinationService();
+  const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const onError = useRequestErrorHandler("destinations.updateError");
 
   return useMutation(
     (updateDestinationPayload: { values: ValuesProps; destinationId: string }) => {
-      return service.update({
-        name: updateDestinationPayload.values.name,
-        destinationId: updateDestinationPayload.destinationId,
-        connectionConfiguration: updateDestinationPayload.values.connectionConfiguration,
-      });
+      return updateDestination(
+        {
+          name: updateDestinationPayload.values.name,
+          destinationId: updateDestinationPayload.destinationId,
+          connectionConfiguration: updateDestinationPayload.values.connectionConfiguration,
+        },
+        requestOptions
+      );
     },
     {
       onSuccess: (data) => {

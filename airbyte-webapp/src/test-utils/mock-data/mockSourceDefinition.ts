@@ -1,5 +1,5 @@
 import { ConnectorIds } from "area/connector/utils";
-import { SourceDefinitionSpecificationRead } from "core/request/AirbyteClient";
+import { SourceDefinitionSpecificationRead } from "core/api/types/AirbyteClient";
 
 export const mockSourceDefinition: SourceDefinitionSpecificationRead = {
   sourceDefinitionId: ConnectorIds.Sources.PokeApi,

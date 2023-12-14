@@ -4,7 +4,7 @@ import { FormattedMessage } from "react-intl";
 import { Icon } from "components/ui/Icon";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { FieldTransform } from "core/request/AirbyteClient";
+import { FieldTransform } from "core/api/types/AirbyteClient";
 
 import styles from "./FieldRow.module.scss";
 

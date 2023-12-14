@@ -35,7 +35,7 @@ open class UserServiceImpl(private val configApiClient: ConfigApiClient) : UserS
   override fun getAllWorkspaceIdsForUser(userInfo: String?): List<UUID> {
     val response =
       try {
-        configApiClient.listAllWorkspaces(System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE))
+        configApiClient.listAllWorkspaces(System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE), null)
       } catch (e: HttpClientResponseException) {
         log.error("Cloud api response error for listWorkspacesByUser: ", e)
         e.response as HttpResponse<WorkspaceReadList>

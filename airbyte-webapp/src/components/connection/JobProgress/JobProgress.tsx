@@ -6,7 +6,7 @@ import { Text } from "components/ui/Text";
 
 import { JobWithAttempts } from "area/connection/types/jobs";
 import { getJobStatus } from "area/connection/utils/jobs";
-import { AttemptRead, AttemptStatus, SynchronousJobRead } from "core/request/AirbyteClient";
+import { AttemptRead, AttemptStatus, SynchronousJobRead } from "core/api/types/AirbyteClient";
 import { formatBytes } from "core/utils/numberHelper";
 
 import styles from "./JobProgress.module.scss";

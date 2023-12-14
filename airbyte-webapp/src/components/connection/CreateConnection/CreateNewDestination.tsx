@@ -10,10 +10,9 @@ import { Button } from "components/ui/Button";
 import { Icon } from "components/ui/Icon";
 
 import { useSuggestedDestinations } from "area/connector/utils";
-import { useDestinationDefinitionList } from "core/api";
+import { useDestinationDefinitionList, useCreateDestination } from "core/api";
 import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
-import { useCreateDestination } from "hooks/services/useDestinationHook";
 
 import { DESTINATION_ID_PARAM, DESTINATION_TYPE_PARAM } from "./SelectDestination";
 

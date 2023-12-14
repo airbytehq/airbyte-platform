@@ -5,7 +5,7 @@ import { useIntl } from "react-intl";
 import { FormLabel } from "components/forms/FormControl";
 import { ListBox, Option } from "components/ui/ListBox";
 
-import { ConnectionScheduleDataBasicSchedule } from "core/request/AirbyteClient";
+import { ConnectionScheduleDataBasicSchedule } from "core/api/types/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { useBasicFrequencyDropdownData } from "./useBasicFrequencyDropdownData";

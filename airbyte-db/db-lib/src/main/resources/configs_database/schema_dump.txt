@@ -362,6 +362,8 @@ create table "public"."workload" (
   "geography" varchar(2147483647) not null default cast('AUTO' as varchar),
   "mutex_key" varchar(2147483647),
   "type" "public"."workload_type" not null,
+  "termination_source" varchar(2147483647),
+  "termination_reason" text,
   constraint "workload_pkey"
     primary key ("id")
 );

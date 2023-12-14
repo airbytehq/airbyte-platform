@@ -11,7 +11,7 @@ import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { useUpdateWorkspace } from "core/api";
-import { Geography } from "core/request/AirbyteClient";
+import { Geography } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { trackError } from "core/utils/datadog";
 import { links } from "core/utils/links";

@@ -6,7 +6,7 @@ import {
   StreamDescriptor,
   StreamTransformTransformType,
   SyncMode,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
 import { calculateInitialCatalog } from "./calculateInitialCatalog";
 

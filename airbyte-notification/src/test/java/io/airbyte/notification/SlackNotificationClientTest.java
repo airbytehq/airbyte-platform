@@ -162,12 +162,12 @@ class SlackNotificationClientTest {
   @Test
   void testNotifySchemaPropagated() throws IOException, InterruptedException {
     final UUID connectionId = UUID.randomUUID();
+    final UUID sourceId = UUID.randomUUID();
     final List<String> changes = List.of("Change1", "Some other change");
     String workspaceName = "";
     String connectionName = "PSQL ->> BigQuery";
     String sourceName = "";
     boolean isBreaking = false;
-    String url = "";
     String connectionUrl = "http://airbyte.io/your_connection";
     String recipient = "";
 
@@ -183,9 +183,10 @@ class SlackNotificationClientTest {
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
 
-    assertTrue(client.notifySchemaPropagated(UUID.randomUUID(), workspaceName, connectionId, connectionName, connectionUrl, sourceName, changes, url,
-        recipient,
-        isBreaking));
+    assertTrue(
+        client.notifySchemaPropagated(UUID.randomUUID(), workspaceName, connectionId, connectionName, connectionUrl, sourceId, sourceName, changes,
+            recipient,
+            isBreaking));
 
   }
 

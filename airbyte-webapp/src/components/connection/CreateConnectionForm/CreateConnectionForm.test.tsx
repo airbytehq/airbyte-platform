@@ -15,12 +15,21 @@ import {
   mockSourceDefinitionVersion,
 } from "test-utils/mock-data/mockSource";
 import { mockTheme } from "test-utils/mock-data/mockTheme";
-import { TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
+import { mocked, TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
+import type { SchemaError } from "core/api";
+import { useDiscoverSchema } from "core/api";
 import { defaultOssFeatures, FeatureItem } from "core/services/features";
-import * as sourceHook from "hooks/services/useSourceHook";
 
 import { CreateConnectionForm } from "./CreateConnectionForm";
+
+const mockBaseUseDiscoverSchema = {
+  schemaErrorStatus: null,
+  isLoading: false,
+  schema: mockConnection.syncCatalog,
+  catalogId: "",
+  onDiscoverSchema: () => Promise.resolve(),
+};
 
 jest.mock("area/workspace/utils", () => ({
   useCurrentWorkspaceId: () => "workspace-id",
@@ -36,6 +45,8 @@ jest.mock("core/api", () => ({
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
   useSourceDefinition: () => mockSourceDefinition,
   useDestinationDefinition: () => mockDestinationDefinition,
+  useDiscoverSchema: jest.fn(() => mockBaseUseDiscoverSchema),
+  LogsRequestError: jest.requireActual("core/api/errors").LogsRequestError,
 }));
 
 jest.mock("area/connector/utils", () => ({
@@ -71,38 +82,26 @@ describe("CreateConnectionForm", () => {
     return renderResult!;
   };
 
-  const baseUseDiscoverSchema = {
-    schemaErrorStatus: null,
-    isLoading: false,
-    schema: mockConnection.syncCatalog,
-    catalogId: "",
-    onDiscoverSchema: () => Promise.resolve(),
-  };
-
   beforeEach(() => {
     useMockIntersectionObserver();
   });
 
   it("should render", async () => {
-    jest.spyOn(sourceHook, "useDiscoverSchema").mockImplementationOnce(() => baseUseDiscoverSchema);
     const renderResult = await render();
     expect(renderResult).toMatchSnapshot();
     expect(renderResult.queryByText("Please wait a little bit more…")).toBeFalsy();
   });
 
   it("should render when loading", async () => {
-    jest
-      .spyOn(sourceHook, "useDiscoverSchema")
-      .mockImplementationOnce(() => ({ ...baseUseDiscoverSchema, isLoading: true }));
-
+    mocked(useDiscoverSchema).mockImplementationOnce(() => ({ ...mockBaseUseDiscoverSchema, isLoading: true }));
     const renderResult = await render();
     expect(renderResult).toMatchSnapshot();
   });
 
   it("should render with an error", async () => {
-    jest.spyOn(sourceHook, "useDiscoverSchema").mockImplementationOnce(() => ({
-      ...baseUseDiscoverSchema,
-      schemaErrorStatus: new Error("Test Error") as sourceHook.SchemaError,
+    mocked(useDiscoverSchema).mockImplementationOnce(() => ({
+      ...mockBaseUseDiscoverSchema,
+      schemaErrorStatus: new Error("Test Error") as SchemaError,
     }));
 
     const renderResult = await render();
@@ -114,8 +113,6 @@ describe("CreateConnectionForm", () => {
     const CRON_EXPRESSION_EVERY_MINUTE = "* * * * * * ?";
 
     it("should display an error for an invalid cron expression", async () => {
-      jest.spyOn(sourceHook, "useDiscoverSchema").mockImplementationOnce(() => baseUseDiscoverSchema);
-
       const container = tlr(
         <TestWrapper>
           <CreateConnectionForm />
@@ -136,8 +133,6 @@ describe("CreateConnectionForm", () => {
     });
 
     it("should allow cron expressions under one hour when feature enabled", async () => {
-      jest.spyOn(sourceHook, "useDiscoverSchema").mockImplementationOnce(() => baseUseDiscoverSchema);
-
       const container = tlr(
         <TestWrapper>
           <CreateConnectionForm />
@@ -158,8 +153,6 @@ describe("CreateConnectionForm", () => {
     });
 
     it("should not allow cron expressions under one hour when feature not enabled", async () => {
-      jest.spyOn(sourceHook, "useDiscoverSchema").mockImplementationOnce(() => baseUseDiscoverSchema);
-
       const featuresToInject = defaultOssFeatures.filter((f) => f !== FeatureItem.AllowSyncSubOneHourCronExpressions);
 
       const container = tlr(

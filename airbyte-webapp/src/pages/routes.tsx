@@ -20,7 +20,7 @@ import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 import MainView from "views/layout/MainView";
 
 import { RoutePaths, DestinationPaths, SourcePaths } from "./routePaths";
-import { WorkspaceRead } from "../core/request/AirbyteClient";
+import { WorkspaceRead } from "../core/api/types/AirbyteClient";
 
 const DefaultView = React.lazy(() => import("./DefaultView"));
 const ConnectionsRoutes = React.lazy(() => import("./connections/ConnectionsRoutes"));

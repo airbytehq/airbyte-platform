@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Log job error reports.
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class LoggingJobErrorReportingClient implements JobErrorReportingClient {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(LoggingJobErrorReportingClient.class);
@@ -22,12 +23,17 @@ public class LoggingJobErrorReportingClient implements JobErrorReportingClient {
   public void reportJobFailureReason(@Nullable final StandardWorkspace workspace,
                                      final FailureReason reason,
                                      final String dockerImage,
-                                     final Map<String, String> metadata) {
-    LOGGER.info("Report Job Error -> workspaceId: {}, dockerImage: {}, failureReason: {}, metadata: {}",
+                                     final Map<String, String> metadata,
+                                     @Nullable final AttemptConfigReportingContext attemptConfig) {
+    LOGGER.info(
+        "Report Job Error -> workspaceId: {}, dockerImage: {}, failureReason: {}, metadata: {}, state: {}, sourceConfig: {}, destinationConfig: {}",
         workspace != null ? workspace.getWorkspaceId() : "null",
         dockerImage,
         reason,
-        metadata);
+        metadata,
+        attemptConfig != null ? attemptConfig.state() : "null",
+        attemptConfig != null ? attemptConfig.sourceConfig() : "null",
+        attemptConfig != null ? attemptConfig.destinationConfig() : "null");
   }
 
 }

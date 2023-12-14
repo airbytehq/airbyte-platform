@@ -49,10 +49,45 @@ spec:
       {{- if .Values.affinity }}
       affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
       {{- end }}
-      {{- if .Values.extraInitContainers }}
       initContainers:
-      {{- toYaml .Values.extraInitContainers | nindent 6 }}
-      {{- end }}
+        {{- if eq .Values.global.deploymentMode "oss"  }}
+        - name: init-db
+          image: postgres:13-alpine
+          command: [ "sh", "-c" ]
+          args:
+            - >
+              PGPASSWORD=$DATABASE_PASSWORD psql -h $DATABASE_HOST -p $DATABASE_PORT -U $DATABASE_USER -d $DATABASE_DB -c "CREATE SCHEMA IF NOT EXISTS keycloak";
+          env:
+            - name: DATABASE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-airbyte-env
+                  key: DATABASE_HOST
+            - name: DATABASE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-airbyte-env
+                  key: DATABASE_PORT
+            - name: DATABASE_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-airbyte-env
+                  key: DATABASE_DB
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
+                  key: DATABASE_USER
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.database.secretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
+                  key: {{ .Values.global.database.secretValue | default "DATABASE_PASSWORD" }}
+        {{- end }}
+
+        {{- if .Values.extraInitContainers }}
+        {{- toYaml .Values.extraInitContainers | nindent 8 }}
+        {{- end }}
       containers:
         - name: airbyte-keycloak
           image: {{ printf "%s:%s" .Values.image.repository (include "keycloak.imageTag" .) }}
@@ -73,7 +108,7 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   name: {{ .Release.Name }}-airbyte-env
-                  key: DATABASE_URL # use the same database as airbyte
+                  key: KEYCLOAK_DATABASE_URL
             - name: KEYCLOAK_DATABASE_USERNAME
               valueFrom:
                 secretKeyRef:

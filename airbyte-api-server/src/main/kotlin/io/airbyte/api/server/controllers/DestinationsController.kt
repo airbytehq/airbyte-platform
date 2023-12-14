@@ -38,6 +38,7 @@ open class DestinationsController(
 ) : DestinationsApi {
   override fun createDestination(
     destinationCreateRequest: DestinationCreateRequest,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -68,6 +69,7 @@ open class DestinationsController(
           destinationService.createDestination(
             destinationCreateRequest,
             destinationDefinitionId,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -89,6 +91,7 @@ open class DestinationsController(
 
   override fun deleteDestination(
     destinationId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -98,6 +101,7 @@ open class DestinationsController(
         {
           destinationService.deleteDestination(
             destinationId,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -118,6 +122,7 @@ open class DestinationsController(
 
   override fun getDestination(
     destinationId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -127,6 +132,7 @@ open class DestinationsController(
         {
           destinationService.getDestination(
             destinationId,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -150,6 +156,7 @@ open class DestinationsController(
     includeDeleted: Boolean?,
     limit: Int?,
     offset: Int?,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -162,6 +169,7 @@ open class DestinationsController(
           includeDeleted!!,
           limit!!,
           offset!!,
+          authorization,
           getLocalUserInfoIfNull(userInfo),
         )
       }, DESTINATIONS_PATH, GET, userId)
@@ -180,6 +188,7 @@ open class DestinationsController(
   override fun patchDestination(
     destinationId: UUID,
     destinationPatchRequest: DestinationPatchRequest,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -192,6 +201,7 @@ open class DestinationsController(
           destinationService.partialUpdateDestination(
             destinationId,
             destinationPatchRequest,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -214,6 +224,7 @@ open class DestinationsController(
   override fun putDestination(
     destinationId: UUID,
     destinationPutRequest: DestinationPutRequest,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -226,6 +237,7 @@ open class DestinationsController(
           destinationService.updateDestination(
             destinationId,
             destinationPutRequest,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },

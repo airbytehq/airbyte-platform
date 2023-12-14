@@ -127,7 +127,7 @@ class ReplicationJobOrchestratorTest {
             mock(Path.class));
 
     assertEquals(replicationOutput, actualReplicationOutput);
-    verify(workloadApi).workloadFailure(new WorkloadFailureRequest(WORKLOAD_ID));
+    verify(workloadApi).workloadFailure(new WorkloadFailureRequest(WORKLOAD_ID, null, null));
   }
 
   @Test
@@ -152,7 +152,8 @@ class ReplicationJobOrchestratorTest {
 
     assertThrows(WorkerException.class, () -> replicationJobOrchestrator.runWithWorkloadEnabled(replicationWorker,
         new ReplicationInput().withConnectionId(UUID.randomUUID()), mock(Path.class)));
-    verify(workloadApi).workloadFailure(new WorkloadFailureRequest(WORKLOAD_ID));
+    verify(workloadApi)
+        .workloadFailure(new WorkloadFailureRequest(WORKLOAD_ID, "airbyte_platform", "Something went wrong within the airbyte platform"));
   }
 
 }

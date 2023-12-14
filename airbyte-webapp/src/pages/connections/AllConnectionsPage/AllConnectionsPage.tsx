@@ -17,7 +17,7 @@ import { PageHeader } from "components/ui/PageHeader";
 import { Text } from "components/ui/Text";
 
 import { useConnectionList } from "core/api";
-import { WebBackendConnectionListItem } from "core/request/AirbyteClient";
+import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { naturalComparatorBy } from "core/utils/objects";
 import { useExperiment } from "hooks/services/Experiment";
@@ -26,11 +26,12 @@ import styles from "./AllConnectionsPage.module.scss";
 import ConnectionsTable from "./ConnectionsTable";
 import { ConnectionRoutePaths } from "../../routePaths";
 
-type SummaryKey = "healthy" | "failed" | "paused";
+type SummaryKey = "healthy" | "failed" | "paused" | "running";
 const connectionStatColors: Record<SummaryKey, React.ComponentPropsWithoutRef<typeof Text>["color"]> = {
   healthy: "green600",
   failed: "red",
   paused: "grey",
+  running: "blue",
 };
 const ConnectionsSummary: React.FC<Record<SummaryKey, number>> = (props) => {
   const keys = Object.keys(props) as SummaryKey[];
@@ -76,28 +77,69 @@ const statusFilterOptions: FilterOption[] = [
   },
   {
     label: (
-      <Text color="green600" bold>
-        <Icon type="successFilled" size="md" />
-        &nbsp; <FormattedMessage id="tables.connections.filters.status.healthy" />
-      </Text>
+      <FlexContainer gap="sm" alignItems="center">
+        <FlexItem>
+          <Text color={connectionStatColors.healthy} as="span">
+            <Icon type="successFilled" size="md" />
+          </Text>
+        </FlexItem>
+        <FlexItem>
+          <Text color="grey" bold as="span">
+            &nbsp; <FormattedMessage id="tables.connections.filters.status.healthy" />
+          </Text>
+        </FlexItem>
+      </FlexContainer>
     ),
     value: "healthy",
   },
   {
     label: (
-      <Text color="red" bold>
-        <Icon type="errorFilled" size="md" />
-        &nbsp; <FormattedMessage id="tables.connections.filters.status.failed" />
-      </Text>
+      <FlexContainer gap="sm" alignItems="center">
+        <FlexItem>
+          <Text color={connectionStatColors.failed} as="span">
+            <Icon type="errorFilled" size="md" />
+          </Text>
+        </FlexItem>
+        <FlexItem>
+          <Text color="grey" bold as="span">
+            &nbsp; <FormattedMessage id="tables.connections.filters.status.failed" />
+          </Text>
+        </FlexItem>
+      </FlexContainer>
     ),
     value: "failed",
   },
   {
     label: (
-      <Text color="grey" bold>
-        <Icon type="pauseFilled" size="md" />
-        &nbsp; <FormattedMessage id="tables.connections.filters.status.paused" />
-      </Text>
+      <FlexContainer gap="sm" alignItems="center">
+        <FlexItem>
+          <Text color={connectionStatColors.running} as="span">
+            <Icon type="sync" size="md" />
+          </Text>
+        </FlexItem>
+        <FlexItem>
+          <Text color="grey" bold as="span">
+            &nbsp; <FormattedMessage id="tables.connections.filters.status.running" />
+          </Text>
+        </FlexItem>
+      </FlexContainer>
+    ),
+    value: "running",
+  },
+  {
+    label: (
+      <FlexContainer gap="sm" alignItems="center">
+        <FlexItem>
+          <Text color={connectionStatColors.paused} as="span">
+            <Icon type="pauseFilled" size="md" />
+          </Text>
+        </FlexItem>
+        <FlexItem>
+          <Text color="grey" bold as="span">
+            &nbsp; <FormattedMessage id="tables.connections.filters.status.paused" />
+          </Text>
+        </FlexItem>
+      </FlexContainer>
     ),
     value: "paused",
   },
@@ -106,6 +148,11 @@ const statusFilterOptions: FilterOption[] = [
 const isConnectionPaused = (
   connection: WebBackendConnectionListItem
 ): connection is WebBackendConnectionListItem & { status: "inactive" } => connection.status === "inactive";
+
+const isConnectionRunning = (
+  connection: WebBackendConnectionListItem
+): connection is WebBackendConnectionListItem & { isSyncing: true } => connection.isSyncing;
+
 const isConnectionFailed = (
   connection: WebBackendConnectionListItem
 ): connection is WebBackendConnectionListItem & { latestSyncJobStatus: "failed" } =>
@@ -140,10 +187,13 @@ export const AllConnectionsPage: React.FC = () => {
     return connections.filter((connection) => {
       if (statusFilter) {
         const isPaused = isConnectionPaused(connection);
+        const isRunning = isConnectionRunning(connection);
         const isFailed = isConnectionFailed(connection);
         if (statusFilter === "paused" && !isPaused) {
           return false;
-        } else if (statusFilter === "failed" && !isFailed) {
+        } else if (statusFilter === "running" && !isRunning) {
+          return false;
+        } else if (statusFilter === "failed" && (!isFailed || isPaused)) {
           return false;
         } else if (statusFilter === "healthy" && (isPaused || isFailed)) {
           return false;
@@ -172,6 +222,7 @@ export const AllConnectionsPage: React.FC = () => {
       // order here governs render order
       healthy: 0,
       failed: 0,
+      running: 0,
       paused: 0,
     }
   );
@@ -226,6 +277,7 @@ export const AllConnectionsPage: React.FC = () => {
                       <ListBox
                         buttonClassName={styles.filterButton}
                         optionClassName={styles.filterOption}
+                        optionTextAs="span"
                         options={statusFilterOptions}
                         selectedValue={statusFilterSelection.value}
                         onSelect={(value) =>
@@ -238,6 +290,7 @@ export const AllConnectionsPage: React.FC = () => {
                         buttonClassName={styles.filterButton}
                         optionsMenuClassName={styles.filterOptionsMenu}
                         optionClassName={styles.filterOption}
+                        optionTextAs="span"
                         options={availableSourceOptions}
                         selectedValue={sourceFilterSelection.value}
                         onSelect={(value) =>
@@ -249,6 +302,7 @@ export const AllConnectionsPage: React.FC = () => {
                       <ListBox
                         buttonClassName={styles.filterButton}
                         optionClassName={styles.filterOption}
+                        optionTextAs="span"
                         options={availableDestinationOptions}
                         selectedValue={destinationFilterSelection.value}
                         onSelect={(value) =>
@@ -268,7 +322,7 @@ export const AllConnectionsPage: React.FC = () => {
                             setDestinationFilterSelection(availableDestinationOptions[0]);
                           }}
                         >
-                          <Text color="red" bold>
+                          <Text color="grey" bold>
                             <FormattedMessage id="tables.connections.filters.clear" />
                           </Text>
                         </Button>

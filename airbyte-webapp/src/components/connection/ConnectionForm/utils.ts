@@ -1,5 +1,5 @@
 import { NormalizationType } from "area/connection/types";
-import { AirbyteStreamAndConfiguration, OperationCreate, OperatorType } from "core/request/AirbyteClient";
+import { AirbyteStreamAndConfiguration, OperationCreate, OperatorType } from "core/api/types/AirbyteClient";
 
 import { FormConnectionFormValues } from "./formConfig";
 

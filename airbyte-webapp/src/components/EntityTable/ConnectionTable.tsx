@@ -4,7 +4,7 @@ import { FormattedMessage } from "react-intl";
 
 import { Table } from "components/ui/Table";
 
-import { ConnectionScheduleType, SchemaChange } from "core/request/AirbyteClient";
+import { ConnectionScheduleType, SchemaChange } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 
 import ConnectionSettingsCell from "./components/ConnectionSettingsCell";

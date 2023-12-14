@@ -2,7 +2,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 
 import { StepsTypes } from "components/ConnectorBlocks";
 
-import { useGetSource } from "hooks/services/useSourceHook";
+import { useGetSource } from "core/api";
 
 export const useGetSourceFromParams = () => {
   const params = useParams<{ "*": StepsTypes | "" | undefined; sourceId: string }>();

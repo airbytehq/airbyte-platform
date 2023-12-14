@@ -11,7 +11,7 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { ConnectorIds, SvgIcon } from "area/connector/utils";
 import { useCurrentWorkspace, useSourceDefinitionList, useDestinationDefinitionList } from "core/api";
-import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
+import { DestinationDefinitionRead, SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { links } from "core/utils/links";
 import { useExperiment } from "hooks/services/Experiment";
 import { ConnectionRoutePaths, DestinationPaths, RoutePaths } from "pages/routePaths";

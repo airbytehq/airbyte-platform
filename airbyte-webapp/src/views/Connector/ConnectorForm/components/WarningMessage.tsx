@@ -5,7 +5,7 @@ import { Box } from "components/ui/Box";
 import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 
-import { SupportLevel } from "core/request/AirbyteClient";
+import { SupportLevel } from "core/api/types/AirbyteClient";
 import { links } from "core/utils/links";
 
 export const WarningMessage: React.FC<{ supportLevel?: SupportLevel }> = ({ supportLevel }) => {

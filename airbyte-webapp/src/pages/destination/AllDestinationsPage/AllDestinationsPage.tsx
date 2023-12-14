@@ -10,8 +10,8 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { PageHeader } from "components/ui/PageHeader";
 
+import { useDestinationList } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useDestinationList } from "hooks/services/useDestinationHook";
 
 import { DestinationPaths } from "../../routePaths";
 

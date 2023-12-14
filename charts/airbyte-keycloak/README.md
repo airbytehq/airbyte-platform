@@ -1,6 +1,6 @@
 # keycloak
 
-![Version: 0.50.9](https://img.shields.io/badge/Version-0.50.9-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: dev](https://img.shields.io/badge/AppVersion-dev-informational?style=flat-square)
+![Version: 0.50.14](https://img.shields.io/badge/Version-0.50.14-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: dev](https://img.shields.io/badge/AppVersion-dev-informational?style=flat-square)
 
 Helm chart to deploy airbyte-keycloak
 
@@ -25,8 +25,6 @@ Helm chart to deploy airbyte-keycloak
 | extraSelectorLabels | object | `{}` |  |
 | extraVolumeMounts | list | `[]` |  |
 | extraVolumes | list | `[]` |  |
-| global.database.host | string | `"example.com"` |  |
-| global.database.port | string | `"5432"` |  |
 | global.database.secretName | string | `""` |  |
 | global.database.secretValue | string | `""` |  |
 | global.deploymentMode | string | `"oss"` | airbyte deployment mode |

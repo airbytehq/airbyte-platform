@@ -1,4 +1,4 @@
-import { AttemptRead, AttemptStats, AttemptStatus, AttemptStreamStats } from "core/request/AirbyteClient";
+import { AttemptRead, AttemptStats, AttemptStatus, AttemptStreamStats } from "core/api/types/AirbyteClient";
 
 import { progressBarCalculations } from "./utils";
 

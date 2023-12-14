@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+
 import {
   webBackendRevokeUserFromWorkspace,
   webBackendResendWithSigninLink,
@@ -12,9 +13,8 @@ import {
   getUserByEmail,
   updateUser,
   webBackendRevokeUserSession,
-} from "core/api/generated/CloudApi";
-import { SCOPE_WORKSPACE } from "services/Scope";
-
+} from "../../generated/CloudApi";
+import { SCOPE_WORKSPACE } from "../../scopes";
 import { UserUpdate, UserCreate } from "../../types/CloudApi";
 import { useRequestOptions } from "../../useRequestOptions";
 import { useSuspenseQuery } from "../../useSuspenseQuery";

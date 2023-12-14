@@ -329,6 +329,12 @@ components:
           nullable: true
         type:
           $ref: '#/components/schemas/WorkloadType'
+        terminationSource:
+          type: string
+          nullable: true
+        terminationReason:
+          type: string
+          nullable: true
     WorkloadCancelRequest:
       required:
       - reason
@@ -386,6 +392,12 @@ components:
       properties:
         workloadId:
           type: string
+        source:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
     WorkloadHeartbeatRequest:
       required:
       - workloadId

@@ -79,13 +79,15 @@ public interface StreamStatusesRepository extends PageableRepository<StreamStatu
   List<StreamStatus> findAllPerRunStateByConnectionId(final UUID connectionId);
 
   /**
-   * Returns the latest stream status per run state per day for a connection after a given timestamp.
+   * Returns the latest stream status per stream per day for a connection after a given timestamp.
    */
 
-  @Query("SELECT DISTINCT ON (stream_name, stream_namespace, run_state, incomplete_run_cause, job_type, DATE(transitioned_at)) * "
-      + "FROM stream_statuses WHERE connection_id = :connectionId AND transitioned_at > :timestamp "
-      + "ORDER BY stream_name, stream_namespace, run_state, incomplete_run_cause, job_type, DATE(transitioned_at), transitioned_at DESC")
-  List<StreamStatus> findLatestStatusPerRunStateByConnectionIdAndDayAfterTimestamp(final UUID connectionId, final OffsetDateTime timestamp);
+  @Query("SELECT DISTINCT ON (stream_name, stream_namespace, 1) DATE_TRUNC('day', transitioned_at, :timezone), * "
+      + "FROM stream_statuses WHERE connection_id = :connectionId AND transitioned_at >= :timestamp "
+      + "ORDER BY stream_name, stream_namespace, 1, transitioned_at DESC")
+  List<StreamStatus> findLatestStatusPerStreamByConnectionIdAndDayAfterTimestamp(final UUID connectionId,
+                                                                                 final OffsetDateTime timestamp,
+                                                                                 final String timezone);
 
   /**
    * Pagination params.

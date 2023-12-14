@@ -6,7 +6,7 @@ import {
   SourceRead,
   SourceSnippetRead,
   WebBackendConnectionListItem,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
 import { EntityTableDataItem, ConnectionTableDataItem, Status as ConnectionSyncStatus } from "./types";
 

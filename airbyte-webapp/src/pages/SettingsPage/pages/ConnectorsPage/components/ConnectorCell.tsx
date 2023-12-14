@@ -4,7 +4,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 
 import { SvgIcon } from "area/connector/utils";
-import { SupportLevel } from "core/request/AirbyteClient";
+import { SupportLevel } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 
 import styles from "./ConnectorCell.module.scss";

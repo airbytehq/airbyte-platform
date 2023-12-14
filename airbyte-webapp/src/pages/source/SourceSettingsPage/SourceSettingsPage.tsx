@@ -10,10 +10,12 @@ import {
   useSourceDefinitionVersion,
   useGetSourceDefinitionSpecification,
   useSourceDefinition,
+  useDeleteSource,
+  useInvalidateSource,
+  useUpdateSource,
 } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
-import { useDeleteSource, useInvalidateSource, useUpdateSource } from "hooks/services/useSourceHook";
 import { useDeleteModal } from "hooks/useDeleteModal";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm";

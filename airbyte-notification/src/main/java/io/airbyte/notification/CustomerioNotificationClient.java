@@ -221,21 +221,14 @@ public class CustomerioNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifySchemaChange(final UUID connectionId,
-                                    final boolean isBreaking,
-                                    final String url) {
-    throw new NotImplementedException();
-  }
-
-  @Override
   public boolean notifySchemaPropagated(final UUID workspaceId,
                                         final String workspaceName,
                                         final UUID connectionId,
                                         final String connectionName,
                                         final String connectionUrl,
+                                        final UUID sourceId,
                                         final String sourceName,
                                         final List<String> changes,
-                                        final String url,
                                         final String recipient,
                                         final boolean isBreaking)
       throws IOException {
@@ -257,6 +250,8 @@ public class CustomerioNotificationClient extends NotificationClient {
     messageDataNode.put("workspace_name", workspaceName);
     messageDataNode.put("changes_details", String.join("\n", changes));
     messageDataNode.put("source", sourceName);
+    messageDataNode.put("source_name", sourceName);
+    messageDataNode.put("source_id", sourceId.toString());
 
     node.set("message_data", messageDataNode);
 

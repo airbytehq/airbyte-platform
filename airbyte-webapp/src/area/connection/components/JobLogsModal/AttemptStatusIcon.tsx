@@ -1,6 +1,6 @@
 import { StatusIcon } from "components/ui/StatusIcon";
 
-import { AttemptInfoRead, AttemptStatus } from "core/request/AirbyteClient";
+import { AttemptInfoRead, AttemptStatus } from "core/api/types/AirbyteClient";
 
 interface AttemptStatusIconProps {
   attempt: AttemptInfoRead;

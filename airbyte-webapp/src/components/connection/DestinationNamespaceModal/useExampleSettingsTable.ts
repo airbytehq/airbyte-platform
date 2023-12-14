@@ -1,6 +1,6 @@
 import { useIntl } from "react-intl";
 
-import { NamespaceDefinitionType } from "core/request/AirbyteClient";
+import { NamespaceDefinitionType } from "core/api/types/AirbyteClient";
 
 export const useExampleTableData = (
   namespaceDefinition: NamespaceDefinitionType

@@ -47,6 +47,7 @@ jest.mock("core/api", () => ({
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
   useSourceDefinition: () => mockSourceDefinition,
   useDestinationDefinition: () => mockDestinationDefinition,
+  LogsRequestError: jest.requireActual("core/api/errors").LogsRequestError,
 }));
 
 jest.mock("hooks/theme/useAirbyteTheme", () => ({

@@ -23,7 +23,6 @@ import io.micronaut.data.model.Page;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -119,10 +118,10 @@ class StreamStatusesHandlerTest {
   @Test
   void testGetConnectionUptimeHistory() {
     final UUID connectionId = UUID.randomUUID();
-    final String timezone = "America/Los_Angeles";
+    final ZoneId timezone = ZoneId.systemDefault();
     final ConnectionUptimeHistoryRequestBody apiReq = new ConnectionUptimeHistoryRequestBody()
         .connectionId(connectionId)
-        .timezone(timezone);
+        .timezone(timezone.getId());
     final StreamStatus domainItem = StreamStatus.builder().build();
 
     final StreamStatusRead apiItem = new StreamStatusRead();
@@ -130,17 +129,16 @@ class StreamStatusesHandlerTest {
     apiItem.setRunState(StreamStatusRunState.COMPLETE);
 
     final List<ConnectionSyncResultRead> expected = List.of(
-        handler.mapStreamStatusToSyncReadResult(apiItem, ZoneId.of(timezone)));
+        handler.mapStreamStatusToSyncReadResult(apiItem, timezone));
 
     // Calculate 30 days ago in the specified timezone, then convert to UTC OffsetDateTime
-    final OffsetDateTime thirtyDaysAgoInSpecifiedTZ = ZonedDateTime.now(ZoneId.of(timezone))
+    final OffsetDateTime thirtyDaysAgoInSpecifiedTZ = ZonedDateTime.now(timezone)
         .minusDays(30)
         .toLocalDate()
-        .atStartOfDay(ZoneId.of(timezone))
-        .withZoneSameInstant(ZoneOffset.UTC)
+        .atStartOfDay(timezone)
         .toOffsetDateTime();
 
-    when(repo.findLatestStatusPerRunStateByConnectionIdAndDayAfterTimestamp(connectionId, thirtyDaysAgoInSpecifiedTZ))
+    when(repo.findLatestStatusPerStreamByConnectionIdAndDayAfterTimestamp(connectionId, thirtyDaysAgoInSpecifiedTZ, timezone.getId()))
         .thenReturn(List.of(domainItem));
     when(mapper.map(domainItem))
         .thenReturn(apiItem);

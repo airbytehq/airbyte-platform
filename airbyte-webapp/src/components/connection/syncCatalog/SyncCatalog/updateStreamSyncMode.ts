@@ -4,7 +4,7 @@ import {
   DestinationSyncMode,
   SelectedFieldInfo,
   SyncMode,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
 import { mergeFieldPathArrays } from "./streamConfigHelpers";
 

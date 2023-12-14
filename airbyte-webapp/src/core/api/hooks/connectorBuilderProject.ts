@@ -2,7 +2,6 @@ import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/re
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { sourceDefinitionKeys } from "core/api";
-import { SCOPE_WORKSPACE } from "services/Scope";
 
 import { useBuilderResolveManifestQuery } from "./connectorBuilderApi";
 import {
@@ -16,6 +15,7 @@ import {
   updateConnectorBuilderProject,
   updateDeclarativeManifestVersion,
 } from "../generated/AirbyteClient";
+import { SCOPE_WORKSPACE } from "../scopes";
 import {
   ConnectorBuilderProjectIdWithWorkspaceId,
   DeclarativeManifestVersionRead,

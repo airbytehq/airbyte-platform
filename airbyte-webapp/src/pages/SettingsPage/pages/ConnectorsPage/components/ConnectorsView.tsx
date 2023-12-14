@@ -10,8 +10,8 @@ import { Table } from "components/ui/Table";
 import { InfoTooltip } from "components/ui/Tooltip";
 
 import { BuilderProject } from "core/api";
+import { DestinationDefinitionRead, SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector, ConnectorDefinition } from "core/domain/connector";
-import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
 import { RoutePaths } from "pages/routePaths";

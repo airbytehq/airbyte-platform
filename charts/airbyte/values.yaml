@@ -18,10 +18,6 @@ global:
     secretName: ""
     # -- Secret value for database password
     secretValue: ""
-    # -- Database host
-    host: "example.com"
-    # -- Database port
-    port: "5432"
   state:
     # -- Determines which state storage will be utilized; "MINIO", "S3", or "GCS"
     storage:

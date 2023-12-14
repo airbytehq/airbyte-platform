@@ -262,7 +262,7 @@ class WorkloadHandlerImplTest {
   @Test
   fun `test workload not found when cancelling workload`() {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
-    assertThrows<NotFoundException> { workloadHandler.cancelWorkload(WORKLOAD_ID) }
+    assertThrows<NotFoundException> { workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel") }
   }
 
   @ParameterizedTest
@@ -277,7 +277,7 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.cancelWorkload(WORKLOAD_ID) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "invalid cancel") }
   }
 
   @ParameterizedTest
@@ -292,10 +292,10 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class)) } just Runs
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel")) } just Runs
 
-    workloadHandler.cancelWorkload(WORKLOAD_ID)
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED)) }
+    workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel")) }
   }
 
   @Test
@@ -309,14 +309,14 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    workloadHandler.cancelWorkload(WORKLOAD_ID)
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED)) }
+    workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel again")
+    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), "test", "test cancel again") }
   }
 
   @Test
   fun `test workload not found when failing workload`() {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
-    assertThrows<NotFoundException> { workloadHandler.failWorkload(WORKLOAD_ID) }
+    assertThrows<NotFoundException> { workloadHandler.failWorkload(WORKLOAD_ID, "test", "fail") }
   }
 
   @ParameterizedTest
@@ -331,7 +331,7 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.failWorkload(WORKLOAD_ID) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.failWorkload(WORKLOAD_ID, "test", "fail") }
   }
 
   @ParameterizedTest
@@ -346,10 +346,10 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class)) } just Runs
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("failing a workload")) } just Runs
 
-    workloadHandler.failWorkload(WORKLOAD_ID)
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.FAILURE)) }
+    workloadHandler.failWorkload(WORKLOAD_ID, "test", "failing a workload")
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.FAILURE), eq("test"), eq("failing a workload")) }
   }
 
   @Test
@@ -363,8 +363,8 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    workloadHandler.failWorkload(WORKLOAD_ID)
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.FAILURE)) }
+    workloadHandler.failWorkload(WORKLOAD_ID, "test", "noop")
+    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.FAILURE), eq("test"), eq("noop")) }
   }
 
   @Test

@@ -1,4 +1,4 @@
-import { OperationId, OperatorDbt } from "core/request/AirbyteClient";
+import { OperationId, OperatorDbt } from "core/api/types/AirbyteClient";
 
 export interface DbtOperationRead {
   name: string;

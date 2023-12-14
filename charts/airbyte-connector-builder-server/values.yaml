@@ -13,8 +13,6 @@ global:
   database:
     secretName: ""
     secretValue: ""
-    host: "example.com"
-    port: "5432"
 
 enabled: true
 ##  replicaCount Number of server replicas

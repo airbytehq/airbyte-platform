@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 
 import { JobHistoryItem } from "area/connection/components/JobHistoryItem";
 import { JobWithAttempts } from "area/connection/types/jobs";
-import { JobWithAttemptsRead } from "core/request/AirbyteClient";
+import { JobWithAttemptsRead } from "core/api/types/AirbyteClient";
 
 interface JobsListProps {
   jobs: JobWithAttemptsRead[];

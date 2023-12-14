@@ -39,21 +39,25 @@ import java.util.UUID
 interface JobService {
   fun sync(
     connectionId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): JobResponse
 
   fun reset(
     connectionId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): JobResponse
 
   fun cancelJob(
     jobId: Long,
+    authorization: String?,
     userInfo: String?,
   ): JobResponse
 
   fun getJobInfoWithoutLogs(
     jobId: Long,
+    authorization: String?,
     userInfo: String?,
   ): JobResponse
 
@@ -62,6 +66,7 @@ interface JobService {
     jobsFilter: JobsFilter,
     orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT,
     orderByMethod: OrderByMethodEnum = OrderByMethodEnum.DESC,
+    authorization: String?,
     userInfo: String?,
   ): JobsResponse
 
@@ -70,6 +75,7 @@ interface JobService {
     jobsFilter: JobsFilter,
     orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT,
     orderByMethod: OrderByMethodEnum = OrderByMethodEnum.DESC,
+    authorization: String?,
     userInfo: String?,
   ): JobsResponse
 }
@@ -89,12 +95,13 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
    */
   override fun sync(
     connectionId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): JobResponse {
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
     val response =
       try {
-        configApiClient.sync(connectionIdRequestBody, userInfo)
+        configApiClient.sync(connectionIdRequestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for job sync: ", e)
         e.response as HttpResponse<JobInfoRead>
@@ -115,12 +122,13 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
    */
   override fun reset(
     connectionId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): JobResponse {
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
     val response =
       try {
-        configApiClient.reset(connectionIdRequestBody, userInfo)
+        configApiClient.reset(connectionIdRequestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for job reset: ", e)
         e.response as HttpResponse<JobInfoRead>
@@ -135,12 +143,13 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
    */
   override fun cancelJob(
     jobId: Long,
+    authorization: String?,
     userInfo: String?,
   ): JobResponse {
     val jobIdRequestBody = JobIdRequestBody().id(jobId)
     val response =
       try {
-        configApiClient.cancelJob(jobIdRequestBody, userInfo)
+        configApiClient.cancelJob(jobIdRequestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for cancelJob: ", e)
         e.response as HttpResponse<JobInfoRead>
@@ -155,12 +164,13 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
    */
   override fun getJobInfoWithoutLogs(
     jobId: Long,
+    authorization: String?,
     userInfo: String?,
   ): JobResponse {
     val jobIdRequestBody = JobIdRequestBody().id(jobId)
     val response =
       try {
-        configApiClient.getJobInfoWithoutLogs(jobIdRequestBody, userInfo)
+        configApiClient.getJobInfoWithoutLogs(jobIdRequestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error(
           "Config api response error for getJobInfoWithoutLogs: $jobId",
@@ -188,6 +198,7 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
     jobsFilter: JobsFilter,
     orderByField: OrderByFieldEnum,
     orderByMethod: OrderByMethodEnum,
+    authorization: String?,
     userInfo: String?,
   ): JobsResponse {
     val configTypes: List<JobConfigType> = getJobConfigTypes(jobsFilter.jobType)
@@ -208,7 +219,7 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
 
     val response =
       try {
-        configApiClient.getJobList(jobListRequestBody, userInfo)
+        configApiClient.getJobList(jobListRequestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for getJobList: ", e)
         e.response as HttpResponse<JobReadList>
@@ -233,6 +244,7 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
     jobsFilter: JobsFilter,
     orderByField: OrderByFieldEnum,
     orderByMethod: OrderByMethodEnum,
+    authorization: String?,
     userInfo: String?,
   ): JobsResponse {
     val configTypes = getJobConfigTypes(jobsFilter.jobType)
@@ -255,7 +267,7 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
 
     val response =
       try {
-        configApiClient.getJobListForWorkspaces(requestBody, userInfo)
+        configApiClient.getJobListForWorkspaces(requestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for getJobList: ", e)
         e.response as HttpResponse<JobReadList>

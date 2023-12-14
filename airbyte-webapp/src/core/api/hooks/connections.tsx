@@ -9,12 +9,13 @@ import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { RoutePaths } from "pages/routePaths";
-import { SCOPE_WORKSPACE } from "services/Scope";
 
 import { useCurrentWorkspace, useInvalidateWorkspaceStateQuery } from "./workspaces";
 import {
   createOrUpdateStateSafe,
   deleteConnection,
+  getConnectionDataHistory,
+  getConnectionUptimeHistory,
   getState,
   getStateType,
   resetConnection,
@@ -25,6 +26,7 @@ import {
   webBackendListConnectionsForWorkspace,
   webBackendUpdateConnection,
 } from "../generated/AirbyteClient";
+import { SCOPE_WORKSPACE } from "../scopes";
 import {
   AirbyteCatalog,
   ConnectionScheduleData,
@@ -50,6 +52,8 @@ const connectionsKeys = {
   all: [SCOPE_WORKSPACE, "connections"] as const,
   lists: (sourceOrDestinationIds: string[] = []) => [...connectionsKeys.all, "list", ...sourceOrDestinationIds],
   detail: (connectionId: string) => [...connectionsKeys.all, "details", connectionId] as const,
+  dataHistory: (connectionId: string) => [...connectionsKeys.all, "dataHistory", connectionId] as const,
+  uptimeHistory: (connectionId: string) => [...connectionsKeys.all, "uptimeHistory", connectionId] as const,
   getState: (connectionId: string) => [...connectionsKeys.all, "getState", connectionId] as const,
 };
 
@@ -391,5 +395,33 @@ export const useCreateOrUpdateState = () => {
         });
       },
     }
+  );
+};
+
+export const useGetConnectionDataHistory = (connectionId: string) => {
+  const options = useRequestOptions();
+
+  return useSuspenseQuery(connectionsKeys.dataHistory(connectionId), () =>
+    getConnectionDataHistory(
+      {
+        connectionId,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+      options
+    )
+  );
+};
+
+export const useGetConnectionUptimeHistory = (connectionId: string) => {
+  const options = useRequestOptions();
+
+  return useSuspenseQuery(connectionsKeys.uptimeHistory(connectionId), () =>
+    getConnectionUptimeHistory(
+      {
+        connectionId,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+      options
+    )
   );
 };

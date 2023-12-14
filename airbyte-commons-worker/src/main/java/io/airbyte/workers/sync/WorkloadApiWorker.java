@@ -24,6 +24,8 @@ import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.internal.exception.DestinationException;
+import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorNameGenerator;
 import io.airbyte.workers.storage.DocumentStoreClient;
@@ -53,6 +55,9 @@ import org.slf4j.LoggerFactory;
  * Worker implementation that uses workload API instead of starting kube pods directly.
  */
 public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOutput> {
+
+  private static final String DESTINATION = "destination";
+  private static final String SOURCE = "source";
 
   private static final Logger log = LoggerFactory.getLogger(WorkloadApiWorker.class);
   private static final Set<WorkloadStatus> TERMINAL_STATUSES = Set.of(WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS);
@@ -112,8 +117,9 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     // Wait until workload reaches a terminal status
     int i = 0;
     final Duration sleepInterval = Duration.ofSeconds(featureFlagClient.intVariation(WorkloadPollingInterval.INSTANCE, getFeatureFlagContext()));
+    Workload workload;
     while (true) {
-      final Workload workload = getWorkload(workloadId);
+      workload = getWorkload(workloadId);
 
       if (workload.getStatus() != null) {
         if (TERMINAL_STATUSES.contains(workload.getStatus())) {
@@ -130,7 +136,23 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
       sleep(sleepInterval.toMillis());
     }
 
-    return getReplicationOutput(workloadId);
+    if (workload.getStatus() == WorkloadStatus.FAILURE) {
+      if (SOURCE.equals(workload.getTerminationSource())) {
+        throw new SourceException(workload.getTerminationReason());
+      } else if (DESTINATION.equals(workload.getTerminationSource())) {
+        throw new DestinationException(workload.getTerminationReason());
+      } else {
+        throw new WorkerException(workload.getTerminationReason());
+      }
+    } else if (workload.getStatus() == WorkloadStatus.CANCELLED) {
+      throw new WorkerException("Replication cancelled by " + workload.getTerminationSource());
+    }
+
+    final ReplicationOutput output = getReplicationOutput(workloadId);
+    if (output == null) {
+      throw new WorkerException("Failed to read replication output");
+    }
+    return output;
   }
 
   @Override

@@ -3,8 +3,8 @@ import { SchemaOf } from "yup";
 
 import { NormalizationType } from "area/connection/types";
 import { validateCronExpression, validateCronFrequencyOneHourOrMore } from "area/connection/utils";
-import { AirbyteStreamAndConfiguration } from "core/api/types/AirbyteClient";
 import {
+  AirbyteStreamAndConfiguration,
   AirbyteStream,
   AirbyteStreamConfiguration,
   ConnectionScheduleData,
@@ -14,7 +14,7 @@ import {
   NamespaceDefinitionType,
   NonBreakingChangesPreference,
   SyncMode,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 import { ConnectionFormMode } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { dbtOperationReadOrCreateSchema } from "../TransformationForm";

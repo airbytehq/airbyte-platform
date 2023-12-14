@@ -10,14 +10,12 @@ import {
   useDestinationDefinitionVersion,
   useGetDestinationDefinitionSpecification,
   useDestinationDefinition,
-} from "core/api";
-import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
-import {
   useDeleteDestination,
   useInvalidateDestination,
   useUpdateDestination,
-} from "hooks/services/useDestinationHook";
+} from "core/api";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 import { useDeleteModal } from "hooks/useDeleteModal";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";

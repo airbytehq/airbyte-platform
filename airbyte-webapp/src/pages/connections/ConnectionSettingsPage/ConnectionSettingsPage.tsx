@@ -16,7 +16,7 @@ import { ExternalLink } from "components/ui/Link";
 import { Spinner } from "components/ui/Spinner";
 
 import { useDeleteConnection } from "core/api";
-import { Geography, WebBackendConnectionUpdate } from "core/request/AirbyteClient";
+import { Geography, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 import { links } from "core/utils/links";

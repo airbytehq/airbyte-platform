@@ -15,6 +15,7 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricClientFactory
 import io.airbyte.metrics.lib.MetricEmittingApps
+import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Singleton
@@ -45,5 +46,18 @@ class ApplicationBeanFactory {
     featureFlagClient: FeatureFlagClient,
   ): ReplicationInputHydrator {
     return ReplicationInputHydrator(connectionApi, jobsApi, stateApi, secretsPersistenceConfigApi, secretsRepositoryReader, featureFlagClient)
+  }
+
+  @Singleton
+  fun checkInputHydrator(
+    secretsPersistenceConfigApi: SecretsPersistenceConfigApi,
+    secretsRepositoryReader: SecretsRepositoryReader,
+    featureFlagClient: FeatureFlagClient,
+  ): CheckConnectionInputHydrator {
+    return CheckConnectionInputHydrator(
+      secretsRepositoryReader,
+      secretsPersistenceConfigApi,
+      featureFlagClient,
+    )
   }
 }

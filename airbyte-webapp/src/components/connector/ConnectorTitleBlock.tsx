@@ -6,8 +6,8 @@ import { Heading } from "components/ui/Heading";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
+import { DestinationRead, SourceRead, ActorDefinitionVersionRead } from "core/api/types/AirbyteClient";
 import { shouldDisplayBreakingChangeBanner, ConnectorDefinition } from "core/domain/connector";
-import { DestinationRead, SourceRead, ActorDefinitionVersionRead } from "core/request/AirbyteClient";
 
 import { BreakingChangeBanner } from "./BreakingChangeBanner";
 import styles from "./ConnectorTitleBlock.module.scss";

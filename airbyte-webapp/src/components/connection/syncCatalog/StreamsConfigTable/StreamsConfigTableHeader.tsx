@@ -10,7 +10,7 @@ import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 
-import { AirbyteStreamAndConfiguration, NamespaceDefinitionType } from "core/request/AirbyteClient";
+import { AirbyteStreamAndConfiguration, NamespaceDefinitionType } from "core/api/types/AirbyteClient";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useModalService } from "hooks/services/Modal";

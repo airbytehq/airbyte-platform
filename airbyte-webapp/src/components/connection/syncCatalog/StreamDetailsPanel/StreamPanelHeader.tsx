@@ -8,7 +8,7 @@ import { Icon } from "components/ui/Icon";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
-import { AirbyteStream, AirbyteStreamConfiguration } from "core/request/AirbyteClient";
+import { AirbyteStream, AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./StreamPanelHeader.module.scss";

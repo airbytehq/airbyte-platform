@@ -20,7 +20,7 @@ import {
   sendPasswordResetEmail,
 } from "firebase/auth";
 import React, { PropsWithChildren, useCallback, useEffect, useMemo, useState } from "react";
-import { useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 import { Observable, Subject } from "rxjs";
 
@@ -54,7 +54,6 @@ export enum FirebaseAuthMessageId {
 export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
   const [, setSpeedyConnectionTimestamp] = useLocalStorage("exp-speedy-connection-timestamp", "");
   const [logoutInProgress, setLogoutInProgress] = useState(false);
-  const { formatMessage } = useIntl();
   const queryClient = useQueryClient();
   const { registerNotification } = useNotificationService();
   const { mutateAsync: updateAirbyteUser } = useUpdateUser();
@@ -85,19 +84,19 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
           }
           registerNotification({
             id: "workspace.emailVerificationSuccess",
-            text: formatMessage({ id: "verifyEmail.success" }),
+            text: <FormattedMessage id="verifyEmail.success" />,
             type: "success",
           });
         })
         .catch(() => {
           registerNotification({
             id: "workspace.emailVerificationError",
-            text: formatMessage({ id: "verifyEmail.error" }),
+            text: <FormattedMessage id="verifyEmail.error" />,
             type: "error",
           });
         });
     },
-    [firebaseAuth, registerNotification, formatMessage, firebaseUser, emailDidVerify]
+    [firebaseAuth, registerNotification, firebaseUser, emailDidVerify]
   );
 
   const logout = useCallback(async () => {
@@ -179,7 +178,7 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
             .then(() => {
               registerNotification({
                 id: "workspace.emailVerificationResendSuccess",
-                text: formatMessage({ id: "credits.emailVerification.resendConfirmation" }),
+                text: <FormattedMessage id="credits.emailVerification.resendConfirmation" />,
                 type: "success",
               });
             })
@@ -188,27 +187,21 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
                 case AuthErrorCodes.NETWORK_REQUEST_FAILED:
                   registerNotification({
                     id: error.code,
-                    text: formatMessage({
-                      id: FirebaseAuthMessageId.NetworkFailure,
-                    }),
+                    text: <FormattedMessage id={FirebaseAuthMessageId.NetworkFailure} />,
                     type: "error",
                   });
                   break;
                 case AuthErrorCodes.TOO_MANY_ATTEMPTS_TRY_LATER:
                   registerNotification({
                     id: error.code,
-                    text: formatMessage({
-                      id: FirebaseAuthMessageId.TooManyRequests,
-                    }),
+                    text: <FormattedMessage id={FirebaseAuthMessageId.TooManyRequests} />,
                     type: "warning",
                   });
                   break;
                 default:
                   registerNotification({
                     id: error.code,
-                    text: formatMessage({
-                      id: FirebaseAuthMessageId.DefaultError,
-                    }),
+                    text: <FormattedMessage id={FirebaseAuthMessageId.DefaultError} />,
                     type: "error",
                   });
               }
@@ -358,7 +351,6 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
     firebaseAuth,
     firebaseInitialized,
     firebaseUser,
-    formatMessage,
     getAirbyteUser,
     keycloakAuth,
     logout,

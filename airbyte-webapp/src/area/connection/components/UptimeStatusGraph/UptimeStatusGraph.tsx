@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import dayjs from "dayjs";
+import React, { useEffect, useMemo, useState } from "react";
 import { ResponsiveContainer, Tooltip, XAxis } from "recharts";
 // these are not worth typing
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -10,48 +11,23 @@ import { formatAxisMap } from "recharts/es6/util/CartesianUtils";
 
 import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
 
+import { getStreamKey } from "area/connection/utils";
+import { useGetConnectionUptimeHistory } from "core/api";
+import { JobStatus } from "core/api/types/AirbyteClient";
+import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 
 import styles from "./UptimeStatusGraph.module.scss";
 import { UptimeStatusGraphTooltip } from "./UptimeStatusGraphTooltip";
-import { UptimeDayEntry, Waffle } from "./WaffleChart";
+import { ChartStream, UptimeDayEntry, Waffle } from "./WaffleChart";
+import {
+  CHART_BASE_HEIGHT,
+  CHART_MAX_HEIGHT,
+  CHART_MIN_HEIGHT,
+  CHART_STREAM_ROW_HEIGHT,
+} from "../DataMovedGraph/constants";
 import { tooltipConfig, xAxisConfig } from "../HistoricalOverview/ChartConfig";
-
-// Build placeholder data
-const STREAMS_COUNT = 20;
-const uptimeData: UptimeDayEntry[] = [];
-for (let i = 0; i < 30; i++) {
-  const date = Date.UTC(2023, 7, i);
-  const streams: (typeof uptimeData)[number]["streams"] = [];
-
-  for (let j = 0; j < STREAMS_COUNT; j++) {
-    let status: ConnectionStatusIndicatorStatus;
-
-    if (i > 25 && j >= STREAMS_COUNT - 1) {
-      // disabled last stream on the last four days
-      status = ConnectionStatusIndicatorStatus.Disabled;
-    } else if (j === 2 || j === STREAMS_COUNT - 3 || j === Math.floor(STREAMS_COUNT / 2)) {
-      // second, middle, and third to last are error
-      status = ConnectionStatusIndicatorStatus.Error;
-    } else if (j === 4 && i >= 15) {
-      // 5th is action required
-      status = ConnectionStatusIndicatorStatus.ActionRequired;
-    } else if (j === 5 && i >= 10 && i <= 16) {
-      // 5th was late for a duration
-      status = ConnectionStatusIndicatorStatus.Late;
-    } else {
-      status = ConnectionStatusIndicatorStatus.OnTime;
-    }
-    streams.push({ status });
-  }
-
-  uptimeData.push({ date, streams });
-}
-
-const CHART_MIN_HEIGHT = 50;
-const CHART_MAX_HEIGHT = 175;
-const CHART_STREAM_ROW_HEIGHT = 15;
-const CHART_BASE_HEIGHT = 17;
+import { NoDataMessage } from "../HistoricalOverview/NoDataMessage";
 
 const StreamChart = generateCategoricalChart({
   chartName: "StreamChart",
@@ -60,12 +36,125 @@ const StreamChart = generateCategoricalChart({
   formatAxisMap,
 });
 
+interface SortableStream {
+  streamNamespace?: string;
+  streamName: string;
+}
+const sortStreams = (a: SortableStream, b: SortableStream) => {
+  const { streamName: nameA, streamNamespace: namespaceA } = a;
+  const { streamName: nameB, streamNamespace: namespaceB } = b;
+
+  const namespaceCompare = (namespaceA ?? "")?.localeCompare(namespaceB ?? "");
+  if (namespaceCompare !== 0) {
+    return namespaceCompare;
+  }
+
+  return nameA.localeCompare(nameB);
+};
+
+function assertNever(_x: never) {}
+
+const formatDataForChart = (data: ReturnType<typeof useGetConnectionUptimeHistory>) => {
+  // bucket entries by their timestamp and collect all stream identities so we can fill in gaps
+  const dateBuckets: Record<string, ChartStream[]> = {};
+  const today = dayjs();
+  for (let i = 0; i < 30; i++) {
+    const date = today.subtract(i, "day").startOf("day").unix();
+    dateBuckets[date] = [];
+  }
+
+  const { bucketedEntries, allStreamIdentities } = data.reduce<{
+    bucketedEntries: typeof dateBuckets;
+    allStreamIdentities: Map<string, SortableStream>;
+  }>(
+    (acc, entry) => {
+      // not destructuring to avoid creating new objects when returning
+      const bucketedEntries = acc.bucketedEntries;
+      const allStreamIdentities = acc.allStreamIdentities;
+
+      // add this entry to its bucket
+      if (bucketedEntries.hasOwnProperty(entry.timestamp)) {
+        let status: ConnectionStatusIndicatorStatus = ConnectionStatusIndicatorStatus.Pending;
+
+        switch (entry.status) {
+          case JobStatus.succeeded:
+            status = ConnectionStatusIndicatorStatus.OnTime;
+            break;
+          case JobStatus.failed:
+            status = ConnectionStatusIndicatorStatus.Error;
+            break;
+          case JobStatus.running:
+          case JobStatus.cancelled:
+          case JobStatus.incomplete:
+          case JobStatus.pending:
+            status = ConnectionStatusIndicatorStatus.Pending;
+            break;
+          default:
+            assertNever(entry.status);
+        }
+        bucketedEntries[entry.timestamp].push({
+          streamNamespace: entry.streamNamespace,
+          streamName: entry.streamName,
+          status,
+        });
+      }
+
+      // add this stream to the map
+      const streamKey = getStreamKey(entry);
+      if (allStreamIdentities.has(streamKey) === false) {
+        allStreamIdentities.set(streamKey, entry);
+      }
+
+      return acc;
+    },
+    {
+      bucketedEntries: dateBuckets,
+      allStreamIdentities: new Map(),
+    }
+  );
+
+  // ensure each date bucket has an entry for each stream and that they align between days
+  const dateBucketKeys: Array<keyof typeof bucketedEntries> = Object.keys(bucketedEntries);
+  const streamIdentities = Array.from(allStreamIdentities.values()).sort(sortStreams);
+
+  // entries in the graph's expected format
+  const uptimeData: UptimeDayEntry[] = [];
+
+  dateBucketKeys.forEach((dateBucketKey) => {
+    const dateEntries = bucketedEntries[dateBucketKey];
+    dateEntries.sort(sortStreams);
+
+    for (let i = 0; i < streamIdentities.length; i++) {
+      const streamIdentity = streamIdentities[i];
+      const dateEntry = dateEntries[i];
+
+      if (
+        !dateEntry ||
+        (streamIdentity.streamNamespace ?? "") !== (dateEntry.streamNamespace ?? "") ||
+        streamIdentity.streamName !== dateEntry.streamName
+      ) {
+        dateEntries.splice(i, 0, {
+          streamNamespace: streamIdentity.streamNamespace,
+          streamName: streamIdentity.streamName,
+          status: ConnectionStatusIndicatorStatus.Pending,
+        });
+      }
+    }
+
+    uptimeData.push({
+      date: parseInt(dateBucketKey, 10) * 1000,
+      streams: dateEntries,
+    });
+  });
+
+  return { uptimeData, streamIdentities };
+};
+
 // wrapped in memo to avoid redrawing the chart when the component tree re-renders
 export const UptimeStatusGraph: React.FC = React.memo(() => {
+  // read color values from the theme
   const [colorMap, setColorMap] = useState<Record<string, string>>({});
-
   const { colorValues } = useAirbyteTheme();
-
   useEffect(() => {
     const colorMap: Record<string, string> = {
       green: colorValues[styles.greenVar],
@@ -77,12 +166,22 @@ export const UptimeStatusGraph: React.FC = React.memo(() => {
     setColorMap(colorMap);
   }, [colorValues]);
 
+  const { connection } = useConnectionEditService();
+  const data = useGetConnectionUptimeHistory(connection.connectionId);
+  const hasData = data.length > 0;
+
+  const { uptimeData, streamIdentities } = useMemo(() => formatDataForChart(data), [data]);
+
+  if (!hasData) {
+    return <NoDataMessage />;
+  }
+
   return (
     <ResponsiveContainer
       width="100%"
       height={Math.max(
         CHART_MIN_HEIGHT,
-        Math.min(CHART_MAX_HEIGHT, STREAMS_COUNT * CHART_STREAM_ROW_HEIGHT + CHART_BASE_HEIGHT)
+        Math.min(CHART_MAX_HEIGHT, streamIdentities.length * CHART_STREAM_ROW_HEIGHT + CHART_BASE_HEIGHT)
       )}
     >
       <StreamChart data={uptimeData}>
@@ -90,7 +189,7 @@ export const UptimeStatusGraph: React.FC = React.memo(() => {
           <Waffle
             colorMap={colorMap}
             dataKey={"date" /* without `dataKey` the tooltip won't show */}
-            streamsCount={uptimeData[0].streams.length}
+            streamsCount={streamIdentities.length}
           />
         )}
 

@@ -77,6 +77,8 @@ fun ApiWorkload.toDomain(): DomainWorkload {
     geography = this.geography,
     mutexKey = this.mutexKey,
     type = this.type.toDomain(),
+    terminationReason = terminationReason,
+    terminationSource = terminationSource,
   )
 }
 

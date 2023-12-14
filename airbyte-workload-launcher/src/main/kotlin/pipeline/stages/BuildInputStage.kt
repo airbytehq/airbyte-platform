@@ -1,13 +1,18 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
 import datadog.trace.api.Trace
+import io.airbyte.config.WorkloadType
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
+import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
+import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
+import io.airbyte.workload.launcher.pipeline.stages.model.WorkloadPayload
 import io.airbyte.workload.launcher.serde.PayloadDeserializer
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
@@ -24,6 +29,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 @Named("build")
 class BuildInputStage(
+  private val checkInputHydrator: CheckConnectionInputHydrator,
   private val replicationInputHydrator: ReplicationInputHydrator,
   private val deserializer: PayloadDeserializer,
   metricPublisher: CustomMetricPublisher,
@@ -34,15 +40,36 @@ class BuildInputStage(
   }
 
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
-    val parsed: ReplicationActivityInput = deserializer.toReplicationActivityInput(input.msg.workloadInput)
-    val hydrated: ReplicationInput = replicationInputHydrator.getHydratedReplicationInput(parsed)
+    val built = buildPayload(input.msg.workloadInput, input.msg.workloadType)
 
     return input.apply {
-      replicationInput = hydrated
+      payload = built
     }
   }
 
   override fun getStageName(): StageName {
     return StageName.BUILD
   }
+
+  private fun buildPayload(
+    rawPayload: String,
+    type: WorkloadType,
+  ): WorkloadPayload =
+    when (type) {
+      WorkloadType.CHECK -> {
+        val parsed = deserializer.toStandardCheckConnectionInput(rawPayload)
+        val hydrated = checkInputHydrator.getHydratedCheckInput(parsed)
+        CheckPayload(hydrated)
+      }
+
+      WorkloadType.SYNC -> {
+        val parsed: ReplicationActivityInput = deserializer.toReplicationActivityInput(rawPayload)
+        val hydrated: ReplicationInput = replicationInputHydrator.getHydratedReplicationInput(parsed)
+        SyncPayload(hydrated)
+      }
+
+      else -> {
+        throw NotImplementedError("Unimplemented workload type: $type")
+      }
+    }
 }

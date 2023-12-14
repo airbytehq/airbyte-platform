@@ -6,6 +6,7 @@ package io.airbyte.persistence.job.errorreporter;
 
 import static org.mockito.Mockito.mock;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.Configs.DeploymentMode;
@@ -18,6 +19,7 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.State;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.WebUrlHelper;
@@ -134,6 +136,10 @@ class JobErrorReporterTest {
         SOURCE_DEFINITION_VERSION_ID,
         DESTINATION_DEFINITION_VERSION_ID);
 
+    final ObjectMapper objectMapper = new ObjectMapper();
+    final AttemptConfigReportingContext attemptConfig =
+        new AttemptConfigReportingContext(objectMapper.createObjectNode(), objectMapper.createObjectNode(), new State());
+
     Mockito.when(configRepository.getSourceDefinitionFromConnection(CONNECTION_ID))
         .thenReturn(new StandardSourceDefinition()
             .withSourceDefinitionId(SOURCE_DEFINITION_ID)
@@ -164,7 +170,7 @@ class JobErrorReporterTest {
     Mockito.when(mWorkspace.getWorkspaceId()).thenReturn(WORKSPACE_ID);
     Mockito.when(configRepository.getStandardWorkspaceFromConnection(CONNECTION_ID, true)).thenReturn(mWorkspace);
 
-    jobErrorReporter.reportSyncJobFailure(CONNECTION_ID, mFailureSummary, jobReportingContext);
+    jobErrorReporter.reportSyncJobFailure(CONNECTION_ID, mFailureSummary, jobReportingContext, attemptConfig);
 
     final Map<String, String> expectedSourceMetadata = Map.ofEntries(
         Map.entry(JOB_ID_KEY, String.valueOf(syncJobId)),
@@ -218,11 +224,13 @@ class JobErrorReporterTest {
         Map.entry(CONNECTOR_NAME_KEY, DESTINATION_DEFINITION_NAME),
         Map.entry(CONNECTOR_RELEASE_STAGE_KEY, DESTINATION_RELEASE_STAGE.toString()));
 
-    Mockito.verify(jobErrorReportingClient).reportJobFailureReason(mWorkspace, sourceFailureReason, SOURCE_DOCKER_IMAGE, expectedSourceMetadata);
+    Mockito.verify(jobErrorReportingClient).reportJobFailureReason(mWorkspace, sourceFailureReason, SOURCE_DOCKER_IMAGE, expectedSourceMetadata,
+        attemptConfig);
     Mockito.verify(jobErrorReportingClient).reportJobFailureReason(mWorkspace, destinationFailureReason, DESTINATION_DOCKER_IMAGE,
-        expectedDestinationMetadata);
+        expectedDestinationMetadata, attemptConfig);
     Mockito.verify(jobErrorReportingClient).reportJobFailureReason(
-        mWorkspace, normalizationFailureReason, String.format("%s:%s", NORMALIZATION_IMAGE, NORMALIZATION_VERSION), expectedNormalizationMetadata);
+        mWorkspace, normalizationFailureReason, String.format("%s:%s", NORMALIZATION_IMAGE, NORMALIZATION_VERSION), expectedNormalizationMetadata,
+        attemptConfig);
     Mockito.verifyNoMoreInteractions(jobErrorReportingClient);
   }
 
@@ -235,6 +243,10 @@ class JobErrorReporterTest {
         .withMetadata(new Metadata().withAdditionalProperty(FROM_TRACE_MESSAGE, true))
         .withFailureOrigin(FailureOrigin.SOURCE)
         .withFailureType(FailureType.SYSTEM_ERROR);
+
+    final ObjectMapper objectMapper = new ObjectMapper();
+    final AttemptConfigReportingContext attemptConfig =
+        new AttemptConfigReportingContext(objectMapper.createObjectNode(), objectMapper.createObjectNode(), new State());
 
     Mockito.when(mFailureSummary.getFailures()).thenReturn(List.of(sourceFailureReason));
 
@@ -256,11 +268,11 @@ class JobErrorReporterTest {
 
     Mockito.doThrow(new RuntimeException("some exception"))
         .when(jobErrorReportingClient)
-        .reportJobFailureReason(Mockito.any(), Mockito.eq(sourceFailureReason), Mockito.any(), Mockito.any());
+        .reportJobFailureReason(Mockito.any(), Mockito.eq(sourceFailureReason), Mockito.any(), Mockito.any(), Mockito.any());
 
-    Assertions.assertDoesNotThrow(() -> jobErrorReporter.reportSyncJobFailure(CONNECTION_ID, mFailureSummary, jobContext));
+    Assertions.assertDoesNotThrow(() -> jobErrorReporter.reportSyncJobFailure(CONNECTION_ID, mFailureSummary, jobContext, attemptConfig));
     Mockito.verify(jobErrorReportingClient, Mockito.times(1))
-        .reportJobFailureReason(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+        .reportJobFailureReason(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
   }
 
   @Test
@@ -299,7 +311,7 @@ class JobErrorReporterTest {
         Map.entry(CONNECTOR_RELEASE_STAGE_KEY, SOURCE_RELEASE_STAGE.toString()),
         Map.entry(CONNECTOR_COMMAND_KEY, CHECK_COMMAND));
 
-    Mockito.verify(jobErrorReportingClient).reportJobFailureReason(mWorkspace, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata);
+    Mockito.verify(jobErrorReportingClient).reportJobFailureReason(mWorkspace, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata, null);
     Mockito.verifyNoMoreInteractions(jobErrorReportingClient);
   }
 
@@ -333,7 +345,7 @@ class JobErrorReporterTest {
         Map.entry(CONNECTOR_RELEASE_STAGE_KEY, SOURCE_RELEASE_STAGE.toString()),
         Map.entry(CONNECTOR_COMMAND_KEY, CHECK_COMMAND));
 
-    Mockito.verify(jobErrorReportingClient).reportJobFailureReason(null, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata);
+    Mockito.verify(jobErrorReportingClient).reportJobFailureReason(null, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata, null);
     Mockito.verifyNoMoreInteractions(jobErrorReportingClient);
   }
 
@@ -373,7 +385,7 @@ class JobErrorReporterTest {
         Map.entry(CONNECTOR_RELEASE_STAGE_KEY, DESTINATION_RELEASE_STAGE.toString()),
         Map.entry(CONNECTOR_COMMAND_KEY, CHECK_COMMAND));
 
-    Mockito.verify(jobErrorReportingClient).reportJobFailureReason(mWorkspace, failureReason, DESTINATION_DOCKER_IMAGE, expectedMetadata);
+    Mockito.verify(jobErrorReportingClient).reportJobFailureReason(mWorkspace, failureReason, DESTINATION_DOCKER_IMAGE, expectedMetadata, null);
     Mockito.verifyNoMoreInteractions(jobErrorReportingClient);
   }
 
@@ -407,7 +419,7 @@ class JobErrorReporterTest {
         Map.entry(CONNECTOR_RELEASE_STAGE_KEY, DESTINATION_RELEASE_STAGE.toString()),
         Map.entry(CONNECTOR_COMMAND_KEY, CHECK_COMMAND));
 
-    Mockito.verify(jobErrorReportingClient).reportJobFailureReason(null, failureReason, DESTINATION_DOCKER_IMAGE, expectedMetadata);
+    Mockito.verify(jobErrorReportingClient).reportJobFailureReason(null, failureReason, DESTINATION_DOCKER_IMAGE, expectedMetadata, null);
     Mockito.verifyNoMoreInteractions(jobErrorReportingClient);
   }
 
@@ -447,7 +459,7 @@ class JobErrorReporterTest {
         Map.entry(CONNECTOR_RELEASE_STAGE_KEY, SOURCE_RELEASE_STAGE.toString()),
         Map.entry(CONNECTOR_COMMAND_KEY, DISCOVER_COMMAND));
 
-    Mockito.verify(jobErrorReportingClient).reportJobFailureReason(mWorkspace, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata);
+    Mockito.verify(jobErrorReportingClient).reportJobFailureReason(mWorkspace, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata, null);
     Mockito.verifyNoMoreInteractions(jobErrorReportingClient);
   }
 
@@ -481,7 +493,7 @@ class JobErrorReporterTest {
         Map.entry(CONNECTOR_RELEASE_STAGE_KEY, SOURCE_RELEASE_STAGE.toString()),
         Map.entry(CONNECTOR_COMMAND_KEY, DISCOVER_COMMAND));
 
-    Mockito.verify(jobErrorReportingClient).reportJobFailureReason(null, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata);
+    Mockito.verify(jobErrorReportingClient).reportJobFailureReason(null, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata, null);
     Mockito.verifyNoMoreInteractions(jobErrorReportingClient);
   }
 
@@ -507,7 +519,7 @@ class JobErrorReporterTest {
         Map.entry(CONNECTOR_REPOSITORY_KEY, SOURCE_DOCKER_REPOSITORY),
         Map.entry(CONNECTOR_COMMAND_KEY, SPEC_COMMAND));
 
-    Mockito.verify(jobErrorReportingClient).reportJobFailureReason(null, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata);
+    Mockito.verify(jobErrorReportingClient).reportJobFailureReason(null, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata, null);
     Mockito.verifyNoMoreInteractions(jobErrorReportingClient);
   }
 

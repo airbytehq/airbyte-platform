@@ -1,0 +1,7 @@
+@use "scss/variables";
+
+.form {
+  display: flex;
+  margin-top: variables.$spacing-xl;
+  gap: variables.$spacing-sm;
+}

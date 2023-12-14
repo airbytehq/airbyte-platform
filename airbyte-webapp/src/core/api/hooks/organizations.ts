@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { SCOPE_ORGANIZATION, SCOPE_USER } from "services/Scope";
 
 import { useGetWorkspace } from "./workspaces";
 import {
@@ -11,6 +10,7 @@ import {
   updateOrganization,
 } from "../generated/AirbyteClient";
 import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
+import { SCOPE_ORGANIZATION, SCOPE_USER } from "../scopes";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 

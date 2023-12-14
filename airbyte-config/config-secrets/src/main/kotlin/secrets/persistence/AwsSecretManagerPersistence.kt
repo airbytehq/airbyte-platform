@@ -11,6 +11,7 @@ import com.amazonaws.regions.Regions
 import com.amazonaws.secretsmanager.caching.SecretCache
 import com.amazonaws.services.secretsmanager.AWSSecretsManager
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder
+import com.amazonaws.services.secretsmanager.model.AWSSecretsManagerException
 import com.amazonaws.services.secretsmanager.model.CreateSecretRequest
 import com.amazonaws.services.secretsmanager.model.DeleteSecretRequest
 import com.amazonaws.services.secretsmanager.model.ResourceNotFoundException
@@ -54,7 +55,24 @@ class AwsSecretManagerPersistence(private val awsClient: AwsClient, private val 
     payload: String,
   ) {
     Preconditions.checkArgument(payload.isNotEmpty(), "Payload shouldn't be empty")
-    if (read(coordinate).isNotEmpty()) {
+    val existingSecret =
+      try {
+        read(coordinate)
+      } catch (e: AWSSecretsManagerException) {
+        // We use tags to control access to secrets.
+        // The AWS SDK doesn't differentiate between role access exceptions and secret not found exceptions to prevent leaking information.
+        // Because of this we catch the exception and if it's due to the assumed-role not having access, we just ignore it and proceed.
+        // In theory, the secret should not exist, and we will go straight to attempting to create which is safe because:
+        // 1. Update and create are distinct actions and we can't create over an already existing secret so we should get an error and no-op
+        // 2. If the secret does exist, we will get an error and no-op
+        if (e.localizedMessage.contains("assumed-role")) {
+          logger.info { "AWS exception caught - Secret ${coordinate.coordinateBase} not found" }
+          ""
+        } else {
+          throw e
+        }
+      }
+    if (existingSecret.isNotEmpty()) {
       logger.debug { "Secret ${coordinate.coordinateBase} found updating payload." }
       val request =
         UpdateSecretRequest()

@@ -604,8 +604,9 @@
   "connection.stream.status.nextSync": "Next sync {sync}",
   "connection.stream.status.nextTry": "Next try {sync}",
 
-  "connection.overview.graph.uptimeStatus": "Uptime status",
-  "connection.overview.graph.dataMoved": "Data moved",
+  "connection.overview.graph.noData": "No data from the last 30 days",
+  "connection.overview.graph.uptimeStatus": "Streams",
+  "connection.overview.graph.dataMoved": "Records",
 
   "form.scheduleType": "Schedule type",
   "form.scheduleType.message": "Set how often data should sync to the destination",
@@ -685,6 +686,7 @@
   "tables.connections.filters.status.all": "All statuses",
   "tables.connections.filters.status.healthy": "Healthy",
   "tables.connections.filters.status.failed": "Failed",
+  "tables.connections.filters.status.running": "Running",
   "tables.connections.filters.status.paused": "Paused",
   "tables.connections.filters.source.all": "All sources",
   "tables.connections.filters.destination.all": "All destinations",
@@ -1469,6 +1471,8 @@
   "settings.workspaceSettings.delete.confirmation.title": "Delete workspace",
   "settings.workspaceSettings.delete.confirmation.text": "Deleting this workspace will remove it for all users and cancel all pending syncs. Do you want to proceed?",
   "settings.workspaceSettings.delete.confirmation.submitButtonText": "Delete workspace",
+  "settings.workspaceSettings.deleteWorkspace.confirmation.title": "Delete workspace: <b>{name}</b>",
+  "settings.workspaceSettings.deleteWorkspace.confirmation.text": "Deleting this workspace will remove it for all users and cancel all pending syncs. To confirm deletion, type the name of the workspace in the input field.",
 
   "settings.workspaceSettings.delete.permissionsError": "You do not have sufficient permissions to delete this workspace. Please consult with the workspace owner.",
   "settings.integrationSettings": "Integration settings",

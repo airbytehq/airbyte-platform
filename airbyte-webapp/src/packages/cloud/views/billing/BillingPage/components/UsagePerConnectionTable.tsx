@@ -13,7 +13,7 @@ import { TextWithOverflowTooltip } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
 import { useCurrentWorkspace } from "core/api";
-import { ConnectionScheduleType, ConnectionStatus } from "core/request/AirbyteClient";
+import { ConnectionScheduleType, ConnectionStatus } from "core/api/types/AirbyteClient";
 import { RoutePaths } from "pages/routePaths";
 
 import { ConnectionFreeAndPaidUsage } from "./calculateUsageDataObjects";

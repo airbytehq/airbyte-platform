@@ -9,7 +9,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { useDeletePermissions, useUpdatePermissions } from "core/api";
-import { PermissionRead, PermissionType, PermissionUpdate } from "core/request/AirbyteClient";
+import { PermissionRead, PermissionType, PermissionUpdate } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 import { useIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";

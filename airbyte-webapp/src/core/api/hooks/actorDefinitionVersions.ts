@@ -1,10 +1,10 @@
 import { isDefined } from "core/utils/common";
-import { SCOPE_WORKSPACE } from "services/Scope";
 
 import {
   getActorDefinitionVersionForDestinationId,
   getActorDefinitionVersionForSourceId,
 } from "../generated/AirbyteClient";
+import { SCOPE_WORKSPACE } from "../scopes";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 

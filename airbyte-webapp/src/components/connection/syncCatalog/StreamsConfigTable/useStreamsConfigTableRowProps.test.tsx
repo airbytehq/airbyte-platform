@@ -2,7 +2,7 @@ import { renderHook } from "@testing-library/react";
 
 import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 
-import { AirbyteStreamAndConfiguration } from "core/request/AirbyteClient";
+import { AirbyteStreamAndConfiguration } from "core/api/types/AirbyteClient";
 import * as connectionFormService from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { useStreamsConfigTableRowProps } from "./useStreamsConfigTableRowProps";

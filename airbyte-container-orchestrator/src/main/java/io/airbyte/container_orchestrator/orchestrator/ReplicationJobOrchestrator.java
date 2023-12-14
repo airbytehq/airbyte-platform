@@ -14,6 +14,7 @@ import datadog.trace.api.Trace;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.Configs;
+import io.airbyte.config.FailureReason;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.container_orchestrator.AsyncStateManager;
 import io.airbyte.metrics.lib.ApmTraceUtils;
@@ -23,6 +24,9 @@ import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
+import io.airbyte.workers.helper.FailureHelper;
+import io.airbyte.workers.internal.exception.DestinationException;
+import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.process.KubePodProcess;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
@@ -121,23 +125,31 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   ReplicationOutput runWithWorkloadEnabled(final ReplicationWorker replicationWorker, final ReplicationInput replicationInput, final Path jobRoot)
       throws WorkerException, IOException {
 
+    final Long jobId = Long.parseLong(jobRunConfig.getJobId());
+    final Integer attemptNumber = Math.toIntExact(jobRunConfig.getAttemptId());
     final String workloadId = workloadIdGenerator.generateSyncWorkloadId(
         replicationInput.getConnectionId(),
-        Long.parseLong(jobRunConfig.getJobId()),
-        Math.toIntExact(jobRunConfig.getAttemptId()));
+        jobId,
+        attemptNumber);
 
     try {
       final ReplicationOutput replicationOutput = replicationWorker.run(replicationInput, jobRoot);
       switch (replicationOutput.getReplicationAttemptSummary().getStatus()) {
-        case FAILED -> failWorkload(workloadId);
+        case FAILED -> failWorkload(workloadId, replicationOutput.getFailures().stream().findFirst());
         case CANCELLED -> cancelWorkload(workloadId);
         case COMPLETED -> succeedWorkload(workloadId);
         default -> throw new RuntimeException(String.format("Unknown status %s.", replicationOutput.getReplicationAttemptSummary().getStatus()));
       }
 
       return replicationOutput;
+    } catch (final DestinationException e) {
+      failWorkload(workloadId, Optional.of(FailureHelper.destinationFailure(e, jobId, attemptNumber)));
+      throw e;
+    } catch (final SourceException e) {
+      failWorkload(workloadId, Optional.of(FailureHelper.sourceFailure(e, jobId, attemptNumber)));
+      throw e;
     } catch (final WorkerException e) {
-      failWorkload(workloadId);
+      failWorkload(workloadId, Optional.of(FailureHelper.platformFailure(e, jobId, attemptNumber)));
       throw e;
     }
   }
@@ -146,8 +158,14 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
     workloadApi.workloadCancel(new WorkloadCancelRequest(workloadId, "Replication job has been cancelled", "orchestrator"));
   }
 
-  private void failWorkload(final String workloadId) throws IOException {
-    workloadApi.workloadFailure(new WorkloadFailureRequest(workloadId));
+  private void failWorkload(final String workloadId, final Optional<FailureReason> failureReason) throws IOException {
+    if (failureReason.isPresent()) {
+      workloadApi.workloadFailure(new WorkloadFailureRequest(workloadId,
+          failureReason.get().getFailureOrigin().value(),
+          failureReason.get().getExternalMessage()));
+    } else {
+      workloadApi.workloadFailure(new WorkloadFailureRequest(workloadId, null, null));
+    }
   }
 
   private void succeedWorkload(final String workloadId) throws IOException {

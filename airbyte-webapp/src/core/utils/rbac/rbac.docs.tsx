@@ -6,7 +6,7 @@ import { Icon } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
 import { ListBox } from "components/ui/ListBox";
 
-import { PermissionType } from "core/request/AirbyteClient";
+import { PermissionType } from "core/api/types/AirbyteClient";
 
 import {
   RbacQuery,

@@ -3,24 +3,24 @@ import { useCallback, useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 
 import { ConnectionConfiguration } from "area/connector/types";
-import { useConfig } from "config";
-import { useSuspenseQuery, useRemoveConnectionsFromList } from "core/api";
-// eslint-disable-next-line import/no-restricted-paths
-import { useRequestOptions } from "core/api/useRequestOptions";
-import { SourceService } from "core/domain/connector/SourceService";
-import {
-  AirbyteCatalog,
-  SourceRead,
-  SynchronousJobRead,
-  WebBackendConnectionListItem,
-} from "core/request/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { isDefined } from "core/utils/common";
-import { useInitService } from "services/useInitService";
 
-import { useRequestErrorHandler } from "./useRequestErrorHandler";
-import { useCurrentWorkspace } from "./useWorkspace";
-import { SCOPE_WORKSPACE } from "../../services/Scope";
+import { useRemoveConnectionsFromList } from "./connections";
+import { useCurrentWorkspace } from "./workspaces";
+import {
+  createSource,
+  deleteSource,
+  discoverSchemaForSource,
+  getSource,
+  listSourcesForWorkspace,
+  updateSource,
+} from "../generated/AirbyteClient";
+import { SCOPE_WORKSPACE } from "../scopes";
+import { AirbyteCatalog, SourceRead, SynchronousJobRead, WebBackendConnectionListItem } from "../types/AirbyteClient";
+import { useRequestErrorHandler } from "../useRequestErrorHandler";
+import { useRequestOptions } from "../useRequestOptions";
+import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const sourcesKeys = {
   all: [SCOPE_WORKSPACE, "sources"] as const,
@@ -41,31 +41,31 @@ interface ConnectorProps {
   sourceDefinitionId: string;
 }
 
-function useSourceService() {
-  const { apiUrl } = useConfig();
-  const requestOptions = useRequestOptions();
-  return useInitService(() => new SourceService(requestOptions), [apiUrl, requestOptions]);
-}
-
 interface SourceList {
   sources: SourceRead[];
 }
 
 const useSourceList = (): SourceList => {
+  const requestOptions = useRequestOptions();
   const workspace = useCurrentWorkspace();
-  const service = useSourceService();
 
-  return useSuspenseQuery(sourcesKeys.lists(), () => service.list(workspace.workspaceId));
+  return useSuspenseQuery(sourcesKeys.lists(), () =>
+    listSourcesForWorkspace({ workspaceId: workspace.workspaceId }, requestOptions)
+  );
 };
 
 const useGetSource = <T extends string | undefined | null>(
   sourceId: T
 ): T extends string ? SourceRead : SourceRead | undefined => {
-  const service = useSourceService();
+  const requestOptions = useRequestOptions();
 
-  return useSuspenseQuery(sourcesKeys.detail(sourceId ?? ""), () => service.get(sourceId ?? ""), {
-    enabled: isDefined(sourceId),
-  });
+  return useSuspenseQuery(
+    sourcesKeys.detail(sourceId ?? ""),
+    () => getSource({ sourceId: sourceId ?? "" }, requestOptions),
+    {
+      enabled: isDefined(sourceId),
+    }
+  );
 };
 
 export const useInvalidateSource = <T extends string | undefined | null>(sourceId: T): (() => void) => {
@@ -77,7 +77,7 @@ export const useInvalidateSource = <T extends string | undefined | null>(sourceI
 };
 
 const useCreateSource = () => {
-  const service = useSourceService();
+  const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const workspace = useCurrentWorkspace();
   const onError = useRequestErrorHandler("sources.createError");
@@ -87,12 +87,15 @@ const useCreateSource = () => {
       const { values, sourceConnector } = createSourcePayload;
       try {
         // Try to create source
-        const result = await service.create({
-          name: values.name,
-          sourceDefinitionId: sourceConnector?.sourceDefinitionId,
-          workspaceId: workspace.workspaceId,
-          connectionConfiguration: values.connectionConfiguration,
-        });
+        const result = await createSource(
+          {
+            name: values.name,
+            sourceDefinitionId: sourceConnector?.sourceDefinitionId,
+            workspaceId: workspace.workspaceId,
+            connectionConfiguration: values.connectionConfiguration,
+          },
+          requestOptions
+        );
 
         return result;
       } catch (e) {
@@ -111,7 +114,7 @@ const useCreateSource = () => {
 };
 
 const useDeleteSource = () => {
-  const service = useSourceService();
+  const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
   const removeConnectionsFromList = useRemoveConnectionsFromList();
@@ -119,7 +122,7 @@ const useDeleteSource = () => {
 
   return useMutation(
     (payload: { source: SourceRead; connectionsWithSource: WebBackendConnectionListItem[] }) =>
-      service.delete(payload.source.sourceId),
+      deleteSource({ sourceId: payload.source.sourceId }, requestOptions),
     {
       onSuccess: (_data, ctx) => {
         analyticsService.track(Namespace.SOURCE, Action.DELETE, {
@@ -146,17 +149,20 @@ const useDeleteSource = () => {
 };
 
 const useUpdateSource = () => {
-  const service = useSourceService();
+  const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const onError = useRequestErrorHandler("sources.updateError");
 
   return useMutation(
     (updateSourcePayload: { values: ValuesProps; sourceId: string }) => {
-      return service.update({
-        name: updateSourcePayload.values.name,
-        sourceId: updateSourcePayload.sourceId,
-        connectionConfiguration: updateSourcePayload.values.connectionConfiguration,
-      });
+      return updateSource(
+        {
+          name: updateSourcePayload.values.name,
+          sourceId: updateSourcePayload.sourceId,
+          connectionConfiguration: updateSourcePayload.values.connectionConfiguration,
+        },
+        requestOptions
+      );
     },
     {
       onSuccess: (data) => {
@@ -179,7 +185,7 @@ const useDiscoverSchema = (
   catalogId: string | undefined;
   onDiscoverSchema: () => Promise<void>;
 } => {
-  const service = useSourceService();
+  const requestOptions = useRequestOptions();
   const [schema, setSchema] = useState<AirbyteCatalog | undefined>(undefined);
   const [catalogId, setCatalogId] = useState<string | undefined>("");
   const [isLoading, setIsLoading] = useState(false);
@@ -189,17 +195,30 @@ const useDiscoverSchema = (
     setIsLoading(true);
     setSchemaErrorStatus(null);
     try {
-      const data = await service.discoverSchema(sourceId || "", disableCache);
+      const result = await discoverSchemaForSource(
+        { sourceId: sourceId || "", disable_cache: disableCache },
+        requestOptions
+      );
+
+      if (!result.jobInfo?.succeeded || !result.catalog) {
+        // @ts-expect-error TODO: address this case
+        const e = result.jobInfo?.logs ? new LogsRequestError(result.jobInfo) : new CommonRequestError(result);
+        // Generate error with failed status and received logs
+        e._status = 400;
+        e.response = result.jobInfo;
+        throw e;
+      }
+
       flushSync(() => {
-        setSchema(data.catalog);
-        setCatalogId(data.catalogId);
+        setSchema(result.catalog);
+        setCatalogId(result.catalogId);
       });
     } catch (e) {
       setSchemaErrorStatus(e);
     } finally {
       setIsLoading(false);
     }
-  }, [disableCache, service, sourceId]);
+  }, [disableCache, requestOptions, sourceId]);
 
   useEffect(() => {
     if (sourceId) {

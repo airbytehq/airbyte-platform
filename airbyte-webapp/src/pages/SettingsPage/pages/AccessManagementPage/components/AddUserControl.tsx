@@ -12,7 +12,7 @@ import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCreatePermission } from "core/api";
-import { OrganizationUserRead, PermissionCreate, PermissionType } from "core/request/AirbyteClient";
+import { OrganizationUserRead, PermissionCreate, PermissionType } from "core/api/types/AirbyteClient";
 
 import styles from "./AddUserControl.module.scss";
 

@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { FeatureItem, useFeature } from "core/services/features";
-import { SCOPE_WORKSPACE } from "services/Scope";
 
 import { webBackendCheckUpdates } from "../generated/AirbyteClient";
+import { SCOPE_WORKSPACE } from "../scopes";
 import { WebBackendCheckUpdatesRead } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 
