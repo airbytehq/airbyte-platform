@@ -37,3 +37,10 @@ flags:
   # the time the platform waits before it decides that a destination has timed out.
   - name: destination-timeout.seconds
     serve: 86400
+  - name: platform.use-workload-api
+    serve: false
+    context:
+      - type: "workspace"
+        include:
+          - "3d2985a0-a412-45f4-9124-e15800b739be"
+        serve: true
