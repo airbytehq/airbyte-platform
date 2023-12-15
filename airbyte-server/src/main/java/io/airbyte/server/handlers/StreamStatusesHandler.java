@@ -114,7 +114,7 @@ public class StreamStatusesHandler {
     return syncReadResults.stream()
         .sorted(Comparator
             .comparing((ConnectionSyncResultRead r) -> LocalDate.ofInstant(Instant.ofEpochSecond(r.getTimestamp()), timezone))
-            .thenComparing(ConnectionSyncResultRead::getStreamNamespace)
+            .thenComparing(ConnectionSyncResultRead::getStreamNamespace, Comparator.nullsFirst(String::compareTo))
             .thenComparing(ConnectionSyncResultRead::getStreamName))
         .toList();
   }
