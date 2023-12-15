@@ -164,6 +164,7 @@ class ReplicationInputHydratorTest {
         "unused",
         null, // unused
         new ConnectionContext().withOrganizationId(UUID.randomUUID()),
+        false,
         false);
   }
 

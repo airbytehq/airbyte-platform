@@ -30,6 +30,7 @@ import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.process.KubePodProcess;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
+import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
@@ -57,6 +58,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   private final WorkloadApi workloadApi;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final boolean workloadEnabled;
+  private final JobOutputDocStore jobOutputDocStore;
 
   public ReplicationJobOrchestrator(final Configs configs,
                                     final JobRunConfig jobRunConfig,
@@ -64,7 +66,8 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
                                     final AsyncStateManager asyncStateManager,
                                     final WorkloadApi workloadApi,
                                     final WorkloadIdGenerator workloadIdGenerator,
-                                    final boolean workloadEnabled) {
+                                    final boolean workloadEnabled,
+                                    final JobOutputDocStore jobOutputDocStore) {
     this.configs = configs;
     this.jobRunConfig = jobRunConfig;
     this.replicationWorkerFactory = replicationWorkerFactory;
@@ -72,6 +75,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
     this.workloadApi = workloadApi;
     this.workloadIdGenerator = workloadIdGenerator;
     this.workloadEnabled = workloadEnabled;
+    this.jobOutputDocStore = jobOutputDocStore;
   }
 
   @Override
@@ -113,6 +117,11 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
     final ReplicationOutput replicationOutput;
     if (workloadEnabled) {
       replicationOutput = runWithWorkloadEnabled(replicationWorker, replicationInput, jobRoot);
+      final String workloadId = workloadIdGenerator.generateSyncWorkloadId(
+          replicationInput.getConnectionId(),
+          Long.parseLong(jobRunConfig.getJobId()),
+          Math.toIntExact(jobRunConfig.getAttemptId()));
+      jobOutputDocStore.writeSyncOutput(workloadId, replicationOutput);
     } else {
       replicationOutput = replicationWorker.run(replicationInput, jobRoot);
     }

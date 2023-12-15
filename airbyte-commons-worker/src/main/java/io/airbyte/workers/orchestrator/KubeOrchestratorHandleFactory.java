@@ -21,6 +21,7 @@ import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
+import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
 import io.temporal.activity.ActivityExecutionContext;
@@ -47,17 +48,20 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
   private final FeatureFlagClient featureFlagClient;
   private final Integer serverPort;
   private final MetricClient metricClient;
+  private final WorkloadIdGenerator workloadIdGenerator;
 
   public KubeOrchestratorHandleFactory(@Named("containerOrchestratorConfig") final ContainerOrchestratorConfig containerOrchestratorConfig,
                                        final WorkerConfigsProvider workerConfigsProvider,
                                        final FeatureFlagClient featureFlagClient,
                                        @Value("${micronaut.server.port}") final Integer serverPort,
-                                       final MetricClient metricClient) {
+                                       final MetricClient metricClient,
+                                       final WorkloadIdGenerator workloadIdGenerator) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.workerConfigsProvider = workerConfigsProvider;
     this.featureFlagClient = featureFlagClient;
     this.serverPort = serverPort;
     this.metricClient = metricClient;
+    this.workloadIdGenerator = workloadIdGenerator;
   }
 
   @Override
@@ -81,7 +85,8 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
         serverPort,
         workerConfigs,
         featureFlagClient,
-        metricClient);
+        metricClient,
+        workloadIdGenerator);
   }
 
   /**
@@ -126,7 +131,8 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
         containerOrchestratorConfig.containerOrchestratorImagePullPolicy(),
         containerOrchestratorConfig.googleApplicationCredentials(),
         containerOrchestratorConfig.workerEnvironment(),
-        containerOrchestratorConfig.serviceAccount());
+        containerOrchestratorConfig.serviceAccount(),
+        containerOrchestratorConfig.jobOutputDocStore());
   }
 
 }

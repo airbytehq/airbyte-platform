@@ -29,6 +29,7 @@ import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import org.junit.jupiter.api.Test;
 
 @MicronautTest(environments = {WorkerMode.DATA_PLANE})
@@ -52,8 +53,16 @@ class DataPlaneActivityInitializationMicronautTest {
   SecretPersistence secretPersistence = mock(SecretPersistence.class);
 
   @Bean
-  @Replaces(DocumentStoreClient.class)
+  @Replaces(value = DocumentStoreClient.class,
+            named = "stateDocumentStore")
+  @Named("stateDocumentStore")
   DocumentStoreClient documentStoreClient = mock(DocumentStoreClient.class);
+
+  @Bean
+  @Replaces(value = DocumentStoreClient.class,
+            named = "outputDocumentStore")
+  @Named("outputDocumentStore")
+  DocumentStoreClient outputDocumentStoreClient = mock(DocumentStoreClient.class);
 
   @Inject
   ConfigFetchActivity configFetchActivity;
