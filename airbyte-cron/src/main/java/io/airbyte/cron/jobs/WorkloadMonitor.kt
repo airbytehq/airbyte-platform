@@ -111,7 +111,7 @@ open class WorkloadMonitor(
     val nonHeartbeatingWorkloads =
       workloadApi.workloadList(
         WorkloadListRequest(
-          status = listOf(WorkloadStatus.RUNNING),
+          status = listOf(WorkloadStatus.RUNNING, WorkloadStatus.LAUNCHED),
           updatedBefore = oldestHeartbeatTime,
         ),
       )

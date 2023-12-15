@@ -6,6 +6,7 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.Workload
+import io.airbyte.workload.api.client.model.generated.WorkloadListRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadListResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus
 import io.mockk.every
@@ -131,7 +132,14 @@ class WorkloadMonitorTest {
   fun `test cancel not heartbeating workloads`() {
     val expiredWorkloads = WorkloadListResponse(workloads = listOf(getWorkload("3"), getWorkload("4"), getWorkload("5")))
     currentTime = OffsetDateTime.now()
-    every { workloadApi.workloadList(any()) } returns expiredWorkloads
+    every {
+      workloadApi.workloadList(
+        WorkloadListRequest(
+          updatedBefore = currentTime.minus(heartbeatTimeout),
+          status = listOf(WorkloadStatus.RUNNING, WorkloadStatus.LAUNCHED),
+        ),
+      )
+    } returns expiredWorkloads
     every { workloadApi.workloadCancel(any()) } returns Unit andThenThrows ServerException() andThen Unit
 
     workloadMonitor.cancelNotHeartbeatingWorkloads()
@@ -139,7 +147,7 @@ class WorkloadMonitorTest {
     verifyAll {
       workloadApi.workloadList(
         match {
-          it.status == listOf(WorkloadStatus.RUNNING) && it.updatedBefore == currentTime.minus(heartbeatTimeout)
+          it.status == listOf(WorkloadStatus.RUNNING, WorkloadStatus.LAUNCHED) && it.updatedBefore == currentTime.minus(heartbeatTimeout)
         },
       )
       workloadApi.workloadCancel(match { it.workloadId == "3" })
