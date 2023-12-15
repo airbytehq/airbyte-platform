@@ -16,6 +16,7 @@ fun ApiWorkloadStatus.toDomain(): WorkloadStatus {
   return when (this) {
     ApiWorkloadStatus.PENDING -> WorkloadStatus.PENDING
     ApiWorkloadStatus.CLAIMED -> WorkloadStatus.CLAIMED
+    ApiWorkloadStatus.LAUNCHED -> WorkloadStatus.LAUNCHED
     ApiWorkloadStatus.RUNNING -> WorkloadStatus.RUNNING
     ApiWorkloadStatus.SUCCESS -> WorkloadStatus.SUCCESS
     ApiWorkloadStatus.FAILURE -> WorkloadStatus.FAILURE
@@ -27,6 +28,7 @@ fun WorkloadStatus.toApi(): ApiWorkloadStatus {
   return when (this) {
     WorkloadStatus.PENDING -> ApiWorkloadStatus.PENDING
     WorkloadStatus.CLAIMED -> ApiWorkloadStatus.CLAIMED
+    WorkloadStatus.LAUNCHED -> ApiWorkloadStatus.LAUNCHED
     WorkloadStatus.RUNNING -> ApiWorkloadStatus.RUNNING
     WorkloadStatus.SUCCESS -> ApiWorkloadStatus.SUCCESS
     WorkloadStatus.FAILURE -> ApiWorkloadStatus.FAILURE

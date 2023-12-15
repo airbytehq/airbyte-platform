@@ -58,7 +58,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/KnownExceptionInfo'
         "410":
-          description: "Workload is in terminal state, it cannot be claimed."
+          description: Workload is in terminal state. It cannot be claimed.
           content:
             application/json:
               schema:
@@ -87,7 +87,7 @@ paths:
     put:
       tags:
       - workload
-      summary: Set workload status to 'failure'
+      summary: Sets workload status to 'failure'.
       operationId: workloadFailure
       requestBody:
         content:
@@ -132,6 +132,32 @@ paths:
         "410":
           description: Workload should stop because it is no longer expected to be
             running.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
+  /api/v1/workload/launched:
+    put:
+      tags:
+      - workload
+      summary: Sets workload status to 'launched'.
+      operationId: workloadLaunched
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkloadLaunchedRequest'
+      responses:
+        "204":
+          description: Success
+        "404":
+          description: Workload with given id was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
+        "410":
+          description: Workload is not in claimed state. It cannot be set to launched.
           content:
             application/json:
               schema:
@@ -194,7 +220,7 @@ paths:
     put:
       tags:
       - workload
-      summary: Set workload status to 'running'
+      summary: Sets workload status to 'running'.
       operationId: workloadRunning
       requestBody:
         content:
@@ -211,7 +237,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/KnownExceptionInfo'
         "410":
-          description: "Workload is not in pending status, it can't be set to running."
+          description: "Workload is not in pending state, it cannot be set to running."
           content:
             application/json:
               schema:
@@ -220,7 +246,7 @@ paths:
     put:
       tags:
       - workload
-      summary: Set workload status to 'success'
+      summary: Sets workload status to 'success'.
       operationId: workloadSuccess
       requestBody:
         content:
@@ -415,6 +441,13 @@ components:
           type: string
         value:
           type: string
+    WorkloadLaunchedRequest:
+      required:
+      - workloadId
+      type: object
+      properties:
+        workloadId:
+          type: string
     WorkloadListRequest:
       type: object
       properties:
@@ -453,6 +486,7 @@ components:
       enum:
       - pending
       - claimed
+      - launched
       - running
       - success
       - failure

@@ -160,12 +160,32 @@ class WorkloadHandlerImpl(
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
+      WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED ->
+        workloadRepository.update(
+          workloadId,
+          WorkloadStatus.RUNNING,
+        )
+      WorkloadStatus.RUNNING -> logger.info { "Workload $workloadId is already marked as running. Skipping..." }
+      WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
+        "Heartbeat a workload in a terminal state",
+      )
+      WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
+        "Can't set a workload status to running on a workload that hasn't been claimed",
+      )
+    }
+  }
+
+  override fun setWorkloadStatusToLaunched(workloadId: String) {
+    val workload = getDomainWorkload(workloadId)
+
+    when (workload.status) {
       WorkloadStatus.CLAIMED ->
         workloadRepository.update(
           workloadId,
-          WorkloadStatus.SUCCESS,
+          WorkloadStatus.LAUNCHED,
         )
-      WorkloadStatus.RUNNING -> logger.info { "Workload $workloadId is already marked as running. Trying to update its status to running is a noop" }
+      WorkloadStatus.LAUNCHED -> logger.info { "Workload $workloadId is already marked as launched. Skipping..." }
+      WorkloadStatus.RUNNING -> throw InvalidStatusTransitionException("Workload $workloadId is already marked as running. Skipping...")
       WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
         "Heartbeat a workload in a terminal state",
       )
@@ -179,7 +199,7 @@ class WorkloadHandlerImpl(
     val workload: DomainWorkload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.CLAIMED, WorkloadStatus.RUNNING ->
+      WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING ->
         workloadRepository.update(
           workloadId,
           WorkloadStatus.RUNNING,

@@ -51,6 +51,8 @@ interface WorkloadHandler {
 
   fun setWorkloadStatusToRunning(workloadId: String)
 
+  fun setWorkloadStatusToLaunched(workloadId: String)
+
   fun heartbeat(workloadId: String)
 
   fun getWorkloadsRunningCreatedBefore(

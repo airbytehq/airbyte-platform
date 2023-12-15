@@ -74,9 +74,10 @@ data class Workload(
 }
 
 enum class WorkloadStatus {
-  CLAIMED,
-  RUNNING,
   PENDING,
+  CLAIMED,
+  LAUNCHED,
+  RUNNING,
   SUCCESS,
   FAILURE,
   CANCELLED,

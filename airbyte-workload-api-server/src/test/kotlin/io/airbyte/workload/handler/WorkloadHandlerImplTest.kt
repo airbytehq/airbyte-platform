@@ -457,8 +457,62 @@ class WorkloadHandlerImplTest {
     assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID) }
   }
 
+  @ParameterizedTest
+  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED"])
+  fun `test set workload status to running succeeded`(workloadStatus: WorkloadStatus) {
+    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
+      Optional.of(
+        Fixtures.workload(
+          id = WORKLOAD_ID,
+          status = workloadStatus,
+        ),
+      ),
+    )
+
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class)) } just Runs
+
+    workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID)
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING)) }
+  }
+
   @Test
-  fun `test set workload status to running succeeded`() {
+  fun `test noop when setting workload status to running`() {
+    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
+      Optional.of(
+        Fixtures.workload(
+          id = WORKLOAD_ID,
+          status = WorkloadStatus.RUNNING,
+        ),
+      ),
+    )
+
+    workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID)
+    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING)) }
+  }
+
+  @Test
+  fun `test workload not found when setting status to launched`() {
+    every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
+    assertThrows<NotFoundException> { workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID) }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = WorkloadStatus::class, names = ["PENDING", "RUNNING", "SUCCESS", "CANCELLED", "FAILURE"])
+  fun `test set workload status to launched when is not in claimed state`(workloadStatus: WorkloadStatus) {
+    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
+      Optional.of(
+        Fixtures.workload(
+          id = WORKLOAD_ID,
+          status = workloadStatus,
+        ),
+      ),
+    )
+
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID) }
+  }
+
+  @Test
+  fun `test set workload status to launched succeeded`() {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
         Fixtures.workload(
@@ -470,23 +524,23 @@ class WorkloadHandlerImplTest {
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class)) } just Runs
 
-    workloadHandler.succeedWorkload(WORKLOAD_ID)
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.SUCCESS)) }
+    workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID)
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.LAUNCHED)) }
   }
 
   @Test
-  fun `test noop when setting workload status to running`() {
+  fun `test noop when setting workload status to launched`() {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
         Fixtures.workload(
           id = WORKLOAD_ID,
-          status = WorkloadStatus.SUCCESS,
+          status = WorkloadStatus.LAUNCHED,
         ),
       ),
     )
 
-    workloadHandler.succeedWorkload(WORKLOAD_ID)
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.SUCCESS)) }
+    workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID)
+    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.LAUNCHED)) }
   }
 
   @Test

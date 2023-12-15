@@ -15,6 +15,7 @@ import io.airbyte.workload.api.domain.WorkloadClaimRequest
 import io.airbyte.workload.api.domain.WorkloadCreateRequest
 import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
+import io.airbyte.workload.api.domain.WorkloadLaunchedRequest
 import io.airbyte.workload.api.domain.WorkloadListRequest
 import io.airbyte.workload.api.domain.WorkloadListResponse
 import io.airbyte.workload.api.domain.WorkloadRunningRequest
@@ -114,7 +115,7 @@ open class WorkloadApi(
   @Status(HttpStatus.NO_CONTENT)
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Set workload status to 'failure'", tags = ["workload"])
+  @Operation(summary = "Sets workload status to 'failure'.", tags = ["workload"])
   @ApiResponses(
     value = [
       ApiResponse(
@@ -147,7 +148,7 @@ open class WorkloadApi(
   @Status(HttpStatus.NO_CONTENT)
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Set workload status to 'success'", tags = ["workload"])
+  @Operation(summary = "Sets workload status to 'success'.", tags = ["workload"])
   @ApiResponses(
     value = [
       ApiResponse(
@@ -180,7 +181,7 @@ open class WorkloadApi(
   @Status(HttpStatus.NO_CONTENT)
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Set workload status to 'running'", tags = ["workload"])
+  @Operation(summary = "Sets workload status to 'running'.", tags = ["workload"])
   @ApiResponses(
     value = [
       ApiResponse(
@@ -194,7 +195,7 @@ open class WorkloadApi(
       ),
       ApiResponse(
         responseCode = "410",
-        description = "Workload is not in pending status, it can't be set to running.",
+        description = "Workload is not in pending state, it cannot be set to running.",
         content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
@@ -268,7 +269,7 @@ open class WorkloadApi(
       ),
       ApiResponse(
         responseCode = "410",
-        description = "Workload is in terminal state, it cannot be claimed.",
+        description = "Workload is in terminal state. It cannot be claimed.",
         content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
@@ -286,6 +287,39 @@ open class WorkloadApi(
     )
     val claimed = workloadHandler.claimWorkload(workloadClaimRequest.workloadId, workloadClaimRequest.dataplaneId)
     return ClaimResponse(claimed)
+  }
+
+  @PUT
+  @Path("/launched")
+  @Status(HttpStatus.NO_CONTENT)
+  @Consumes("application/json")
+  @Produces("application/json")
+  @Operation(summary = "Sets workload status to 'launched'.", tags = ["workload"])
+  @ApiResponses(
+    value = [
+      ApiResponse(
+        responseCode = "204",
+        description = "Success",
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
+      ),
+      ApiResponse(
+        responseCode = "410",
+        description = "Workload is not in claimed state. It cannot be set to launched.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
+      ),
+    ],
+  )
+  open fun workloadLaunched(
+    @RequestBody(
+      content = [Content(schema = Schema(implementation = WorkloadLaunchedRequest::class))],
+    ) workloadLaunchedRequest: WorkloadLaunchedRequest,
+  ) {
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadLaunchedRequest.workloadId) as Map<String, Any>?)
+    workloadHandler.setWorkloadStatusToLaunched(workloadLaunchedRequest.workloadId)
   }
 
   @GET

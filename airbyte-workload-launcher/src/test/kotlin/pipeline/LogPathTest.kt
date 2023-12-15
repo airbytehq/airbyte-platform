@@ -117,7 +117,7 @@ class LogPathTest {
       mockk {
         every { reportFailure(any()) } returns Unit
       }
-    private val successHandler = SuccessHandler(metricPublisher, Optional.of(Function { id -> "TEST: success. Id: $id." }))
+    private val successHandler = SuccessHandler(mockApiClient, metricPublisher, Optional.of(Function { id -> "TEST: success. Id: $id." }))
     private val failureHandler = FailureHandler(mockApiClient, metricPublisher, Optional.of(Function { id -> "TEST: failure. Id: $id." }))
 
     private const val TEST_LOG_PREFIX = "TEST"
