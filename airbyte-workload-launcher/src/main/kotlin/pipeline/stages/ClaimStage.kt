@@ -29,7 +29,7 @@ private val logger = KotlinLogging.logger {}
  */
 @Singleton
 @Named("claim")
-class ClaimStage(
+open class ClaimStage(
   private val apiClient: WorkloadApiClient,
   metricPublisher: CustomMetricPublisher,
 ) : LaunchStage(metricPublisher) {

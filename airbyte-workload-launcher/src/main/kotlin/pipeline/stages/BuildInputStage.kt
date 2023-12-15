@@ -30,7 +30,7 @@ private val logger = KotlinLogging.logger {}
  */
 @Singleton
 @Named("build")
-class BuildInputStage(
+open class BuildInputStage(
   private val checkInputHydrator: CheckConnectionInputHydrator,
   private val replicationInputHydrator: ReplicationInputHydrator,
   private val deserializer: PayloadDeserializer,

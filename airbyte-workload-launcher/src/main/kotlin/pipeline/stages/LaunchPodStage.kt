@@ -22,7 +22,7 @@ private val logger = KotlinLogging.logger {}
  */
 @Singleton
 @Named("launch")
-class LaunchPodStage(private val launcher: KubePodClient, metricPublisher: CustomMetricPublisher) : LaunchStage(metricPublisher) {
+open class LaunchPodStage(private val launcher: KubePodClient, metricPublisher: CustomMetricPublisher) : LaunchStage(metricPublisher) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "LaunchPodStage")
   @Instrument(
     start = "WORKLOAD_STAGE_START",

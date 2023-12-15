@@ -24,7 +24,7 @@ private val logger = KotlinLogging.logger {}
  */
 @Singleton
 @Named("check")
-class CheckStatusStage(
+open class CheckStatusStage(
   private val kubeClient: KubePodClient,
   private val customMetricPublisher: CustomMetricPublisher,
 ) : LaunchStage(customMetricPublisher) {

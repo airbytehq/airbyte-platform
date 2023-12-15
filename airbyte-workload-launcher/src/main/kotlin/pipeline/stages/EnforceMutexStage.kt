@@ -26,7 +26,7 @@ private val logger = KotlinLogging.logger {}
  */
 @Singleton
 @Named("mutex")
-class EnforceMutexStage(
+open class EnforceMutexStage(
   private val launcher: KubePodClient,
   metricPublisher: CustomMetricPublisher,
 ) : LaunchStage(metricPublisher) {
