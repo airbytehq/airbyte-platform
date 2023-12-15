@@ -82,11 +82,6 @@ class WorkloadMonitorTest {
     }
     verify(exactly = 1) {
       metricClient.count(
-        OssMetricsRegistry.WORKLOAD_MONITOR_RUN,
-        1,
-        MetricAttribute(MetricTags.CRON_TYPE, "workload-monitor-start"),
-      )
-      metricClient.count(
         OssMetricsRegistry.WORKLOADS_CANCEL,
         1,
         MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-start"),
@@ -123,11 +118,6 @@ class WorkloadMonitorTest {
       )
     }
     verify(exactly = 1) {
-      metricClient.count(
-        OssMetricsRegistry.WORKLOAD_MONITOR_RUN,
-        1,
-        MetricAttribute(MetricTags.CRON_TYPE, "workload-monitor-claim"),
-      )
       metricClient.count(
         OssMetricsRegistry.WORKLOADS_CANCEL,
         1,
@@ -166,11 +156,6 @@ class WorkloadMonitorTest {
     }
     verify(exactly = 1) {
       metricClient.count(
-        OssMetricsRegistry.WORKLOAD_MONITOR_RUN,
-        1,
-        MetricAttribute(MetricTags.CRON_TYPE, "workload-monitor-heartbeat"),
-      )
-      metricClient.count(
         OssMetricsRegistry.WORKLOADS_CANCEL,
         1,
         MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-heartbeat"),
@@ -208,11 +193,6 @@ class WorkloadMonitorTest {
     }
     verify(exactly = 1) {
       metricClient.count(
-        OssMetricsRegistry.WORKLOAD_MONITOR_RUN,
-        1,
-        MetricAttribute(MetricTags.CRON_TYPE, "workload-monitor-non-sync-timeout"),
-      )
-      metricClient.count(
         OssMetricsRegistry.WORKLOADS_CANCEL,
         1,
         MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-non-sync-timeout"),
@@ -249,11 +229,6 @@ class WorkloadMonitorTest {
       )
     }
     verify(exactly = 1) {
-      metricClient.count(
-        OssMetricsRegistry.WORKLOAD_MONITOR_RUN,
-        1,
-        MetricAttribute(MetricTags.CRON_TYPE, "workload-monitor-sync-timeout"),
-      )
       metricClient.count(
         OssMetricsRegistry.WORKLOADS_CANCEL,
         1,

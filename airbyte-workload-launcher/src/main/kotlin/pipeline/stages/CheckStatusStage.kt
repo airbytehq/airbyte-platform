@@ -1,6 +1,8 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
 import datadog.trace.api.Trace
+import io.airbyte.metrics.annotations.Instrument
+import io.airbyte.metrics.annotations.Tag
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
@@ -27,6 +29,12 @@ class CheckStatusStage(
   private val customMetricPublisher: CustomMetricPublisher,
 ) : LaunchStage(customMetricPublisher) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "CheckStatusStage")
+  @Instrument(
+    start = "WORKLOAD_STAGE_START",
+    end = "WORKLOAD_STAGE_DONE",
+    duration = "WORKLOAD_STAGE_DURATION",
+    tags = [Tag(key = MeterFilterFactory.STAGE_NAME_TAG, value = "check_status")],
+  )
   override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
     return super.apply(input)
   }

@@ -2,6 +2,8 @@ package io.airbyte.workload.launcher.pipeline.stages
 
 import datadog.trace.api.Trace
 import io.airbyte.config.WorkloadType
+import io.airbyte.metrics.annotations.Instrument
+import io.airbyte.metrics.annotations.Tag
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
@@ -35,6 +37,12 @@ class BuildInputStage(
   metricPublisher: CustomMetricPublisher,
 ) : LaunchStage(metricPublisher) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "BuildInputStage")
+  @Instrument(
+    start = "WORKLOAD_STAGE_START",
+    end = "WORKLOAD_STAGE_DONE",
+    duration = "WORKLOAD_STAGE_DURATION",
+    tags = [Tag(key = MeterFilterFactory.STAGE_NAME_TAG, value = "build")],
+  )
   override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
     return super.apply(input)
   }

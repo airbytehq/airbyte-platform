@@ -4,6 +4,7 @@ import io.airbyte.metrics.lib.MetricAttribute
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tag
 import jakarta.inject.Singleton
+import java.time.Duration
 import java.util.function.ToDoubleFunction
 import java.util.stream.Collectors
 import java.util.stream.Stream
@@ -17,6 +18,14 @@ class CustomMetricPublisher(
     vararg attributes: MetricAttribute,
   ) {
     meterRegistry.counter(workloadLauncherMetricMetadata.metricName, toTags(*attributes)).increment()
+  }
+
+  fun timer(
+    workloadLauncherMetricMetadata: WorkloadLauncherMetricMetadata,
+    duration: Duration,
+    vararg attributes: MetricAttribute,
+  ) {
+    meterRegistry.timer(workloadLauncherMetricMetadata.metricName, toTags(*attributes)).record(duration)
   }
 
   fun <T> gauge(

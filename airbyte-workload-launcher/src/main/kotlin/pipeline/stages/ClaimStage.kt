@@ -5,6 +5,8 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
 import datadog.trace.api.Trace
+import io.airbyte.metrics.annotations.Instrument
+import io.airbyte.metrics.annotations.Tag
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
@@ -32,6 +34,12 @@ class ClaimStage(
   metricPublisher: CustomMetricPublisher,
 ) : LaunchStage(metricPublisher) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "ClaimStage")
+  @Instrument(
+    start = "WORKLOAD_STAGE_START",
+    end = "WORKLOAD_STAGE_DONE",
+    duration = "WORKLOAD_STAGE_DURATION",
+    tags = [Tag(key = MeterFilterFactory.STAGE_NAME_TAG, value = "claim")],
+  )
   override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
     return super.apply(input)
   }
