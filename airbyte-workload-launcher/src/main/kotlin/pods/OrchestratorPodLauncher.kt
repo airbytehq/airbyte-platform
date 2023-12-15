@@ -12,6 +12,8 @@ import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.KubePodProcess
 import io.airbyte.workers.process.KubePodResourceHelper
+import io.airbyte.workload.launcher.pods.OrchestratorPodLauncher.Constants.KUBECTL_COMPLETED_VALUE
+import io.airbyte.workload.launcher.pods.OrchestratorPodLauncher.Constants.KUBECTL_PHASE_FIELD_NAME
 import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.ContainerPort
 import io.fabric8.kubernetes.api.model.DeletionPropagation
@@ -357,12 +359,13 @@ class OrchestratorPodLauncher(
     }
   }
 
-  fun deletePods(labels: Map<String, String>): List<StatusDetails> {
+  fun deleteActivePods(labels: Map<String, String>): List<StatusDetails> {
     return runKubeCommand(
       {
         kubernetesClient.pods()
           .inNamespace(namespace)
           .withLabels(labels)
+          .withoutField(KUBECTL_PHASE_FIELD_NAME, KUBECTL_COMPLETED_VALUE) // filters out completed pods
           .list()
           .items
           .flatMap { p ->
@@ -390,5 +393,12 @@ class OrchestratorPodLauncher(
 
       throw e
     }
+  }
+
+  object Constants {
+    // Wait why is this named like this?
+    // Explanation: Kubectl displays "Completed" but the selector expects "Succeeded"
+    const val KUBECTL_COMPLETED_VALUE = "Succeeded"
+    const val KUBECTL_PHASE_FIELD_NAME = "status.phase"
   }
 }

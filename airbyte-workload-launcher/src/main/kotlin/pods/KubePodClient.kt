@@ -105,7 +105,7 @@ class KubePodClient(
   fun deleteMutexPods(mutexKey: String): Boolean {
     val labels = labeler.getMutexLabels(mutexKey)
 
-    val deleted = orchestratorLauncher.deletePods(labels)
+    val deleted = orchestratorLauncher.deleteActivePods(labels)
     return deleted.isNotEmpty()
   }
 

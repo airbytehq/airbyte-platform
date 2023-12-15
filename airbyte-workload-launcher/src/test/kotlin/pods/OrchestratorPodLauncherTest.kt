@@ -106,7 +106,7 @@ class OrchestratorPodLauncherTest {
   @Test
   fun `test fail to delete pod`() {
     assertThrows<IllegalStateException> {
-      orchestratorPodLauncher.deletePods(
+      orchestratorPodLauncher.deleteActivePods(
         mapOf(),
       )
     }
