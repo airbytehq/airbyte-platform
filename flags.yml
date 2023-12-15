@@ -45,7 +45,7 @@ flags:
           - "3d2985a0-a412-45f4-9124-e15800b739be"
           - "480e631f-1c88-4c2d-9081-855981018205"
         serve: true
-  - name: use-workload-output-doc-store
+  - name: platform.use-workload-output-doc-store
     serve: false
     context:
       - type: "workspace"
