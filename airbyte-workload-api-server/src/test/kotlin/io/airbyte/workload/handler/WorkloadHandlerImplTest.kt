@@ -135,7 +135,7 @@ class WorkloadHandlerImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "RUNNING"])
+  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING"])
   fun `test successfulHeartbeat`(workloadStatus: WorkloadStatus) {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
@@ -228,7 +228,7 @@ class WorkloadHandlerImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["RUNNING", "SUCCESS", "FAILURE", "CANCELLED"])
+  @EnumSource(value = WorkloadStatus::class, names = ["RUNNING", "LAUNCHED", "SUCCESS", "FAILURE", "CANCELLED"])
   fun `test claiming workload that is not pending`(workloadStatus: WorkloadStatus) {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
@@ -281,7 +281,7 @@ class WorkloadHandlerImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "RUNNING", "PENDING"])
+  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING", "PENDING"])
   fun `test successful cancel`(workloadStatus: WorkloadStatus) {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
@@ -335,7 +335,7 @@ class WorkloadHandlerImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "RUNNING"])
+  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING"])
   fun `test failing workload succeeded`(workloadStatus: WorkloadStatus) {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
@@ -389,7 +389,7 @@ class WorkloadHandlerImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "RUNNING"])
+  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING"])
   fun `test succeeding workload succeeded`(workloadStatus: WorkloadStatus) {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(

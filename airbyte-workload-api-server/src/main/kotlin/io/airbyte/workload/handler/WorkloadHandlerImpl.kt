@@ -103,7 +103,7 @@ class WorkloadHandlerImpl(
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.PENDING, WorkloadStatus.RUNNING, WorkloadStatus.CLAIMED ->
+      WorkloadStatus.PENDING, WorkloadStatus.LAUNCHED, WorkloadStatus.CLAIMED, WorkloadStatus.RUNNING ->
         workloadRepository.update(
           workloadId,
           WorkloadStatus.CANCELLED,
@@ -125,7 +125,7 @@ class WorkloadHandlerImpl(
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.CLAIMED, WorkloadStatus.RUNNING ->
+      WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING ->
         workloadRepository.update(
           workloadId,
           WorkloadStatus.FAILURE,
@@ -143,7 +143,7 @@ class WorkloadHandlerImpl(
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.CLAIMED, WorkloadStatus.RUNNING ->
+      WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING ->
         workloadRepository.update(
           workloadId,
           WorkloadStatus.SUCCESS,
