@@ -415,65 +415,6 @@ paths:
                 $ref: "#/components/schemas/PermissionRead"
         "422":
           $ref: "#/components/responses/ExceptionResponse"
-  /v1/permissions/list:
-    post:
-      tags:
-        - permission
-      summary: List all permissions
-      operationId: listPermissions
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PermissionReadList"
-  /v1/permissions/get:
-    post:
-      tags:
-        - permission
-      summary: Find a permission ressource by ID
-      operationId: getPermission
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PermissionIdRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PermissionRead"
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-  /v1/permissions/update:
-    post:
-      tags:
-        - permission
-      summary: Updates a permission ressource
-      operationId: updatePermission
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PermissionUpdate"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PermissionRead"
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
   /v1/permissions/delete:
     post:
       tags:
