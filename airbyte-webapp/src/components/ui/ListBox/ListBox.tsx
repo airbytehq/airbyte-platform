@@ -58,6 +58,7 @@ export interface ListBoxProps<T> {
   selectedValue?: T;
   onSelect: (selectedValue: T) => void;
   buttonClassName?: string;
+  id?: string;
   isDisabled?: boolean;
   controlButton?: React.ComponentType<ListBoxControlButtonProps<T>>;
   "data-testid"?: string;
@@ -92,6 +93,7 @@ export const ListBox = <T,>({
   selectedOptionClassName,
   "data-testid": testId,
   hasError,
+  id,
   isDisabled,
   placement = "bottom",
   adaptiveWidth = true,
@@ -126,6 +128,7 @@ export const ListBox = <T,>({
             {...(testId && {
               "data-testid": `${testId}-listbox-button`,
             })}
+            id={id}
           >
             <ControlButton selectedOption={selectedOption} isDisabled={isDisabled} />
           </Listbox.Button>

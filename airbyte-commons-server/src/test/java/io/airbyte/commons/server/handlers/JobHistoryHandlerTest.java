@@ -224,7 +224,8 @@ class JobHistoryHandlerTest {
           null,
           null))
               .thenReturn(List.of(latestJobNoAttempt, successfulJob));
-      when(jobPersistence.getJobCount(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class)), JOB_CONFIG_ID)).thenReturn(2L);
+      when(jobPersistence.getJobCount(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class)), JOB_CONFIG_ID, null, null, null, null, null))
+          .thenReturn(2L);
       when(jobPersistence.getAttemptStats(List.of(200L, 100L))).thenReturn(Map.of(
           new JobAttemptPair(100, 0), ATTEMPT_STATS,
           new JobAttemptPair(jobId2, 0), ATTEMPT_STATS));
@@ -269,7 +270,7 @@ class JobHistoryHandlerTest {
 
       when(jobPersistence.listJobs(configTypes, JOB_CONFIG_ID, pagesize, rowOffset, null, null, null, null, null, null, null))
           .thenReturn(List.of(latestJob, secondJob, firstJob));
-      when(jobPersistence.getJobCount(configTypes, JOB_CONFIG_ID)).thenReturn(3L);
+      when(jobPersistence.getJobCount(configTypes, JOB_CONFIG_ID, null, null, null, null, null)).thenReturn(3L);
       when(jobPersistence.getAttemptStats(List.of(300L, 200L, 100L))).thenReturn(Map.of(
           new JobAttemptPair(100, 0), ATTEMPT_STATS,
           new JobAttemptPair(secondJobId, 0), ATTEMPT_STATS,
@@ -309,7 +310,8 @@ class JobHistoryHandlerTest {
 
       when(jobPersistence.listJobsIncludingId(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class)), JOB_CONFIG_ID, jobId2, pagesize))
           .thenReturn(List.of(latestJobNoAttempt, successfulJob));
-      when(jobPersistence.getJobCount(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class)), JOB_CONFIG_ID)).thenReturn(2L);
+      when(jobPersistence.getJobCount(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class)), JOB_CONFIG_ID, null, null, null, null, null))
+          .thenReturn(2L);
       when(jobPersistence.getAttemptStats(List.of(200L, 100L))).thenReturn(Map.of(
           new JobAttemptPair(100, 0), ATTEMPT_STATS,
           new JobAttemptPair(jobId2, 0), ATTEMPT_STATS));

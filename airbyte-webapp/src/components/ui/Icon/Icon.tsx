@@ -277,6 +277,7 @@ export const Icon: React.FC<IconProps> = React.memo(
       styles.icon,
       color ? colorMap[color] : undefined,
       withBackground ? styles["icon--withBackground"] : undefined,
+      type === "loading" ? styles["icon--spinning"] : undefined,
       sizeMap[size]
     );
 

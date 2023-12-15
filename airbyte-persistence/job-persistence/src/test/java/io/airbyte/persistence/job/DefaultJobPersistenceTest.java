@@ -63,6 +63,7 @@ import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -105,6 +106,7 @@ class DefaultJobPersistenceTest {
   private static final JobConfig SPEC_JOB_CONFIG = new JobConfig()
       .withConfigType(ConfigType.GET_SPEC)
       .withGetSpec(new JobGetSpecConfig());
+
   private static final JobConfig CHECK_JOB_CONFIG = new JobConfig()
       .withConfigType(ConfigType.CHECK_CONNECTION_DESTINATION)
       .withGetSpec(new JobGetSpecConfig());
@@ -1699,9 +1701,114 @@ class DefaultJobPersistenceTest {
         jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG);
       }
 
-      final Long actualJobCount = jobPersistence.getJobCount(Set.of(SPEC_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString());
+      final Long actualJobCount =
+          jobPersistence.getJobCount(Set.of(SPEC_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString(), null, null, null, null, null);
 
       assertEquals(numJobsToCreate, actualJobCount);
+    }
+
+    @Test
+    @DisplayName("Should return the total job count for the connection when filtering by failed jobs only")
+    void testGetJobCountWithFailedJobFilter() throws IOException {
+      final int numPendingJobsToCreate = 10;
+      for (int i = 0; i < numPendingJobsToCreate; i++) {
+        jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG);
+      }
+
+      final int numFailedJobsToCreate = 5;
+      for (int i = 0; i < numFailedJobsToCreate; i++) {
+        final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
+        jobPersistence.failJob(jobId);
+      }
+
+      final Long actualJobCount =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, JobStatus.FAILED, null, null, null, null);
+
+      assertEquals(numFailedJobsToCreate, actualJobCount);
+    }
+
+    @Test
+    @DisplayName("Should return the total job count filtering by createdAtStart")
+    void testGetJobCountWithCreatedAtStart() throws IOException {
+      final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
+      final Job job = jobPersistence.getJob(jobId);
+      final Long jobCreatedAtSeconds = job.getCreatedAtInSecond();
+      final Long oneHourEarlierSeconds = jobCreatedAtSeconds - (60 * 60);
+      final Long oneHourLaterSeconds = jobCreatedAtSeconds + (60 * 60);
+
+      final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond((oneHourEarlierSeconds)), ZoneOffset.UTC);
+      final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond((oneHourLaterSeconds)), ZoneOffset.UTC);
+
+      final Long numJobsCreatedAtStartOneHourEarlier =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, oneHourEarlier, null, null, null);
+      final Long numJobsCreatedAtStartOneHourLater =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, oneHourLater, null, null, null);
+
+      assertEquals(1, numJobsCreatedAtStartOneHourEarlier);
+      assertEquals(0, numJobsCreatedAtStartOneHourLater);
+    }
+
+    @Test
+    @DisplayName("Should return the total job count filtering by createdAtEnd")
+    void testGetJobCountCreatedAtEnd() throws IOException {
+      final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
+      final Job job = jobPersistence.getJob(jobId);
+      final Long jobCreatedAtSeconds = job.getCreatedAtInSecond();
+      final Long oneHourEarlierSeconds = jobCreatedAtSeconds - (60 * 60);
+      final Long oneHourLaterSeconds = jobCreatedAtSeconds + (60 * 60);
+
+      final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond((oneHourEarlierSeconds)), ZoneOffset.UTC);
+      final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond((oneHourLaterSeconds)), ZoneOffset.UTC);
+
+      final Long numJobsCreatedAtEndOneHourEarlier =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, null, oneHourEarlier, null, null);
+      final Long numJobsCreatedAtEndOneHourLater =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, null, oneHourLater, null, null);
+
+      assertEquals(0, numJobsCreatedAtEndOneHourEarlier);
+      assertEquals(1, numJobsCreatedAtEndOneHourLater);
+    }
+
+    @Test
+    @DisplayName("Should return the total job count filtering by updatedAtStart")
+    void testGetJobCountWithUpdatedAtStart() throws IOException {
+      final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
+      final Job job = jobPersistence.getJob(jobId);
+      final Long jobUpdatedAtSeconds = job.getUpdatedAtInSecond();
+      final Long oneHourEarlierSeconds = jobUpdatedAtSeconds - (60 * 60);
+      final Long oneHourLaterSeconds = jobUpdatedAtSeconds + (60 * 60);
+
+      final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond((oneHourEarlierSeconds)), ZoneOffset.UTC);
+      final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond((oneHourLaterSeconds)), ZoneOffset.UTC);
+
+      final Long numJobsUpdatedAtStartOneHourEarlier =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, null, null, oneHourEarlier, null);
+      final Long numJobsUpdatedAtStartOneDayLater =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, null, null, oneHourLater, null);
+
+      assertEquals(1, numJobsUpdatedAtStartOneHourEarlier);
+      assertEquals(0, numJobsUpdatedAtStartOneDayLater);
+    }
+
+    @Test
+    @DisplayName("Should return the total job count filtering by updatedAtEnd")
+    void testGetJobCountUpdatedAtEnd() throws IOException {
+      final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
+      final Job job = jobPersistence.getJob(jobId);
+      final Long jobUpdatedAtSeconds = job.getUpdatedAtInSecond();
+      final Long oneHourEarlierSeconds = jobUpdatedAtSeconds - (60 * 60);
+      final Long oneHourLaterSeconds = jobUpdatedAtSeconds + (60 * 60);
+
+      final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond((oneHourEarlierSeconds)), ZoneOffset.UTC);
+      final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond((oneHourLaterSeconds)), ZoneOffset.UTC);
+
+      final Long numJobsUpdatedAtEndOneHourEarlier =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, null, null, null, oneHourEarlier);
+      final Long numJobsUpdatedAtEndOneHourLater =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, null, null, null, oneHourLater);
+
+      assertEquals(0, numJobsUpdatedAtEndOneHourEarlier);
+      assertEquals(1, numJobsUpdatedAtEndOneHourLater);
     }
 
     @Test
@@ -1713,7 +1820,8 @@ class DefaultJobPersistenceTest {
       jobPersistence.enqueueJob(otherConnectionId1.toString(), SPEC_JOB_CONFIG);
       jobPersistence.enqueueJob(otherConnectionId2.toString(), SPEC_JOB_CONFIG);
 
-      final Long actualJobCount = jobPersistence.getJobCount(Set.of(SPEC_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString());
+      final Long actualJobCount =
+          jobPersistence.getJobCount(Set.of(SPEC_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString(), null, null, null, null, null);
 
       assertEquals(0, actualJobCount);
     }

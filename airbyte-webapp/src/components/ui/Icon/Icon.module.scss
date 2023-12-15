@@ -1,6 +1,16 @@
 @use "scss/variables";
 @use "scss/colors";
 
+@keyframes spinning {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 $colorMap: (
   "primary": colors.$blue,
   "disabled": colors.$grey,
@@ -19,6 +29,10 @@ $iconClassname: "icon";
   height: $baseIconSize;
   width: $baseIconSize;
   vertical-align: -6%;
+
+  &.#{$iconClassname}--spinning {
+    animation: spinning 1.5s linear 0s infinite;
+  }
 
   &.#{$iconClassname}--withBackground {
     color: colors.$foreground;

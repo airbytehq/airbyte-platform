@@ -1,6 +1,4 @@
-import { Updater, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-
-import { useExperiment } from "hooks/services/Experiment";
+import { Updater, useInfiniteQuery, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   cancelJob,
@@ -14,45 +12,91 @@ import { JobListRequestBody, JobReadList, JobStatus } from "../types/AirbyteClie
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
-export const useListJobs = (listParams: JobListRequestBody, keepPreviousData = true) => {
-  const requestOptions = useRequestOptions();
-  const queryKey = [
-    SCOPE_WORKSPACE,
-    "jobs",
-    "list",
-    listParams.configId,
-    listParams.includingJobId,
-    listParams.pagination,
-  ];
+export const jobsKeys = {
+  all: (connectionId: string) => [SCOPE_WORKSPACE, connectionId] as const,
+  list: (connectionId: string, filters: string | Record<string, string | number | undefined> = {}) =>
+    [...jobsKeys.all(connectionId), { filters }] as const,
+  useListJobsForConnectionStatus: (connectionId: string) =>
+    [...jobsKeys.all(connectionId), "connectionStatus"] as const,
+};
 
-  const result = useQuery(queryKey, () => listJobsFor(listParams, requestOptions), {
-    refetchInterval: (data) => {
-      return data?.jobs?.[0]?.job?.status === JobStatus.running ? 2500 : 10000;
-    },
-    keepPreviousData,
-    suspense: true,
+export const useListJobs = (requestParams: Omit<JobListRequestBody, "pagination">, pageSize: number) => {
+  const requestOptions = useRequestOptions();
+  const queryKey = jobsKeys.list(requestParams.configId, {
+    includingJobId: requestParams.includingJobId,
+    status: requestParams.status,
+    updatedAtStart: requestParams.updatedAtStart,
+    updatedAtEnd: requestParams.updatedAtEnd,
+    pageSize,
   });
 
-  return {
-    data: result.data as JobReadList, // cast to JobReadList because (suspense: true) means we will never get undefined
-    isPreviousData: result.isPreviousData,
-  };
+  return useInfiniteQuery(
+    queryKey,
+    async ({ pageParam = 0 }: { pageParam?: number }) => {
+      return {
+        data: await listJobsFor(
+          {
+            ...requestParams,
+            includingJobId: pageParam > 0 ? undefined : requestParams.includingJobId,
+            pagination: { pageSize, rowOffset: pageSize * pageParam },
+          },
+          requestOptions
+        ),
+        pageParam,
+      };
+    },
+    {
+      refetchInterval: (data) => {
+        return data?.pages[0].data.jobs[0]?.job?.status === JobStatus.running ? 2500 : 10000;
+      },
+      getPreviousPageParam: (firstPage) => {
+        return firstPage.pageParam > 0 ? firstPage.pageParam - 1 : undefined;
+      },
+      getNextPageParam: (lastPage, allPages) => {
+        if (allPages.reduce((acc, page) => acc + page.data.jobs.length, 0) < lastPage.data.totalJobCount) {
+          if (lastPage.pageParam === 0 && requestParams.includingJobId) {
+            // the API will sometimes return more items than we request. If we include includingJobId, it will return as many pages as necessary to include the job with the given id. In this case, we cannot trust the pageParam, so we need to calculate the actual page number.
+            const actualPageNumber = lastPage.data.jobs.length / pageSize - 1;
+            return actualPageNumber + 1;
+          }
+          // all the data we have loaded is less than the total indicated by the API, so we can get another page
+          return lastPage.pageParam + 1;
+        }
+        return undefined;
+      },
+    }
+  );
 };
 
 export const useListJobsForConnectionStatus = (connectionId: string) => {
-  return useListJobs({
-    configId: connectionId,
-    configTypes: ["sync", "reset_connection"],
-    pagination: {
-      pageSize: useExperiment("connection.streamCentricUI.numberOfLogsToLoad", 15),
-    },
-  });
+  const requestOptions = useRequestOptions();
+
+  return useSuspenseQuery(
+    jobsKeys.useListJobsForConnectionStatus(connectionId),
+    () =>
+      listJobsFor(
+        {
+          configId: connectionId,
+          configTypes: ["sync", "reset_connection"],
+          pagination: {
+            // This is an arbitrary number. We have to look back at several jobs to determine the current status of the connection. Just knowing whether it's running or not is not sufficient, we want to know the status of the last completed job as well.
+            pageSize: 3,
+          },
+        },
+        requestOptions
+      ),
+    {
+      refetchInterval: (data) => {
+        return data?.jobs?.[0]?.job?.status === JobStatus.running ? 2500 : 10000;
+      },
+    }
+  );
 };
 
 export const useSetConnectionJobsData = (connectionId: string) => {
   const queryClient = useQueryClient();
   return (data: Updater<JobReadList | undefined, JobReadList>) =>
-    queryClient.setQueriesData([SCOPE_WORKSPACE, "jobs", "list", connectionId], data);
+    queryClient.setQueriesData(jobsKeys.useListJobsForConnectionStatus(connectionId), data);
 };
 
 // A disabled useQuery that can be called manually to download job logs

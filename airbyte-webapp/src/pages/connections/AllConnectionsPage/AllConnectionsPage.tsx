@@ -9,6 +9,7 @@ import { ConnectionOnboarding } from "components/connection/ConnectionOnboarding
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
+import { ClearFiltersButton } from "components/ui/ClearFiltersButton";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
@@ -314,18 +315,13 @@ export const AllConnectionsPage: React.FC = () => {
                     </FlexItem>
                     {hasAnyFilterSelected && (
                       <FlexItem>
-                        <Button
-                          variant="clear"
+                        <ClearFiltersButton
                           onClick={() => {
                             setStatusFilterSelection(statusFilterOptions[0]);
                             setSourceFilterSelection(availableSourceOptions[0]);
                             setDestinationFilterSelection(availableDestinationOptions[0]);
                           }}
-                        >
-                          <Text color="grey" bold>
-                            <FormattedMessage id="tables.connections.filters.clear" />
-                          </Text>
-                        </Button>
+                        />
                       </FlexItem>
                     )}
                   </FlexContainer>

@@ -161,7 +161,12 @@ public class JobHistoryHandler {
       }
     }
 
-    final Long totalJobCount = jobPersistence.getJobCount(configTypes, configId);
+    final Long totalJobCount = jobPersistence.getJobCount(configTypes, configId,
+        request.getStatus() == null ? null : JobStatus.valueOf(request.getStatus().toString().toUpperCase()),
+        request.getCreatedAtStart(),
+        request.getCreatedAtEnd(),
+        request.getUpdatedAtStart(),
+        request.getUpdatedAtEnd());
     return new JobReadList().jobs(jobReads).totalJobCount(totalJobCount);
   }
 

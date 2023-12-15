@@ -1,3 +1,4 @@
+import classNames from "classnames";
 import en from "date-fns/locale/en-US";
 import dayjs from "dayjs";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
@@ -51,16 +52,23 @@ export const toEquivalentLocalTime = (utcString: string): Date | undefined => {
 };
 
 export interface DatePickerProps {
-  error?: boolean;
-  value: string;
-  onChange: (value: string) => void;
-  withTime?: boolean;
-  withPrecision?: "milliseconds" | "microseconds";
+  className?: string;
   disabled?: boolean;
-  readOnly?: boolean;
+  endDate?: Date;
+  error?: boolean;
+  maxDate?: string;
+  minDate?: string;
   onBlur?: () => void;
+  onChange: (value: string) => void;
   onFocus?: () => void;
   placeholder?: string;
+  readOnly?: boolean;
+  selectsEnd?: true;
+  selectsStart?: true;
+  startDate?: Date;
+  value: string;
+  withPrecision?: "milliseconds" | "microseconds";
+  withTime?: boolean;
 }
 
 interface DatePickerButtonTriggerProps {
@@ -78,7 +86,7 @@ const DatepickerButton = React.forwardRef<HTMLButtonElement, DatePickerButtonTri
       ref={ref}
       type="button"
       variant="clear"
-      icon={<Icon type="calendar" className={styles.dropdownButton} />}
+      icon={<Icon type="calendar" />}
     />
   );
 });
@@ -90,16 +98,23 @@ const ISO8601_WITH_MICROSECONDS = "YYYY-MM-DDTHH:mm:ss.SSSSSS[Z]";
 const YEAR_MONTH_DAY_FORMAT = "YYYY-MM-DD";
 
 export const DatePicker: React.FC<DatePickerProps> = ({
+  className,
   disabled,
-  readOnly,
+  endDate,
   error,
-  onChange,
+  maxDate = "",
+  minDate = "",
   onBlur,
+  onChange,
   onFocus,
   placeholder,
+  readOnly,
+  selectsEnd,
+  selectsStart,
+  startDate,
   value = "",
-  withTime = false,
   withPrecision,
+  withTime = false,
 }) => {
   const { locale, formatMessage } = useIntl();
   const datepickerRef = useRef<ReactDatePicker>(null);
@@ -151,6 +166,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   );
 
   const localDate = useMemo(() => toEquivalentLocalTime(value), [value]);
+  const localMinDate = useMemo(() => toEquivalentLocalTime(minDate), [minDate]);
+  const localMaxDate = useMemo(() => toEquivalentLocalTime(maxDate), [maxDate]);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const handleWrapperBlur = () => {
@@ -160,7 +177,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   };
 
   return (
-    <div className={styles.wrapper} ref={wrapperRef} onBlur={handleWrapperBlur}>
+    <div className={classNames(styles.wrapper, className)} ref={wrapperRef} onBlur={handleWrapperBlur}>
       <Input
         placeholder={placeholder}
         error={error}
@@ -177,22 +194,28 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       />
       <div className={styles.datepickerButtonContainer}>
         <ReactDatePicker
-          ref={datepickerRef}
-          showMonthDropdown
-          showYearDropdown
+          customInput={<DatepickerButton />}
+          disabled={disabled}
           dropdownMode="select"
+          endDate={endDate}
+          locale={locale}
+          maxDate={localMaxDate}
+          minDate={localMinDate}
+          onChange={handleDatepickerChange}
+          popperClassName={styles.popup}
+          popperPlacement="bottom-end"
+          portalId="react-datepicker"
+          readOnly={readOnly}
+          ref={datepickerRef}
+          selected={localDate}
+          selectsEnd={selectsEnd}
+          selectsStart={selectsStart}
+          showMonthDropdown
           showPopperArrow={false}
           showTimeSelect={withTime}
-          disabled={disabled}
-          readOnly={readOnly}
-          locale={locale}
-          selected={localDate}
-          onChange={handleDatepickerChange}
-          customInput={<DatepickerButton />}
-          popperClassName={styles.popup}
+          showYearDropdown
+          startDate={startDate}
           timeCaption={formatMessage({ id: "form.datepickerTimeCaption" })}
-          portalId="react-datepicker"
-          popperPlacement="bottom-end"
         />
       </div>
     </div>

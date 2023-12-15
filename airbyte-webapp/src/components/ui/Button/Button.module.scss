@@ -90,19 +90,8 @@
       }
     }
 
-    &.isSpinnerIcon {
-      @keyframes spin {
-        from {
-          transform: rotate(0deg);
-        }
-
-        to {
-          transform: rotate(360deg);
-        }
-      }
-
+    &.loadingIcon {
       position: absolute;
-      animation: spin 1.5s linear 0s infinite;
     }
   }
 

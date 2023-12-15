@@ -82,9 +82,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
 
   // get the last N (10) jobs for this connection
   // to determine the connection's status
-  const {
-    data: { jobs },
-  } = useListJobsForConnectionStatus(connectionId);
+  const { jobs } = useListJobsForConnectionStatus(connectionId);
 
   const configError = getConfigErrorFromJobs(jobs);
 

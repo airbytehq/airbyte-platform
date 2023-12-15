@@ -3,15 +3,14 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button, ButtonVariant } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
+import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 
 import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
-import styles from "./ConnectionSyncButtons.module.scss";
 import { useConnectionSyncContext } from "./ConnectionSyncContext";
-
 interface ConnectionSyncButtonsProps {
   buttonText: React.ReactNode;
   variant?: ButtonVariant;
@@ -66,7 +65,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
   };
 
   return (
-    <div className={styles.buttons}>
+    <FlexContainer gap="sm">
       {!jobSyncRunning && !jobResetRunning && (
         <Button
           onClick={syncConnection}
@@ -109,6 +108,6 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
       >
         {() => <Button variant="clear" icon={<Icon type="options" />} />}
       </DropdownMenu>
-    </div>
+    </FlexContainer>
   );
 };

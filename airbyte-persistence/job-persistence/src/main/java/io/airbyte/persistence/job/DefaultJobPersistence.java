@@ -851,10 +851,23 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
-  public Long getJobCount(final Set<ConfigType> configTypes, final String connectionId) throws IOException {
+  public Long getJobCount(final Set<ConfigType> configTypes,
+                          final String connectionId,
+                          final JobStatus status,
+                          final OffsetDateTime createdAtStart,
+                          final OffsetDateTime createdAtEnd,
+                          final OffsetDateTime updatedAtStart,
+                          final OffsetDateTime updatedAtEnd)
+      throws IOException {
     return jobDatabase.query(ctx -> ctx.selectCount().from(JOBS)
         .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
         .and(JOBS.SCOPE.eq(connectionId))
+        .and(status == null ? DSL.noCondition()
+            : JOBS.STATUS.eq(io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(status.toString().toLowerCase())))
+        .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
+        .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.le(createdAtEnd))
+        .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))
+        .and(updatedAtEnd == null ? DSL.noCondition() : JOBS.UPDATED_AT.le(updatedAtEnd))
         .fetchOne().into(Long.class));
   }
 

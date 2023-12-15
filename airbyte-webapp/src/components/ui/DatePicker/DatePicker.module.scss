@@ -84,11 +84,11 @@
 }
 
 :global(.react-datepicker__day--today) {
-  background-color: colors.$grey-50;
+  background-color: colors.$grey-100;
   font-weight: 700;
 }
 
-:global(.react-datepicker__day--selected) {
+:global(.react-datepicker__day.react-datepicker__day--selected) {
   color: colors.$foreground;
   background-color: colors.$blue-400;
   font-weight: 700;
@@ -96,6 +96,21 @@
   &:hover {
     background-color: colors.$blue-500;
   }
+}
+
+:global(.react-datepicker__day.react-datepicker__day--in-selecting-range) {
+  color: colors.$foreground;
+  background-color: colors.$blue-400;
+
+  &:hover {
+    background-color: colors.$blue-500;
+  }
+}
+
+:global(.react-datepicker__day--disabled) {
+  color: colors.$grey-300;
+  cursor: not-allowed;
+  position: relative;
 }
 
 :global(.react-datepicker__navigation-icon::before) {

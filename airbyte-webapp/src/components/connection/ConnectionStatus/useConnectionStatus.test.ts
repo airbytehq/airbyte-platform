@@ -73,7 +73,8 @@ const resetAndSetupMocks = ({ connectionStatus, schemaChange, scheduleType, sche
   }));
 
   mockUseListJobsForConnectionStatus.mockImplementation(() => ({
-    data: { jobs: jobList || [], totalJobCount: jobList?.length ?? 0 },
+    jobs: jobList || [],
+    totalJobCount: jobList?.length ?? 0,
     isPreviousData: false,
     setData: () => undefined,
   }));

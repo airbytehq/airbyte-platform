@@ -60,7 +60,6 @@ export const CloudWorkspacesPage: React.FC = () => {
     250,
     [searchValue]
   );
-  console.log({ showNoWorkspacesContent });
 
   return (
     <div className={styles.cloudWorkspacesPage__container}>

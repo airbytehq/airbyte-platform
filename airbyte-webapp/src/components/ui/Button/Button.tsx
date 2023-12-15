@@ -46,14 +46,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
       disabled={disabled || isLoading}
       {...buttonProps}
     >
-      {isLoading && (
-        <Icon
-          type="loading"
-          className={classNames(styles.buttonIcon, {
-            [styles.isSpinnerIcon]: true,
-          })}
-        />
-      )}
+      {isLoading && <Icon type="loading" className={classNames(styles.buttonIcon, styles.loadingIcon)} />}
       {icon &&
         iconPosition === "left" &&
         React.cloneElement(icon, {

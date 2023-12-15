@@ -8,9 +8,7 @@ import { useListJobsForConnectionStatus } from "core/api";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 const useStreamsContextInit = (connectionId: string) => {
-  const {
-    data: { jobs },
-  } = useListJobsForConnectionStatus(connectionId);
+  const { jobs } = useListJobsForConnectionStatus(connectionId);
   const [searchTerm, setSearchTerm] = useState("");
 
   const { enabledStreams, streamStatuses } = useStreamsStatuses(connectionId);

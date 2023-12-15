@@ -207,13 +207,26 @@ public interface JobPersistence {
   void writeAttemptSyncConfig(long jobId, int attemptNumber, AttemptSyncConfig attemptSyncConfig) throws IOException;
 
   /**
-   * Get count of jobs beloging to the specified connection.
+   * Get count of jobs beloging to the specified connection. This override allows passing several
+   * query filters.
    *
    * @param configTypes - the type of config, e.g. sync
    * @param connectionId - ID of the connection for which the job count should be retrieved
+   * @param status - status to filter by
+   * @param createdAtStart - minimum created at date to filter by
+   * @param createdAtEnd - maximum created at date to filter by
+   * @param updatedAtStart - minimum updated at date to filter by
+   * @param updatedAtEnd - maximum updated at date to filter by
    * @return count of jobs belonging to the specified connection
    */
-  Long getJobCount(final Set<ConfigType> configTypes, final String connectionId) throws IOException;
+  Long getJobCount(final Set<ConfigType> configTypes,
+                   final String connectionId,
+                   final JobStatus status,
+                   final OffsetDateTime createdAtStart,
+                   final OffsetDateTime createdAtEnd,
+                   final OffsetDateTime updatedAtStart,
+                   final OffsetDateTime updatedAtEnd)
+      throws IOException;
 
   /**
    * List jobs of a connection. Pageable.
