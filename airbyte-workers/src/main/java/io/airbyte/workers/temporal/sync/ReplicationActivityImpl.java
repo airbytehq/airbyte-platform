@@ -42,7 +42,6 @@ import io.airbyte.workers.orchestrator.OrchestratorNameGenerator;
 import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.sync.WorkloadApiWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
-import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.micronaut.context.annotation.Value;
@@ -76,9 +75,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final LogConfigs logConfigs;
   private final String airbyteVersion;
   private final AirbyteConfigValidator airbyteConfigValidator;
-  private final DocumentStoreClient documentStoreClient;
   private final AirbyteApiClient airbyteApiClient;
-  private final JobOutputDocStore jobOutputDocStore;
+  private final DocumentStoreClient documentStoreClient;
   private final WorkloadApi workloadApi;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final OrchestratorHandleFactory orchestratorHandleFactory;
@@ -93,8 +91,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  @Value("${airbyte.version}") final String airbyteVersion,
                                  final AirbyteConfigValidator airbyteConfigValidator,
                                  final AirbyteApiClient airbyteApiClient,
-                                 @Named("stateDocumentStore") final DocumentStoreClient documentStoreClient,
-                                 final JobOutputDocStore jobOutputDocStore,
+                                 final DocumentStoreClient documentStoreClient,
                                  final WorkloadApi workloadApi,
                                  final WorkloadIdGenerator workloadIdGenerator,
                                  final OrchestratorHandleFactory orchestratorHandleFactory,
@@ -114,7 +111,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.airbyteConfigValidator = airbyteConfigValidator;
     this.airbyteApiClient = airbyteApiClient;
     this.documentStoreClient = documentStoreClient;
-    this.jobOutputDocStore = jobOutputDocStore;
     this.workloadApi = workloadApi;
     this.workloadIdGenerator = workloadIdGenerator;
     this.orchestratorHandleFactory = orchestratorHandleFactory;
@@ -162,8 +158,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
           // TODO: remove this once migration to workloads complete
           if (useWorkloadApi(replicationActivityInput)) {
-            worker = new WorkloadApiWorker(documentStoreClient, orchestratorNameGenerator, jobOutputDocStore, airbyteApiClient,
-                workloadApi, workloadIdGenerator, replicationActivityInput, featureFlagClient, replicationActivityInput.getUseNewDocStoreApi());
+            worker = new WorkloadApiWorker(documentStoreClient, orchestratorNameGenerator, airbyteApiClient, workloadApi, workloadIdGenerator,
+                replicationActivityInput, featureFlagClient);
           } else {
             final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =
                 orchestratorHandleFactory.create(hydratedReplicationInput.getSourceLauncherConfig(),

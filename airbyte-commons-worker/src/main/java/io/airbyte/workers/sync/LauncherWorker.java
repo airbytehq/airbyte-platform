@@ -30,7 +30,6 @@ import io.airbyte.workers.process.KubeContainerInfo;
 import io.airbyte.workers.process.KubePodInfo;
 import io.airbyte.workers.process.KubePodResourceHelper;
 import io.airbyte.workers.process.KubeProcessFactory;
-import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClientException;
@@ -85,7 +84,6 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
   private AsyncOrchestratorPodProcess process;
   private final FeatureFlagClient featureFlagClient;
   private final MetricClient metricClient;
-  private final WorkloadIdGenerator workloadIdGenerator;
 
   public LauncherWorker(final UUID connectionId,
                         final UUID workspaceId,
@@ -100,8 +98,7 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
                         final WorkerConfigs workerConfigs,
                         final FeatureFlagClient featureFlagClient,
                         final boolean isCustomConnector,
-                        final MetricClient metricClient,
-                        final WorkloadIdGenerator workloadIdGenerator) {
+                        final MetricClient metricClient) {
 
     this.connectionId = connectionId;
     this.workspaceId = workspaceId;
@@ -117,7 +114,6 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
     this.featureFlagClient = featureFlagClient;
     this.isCustomConnector = isCustomConnector;
     this.metricClient = metricClient;
-    this.workloadIdGenerator = workloadIdGenerator;
 
     // Generate a random UUID to unique identify the pod process
     processId = UUID.randomUUID();
@@ -174,10 +170,6 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
           generateMetadataLabels(),
           Collections.emptyMap());
 
-      final String workloadId = workloadIdGenerator.generateSyncWorkloadId(connectionId,
-          Long.parseLong(jobRunConfig.getJobId()),
-          Math.toIntExact(jobRunConfig.getAttemptId()));
-
       // Use the configuration to create the process.
       process = new AsyncOrchestratorPodProcess(
           kubePodInfo,
@@ -194,9 +186,7 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
           containerOrchestratorConfig.serviceAccount(),
           schedulerName.isBlank() ? null : schedulerName,
           metricClient,
-          getLauncherType(),
-          containerOrchestratorConfig.jobOutputDocStore(),
-          workloadId);
+          getLauncherType());
 
       // only kill running pods and create process if it is not already running.
       if (process.getDocStoreStatus().equals(AsyncKubePodStatus.NOT_STARTED)) {

@@ -23,7 +23,6 @@ import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
-import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
@@ -69,8 +68,7 @@ class ReplicationJobOrchestratorTest {
         mock(AsyncStateManager.class),
         workloadApi,
         workloadIdGenerator,
-        true,
-        mock(JobOutputDocStore.class));
+        true);
 
     final ReplicationOutput actualReplicationOutput =
         replicationJobOrchestrator.runWithWorkloadEnabled(replicationWorker, new ReplicationInput().withConnectionId(UUID.randomUUID()),
@@ -96,8 +94,7 @@ class ReplicationJobOrchestratorTest {
         mock(AsyncStateManager.class),
         workloadApi,
         workloadIdGenerator,
-        true,
-        mock(JobOutputDocStore.class));
+        true);
 
     final ReplicationOutput actualReplicationOutput =
         replicationJobOrchestrator.runWithWorkloadEnabled(replicationWorker, new ReplicationInput().withConnectionId(UUID.randomUUID()),
@@ -123,8 +120,7 @@ class ReplicationJobOrchestratorTest {
         mock(AsyncStateManager.class),
         workloadApi,
         workloadIdGenerator,
-        true,
-        mock(JobOutputDocStore.class));
+        true);
 
     final ReplicationOutput actualReplicationOutput =
         replicationJobOrchestrator.runWithWorkloadEnabled(replicationWorker, new ReplicationInput().withConnectionId(UUID.randomUUID()),
@@ -150,8 +146,7 @@ class ReplicationJobOrchestratorTest {
         mock(AsyncStateManager.class),
         workloadApi,
         workloadIdGenerator,
-        true,
-        mock(JobOutputDocStore.class));
+        true);
 
     when(replicationWorker.run(any(), any())).thenThrow(new WorkerException("test"));
 

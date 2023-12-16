@@ -15,7 +15,6 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
-import io.airbyte.workers.workload.WorkloadIdGenerator;
 import java.util.Map;
 import java.util.UUID;
 
@@ -36,8 +35,7 @@ public class DbtLauncherWorker extends LauncherWorker<OperatorDbtInput, Void> {
                            final ContainerOrchestratorConfig containerOrchestratorConfig,
                            final Integer serverPort,
                            final FeatureFlagClient featureFlagClient,
-                           final MetricClient metricClient,
-                           final WorkloadIdGenerator workloadIdGenerator) {
+                           final MetricClient metricClient) {
     super(
         connectionId,
         workspaceId,
@@ -55,8 +53,7 @@ public class DbtLauncherWorker extends LauncherWorker<OperatorDbtInput, Void> {
         // Custom connector does not use Dbt at this moment, thus this flag for runnning job under
         // isolated pool can be set to false.
         false,
-        metricClient,
-        workloadIdGenerator);
+        metricClient);
   }
 
   @Override

@@ -29,7 +29,4 @@ public interface WorkloadFeatureFlagActivity {
   @ActivityMethod
   Boolean useWorkloadApi(final Input input);
 
-  @ActivityMethod
-  Boolean useOutputDocStore(final Input input);
-
 }

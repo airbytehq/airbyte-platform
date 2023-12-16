@@ -285,7 +285,7 @@ class SyncWorkflowTest {
 
     final StandardSyncOutput actualOutput = execute();
 
-    verifyReplication(replicationActivity, syncInput, useWorkloadApi, false);
+    verifyReplication(replicationActivity, syncInput, useWorkloadApi);
     verifyNormalize(normalizationActivity, normalizationInput);
     verifyDbtTransform(dbtTransformationActivity, null, operatorDbtInput);
     verifyShouldRefreshSchema(refreshSchemaActivity);
@@ -460,13 +460,12 @@ class SyncWorkflowTest {
   }
 
   private static void verifyReplication(final ReplicationActivity replicationActivity, final StandardSyncInput syncInput) {
-    verifyReplication(replicationActivity, syncInput, false, false);
+    verifyReplication(replicationActivity, syncInput, false);
   }
 
   private static void verifyReplication(final ReplicationActivity replicationActivity,
                                         final StandardSyncInput syncInput,
-                                        final boolean useWorkloadApi,
-                                        final boolean useOutputDocStore) {
+                                        final boolean useWorkloadApi) {
     verify(replicationActivity).replicateV2(new ReplicationActivityInput(
         syncInput.getSourceId(),
         syncInput.getDestinationId(),
@@ -486,8 +485,7 @@ class SyncWorkflowTest {
         syncInput.getPrefix(),
         null,
         new ConnectionContext().withOrganizationId(ORGANIZATION_ID),
-        useWorkloadApi,
-        useOutputDocStore));
+        useWorkloadApi));
   }
 
   private void verifyNormalize(final NormalizationActivity normalizationActivity, final NormalizationInput normalizationInput) {

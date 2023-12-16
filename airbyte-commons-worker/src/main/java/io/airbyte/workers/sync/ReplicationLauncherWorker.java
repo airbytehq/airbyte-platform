@@ -17,7 +17,6 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.ContainerOrchestratorConfig;
-import io.airbyte.workers.workload.WorkloadIdGenerator;
 import java.util.Map;
 import java.util.UUID;
 
@@ -43,8 +42,7 @@ public class ReplicationLauncherWorker extends LauncherWorker<ReplicationInput, 
                                    final Integer serverPort,
                                    final WorkerConfigs workerConfigs,
                                    final FeatureFlagClient featureFlagClient,
-                                   final MetricClient metricClient,
-                                   final WorkloadIdGenerator workloadIdGenerator) {
+                                   final MetricClient metricClient) {
     super(
         connectionId,
         workspaceId,
@@ -61,8 +59,7 @@ public class ReplicationLauncherWorker extends LauncherWorker<ReplicationInput, 
         workerConfigs,
         featureFlagClient,
         sourceLauncherConfig.getIsCustomConnector() || destinationLauncherConfig.getIsCustomConnector(),
-        metricClient,
-        workloadIdGenerator);
+        metricClient);
   }
 
   @Override

@@ -18,7 +18,6 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.storage.S3DocumentStoreClient;
 import io.airbyte.workers.sync.OrchestratorConstants;
-import io.airbyte.workers.workload.JobOutputDocStore;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -125,9 +124,7 @@ class AsyncOrchestratorPodProcessIntegrationTest {
         "airbyte-admin",
         null,
         mock(MetricClient.class),
-        "test",
-        new JobOutputDocStore(documentStoreClient),
-        "workload_id");
+        "test");
 
     final Map<Integer, Integer> portMap = Map.of(
         serverPort, serverPort,

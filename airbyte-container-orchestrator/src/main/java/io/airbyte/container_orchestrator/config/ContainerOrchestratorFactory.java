@@ -32,7 +32,6 @@ import io.airbyte.workers.sync.DbtLauncherWorker;
 import io.airbyte.workers.sync.NormalizationLauncherWorker;
 import io.airbyte.workers.sync.OrchestratorConstants;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
-import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
@@ -118,11 +117,10 @@ class ContainerOrchestratorFactory {
                                      final AsyncStateManager asyncStateManager,
                                      final WorkloadApi workloadApi,
                                      final WorkloadIdGenerator workloadIdGenerator,
-                                     @Value("${airbyte.workload.enabled}") final boolean workloadEnabled,
-                                     final JobOutputDocStore jobOutputDocStore) {
+                                     @Value("${airbyte.workload.enabled}") final boolean workloadEnabled) {
     return switch (application) {
       case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(envConfigs, jobRunConfig,
-          replicationWorkerFactory, asyncStateManager, workloadApi, workloadIdGenerator, workloadEnabled, jobOutputDocStore);
+          replicationWorkerFactory, asyncStateManager, workloadApi, workloadIdGenerator, workloadEnabled);
       case NormalizationLauncherWorker.NORMALIZATION -> new NormalizationJobOrchestrator(envConfigs, processFactory, jobRunConfig, asyncStateManager);
       case DbtLauncherWorker.DBT -> new DbtJobOrchestrator(envConfigs, workerConfigsProvider, processFactory, jobRunConfig, asyncStateManager);
       case AsyncOrchestratorPodProcess.NO_OP -> new NoOpOrchestrator();
@@ -131,15 +129,8 @@ class ContainerOrchestratorFactory {
   }
 
   @Singleton
-  @Named("stateDocumentStore")
   DocumentStoreClient documentStoreClient(final EnvConfigs config) {
     return StateClients.create(config.getStateStorageCloudConfigs(), Path.of("/state"));
-  }
-
-  @Singleton
-  @Named("outputDocumentStore")
-  DocumentStoreClient outputDocumentStoreClient(final EnvConfigs config) {
-    return StateClients.create(config.getStateStorageCloudConfigs(), Path.of("/workload/output"));
   }
 
   @Prototype

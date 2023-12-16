@@ -31,7 +31,6 @@ import io.airbyte.api.model.generated.SourceReadList;
 import io.airbyte.api.model.generated.WebhookConfigRead;
 import io.airbyte.api.model.generated.WebhookConfigWrite;
 import io.airbyte.api.model.generated.WorkspaceCreate;
-import io.airbyte.api.model.generated.WorkspaceCreateWithId;
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceOrganizationInfoRead;
@@ -280,56 +279,6 @@ class WorkspacesHandlerTest {
         .organizationId(ORGANIZATION_ID);
 
     assertEquals(expectedRead, actualRead);
-  }
-
-  @Test
-  void testCreateWorkspaceIfNotExist() throws JsonValidationException, IOException, ConfigNotFoundException {
-    workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS);
-    when(configRepository.getStandardWorkspaceNoSecrets(any(), eq(false))).thenReturn(workspace);
-
-    final UUID uuid = UUID.randomUUID();
-    when(uuidSupplier.get()).thenReturn(uuid);
-
-    configRepository.writeStandardWorkspaceNoSecrets(workspace);
-
-    final UUID notSuppliedUUID = UUID.randomUUID();
-
-    final WorkspaceCreateWithId workspaceCreateWithId = new WorkspaceCreateWithId()
-        .id(notSuppliedUUID)
-        .name(NEW_WORKSPACE)
-        .email(TEST_EMAIL)
-        .news(false)
-        .anonymousDataCollection(false)
-        .securityUpdates(false)
-        .notifications(List.of(generateApiNotification()))
-        .notificationSettings(generateApiNotificationSettings())
-        .defaultGeography(GEOGRAPHY_US)
-        .webhookConfigs(List.of(new WebhookConfigWrite().name(TEST_NAME).authToken(TEST_AUTH_TOKEN)))
-        .organizationId(ORGANIZATION_ID);
-
-    when(secretPersistence.read(any())).thenReturn("");
-
-    final WorkspaceRead actualRead = workspacesHandler.createWorkspaceIfNotExist(workspaceCreateWithId);
-    final WorkspaceRead secondActualRead = workspacesHandler.createWorkspaceIfNotExist(workspaceCreateWithId);
-    final WorkspaceRead expectedRead = new WorkspaceRead()
-        .workspaceId(notSuppliedUUID)
-        .customerId(uuid)
-        .email(TEST_EMAIL)
-        .name(NEW_WORKSPACE)
-        .slug("new-workspace")
-        .initialSetupComplete(false)
-        .displaySetupWizard(false)
-        .news(false)
-        .anonymousDataCollection(false)
-        .securityUpdates(false)
-        .notifications(List.of(generateApiNotification()))
-        .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
-        .defaultGeography(GEOGRAPHY_US)
-        .webhookConfigs(List.of(new WebhookConfigRead().id(uuid).name(TEST_NAME)))
-        .organizationId(ORGANIZATION_ID);
-
-    assertEquals(expectedRead, actualRead);
-    assertEquals(expectedRead, secondActualRead);
   }
 
   @Test

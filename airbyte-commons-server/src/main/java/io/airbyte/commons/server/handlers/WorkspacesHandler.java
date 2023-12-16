@@ -23,7 +23,6 @@ import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.WorkspaceCreate;
-import io.airbyte.api.model.generated.WorkspaceCreateWithId;
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceOrganizationInfoRead;
@@ -138,56 +137,36 @@ public class WorkspacesHandler {
   public WorkspaceRead createWorkspace(final WorkspaceCreate workspaceCreate)
       throws JsonValidationException, IOException, ValueConflictKnownException, ConfigNotFoundException {
 
-    final WorkspaceCreateWithId workspaceCreateWithId = new WorkspaceCreateWithId()
-        .id(uuidSupplier.get())
-        .organizationId(workspaceCreate.getOrganizationId())
-        .defaultGeography(workspaceCreate.getDefaultGeography())
-        .displaySetupWizard(workspaceCreate.getDisplaySetupWizard())
-        .name(workspaceCreate.getName())
-        .notifications(workspaceCreate.getNotifications())
-        .webhookConfigs(workspaceCreate.getWebhookConfigs())
-        .anonymousDataCollection(workspaceCreate.getAnonymousDataCollection())
-        .email(workspaceCreate.getEmail())
-        .news(workspaceCreate.getNews())
-        .notificationSettings(workspaceCreate.getNotificationSettings())
-        .securityUpdates(workspaceCreate.getSecurityUpdates());
-
-    return createWorkspaceIfNotExist(workspaceCreateWithId);
-  }
-
-  public WorkspaceRead createWorkspaceIfNotExist(final WorkspaceCreateWithId workspaceCreateWithId)
-      throws JsonValidationException, IOException, ValueConflictKnownException, ConfigNotFoundException {
-
-    final String email = workspaceCreateWithId.getEmail();
-    final Boolean anonymousDataCollection = workspaceCreateWithId.getAnonymousDataCollection();
-    final Boolean news = workspaceCreateWithId.getNews();
-    final Boolean securityUpdates = workspaceCreateWithId.getSecurityUpdates();
-    final Boolean displaySetupWizard = workspaceCreateWithId.getDisplaySetupWizard();
+    final String email = workspaceCreate.getEmail();
+    final Boolean anonymousDataCollection = workspaceCreate.getAnonymousDataCollection();
+    final Boolean news = workspaceCreate.getNews();
+    final Boolean securityUpdates = workspaceCreate.getSecurityUpdates();
+    final Boolean displaySetupWizard = workspaceCreate.getDisplaySetupWizard();
 
     // if not set on the workspaceCreate, set the defaultGeography to AUTO
-    final io.airbyte.config.Geography defaultGeography = workspaceCreateWithId.getDefaultGeography() != null
-        ? Enums.convertTo(workspaceCreateWithId.getDefaultGeography(), io.airbyte.config.Geography.class)
+    final io.airbyte.config.Geography defaultGeography = workspaceCreate.getDefaultGeography() != null
+        ? Enums.convertTo(workspaceCreate.getDefaultGeography(), io.airbyte.config.Geography.class)
         : io.airbyte.config.Geography.AUTO;
 
     // NotificationSettings from input will be patched with default values.
-    final NotificationSettings notificationSettings = patchNotificationSettingsWithDefaultValue(workspaceCreateWithId);
+    final NotificationSettings notificationSettings = patchNotificationSettingsWithDefaultValue(workspaceCreate);
 
     final StandardWorkspace workspace = new StandardWorkspace()
-        .withWorkspaceId(workspaceCreateWithId.getId())
+        .withWorkspaceId(uuidSupplier.get())
         .withCustomerId(uuidSupplier.get()) // "customer_id" should be deprecated
-        .withName(workspaceCreateWithId.getName())
-        .withSlug(generateUniqueSlug(workspaceCreateWithId.getName()))
+        .withName(workspaceCreate.getName())
+        .withSlug(generateUniqueSlug(workspaceCreate.getName()))
         .withInitialSetupComplete(false)
         .withAnonymousDataCollection(anonymousDataCollection != null ? anonymousDataCollection : false)
         .withNews(news != null ? news : false)
         .withSecurityUpdates(securityUpdates != null ? securityUpdates : false)
         .withDisplaySetupWizard(displaySetupWizard != null ? displaySetupWizard : false)
         .withTombstone(false)
-        .withNotifications(NotificationConverter.toConfigList(workspaceCreateWithId.getNotifications()))
+        .withNotifications(NotificationConverter.toConfigList(workspaceCreate.getNotifications()))
         .withNotificationSettings(NotificationSettingsConverter.toConfig(notificationSettings))
         .withDefaultGeography(defaultGeography)
-        .withWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreateWithId.getWebhookConfigs(), uuidSupplier))
-        .withOrganizationId(workspaceCreateWithId.getOrganizationId());
+        .withWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreate.getWebhookConfigs(), uuidSupplier))
+        .withOrganizationId(workspaceCreate.getOrganizationId());
 
     if (!Strings.isNullOrEmpty(email)) {
       workspace.withEmail(email);
@@ -259,7 +238,7 @@ public class WorkspacesHandler {
     persistStandardWorkspace(persistedWorkspace);
   }
 
-  private NotificationSettings patchNotificationSettingsWithDefaultValue(final WorkspaceCreateWithId workspaceCreateWithId) {
+  private NotificationSettings patchNotificationSettingsWithDefaultValue(final WorkspaceCreate workspaceCreate) {
     final NotificationSettings notificationSettings = new NotificationSettings()
         .sendOnSuccess(new NotificationItem().notificationType(List.of()))
         .sendOnFailure(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
@@ -269,8 +248,8 @@ public class WorkspacesHandler {
         .sendOnSyncDisabledWarning(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
         .sendOnBreakingChangeWarning(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
         .sendOnBreakingChangeSyncsDisabled(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO));
-    if (workspaceCreateWithId.getNotificationSettings() != null) {
-      final NotificationSettings inputNotificationSettings = workspaceCreateWithId.getNotificationSettings();
+    if (workspaceCreate.getNotificationSettings() != null) {
+      final NotificationSettings inputNotificationSettings = workspaceCreate.getNotificationSettings();
       if (inputNotificationSettings.getSendOnSuccess() != null) {
         notificationSettings.setSendOnSuccess(inputNotificationSettings.getSendOnSuccess());
       }

@@ -108,28 +108,6 @@ paths:
                 $ref: "#/components/schemas/WorkspaceRead"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/workspaces/create_if_not_exist:
-    post:
-      tags:
-        - workspace
-        - internal
-      summary: Creates a workspace with an explicit workspace ID. This should be use in acceptance tests only.
-      operationId: createWorkspaceIfNotExist
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WorkspaceCreateWithId"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkspaceRead"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
   /v1/workspaces/delete:
     post:
       tags:
@@ -4401,42 +4379,6 @@ components:
       required:
         - name
       properties:
-        email:
-          type: string
-          format: email
-        anonymousDataCollection:
-          type: boolean
-        name:
-          type: string
-        news:
-          type: boolean
-        securityUpdates:
-          type: boolean
-        notifications:
-          type: array
-          items:
-            $ref: "#/components/schemas/Notification"
-        notificationSettings:
-          $ref: "#/components/schemas/NotificationSettings"
-        displaySetupWizard:
-          type: boolean
-        defaultGeography:
-          $ref: "#/components/schemas/Geography"
-        webhookConfigs:
-          type: array
-          items:
-            $ref: "#/components/schemas/WebhookConfigWrite"
-        organizationId:
-          $ref: "#/components/schemas/OrganizationId"
-    WorkspaceCreateWithId:
-      type: object
-      required:
-        - id
-        - name
-      properties:
-        id:
-          type: string
-          format: uuid
         email:
           type: string
           format: email

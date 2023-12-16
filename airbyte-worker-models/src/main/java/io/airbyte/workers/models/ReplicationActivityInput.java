@@ -68,7 +68,5 @@ public class ReplicationActivityInput {
   private ConnectionContext connectionContext;
   // Whether to use workload API
   private Boolean useWorkloadApi;
-  // Whether to use workload API
-  private Boolean useNewDocStoreApi;
 
 }
