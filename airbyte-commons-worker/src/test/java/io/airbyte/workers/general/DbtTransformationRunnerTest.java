@@ -4,28 +4,37 @@
 
 package io.airbyte.workers.general;
 
+import static io.airbyte.workers.process.Metadata.CUSTOM_STEP;
+import static io.airbyte.workers.process.Metadata.JOB_TYPE_KEY;
+import static io.airbyte.workers.process.Metadata.SYNC_JOB;
+import static io.airbyte.workers.process.Metadata.SYNC_STEP_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.collect.ImmutableMap;
+import io.airbyte.commons.constants.WorkerConstants;
+import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.OperatorDbt;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.workers.process.AirbyteIntegrationLauncher;
 import io.airbyte.workers.process.ProcessFactory;
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.runner.RunWith;
+import org.mockito.junit.MockitoJUnitRunner;
 
 @SuppressWarnings("JavadocMethod")
+@RunWith(MockitoJUnitRunner.class)
 class DbtTransformationRunnerTest {
 
   /**
@@ -37,8 +46,23 @@ class DbtTransformationRunnerTest {
   void configureDbtTest() throws Exception {
     final var processFac = mock(ProcessFactory.class);
     final var process = mock(Process.class);
-    when(processFac.create(any(), any(), any(), anyInt(), any(), any(), any(), any(), anyBoolean(), anyBoolean(), any(), any(),
-        any(), any(), any(), any(), any(), any(), any())).thenReturn(process);
+
+    final var connId = UUID.randomUUID();
+    final var workspaceId = UUID.randomUUID();
+    final var path = Path.of("/");
+    final var config = Jsons.emptyObject();
+    final var resourceReq = new ResourceRequirements();
+
+    when(processFac.create(
+        WorkerConfigsProvider.ResourceType.DEFAULT,
+        CUSTOM_STEP, "1", 0, connId, workspaceId, path, "airbyte/custom-transformation-prep:1.0", false, false,
+        ImmutableMap.of(WorkerConstants.DESTINATION_CONFIG_JSON_FILENAME, Jsons.serialize(config)), null,
+        AirbyteIntegrationLauncher.buildGenericConnectorResourceRequirements(resourceReq),
+        null, Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, CUSTOM_STEP),
+        Collections.emptyMap(),
+        Collections.emptyMap(),
+        Collections.emptyMap(), "configure-dbt", "--integration-type", "bigquery", "--config", "destination_config.json", "--git-repo", "test url"))
+            .thenReturn(process);
 
     final var inputStream = mock(InputStream.class);
     when(process.getInputStream()).thenReturn(inputStream);
@@ -52,16 +76,11 @@ class DbtTransformationRunnerTest {
         .withGitRepoUrl("test url")
         .withDockerImage("test image");
 
-    final var connId = UUID.randomUUID();
-    final var workspaceId = UUID.randomUUID();
-    final var path = Path.of("/");
-    final var config = mock(JsonNode.class);
-    final var resourceReq = mock(ResourceRequirements.class);
     runnerSpy.configureDbt("1", 0, connId, workspaceId, path, config, resourceReq, dbtConfig);
 
     // The key pieces to verify: 1) the correct integration type is called 2) the correct repo is passed
     // in.
-    verify(runnerSpy).runConfigureProcess("1", 0, connId, workspaceId, path, Map.of("destination_config.json", ""),
+    verify(runnerSpy).runConfigureProcess("1", 0, connId, workspaceId, path, Map.of(WorkerConstants.DESTINATION_CONFIG_JSON_FILENAME, "{}"),
         resourceReq, "configure-dbt", "--integration-type", "bigquery", "--config", "destination_config.json", "--git-repo", "test url");
 
   }

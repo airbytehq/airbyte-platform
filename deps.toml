@@ -32,8 +32,8 @@ micronaut-openapi = "4.10.0"
 micronaut-security = "3.11.1"
 micronaut-test = "3.9.2"
 moshi = "1.15.0"
-mockito = "4.11.0"
-mockito-kotlin = "5.1.0"
+mockito = "5.8.0"
+mockito-kotlin = "5.2.1"
 okhttp3 = "4.10.0"
 platform-testcontainers = "1.17.6"
 postgresql = "42.5.4"
@@ -61,7 +61,7 @@ aws-java-sdk-sts = {module = "com.amazonaws:aws-java-sdk-sts", version = "1.12.6
 aws-secretsmanager-caching-java = { module = "com.amazonaws.secretsmanager:aws-secretsmanager-caching-java", version = "1.0.2" }
 bouncycastle-bcprov = { module = "org.bouncycastle:bcprov-jdk15on", version.ref = "bouncycastle" }
 bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk15on", version.ref = "bouncycastle" }
-byte-buddy = { module = "net.bytebuddy:byte-buddy", version = "1.12.14" }
+byte-buddy = { module = "net.bytebuddy:byte-buddy", version = "1.14.10" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commons_io" }
 connectors-testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "connectors-testcontainers" }
 connectors-testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "connectors-testcontainers" }
@@ -125,7 +125,7 @@ lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 micrometer-statsd = { module = "io.micrometer:micrometer-registry-statsd", version = "1.9.3" }
 moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
-mockito-inline = { module = "org.mockito:mockito-inline", version.ref = "mockito" }
+mockito-inline = { module = "org.mockito:mockito-inline", version = "5.2.0" }
 mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin" }
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
 mockk = { module = "io.mockk:mockk", version = "1.13.8" }
@@ -222,6 +222,7 @@ micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micro
 micronaut-server = ["micronaut-jaxrs-processor", "micronaut-jaxrs-server"]
 micronaut-test = ["micronaut-test-core", "micronaut-test-junit5", "h2-database"]
 micronaut-test-annotation-processor = ["micronaut-inject-java"]
+mockito-inline = ["mockito-inline", "byte-buddy"]
 secret-hydration = ["google-cloud-storage", "google-cloud-storage-secretmanager", "aws-secretsmanager-caching-java", "vault-java-driver"]
 slf4j = ["jul-to-slf4j", "jcl-over-slf4j", "log4j-over-slf4j"]
 temporal = ["temporal-sdk", "temporal-serviceclient"]

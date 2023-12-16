@@ -70,11 +70,11 @@ dependencies {
     testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
     testImplementation(libs.bundles.micronaut.test)
-    testImplementation(libs.mockito.inline)
+    testImplementation(libs.bundles.mockito.inline)
+    testImplementation(libs.bundles.bouncycastle)
     testImplementation(libs.postgresql)
     testImplementation(libs.platform.testcontainers)
     testImplementation(libs.platform.testcontainers.postgresql)
-    testImplementation(libs.bundles.bouncycastle)
 
     airbyteProtocol(libs.airbyte.protocol) {
         isTransitive = false

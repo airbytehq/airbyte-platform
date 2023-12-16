@@ -25,11 +25,11 @@ buildscript {
 plugins {
     id "base"
     id "com.dorongold.task-tree" version "2.1.1"
-    id "io.airbyte.gradle.jvm" version "0.20.0" apply false
-    id "io.airbyte.gradle.jvm.app" version "0.20.0" apply false
-    id "io.airbyte.gradle.jvm.lib" version "0.20.0" apply false
-    id "io.airbyte.gradle.docker" version "0.20.0" apply false
-    id "io.airbyte.gradle.publish" version "0.20.0" apply false
+    id "io.airbyte.gradle.jvm" version "0.21.0-SNAPSHOT" apply false
+    id "io.airbyte.gradle.jvm.app" version "0.21.0-SNAPSHOT" apply false
+    id "io.airbyte.gradle.jvm.lib" version "0.21.0-SNAPSHOT" apply false
+    id "io.airbyte.gradle.docker" version "0.21.0-SNAPSHOT" apply false
+    id "io.airbyte.gradle.publish" version "0.21.0-SNAPSHOT" apply false
     id "jacoco-report-aggregation"
 }
 

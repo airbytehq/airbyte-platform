@@ -71,7 +71,7 @@ dependencies {
 
     testImplementation(libs.bundles.micronaut.test)
     testImplementation(libs.json.path)
-    testImplementation(libs.mockito.inline)
+    testImplementation(libs.bundles.mockito.inline)
     testImplementation(libs.mockk)
     testImplementation(variantOf(libs.opentracing.util.test) { classifier("tests") })
     testImplementation(libs.postgresql)
