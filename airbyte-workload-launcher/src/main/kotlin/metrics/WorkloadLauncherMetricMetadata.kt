@@ -48,6 +48,10 @@ enum class WorkloadLauncherMetricMetadata(
     "workload_stage_done",
     "increments when a workload stage is done",
   ),
+  WORKLOAD_STAGE_DURATION(
+    "workload_stage_duration",
+    "tracks the duration of a workload stage",
+  ),
   PODS_DELETED_FOR_MUTEX_KEY(
     "workload_pods_deleted_for_mutex_key",
     "existing pods for the provided mutex key were found and deleted",
