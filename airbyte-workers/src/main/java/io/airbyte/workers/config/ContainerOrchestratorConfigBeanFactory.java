@@ -14,6 +14,7 @@ import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.storage.StateClients;
 import io.airbyte.workers.sync.OrchestratorConstants;
+import io.airbyte.workers.workload.JobOutputDocStore;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
@@ -55,6 +56,7 @@ public class ContainerOrchestratorConfigBeanFactory {
   // IMPORTANT: Changing the storage location will orphan already existing kube pods when the new
   // version is deployed!
   public static final Path STATE_STORAGE_PREFIX = Path.of("/state");
+  public static final Path OUTPUT_STORAGE_PREFIX = Path.of("/workload/output");
 
   @SuppressWarnings("LineLength")
   @Singleton
@@ -93,6 +95,12 @@ public class ContainerOrchestratorConfigBeanFactory {
     final DocumentStoreClient documentStoreClient = StateClients.create(
         cloudStateStorageConfiguration.orElse(null),
         STATE_STORAGE_PREFIX);
+
+    final DocumentStoreClient outputDocumentStoreClient = StateClients.create(
+        cloudStateStorageConfiguration.orElse(null),
+        OUTPUT_STORAGE_PREFIX);
+
+    final JobOutputDocStore jobOutputDocStore = new JobOutputDocStore(outputDocumentStoreClient);
 
     // Build the map of additional environment variables to be passed to the container orchestrator
     final Map<String, String> environmentVariables = new HashMap<>();
@@ -161,7 +169,8 @@ public class ContainerOrchestratorConfigBeanFactory {
         containerOrchestratorImagePullPolicy,
         googleApplicationCredentials,
         workerEnvironment,
-        serviceAccount);
+        serviceAccount,
+        jobOutputDocStore);
   }
 
 }

@@ -239,7 +239,7 @@ public class AirbyteApiAcceptanceTests {
             discoverResult.getCatalogId())
                 .build());
     final var connectionId = conn.getConnectionId();
-    JobTypeEnum expectedJobType = JobTypeEnum.SYNC;
+    final JobTypeEnum expectedJobType = JobTypeEnum.SYNC;
 
     // first sync and list jobs
     final JobCreateRequest jobCreate = new JobCreateRequest(

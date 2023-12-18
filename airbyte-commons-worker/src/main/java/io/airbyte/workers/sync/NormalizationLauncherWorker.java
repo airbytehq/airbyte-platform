@@ -16,6 +16,7 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
+import io.airbyte.workers.workload.WorkloadIdGenerator;
 import java.util.Map;
 import java.util.UUID;
 
@@ -36,7 +37,8 @@ public class NormalizationLauncherWorker extends LauncherWorker<NormalizationInp
                                      final ContainerOrchestratorConfig containerOrchestratorConfig,
                                      final Integer serverPort,
                                      final FeatureFlagClient featureFlagClient,
-                                     final MetricClient metricClient) {
+                                     final MetricClient metricClient,
+                                     final WorkloadIdGenerator workloadIdGenerator) {
     super(
         connectionId,
         workspaceId,
@@ -54,7 +56,8 @@ public class NormalizationLauncherWorker extends LauncherWorker<NormalizationInp
         // Normalization process will happen only on a fixed set of connectors,
         // thus they are not going to be run under custom connectors. Setting this to false.
         false,
-        metricClient);
+        metricClient,
+        workloadIdGenerator);
 
   }
 

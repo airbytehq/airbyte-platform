@@ -19,6 +19,7 @@ import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.orchestrator.OrchestratorNameGenerator
 import io.airbyte.workers.storage.DocumentStoreClient
 import io.airbyte.workers.sync.WorkloadApiWorker
+import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workers.workload.WorkloadIdGenerator
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.Workload
@@ -41,6 +42,7 @@ internal class WorkloadApiWorkerTest {
   private var connectionApi: ConnectionApi = mockk()
   private var workloadApi: WorkloadApi = mockk()
   private var featureFlagClient: FeatureFlagClient = mockk()
+  private var jobOutputDocStore: JobOutputDocStore = mockk()
   private lateinit var replicationActivityInput: ReplicationActivityInput
   private lateinit var replicationInput: ReplicationInput
   private lateinit var workloadApiWorker: WorkloadApiWorker
@@ -57,11 +59,13 @@ internal class WorkloadApiWorkerTest {
       WorkloadApiWorker(
         documentStoreClient,
         OrchestratorNameGenerator("testNs"),
+        jobOutputDocStore,
         apiClient,
         workloadApi,
         workloadIdGenerator,
         replicationActivityInput,
         featureFlagClient,
+        false,
       )
   }
 
@@ -83,6 +87,40 @@ internal class WorkloadApiWorkerTest {
     every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.SUCCESS)
 
     every { documentStoreClient.read("$expectedDocPrefix/SUCCEEDED") } returns Optional.of(Jsons.serialize(expectedOutput))
+
+    val output = workloadApiWorker.run(replicationInput, jobRoot)
+    assertEquals(expectedOutput, output)
+  }
+
+  @Test
+  fun testSuccessfulReplicationWithDocOutput() {
+    workloadApiWorker =
+      WorkloadApiWorker(
+        documentStoreClient,
+        OrchestratorNameGenerator("testNs"),
+        jobOutputDocStore,
+        apiClient,
+        workloadApi,
+        workloadIdGenerator,
+        replicationActivityInput,
+        featureFlagClient,
+        true,
+      )
+    val jobId = 13L
+    val attemptNumber = 37
+    val workloadId = "my-workload"
+    val expectedOutput =
+      ReplicationOutput()
+        .withReplicationAttemptSummary(ReplicationAttemptSummary().withStatus(StandardSyncSummary.ReplicationStatus.COMPLETED))
+    initializeReplicationInput(jobId, attemptNumber)
+
+    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
+
+    every { connectionApi.getConnection(any()) } returns ConnectionRead().geography(Geography.US)
+    every { workloadApi.workloadCreate(any()) } returns Unit
+    every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.SUCCESS)
+
+    every { jobOutputDocStore.readSyncOutput(workloadId) } returns Optional.of(expectedOutput)
 
     val output = workloadApiWorker.run(replicationInput, jobRoot)
     assertEquals(expectedOutput, output)

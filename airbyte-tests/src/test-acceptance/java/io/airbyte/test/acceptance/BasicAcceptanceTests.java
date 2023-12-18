@@ -81,6 +81,7 @@ import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.api.client.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.api.client.model.generated.WebhookConfigWrite;
 import io.airbyte.api.client.model.generated.WorkspaceCreate;
+import io.airbyte.api.client.model.generated.WorkspaceCreateWithId;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.api.client.model.generated.WorkspaceUpdate;
 import io.airbyte.commons.json.Jsons;
@@ -119,6 +120,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -137,7 +139,8 @@ import org.slf4j.LoggerFactory;
  * these tests, the assert statement we would need to put in to check nullability is just as good as
  * throwing the NPE as they will be effectively the same at run time.
  */
-@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "DataFlowIssue", "SqlDialectInspection", "SqlNoDataSourceInspection"})
+@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "DataFlowIssue", "SqlDialectInspection", "SqlNoDataSourceInspection",
+  "PMD.AvoidDuplicateLiterals"})
 @DisabledIfEnvironmentVariable(named = "SKIP_BASIC_ACCEPTANCE_TESTS",
                                matches = "true")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -183,8 +186,9 @@ class BasicAcceptanceTests {
   private static final String GERALT = "geralt";
   private static final String FIELD = "field";
   private static final String ID_AND_NAME = "id_and_name";
-
   private static final int MAX_SCHEDULED_JOB_RETRIES = 10;
+  private static final UUID RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID = UUID.fromString("3d2985a0-a412-45f4-9124-e15800b739be");
+  private static final UUID RUN_WITH_WORKLOAD_WITH_DOC_STORE_WORKSPACE_ID = UUID.fromString("480e631f-1c88-4c2d-9081-855981018205");
 
   private static final ConnectionScheduleData BASIC_SCHEDULE_DATA = new ConnectionScheduleData().basicSchedule(
       new ConnectionScheduleDataBasicSchedule().units(1L).timeUnit(TimeUnitEnum.HOURS));
@@ -219,6 +223,7 @@ class BasicAcceptanceTests {
     // deployment where we don't want to create workspaces.
     // NOTE: the API client can't create workspaces in GKE deployments, so we need to provide a
     // workspace ID in that environment.
+
     workspaceId = System.getenv().get(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID) == null ? apiClient.getWorkspaceApi()
         .createWorkspace(new WorkspaceCreate().email("acceptance-tests@airbyte.io").name("Airbyte Acceptance Tests" + UUID.randomUUID()))
         .getWorkspaceId()
@@ -678,6 +683,68 @@ class BasicAcceptanceTests {
 
   @Test
   void testIncrementalSync() throws Exception {
+    runIncrementalSyncForAWorkspaceId(workspaceId);
+  }
+
+  @Test
+  @EnabledIfEnvironmentVariable(named = "KUBE",
+                                matches = "true")
+  @DisabledIfEnvironmentVariable(named = IS_GKE,
+                                 matches = TRUE,
+                                 disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
+  void testIncrementalSyncWithWorkloadWithoutOutputDocStore() throws Exception {
+    final UUID workspaceId = apiClient.getWorkspaceApi()
+        .createWorkspaceIfNotExist(new WorkspaceCreateWithId()
+            // This is a randomly generated UUID which is used in the flags.yaml to perform an override in order
+            // to activate the workload for this test.
+            .id(RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID)
+            .email("acceptance-tests@airbyte.io")
+            .name("Airbyte Acceptance Tests" + UUID.randomUUID()))
+        .getWorkspaceId();
+
+    final AcceptanceTestHarness oldTestharness = testHarness;
+    setTestHarness(new AcceptanceTestHarness(apiClient, workspaceId));
+    testHarness.ensureCleanSlate();
+    testHarness.setup();
+
+    runIncrementalSyncForAWorkspaceId(workspaceId);
+
+    testHarness.cleanup();
+    setTestHarness(oldTestharness);
+  }
+
+  @Test
+  @EnabledIfEnvironmentVariable(named = "KUBE",
+                                matches = "true")
+  @DisabledIfEnvironmentVariable(named = IS_GKE,
+                                 matches = TRUE,
+                                 disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
+  void testIncrementalSyncWithWorkloadWithOutputDocStore() throws Exception {
+    final UUID workspaceId = apiClient.getWorkspaceApi()
+        .createWorkspaceIfNotExist(new WorkspaceCreateWithId()
+            // This is a randomly generated UUID which is used in the flags.yaml to perform an override in order
+            // to activate the workload for this test.
+            .id(RUN_WITH_WORKLOAD_WITH_DOC_STORE_WORKSPACE_ID)
+            .email("acceptance-tests@airbyte.io")
+            .name("Airbyte Acceptance Tests" + UUID.randomUUID()))
+        .getWorkspaceId();
+
+    final AcceptanceTestHarness oldTestharness = testHarness;
+    setTestHarness(new AcceptanceTestHarness(apiClient, workspaceId));
+    testHarness.ensureCleanSlate();
+    testHarness.setup();
+
+    runIncrementalSyncForAWorkspaceId(workspaceId);
+
+    testHarness.cleanup();
+    setTestHarness(oldTestharness);
+  }
+
+  private static void setTestHarness(final AcceptanceTestHarness acceptanceTestHarness) {
+    testHarness = acceptanceTestHarness;
+  }
+
+  private void runIncrementalSyncForAWorkspaceId(final UUID workspaceId) throws Exception {
     LOGGER.info("Starting testIncrementalSync()");
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();

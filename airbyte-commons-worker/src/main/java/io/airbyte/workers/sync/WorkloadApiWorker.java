@@ -30,7 +30,9 @@ import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorNameGenerator;
 import io.airbyte.workers.process.Metadata;
 import io.airbyte.workers.storage.DocumentStoreClient;
+import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
+import io.airbyte.workers.workload.exception.DocStoreAccessException;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
@@ -48,6 +50,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import org.openapitools.client.infrastructure.ClientException;
 import org.openapitools.client.infrastructure.ServerException;
 import org.slf4j.Logger;
@@ -66,27 +69,34 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   private static final Set<WorkloadStatus> TERMINAL_STATUSES = Set.of(WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS);
   private final DocumentStoreClient documentStoreClient;
   private final OrchestratorNameGenerator orchestratorNameGenerator;
+  private final JobOutputDocStore jobOutputDocStore;
   private final AirbyteApiClient apiClient;
   private final WorkloadApi workloadApi;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final ReplicationActivityInput input;
   private final FeatureFlagClient featureFlagClient;
+  private final boolean useOutputDocStore;
+
   private String workloadId = null;
 
   public WorkloadApiWorker(final DocumentStoreClient documentStoreClient,
                            final OrchestratorNameGenerator orchestratorNameGenerator,
+                           final JobOutputDocStore jobOutputDocStore,
                            final AirbyteApiClient apiClient,
                            final WorkloadApi workloadApi,
                            final WorkloadIdGenerator workloadIdGenerator,
                            final ReplicationActivityInput input,
-                           final FeatureFlagClient featureFlagClient) {
+                           final FeatureFlagClient featureFlagClient,
+                           final boolean useOutputDocStore) {
     this.documentStoreClient = documentStoreClient;
     this.orchestratorNameGenerator = orchestratorNameGenerator;
+    this.jobOutputDocStore = jobOutputDocStore;
     this.apiClient = apiClient;
     this.workloadApi = workloadApi;
     this.workloadIdGenerator = workloadIdGenerator;
     this.input = input;
     this.featureFlagClient = featureFlagClient;
+    this.useOutputDocStore = useOutputDocStore;
   }
 
   @Override
@@ -161,7 +171,12 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
       throw new WorkerException("Replication cancelled by " + workload.getTerminationSource());
     }
 
-    final ReplicationOutput output = getReplicationOutput(workloadId);
+    final ReplicationOutput output;
+    try {
+      output = getReplicationOutput(workloadId);
+    } catch (final DocStoreAccessException e) {
+      throw new WorkerException("Failed to read replication output", e);
+    }
     if (output == null) {
       throw new WorkerException("Failed to read replication output");
     }
@@ -187,22 +202,35 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     }
   }
 
-  private ReplicationOutput getReplicationOutput(final String workloadId) {
+  private ReplicationOutput getReplicationOutput(final String workloadId) throws DocStoreAccessException {
     final String outputLocation = orchestratorNameGenerator.getOrchestratorOutputLocation(input.getJobRunConfig().getJobId(),
         input.getJobRunConfig().getAttemptId());
 
-    final Optional<String> output = fetchReplicationOutput(outputLocation);
+    final Optional<ReplicationOutput> output;
+    if (useOutputDocStore) {
+      output = fetchReplicationOutput(workloadId, (location) -> {
+        try {
+          return jobOutputDocStore.readSyncOutput(location);
+        } catch (final DocStoreAccessException e) {
+          throw new RuntimeException(e);
+        }
+      });
+    } else {
+      output = fetchReplicationOutput(outputLocation,
+          (location) -> documentStoreClient.read(outputLocation).map(s -> Jsons.deserialize(s, ReplicationOutput.class)));
+    }
 
-    log.info("Replication output for workload {} : {}", workloadId, output.orElse(""));
-    return output.map(s -> Jsons.deserialize(s, ReplicationOutput.class)).orElse(null);
+    log.info("Replication output for workload {} : {}", workloadId, output.orElse(null));
+    return output.orElse(null);
   }
 
-  private Optional<String> fetchReplicationOutput(final String outputLocation) {
+  private Optional<ReplicationOutput> fetchReplicationOutput(final String location,
+                                                             final Function<String, Optional<ReplicationOutput>> replicationFetcher) {
     final Context context = getFeatureFlagContext();
     final int workloadHeartbeatRate = featureFlagClient.intVariation(WorkloadHeartbeatRate.INSTANCE, context);
     final Instant cutoffTime = Instant.now().plus(workloadHeartbeatRate, ChronoUnit.SECONDS);
     do {
-      final Optional<String> output = documentStoreClient.read(outputLocation);
+      final Optional<ReplicationOutput> output = replicationFetcher.apply(location);
       if (output.isPresent()) {
         return output;
       }

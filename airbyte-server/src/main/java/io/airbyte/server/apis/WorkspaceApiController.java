@@ -21,6 +21,7 @@ import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody;
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
 import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.WorkspaceCreate;
+import io.airbyte.api.model.generated.WorkspaceCreateWithId;
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceOrganizationInfoRead;
@@ -57,6 +58,13 @@ public class WorkspaceApiController implements WorkspaceApi {
   @Override
   public WorkspaceRead createWorkspace(@Body final WorkspaceCreate workspaceCreate) {
     return ApiHelper.execute(() -> workspacesHandler.createWorkspace(workspaceCreate));
+  }
+
+  @Post("/create_if_not_exist")
+  @Secured({AUTHENTICATED_USER})
+  @Override
+  public WorkspaceRead createWorkspaceIfNotExist(@Body final WorkspaceCreateWithId workspaceCreateWithId) {
+    return ApiHelper.execute(() -> workspacesHandler.createWorkspaceIfNotExist(workspaceCreateWithId));
   }
 
   @Post("/delete")

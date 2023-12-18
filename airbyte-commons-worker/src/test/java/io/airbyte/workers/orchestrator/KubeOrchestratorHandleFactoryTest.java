@@ -37,9 +37,9 @@ class KubeOrchestratorHandleFactoryTest {
       when(client.stringVariation(ContainerOrchestratorJavaOpts.INSTANCE, new Connection(correctUuid))).thenReturn("");
 
       final ContainerOrchestratorConfig config =
-          new ContainerOrchestratorConfig(expNamespace, null, Map.of("a", "b"), null, expSecret,
+          new ContainerOrchestratorConfig(expNamespace, Map.of("a", "b"), expSecret,
               "path", "dataplane secrets", "dataplane path",
-              "image 0", "pull policy", "gcp creds", null, "airbyte-admin");
+              "image 0", "pull policy", "gcp creds", "airbyte-admin");
 
       final ContainerOrchestratorConfig actual = KubeOrchestratorHandleFactory.injectContainerOrchestratorConfig(client, config, correctUuid);
 
@@ -56,9 +56,9 @@ class KubeOrchestratorHandleFactoryTest {
       when(client.stringVariation(ContainerOrchestratorJavaOpts.INSTANCE, new Connection(badUuid))).thenReturn("");
 
       final ContainerOrchestratorConfig config =
-          new ContainerOrchestratorConfig("ns 1", null, Map.of("a", "b"), null, "secret",
+          new ContainerOrchestratorConfig("ns 1", Map.of("a", "b"), "secret",
               "path", "dataplane secrets", "dataplane path",
-              "image 0", "pull policy", "gcp creds", null, "airbyte-admin");
+              "image 0", "pull policy", "gcp creds", "airbyte-admin");
 
       final ContainerOrchestratorConfig actual = KubeOrchestratorHandleFactory.injectContainerOrchestratorConfig(client, config, badUuid);
 
@@ -81,9 +81,9 @@ class KubeOrchestratorHandleFactoryTest {
 
       final var orgMap = Map.of("a", "b", "JAVA_OPTS", "bad");
       final ContainerOrchestratorConfig config =
-          new ContainerOrchestratorConfig(expNamespace, null, orgMap, null, expSecret,
+          new ContainerOrchestratorConfig(expNamespace, orgMap, expSecret,
               "path", "dataplane secrets", "dataplane path",
-              "image 0", "pull policy", "gcp creds", null, "airbyte-admin");
+              "image 0", "pull policy", "gcp creds", "airbyte-admin");
 
       final ContainerOrchestratorConfig actual = KubeOrchestratorHandleFactory.injectContainerOrchestratorConfig(client, config, correctUuid);
 
@@ -101,9 +101,9 @@ class KubeOrchestratorHandleFactoryTest {
       when(client.stringVariation(ContainerOrchestratorDevImage.INSTANCE, new Connection(badUuid))).thenReturn("");
 
       final ContainerOrchestratorConfig config =
-          new ContainerOrchestratorConfig("ns 1", null, Map.of("a", "b"), null, "secret",
+          new ContainerOrchestratorConfig("ns 1", Map.of("a", "b"), "secret",
               "path", "dataplane secrets", "dataplane path",
-              "image 0", "pull policy", "gcp creds", null, "airbyte-admin");
+              "image 0", "pull policy", "gcp creds", "airbyte-admin");
 
       final ContainerOrchestratorConfig actual = KubeOrchestratorHandleFactory.injectContainerOrchestratorConfig(client, config, badUuid);
 

@@ -14,6 +14,8 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.workers.storage.DocumentStoreClient;
+import io.airbyte.workers.workload.JobOutputDocStore;
+import io.airbyte.workers.workload.exception.DocStoreAccessException;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
@@ -85,6 +87,8 @@ public class AsyncOrchestratorPodProcess implements KubePod {
   private final String schedulerName;
   private final MetricClient metricClient;
   private final String launcherType;
+  private final JobOutputDocStore jobOutputDocStore;
+  private final String workloadId;
 
   public AsyncOrchestratorPodProcess(
                                      final KubePodInfo kubePodInfo,
@@ -101,7 +105,9 @@ public class AsyncOrchestratorPodProcess implements KubePod {
                                      final String serviceAccount,
                                      final String schedulerName,
                                      final MetricClient metricClient,
-                                     final String launcherType) {
+                                     final String launcherType,
+                                     final JobOutputDocStore jobOutputDocStore,
+                                     final String workloadId) {
     this.kubePodInfo = kubePodInfo;
     this.documentStoreClient = documentStoreClient;
     this.kubernetesClient = kubernetesClient;
@@ -118,6 +124,8 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     this.schedulerName = schedulerName;
     this.metricClient = metricClient;
     this.launcherType = launcherType;
+    this.jobOutputDocStore = jobOutputDocStore;
+    this.workloadId = workloadId;
   }
 
   /**
@@ -127,12 +135,20 @@ public class AsyncOrchestratorPodProcess implements KubePod {
    */
   public Optional<String> getOutput() {
     final var possibleOutput = getDocument(AsyncKubePodStatus.SUCCEEDED.name());
-
-    if (possibleOutput.isPresent() && possibleOutput.get().isBlank()) {
-      return Optional.empty();
-    } else {
+    if (possibleOutput.isPresent() && !possibleOutput.get().isBlank()) {
       return possibleOutput;
     }
+
+    try {
+      final var possibleWorkloadOutput = jobOutputDocStore.readSyncOutput(workloadId).map(Jsons::serialize);
+      if (possibleWorkloadOutput.isPresent() && !possibleWorkloadOutput.get().isBlank()) {
+        return possibleWorkloadOutput;
+      }
+    } catch (DocStoreAccessException e) {
+      throw new RuntimeException("Unable to access workload doc store", e);
+    }
+
+    return Optional.empty();
   }
 
   /**

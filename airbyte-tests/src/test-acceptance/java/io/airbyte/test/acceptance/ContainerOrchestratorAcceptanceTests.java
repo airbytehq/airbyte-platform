@@ -81,7 +81,7 @@ class ContainerOrchestratorAcceptanceTests {
             .setPort(url.getPort())
             .setBasePath("/api"));
     // work in whatever default workspace is present.
-    UUID workspaceId = apiClient.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();
+    final UUID workspaceId = apiClient.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();
     LOGGER.info("workspaceId = " + workspaceId);
 
     // log which connectors are being used.

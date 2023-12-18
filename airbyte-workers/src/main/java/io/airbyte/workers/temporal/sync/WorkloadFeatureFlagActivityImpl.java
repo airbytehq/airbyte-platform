@@ -10,6 +10,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseWorkloadApi;
+import io.airbyte.featureflag.UseWorkloadOutputDocStore;
 import io.airbyte.featureflag.Workspace;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
@@ -26,6 +27,19 @@ public class WorkloadFeatureFlagActivityImpl implements WorkloadFeatureFlagActiv
 
   @Override
   public Boolean useWorkloadApi(final WorkloadFeatureFlagActivity.Input input) {
+    final var context = getContext(input);
+
+    return featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, context);
+  }
+
+  @Override
+  public Boolean useOutputDocStore(final Input input) {
+    final var context = getContext(input);
+
+    return featureFlagClient.boolVariation(UseWorkloadOutputDocStore.INSTANCE, context);
+  }
+
+  private Context getContext(final Input input) {
     final var contexts = new ArrayList<Context>();
     contexts.add(new Workspace(input.getWorkspaceId()));
     contexts.add(new Connection(input.getConnectionId()));
@@ -34,9 +48,7 @@ public class WorkloadFeatureFlagActivityImpl implements WorkloadFeatureFlagActiv
       contexts.add(new Organization(organizationId));
     }
 
-    final var context = new Multi(contexts);
-
-    return featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE, context);
+    return new Multi(contexts);
   }
 
 }
