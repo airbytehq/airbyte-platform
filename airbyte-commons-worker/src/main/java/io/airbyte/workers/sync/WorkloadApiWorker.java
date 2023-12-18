@@ -28,6 +28,7 @@ import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorNameGenerator;
+import io.airbyte.workers.process.Metadata;
 import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
@@ -106,9 +107,13 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
       createWorkload(new WorkloadCreateRequest(
           workloadId,
           List.of(
-              new WorkloadLabel("connectionId", replicationInput.getConnectionId().toString()),
-              new WorkloadLabel("jobId", replicationInput.getJobRunConfig().getJobId()),
-              new WorkloadLabel("attemptNumber", replicationInput.getJobRunConfig().getAttemptId().toString())),
+              // This list copied from KubeProcess#getLabels() without docker image labels which we populate from
+              // the launcher
+              new WorkloadLabel(Metadata.CONNECTION_ID_LABEL_KEY, replicationInput.getConnectionId().toString()),
+              new WorkloadLabel(Metadata.JOB_LABEL_KEY, replicationInput.getJobRunConfig().getJobId()),
+              new WorkloadLabel(Metadata.ATTEMPT_LABEL_KEY, replicationInput.getJobRunConfig().getAttemptId().toString()),
+              new WorkloadLabel(Metadata.WORKSPACE_LABEL_KEY, replicationInput.getWorkspaceId().toString()),
+              new WorkloadLabel(Metadata.WORKER_POD_LABEL_KEY, Metadata.WORKER_POD_LABEL_VALUE)),
           serializedInput,
           fullLogPath(jobRoot),
           geo.getValue(),

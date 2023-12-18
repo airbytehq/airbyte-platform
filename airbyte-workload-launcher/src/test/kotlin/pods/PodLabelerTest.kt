@@ -1,9 +1,12 @@
 package io.airbyte.workload.launcher.pods
 
+import io.airbyte.workers.process.Metadata.IMAGE_NAME
+import io.airbyte.workers.process.Metadata.IMAGE_VERSION
 import io.airbyte.workers.process.Metadata.ORCHESTRATOR_REPLICATION_STEP
 import io.airbyte.workers.process.Metadata.READ_STEP
 import io.airbyte.workers.process.Metadata.SYNC_STEP_KEY
 import io.airbyte.workers.process.Metadata.WRITE_STEP
+import io.airbyte.workers.process.ProcessFactory
 import io.airbyte.workload.launcher.pods.KubePodClient.Constants.MUTEX_KEY
 import io.airbyte.workload.launcher.pods.KubePodClient.Constants.WORKLOAD_ID
 import org.junit.jupiter.api.Test
@@ -16,7 +19,7 @@ import java.util.stream.Stream
 class PodLabelerTest {
   @Test
   fun getSourceLabels() {
-    val labeler = PodLabeler()
+    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
     val result = labeler.getSourceLabels()
 
     assert(
@@ -29,7 +32,7 @@ class PodLabelerTest {
 
   @Test
   fun getDestinationLabels() {
-    val labeler = PodLabeler()
+    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
     val result = labeler.getDestinationLabels()
 
     assert(
@@ -42,13 +45,17 @@ class PodLabelerTest {
 
   @Test
   fun getOrchestratorLabels() {
-    val labeler = PodLabeler()
+    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
     val result = labeler.getOrchestratorLabels()
+    val shortImageName = ProcessFactory.getShortImageName(ORCHESTRATOR_IMAGE_NAME)
+    val imageVersion = ProcessFactory.getImageVersion(ORCHESTRATOR_IMAGE_NAME)
 
     assert(
       result ==
         mapOf(
           SYNC_STEP_KEY to ORCHESTRATOR_REPLICATION_STEP,
+          IMAGE_NAME to shortImageName,
+          IMAGE_VERSION to imageVersion,
         ),
     )
   }
@@ -56,7 +63,7 @@ class PodLabelerTest {
   @ParameterizedTest
   @MethodSource("randomStringMatrix")
   fun getWorkloadLabels(workloadId: String) {
-    val labeler = PodLabeler()
+    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
     val result = labeler.getWorkloadLabels(workloadId)
 
     assert(
@@ -70,7 +77,7 @@ class PodLabelerTest {
   @ParameterizedTest
   @MethodSource("randomStringMatrix")
   fun getMutexLabels(key: String) {
-    val labeler = PodLabeler()
+    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
     val result = labeler.getMutexLabels(key)
 
     assert(
@@ -88,7 +95,7 @@ class PodLabelerTest {
     mutexKey: String?,
     passThroughLabels: Map<String, String>,
   ) {
-    val labeler = PodLabeler()
+    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
     val result = labeler.getSharedLabels(workloadId, mutexKey, passThroughLabels)
 
     assert(
@@ -100,6 +107,8 @@ class PodLabelerTest {
   }
 
   companion object {
+    const val ORCHESTRATOR_IMAGE_NAME: String = "an image"
+
     @JvmStatic
     private fun replInputWorkloadIdMatrix(): Stream<Arguments> {
       return Stream.of(

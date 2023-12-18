@@ -14,12 +14,14 @@ import io.airbyte.workers.process.KubePodProcess
 import io.airbyte.workers.process.KubePodResourceHelper
 import io.airbyte.workload.launcher.pods.OrchestratorPodLauncher.Constants.KUBECTL_COMPLETED_VALUE
 import io.airbyte.workload.launcher.pods.OrchestratorPodLauncher.Constants.KUBECTL_PHASE_FIELD_NAME
+import io.airbyte.workload.launcher.pods.OrchestratorPodLauncher.Constants.MAX_DELETION_TIMEOUT
 import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.ContainerPort
 import io.fabric8.kubernetes.api.model.DeletionPropagation
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
+import io.fabric8.kubernetes.api.model.PodList
 import io.fabric8.kubernetes.api.model.SecretVolumeSourceBuilder
 import io.fabric8.kubernetes.api.model.StatusDetails
 import io.fabric8.kubernetes.api.model.Volume
@@ -27,6 +29,8 @@ import io.fabric8.kubernetes.api.model.VolumeBuilder
 import io.fabric8.kubernetes.api.model.VolumeMount
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder
 import io.fabric8.kubernetes.client.KubernetesClient
+import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable
+import io.fabric8.kubernetes.client.dsl.PodResource
 import io.fabric8.kubernetes.client.readiness.Readiness
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
@@ -362,22 +366,36 @@ class OrchestratorPodLauncher(
   fun deleteActivePods(labels: Map<String, String>): List<StatusDetails> {
     return runKubeCommand(
       {
-        kubernetesClient.pods()
-          .inNamespace(namespace)
-          .withLabels(labels)
-          .withoutField(KUBECTL_PHASE_FIELD_NAME, KUBECTL_COMPLETED_VALUE) // filters out completed pods
-          .list()
-          .items
-          .flatMap { p ->
-            kubernetesClient.pods()
-              .inNamespace(namespace)
-              .resource(p)
-              .withPropagationPolicy(DeletionPropagation.FOREGROUND)
-              .delete()
-          }
+        val statuses =
+          listActivePods(labels)
+            .list()
+            .items
+            .flatMap { p ->
+              kubernetesClient.pods()
+                .inNamespace(namespace)
+                .resource(p)
+                .withPropagationPolicy(DeletionPropagation.FOREGROUND)
+                .delete()
+            }
+
+        if (statuses.isEmpty()) {
+          return@runKubeCommand statuses
+        }
+
+        listActivePods(labels)
+          .waitUntilCondition(Objects::isNull, MAX_DELETION_TIMEOUT, TimeUnit.SECONDS)
+
+        statuses
       },
       "delete",
     )
+  }
+
+  private fun listActivePods(labels: Map<String, String>): FilterWatchListDeletable<Pod, PodList, PodResource> {
+    return kubernetesClient.pods()
+      .inNamespace(namespace)
+      .withLabels(labels)
+      .withoutField(KUBECTL_PHASE_FIELD_NAME, KUBECTL_COMPLETED_VALUE) // filters out completed pods
   }
 
   private fun <T> runKubeCommand(
@@ -400,5 +418,6 @@ class OrchestratorPodLauncher(
     // Explanation: Kubectl displays "Completed" but the selector expects "Succeeded"
     const val KUBECTL_COMPLETED_VALUE = "Succeeded"
     const val KUBECTL_PHASE_FIELD_NAME = "status.phase"
+    const val MAX_DELETION_TIMEOUT = 45L
   }
 }

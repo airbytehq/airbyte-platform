@@ -15,12 +15,12 @@ public final class Metadata {
    */
   public static final String JOB_LABEL_KEY = "job_id";
   public static final String ATTEMPT_LABEL_KEY = "attempt_id";
-  static final String WORKSPACE_LABEL_KEY = "workspace_id";
-  static final String WORKER_POD_LABEL_KEY = "airbyte";
-  static final String WORKER_POD_LABEL_VALUE = "job-pod";
+  public static final String WORKSPACE_LABEL_KEY = "workspace_id";
+  public static final String WORKER_POD_LABEL_KEY = "airbyte";
+  public static final String WORKER_POD_LABEL_VALUE = "job-pod";
   public static final String CONNECTION_ID_LABEL_KEY = "connection_id";
-  static final String IMAGE_NAME = "image_name";
-  static final String IMAGE_VERSION = "image_version";
+  public static final String IMAGE_NAME = "image_name";
+  public static final String IMAGE_VERSION = "image_version";
 
   /**
    * These are more readable forms of {@link io.airbyte.config.JobTypeResourceLimit.JobType}.
