@@ -21,7 +21,14 @@ import org.apache.http.client.utils.URIBuilder;
 public class AmazonAdsOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "https://www.amazon.com/ap/oa";
+  private static final String AUTHORIZE_EU_URL = "https://eu.account.amazon.com/ap/oa";
+  private static final String AUTHORIZE_FE_URL = "https://apac.account.amazon.com/ap/oa";
   private static final String ACCESS_TOKEN_URL = "https://api.amazon.com/auth/o2/token";
+
+  private static final Map<String, String> AUTHORIZE_URL_MAP = ImmutableMap.of(
+      "NA", AUTHORIZE_URL,
+      "EU", AUTHORIZE_EU_URL,
+      "FE", AUTHORIZE_FE_URL);
 
   public AmazonAdsOAuthFlow(final HttpClient httpClient) {
     super(httpClient);
@@ -47,7 +54,10 @@ public class AmazonAdsOAuthFlow extends BaseOAuth2Flow {
                                     final JsonNode inputOAuthConfiguration)
       throws IOException {
     try {
-      return new URIBuilder(AUTHORIZE_URL)
+      String authorizeUrl = inputOAuthConfiguration.has("region")
+          ? AUTHORIZE_URL_MAP.get(inputOAuthConfiguration.get("region").asText())
+          : AUTHORIZE_URL;
+      return new URIBuilder(authorizeUrl)
           .addParameter("client_id", clientId)
           .addParameter("scope", "advertising::campaign_management")
           .addParameter("response_type", "code")
