@@ -48,4 +48,5 @@ export enum SettingsRoutePaths {
   Workspace = "workspace",
   Organization = "organization",
   AccessManagement = "access-management",
+  Applications = "applications",
 }

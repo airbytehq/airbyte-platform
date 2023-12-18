@@ -5,6 +5,7 @@ import { useCurrentWorkspace } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
+import { ApplicationSettingsView } from "packages/cloud/views/users/ApplicationSettingsView/ApplicationSettingsView";
 import { SettingsRoutePaths } from "pages/routePaths";
 import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
 import { PageConfig, SettingsPageBase } from "pages/SettingsPage/SettingsPageBase";
@@ -22,6 +23,7 @@ export const SettingsPage: React.FC = () => {
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
+  const applicationManagement = useFeature(FeatureItem.APITokenManagement);
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
 
@@ -36,6 +38,15 @@ export const SettingsPage: React.FC = () => {
               name: <FormattedMessage id="settings.account" />,
               component: AccountPage,
             },
+            ...(applicationManagement
+              ? [
+                  {
+                    path: `${SettingsRoutePaths.Applications}`,
+                    name: <FormattedMessage id="settings.applications" />,
+                    component: ApplicationSettingsView,
+                  },
+                ]
+              : []),
           ],
         },
         ...(canViewWorkspaceSettings
@@ -138,6 +149,7 @@ export const SettingsPage: React.FC = () => {
       ],
     }),
     [
+      applicationManagement,
       canViewOrganizationSettings,
       canViewWorkspaceSettings,
       countNewDestinationVersion,

@@ -12,7 +12,12 @@ interface CopyButtonProps {
   title?: string;
 }
 
-export const CopyButton: React.FC<CopyButtonProps> = ({ className, content, title }) => {
+export const CopyButton: React.FC<React.PropsWithChildren<CopyButtonProps>> = ({
+  className,
+  content,
+  title,
+  children,
+}) => {
   const { formatMessage } = useIntl();
   const [copied, setCopied] = useState(false);
 
@@ -42,6 +47,8 @@ export const CopyButton: React.FC<CopyButtonProps> = ({ className, content, titl
         </div>
       }
       onClick={handleClick}
-    />
+    >
+      {children}
+    </Button>
   );
 };

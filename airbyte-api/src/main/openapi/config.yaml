@@ -9064,18 +9064,22 @@ components:
       required:
         - id
         - name
-        - client_id
-        - client_secret
+        - clientId
+        - clientSecret
+        - createdAt
       type: object
       properties:
         id:
           type: string
         name:
           type: string
-        client_id:
+        clientId:
           type: string
-        client_secret:
+        clientSecret:
           type: string
+        createdAt:
+          type: integer
+          format: int64
     ApplicationTokenRequest:
       required:
         - client_id

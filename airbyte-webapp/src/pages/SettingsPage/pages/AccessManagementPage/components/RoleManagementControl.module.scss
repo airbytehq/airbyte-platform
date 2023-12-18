@@ -3,6 +3,7 @@
 
 .roleManagementControl__button {
   opacity: 0;
+  transition: 0.2s;
 
   &:focus,
   &:hover {

@@ -37,4 +37,5 @@ export interface Experiments {
   "settings.breakingChangeNotifications": boolean;
   "upcomingFeaturesPage.url": string;
   "settings.accessManagement": boolean;
+  "settings.token-management-ui": boolean;
 }

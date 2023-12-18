@@ -5,6 +5,7 @@ import { useCurrentOrganizationInfo } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { isOsanoActive, showOsanoDrawer } from "core/utils/dataPrivacy";
 import { useIntent } from "core/utils/rbac";
+import { useExperiment } from "hooks/services/Experiment";
 import { DbtCloudSettingsView } from "packages/cloud/views/settings/integrations/DbtCloudSettingsView";
 import { AccountSettingsView } from "packages/cloud/views/users/AccountSettingsView";
 import { UsersSettingsView } from "packages/cloud/views/users/UsersSettingsView";
@@ -21,6 +22,7 @@ import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
 import { PageConfig, SettingsPageBase } from "pages/SettingsPage/SettingsPageBase";
 
 import { CloudSettingsRoutePaths } from "./routePaths";
+import { ApplicationSettingsView } from "../users/ApplicationSettingsView/ApplicationSettingsView";
 
 const CloudSettingsPage: React.FC = () => {
   const organization = useCurrentOrganizationInfo();
@@ -28,6 +30,7 @@ const CloudSettingsPage: React.FC = () => {
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: organization?.organizationId });
   const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
   const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
+  const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
 
   const ssoPageConfig = useMemo<PageConfig>(
     () => ({
@@ -40,6 +43,15 @@ const CloudSettingsPage: React.FC = () => {
               name: <FormattedMessage id="settings.account" />,
               component: AccountSettingsView,
             },
+            ...(isTokenManagementEnabled
+              ? [
+                  {
+                    path: `${CloudSettingsRoutePaths.Applications}`,
+                    name: <FormattedMessage id="settings.applications" />,
+                    component: ApplicationSettingsView,
+                  },
+                ]
+              : []),
             ...(isOsanoActive()
               ? [
                   {
@@ -147,7 +159,14 @@ const CloudSettingsPage: React.FC = () => {
           : []),
       ],
     }),
-    [canViewOrgSettings, isSsoEnabled, organization, supportsCloudDbtIntegration, supportsDataResidency]
+    [
+      canViewOrgSettings,
+      isSsoEnabled,
+      isTokenManagementEnabled,
+      organization,
+      supportsCloudDbtIntegration,
+      supportsDataResidency,
+    ]
   );
 
   return <SettingsPageBase pageConfig={ssoPageConfig} />;
