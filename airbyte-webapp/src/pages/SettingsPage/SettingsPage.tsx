@@ -23,7 +23,8 @@ export const SettingsPage: React.FC = () => {
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
-  const applicationManagement = useFeature(FeatureItem.APITokenManagement);
+  const apiTokenManagement = false;
+  // const apiTokenManagement = useFeature(FeatureItem.APITokenManagement);
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
 
@@ -38,7 +39,7 @@ export const SettingsPage: React.FC = () => {
               name: <FormattedMessage id="settings.account" />,
               component: AccountPage,
             },
-            ...(applicationManagement
+            ...(apiTokenManagement
               ? [
                   {
                     path: `${SettingsRoutePaths.Applications}`,
@@ -149,7 +150,7 @@ export const SettingsPage: React.FC = () => {
       ],
     }),
     [
-      applicationManagement,
+      apiTokenManagement,
       canViewOrganizationSettings,
       canViewWorkspaceSettings,
       countNewDestinationVersion,

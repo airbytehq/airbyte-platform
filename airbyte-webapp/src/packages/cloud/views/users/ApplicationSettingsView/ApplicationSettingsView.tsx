@@ -10,11 +10,13 @@ import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
+import { MaskedText } from "components/ui/Text/MaskedText";
 import { InfoTooltip } from "components/ui/Tooltip";
 
 import { useListApplications } from "core/api";
 import { ApplicationRead } from "core/api/types/AirbyteClient";
 
+import styles from "./ApplicationSettingsView.module.scss";
 import { CreateApplicationControl } from "./CreateApplicationControl";
 import { DeleteApplicationControl } from "./DeleteApplicationControl";
 import { GenerateTokenControl } from "./GenerateTokenControl";
@@ -33,17 +35,26 @@ export const ApplicationSettingsView = () => {
       columnHelper.accessor("clientId", {
         header: () => <FormattedMessage id="settings.applications.table.clientId" />,
         cell: (props) => {
-          return <Text color="grey400">{props.cell.getValue()}</Text>;
+          return (
+            <Text color="grey400" className={styles.clientDetailsCell}>
+              {props.cell.getValue()}
+            </Text>
+          );
         },
         enableSorting: false,
+        meta: { thClassName: styles.clientDetailsColumn },
       }),
       columnHelper.accessor("clientSecret", {
         header: () => <FormattedMessage id="settings.applications.table.clientSecret" />,
         cell: (props) => {
-          // todo: component WIP for showing/hiding client secret: https://github.com/airbytehq/airbyte-platform-internal/pull/10406
-          return <Text color="grey400">{props.cell.getValue()}</Text>;
+          return (
+            <MaskedText color="grey400" className={styles.clientDetailsCell}>
+              {props.cell.getValue()}
+            </MaskedText>
+          );
         },
         enableSorting: false,
+        meta: { thClassName: styles.clientDetailsColumn },
       }),
       columnHelper.accessor("createdAt", {
         header: () => <FormattedMessage id="settings.applications.table.createdAt" />,
@@ -52,6 +63,7 @@ export const ApplicationSettingsView = () => {
         ),
         sortingFn: "basic",
       }),
+
       columnHelper.display({
         id: "actions",
         cell: (props) => {
@@ -68,6 +80,7 @@ export const ApplicationSettingsView = () => {
             </FlexContainer>
           );
         },
+        meta: { thClassName: styles.actionsColumn },
       }),
     ];
   }, [columnHelper]);
