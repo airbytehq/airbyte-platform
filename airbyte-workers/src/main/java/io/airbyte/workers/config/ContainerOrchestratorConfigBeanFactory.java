@@ -13,6 +13,7 @@ import io.airbyte.config.storage.CloudStorageConfigs;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.storage.StateClients;
+import io.airbyte.workers.sync.OrchestratorConstants;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
@@ -26,6 +27,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Micronaut bean factory for container orchestrator configuration-related singletons.
@@ -141,6 +143,10 @@ public class ContainerOrchestratorConfigBeanFactory {
     }
 
     environmentVariables.put(ACCEPTANCE_TEST_ENABLED_VAR, Boolean.toString(isInTestMode));
+
+    // copy over all local values
+    environmentVariables.putAll(System.getenv().entrySet().stream().filter(e -> OrchestratorConstants.ENV_VARS_TO_TRANSFER.contains(e.getKey()))
+        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
 
     return new ContainerOrchestratorConfig(
         namespace,

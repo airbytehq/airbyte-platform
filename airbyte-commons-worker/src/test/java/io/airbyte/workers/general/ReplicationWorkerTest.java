@@ -73,6 +73,7 @@ import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.AnalyticsMessageTracker;
 import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.DestinationTimeoutMonitor.TimeoutException;
 import io.airbyte.workers.internal.HeartbeatMonitor;
@@ -173,6 +174,8 @@ abstract class ReplicationWorkerTest {
   protected ReplicationWorkerHelper replicationWorkerHelper;
   protected WorkloadApi workloadApi;
 
+  protected AnalyticsMessageTracker analyticsMessageTracker;
+
   ReplicationWorker getDefaultReplicationWorker() {
     return getDefaultReplicationWorker(false);
   }
@@ -215,6 +218,8 @@ abstract class ReplicationWorkerTest {
     destinationTimeoutMonitor = mock(DestinationTimeoutMonitor.class);
     replicationAirbyteMessageEventPublishingHelper = mock(ReplicationAirbyteMessageEventPublishingHelper.class);
     workloadApi = mock(WorkloadApi.class);
+
+    analyticsMessageTracker = mock(AnalyticsMessageTracker.class);
 
     when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
 

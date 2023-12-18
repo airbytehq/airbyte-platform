@@ -221,7 +221,7 @@ airbyte:
       max-workers: ${MAX_NOTIFY_WORKERS:5}
   workload:
     enabled: false
-  role: ${AIRBYTE_ROLE:}
+  role: ${AIRBYTE_ROLE:dev}
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:
@@ -242,7 +242,7 @@ airbyte:
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}
-  version: ${AIRBYTE_VERSION}
+  version: ${AIRBYTE_VERSION:dev}
   web-app:
     url: ${WEBAPP_URL:}
   workflow:

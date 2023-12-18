@@ -47,6 +47,7 @@ dependencies {
     implementation(libs.sts)
 
     implementation(project(":airbyte-api"))
+    implementation(project(":airbyte-analytics"))
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-auth"))
     implementation(project(":airbyte-commons-converters"))
@@ -70,6 +71,7 @@ dependencies {
     testAnnotationProcessor(libs.jmh.annotations)
 
     testImplementation(libs.bundles.micronaut.test)
+    testImplementation(libs.mockk)
     testImplementation(libs.json.path)
     testImplementation(libs.bundles.mockito.inline)
     testImplementation(libs.mockk)

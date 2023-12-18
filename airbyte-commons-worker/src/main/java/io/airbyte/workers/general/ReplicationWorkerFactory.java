@@ -44,6 +44,7 @@ import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.AnalyticsMessageTracker;
 import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.EmptyAirbyteSource;
 import io.airbyte.workers.internal.FieldSelector;
@@ -89,6 +90,7 @@ public class ReplicationWorkerFactory {
   private final FeatureFlags featureFlags;
   private final MetricClient metricClient;
   private final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
+  private final AnalyticsMessageTracker analyticsMessageTracker;
   private final WorkloadApi workloadApi;
 
   private final WorkloadIdGenerator workloadIdGenerator;
@@ -107,6 +109,7 @@ public class ReplicationWorkerFactory {
                                   final MetricClient metricClient,
                                   final WorkloadApi workloadApi,
                                   final WorkloadIdGenerator workloadIdGenerator,
+                                  final AnalyticsMessageTracker analyticsMessageTracker,
                                   @Value("${airbyte.workload.enabled}") final boolean workloadEnabled) {
     this.airbyteIntegrationLauncherFactory = airbyteIntegrationLauncherFactory;
     this.sourceApi = sourceApi;
@@ -122,6 +125,7 @@ public class ReplicationWorkerFactory {
     this.workloadApi = workloadApi;
     this.workloadIdGenerator = workloadIdGenerator;
     this.workloadEnabled = workloadEnabled;
+    this.analyticsMessageTracker = analyticsMessageTracker;
   }
 
   /**
@@ -169,7 +173,7 @@ public class ReplicationWorkerFactory {
     return createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
         syncPersistence, recordSchemaValidator, fieldSelector, heartbeatTimeoutChaperone,
         featureFlagClient, jobRunConfig, replicationInput, airbyteMessageDataExtractor, replicationAirbyteMessageEventPublishingHelper,
-        onReplicationRunning, metricClient, destinationTimeout, workloadApi, workloadIdGenerator, workloadEnabled);
+        onReplicationRunning, metricClient, destinationTimeout, workloadApi, workloadIdGenerator, workloadEnabled, analyticsMessageTracker);
   }
 
   /**
@@ -241,9 +245,9 @@ public class ReplicationWorkerFactory {
   private static DestinationTimeoutMonitor createDestinationTimeout(final FeatureFlagClient featureFlagClient,
                                                                     final ReplicationInput replicationInput,
                                                                     final MetricClient metricClient) {
-    Context context = new Multi(List.of(new Workspace(replicationInput.getWorkspaceId()), new Connection(replicationInput.getConnectionId())));
-    boolean throwExceptionOnDestinationTimeout = featureFlagClient.boolVariation(ShouldFailSyncOnDestinationTimeout.INSTANCE, context);
-    int destinationTimeoutSeconds = featureFlagClient.intVariation(DestinationTimeoutSeconds.INSTANCE, context);
+    final Context context = new Multi(List.of(new Workspace(replicationInput.getWorkspaceId()), new Connection(replicationInput.getConnectionId())));
+    final boolean throwExceptionOnDestinationTimeout = featureFlagClient.boolVariation(ShouldFailSyncOnDestinationTimeout.INSTANCE, context);
+    final int destinationTimeoutSeconds = featureFlagClient.intVariation(DestinationTimeoutSeconds.INSTANCE, context);
 
     return new DestinationTimeoutMonitor(
         replicationInput.getWorkspaceId(),
@@ -305,7 +309,8 @@ public class ReplicationWorkerFactory {
                                                            final DestinationTimeoutMonitor destinationTimeout,
                                                            final WorkloadApi workloadApi,
                                                            final WorkloadIdGenerator workloadIdGenerator,
-                                                           final boolean workloadEnabled) {
+                                                           final boolean workloadEnabled,
+                                                           final AnalyticsMessageTracker analyticsMessageTracker) {
     final Context flagContext = getFeatureFlagContext(replicationInput);
     final String workerImpl = featureFlagClient.stringVariation(ReplicationWorkerImpl.INSTANCE, flagContext);
     return buildReplicationWorkerInstance(
@@ -331,7 +336,7 @@ public class ReplicationWorkerFactory {
         destinationTimeout,
         workloadApi,
         workloadIdGenerator,
-        workloadEnabled);
+        workloadEnabled, analyticsMessageTracker);
   }
 
   private static Context getFeatureFlagContext(final ReplicationInput replicationInput) {
@@ -375,11 +380,12 @@ public class ReplicationWorkerFactory {
                                                                   final DestinationTimeoutMonitor destinationTimeout,
                                                                   final WorkloadApi workloadApi,
                                                                   final WorkloadIdGenerator workloadIdGenerator,
-                                                                  final boolean workloadEnabled) {
+                                                                  final boolean workloadEnabled,
+                                                                  final AnalyticsMessageTracker analyticsMessageTracker) {
     final ReplicationWorkerHelper replicationWorkerHelper =
         new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
             messageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApi, workloadIdGenerator,
-            workloadEnabled);
+            workloadEnabled, analyticsMessageTracker);
     if ("buffered".equals(workerImpl)) {
       metricClient.count(OssMetricsRegistry.REPLICATION_WORKER_CREATED, 1, new MetricAttribute(MetricTags.IMPLEMENTATION, workerImpl));
       return new BufferedReplicationWorker(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator,

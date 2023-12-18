@@ -41,6 +41,7 @@ import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.AnalyticsMessageTracker;
 import io.airbyte.workers.internal.DefaultAirbyteSource;
 import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.FieldSelector;
@@ -119,6 +120,7 @@ public abstract class ReplicationWorkerPerformanceTest {
     log.warn("availableProcessors {}", Runtime.getRuntime().availableProcessors());
     final var perDestination = new EmptyAirbyteDestination();
     final var messageTracker = mock(AirbyteMessageTracker.class);
+    final var analyticsMessageTracker = mock(AnalyticsMessageTracker.class);
     final var syncPersistence = mock(SyncPersistence.class);
     final var connectorConfigUpdater = mock(ConnectorConfigUpdater.class);
     final var metricReporter = new WorkerMetricReporter(new NotImplementedMetricClient(), "test-image:0.01");
@@ -177,7 +179,7 @@ public abstract class ReplicationWorkerPerformanceTest {
     final ReplicationWorkerHelper replicationWorkerHelper =
         new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, dstNamespaceMapper, messageTracker, syncPersistence,
             replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), () -> {}, mock(WorkloadApi.class),
-            new WorkloadIdGenerator(), false);
+            new WorkloadIdGenerator(), false, analyticsMessageTracker);
 
     final var worker = getReplicationWorker("1", 0,
         versionedAbSource,

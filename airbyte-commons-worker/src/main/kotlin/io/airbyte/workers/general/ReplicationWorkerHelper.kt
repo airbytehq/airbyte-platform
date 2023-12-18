@@ -32,6 +32,7 @@ import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.internal.AirbyteDestination
 import io.airbyte.workers.internal.AirbyteMapper
 import io.airbyte.workers.internal.AirbyteSource
+import io.airbyte.workers.internal.AnalyticsMessageTracker
 import io.airbyte.workers.internal.DestinationTimeoutMonitor
 import io.airbyte.workers.internal.FieldSelector
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone
@@ -72,6 +73,7 @@ class ReplicationWorkerHelper(
   private val workloadApi: WorkloadApi,
   private val workloadIdGenerator: WorkloadIdGenerator,
   private val workloadEnabled: Boolean,
+  private val analyticsMessageTracker: AnalyticsMessageTracker,
 ) {
   private val metricClient = MetricClientFactory.getMetricClient()
   private val metricAttrs: MutableList<MetricAttribute> = mutableListOf()
@@ -158,6 +160,8 @@ class ReplicationWorkerHelper(
     this.ctx = ctx
     this.replicationFeatureFlags = replicationFeatureFlags
 
+    analyticsMessageTracker.ctx = ctx
+
     with(metricAttrs) {
       clear()
       addAll(toConnectionAttrs(ctx))
@@ -226,6 +230,7 @@ class ReplicationWorkerHelper(
     }
 
     timeTracker.trackReplicationEndTime()
+    analyticsMessageTracker.flush()
   }
 
   fun endOfSource() {
@@ -320,6 +325,9 @@ class ReplicationWorkerHelper(
     fieldSelector.filterSelectedFields(sourceRawMessage)
     fieldSelector.validateSchema(sourceRawMessage)
     messageTracker.acceptFromSource(sourceRawMessage)
+    if (isAnalyticsMessage(sourceRawMessage)) {
+      analyticsMessageTracker.addMessage(sourceRawMessage, AirbyteMessageOrigin.SOURCE)
+    }
 
     if (shouldPublishMessage(sourceRawMessage)) {
       replicationAirbyteMessageEventPublishingHelper
@@ -364,6 +372,9 @@ class ReplicationWorkerHelper(
         }
 
     messageTracker.acceptFromDestination(destinationRawMessage)
+    if (isAnalyticsMessage(destinationRawMessage)) {
+      analyticsMessageTracker.addMessage(destinationRawMessage, AirbyteMessageOrigin.DESTINATION)
+    }
 
     if (destinationRawMessage.type == Type.STATE) {
       syncPersistence.persist(context.connectionId, destinationRawMessage.state)
@@ -459,6 +470,8 @@ private fun shouldPublishMessage(msg: AirbyteMessage): Boolean =
     msg.type == Type.TRACE && msg.trace.type == AirbyteTraceMessage.Type.STREAM_STATUS -> true
     else -> false
   }
+
+private fun isAnalyticsMessage(msg: AirbyteMessage): Boolean = msg.type == Type.TRACE && msg.trace.type == AirbyteTraceMessage.Type.ANALYTICS
 
 private fun toConnectionAttrs(ctx: ReplicationContext?): List<MetricAttribute> {
   if (ctx == null) {

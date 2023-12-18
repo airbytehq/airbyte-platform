@@ -5,6 +5,7 @@
 package io.airbyte.workers.sync;
 
 import com.uber.m3.util.ImmutableSet;
+import io.airbyte.analytics.TrackingClientConstants;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.helpers.LogClientSingleton;
@@ -82,7 +83,13 @@ public class OrchestratorConstants {
           FEATURE_FLAG_PATH,
           EnvConfigs.LAUNCHDARKLY_KEY,
           EnvConfigs.SOCAT_KUBE_CPU_LIMIT,
-          EnvConfigs.SOCAT_KUBE_CPU_REQUEST))
+          EnvConfigs.SOCAT_KUBE_CPU_REQUEST,
+          // Tracking Client Environment Variables
+          TrackingClientConstants.AIRBYTE_ROLE_ENV_VAR,
+          TrackingClientConstants.AIRBYTE_VERSION_ENV_VAR,
+          TrackingClientConstants.DEPLOYMENT_MODE_ENV_VAR,
+          TrackingClientConstants.SEGMENT_WRITE_KEY_ENV_VAR,
+          TrackingClientConstants.TRACKING_STRATEGY_ENV_VAR))
       .build();
 
   public static final String INIT_FILE_ENV_MAP = "envMap.json";

@@ -5,8 +5,11 @@
 package io.airbyte.analytics
 
 import com.segment.analytics.Analytics
+import com.segment.analytics.Callback
+import com.segment.analytics.Plugin
 import com.segment.analytics.messages.AliasMessage
 import com.segment.analytics.messages.IdentifyMessage
+import com.segment.analytics.messages.Message
 import com.segment.analytics.messages.TrackMessage
 import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.api.client.model.generated.WorkspaceRead
@@ -14,11 +17,16 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
 import io.micronaut.http.context.ServerRequestContext
+import jakarta.annotation.PreDestroy
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Phaser
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.function.Function
 import java.util.function.Supplier
 
@@ -201,9 +209,72 @@ class SegmentTrackingClient(
 @Singleton
 @Requires(property = "airbyte.tracking.strategy", pattern = "(?i)^segment$")
 class SegmentAnalyticsClient(
+  @Value("\${airbyte.tracking.flush-interval-sec:10}") flushInterval: Long,
   @Value("\${airbyte.tracking.write-key}") writeKey: String,
+  private val blockingShutdownAnalyticsPlugin: BlockingShutdownAnalyticsPlugin,
 ) {
-  val analyticsClient: Analytics = Analytics.builder(writeKey).build()
+  val analyticsClient: Analytics =
+    Analytics
+      .builder(writeKey)
+      .flushInterval(flushInterval, TimeUnit.SECONDS)
+      .plugin(blockingShutdownAnalyticsPlugin)
+      .build()
+
+  @PreDestroy
+  fun close() {
+    logger.info { "Closing Segment analytics client..." }
+    analyticsClient.flush()
+    blockingShutdownAnalyticsPlugin.waitForFlush()
+    analyticsClient.shutdown()
+    logger.info { "Segment analytics client closed.  No new events will be accepted." }
+  }
+}
+
+/**
+ * Custom Segment Analytic client [Plugin] that ensures that any enqueued message
+ * has been sent to Segment.  This can be used on shutdown to verify that we are not
+ * dropping any enqueued or in-flight events are delivered to Segment before
+ * stopping.
+ */
+@Singleton
+@Requires(property = "airbyte.tracking.strategy", pattern = "(?i)^segment$")
+class BlockingShutdownAnalyticsPlugin(
+  @Value("\${airbyte.tracking.flush-interval-sec:10}") private val flushInterval: Long,
+) : Plugin {
+  private val phaser = Phaser(1)
+
+  override fun configure(builder: Analytics.Builder) {
+    builder.messageTransformer { phaser.register() > -1 }
+    builder.callback(
+      object : Callback {
+        override fun success(message: Message) {
+          phaser.arrive()
+        }
+
+        override fun failure(
+          message: Message,
+          throwable: Throwable,
+        ) {
+          phaser.arrive()
+        }
+      },
+    )
+  }
+
+  fun waitForFlush() {
+    // Wait 2 x the flush interval for the flush to occur before moving along to avoid
+    // blocking indefinitely on shutdown if something goes wrong
+    val timeout = flushInterval * 2
+
+    try {
+      logger.info { "Waiting for Segment analytic client to flush enqueued messages..." }
+      val future = CompletableFuture.supplyAsync { phaser.arriveAndAwaitAdvance() }
+      future.get(timeout, TimeUnit.SECONDS)
+      logger.info { "Segment analytic client flush complete." }
+    } catch (e: TimeoutException) {
+      logger.warn { "Timed out waiting for Segment analytic client to flush enqueued messages (timeout = $timeout seconds)" }
+    }
+  }
 }
 
 /**
