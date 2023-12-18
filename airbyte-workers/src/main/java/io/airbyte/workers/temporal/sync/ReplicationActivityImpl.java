@@ -19,6 +19,7 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.temporal.HeartbeatUtils;
+import io.airbyte.commons.temporal.utils.PayloadChecker;
 import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ReplicationAttemptSummary;
@@ -200,7 +201,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           }
           BackfillHelper.markBackfilledStreams(streamsToBackfill, standardSyncOutput);
           LOGGER.info("sync summary after backfill: {}", standardSyncOutput);
-          return standardSyncOutput;
+          return PayloadChecker.validatePayloadSize(standardSyncOutput);
         },
         context);
   }
