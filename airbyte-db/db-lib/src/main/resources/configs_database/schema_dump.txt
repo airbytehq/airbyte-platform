@@ -183,6 +183,7 @@ create table "public"."connector_builder_project" (
   "tombstone" boolean not null default false,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "testing_values" jsonb,
   constraint "connector_builder_project_pkey"
     primary key ("id")
 );
