@@ -5,8 +5,13 @@
 package io.airbyte.workload.launcher.pods
 
 import datadog.trace.api.Trace
+import io.airbyte.metrics.annotations.Instrument
+import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.KUBERNETES_RESOURCE_MONITOR_NAME
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.RUNNING_STATUS
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.STATUS_TAG
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.STOPPED_STATUS
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodList
@@ -25,7 +30,7 @@ private val logger = KotlinLogging.logger {}
  * Monitors for resource exhaustion in the Kubernetes cluster.
  */
 @Singleton
-class KubeResourceMonitor(
+open class KubeResourceMonitor(
   private val kubernetesClient: KubernetesClient,
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String,
   @Value("\${airbyte.kubernetes.pending-time-limit-sec}") private val pendingTimeLimitSec: Long,
@@ -42,7 +47,11 @@ class KubeResourceMonitor(
    */
   @Trace(operationName = KUBERNETES_RESOURCE_MONITOR_NAME)
   @Scheduled(fixedRate = "\${airbyte.kubernetes.resource-check-rate}")
-  fun checkKubernetesResources() {
+  @Instrument(
+    start = "WORKLOAD_LAUNCHER_KUBERNETES_RESOURCE_MONITOR_START",
+    duration = "WORKLOAD_LAUNCHER_KUBERNETES_RESOURCE_MONITOR_RUN",
+  )
+  open fun checkKubernetesResources() {
     logger.debug { "Scanning pending pods for any older than $pendingTimeLimitSec seconds..." }
 
     val pendingPods: PodList
@@ -93,6 +102,10 @@ class KubeResourceMonitor(
         isPollingSuspended = false
       }
     }
+    customMetricPublisher.count(
+      WorkloadLauncherMetricMetadata.WORKLOAD_LAUNCHER_POLLER_STATUS,
+      MetricAttribute(STATUS_TAG, if (isPollingSuspended) STOPPED_STATUS else RUNNING_STATUS),
+    )
   }
 
   private fun selectLastTransitionTime(p: Pod): Instant {

@@ -127,6 +127,9 @@ class KubeResourceMonitorTest {
         any(),
       )
     } returns Unit
+    every {
+      customMetricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_LAUNCHER_POLLER_STATUS, any())
+    } returns Unit
     every { workerFactory.suspendPolling() } returns Unit
     every { workerFactory.resumePolling() } returns Unit
   }

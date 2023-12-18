@@ -54,5 +54,7 @@ class MeterFilterFactory(
     const val KUBERNETES_RESOURCE_MONITOR_NAME = "kubernetes-resource-monitor"
     const val SUCCESS_STATUS = "ok"
     const val FAILURE_STATUS = "error"
+    const val RUNNING_STATUS = "running"
+    const val STOPPED_STATUS = "stopped"
   }
 }

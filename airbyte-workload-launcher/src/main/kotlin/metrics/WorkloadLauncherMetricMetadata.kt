@@ -8,6 +8,18 @@ enum class WorkloadLauncherMetricMetadata(
   private val metricName: String,
   private val description: String,
 ) : MetricsRegistry {
+  WORKLOAD_LAUNCHER_KUBERNETES_RESOURCE_MONITOR_START(
+    "workload_launcher_kubernetes_resource_monitor_start",
+    "increments when the Kube resource monitor starts",
+  ),
+  WORKLOAD_LAUNCHER_KUBERNETES_RESOURCE_MONITOR_RUN(
+    "workload_launcher_kubernetes_resource_monitor_run",
+    "increments when the Kube resource monitor ends",
+  ),
+  WORKLOAD_LAUNCHER_POLLER_STATUS(
+    "workload_launcher_poller_status",
+    "tracks the status of the workload task poller",
+  ),
   WORKLOAD_QUEUE_SIZE(
     "workload_queue_size",
     "used to track the queue size launcher does not processes a workload successfully",
