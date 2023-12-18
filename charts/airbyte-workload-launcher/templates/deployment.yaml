@@ -455,6 +455,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKER_STATE_STORAGE_TYPE
+        - name: WORKLOAD_LAUNCHER_PARALLELISM
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKLOAD_LAUNCHER_PARALLELISM
        {{- if eq .Values.global.edition "pro" }}
         - name: AIRBYTE_API_AUTH_HEADER_NAME
           value: "X-Airbyte-Auth"
