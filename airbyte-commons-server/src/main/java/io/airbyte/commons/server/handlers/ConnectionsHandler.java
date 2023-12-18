@@ -37,6 +37,9 @@ import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSearch;
 import io.airbyte.api.model.generated.DestinationSyncMode;
+import io.airbyte.api.model.generated.FailureOrigin;
+import io.airbyte.api.model.generated.FailureReason;
+import io.airbyte.api.model.generated.FailureType;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
@@ -64,8 +67,6 @@ import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.FailureReason;
-import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.Geography;
 import io.airbyte.config.JobConfig;
@@ -897,6 +898,18 @@ public class ConnectionsHandler {
     return new ConnectionReadList().connections(connectionReads);
   }
 
+  public FailureReason mapFailureReason(final io.airbyte.config.FailureReason data) {
+    final FailureReason failureReason = new FailureReason();
+    failureReason.setFailureOrigin(Enums.convertTo(data.getFailureOrigin(), FailureOrigin.class));
+    failureReason.setFailureType(Enums.convertTo(data.getFailureType(), FailureType.class));
+    failureReason.setExternalMessage(data.getExternalMessage());
+    failureReason.setInternalMessage(data.getInternalMessage());
+    failureReason.setStacktrace(data.getStacktrace());
+    failureReason.setRetryable(data.getRetryable());
+    failureReason.setTimestamp(data.getTimestamp());
+    return failureReason;
+  }
+
   public List<ConnectionStatusRead> getConnectionStatuses(
                                                           final ConnectionStatusesRequestBody connectionStatusesRequestBody)
       throws IOException, JsonValidationException, ConfigNotFoundException {
@@ -908,8 +921,9 @@ public class ConnectionsHandler {
           maxJobLookback);
       final boolean isRunning = jobs.stream().anyMatch(job -> JobStatus.NON_TERMINAL_STATUSES.contains(job.getStatus()));
 
-      final Optional<Job> lastJob = jobs.stream().filter(job -> JobStatus.TERMINAL_STATUSES.contains(job.getStatus())).findFirst();
-      final Optional<JobStatus> lastSyncStatus = lastJob.map(job -> job.getStatus());
+      final Optional<Job> lastSucceededOrFailedJob =
+          jobs.stream().filter(job -> JobStatus.TERMINAL_STATUSES.contains(job.getStatus()) && job.getStatus() != JobStatus.CANCELLED).findFirst();
+      final Optional<JobStatus> lastSyncStatus = lastSucceededOrFailedJob.map(job -> job.getStatus());
 
       final Optional<Job> lastSuccessfulJob = jobs.stream().filter(job -> job.getStatus() == JobStatus.SUCCEEDED).findFirst();
       final Optional<Long> lastSuccessTimestamp = lastSuccessfulJob.map(job -> job.getUpdatedAtInSecond());
@@ -921,14 +935,20 @@ public class ConnectionsHandler {
               io.airbyte.api.model.generated.JobStatus.class))
           .lastSuccessfulSync(lastSuccessTimestamp.orElse(null))
           .nextSync(null)
-          .isLastCompletedJobReset(lastJob.map(job -> job.getConfigType() == ConfigType.RESET_CONNECTION).orElse(false));
-      final Optional<FailureType> failureType =
-          lastJob.flatMap(Job::getLastFailedAttempt)
-              .flatMap(Attempt::getFailureSummary)
-              .flatMap(s -> s.getFailures().stream().findFirst())
-              .map(FailureReason::getFailureType);
-      if (failureType.isPresent() && lastJob.get().getStatus() == JobStatus.FAILED) {
-        connectionStatus.setFailureType(Enums.convertTo(failureType.get(), io.airbyte.api.model.generated.FailureType.class));
+          .isLastCompletedJobReset(lastSucceededOrFailedJob.map(job -> job.getConfigType() == ConfigType.RESET_CONNECTION).orElse(false));
+      if (lastSucceededOrFailedJob.isPresent()) {
+        connectionStatus.lastSyncJobId(lastSucceededOrFailedJob.get().getId());
+        final Optional<Attempt> lastAttempt = lastSucceededOrFailedJob.get().getLastAttempt();
+        if (lastAttempt.isPresent()) {
+          connectionStatus.lastSyncAttemptNumber(lastAttempt.get().getAttemptNumber());
+        }
+      }
+      final Optional<io.airbyte.api.model.generated.FailureReason> failureReason = lastSucceededOrFailedJob.flatMap(Job::getLastFailedAttempt)
+          .flatMap(Attempt::getFailureSummary)
+          .flatMap(s -> s.getFailures().stream().findFirst())
+          .map(reason -> mapFailureReason(reason));
+      if (failureReason.isPresent() && lastSucceededOrFailedJob.get().getStatus() == JobStatus.FAILED) {
+        connectionStatus.setFailureReason(failureReason.get());
       }
       result.add(connectionStatus);
     }

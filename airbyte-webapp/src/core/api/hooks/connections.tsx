@@ -1,4 +1,4 @@
-import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Updater, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -13,6 +13,7 @@ import { RoutePaths } from "pages/routePaths";
 import { jobsKeys } from "./jobs";
 import { useCurrentWorkspace, useInvalidateWorkspaceStateQuery } from "./workspaces";
 import {
+  getConnectionStatuses,
   createOrUpdateStateSafe,
   deleteConnection,
   getConnectionDataHistory,
@@ -33,6 +34,7 @@ import {
   ConnectionScheduleData,
   ConnectionScheduleType,
   ConnectionStateCreateOrUpdate,
+  ConnectionStatusesRead,
   ConnectionStream,
   DestinationRead,
   JobConfigType,
@@ -60,6 +62,7 @@ const connectionsKeys = {
   dataHistory: (connectionId: string) => [...connectionsKeys.all, "dataHistory", connectionId] as const,
   uptimeHistory: (connectionId: string) => [...connectionsKeys.all, "uptimeHistory", connectionId] as const,
   getState: (connectionId: string) => [...connectionsKeys.all, "getState", connectionId] as const,
+  statuses: (connectionIds: string[]) => [...connectionsKeys.all, "status", connectionIds],
 };
 
 export interface ConnectionValues {
@@ -90,6 +93,7 @@ export const useSyncConnection = () => {
   const { registerNotification } = useNotificationService();
   const workspaceId = useCurrentWorkspaceId();
   const { formatMessage } = useIntl();
+  const setConnectionRunState = useSetConnectionRunState();
 
   return useMutation(
     async (connection: WebBackendConnectionRead | WebBackendConnectionListItem) => {
@@ -103,6 +107,7 @@ export const useSyncConnection = () => {
       });
 
       await syncConnection({ connectionId: connection.connectionId }, requestOptions);
+      setConnectionRunState(connection.connectionId, true);
       queryClient.setQueriesData<JobReadList>(
         jobsKeys.useListJobsForConnectionStatus(connection.connectionId),
         (prevJobList) => prependArtificialJobToStatus({ configType: "sync", status: JobStatus.running }, prevJobList)
@@ -164,8 +169,10 @@ export function prependArtificialJobToStatus(
 export const useResetConnection = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
+  const setConnectionRunState = useSetConnectionRunState();
   const mutation = useMutation(["useResetConnection"], async (connectionId: string) => {
     await resetConnection({ connectionId }, requestOptions);
+    setConnectionRunState(connectionId, true);
     queryClient.setQueriesData<JobReadList>(jobsKeys.useListJobsForConnectionStatus(connectionId), (prevJobList) =>
       prependArtificialJobToStatus({ status: JobStatus.running, configType: "reset_connection" }, prevJobList)
     );
@@ -177,8 +184,10 @@ export const useResetConnection = () => {
 export const useResetConnectionStream = (connectionId: string) => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
+  const setConnectionRunState = useSetConnectionRunState();
   return useMutation(async (streams: ConnectionStream[]) => {
     await resetConnectionStream({ connectionId, streams }, requestOptions);
+    setConnectionRunState(connectionId, true);
     queryClient.setQueriesData<JobReadList>(jobsKeys.useListJobsForConnectionStatus(connectionId), (prevJobList) =>
       prependArtificialJobToStatus({ status: JobStatus.running, configType: "reset_connection" }, prevJobList)
     );
@@ -478,4 +487,37 @@ export const useGetConnectionUptimeHistory = (connectionId: string) => {
       options
     )
   );
+};
+
+export const useListConnectionsStatuses = (connectionIds: string[]) => {
+  const requestOptions = useRequestOptions();
+  const queryKey = connectionsKeys.statuses(connectionIds);
+
+  return useSuspenseQuery(queryKey, () => getConnectionStatuses({ connectionIds }, requestOptions), {
+    refetchInterval: (data) => {
+      // when any of the polled connections is running, refresh 2.5s instead of 10s
+      return data?.some(({ isRunning }) => isRunning) ? 2500 : 10000;
+    },
+  });
+};
+
+export const useSetConnectionRunState = () => {
+  const queryClient = useQueryClient();
+
+  return (connectionId: string, isRunning: boolean) => {
+    queryClient.setQueriesData([SCOPE_WORKSPACE, "connections", "status"], ((data) => {
+      if (data) {
+        data = data.map((connectionStatus) => {
+          if (connectionStatus.connectionId === connectionId) {
+            const nextConnectionStatus = structuredClone(connectionStatus); // don't mutate existing object
+            nextConnectionStatus.isRunning = isRunning; // set run state
+            delete nextConnectionStatus.failureReason; // new runs reset failure state
+            return nextConnectionStatus;
+          }
+          return connectionStatus;
+        });
+      }
+      return data;
+    }) as Updater<ConnectionStatusesRead | undefined, ConnectionStatusesRead>);
+  };
 };

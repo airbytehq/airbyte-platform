@@ -4,11 +4,9 @@ import { ConnectionStatusIndicatorStatus } from "components/connection/Connectio
 import { sortStreams } from "components/connection/StreamStatus/streamStatusUtils";
 
 import { useStreamsStatuses } from "area/connection/utils";
-import { useListJobsForConnectionStatus } from "core/api";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 const useStreamsContextInit = (connectionId: string) => {
-  const { jobs } = useListJobsForConnectionStatus(connectionId);
   const [searchTerm, setSearchTerm] = useState("");
 
   const { enabledStreams, streamStatuses } = useStreamsStatuses(connectionId);
@@ -26,7 +24,6 @@ const useStreamsContextInit = (connectionId: string) => {
   return {
     setSearchTerm,
     filteredStreams,
-    jobs,
   };
 };
 

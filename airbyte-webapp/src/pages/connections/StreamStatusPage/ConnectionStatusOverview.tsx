@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { FormattedMessage } from "react-intl";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
@@ -55,11 +56,11 @@ export const ConnectionStatusOverview: React.FC = () => {
         <Box as="span" ml="md">
           <Text color="grey" bold size="sm" as="span">
             {status === ConnectionStatusIndicatorStatus.OnTime && nextSync && (
-              <FormattedMessage id="connection.stream.status.nextSync" values={{ sync: nextSync.fromNow() }} />
+              <FormattedMessage id="connection.stream.status.nextSync" values={{ sync: dayjs(nextSync).fromNow() }} />
             )}
             {(status === ConnectionStatusIndicatorStatus.Late || status === ConnectionStatusIndicatorStatus.OnTrack) &&
               nextSync && (
-                <FormattedMessage id="connection.stream.status.nextTry" values={{ sync: nextSync.fromNow() }} />
+                <FormattedMessage id="connection.stream.status.nextTry" values={{ sync: dayjs(nextSync).fromNow() }} />
               )}
           </Text>
         </Box>

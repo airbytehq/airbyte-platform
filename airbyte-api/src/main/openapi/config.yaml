@@ -6162,6 +6162,10 @@ components:
         lastSuccessfulSync:
           type: integer
           format: int64
+        lastSyncJobId:
+          $ref: "#/components/schemas/JobId"
+        lastSyncAttemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
         nextSync:
           type: integer
           format: int64
@@ -6169,8 +6173,8 @@ components:
           type: boolean
         isLastCompletedJobReset:
           type: boolean
-        failureType:
-          $ref: "#/components/schemas/FailureType"
+        failureReason:
+          $ref: "#/components/schemas/FailureReason"
     ConnectionSyncProgressRead:
       type: array
       items:

@@ -3,18 +3,16 @@ import { createContext, useCallback, useContext, useMemo } from "react";
 
 import {
   useResetConnection,
-  useResetConnectionStream,
   useSyncConnection,
   useCancelJob,
   useListJobsForConnectionStatus,
   jobsKeys,
   prependArtificialJobToStatus,
+  useResetConnectionStream,
 } from "core/api";
 import {
   ConnectionStatus,
   ConnectionStream,
-  JobWithAttemptsRead,
-  JobConfigType,
   JobStatus,
   WebBackendConnectionRead,
   JobReadList,
@@ -26,17 +24,21 @@ interface ConnectionSyncContext {
   connectionEnabled: boolean;
   syncStarting: boolean;
   jobSyncRunning: boolean;
-  cancelJob: () => Promise<void>;
+  cancelJob: (() => Promise<void>) | undefined;
   cancelStarting: boolean;
   resetStreams: (streams?: ConnectionStream[]) => Promise<void>;
   resetStarting: boolean;
   jobResetRunning: boolean;
-  lastCompletedSyncJob?: JobWithAttemptsRead;
 }
 
-export const jobStatusesIndicatingFinishedExecution: string[] = [JobStatus.succeeded, JobStatus.failed];
+export const jobStatusesIndicatingFinishedExecution: string[] = [
+  JobStatus.succeeded,
+  JobStatus.failed,
+  JobStatus.cancelled,
+];
 const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): ConnectionSyncContext => {
   const { jobs } = useListJobsForConnectionStatus(connection.connectionId);
+  const mostRecentJob = jobs?.[0]?.job;
   const connectionEnabled = connection.status === ConnectionStatus.active;
   const queryClient = useQueryClient();
 
@@ -46,20 +48,23 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
   }, [connection, doSyncConnection]);
 
   const { mutateAsync: doCancelJob, isLoading: cancelStarting } = useCancelJob();
-  const cancelJob = useCallback(async () => {
-    const jobId = jobs?.[0]?.job?.id;
-    if (jobId) {
+  const cancelJob = useMemo(() => {
+    const jobId = mostRecentJob?.id;
+    if (!jobId) {
+      return undefined;
+    }
+    return async () => {
       await doCancelJob(jobId);
       queryClient.setQueriesData<JobReadList>(
         jobsKeys.useListJobsForConnectionStatus(connection.connectionId),
         (prevJobList) =>
           prependArtificialJobToStatus(
-            { configType: jobs?.[0]?.job?.configType ?? "sync", status: JobStatus.cancelled },
+            { configType: mostRecentJob?.configType ?? "sync", status: JobStatus.cancelled },
             prevJobList
           )
       );
-    }
-  }, [jobs, doCancelJob, connection.connectionId, queryClient]);
+    };
+  }, [mostRecentJob, doCancelJob, connection.connectionId, queryClient]);
 
   const { mutateAsync: doResetConnection, isLoading: resetStarting } = useResetConnection();
   const { mutateAsync: resetStream } = useResetConnectionStream(connection.connectionId);
@@ -76,21 +81,15 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
     [connection.connectionId, doResetConnection, resetStream]
   );
 
-  const activeJob = jobs[0]?.job;
   const jobSyncRunning = useMemo(
     () =>
-      activeJob?.configType === "sync" &&
-      (activeJob?.status === JobStatus.running || activeJob?.status === JobStatus.incomplete),
-    [activeJob?.configType, activeJob?.status]
+      mostRecentJob?.configType === "sync" &&
+      (mostRecentJob?.status === JobStatus.running || mostRecentJob?.status === JobStatus.incomplete),
+    [mostRecentJob?.configType, mostRecentJob?.status]
   );
   const jobResetRunning = useMemo(
-    () => activeJob?.status === "running" && activeJob.configType === "reset_connection",
-    [activeJob?.configType, activeJob?.status]
-  );
-
-  const lastCompletedSyncJob = jobs.find(
-    ({ job }) =>
-      job && job.configType === JobConfigType.sync && jobStatusesIndicatingFinishedExecution.includes(job.status)
+    () => mostRecentJob?.status === "running" && mostRecentJob.configType === "reset_connection",
+    [mostRecentJob?.configType, mostRecentJob?.status]
   );
 
   return {
@@ -103,7 +102,6 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
     resetStreams,
     resetStarting,
     jobResetRunning,
-    lastCompletedSyncJob,
   };
 };
 

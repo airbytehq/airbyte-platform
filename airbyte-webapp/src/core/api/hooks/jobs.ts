@@ -1,5 +1,7 @@
 import { Updater, useInfiniteQuery, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { jobStatusesIndicatingFinishedExecution } from "components/connection/ConnectionSync/ConnectionSyncContext";
+
 import {
   cancelJob,
   getAttemptForJob,
@@ -8,7 +10,7 @@ import {
   listJobsFor,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
-import { JobListRequestBody, JobReadList, JobStatus } from "../types/AirbyteClient";
+import { JobListRequestBody, JobReadList } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -47,7 +49,8 @@ export const useListJobs = (requestParams: Omit<JobListRequestBody, "pagination"
     },
     {
       refetchInterval: (data) => {
-        return data?.pages[0].data.jobs[0]?.job?.status === JobStatus.running ? 2500 : 10000;
+        const jobStatus = data?.pages[0].data.jobs[0]?.job?.status;
+        return jobStatus && jobStatusesIndicatingFinishedExecution.includes(jobStatus) ? 10000 : 2500;
       },
       getPreviousPageParam: (firstPage) => {
         return firstPage.pageParam > 0 ? firstPage.pageParam - 1 : undefined;
@@ -87,7 +90,10 @@ export const useListJobsForConnectionStatus = (connectionId: string) => {
       ),
     {
       refetchInterval: (data) => {
-        return data?.jobs?.[0]?.job?.status === JobStatus.running ? 2500 : 10000;
+        return data?.jobs?.[0]?.job?.status &&
+          jobStatusesIndicatingFinishedExecution.includes(data?.jobs?.[0]?.job?.status)
+          ? 10000
+          : 2500;
       },
     }
   );

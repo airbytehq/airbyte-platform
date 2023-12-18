@@ -11,6 +11,8 @@ import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { useConnectionSyncContext } from "./ConnectionSyncContext";
+import { useConnectionStatus } from "../ConnectionStatus/useConnectionStatus";
+
 interface ConnectionSyncButtonsProps {
   buttonText: React.ReactNode;
   variant?: ButtonVariant;
@@ -35,10 +37,11 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
     connectionEnabled,
     resetStreams,
     resetStarting,
-    jobSyncRunning,
     jobResetRunning,
   } = useConnectionSyncContext();
   const { mode, connection } = useConnectionFormService();
+
+  const connectionStatus = useConnectionStatus(connection.connectionId ?? "");
 
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
@@ -66,7 +69,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
 
   return (
     <FlexContainer gap="sm">
-      {!jobSyncRunning && !jobResetRunning && (
+      {!connectionStatus.isRunning && (
         <Button
           onClick={syncConnection}
           icon={syncStarting ? undefined : <Icon type="sync" />}
@@ -79,7 +82,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
           {buttonText}
         </Button>
       )}
-      {(jobSyncRunning || jobResetRunning) && (
+      {connectionStatus.isRunning && cancelJob && (
         <Button
           onClick={cancelJob}
           disabled={syncStarting || resetStarting}
@@ -100,7 +103,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
             displayName: formatMessage({ id: "connection.resetData" }),
             value: ContextMenuOptions.ResetData,
             disabled:
-              jobSyncRunning || jobResetRunning || connection.status !== ConnectionStatus.active || mode === "readonly",
+              connectionStatus.isRunning || connection.status !== ConnectionStatus.active || mode === "readonly",
             "data-testid": "reset-data-dropdown-option",
           },
         ]}
