@@ -1,0 +1,57 @@
+---
+"$schema": http://json-schema.org/draft-07/schema#
+"$id": https://github.com/airbytehq/airbyte/blob/master/airbyte-config/models/src/main/resources/types/ScopedConfiguration.yaml
+title: ScopedConfiguration
+description: scoped configuration entry
+type: object
+required:
+  - id
+  - key
+  - value
+  - resourceType
+  - resourceId
+  - scopeType
+  - scopeId
+  - originType
+  - origin
+additionalProperties: true
+properties:
+  id:
+    type: string
+    format: uuid
+  key:
+    description: Which configuration is being set
+    type: string
+  value:
+    description: Value of the configuration
+    type: string
+  resourceId:
+    description: ID of resource referenced by the configuration (of type resourceType)
+    type: string
+    format: uuid
+  resourceType:
+    description: Type of resource referenced by the configuration
+    $ref: ConfigResourceType.yaml
+  scopeId:
+    description: ID of scope targeted by the configuration (of type scopeType)
+    type: string
+    format: uuid
+  scopeType:
+    description: Type of scope targeted by the configuration
+    $ref: ConfigScopeType.yaml
+  originType:
+    description: Type of origin of the configuration
+    $ref: ConfigOriginType.yaml
+  origin:
+    description: Reference to where this configuration came from
+    type: string
+  description:
+    description: More information about why the configuration was set
+    type: string
+  referenceUrl:
+    description: URL with more information about why the configuration was set (e.g. OC issue, slack link, etc)
+    type: string
+  expiresAt:
+    description: Date at which the configuration entry is no longer valid
+    type: string
+    format: date

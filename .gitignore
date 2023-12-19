@@ -25,7 +25,7 @@ updated_configurations
 !airbyte-integrations/connector-templates/**/secrets
 
 # include airbyte-data
-!airbyte-data/src/main/java/io/airbyte/data
+!airbyte-data/src/**/data
 
 # Test logs
 acceptance_tests_logs
