@@ -25,8 +25,6 @@ import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardCheckConnectionInput;
-import io.airbyte.config.StandardCheckConnectionOutput;
-import io.airbyte.config.StandardCheckConnectionOutput.Status;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
@@ -138,19 +136,6 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
           return temporalAttemptExecution.get();
         },
         context);
-  }
-
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  @Override
-  public StandardCheckConnectionOutput run(final CheckConnectionInput args) {
-    ApmTraceUtils
-        .addTagsToTrace(Map.of(JOB_ID_KEY, args.getJobRunConfig().getJobId(), DOCKER_IMAGE_KEY, args.getLauncherConfig().getDockerImage()));
-    final ConnectorJobOutput output = runWithJobOutput(args);
-    if (output.getFailureReason() != null) {
-      return new StandardCheckConnectionOutput().withStatus(Status.FAILED).withMessage("Error checking connection");
-    }
-
-    return output.getCheckConnection();
   }
 
   @SuppressWarnings("LineLength")

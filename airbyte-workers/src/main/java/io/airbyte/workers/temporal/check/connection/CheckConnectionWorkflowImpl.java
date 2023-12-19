@@ -22,16 +22,12 @@ import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.CheckConnectionInput;
-import io.temporal.workflow.Workflow;
 import java.util.Map;
 
 /**
  * Check connection temporal workflow implementation.
  */
 public class CheckConnectionWorkflowImpl implements CheckConnectionWorkflow {
-
-  private static final String CHECK_JOB_OUTPUT_TAG = "check_job_output";
-  private static final int CHECK_JOB_OUTPUT_TAG_CURRENT_VERSION = 1;
 
   @TemporalActivityStub(activityOptionsBeanName = "checkActivityOptions")
   private CheckConnectionActivity activity;
@@ -48,16 +44,8 @@ public class CheckConnectionWorkflowImpl implements CheckConnectionWorkflow {
     try {
       final CheckConnectionInput checkInput = new CheckConnectionInput(jobRunConfig, launcherConfig, connectionConfiguration);
 
-      final int jobOutputVersion =
-          Workflow.getVersion(CHECK_JOB_OUTPUT_TAG, Workflow.DEFAULT_VERSION, CHECK_JOB_OUTPUT_TAG_CURRENT_VERSION);
-
-      if (jobOutputVersion < CHECK_JOB_OUTPUT_TAG_CURRENT_VERSION) {
-        final StandardCheckConnectionOutput checkOutput = activity.run(checkInput);
-        return new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION).withCheckConnection(checkOutput);
-      }
-
       result = activity.runWithJobOutput(checkInput);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       result = new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
           .withCheckConnection(new StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.FAILED)
               .withMessage("The check connection failed."))
