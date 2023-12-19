@@ -268,6 +268,32 @@ create table "public"."schema_management" (
   constraint "schema_management_pkey"
     primary key ("id")
 );
+create table "public"."scoped_configuration" (
+  "id" uuid not null,
+  "key" varchar(256) not null,
+  "resource_type" "public"."config_resource_type" not null,
+  "resource_id" uuid not null,
+  "scope_type" "public"."config_scope_type" not null,
+  "scope_id" uuid not null,
+  "value" varchar(256) not null,
+  "description" text,
+  "reference_url" varchar(256),
+  "origin_type" "public"."config_origin_type" not null,
+  "origin" varchar(256) not null,
+  "expires_at" date,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "scoped_configuration_pkey"
+    primary key ("id"),
+  constraint "scoped_configuration_key_resource_type_resource_id_scope_ty_key"
+    unique (
+      "key",
+      "resource_type",
+      "resource_id",
+      "scope_type",
+      "scope_id"
+    )
+);
 create table "public"."secret_persistence_config" (
   "id" uuid not null,
   "scope_id" uuid,
