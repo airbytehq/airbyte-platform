@@ -21,6 +21,8 @@ import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.kotlin.core.publisher.toMono
+import kotlin.time.TimeSource
+import kotlin.time.toJavaDuration
 
 private val logger = KotlinLogging.logger {}
 
@@ -39,10 +41,12 @@ class LaunchPipeline(
 ) {
   @Trace(operationName = LAUNCH_PIPELINE_OPERATION_NAME)
   fun accept(msg: LauncherInput) {
+    val startTime = TimeSource.Monotonic.markNow()
     metricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_RECEIVED, MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId))
     buildPipeline(msg)
       .subscribeOn(Schedulers.immediate())
       .subscribe()
+    metricPublisher.timer(WorkloadLauncherMetricMetadata.WORKLOAD_LAUNCH_DURATION, startTime.elapsedNow().toJavaDuration())
   }
 
   fun buildPipeline(msg: LauncherInput): Mono<LaunchStageIO> {

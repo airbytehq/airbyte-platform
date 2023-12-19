@@ -28,6 +28,10 @@ enum class WorkloadLauncherMetricMetadata(
     "workload_received",
     "increments when the launcher receives a workload from the queue",
   ),
+  WORKLOAD_LAUNCH_DURATION(
+    "workload_launch_duration",
+    "tracks the duration of the launch of a workload",
+  ),
   WORKLOAD_CLAIM_RESUMED(
     "workload_claim_resumed",
     "increments when a claimed workload is retrieved and processed on startup",

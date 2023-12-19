@@ -13,6 +13,9 @@ class SharedMocks {
           count(any(), *anyVararg())
         } returns Unit
         every {
+          timer(any(), any(), *anyVararg())
+        } returns Unit
+        every {
           gauge<Any>(any(), any(), any(), any())
         } returns Unit
       }
