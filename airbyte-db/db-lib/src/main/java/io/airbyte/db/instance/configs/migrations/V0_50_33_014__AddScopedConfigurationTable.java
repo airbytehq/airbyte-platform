@@ -23,9 +23,9 @@ import org.jooq.impl.SchemaImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class V0_50_33_013__AddScopedConfigurationTable extends BaseJavaMigration {
+public class V0_50_33_014__AddScopedConfigurationTable extends BaseJavaMigration {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(V0_50_33_013__AddScopedConfigurationTable.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(V0_50_33_014__AddScopedConfigurationTable.class);
 
   private static final String CONFIG_SCOPE_TYPE = "config_scope_type";
   private static final String CONFIG_RESOURCE_TYPE = "config_resource_type";

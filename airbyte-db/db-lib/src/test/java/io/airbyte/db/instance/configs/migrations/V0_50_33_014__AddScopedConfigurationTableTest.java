@@ -5,9 +5,9 @@
 package io.airbyte.db.instance.configs.migrations;
 
 import io.airbyte.db.instance.configs.AbstractConfigsDatabaseTest;
-import io.airbyte.db.instance.configs.migrations.V0_50_33_013__AddScopedConfigurationTable.ConfigOriginType;
-import io.airbyte.db.instance.configs.migrations.V0_50_33_013__AddScopedConfigurationTable.ConfigResourceType;
-import io.airbyte.db.instance.configs.migrations.V0_50_33_013__AddScopedConfigurationTable.ConfigScopeType;
+import io.airbyte.db.instance.configs.migrations.V0_50_33_014__AddScopedConfigurationTable.ConfigOriginType;
+import io.airbyte.db.instance.configs.migrations.V0_50_33_014__AddScopedConfigurationTable.ConfigResourceType;
+import io.airbyte.db.instance.configs.migrations.V0_50_33_014__AddScopedConfigurationTable.ConfigScopeType;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
@@ -18,7 +18,7 @@ import org.jooq.impl.DSL;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-class V0_50_33_013__AddScopedConfigurationTableTest extends AbstractConfigsDatabaseTest {
+class V0_50_33_014__AddScopedConfigurationTableTest extends AbstractConfigsDatabaseTest {
 
   private static final String SCOPED_CONFIGURATION = "scoped_configuration";
   private static final String ID = "id";
@@ -38,10 +38,10 @@ class V0_50_33_013__AddScopedConfigurationTableTest extends AbstractConfigsDatab
   void test() throws SQLException, IOException {
     final DSLContext context = getDslContext();
 
-    V0_50_33_013__AddScopedConfigurationTable.createResourceTypeEnum(context);
-    V0_50_33_013__AddScopedConfigurationTable.createScopeTypeEnum(context);
-    V0_50_33_013__AddScopedConfigurationTable.createOriginTypeEnum(context);
-    V0_50_33_013__AddScopedConfigurationTable.createScopedConfigurationTable(context);
+    V0_50_33_014__AddScopedConfigurationTable.createResourceTypeEnum(context);
+    V0_50_33_014__AddScopedConfigurationTable.createScopeTypeEnum(context);
+    V0_50_33_014__AddScopedConfigurationTable.createOriginTypeEnum(context);
+    V0_50_33_014__AddScopedConfigurationTable.createScopedConfigurationTable(context);
 
     final UUID configId = UUID.randomUUID();
     final String configKey = "connectorVersion";
