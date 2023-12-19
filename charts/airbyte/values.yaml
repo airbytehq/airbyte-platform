@@ -11,7 +11,6 @@ global:
 
   # -- Environment variables
   env_vars: {}
-
   # Database configuration override
   database:
     # -- Secret name where database credentials are stored

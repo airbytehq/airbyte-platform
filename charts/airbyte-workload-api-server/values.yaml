@@ -5,7 +5,7 @@ global:
   secretName: ""
   credVolumeOverride: ""
   extraContainers: []
-  ## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+  ## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
   extraSelectorLabels: {}
   ## extraLabels [object] - use to specify own additional labels for deployment
   extraLabels: {}
@@ -428,7 +428,7 @@ secrets: {}
 env_vars: {}
 
 
-## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
 extraSelectorLabels: {}
 ## extraLabels [object] - use to specify own additional labels for deployment
 extraLabels: {}

@@ -4,7 +4,7 @@ global:
   configMapName: ""
   secretName: ""
   extraContainers: []
-  ## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+  ## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
   extraSelectorLabels: {}
   ## extraLabels [object] - use to specify own additional labels for deployment
   extraLabels: {}
@@ -219,7 +219,7 @@ env_vars: {}
 workloadApi: {}
 
 
-## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
 extraSelectorLabels: {}
 ## extraLabels [object] - use to specify own additional labels for deployment
 extraLabels: {}
