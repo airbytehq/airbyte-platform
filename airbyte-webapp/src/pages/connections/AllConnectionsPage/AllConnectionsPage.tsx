@@ -18,7 +18,7 @@ import { PageHeader } from "components/ui/PageHeader";
 import { Text } from "components/ui/Text";
 
 import { useConnectionList } from "core/api";
-import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
+import { JobStatus, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { naturalComparatorBy } from "core/utils/objects";
 import { useExperiment } from "hooks/services/Experiment";
@@ -157,7 +157,9 @@ const isConnectionRunning = (
 const isConnectionFailed = (
   connection: WebBackendConnectionListItem
 ): connection is WebBackendConnectionListItem & { latestSyncJobStatus: "failed" } =>
-  connection.latestSyncJobStatus === "failed";
+  connection.latestSyncJobStatus === JobStatus.failed ||
+  connection.latestSyncJobStatus === JobStatus.cancelled ||
+  connection.latestSyncJobStatus === JobStatus.incomplete;
 
 export const AllConnectionsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -192,11 +194,11 @@ export const AllConnectionsPage: React.FC = () => {
         const isFailed = isConnectionFailed(connection);
         if (statusFilter === "paused" && !isPaused) {
           return false;
-        } else if (statusFilter === "running" && !isRunning) {
+        } else if (statusFilter === "running" && (!isRunning || isPaused)) {
           return false;
-        } else if (statusFilter === "failed" && (!isFailed || isPaused)) {
+        } else if (statusFilter === "failed" && (!isFailed || isRunning || isPaused)) {
           return false;
-        } else if (statusFilter === "healthy" && (isPaused || isFailed)) {
+        } else if (statusFilter === "healthy" && (isRunning || isPaused || isFailed)) {
           return false;
         }
       }
@@ -215,15 +217,26 @@ export const AllConnectionsPage: React.FC = () => {
 
   const connectionsSummary = connections.reduce<Record<SummaryKey, number>>(
     (acc, connection) => {
-      const status = isConnectionPaused(connection) ? "paused" : isConnectionFailed(connection) ? "failed" : "healthy";
+      let status: SummaryKey;
+
+      if (isConnectionPaused(connection)) {
+        status = "paused";
+      } else if (isConnectionRunning(connection)) {
+        status = "running";
+      } else if (isConnectionFailed(connection)) {
+        status = "failed";
+      } else {
+        status = "healthy";
+      }
+
       acc[status] += 1;
       return acc;
     },
     {
       // order here governs render order
+      running: 0,
       healthy: 0,
       failed: 0,
-      running: 0,
       paused: 0,
     }
   );
