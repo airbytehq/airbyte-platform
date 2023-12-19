@@ -208,11 +208,19 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   ORCHESTRATOR_OUT_OF_MEMORY(MetricEmittingApps.WORKER,
       "orchestrator_out_of_memory",
       "orchestrator out of memory error"),
+  ORCHESTRATOR_INIT_COPY_FAILURE(MetricEmittingApps.WORKER,
+      "orchestrator_init_copy_failure",
+      "init files failed to copy over to orchestrator"),
 
   OVERALL_JOB_RUNTIME_IN_LAST_HOUR_BY_TERMINAL_STATE_SECS(MetricEmittingApps.METRICS_REPORTER,
       "overall_job_runtime_in_last_hour_by_terminal_state_secs",
       "overall job runtime - scheduling and execution for all attempts - for jobs that reach terminal states in the last hour. "
           + "tagged by terminal states."),
+
+  RUNNING_PODS_FOUND_FOR_CONNECTION_ID(MetricEmittingApps.WORKER,
+      "running_pods_found_for_connection_id",
+      "whether we found pods running for a given connection id when attempting to start a sync for that connection id"),
+
   REPLICATION_BYTES_SYNCED(MetricEmittingApps.WORKER,
       "replication_bytes_synced",
       "number of bytes synced during replication"),

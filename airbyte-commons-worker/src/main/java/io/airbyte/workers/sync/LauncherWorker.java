@@ -6,6 +6,7 @@ package io.airbyte.workers.sync;
 
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.PROCESS_EXIT_VALUE_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
+import static io.airbyte.metrics.lib.OssMetricsRegistry.RUNNING_PODS_FOUND_FOR_CONNECTION_ID;
 import static io.airbyte.workers.process.Metadata.CONNECTION_ID_LABEL_KEY;
 
 import com.google.common.base.Stopwatch;
@@ -19,7 +20,9 @@ import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.UseCustomK8sScheduler;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
@@ -291,6 +294,10 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
 
     // delete all pods with the connection id label
     List<Pod> runningPods = getNonTerminalPodsWithLabels();
+    if (!runningPods.isEmpty()) {
+      metricClient.count(RUNNING_PODS_FOUND_FOR_CONNECTION_ID, 1, new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+    }
+
     final Stopwatch stopwatch = Stopwatch.createStarted();
 
     while (!runningPods.isEmpty() && stopwatch.elapsed().compareTo(MAX_DELETION_TIMEOUT) < 0) {

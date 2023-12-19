@@ -596,7 +596,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
         .toArray(Toleration[]::new);
   }
 
-  private static void copyFilesToKubeConfigVolumeMain(final Pod podDefinition, final Map<String, String> files) {
+  private void copyFilesToKubeConfigVolumeMain(final Pod podDefinition, final Map<String, String> files) {
     final List<Map.Entry<String, String>> fileEntries = new ArrayList<>(files.entrySet());
 
     // copy this file last to indicate that the copy has completed
@@ -628,6 +628,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
 
         log.info("kubectl cp complete, closing process");
       } catch (final IOException | InterruptedException e) {
+        metricClient.count(OssMetricsRegistry.ORCHESTRATOR_INIT_COPY_FAILURE, 1, new MetricAttribute(MetricTags.LAUNCHER, launcherType));
         throw new RuntimeException(e);
       } finally {
         if (tmpFile != null) {
