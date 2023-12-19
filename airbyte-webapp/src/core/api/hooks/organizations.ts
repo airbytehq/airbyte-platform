@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useAuthService } from "core/services/auth";
 
 import { useGetWorkspace } from "./workspaces";
 import {
@@ -29,14 +30,19 @@ export const organizationKeys = {
  * user isn't inside a workspace or the workspace doesn't belong to an organization.
  */
 export const useCurrentOrganizationInfo = () => {
+  const { user } = useAuthService();
   const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
-  const workspace = useGetWorkspace(workspaceId, { enabled: !!workspaceId });
+
+  // Because this hook is called before the auth service initializes (because we want to add the organization to the LDEXperimentService)
+  // the user might be null. In that case, we should disable the query, otherwise it will fail due to no valid JWT being present yet.
+  const workspace = useGetWorkspace(workspaceId, { enabled: !!workspaceId && !!user });
+
   return useSuspenseQuery(organizationKeys.info(workspace?.organizationId ?? ""), () => {
     // TODO: Once all workspaces are in an organization this can be removed, but for now
     //       we guard against calling the endpoint if the workspace isn't in an organization
     //       to not cause too many 404 in the getOrganizationInfo endpoint.
-    if (!workspace?.organizationId) {
+    if (!workspace?.organizationId || !user) {
       return Promise.resolve(null);
     }
 
