@@ -95,7 +95,7 @@ dependencies {
 }
 
 tasks.named<Test>("test") {
-    maxHeapSize = "4g"
+    maxHeapSize = "6g"
 
     useJUnitPlatform {
         excludeTags("cloud-storage")
