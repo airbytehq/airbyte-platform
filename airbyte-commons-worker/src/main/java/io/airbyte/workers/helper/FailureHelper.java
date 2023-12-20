@@ -55,6 +55,7 @@ public class FailureHelper {
 
   private static final String WORKFLOW_TYPE_SYNC = "SyncWorkflow";
   private static final String ACTIVITY_TYPE_REPLICATE = "Replicate";
+  private static final String ACTIVITY_TYPE_REPLICATEV2 = "ReplicateV2";
   private static final String ACTIVITY_TYPE_PERSIST = "Persist";
   private static final String ACTIVITY_TYPE_NORMALIZE = "Normalize";
   private static final String ACTIVITY_TYPE_DBT_RUN = "Run";
@@ -381,7 +382,7 @@ public class FailureHelper {
                                                                    final Throwable t,
                                                                    final Long jobId,
                                                                    final Integer attemptNumber) {
-    if (WORKFLOW_TYPE_SYNC.equals(workflowType) && ACTIVITY_TYPE_REPLICATE.equals(activityType)) {
+    if (WORKFLOW_TYPE_SYNC.equals(workflowType) && (ACTIVITY_TYPE_REPLICATE.equals(activityType) || ACTIVITY_TYPE_REPLICATEV2.equals(activityType))) {
       return replicationFailure(t, jobId, attemptNumber);
     } else if (WORKFLOW_TYPE_SYNC.equals(workflowType) && ACTIVITY_TYPE_PERSIST.equals(activityType)) {
       return persistenceFailure(t, jobId, attemptNumber);

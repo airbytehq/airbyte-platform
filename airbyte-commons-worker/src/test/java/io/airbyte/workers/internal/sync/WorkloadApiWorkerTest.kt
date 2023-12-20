@@ -34,6 +34,7 @@ import org.openapitools.client.infrastructure.ServerException
 import java.nio.file.Path
 import java.util.Optional
 import java.util.UUID
+import java.util.concurrent.CancellationException
 
 internal class WorkloadApiWorkerTest {
   private var workloadIdGenerator: WorkloadIdGenerator = mockk()
@@ -89,6 +90,30 @@ internal class WorkloadApiWorkerTest {
     every { documentStoreClient.read("$expectedDocPrefix/SUCCEEDED") } returns Optional.of(Jsons.serialize(expectedOutput))
 
     val output = workloadApiWorker.run(replicationInput, jobRoot)
+    assertEquals(expectedOutput, output)
+  }
+
+  @Test
+  fun testFailedReplicationWithOutput() {
+    val jobId = 13L
+    val attemptNumber = 37
+    val workloadId = "my-workload"
+    val expectedDocPrefix = "testNs/orchestrator-repl-job-$jobId-attempt-$attemptNumber"
+    val expectedOutput =
+      ReplicationOutput()
+        .withReplicationAttemptSummary(ReplicationAttemptSummary().withStatus(StandardSyncSummary.ReplicationStatus.COMPLETED))
+    initializeReplicationInput(jobId, attemptNumber)
+
+    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
+
+    every { connectionApi.getConnection(any()) } returns ConnectionRead().geography(Geography.US)
+    every { workloadApi.workloadCreate(any()) } returns Unit
+    every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.FAILURE)
+
+    every { documentStoreClient.read("$expectedDocPrefix/SUCCEEDED") } returns Optional.of(Jsons.serialize(expectedOutput))
+
+    val output = workloadApiWorker.run(replicationInput, jobRoot)
+    // We expect the output to be returned if it exists, even on a failure
     assertEquals(expectedOutput, output)
   }
 
@@ -185,7 +210,7 @@ internal class WorkloadApiWorkerTest {
         terminationReason = "Oops... user cancelled",
       )
 
-    assertThrows<WorkerException> { workloadApiWorker.run(replicationInput, jobRoot) }
+    assertThrows<CancellationException> { workloadApiWorker.run(replicationInput, jobRoot) }
   }
 
   @Test

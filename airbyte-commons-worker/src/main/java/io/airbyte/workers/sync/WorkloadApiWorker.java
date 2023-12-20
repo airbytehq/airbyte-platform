@@ -50,6 +50,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
 import java.util.function.Function;
 import org.openapitools.client.infrastructure.ClientException;
 import org.openapitools.client.infrastructure.ServerException;
@@ -159,28 +160,36 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
       sleep(sleepInterval.toMillis());
     }
 
-    if (workload.getStatus() == WorkloadStatus.FAILURE) {
-      if (SOURCE.equals(workload.getTerminationSource())) {
-        throw new SourceException(workload.getTerminationReason());
-      } else if (DESTINATION.equals(workload.getTerminationSource())) {
-        throw new DestinationException(workload.getTerminationReason());
-      } else {
-        throw new WorkerException(workload.getTerminationReason());
-      }
-    } else if (workload.getStatus() == WorkloadStatus.CANCELLED) {
-      throw new WorkerException("Replication cancelled by " + workload.getTerminationSource());
+    if (workload.getStatus() == WorkloadStatus.CANCELLED) {
+      throw new CancellationException("Replication cancelled by " + workload.getTerminationSource());
     }
 
     final ReplicationOutput output;
     try {
       output = getReplicationOutput(workloadId);
-    } catch (final DocStoreAccessException e) {
+    } catch (final Exception e) {
+      throwFallbackError(workload, e);
       throw new WorkerException("Failed to read replication output", e);
     }
     if (output == null) {
-      throw new WorkerException("Failed to read replication output");
+      // If we fail to read the output, fallback to throwing an exception based on the status of the
+      // workload
+      throwFallbackError(workload, null);
+      throw new WorkerException("Replication output is empty");
     }
     return output;
+  }
+
+  private void throwFallbackError(final Workload workload, final Exception e) throws WorkerException {
+    if (workload.getStatus() == WorkloadStatus.FAILURE) {
+      if (SOURCE.equals(workload.getTerminationSource())) {
+        throw new SourceException(workload.getTerminationReason(), e);
+      } else if (DESTINATION.equals(workload.getTerminationSource())) {
+        throw new DestinationException(workload.getTerminationReason(), e);
+      } else {
+        throw new WorkerException(workload.getTerminationReason(), e);
+      }
+    }
   }
 
   @Override
