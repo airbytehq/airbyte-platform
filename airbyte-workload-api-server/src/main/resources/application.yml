@@ -18,6 +18,8 @@ micronaut:
           enabled: true
         queues:
           enabled: true
+      web:
+        enabled: true
     export:
       statsd:
         enabled: ${MICROMETER_METRICS_ENABLED:false}
