@@ -12,6 +12,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
+import java.util.Optional
 
 class CustomMetricPublisherTest {
   @Test
@@ -24,7 +25,7 @@ class CustomMetricPublisherTest {
     every { counter.increment() } returns Unit
     every { meterRegistry.counter(metricName, toTags(metricAttribute)) } returns counter
 
-    val publisher = CustomMetricPublisher(meterRegistry)
+    val publisher = CustomMetricPublisher(Optional.of(meterRegistry))
 
     publisher.count(metricName, metricAttribute)
 
@@ -41,7 +42,7 @@ class CustomMetricPublisherTest {
 
     every { meterRegistry.gauge(metricName, toTags(metricAttribute), stateObject, any()) } returns stateObject
 
-    val publisher = CustomMetricPublisher(meterRegistry)
+    val publisher = CustomMetricPublisher(Optional.of(meterRegistry))
 
     publisher.gauge(metricName, stateObject, valueFunction, metricAttribute)
 
