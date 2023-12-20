@@ -1,14 +1,16 @@
 import {
   AirbyteCatalog,
   AirbyteStreamAndConfiguration,
+  CatalogDiff,
   DestinationSyncMode,
   FieldTransformTransformType,
+  SchemaChange,
   StreamDescriptor,
   StreamTransformTransformType,
   SyncMode,
 } from "core/api/types/AirbyteClient";
 
-import { calculateInitialCatalog } from "./calculateInitialCatalog";
+import { analyzeSyncCatalogBreakingChanges, calculateInitialCatalog } from "./calculateInitialCatalog";
 
 const mockSyncSchemaStream: AirbyteStreamAndConfiguration = {
   stream: {
@@ -942,5 +944,82 @@ describe("calculateInitialCatalog", () => {
 
     expect(values.streams[2].config?.primaryKey).toEqual([["id"]]); // was unaffected
     expect(values.streams[2].config?.cursorField).toEqual(["created_at"]); // was unaffected because it's a source-defined cursor
+  });
+});
+
+describe("analyzeSyncCatalogBreakingChanges", () => {
+  it("should return syncCatalog unchanged when schemaChange is no_change and catalogDiff is undefined", () => {
+    const syncCatalog: AirbyteCatalog = { streams: [mockSyncSchemaStream] };
+    const result = analyzeSyncCatalogBreakingChanges(syncCatalog, undefined, SchemaChange.no_change);
+    expect(result).toEqual(syncCatalog);
+  });
+
+  it("should return syncCatalog unchanged when schemaChange is non_breaking and catalogDiff is undefined", () => {
+    const syncCatalog: AirbyteCatalog = { streams: [mockSyncSchemaStream] };
+    const result = analyzeSyncCatalogBreakingChanges(syncCatalog, undefined, SchemaChange.non_breaking);
+    expect(result).toEqual(syncCatalog);
+  });
+
+  it("should return syncCatalog with transformed streams when there are breaking changes - primaryKey", () => {
+    const syncCatalog: AirbyteCatalog = { streams: [mockSyncSchemaStream] };
+    const catalogDiff: CatalogDiff = {
+      transforms: [
+        {
+          transformType: StreamTransformTransformType.update_stream,
+          streamDescriptor: { name: "test", namespace: "namespace-test" },
+          updateStream: [
+            {
+              breaking: true,
+              transformType: FieldTransformTransformType.remove_field,
+              fieldName: ["old_primary_key"],
+            },
+          ],
+        },
+      ],
+    };
+    const result = analyzeSyncCatalogBreakingChanges(syncCatalog, catalogDiff, SchemaChange.breaking);
+    expect(result.streams[0].config?.primaryKey).toEqual([]);
+  });
+
+  it("should return syncCatalog with transformed streams when there are breaking changes - cursor", () => {
+    const syncCatalog: AirbyteCatalog = { streams: [mockSyncSchemaStream] };
+    const catalogDiff: CatalogDiff = {
+      transforms: [
+        {
+          transformType: StreamTransformTransformType.update_stream,
+          streamDescriptor: { name: "test", namespace: "namespace-test" },
+          updateStream: [
+            {
+              breaking: true,
+              transformType: FieldTransformTransformType.remove_field,
+              fieldName: ["old_cursor"],
+            },
+          ],
+        },
+      ],
+    };
+    const result = analyzeSyncCatalogBreakingChanges(syncCatalog, catalogDiff, SchemaChange.breaking);
+    expect(result.streams[0].config?.cursorField).toEqual([]);
+  });
+
+  it("should return syncCatalog unchanged when there are no breaking changes", () => {
+    const syncCatalog: AirbyteCatalog = { streams: [mockSyncSchemaStream] };
+    const catalogDiff: CatalogDiff = {
+      transforms: [
+        {
+          transformType: StreamTransformTransformType.update_stream,
+          streamDescriptor: { name: "test", namespace: "namespace-test" },
+          updateStream: [
+            {
+              breaking: false,
+              transformType: FieldTransformTransformType.add_field,
+              fieldName: ["new_field"],
+            },
+          ],
+        },
+      ],
+    };
+    const result = analyzeSyncCatalogBreakingChanges(syncCatalog, catalogDiff, SchemaChange.breaking);
+    expect(result).toEqual(syncCatalog);
   });
 });

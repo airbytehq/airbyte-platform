@@ -26,7 +26,7 @@ import {
 } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 
-import { calculateInitialCatalog } from "./calculateInitialCatalog";
+import { analyzeSyncCatalogBreakingChanges, calculateInitialCatalog } from "./calculateInitialCatalog";
 import { BASIC_FREQUENCY_DEFAULT_VALUE } from "./ScheduleFormField/useBasicFrequencyDropdownData";
 import { createConnectionValidationSchema } from "./schema";
 import { DbtOperationRead } from "../TransformationForm";
@@ -112,8 +112,9 @@ export const useInitialFormValues = (
   isEditMode?: boolean
 ): FormConnectionFormValues => {
   const autoPropagationEnabled = useExperiment("autopropagation.enabled", false);
+  const skipInitialCalculation = useExperiment("catalog.skipInitialCalculation", false);
   const workspace = useCurrentWorkspace();
-  const { catalogDiff } = connection;
+  const { catalogDiff, syncCatalog, schemaChange } = connection;
 
   const defaultNonBreakingChangesPreference = autoPropagationEnabled
     ? NonBreakingChangesPreference.propagate_columns
@@ -126,16 +127,16 @@ export const useInitialFormValues = (
 
   // used to determine if we need to clear any primary keys or cursor fields that were removed
   const streamTransformsWithBreakingChange = useMemo(() => {
-    if (connection.schemaChange === SchemaChange.breaking) {
+    if (schemaChange === SchemaChange.breaking) {
       return catalogDiff?.transforms.filter((streamTransform) => {
         if (streamTransform.transformType === "update_stream") {
-          return streamTransform.updateStream?.filter((fieldTransform) => fieldTransform.breaking === true);
+          return streamTransform.updateStream?.filter((fieldTransform) => fieldTransform.breaking);
         }
         return false;
       });
     }
     return undefined;
-  }, [catalogDiff?.transforms, connection]);
+  }, [catalogDiff?.transforms, schemaChange]);
 
   const initialSchema = useMemo(
     () =>
@@ -198,12 +199,15 @@ export const useInitialFormValues = (
         ...(destDefinitionVersion.supportsDbt && {
           transformations: getInitialTransformations(connection.operations ?? []),
         }),
-        syncCatalog: initialSchema,
+        syncCatalog: skipInitialCalculation
+          ? analyzeSyncCatalogBreakingChanges(syncCatalog, catalogDiff, schemaChange)
+          : initialSchema,
       },
     };
 
     return initialValues;
   }, [
+    isEditMode,
     connection.name,
     connection.source.name,
     connection.destination.name,
@@ -218,7 +222,10 @@ export const useInitialFormValues = (
     defaultNonBreakingChangesPreference,
     workspace.defaultGeography,
     destDefinitionVersion.supportsDbt,
-    isEditMode,
+    skipInitialCalculation,
+    syncCatalog,
+    catalogDiff,
+    schemaChange,
     initialSchema,
   ]);
 };

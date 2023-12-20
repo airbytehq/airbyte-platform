@@ -1573,7 +1573,7 @@ exports[`#useInitialFormValues should generate initial values w/ 'not create' mo
         "config": {
           "aliasName": "pokemon",
           "cursorField": [],
-          "destinationSyncMode": "append",
+          "destinationSyncMode": "overwrite",
           "primaryKey": [],
           "selected": true,
           "syncMode": "full_refresh",
@@ -2087,7 +2087,7 @@ exports[`#useInitialFormValues should generate initial values w/ 'not create' mo
         "config": {
           "aliasName": "pokemon",
           "cursorField": [],
-          "destinationSyncMode": "append",
+          "destinationSyncMode": "overwrite",
           "primaryKey": [],
           "selected": false,
           "syncMode": "full_refresh",
@@ -2601,7 +2601,7 @@ exports[`#useInitialFormValues should generate initial values w/ 'not create' mo
         "config": {
           "aliasName": "pokemon",
           "cursorField": [],
-          "destinationSyncMode": "append",
+          "destinationSyncMode": "overwrite",
           "primaryKey": [],
           "selected": true,
           "syncMode": "full_refresh",

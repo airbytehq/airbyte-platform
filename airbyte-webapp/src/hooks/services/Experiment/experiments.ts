@@ -38,4 +38,5 @@ export interface Experiments {
   "upcomingFeaturesPage.url": string;
   "settings.accessManagement": boolean;
   "settings.token-management-ui": boolean;
+  "catalog.skipInitialCalculation": boolean;
 }
