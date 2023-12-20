@@ -75,7 +75,7 @@ dependencies {
     testImplementation(libs.json.path)
     testImplementation(libs.bundles.mockito.inline)
     testImplementation(libs.mockk)
-    testImplementation(variantOf(libs.opentracing.util.test) { classifier("tests") })
+    testImplementation(variantOf(libs.opentracing.util) { classifier("tests") })
     testImplementation(libs.postgresql)
     testImplementation(libs.platform.testcontainers.postgresql)
     testImplementation(libs.jmh.core)

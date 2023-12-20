@@ -37,7 +37,7 @@ dependencies {
     testImplementation(libs.bundles.junit)
     testImplementation(libs.assertj.core)
     testImplementation(libs.mockk)
-    testImplementation((variantOf(libs.opentracing.util.test) { classifier("tests") }))
+    testImplementation((variantOf(libs.opentracing.util) { classifier("tests") }))
 
     testImplementation(libs.junit.pioneer)
 

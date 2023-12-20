@@ -132,11 +132,12 @@ mockk = { module = "io.mockk:mockk", version = "1.13.8" }
 mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp3" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp3" }
 openapi-jackson-databind-nullable = { module = "org.openapitools:jackson-databind-nullable", version = "0.2.5" }
-opentracing-util-test = { module = "io.opentracing:opentracing-util", version = "0.33.0" }
-otel-bom = { module = "io.opentelemetry:opentelemetry-bom", version = "1.14.0" }
-otel-sdk = { module = "io.opentelemetry:opentelemetry-sdk-metrics", version = "1.14.0" }
-otel-sdk-testing = { module = "io.opentelemetry:opentelemetry-sdk-metrics-testing", version = "1.13.0-alpha" }
-otel-semconv = { module = "io.opentelemetry:opentelemetry-semconv", version = "1.14.0-alpha" }
+opentracing-util = { module = "io.opentracing:opentracing-util", version = "0.33.0" }
+otel-bom = { module = "io.opentelemetry:opentelemetry-bom", version = "1.33.0" }
+otel-bom-alpha = { module = "io.opentelemetry:opentelemetry-bom-alpha", version = "1.33.0-alpha" }
+otel-sdk = { module = "io.opentelemetry:opentelemetry-sdk-metrics", version = "1.33.0" }
+otel-sdk-testing = { module = "io.opentelemetry:opentelemetry-sdk-testing", version = "1.33.0" }
+otel-semconv = { module = "io.opentelemetry:opentelemetry-semconv", version = "1.30.1-alpha" }
 platform-testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "platform-testcontainers" }
 platform-testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "platform-testcontainers" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
