@@ -21,6 +21,8 @@ plugins {
     id("io.airbyte.gradle.jvm.app")
     id("io.airbyte.gradle.docker")
     id("io.airbyte.gradle.publish")
+    kotlin("jvm")
+    kotlin("kapt")
 }
 
 val airbyteProtocol by configurations.creating

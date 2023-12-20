@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
 public class DefaultCheckConnectionWorker implements CheckConnectionWorker {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultCheckConnectionWorker.class);
-  private static final String SECTION_NAME = "CHECK";
+  public static final String SECTION_NAME = "CHECK";
 
   private final IntegrationLauncher integrationLauncher;
   private final ConnectorConfigUpdater connectorConfigUpdater;

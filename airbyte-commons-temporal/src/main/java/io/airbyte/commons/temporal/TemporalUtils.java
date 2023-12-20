@@ -226,4 +226,16 @@ public class TemporalUtils {
         .resolve(String.valueOf(attemptId));
   }
 
+  /**
+   * Get an attempt root director from workspace and workloadId.
+   *
+   * @param workspaceRoot workspace root
+   * @param workloadId workload id
+   * @return working directory
+   */
+  public static Path getJobRoot(final Path workspaceRoot, final String workloadId) {
+    return workspaceRoot
+        .resolve(String.valueOf(workloadId));
+  }
+
 }

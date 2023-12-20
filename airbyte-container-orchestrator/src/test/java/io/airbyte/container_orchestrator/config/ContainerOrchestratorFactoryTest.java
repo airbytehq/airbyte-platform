@@ -16,6 +16,7 @@ import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.container_orchestrator.AsyncStateManager;
+import io.airbyte.container_orchestrator.orchestrator.CheckJobOrchestratorDataClass;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -68,6 +69,8 @@ class ContainerOrchestratorFactoryTest {
   @Inject
   ReplicationWorkerFactory replicationWorkerFactory;
 
+  CheckJobOrchestratorDataClass dataClass;
+
   AsyncStateManager asyncStateManager;
 
   // Tests will fail if this is uncommented, due to how the implementation of the DocumentStoreClient
@@ -82,6 +85,7 @@ class ContainerOrchestratorFactoryTest {
   void beforeEach() {
     asyncStateManager = mock(AsyncStateManager.class);
     jobOutputDocStore = mock(JobOutputDocStore.class);
+    dataClass = mock(CheckJobOrchestratorDataClass.class);
   }
 
   @Test
@@ -118,28 +122,28 @@ class ContainerOrchestratorFactoryTest {
 
     final var repl = factory.jobOrchestrator(
         ReplicationLauncherWorker.REPLICATION, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
-        asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore);
+        asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore, dataClass);
     assertEquals("Replication", repl.getOrchestratorName());
 
     final var norm = factory.jobOrchestrator(
         NormalizationLauncherWorker.NORMALIZATION, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
-        asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore);
+        asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore, dataClass);
     assertEquals("Normalization", norm.getOrchestratorName());
 
     final var dbt = factory.jobOrchestrator(
         DbtLauncherWorker.DBT, envConfigs, processFactory, workerConfigsProvider, jobRunConfig,
-        replicationWorkerFactory, asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore);
+        replicationWorkerFactory, asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore, dataClass);
     assertEquals("DBT Transformation", dbt.getOrchestratorName());
 
     final var noop = factory.jobOrchestrator(
         AsyncOrchestratorPodProcess.NO_OP, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
-        asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore);
+        asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore, dataClass);
     assertEquals("NO_OP", noop.getOrchestratorName());
 
     var caught = false;
     try {
       factory.jobOrchestrator("does not exist", envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
-          asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore);
+          asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore, dataClass);
     } catch (final Exception e) {
       caught = true;
     }
