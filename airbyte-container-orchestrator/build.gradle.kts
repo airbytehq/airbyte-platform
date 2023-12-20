@@ -43,6 +43,7 @@ dependencies {
 
     implementation(platform(libs.micronaut.bom))
     implementation(libs.bundles.micronaut)
+    implementation(libs.bundles.micronaut.metrics)
     implementation(libs.guava)
     implementation(libs.s3)
     implementation(libs.aws.java.sdk.s3)

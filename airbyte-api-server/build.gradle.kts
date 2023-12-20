@@ -10,8 +10,6 @@ plugins {
 }
 
 dependencies {
-    implementation("org.apache.logging.log4j:log4j-slf4j2-impl")
-
     kapt(platform(libs.micronaut.bom))
     kapt(libs.bundles.micronaut.annotation.processor)
 
@@ -27,11 +25,13 @@ dependencies {
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-config:config-models"))
     implementation("com.cronutils:cron-utils:9.2.1")
+    implementation("org.apache.logging.log4j:log4j-slf4j2-impl")
     implementation(libs.bundles.jackson)
 
     implementation(platform(libs.micronaut.bom))
     implementation(libs.bundles.micronaut)
     implementation(libs.bundles.micronaut.data.jdbc)
+    implementation(libs.bundles.micronaut.metrics)
     implementation(libs.micronaut.jaxrs.server)
     implementation(libs.micronaut.problem.json)
     implementation(libs.micronaut.security)

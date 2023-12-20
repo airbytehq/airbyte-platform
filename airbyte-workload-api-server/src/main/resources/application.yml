@@ -9,7 +9,7 @@ micronaut:
       type: fixed
       n-threads: ${WORKLOAD_TASK_EXECUTOR_THREADS:50}
   metrics:
-    enabled: true
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
     binders:
       netty:
         bytebuf-allocators:
@@ -20,11 +20,11 @@ micronaut:
           enabled: true
     export:
       statsd:
-        enabled: true
-        flavor: ${MICROMENTER_METRICS_STATSD_FLAVOR:datadog}
-        step: PT10S
-        host: ${DD_AGENT_HOST:airbyte-datadog}
-        port: ${DD_DOGSTATSD_PORT:8125}
+        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        host: ${STATSD_HOST:}
+        port: ${STATSD_PORT:}
   security:
     authentication-provider-strategy: ALL
     enabled: true
@@ -72,7 +72,7 @@ endpoints:
     enabled: true
     sensitive: false
   metrics:
-    enabled: true
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
     sensitive: false
   refresh:
     enabled: false

@@ -10,6 +10,15 @@ micronaut:
     stream-status:
       type: fixed
       n-threads: ${STREAM_STATUS_EXECUTOR_THREADS:1}
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    export:
+      statsd:
+        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        host: ${STATSD_HOST:}
+        port: ${STATSD_PORT:}
   security:
     enabled: false
 

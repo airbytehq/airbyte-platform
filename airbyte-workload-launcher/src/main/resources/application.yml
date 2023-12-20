@@ -8,14 +8,14 @@ micronaut:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:false}
     idle-timeout: ${HTTP_IDLE_TIMEOUT:10m}
   metrics:
-    enabled: true
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
     export:
       statsd:
-        enabled: true
-        flavor: ${MICROMENTER_METRICS_STATSD_FLAVOR:datadog}
-        step: PT30S
-        host: ${DD_AGENT_HOST:airbyte-datadog}
-        port: ${DD_DOGSTATSD_PORT:8125}
+        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        host: ${STATSD_HOST:}
+        port: ${STATSD_PORT:}
 
 airbyte:
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
@@ -175,6 +175,9 @@ endpoints:
   loggers:
     enabled: true
     sensitive: false
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    sensitive: false
   refresh:
     enabled: false
     sensitive: true
@@ -184,9 +187,6 @@ endpoints:
   threaddump:
     enabled: true
     sensitive: true
-  metrics:
-    enabled: true
-    sensitive: false
 
 temporal:
   cloud:

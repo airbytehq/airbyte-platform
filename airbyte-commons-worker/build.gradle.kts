@@ -19,12 +19,13 @@ dependencies {
 
     implementation(platform(libs.micronaut.bom))
     implementation(libs.bundles.micronaut)
+    implementation(libs.bundles.micronaut.metrics)
     implementation(libs.micronaut.http)
     implementation(libs.kotlin.logging)
     implementation(libs.micronaut.kotlin.extensions)
 
     implementation(libs.bundles.kubernetes.client)
-    implementation("com.auth0:java-jwt:3.19.2")
+    implementation(libs.java.jwt)
     implementation(libs.gson)
     implementation(libs.guava)
     implementation(libs.temporal.sdk) {

@@ -1,20 +1,20 @@
-/*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
- */
-
-package io.airbyte.workload.metrics
+package io.airbyte.workers.config
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.statsd.StatsdMeterRegistry
 import io.micronaut.configuration.metrics.aggregator.MeterRegistryConfigurer
 import io.micronaut.configuration.metrics.annotation.RequiresMetrics
-import io.micronaut.context.annotation.Replaces
 import io.micronaut.core.annotation.Order
 import io.micronaut.core.order.Ordered
 import io.micronaut.core.util.StringUtils
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 
 private val logger = KotlinLogging.logger {}
+
+// TODO Temporarily copy this from the workload-launcher.  Ultimately, this will move to airbyte-metrics/metrics-lib
+//      and would provide a mechanism to override/add additional tags and/or define the tags that will be included
+//      in metrics
 
 /**
  * Custom Micronaut {@link MeterRegistryConfigurer} used to ensure that a common set of tags are
@@ -24,8 +24,8 @@ private val logger = KotlinLogging.logger {}
  */
 @Order(Int.MAX_VALUE)
 @Singleton
+@Named("statsDRegistryConfigurer")
 @RequiresMetrics
-@Replaces(named = "statsDRegistryConfigurer")
 class StatsDRegistryConfigurer : MeterRegistryConfigurer<StatsdMeterRegistry>, Ordered {
   override fun configure(meterRegistry: StatsdMeterRegistry?) {
         /*
@@ -74,14 +74,5 @@ class StatsDRegistryConfigurer : MeterRegistryConfigurer<StatsdMeterRegistry>, O
     const val DATA_DOG_ENVIRONMENT_TAG = "DD_ENV"
     const val DATA_DOG_SERVICE_TAG = "DD_SERVICE"
     const val DATA_DOG_VERSION_TAG = "DD_VERSION"
-    const val DATA_PLANE_ID_TAG = "data_plane_id"
-    const val GEOGRAPHY_TAG = "geography"
-    const val MUTEX_KEY_TAG = "mutex_key"
-    const val QUEUE_NAME_TAG = "queue_name"
-    const val WORKLOAD_ID_TAG = "workload_id"
-    const val WORKLOAD_TYPE_TAG = "workload_type"
-    const val WORKLOAD_CANCEL_REASON_TAG = "cancel_reason"
-    const val WORKLOAD_CANCEL_SOURCE_TAG = "cancel_source"
-    const val WORKLOAD_PUBLISHER_OPERATION_NAME = "workload_publisher"
   }
 }

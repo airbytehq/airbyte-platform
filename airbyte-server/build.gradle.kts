@@ -31,6 +31,7 @@ dependencies {
     implementation(platform(libs.micronaut.bom))
     implementation(libs.bundles.micronaut)
     implementation(libs.bundles.micronaut.data.jdbc)
+    implementation(libs.bundles.micronaut.metrics)
     implementation(libs.micronaut.jaxrs.server)
     implementation(libs.micronaut.security)
     implementation(libs.flyway.core)

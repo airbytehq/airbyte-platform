@@ -1,6 +1,15 @@
 micronaut:
   application:
     name: airbyte-cron
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    export:
+      statsd:
+        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        host: ${STATSD_HOST:}
+        port: ${STATSD_PORT:}
   caches:
     remote-definitions-provider:
       expire-after-write: 15s
@@ -109,6 +118,9 @@ endpoints:
   loggers:
     enabled: true
     sensitive: true
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    sensitive: false
   refresh:
     enabled: false
     sensitive: true

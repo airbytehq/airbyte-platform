@@ -10,9 +10,13 @@ plugins {
 
 dependencies {
     annotationProcessor(libs.lombok)
-    implementation(libs.lombok)
-    implementation(libs.commons.io)
+    annotationProcessor(platform(libs.micronaut.bom))
+    annotationProcessor(libs.bundles.micronaut.annotation.processor)
+    kapt(libs.bundles.micronaut.annotation.processor)
 
+    implementation(platform(libs.micronaut.bom))
+    implementation(libs.bundles.micronaut)
+    implementation(libs.bundles.micronaut.metrics)
     implementation(libs.bundles.kubernetes.client)
     implementation(libs.bundles.temporal)
     implementation(libs.bundles.datadog)
@@ -22,6 +26,8 @@ dependencies {
     implementation(libs.kotlin.logging)
     implementation(libs.okhttp)
     implementation(libs.sentry.java)
+    implementation(libs.lombok)
+    implementation(libs.commons.io)
 
     implementation(project(":airbyte-api"))
     implementation(project(":airbyte-analytics"))
@@ -39,12 +45,6 @@ dependencies {
     implementation(project(":airbyte-metrics:metrics-lib"))
     implementation(project(":airbyte-persistence:job-persistence"))
 
-    annotationProcessor(platform(libs.micronaut.bom))
-    annotationProcessor(libs.bundles.micronaut.annotation.processor)
-    kapt(libs.bundles.micronaut.annotation.processor)
-
-    implementation(platform(libs.micronaut.bom))
-    implementation(libs.bundles.micronaut)
 
     testImplementation(libs.bundles.junit)
     testImplementation(libs.mockk)
