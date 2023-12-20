@@ -1,0 +1,20 @@
+apiVersion: v1
+entries:
+  worker:
+  - apiVersion: v2
+    appVersion: dev
+    created: "2023-11-28T00:46:00.644774+01:00"
+    dependencies:
+    - name: common
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - bitnami-common
+      version: 1.x.x
+    description: Helm chart to deploy airbyte-worker
+    digest: e229f66b86933fad9cc0217edd757743fa85d566a458d7bcf24584635f039ff4
+    name: worker
+    type: application
+    urls:
+    - https://core-ops-charts.storage.googleapis.com/airbyte-worker/worker-0.50.2.tgz
+    version: 0.50.2
+generated: "2023-11-28T00:46:00.642993+01:00"

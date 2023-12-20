@@ -51,7 +51,7 @@ dependencies:
     version: 0.50.2
   - condition: worker.enabled
     name: worker
-    repository: https://airbytehq.github.io/helm-charts/
+    repository: https://core-ops-charts.storage.googleapis.com/airbyte-worker
     version: 0.50.2
   - condition: pod-sweeper.enabled
     name: pod-sweeper
@@ -79,9 +79,9 @@ dependencies:
     version: 0.50.2
   - condition: workload-launcher.enabled
     name: workload-launcher
-    repository: https://airbytehq.github.io/helm-charts/
+    repository: https://core-ops-charts.storage.googleapis.com/airbyte-workload-launcher
     version: 0.50.2
   - condition: workload-api.enabled
     name: workload-api
-    repository: https://airbytehq.github.io/helm-charts/
+    repository: https://core-ops-charts.storage.googleapis.com/airbyte-workload-api
     version: 0.50.2

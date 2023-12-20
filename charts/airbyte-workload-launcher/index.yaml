@@ -1,0 +1,48 @@
+apiVersion: v1
+entries:
+  common:
+  - annotations:
+      category: Infrastructure
+    apiVersion: v2
+    appVersion: 1.17.1
+    created: "2023-11-28T01:04:30.131034+01:00"
+    description: A Library Helm Chart for grouping common logic between bitnami charts.
+      This chart is not deployable by itself.
+    digest: 2a623d42475796af0ff0d18bbfa3b76ead1ccd7efab8280ea079b6a53f5ac627
+    home: https://github.com/bitnami/charts/tree/master/bitnami/common
+    icon: https://bitnami.com/downloads/logos/bitnami-mark.png
+    keywords:
+    - common
+    - helper
+    - template
+    - function
+    - bitnami
+    maintainers:
+    - name: Bitnami
+      url: https://github.com/bitnami/charts
+    name: common
+    sources:
+    - https://github.com/bitnami/charts
+    - https://www.bitnami.com/
+    type: library
+    urls:
+    - https://core-ops-charts.storage.googleapis.com/airbyte-workload-launcher/charts/common-1.17.1.tgz
+    version: 1.17.1
+  workload-launcher:
+  - apiVersion: v2
+    appVersion: dev
+    created: "2023-11-28T01:04:30.130597+01:00"
+    dependencies:
+    - name: common
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - bitnami-common
+      version: 1.x.x
+    description: Helm chart to deploy airbyte-workload-launcher
+    digest: dfec8392c8fdb77ea8fcaa9706bd99cdf86ad97c8146e63c38fd16a83495d5bc
+    name: workload-launcher
+    type: application
+    urls:
+    - https://core-ops-charts.storage.googleapis.com/airbyte-workload-launcher/workload-launcher-0.50.2.tgz
+    version: 0.50.2
+generated: "2023-11-28T01:04:30.128486+01:00"

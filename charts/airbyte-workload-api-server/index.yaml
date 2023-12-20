@@ -1,0 +1,48 @@
+apiVersion: v1
+entries:
+  common:
+  - annotations:
+      category: Infrastructure
+    apiVersion: v2
+    appVersion: 1.17.1
+    created: "2023-11-28T01:13:54.839209+01:00"
+    description: A Library Helm Chart for grouping common logic between bitnami charts.
+      This chart is not deployable by itself.
+    digest: 2a623d42475796af0ff0d18bbfa3b76ead1ccd7efab8280ea079b6a53f5ac627
+    home: https://github.com/bitnami/charts/tree/master/bitnami/common
+    icon: https://bitnami.com/downloads/logos/bitnami-mark.png
+    keywords:
+    - common
+    - helper
+    - template
+    - function
+    - bitnami
+    maintainers:
+    - name: Bitnami
+      url: https://github.com/bitnami/charts
+    name: common
+    sources:
+    - https://github.com/bitnami/charts
+    - https://www.bitnami.com/
+    type: library
+    urls:
+    - https://core-ops-charts.storage.googleapis.com/airbyte-workload-api/charts/common-1.17.1.tgz
+    version: 1.17.1
+  workload-api:
+  - apiVersion: v2
+    appVersion: dev
+    created: "2023-11-28T01:13:54.838446+01:00"
+    dependencies:
+    - name: common
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - bitnami-common
+      version: 1.x.x
+    description: Helm chart to deploy the workload-api service
+    digest: 461432c40528e865ac85b16475fece58e79de7b68f2fe5f0e43be80519f4bdd5
+    name: workload-api
+    type: application
+    urls:
+    - https://core-ops-charts.storage.googleapis.com/airbyte-workload-api/workload-api-0.50.2.tgz
+    version: 0.50.2
+generated: "2023-11-28T01:13:54.836317+01:00"

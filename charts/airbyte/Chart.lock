@@ -18,8 +18,8 @@ dependencies:
   repository: https://airbytehq.github.io/helm-charts/
   version: 0.50.2
 - name: worker
-  repository: https://airbytehq.github.io/helm-charts/
-  version: 0.50.2
+  repository: https://core-ops-charts.storage.googleapis.com/airbyte-worker
+  version: 0.49.6
 - name: pod-sweeper
   repository: https://airbytehq.github.io/helm-charts/
   version: 0.50.2
@@ -38,5 +38,11 @@ dependencies:
 - name: keycloak-setup
   repository: https://airbytehq.github.io/helm-charts/
   version: 0.50.2
-digest: sha256:2bde5f6938e63e5e5d3e219beb21e0cfb745d5d026f3c0ecf799e9941d604cdd
-generated: "2023-11-17T19:50:35.272998636Z"
+- name: workload-launcher
+  repository: https://core-ops-charts.storage.googleapis.com/airbyte-workload-launcher
+  version: 0.50.2
+- name: workload-api
+  repository: https://core-ops-charts.storage.googleapis.com/airbyte-workload-api
+  version: 0.50.2
+digest: sha256:db6cb5f7d55ba6fce9735c1926b30d543ad4193deb3b6722574c75ba78b9bedb
+generated: "2023-11-28T01:16:09.148304+01:00"

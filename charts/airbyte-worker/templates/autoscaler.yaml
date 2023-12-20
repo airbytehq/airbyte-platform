@@ -1,0 +1,26 @@
+{{- if .Values.autoscaler  -}}
+  {{- if .Values.autoscaler.enabled -}}
+{{- if semverCompare ">=1.23-0" $.Capabilities.KubeVersion.GitVersion -}}
+apiVersion: autoscaling/v2
+{{- else -}}
+apiVersion: autoscaling/v2beta2
+{{- end }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "common.names.fullname" . }}-autoscaler
+  namespace: {{ .Release.Namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "common.names.fullname" . }}
+  minReplicas: {{ .Values.autoscaler.minReplicas | default 1 }}
+  maxReplicas: {{ .Values.autoscaler.maxReplicas | default 1 }}
+  {{- if .Values.autoscaler.extra }}{{ toYaml .Values.autoscaler.extra | trim | nindent 2 }}{{ end }}
+  {{- if .Values.autoscaler.metrics }}
+  metrics:
+  {{- toYaml .Values.autoscaler.metrics | nindent 4 }}
+  {{- end }}
+---
+  {{- end }}
+{{- end }}
