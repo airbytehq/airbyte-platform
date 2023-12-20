@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Optional;
-import java.util.UUID;
 
 public class CheckJobOrchestrator implements JobOrchestrator<CheckConnectionInput> {
 
@@ -59,7 +58,8 @@ public class CheckJobOrchestrator implements JobOrchestrator<CheckConnectionInpu
     // Compare this with CheckConnectionActivityImpl
     final StandardCheckConnectionInput connectionConfiguration = input.getConnectionConfiguration();
     final String workloadId =
-        data.workloadIdGenerator().generateCheckWorkloadId(connectionConfiguration.getActorId(), UUID.fromString(input.getJobRunConfig().getJobId()));
+        data.workloadIdGenerator().generateCheckWorkloadId(connectionConfiguration.getActorId(), input.getJobRunConfig().getJobId(),
+            Math.toIntExact(input.getJobRunConfig().getAttemptId()));
     final Path jobRoot = TemporalUtils.getJobRoot(data.configs().getWorkspaceRoot(), workloadId);
 
     try {

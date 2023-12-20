@@ -6,19 +6,25 @@ package io.airbyte.workers.workload
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
+import java.util.stream.Stream
 
 class WorkloadIdGeneratorTest {
   private val generator = WorkloadIdGenerator()
 
-  @Test
-  internal fun `test that the correct workload ID is generated for check`() {
-    val actorId = UUID.randomUUID()
-    val jobId = UUID.randomUUID()
-
-    val generatedWorkloadId = generator.generateCheckWorkloadId(actorId, jobId)
+  @ParameterizedTest
+  @MethodSource("checkWorkloadIdArgsMatrix")
+  internal fun `test that the correct workload ID is generated for check`(
+    actorId: UUID,
+    jobId: String,
+    attemptNumber: Int,
+  ) {
+    val generatedWorkloadId = generator.generateCheckWorkloadId(actorId, jobId, attemptNumber)
     assertEquals(
-      "${actorId}_${jobId}_check",
+      "${actorId}_${jobId}_${attemptNumber}_check",
       generatedWorkloadId,
     )
   }
@@ -58,5 +64,17 @@ class WorkloadIdGeneratorTest {
       "${connectionId}_${jobId}_${attemptNumber}_sync",
       generatedWorkloadId,
     )
+  }
+
+  companion object {
+    @JvmStatic
+    private fun checkWorkloadIdArgsMatrix(): Stream<Arguments> {
+      return Stream.of(
+        Arguments.of(UUID.randomUUID(), 12412431L.toString(), 1),
+        Arguments.of(UUID.randomUUID(), "89127421", 2),
+        Arguments.of(UUID.randomUUID(), UUID.randomUUID().toString(), 0),
+        Arguments.of(UUID.randomUUID(), "any string really", 0),
+      )
+    }
   }
 }

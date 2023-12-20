@@ -18,9 +18,10 @@ import java.util.UUID
 class WorkloadIdGenerator {
   fun generateCheckWorkloadId(
     actorId: UUID,
-    differentiator: UUID,
+    jobId: String,
+    attemptNumber: Int,
   ): String {
-    return "${actorId}_${differentiator}_check"
+    return "${actorId}_${jobId}_${attemptNumber}_check"
   }
 
   fun generateDiscoverWorkloadId(
