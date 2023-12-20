@@ -20,6 +20,7 @@ import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfigWithMetadata;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.helpers.ScheduleHelpers;
+import io.airbyte.data.services.impls.jooq.DbConverter;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
@@ -291,9 +292,9 @@ public class StandardSyncPersistence {
   static boolean getNotificationEnabled(final StandardSync standardSync, final NotificationType notificationType) {
     switch (notificationType) {
       case webhook:
-        return standardSync.getNotifySchemaChanges() == null ? false : standardSync.getNotifySchemaChanges();
+        return standardSync.getNotifySchemaChanges() != null && standardSync.getNotifySchemaChanges();
       case email:
-        return standardSync.getNotifySchemaChangesByEmail() == null ? false : standardSync.getNotifySchemaChangesByEmail();
+        return standardSync.getNotifySchemaChangesByEmail() != null && standardSync.getNotifySchemaChangesByEmail();
       default:
         throw new IllegalStateException("Notification type unsupported");
     }

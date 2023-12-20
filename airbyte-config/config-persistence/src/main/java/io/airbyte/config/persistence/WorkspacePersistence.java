@@ -11,6 +11,7 @@ import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
+import io.airbyte.data.services.impls.jooq.DbConverter;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import java.io.IOException;
@@ -40,7 +41,7 @@ public class WorkspacePersistence {
   public List<StandardWorkspace> listWorkspacesByInstanceAdminUserPaginated(final boolean includeDeleted,
                                                                             final int pageSize,
                                                                             final int rowOffset,
-                                                                            Optional<String> keyword)
+                                                                            final Optional<String> keyword)
       throws IOException {
     return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
         .from(WORKSPACE)
@@ -59,7 +60,7 @@ public class WorkspacePersistence {
    * List all workspaces as user has instance_admin role. Returning result ordered by workspace name.
    * Supports keyword search.
    */
-  public List<StandardWorkspace> listWorkspacesByInstanceAdminUser(final boolean includeDeleted, Optional<String> keyword)
+  public List<StandardWorkspace> listWorkspacesByInstanceAdminUser(final boolean includeDeleted, final Optional<String> keyword)
       throws IOException {
     return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
         .from(WORKSPACE)
@@ -76,7 +77,8 @@ public class WorkspacePersistence {
    * List all workspaces owned by org id, returning result ordered by workspace name. Supports
    * pagination and keyword search.
    */
-  public List<StandardWorkspace> listWorkspacesByOrganizationIdPaginated(final ResourcesByOrganizationQueryPaginated query, Optional<String> keyword)
+  public List<StandardWorkspace> listWorkspacesByOrganizationIdPaginated(final ResourcesByOrganizationQueryPaginated query,
+                                                                         final Optional<String> keyword)
       throws IOException {
     return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
         .from(WORKSPACE)
@@ -96,7 +98,9 @@ public class WorkspacePersistence {
    * List all workspaces owned by org id, returning result ordered by workspace name. Supports keyword
    * search.
    */
-  public List<StandardWorkspace> listWorkspacesByOrganizationId(UUID organizationId, boolean includeDeleted, Optional<String> keyword)
+  public List<StandardWorkspace> listWorkspacesByOrganizationId(final UUID organizationId,
+                                                                final boolean includeDeleted,
+                                                                final Optional<String> keyword)
       throws IOException {
     return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
         .from(WORKSPACE)
@@ -113,7 +117,7 @@ public class WorkspacePersistence {
   /**
    * Get search keyword with flexible matching.
    */
-  private String getSearchKeyword(Optional<String> keyword) {
+  private String getSearchKeyword(final Optional<String> keyword) {
     if (keyword.isPresent()) {
       return "%" + keyword.get().toLowerCase() + "%";
     } else {
@@ -125,7 +129,7 @@ public class WorkspacePersistence {
    * List all active workspaces readable by user id, returning result ordered by workspace name.
    * Supports keyword search.
    */
-  public List<StandardWorkspace> listActiveWorkspacesByUserId(UUID userId, Optional<String> keyword)
+  public List<StandardWorkspace> listActiveWorkspacesByUserId(final UUID userId, final Optional<String> keyword)
       throws IOException {
     final String searchKeyword = getSearchKeyword(keyword);
     return database
@@ -143,7 +147,7 @@ public class WorkspacePersistence {
    * List all workspaces readable by user id, returning result ordered by workspace name. Supports
    * pagination and keyword search.
    */
-  public List<StandardWorkspace> listWorkspacesByUserIdPaginated(final ResourcesByUserQueryPaginated query, Optional<String> keyword)
+  public List<StandardWorkspace> listWorkspacesByUserIdPaginated(final ResourcesByUserQueryPaginated query, final Optional<String> keyword)
       throws IOException {
     final String searchKeyword = getSearchKeyword(keyword);
     final String workspaceQuery = PermissionPersistenceHelper.LIST_ACTIVE_WORKSPACES_BY_USER_ID_AND_PERMISSION_TYPES_QUERY
