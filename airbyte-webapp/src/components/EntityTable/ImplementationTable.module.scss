@@ -1,3 +1,18 @@
+@use "scss/variables";
+
 .thEntityName {
-  width: 40%;
+  width: 35%;
+}
+
+.thConnectorName {
+  width: 35%;
+}
+
+.thConnectEntities {
+  width: 20%;
+}
+
+.cellContent {
+  padding: variables.$spacing-md variables.$spacing-lg;
+  display: block;
 }

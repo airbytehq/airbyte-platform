@@ -24,7 +24,6 @@ export interface TableProps<T> {
   columns: TableColumns<T>;
   data: T[];
   variant?: "default" | "light" | "white" | "inBlock";
-  onClickRow?: (data: T) => void;
   getRowCanExpand?: (data: Row<T>) => boolean;
   getIsRowExpanded?: (data: Row<T>) => boolean;
   expandedRow?: (props: { row: Row<T> }) => React.ReactElement;
@@ -52,7 +51,6 @@ export const Table = <T,>({
   columns,
   data,
   variant = "default",
-  onClickRow,
   getRowCanExpand,
   getIsRowExpanded,
   expandedRow,
@@ -99,15 +97,8 @@ export const Table = <T,>({
     return (
       <>
         <tr
-          className={classNames(
-            styles.tr,
-            {
-              [styles["tr--clickable"]]: !!onClickRow,
-            },
-            getRowClassName?.(row.original)
-          )}
+          className={classNames(styles.tr, getRowClassName?.(row.original))}
           data-testid={`table-row-${row.id}`}
-          onClick={() => onClickRow?.(row.original)}
           {...(virtualized && { ...restRowProps })}
         >
           {row.getVisibleCells().map((cell) => {
@@ -116,6 +107,7 @@ export const Table = <T,>({
               <td
                 className={classNames(styles.td, meta?.tdClassName, {
                   [styles["td--responsive"]]: meta?.responsive,
+                  [styles["td--noPadding"]]: meta?.noPadding,
                 })}
                 key={`table-cell-${row.id}-${cell.id}`}
                 data-testid={`table-cell-${row.id}-${cell.id}`}

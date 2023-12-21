@@ -63,6 +63,6 @@ export const clickOnCellInTable = (tableSelector: string, columnName: string, co
       return cy.wrap(value);
     })
     .then((columnIndex) => {
-      cy.contains("tbody tr", connectName).find("td").eq(columnIndex).click();
+      cy.contains("tbody tr", connectName).find("td").eq(columnIndex).find("a").click();
     });
 };

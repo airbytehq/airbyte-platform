@@ -9,7 +9,6 @@ export enum RoutePaths {
   Destination = "destination",
   Source = "source",
   Settings = "settings",
-  Connection = "connection",
   ConnectorBuilder = "connector-builder",
 }
 
