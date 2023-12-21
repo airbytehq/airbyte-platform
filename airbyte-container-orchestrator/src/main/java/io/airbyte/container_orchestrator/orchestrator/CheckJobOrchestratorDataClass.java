@@ -10,6 +10,7 @@ import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.Configs;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.workload.JobOutputDocStore;
@@ -29,6 +30,7 @@ public record CheckJobOrchestratorDataClass(
                                             GsonPksExtractor gsonPksExtractor,
                                             AirbyteMessageSerDeProvider serDeProvider,
                                             AirbyteProtocolVersionedMigratorFactory migratorFactory,
-                                            JobOutputDocStore jobOutputDocStore) {
+                                            JobOutputDocStore jobOutputDocStore,
+                                            FeatureFlagClient featureFlagClient) {
 
 }
