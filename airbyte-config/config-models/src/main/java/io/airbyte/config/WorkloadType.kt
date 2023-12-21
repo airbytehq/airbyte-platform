@@ -9,7 +9,7 @@ enum class WorkloadType(private val value: String) {
   SYNC("sync"),
 
   @JsonProperty("check")
-  CHECK("CHECK"),
+  CHECK("check"),
 
   @JsonProperty("discover")
   DISCOVER("discover"),

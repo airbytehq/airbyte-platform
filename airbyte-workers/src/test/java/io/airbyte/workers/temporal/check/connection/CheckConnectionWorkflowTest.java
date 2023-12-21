@@ -16,11 +16,9 @@ import io.temporal.testing.WorkflowReplayer;
 import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
-@Disabled("Flaky in CI")
 class CheckConnectionWorkflowTest {
 
   private ActivityOptions activityOptions;
