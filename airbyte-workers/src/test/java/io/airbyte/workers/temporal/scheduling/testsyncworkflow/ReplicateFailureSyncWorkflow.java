@@ -27,7 +27,8 @@ public class ReplicateFailureSyncWorkflow implements SyncWorkflow {
                                 final StandardSyncInput syncInput,
                                 final UUID connectionId) {
 
-    throw new ActivityFailure(1L, 1L, ACTIVITY_TYPE_REPLICATE, "someId", RetryState.RETRY_STATE_UNSPECIFIED, "someIdentity", CAUSE);
+    throw new ActivityFailure("replicate failed", 1L, 1L, ACTIVITY_TYPE_REPLICATE, "someId", RetryState.RETRY_STATE_UNSPECIFIED, "someIdentity",
+        CAUSE);
   }
 
 }

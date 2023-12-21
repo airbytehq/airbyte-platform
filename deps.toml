@@ -42,8 +42,8 @@ segment = "2.1.1"
 sentry = "6.14.0"
 slf4j = "1.7.36"
 swagger = "1.6.2"
+temporal = "1.22.3"
 v3-swagger = "2.2.16"
-temporal = "1.17.0"
 
 [libraries]
 airbyte-protocol = { module = "io.airbyte.airbyte-protocol:protocol-models", version.ref = "airbyte-protocol" }

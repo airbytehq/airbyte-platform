@@ -214,7 +214,7 @@ class FailureHelperTest {
   @Test
   void testExceptionChainContains() {
     final Throwable t =
-        new ActivityFailure(1L, 2L, "act", "actId", RetryState.RETRY_STATE_NON_RETRYABLE_FAILURE, "id",
+        new ActivityFailure("", 1L, 2L, "act", "actId", RetryState.RETRY_STATE_NON_RETRYABLE_FAILURE, "id",
             new RuntimeException("oops",
                 new SizeLimitException("oops too big")));
     assertTrue(FailureHelper.exceptionChainContains(t, ActivityFailure.class));
