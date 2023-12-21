@@ -22,7 +22,6 @@ public final class Metadata {
   public static final String IMAGE_NAME = "image_name";
   public static final String IMAGE_VERSION = "image_version";
   public static final String ACTOR_TYPE = "actor_type";
-  public static final String ACTOR_ID = "actor_type";
 
   /**
    * These are more readable forms of {@link io.airbyte.config.JobTypeResourceLimit.JobType}.
