@@ -28,7 +28,6 @@ import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.Optional;
 
 public class CheckJobOrchestrator implements JobOrchestrator<CheckConnectionInput> {
@@ -64,7 +63,8 @@ public class CheckJobOrchestrator implements JobOrchestrator<CheckConnectionInpu
 
     try {
       final ConnectorJobOutput output =
-          worker(input.getLauncherConfig(), connectionConfiguration.getResourceRequirements()).run(connectionConfiguration, jobRoot);
+          worker(input.getLauncherConfig(), connectionConfiguration.getResourceRequirements()).run(connectionConfiguration,
+              jobRoot);
       data.jobOutputDocStore().write(workloadId, output);
       succeedWorkload(workloadId);
       return Optional.of(Jsons.serialize(output));
@@ -102,8 +102,8 @@ public class CheckJobOrchestrator implements JobOrchestrator<CheckConnectionInpu
         launcherConfig.getAllowedHosts(),
         launcherConfig.getIsCustomConnector(),
         data.featureFlags(),
-        Collections.emptyMap(),
-        Collections.emptyMap());
+        launcherConfig.getAdditionalEnvironmentVariables(),
+        launcherConfig.getAdditionalLabels());
 
     final ConnectorConfigUpdater connectorConfigUpdater = new ConnectorConfigUpdater(
         data.airbyteApiClient().getSourceApi(),
