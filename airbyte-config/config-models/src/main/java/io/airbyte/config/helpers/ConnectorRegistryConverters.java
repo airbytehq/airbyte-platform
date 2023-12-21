@@ -8,6 +8,7 @@ import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.BreakingChangeScope;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -149,7 +150,8 @@ public class ConnectorRegistryConverters {
             .withVersion(new Version(entry.getKey()))
             .withMigrationDocumentationUrl(entry.getValue().getMigrationDocumentationUrl())
             .withUpgradeDeadline(entry.getValue().getUpgradeDeadline())
-            .withMessage(entry.getValue().getMessage()))
+            .withMessage(entry.getValue().getMessage())
+            .withScopedImpact(getValidatedScopedImpact(entry.getValue().getScopedImpact())))
         .collect(Collectors.toList());
   }
 
@@ -188,6 +190,17 @@ public class ConnectorRegistryConverters {
     } catch (final IllegalArgumentException e) {
       throw new IllegalArgumentException("Invalid Semver version for docker image tag: " + dockerImageTag, e);
     }
+  }
+
+  /**
+   * jsonschema2Pojo does not support oneOf and const Therefore, the type checking for
+   * BreakingChangeScope cannot take more specific subtypes. However, we want to validate that each
+   * scope can be correctly resolved to an internal type that we'll use for processing later (e.g.
+   * StreamBreakingChangeScope), So we validate that here at runtime instead.
+   */
+  private static List<BreakingChangeScope> getValidatedScopedImpact(final List<BreakingChangeScope> scopedImpact) {
+    scopedImpact.forEach(BreakingChangeScopeFactory::validateBreakingChangeScope);
+    return scopedImpact;
   }
 
 }

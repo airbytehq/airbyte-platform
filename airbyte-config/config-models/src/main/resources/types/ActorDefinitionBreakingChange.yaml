@@ -28,3 +28,9 @@ properties:
   message:
     description: message describing the breaking change, in markdown
     type: string
+  scopedImpact:
+    description: List of scopes that are impacted by the breaking change. If not specified, the breaking change cannot be scoped to reduce impact via the supported scope types.
+    type: array
+    minItems: 1
+    items:
+      $ref: BreakingChangeScope.yaml

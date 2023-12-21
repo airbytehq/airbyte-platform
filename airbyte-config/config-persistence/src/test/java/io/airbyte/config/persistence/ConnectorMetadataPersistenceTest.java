@@ -17,6 +17,8 @@ import static org.mockito.Mockito.mock;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.BreakingChangeScope;
+import io.airbyte.config.BreakingChangeScope.ScopeType;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
 import io.airbyte.config.SourceConnection;
@@ -139,8 +141,11 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     final StandardSourceDefinition sourceDefinition2 = sourceDefinition.withName("updated name");
     final ActorDefinitionVersion actorDefinitionVersion2 =
         createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(UPGRADE_IMAGE_TAG);
+    final List<BreakingChangeScope> scopedImpact =
+        List.of(new BreakingChangeScope().withScopeType(ScopeType.STREAM).withImpactedScopes(List.of("stream_a", "stream_b")));
     final List<ActorDefinitionBreakingChange> breakingChanges =
-        List.of(MockData.actorDefinitionBreakingChange(UPGRADE_IMAGE_TAG).withActorDefinitionId(sourceDefinition2.getSourceDefinitionId()));
+        List.of(MockData.actorDefinitionBreakingChange(UPGRADE_IMAGE_TAG).withActorDefinitionId(sourceDefinition2.getSourceDefinitionId())
+            .withScopedImpact(scopedImpact));
     configRepository.writeConnectorMetadata(sourceDefinition2, actorDefinitionVersion2, breakingChanges);
 
     sourceDefinitionFromDB = configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId());
@@ -183,8 +188,12 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     final StandardDestinationDefinition destinationDefinition2 = destinationDefinition.withName("updated name");
     final ActorDefinitionVersion actorDefinitionVersion2 =
         createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId()).withDockerImageTag(UPGRADE_IMAGE_TAG);
+
+    final List<BreakingChangeScope> scopedImpact =
+        List.of(new BreakingChangeScope().withScopeType(ScopeType.STREAM).withImpactedScopes(List.of("stream_a", "stream_b")));
     final List<ActorDefinitionBreakingChange> breakingChanges =
-        List.of(MockData.actorDefinitionBreakingChange(UPGRADE_IMAGE_TAG).withActorDefinitionId(destinationDefinition2.getDestinationDefinitionId()));
+        List.of(MockData.actorDefinitionBreakingChange(UPGRADE_IMAGE_TAG).withActorDefinitionId(destinationDefinition2.getDestinationDefinitionId())
+            .withScopedImpact(scopedImpact));
     configRepository.writeConnectorMetadata(destinationDefinition2, actorDefinitionVersion2, breakingChanges);
 
     destinationDefinitionFromDB = configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId());

@@ -12,6 +12,8 @@ import static org.mockito.Mockito.spy;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.BreakingChangeScope;
+import io.airbyte.config.BreakingChangeScope.ScopeType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SupportLevel;
@@ -53,12 +55,17 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
       .withName("Test Destination")
       .withDestinationDefinitionId(ACTOR_DEFINITION_ID_2);
 
+  private static final BreakingChangeScope BREAKING_CHANGE_SCOPE = new BreakingChangeScope()
+      .withScopeType(ScopeType.STREAM)
+      .withImpactedScopes(List.of("stream1", "stream2"));
+
   private static final ActorDefinitionBreakingChange BREAKING_CHANGE = new ActorDefinitionBreakingChange()
       .withActorDefinitionId(ACTOR_DEFINITION_ID_1)
       .withVersion(new Version("1.0.0"))
       .withMessage("This is an older breaking change")
       .withMigrationDocumentationUrl("https://docs.airbyte.com/migration#1.0.0")
-      .withUpgradeDeadline("2025-01-21");
+      .withUpgradeDeadline("2025-01-21")
+      .withScopedImpact(List.of(BREAKING_CHANGE_SCOPE));
   private static final ActorDefinitionBreakingChange BREAKING_CHANGE_2 = new ActorDefinitionBreakingChange()
       .withActorDefinitionId(ACTOR_DEFINITION_ID_1)
       .withVersion(new Version("2.0.0"))
@@ -166,8 +173,9 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
         .withActorDefinitionId(BREAKING_CHANGE.getActorDefinitionId())
         .withVersion(BREAKING_CHANGE.getVersion())
         .withMessage("Updated message")
-        .withUpgradeDeadline("2025-01-01")
-        .withMigrationDocumentationUrl(BREAKING_CHANGE.getMigrationDocumentationUrl());
+        .withUpgradeDeadline("2025-12-12") // Updated date
+        .withMigrationDocumentationUrl("https://docs.airbyte.com/migration#updated-miration-url")
+        .withScopedImpact(List.of(new BreakingChangeScope().withScopeType(ScopeType.STREAM).withImpactedScopes(List.of("stream3"))));
     configRepository.writeConnectorMetadata(SOURCE_DEFINITION, createActorDefVersion(SOURCE_DEFINITION.getSourceDefinitionId()),
         List.of(updatedBreakingChange, BREAKING_CHANGE_2, BREAKING_CHANGE_3, BREAKING_CHANGE_4));
 

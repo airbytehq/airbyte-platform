@@ -22,6 +22,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.SECRET_PERSIS
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
@@ -35,6 +36,7 @@ import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorDefinitionVersion.SupportState;
 import io.airbyte.config.AllowedHosts;
+import io.airbyte.config.BreakingChangeScope;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
@@ -456,12 +458,18 @@ public class DbConverter {
    * @return actor definition breaking change
    */
   public static ActorDefinitionBreakingChange buildActorDefinitionBreakingChange(final Record record) {
+    final List<BreakingChangeScope> scopedImpact = new ArrayList<>();
+    if (record.get(ACTOR_DEFINITION_BREAKING_CHANGE.SCOPED_IMPACT) != null) {
+      scopedImpact.addAll(
+          Jsons.deserialize(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.SCOPED_IMPACT).data(), new TypeReference<List<BreakingChangeScope>>() {}));
+    }
     return new ActorDefinitionBreakingChange()
         .withActorDefinitionId(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID))
         .withVersion(new Version(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.VERSION)))
         .withMessage(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.MESSAGE))
         .withUpgradeDeadline(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.UPGRADE_DEADLINE).toString())
-        .withMigrationDocumentationUrl(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL));
+        .withMigrationDocumentationUrl(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL))
+        .withScopedImpact(scopedImpact);
   }
 
   /**
