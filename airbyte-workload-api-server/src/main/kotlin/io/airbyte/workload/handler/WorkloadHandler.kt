@@ -20,6 +20,8 @@ interface WorkloadHandler {
     updatedBefore: OffsetDateTime?,
   ): List<Workload>
 
+  fun workloadAlreadyExists(workloadId: String): Boolean
+
   fun createWorkload(
     workloadId: String,
     labels: List<WorkloadLabel>?,

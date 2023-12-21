@@ -28,6 +28,7 @@ import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_C
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_CANCEL_SOURCE_TAG
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_ID_TAG
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_TYPE_TAG
+import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Status
@@ -69,9 +70,8 @@ open class WorkloadApi(
         description = "Successfully created workload",
       ),
       ApiResponse(
-        responseCode = "409",
+        responseCode = "200",
         description = "Workload with given workload id already exists.",
-        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
   )
@@ -81,7 +81,7 @@ open class WorkloadApi(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadCreateRequest::class))],
     ) workloadCreateRequest: WorkloadCreateRequest,
-  ) {
+  ): HttpResponse<Any> {
     ApmTraceUtils.addTagsToTrace(
       mutableMapOf(
         GEOGRAPHY_TAG to workloadCreateRequest.geography,
@@ -90,6 +90,10 @@ open class WorkloadApi(
         WORKLOAD_TYPE_TAG to workloadCreateRequest.type,
       ) as Map<String, Any>?,
     )
+    if (workloadHandler.workloadAlreadyExists(workloadCreateRequest.workloadId)) {
+      return HttpResponse.status(HttpStatus.OK)
+    }
+
     workloadHandler.createWorkload(
       workloadCreateRequest.workloadId,
       workloadCreateRequest.labels,
@@ -108,6 +112,7 @@ open class WorkloadApi(
       workloadCreateRequest.mutexKey,
       workloadCreateRequest.type,
     )
+    return HttpResponse.status(HttpStatus.NO_CONTENT)
   }
 
   @PUT

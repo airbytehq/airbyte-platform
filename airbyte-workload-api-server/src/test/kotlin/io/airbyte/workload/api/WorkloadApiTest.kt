@@ -11,7 +11,6 @@ import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
 import io.airbyte.workload.api.domain.WorkloadListRequest
 import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.airbyte.workload.api.domain.WorkloadSuccessRequest
-import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
 import io.airbyte.workload.handler.ApiWorkload
@@ -72,6 +71,7 @@ class WorkloadApiTest(
 
   @Test
   fun `test create success`() {
+    every { workloadHandler.workloadAlreadyExists(any()) } returns false
     every { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any()) } just Runs
     every { workloadService.create(any(), any(), any(), any(), any(), any(), any()) } just Runs
     testEndpointStatus(HttpRequest.POST("/api/v1/workload/create", Jsons.serialize(WorkloadCreateRequest())), HttpStatus.NO_CONTENT)
@@ -81,12 +81,10 @@ class WorkloadApiTest(
 
   @Test
   fun `test create conflict`() {
-    val exceptionMessage = "workload already exists"
-    every { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any()) } throws ConflictException(exceptionMessage)
-    testErrorEndpointResponse(
+    every { workloadHandler.workloadAlreadyExists(any()) } returns true
+    testEndpointStatus(
       HttpRequest.POST("/api/v1/workload/create", Jsons.serialize(WorkloadCreateRequest())),
-      HttpStatus.CONFLICT,
-      exceptionMessage,
+      HttpStatus.OK,
     )
   }
 

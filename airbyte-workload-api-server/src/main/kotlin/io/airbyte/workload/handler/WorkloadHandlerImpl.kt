@@ -45,6 +45,10 @@ class WorkloadHandlerImpl(
     return domainWorkloads.map { it.toApi() }
   }
 
+  override fun workloadAlreadyExists(workloadId: String): Boolean {
+    return workloadRepository.existsById(workloadId)
+  }
+
   override fun createWorkload(
     workloadId: String,
     labels: List<WorkloadLabel>?,
