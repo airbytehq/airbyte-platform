@@ -40,7 +40,7 @@ class ApiBeanFactory {
     builder.connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
 
     val okHttpClient: OkHttpClient = builder.build()
-    val metricTags = mutableListOf("base-path", workloadApiBasePath, "max-retries", maxRetries.toString())
+    val metricTags = arrayOf("base-path", workloadApiBasePath, "max-retries", maxRetries.toString())
 
     val retryPolicy: RetryPolicy<Response> =
       RetryPolicy.builder<Response>()
@@ -56,28 +56,53 @@ class ApiBeanFactory {
         // TODO move these metrics into a centralized metric registery as part of the MetricClient refactor/cleanup
         .onAbort { l ->
           logger.warn { "Attempt aborted.  Attempt count ${l.attemptCount}" }
-          metricTags.addAll(listOf("retry-attempt", l.attemptCount.toString()))
-          meterRegistry.ifPresent { r -> r.counter("workload_api_client.abort", *metricTags.toTypedArray()).increment() }
+          meterRegistry.ifPresent { r ->
+            r.counter(
+              "workload_api_client.abort",
+              *metricTags,
+              *arrayOf("retry-attempt", l.attemptCount.toString()),
+            ).increment()
+          }
         }
         .onFailure { l ->
           logger.error(l.exception) { "Failed to call $workloadApiBasePath.  Last response: ${l.result}" }
-          metricTags.addAll(listOf("retry-attempt", l.attemptCount.toString()))
-          meterRegistry.ifPresent { r -> r.counter("workload_api_client.failure", *metricTags.toTypedArray()).increment() }
+          meterRegistry.ifPresent { r ->
+            r.counter(
+              "workload_api_client.failure",
+              *metricTags,
+              *arrayOf("retry-attempt", l.attemptCount.toString()),
+            ).increment()
+          }
         }
         .onRetry { l ->
           logger.warn { "Retry attempt ${l.attemptCount} of $maxRetries. Last response: ${l.lastResult}" }
-          metricTags.addAll(listOf("retry-attempt", l.attemptCount.toString()))
-          meterRegistry.ifPresent { r -> r.counter("workload_api_client.retry", *metricTags.toTypedArray()).increment() }
+          meterRegistry.ifPresent { r ->
+            r.counter(
+              "workload_api_client.retry",
+              *metricTags,
+              *arrayOf("retry-attempt", l.attemptCount.toString()),
+            ).increment()
+          }
         }
         .onRetriesExceeded { l ->
           logger.error(l.exception) { "Retry attempts exceeded." }
-          metricTags.addAll(listOf("retry-attempt", l.attemptCount.toString()))
-          meterRegistry.ifPresent { r -> r.counter("workload_api_client.retries_exceeded", *metricTags.toTypedArray()).increment() }
+          meterRegistry.ifPresent { r ->
+            r.counter(
+              "workload_api_client.retries_exceeded",
+              *metricTags,
+              *arrayOf("retry-attempt", l.attemptCount.toString()),
+            ).increment()
+          }
         }
         .onSuccess { l ->
           logger.debug { "Successfully called $workloadApiBasePath.  Response: ${l.result}, isRetry: ${l.isRetry}" }
-          metricTags.addAll(listOf("retry-attempt", l.attemptCount.toString()))
-          meterRegistry.ifPresent { r -> r.counter("workload_api_client.success", *metricTags.toTypedArray()) }
+          meterRegistry.ifPresent { r ->
+            r.counter(
+              "workload_api_client.success",
+              *metricTags,
+              *arrayOf("retry-attempt", l.attemptCount.toString()),
+            )
+          }
         }
         .withDelay(Duration.ofSeconds(retryDelaySeconds))
         .withMaxRetries(maxRetries)
