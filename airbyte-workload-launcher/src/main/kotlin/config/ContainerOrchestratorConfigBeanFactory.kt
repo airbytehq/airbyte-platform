@@ -7,6 +7,7 @@ import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.commons.workers.config.WorkerConfigsProvider
 import io.airbyte.config.Configs
 import io.airbyte.config.EnvConfigs
+import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.helpers.LogClientSingleton
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.sync.OrchestratorConstants
@@ -77,37 +78,15 @@ class ContainerOrchestratorConfigBeanFactory {
   }
 
   @Singleton
-  @Named("replicationWorkerConfig")
-  fun workerConfigs(workerConfigsProvider: WorkerConfigsProvider): WorkerConfigs {
+  @Named("replicationWorkerConfigs")
+  fun replicationWorkerConfigs(workerConfigsProvider: WorkerConfigsProvider): WorkerConfigs {
     return workerConfigsProvider.getConfig(WorkerConfigsProvider.ResourceType.REPLICATION)
   }
 
   @Singleton
-  @Named("orchestratorCustomNodeSelectors")
-  fun customNodeSelectors(
-    @Named("replicationWorkerConfig") workerConfigs: WorkerConfigs,
-  ): Map<String, String> {
-    // custom connectors run in an isolated node pool from airbyte-supported connectors
-    // to reduce the blast radius of any problems with custom connector code.
-    return workerConfigs.workerIsolatedKubeNodeSelectors.orElse(
-      workerConfigs.getworkerKubeNodeSelectors(),
-    )
-  }
-
-  @Singleton
-  @Named("orchestratorNodeSelectors")
-  fun nodeSelectors(
-    @Named("replicationWorkerConfig") workerConfigs: WorkerConfigs,
-  ): Map<String, String> {
-    return workerConfigs.getworkerKubeNodeSelectors()
-  }
-
-  @Singleton
-  @Named("orchestratorAnnotations")
-  fun annotations(
-    @Named("replicationWorkerConfig") workerConfigs: WorkerConfigs,
-  ): Map<String, String> {
-    return workerConfigs.workerKubeAnnotations
+  @Named("checkWorkerConfigs")
+  fun checkWorkerConfigs(workerConfigsProvider: WorkerConfigsProvider): WorkerConfigs {
+    return workerConfigsProvider.getConfig(WorkerConfigsProvider.ResourceType.CHECK)
   }
 
   @Singleton
@@ -269,6 +248,14 @@ class ContainerOrchestratorConfigBeanFactory {
         .toList()
 
     return envVars + secretEnvVars
+  }
+
+  @Singleton
+  @Named("checkOrchestratorReqs")
+  fun check(): ResourceRequirements {
+    return ResourceRequirements()
+      .withMemoryRequest("500Mi") // TODO: Tweak this ideally to something smaller
+      .withCpuRequest("0.5") // TODO: Tweak this to ideally something smaller
   }
 
   companion object {

@@ -49,7 +49,6 @@ class OrchestratorPodLauncherTest {
         "",
         listOf(),
         listOf(),
-        mapOf(),
         metricClient,
       )
 
@@ -66,6 +65,7 @@ class OrchestratorPodLauncherTest {
         ResourceRequirements(),
         mapOf(),
         KubePodInfo("", "", KubeContainerInfo("", "")),
+        mapOf(),
       )
     }
 

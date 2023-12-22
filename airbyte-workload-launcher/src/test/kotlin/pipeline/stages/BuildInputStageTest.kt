@@ -12,6 +12,7 @@ import io.airbyte.config.WorkloadType
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
+import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
@@ -66,13 +67,18 @@ class BuildInputStageTest {
   @Test
   fun `parses check input and hydrates`() {
     val inputStr = "foo"
-    val unhydrated =
+    val checkInput = CheckConnectionInput()
+    val unhydratedConfig =
       StandardCheckConnectionInput()
         .withActorId(UUID.randomUUID())
         .withAdditionalProperty("whatever", "random value")
         .withActorType(ActorType.DESTINATION)
+    val unhydrated =
+      checkInput.apply {
+        connectionConfiguration = unhydratedConfig
+      }
 
-    val hydrated =
+    val hydratedConfig =
       StandardCheckConnectionInput()
         .withActorId(UUID.randomUUID())
         .withAdditionalProperty("whatever", "random value")
@@ -82,8 +88,8 @@ class BuildInputStageTest {
     val checkInputHydrator: CheckConnectionInputHydrator = mockk()
     val replicationInputHydrator: ReplicationInputHydrator = mockk()
     val deserializer: PayloadDeserializer = mockk()
-    every { deserializer.toStandardCheckConnectionInput(inputStr) } returns unhydrated
-    every { checkInputHydrator.getHydratedCheckInput(unhydrated) } returns hydrated
+    every { deserializer.toCheckConnectionInput(inputStr) } returns unhydrated
+    every { checkInputHydrator.getHydratedStandardCheckInput(unhydratedConfig) } returns hydratedConfig
 
     val stage =
       BuildInputStage(
@@ -97,12 +103,12 @@ class BuildInputStageTest {
     val result = stage.applyStage(io)
 
     verify {
-      deserializer.toStandardCheckConnectionInput(inputStr)
-      checkInputHydrator.getHydratedCheckInput(unhydrated)
+      deserializer.toCheckConnectionInput(inputStr)
+      checkInputHydrator.getHydratedStandardCheckInput(unhydratedConfig)
     }
 
     when (val payload = result.payload) {
-      is CheckPayload -> assert(hydrated == payload.input)
+      is CheckPayload -> assert(hydratedConfig == payload.input.connectionConfiguration)
       else -> "Incorrect payload type: ${payload?.javaClass?.name}"
     }
   }

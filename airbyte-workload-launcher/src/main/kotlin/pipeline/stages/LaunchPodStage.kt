@@ -5,6 +5,7 @@ import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
+import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
@@ -38,8 +39,8 @@ open class LaunchPodStage(private val launcher: KubePodClient, metricPublisher: 
     val payload = input.payload!!
 
     when (payload) {
-      is SyncPayload -> launcher.launchReplication(payload.input!!, input.msg)
-      else -> throw NotImplementedError("")
+      is SyncPayload -> launcher.launchReplication(payload.input, input.msg)
+      is CheckPayload -> launcher.launchCheck(payload.input, input.msg)
     }
 
     return input

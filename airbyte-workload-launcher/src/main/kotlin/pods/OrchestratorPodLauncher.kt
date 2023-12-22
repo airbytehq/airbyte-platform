@@ -62,7 +62,6 @@ class OrchestratorPodLauncher(
   @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
   @Named("orchestratorEnvVars") private val envVars: List<EnvVar>,
   @Named("orchestratorContainerPorts") private val containerPorts: List<ContainerPort>,
-  @Named("orchestratorAnnotations") private val annotations: Map<String, String>,
   private val metricClient: MetricClient,
 ) {
   fun create(
@@ -70,6 +69,7 @@ class OrchestratorPodLauncher(
     resourceRequirements: ResourceRequirements?,
     nodeSelectors: Map<String, String>,
     kubePodInfo: KubePodInfo,
+    annotations: Map<String, String>,
   ): Pod {
     val volumes: MutableList<Volume> = ArrayList()
     val volumeMounts: MutableList<VolumeMount> = ArrayList()

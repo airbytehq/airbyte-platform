@@ -7,6 +7,7 @@ import io.airbyte.metrics.annotations.Tag
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
+import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
@@ -65,8 +66,8 @@ open class BuildInputStage(
   ): WorkloadPayload =
     when (type) {
       WorkloadType.CHECK -> {
-        val parsed = deserializer.toStandardCheckConnectionInput(rawPayload)
-        val hydrated = checkInputHydrator.getHydratedCheckInput(parsed)
+        val parsed: CheckConnectionInput = deserializer.toCheckConnectionInput(rawPayload)
+        val hydrated = parsed.apply { connectionConfiguration = checkInputHydrator.getHydratedStandardCheckInput(parsed.connectionConfiguration) }
         CheckPayload(hydrated)
       }
 

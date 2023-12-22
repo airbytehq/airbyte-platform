@@ -191,7 +191,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         .addTagsToTrace(Map.of(ATTEMPT_NUMBER_KEY, args.getJobRunConfig().getAttemptId(), JOB_ID_KEY, args.getJobRunConfig().getJobId(),
             DOCKER_IMAGE_KEY, args.getLauncherConfig().getDockerImage()));
     final StandardCheckConnectionInput rawInput = args.getConnectionConfiguration();
-    final StandardCheckConnectionInput input = inputHydrator.getHydratedCheckInput(rawInput);
+    final StandardCheckConnectionInput input = inputHydrator.getHydratedStandardCheckInput(rawInput);
 
     final ActivityExecutionContext context = Activity.getExecutionContext();
     final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);

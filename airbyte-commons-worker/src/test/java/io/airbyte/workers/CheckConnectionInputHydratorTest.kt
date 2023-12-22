@@ -62,7 +62,7 @@ class CheckConnectionInputHydratorTest {
 
     every { featureFlagClient.boolVariation(eq(UseRuntimeSecretPersistence), eq(Organization(orgId))) } returns true
 
-    val result = hydrator.getHydratedCheckInput(input)
+    val result = hydrator.getHydratedStandardCheckInput(input)
 
     verify { secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(unhyrdatedConfig, runtimeSecretPersistence) }
 
@@ -100,7 +100,7 @@ class CheckConnectionInputHydratorTest {
 
     every { featureFlagClient.boolVariation(eq(UseRuntimeSecretPersistence), eq(Organization(orgId))) } returns false
 
-    val result = hydrator.getHydratedCheckInput(input)
+    val result = hydrator.getHydratedStandardCheckInput(input)
 
     verify { secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(unhyrdatedConfig) }
 

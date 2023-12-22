@@ -1,7 +1,7 @@
 package io.airbyte.workload.launcher.pipeline.stages.model
 
-import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 
 /**
@@ -25,9 +25,9 @@ data class LaunchStageIO(
 sealed class WorkloadPayload
 
 data class SyncPayload(
-  var input: ReplicationInput? = null,
+  var input: ReplicationInput,
 ) : WorkloadPayload()
 
 data class CheckPayload(
-  var input: StandardCheckConnectionInput? = null,
+  var input: CheckConnectionInput,
 ) : WorkloadPayload()

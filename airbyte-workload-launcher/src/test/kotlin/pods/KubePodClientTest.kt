@@ -4,13 +4,16 @@ import fixtures.RecordFixtures
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.process.KubePodInfo
+import io.airbyte.workload.launcher.model.setConnectorLabels
 import io.airbyte.workload.launcher.model.setDestinationLabels
 import io.airbyte.workload.launcher.model.setSourceLabels
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.CONNECTOR_STARTUP_TIMEOUT_VALUE
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.ORCHESTRATOR_INIT_TIMEOUT_VALUE
-import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.kubeInput
+import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.checkKubeInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.launcherInput
+import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.replKubeInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.sharedLabels
 import io.fabric8.kubernetes.api.model.Pod
 import io.mockk.every
@@ -39,7 +42,9 @@ class KubePodClientTest {
 
   private lateinit var client: KubePodClient
 
-  private lateinit var input: ReplicationInput
+  private lateinit var replInput: ReplicationInput
+
+  private lateinit var checkInput: CheckConnectionInput
 
   @BeforeEach
   fun setup() {
@@ -50,16 +55,21 @@ class KubePodClientTest {
         mapper,
       )
 
-    input =
+    replInput =
       ReplicationInput()
         .withSourceLauncherConfig(IntegrationLauncherConfig())
         .withDestinationLauncherConfig(IntegrationLauncherConfig())
 
+    checkInput =
+      CheckConnectionInput(null, IntegrationLauncherConfig(), null)
+
     every { labeler.getSharedLabels(any(), any(), any()) } returns sharedLabels
 
-    every { mapper.toKubeInput(input, sharedLabels) } returns kubeInput
+    every { mapper.toKubeInput(replInput, sharedLabels) } returns replKubeInput
 
-    every { launcher.create(any(), any(), any(), any()) } returns pod
+    every { mapper.toKubeInput(checkInput, sharedLabels) } returns checkKubeInput
+
+    every { launcher.create(any(), any(), any(), any(), any()) } returns pod
     every { launcher.waitForPodInit(any(), any()) } returns Unit
     every { launcher.copyFilesToKubeConfigVolumeMain(any(), any()) } returns Unit
     every { launcher.waitForPodReadyOrTerminal(any(), any()) } returns Unit
@@ -67,86 +77,156 @@ class KubePodClientTest {
 
   @Test
   fun `launchReplication starts an orchestrator and waits on all 3 pods`() {
-    client.launchReplication(input, launcherInput)
+    client.launchReplication(replInput, launcherInput)
 
     verify {
       launcher.create(
-        kubeInput.orchestratorLabels,
-        kubeInput.resourceReqs,
-        kubeInput.nodeSelectors,
-        kubeInput.kubePodInfo,
+        replKubeInput.orchestratorLabels,
+        replKubeInput.resourceReqs,
+        replKubeInput.nodeSelectors,
+        replKubeInput.kubePodInfo,
+        replKubeInput.annotations,
       )
     }
 
-    verify { launcher.waitForPodInit(kubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE) }
+    verify { launcher.waitForPodInit(replKubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE) }
 
-    verify { launcher.copyFilesToKubeConfigVolumeMain(pod, kubeInput.fileMap) }
+    verify { launcher.copyFilesToKubeConfigVolumeMain(pod, replKubeInput.fileMap) }
 
-    verify { launcher.waitForPodReadyOrTerminal(kubeInput.sourceLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) }
+    verify { launcher.waitForPodReadyOrTerminal(replKubeInput.sourceLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) }
 
-    verify { launcher.waitForPodReadyOrTerminal(kubeInput.destinationLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) }
+    verify { launcher.waitForPodReadyOrTerminal(replKubeInput.destinationLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) }
   }
 
   @Test
   fun `launchReplication sets pass-through labels for propagation to source and destination`() {
     every { labeler.getSharedLabels(any(), any(), any()) } returns sharedLabels
-    every { mapper.toKubeInput(input, sharedLabels) } returns kubeInput
+    every { mapper.toKubeInput(replInput, sharedLabels) } returns replKubeInput
 
-    client.launchReplication(input, launcherInput)
+    client.launchReplication(replInput, launcherInput)
 
-    val inputWithLabels = input.setDestinationLabels(sharedLabels).setSourceLabels(sharedLabels)
+    val inputWithLabels = replInput.setDestinationLabels(sharedLabels).setSourceLabels(sharedLabels)
 
     verify { mapper.toKubeInput(inputWithLabels, sharedLabels) }
   }
 
   @Test
   fun `launchReplication propagates orchestrator creation error`() {
-    every { launcher.create(any(), any(), any(), any()) } throws RuntimeException("bang")
+    every { launcher.create(any(), any(), any(), any(), any()) } throws RuntimeException("bang")
 
     assertThrows<KubePodInitException> {
-      client.launchReplication(input, launcherInput)
+      client.launchReplication(replInput, launcherInput)
     }
   }
 
   @Test
   fun `launchReplication propagates orchestrator wait for init error`() {
-    every { launcher.waitForPodInit(kubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE) } throws RuntimeException("bang")
+    every { launcher.waitForPodInit(replKubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
     assertThrows<KubePodInitException> {
-      client.launchReplication(input, launcherInput)
+      client.launchReplication(replInput, launcherInput)
     }
   }
 
   @Test
   fun `launchReplication propagates orchestrator copy file map error`() {
-    every { launcher.copyFilesToKubeConfigVolumeMain(any(), kubeInput.fileMap) } throws RuntimeException("bang")
+    every { launcher.copyFilesToKubeConfigVolumeMain(any(), replKubeInput.fileMap) } throws RuntimeException("bang")
 
     assertThrows<KubePodInitException> {
-      client.launchReplication(input, launcherInput)
+      client.launchReplication(replInput, launcherInput)
     }
   }
 
   @Test
   fun `launchReplication propagates source wait for init error`() {
-    every { launcher.waitForPodReadyOrTerminal(kubeInput.sourceLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) } throws RuntimeException("bang")
+    every { launcher.waitForPodReadyOrTerminal(replKubeInput.sourceLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
     assertThrows<KubePodInitException> {
-      client.launchReplication(input, launcherInput)
+      client.launchReplication(replInput, launcherInput)
     }
   }
 
   @Test
   fun `launchReplication propagates destination wait for init error`() {
-    every { launcher.waitForPodReadyOrTerminal(kubeInput.destinationLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) } throws RuntimeException("bang")
+    every { launcher.waitForPodReadyOrTerminal(replKubeInput.destinationLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
     assertThrows<KubePodInitException> {
-      client.launchReplication(input, launcherInput)
+      client.launchReplication(replInput, launcherInput)
+    }
+  }
+
+  @Test
+  fun `launchCheck starts an orchestrator and waits on both pods`() {
+    client.launchCheck(checkInput, launcherInput)
+
+    verify {
+      launcher.create(
+        checkKubeInput.orchestratorLabels,
+        checkKubeInput.resourceReqs,
+        checkKubeInput.nodeSelectors,
+        checkKubeInput.kubePodInfo,
+        checkKubeInput.annotations,
+      )
+    }
+
+    verify { launcher.waitForPodInit(checkKubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE) }
+
+    verify { launcher.copyFilesToKubeConfigVolumeMain(pod, checkKubeInput.fileMap) }
+
+    verify { launcher.waitForPodReadyOrTerminal(checkKubeInput.connectorLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) }
+  }
+
+  @Test
+  fun `launchCheck sets pass-through labels for propagation to connector`() {
+    every { labeler.getSharedLabels(any(), any(), any()) } returns sharedLabels
+    every { mapper.toKubeInput(checkInput, sharedLabels) } returns checkKubeInput
+
+    client.launchCheck(checkInput, launcherInput)
+
+    val inputWithLabels = checkInput.setConnectorLabels(sharedLabels)
+
+    verify { mapper.toKubeInput(inputWithLabels, sharedLabels) }
+  }
+
+  @Test
+  fun `launchCheck propagates orchestrator creation error`() {
+    every { launcher.create(any(), any(), any(), any(), any()) } throws RuntimeException("bang")
+
+    assertThrows<KubePodInitException> {
+      client.launchCheck(checkInput, launcherInput)
+    }
+  }
+
+  @Test
+  fun `launchCheck propagates orchestrator wait for init error`() {
+    every { launcher.waitForPodInit(checkKubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE) } throws RuntimeException("bang")
+
+    assertThrows<KubePodInitException> {
+      client.launchCheck(checkInput, launcherInput)
+    }
+  }
+
+  @Test
+  fun `launchCheck propagates orchestrator copy file map error`() {
+    every { launcher.copyFilesToKubeConfigVolumeMain(any(), checkKubeInput.fileMap) } throws RuntimeException("bang")
+
+    assertThrows<KubePodInitException> {
+      client.launchCheck(checkInput, launcherInput)
+    }
+  }
+
+  @Test
+  fun `launchCheck propagates source wait for init error`() {
+    every { launcher.waitForPodReadyOrTerminal(checkKubeInput.connectorLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) } throws RuntimeException("bang")
+
+    assertThrows<KubePodInitException> {
+      client.launchCheck(checkInput, launcherInput)
     }
   }
 
   object Fixtures {
-    val kubeInput =
-      OrchestratorKubeInput(
+    val replKubeInput =
+      ReplicationOrchestratorKubeInput(
         mapOf("test-orch-label" to "val1"),
         mapOf("test-source-label" to "val2"),
         mapOf("test-dest-label" to "val3"),
@@ -154,6 +234,18 @@ class KubePodClientTest {
         KubePodInfo("test-namespace", "test-name", null),
         mapOf("test-file" to "val5"),
         ResourceRequirements().withCpuRequest("test-cpu").withMemoryRequest("test-mem"),
+        mapOf("test-annotation" to "val6"),
+      )
+
+    val checkKubeInput =
+      CheckOrchestratorKubeInput(
+        mapOf("test-orch-label" to "val1"),
+        mapOf("test-connector-label" to "val2"),
+        mapOf("test-selector" to "val3"),
+        KubePodInfo("test-namespace", "test-name", null),
+        mapOf("test-file" to "val4"),
+        ResourceRequirements().withCpuRequest("test-cpu").withMemoryRequest("test-mem"),
+        mapOf("test-annotation" to "val5"),
       )
 
     val workloadId = "workload-id"

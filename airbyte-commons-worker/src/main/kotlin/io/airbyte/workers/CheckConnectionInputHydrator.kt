@@ -20,7 +20,7 @@ class CheckConnectionInputHydrator(
   private val secretsApiClient: SecretsPersistenceConfigApi,
   private val featureFlagClient: FeatureFlagClient,
 ) {
-  fun getHydratedCheckInput(rawInput: StandardCheckConnectionInput): StandardCheckConnectionInput {
+  fun getHydratedStandardCheckInput(rawInput: StandardCheckConnectionInput): StandardCheckConnectionInput {
     val fullConfig: JsonNode?
     val organizationId: UUID? = rawInput.actorContext.organizationId
 

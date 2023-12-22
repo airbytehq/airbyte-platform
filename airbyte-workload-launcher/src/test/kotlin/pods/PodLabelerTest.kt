@@ -1,14 +1,20 @@
 package io.airbyte.workload.launcher.pods
 
+import io.airbyte.workers.process.Metadata.CHECK_JOB
+import io.airbyte.workers.process.Metadata.CHECK_STEP_KEY
+import io.airbyte.workers.process.Metadata.CONNECTOR_STEP
 import io.airbyte.workers.process.Metadata.IMAGE_NAME
 import io.airbyte.workers.process.Metadata.IMAGE_VERSION
+import io.airbyte.workers.process.Metadata.JOB_TYPE_KEY
+import io.airbyte.workers.process.Metadata.ORCHESTRATOR_CHECK_STEP
 import io.airbyte.workers.process.Metadata.ORCHESTRATOR_REPLICATION_STEP
 import io.airbyte.workers.process.Metadata.READ_STEP
+import io.airbyte.workers.process.Metadata.SYNC_JOB
 import io.airbyte.workers.process.Metadata.SYNC_STEP_KEY
 import io.airbyte.workers.process.Metadata.WRITE_STEP
 import io.airbyte.workers.process.ProcessFactory
-import io.airbyte.workload.launcher.pods.KubePodClient.Constants.MUTEX_KEY
-import io.airbyte.workload.launcher.pods.KubePodClient.Constants.WORKLOAD_ID
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.MUTEX_KEY
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.WORKLOAD_ID
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -44,18 +50,51 @@ class PodLabelerTest {
   }
 
   @Test
-  fun getOrchestratorLabels() {
+  fun getReplicationOrchestratorLabels() {
     val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
-    val result = labeler.getOrchestratorLabels()
+    val result = labeler.getReplicationOrchestratorLabels()
     val shortImageName = ProcessFactory.getShortImageName(ORCHESTRATOR_IMAGE_NAME)
     val imageVersion = ProcessFactory.getImageVersion(ORCHESTRATOR_IMAGE_NAME)
 
     assert(
       result ==
         mapOf(
-          SYNC_STEP_KEY to ORCHESTRATOR_REPLICATION_STEP,
           IMAGE_NAME to shortImageName,
           IMAGE_VERSION to imageVersion,
+          JOB_TYPE_KEY to SYNC_JOB,
+          SYNC_STEP_KEY to ORCHESTRATOR_REPLICATION_STEP,
+        ),
+    )
+  }
+
+  @Test
+  fun getCheckConnectorLabels() {
+    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
+    val result = labeler.getCheckConnectorLabels()
+
+    assert(
+      result ==
+        mapOf(
+          JOB_TYPE_KEY to CHECK_JOB,
+          CHECK_STEP_KEY to CONNECTOR_STEP,
+        ),
+    )
+  }
+
+  @Test
+  fun getCheckOrchestratorLabels() {
+    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
+    val result = labeler.getCheckOrchestratorLabels()
+    val shortImageName = ProcessFactory.getShortImageName(ORCHESTRATOR_IMAGE_NAME)
+    val imageVersion = ProcessFactory.getImageVersion(ORCHESTRATOR_IMAGE_NAME)
+
+    assert(
+      result ==
+        mapOf(
+          IMAGE_NAME to shortImageName,
+          IMAGE_VERSION to imageVersion,
+          JOB_TYPE_KEY to CHECK_JOB,
+          CHECK_STEP_KEY to ORCHESTRATOR_CHECK_STEP,
         ),
     )
   }

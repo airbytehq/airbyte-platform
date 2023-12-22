@@ -5,6 +5,7 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
 import fixtures.RecordFixtures
+import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
@@ -17,7 +18,7 @@ import org.junit.jupiter.api.Test
 class EnforceMutexStageTest {
   @Test
   fun `deletes existing pods for mutex key`() {
-    val payload = SyncPayload()
+    val payload = SyncPayload(ReplicationInput())
     val mutexKey = "a unique key"
 
     val launcher: KubePodClient = mockk()
@@ -39,7 +40,7 @@ class EnforceMutexStageTest {
 
   @Test
   fun `noops if mutex key not present`() {
-    val payload = SyncPayload()
+    val payload = SyncPayload(ReplicationInput())
 
     val launcher: KubePodClient = mockk()
     val metricClient: CustomMetricPublisher = mockk()
