@@ -1,5 +1,5 @@
 # A test describe in the README is available to test a version update
-FROM temporalio/auto-setup:1.20.1
+FROM temporalio/auto-setup:1.22.3
 
 ENV TEMPORAL_HOME /etc/temporal
 
