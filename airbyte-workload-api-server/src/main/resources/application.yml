@@ -20,6 +20,10 @@ micronaut:
           enabled: true
       web:
         enabled: true
+        server:
+          percentiles: "0.95"
+        client:
+          percentiles: "0.95"
     export:
       statsd:
         enabled: ${MICROMETER_METRICS_ENABLED:false}
