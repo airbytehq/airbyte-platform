@@ -35,8 +35,6 @@ class StatsDRegistryConfigurer : MeterRegistryConfigurer<StatsdMeterRegistry>, O
          */
     val tags: MutableSet<String> = LinkedHashSet()
 
-    possiblyAddTag(DATA_DOG_ENVIRONMENT_TAG, "env", tags)
-    possiblyAddTag(DATA_DOG_AGENT_HOST_TAG, "host", tags)
     possiblyAddTag(DATA_DOG_SERVICE_TAG, "service", tags)
     possiblyAddTag(DATA_DOG_VERSION_TAG, "version", tags)
 
@@ -70,8 +68,6 @@ class StatsDRegistryConfigurer : MeterRegistryConfigurer<StatsdMeterRegistry>, O
   }
 
   companion object {
-    const val DATA_DOG_AGENT_HOST_TAG = "DD_AGENT_HOST"
-    const val DATA_DOG_ENVIRONMENT_TAG = "DD_ENV"
     const val DATA_DOG_SERVICE_TAG = "DD_SERVICE"
     const val DATA_DOG_VERSION_TAG = "DD_VERSION"
     const val DATA_PLANE_ID_TAG = "data_plane_id"
