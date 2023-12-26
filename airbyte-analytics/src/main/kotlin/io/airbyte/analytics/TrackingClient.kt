@@ -20,13 +20,14 @@ import io.micronaut.http.context.ServerRequestContext
 import jakarta.annotation.PreDestroy
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import java.lang.Thread.sleep
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Phaser
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Function
 import java.util.function.Supplier
 
@@ -241,24 +242,34 @@ class SegmentAnalyticsClient(
 class BlockingShutdownAnalyticsPlugin(
   @Value("\${airbyte.tracking.flush-interval-sec:10}") private val flushInterval: Long,
 ) : Plugin {
-  private val phaser = Phaser(1)
+  private val inflightMessageCount = AtomicLong(0L)
 
   override fun configure(builder: Analytics.Builder) {
-    builder.messageTransformer { phaser.register() > -1 }
+    builder.messageTransformer {
+      inflightMessageCount.incrementAndGet()
+      true
+    }
     builder.callback(
       object : Callback {
         override fun success(message: Message) {
-          phaser.arrive()
+          inflightMessageCount.decrementAndGet()
         }
 
         override fun failure(
           message: Message,
           throwable: Throwable,
         ) {
-          phaser.arrive()
+          logger.error(throwable) {
+            "Failed to send analytics message to Segment (userId = ${message.userId()}, type = ${message.type()}, messageId = ${message.messageId()})"
+          }
+          inflightMessageCount.decrementAndGet()
         }
       },
     )
+  }
+
+  fun currentInflightMessageCount(): Long {
+    return inflightMessageCount.get()
   }
 
   fun waitForFlush() {
@@ -268,11 +279,21 @@ class BlockingShutdownAnalyticsPlugin(
 
     try {
       logger.info { "Waiting for Segment analytic client to flush enqueued messages..." }
-      val future = CompletableFuture.supplyAsync { phaser.arriveAndAwaitAdvance() }
+      val future =
+        CompletableFuture.supplyAsync {
+          var completed = false
+          while (!completed) {
+            completed = inflightMessageCount.get() == 0L
+            if (!completed) {
+              sleep(1)
+            }
+          }
+        }
       future.get(timeout, TimeUnit.SECONDS)
       logger.info { "Segment analytic client flush complete." }
     } catch (e: TimeoutException) {
       logger.warn { "Timed out waiting for Segment analytic client to flush enqueued messages (timeout = $timeout seconds)" }
+      logger.warn { "There are ${inflightMessageCount.get()} remaining enqueued analytic message(s) that were not sent." }
     }
   }
 }
