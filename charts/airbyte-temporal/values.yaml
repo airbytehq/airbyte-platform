@@ -22,7 +22,7 @@ replicaCount: 1
 image:
   repository: temporalio/auto-setup
   pullPolicy: IfNotPresent
-  tag: "1.20.1"
+  tag: "1.22.3"
 
 ##  temporal.service.type The Kubernetes Service Type
 ##  temporal.service.port The temporal port and exposed kubernetes port
