@@ -596,4 +596,5 @@ create index "user_invitation_invite_code_idx" on "public"."user_invitation"("in
 create index "user_invitation_invited_email_idx" on "public"."user_invitation"("invited_email" asc);
 create index "user_invitation_organization_id_idx" on "public"."user_invitation"("organization_id" asc);
 create index "user_invitation_workspace_id_idx" on "public"."user_invitation"("workspace_id" asc);
+create index "workload_status_idx" on "public"."workload"("status" asc);
 create index "workload_label_workload_id_idx" on "public"."workload_label"("workload_id" asc);
