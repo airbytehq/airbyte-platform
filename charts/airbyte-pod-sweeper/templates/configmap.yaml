@@ -44,6 +44,13 @@ data:
           NON_SUCCESS_DATE=`date -d $NON_SUCCESS_DATE_STR +%s`
           echo "Will sweep unsuccessful pods from before ${NON_SUCCESS_DATE_STR}"
         fi
+    
+        if [ -n "${ERROR_TTL_MINUTES}" ]; then 
+          # Longer time window for unsuccessful pods (to debug)
+          ERROR_DATE_STR=`date -d "now - ${ERROR_TTL_MINUTES} minutes" --utc -Ins`
+          ERROR_DATE=`date -d $ERROR_DATE_STR +%s`
+          echo "Will sweep error pods from before ${ERROR_DATE_STR}"
+        fi
         (
             IFS=$'\n'
             for POD in `get_job_pods`; do
@@ -63,6 +70,10 @@ data:
                   fi
                 elif [ -n "${UNSUCCESSFUL_TTL_MINUTES}" ] && [ "$POD_STATUS" != "Running" ] && [ "$POD_STATUS" != "Succeeded" ]; then
                   if [ "$POD_DATE" -lt "$NON_SUCCESS_DATE" ]; then
+                      delete_pod "$POD_NAME" "$POD_STATUS" "$POD_DATE_STR"
+                  fi
+                elif [ -n "${ERROR_TTL_MINUTES}" ] && [ "$POD_STATUS" = "Error" ]; then
+                  if [ "$POD_DATE" -lt "$ERROR_DATE" ]; then
                       delete_pod "$POD_NAME" "$POD_STATUS" "$POD_DATE_STR"
                   fi
                 fi

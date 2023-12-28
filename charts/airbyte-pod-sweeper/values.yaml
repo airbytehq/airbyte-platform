@@ -221,6 +221,7 @@ extraVolumes: []
 ##  podSweeper.timeToDeletePods.unsuccessful Time to remove pods on neither running nor succeeded status (minutes).
 timeToDeletePods:
   running: ""
+  error: ""
   succeeded: 120
   unsuccessful: 1440
 
