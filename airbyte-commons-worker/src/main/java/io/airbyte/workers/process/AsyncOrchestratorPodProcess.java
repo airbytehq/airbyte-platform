@@ -450,7 +450,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
         .withMountPath(KubePodProcess.CONFIG_DIR)
         .build());
 
-    if (secretName != null && secretMountPath != null && StringUtils.isNotEmpty(googleApplicationCredentials)) {
+    if (StringUtils.isNotEmpty(secretName) && StringUtils.isNotEmpty(secretMountPath) && StringUtils.isNotEmpty(googleApplicationCredentials)) {
       volumes.add(new VolumeBuilder()
           .withName("airbyte-secret")
           .withSecret(new SecretVolumeSourceBuilder()
