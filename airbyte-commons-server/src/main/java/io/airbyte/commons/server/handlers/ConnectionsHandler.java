@@ -87,6 +87,7 @@ import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.featureflag.CheckWithCatalog;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Workspace;
@@ -151,6 +152,7 @@ public class ConnectionsHandler {
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final ConnectorDefinitionSpecificationHandler connectorSpecHandler;
   private final JobNotifier jobNotifier;
+  private final ConnectionService connectionService;
   private final Integer maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
   private final Integer maxFailedJobsInARowBeforeConnectionDisable;
   private final int maxJobLookback = 10;
@@ -168,6 +170,7 @@ public class ConnectionsHandler {
                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                             final ConnectorDefinitionSpecificationHandler connectorSpecHandler,
                             final JobNotifier jobNotifier,
+                            final ConnectionService connectionService,
                             @Value("${airbyte.server.connection.disable.max-days}") final Integer maxDaysOfOnlyFailedJobsBeforeConnectionDisable,
                             @Value("${airbyte.server.connection.disable.max-jobs}") final Integer maxFailedJobsInARowBeforeConnectionDisable) {
     this.jobPersistence = jobPersistence;
@@ -181,6 +184,7 @@ public class ConnectionsHandler {
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.connectorSpecHandler = connectorSpecHandler;
     this.jobNotifier = jobNotifier;
+    this.connectionService = connectionService;
     this.maxDaysOfOnlyFailedJobsBeforeConnectionDisable = maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
     this.maxFailedJobsInARowBeforeConnectionDisable = maxFailedJobsInARowBeforeConnectionDisable;
   }
@@ -432,7 +436,13 @@ public class ConnectionsHandler {
 
   public ConnectionRead createConnection(final ConnectionCreate connectionCreate)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-
+    final UUID idempotencyKey = connectionCreate.getIdempotencyKey();
+    if (idempotencyKey != null) {
+      final Optional<StandardSync> found = connectionService.getStandardSyncByIdempotencyKey(idempotencyKey);
+      if (found.isPresent()) {
+        return buildConnectionRead(found.get().getConnectionId());
+      }
+    }
     // Validate source and destination
     final SourceConnection sourceConnection = configRepository.getSourceConnection(connectionCreate.getSourceId());
     final DestinationConnection destinationConnection = configRepository.getDestinationConnection(connectionCreate.getDestinationId());
@@ -469,6 +479,7 @@ public class ConnectionsHandler {
         .withSourceCatalogId(connectionCreate.getSourceCatalogId())
         .withGeography(getGeographyFromConnectionCreateOrWorkspace(connectionCreate))
         .withBreakingChange(false)
+        .withIdempotencyKey(idempotencyKey)
         .withNonBreakingChangesPreference(
             ApiPojoConverters.toPersistenceNonBreakingChangesPreference(connectionCreate.getNonBreakingChangesPreference()));
     if (connectionCreate.getResourceRequirements() != null) {

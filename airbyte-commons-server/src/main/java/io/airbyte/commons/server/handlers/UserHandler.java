@@ -117,7 +117,15 @@ public class UserHandler {
         .withStatus(Enums.convertTo(userCreate.getStatus(), User.Status.class))
         .withCompanyName(userCreate.getCompanyName())
         .withEmail(userCreate.getEmail())
-        .withNews(userCreate.getNews());
+        .withNews(userCreate.getNews())
+        .withIdempotencyKey(userCreate.getIdempotencyKey());
+    final UUID idempotencyKey = userCreate.getIdempotencyKey();
+    if (idempotencyKey != null) {
+      Optional<User> found = userPersistence.getUserByIdempotencyKey(idempotencyKey);
+      if (found.isPresent()) {
+        return buildUserRead(found.get());
+      }
+    }
     userPersistence.writeUser(user);
     return buildUserRead(userId);
   }

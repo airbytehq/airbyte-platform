@@ -38,6 +38,7 @@ import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
@@ -55,6 +56,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -68,6 +70,7 @@ import java.util.stream.Stream;
 public class SourceDefinitionsHandler {
 
   private final ConfigRepository configRepository;
+  private final SourceService sourceService;
   private final Supplier<UUID> uuidSupplier;
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
@@ -82,7 +85,8 @@ public class SourceDefinitionsHandler {
                                   final RemoteDefinitionsProvider remoteDefinitionsProvider,
                                   final SourceHandler sourceHandler,
                                   final SupportStateUpdater supportStateUpdater,
-                                  final FeatureFlagClient featureFlagClient) {
+                                  final FeatureFlagClient featureFlagClient,
+                                  final SourceService sourceService) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
@@ -90,6 +94,7 @@ public class SourceDefinitionsHandler {
     this.sourceHandler = sourceHandler;
     this.supportStateUpdater = supportStateUpdater;
     this.featureFlagClient = featureFlagClient;
+    this.sourceService = sourceService;
   }
 
   @VisibleForTesting
@@ -233,6 +238,20 @@ public class SourceDefinitionsHandler {
   }
 
   public SourceDefinitionRead createCustomSourceDefinition(final CustomSourceDefinitionCreate customSourceDefinitionCreate) throws IOException {
+    final UUID idempotencyKey = customSourceDefinitionCreate.getIdempotencyKey();
+    if (idempotencyKey != null) {
+      Optional<StandardSourceDefinition> found = sourceService.getStandardSourceDefinitionByIdempotencyKey(idempotencyKey);
+      if (found.isPresent()) {
+        final StandardSourceDefinition sourceDefinition = found.get();
+        final ActorDefinitionVersion actorDefinitionVersion;
+        try {
+          actorDefinitionVersion = configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId());
+          return buildSourceDefinitionRead(sourceDefinition, actorDefinitionVersion);
+        } catch (ConfigNotFoundException e) {
+          // not found, so must create
+        }
+      }
+    }
     final UUID id = uuidSupplier.get();
     final SourceDefinitionCreate sourceDefinitionCreate = customSourceDefinitionCreate.getSourceDefinition();
     final ActorDefinitionVersion actorDefinitionVersion =

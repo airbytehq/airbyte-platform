@@ -150,8 +150,8 @@ public class WorkspacesHandler {
         .email(workspaceCreate.getEmail())
         .news(workspaceCreate.getNews())
         .notificationSettings(workspaceCreate.getNotificationSettings())
-        .securityUpdates(workspaceCreate.getSecurityUpdates());
-
+        .securityUpdates(workspaceCreate.getSecurityUpdates())
+        .idempotencyKey(workspaceCreate.getIdempotencyKey());
     return createWorkspaceIfNotExist(workspaceCreateWithId);
   }
 
@@ -187,7 +187,8 @@ public class WorkspacesHandler {
         .withNotificationSettings(NotificationSettingsConverter.toConfig(notificationSettings))
         .withDefaultGeography(defaultGeography)
         .withWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreateWithId.getWebhookConfigs(), uuidSupplier))
-        .withOrganizationId(workspaceCreateWithId.getOrganizationId());
+        .withOrganizationId(workspaceCreateWithId.getOrganizationId())
+        .withIdempotencyKey(workspaceCreateWithId.getIdempotencyKey());
 
     if (!Strings.isNullOrEmpty(email)) {
       workspace.withEmail(email);
@@ -584,6 +585,13 @@ public class WorkspacesHandler {
   private WorkspaceRead persistStandardWorkspace(final StandardWorkspace workspace)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     try {
+      final UUID idempotencyKey = workspace.getIdempotencyKey();
+      if (idempotencyKey != null) {
+        Optional<StandardWorkspace> found = workspaceService.getWorkspaceByIdempotencyKey(idempotencyKey);
+        if (found.isPresent()) {
+          return buildWorkspaceRead(found.get());
+        }
+      }
       workspaceService.writeWorkspaceWithSecrets(workspace);
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());

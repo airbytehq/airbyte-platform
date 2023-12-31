@@ -152,6 +152,13 @@ public class SourceHandler {
   @VisibleForTesting
   public SourceRead createSource(final SourceCreate sourceCreate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
+    final UUID idempotencyKey = sourceCreate.getIdempotencyKey();
+    if (idempotencyKey != null) {
+      Optional<SourceConnection> found = sourceService.getSourceConnectionByIdempotencyKey(idempotencyKey);
+      if (found.isPresent()) {
+        return buildSourceRead(found.get());
+      }
+    }
     // validate configuration
     final ConnectorSpecification spec = getSpecFromSourceDefinitionIdForWorkspace(
         sourceCreate.getSourceDefinitionId(), sourceCreate.getWorkspaceId());
@@ -166,7 +173,8 @@ public class SourceHandler {
         sourceId,
         false,
         sourceCreate.getConnectionConfiguration(),
-        spec);
+        spec,
+        sourceCreate.getIdempotencyKey());
 
     // read configuration from db
     return buildSourceRead(configRepository.getSourceConnection(sourceId), spec);
@@ -190,7 +198,8 @@ public class SourceHandler {
         updatedSource.getSourceId(),
         updatedSource.getTombstone(),
         updatedSource.getConfiguration(),
-        spec);
+        spec,
+        updatedSource.getIdempotencyKey());
 
     // read configuration from db
     return buildSourceRead(configRepository.getSourceConnection(sourceId), spec);
@@ -214,7 +223,8 @@ public class SourceHandler {
         updatedSource.getSourceId(),
         updatedSource.getTombstone(),
         updatedSource.getConfiguration(),
-        spec);
+        spec,
+        updatedSource.getIdempotencyKey());
 
     // read configuration from db
     return buildSourceRead(configRepository.getSourceConnection(sourceId), spec);
@@ -375,7 +385,8 @@ public class SourceHandler {
         source.getSourceId(),
         true,
         fullConfig,
-        spec);
+        spec,
+        null);
   }
 
   public DiscoverCatalogResult writeDiscoverCatalogResult(final SourceDiscoverSchemaWriteRequestBody request)
@@ -462,7 +473,8 @@ public class SourceHandler {
                                        final UUID sourceId,
                                        final boolean tombstone,
                                        final JsonNode configurationJson,
-                                       final ConnectorSpecification spec)
+                                       final ConnectorSpecification spec,
+                                       final UUID idempotencyKey)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final JsonNode oAuthMaskedConfigurationJson =
         oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, configurationJson, spec);
@@ -472,7 +484,8 @@ public class SourceHandler {
         .withWorkspaceId(workspaceId)
         .withSourceId(sourceId)
         .withTombstone(tombstone)
-        .withConfiguration(oAuthMaskedConfigurationJson);
+        .withConfiguration(oAuthMaskedConfigurationJson)
+        .withIdempotencyKey(idempotencyKey);
     try {
       sourceService.writeSourceConnectionWithSecrets(sourceConnection, spec);
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {

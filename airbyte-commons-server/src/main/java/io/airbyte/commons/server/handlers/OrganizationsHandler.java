@@ -66,6 +66,13 @@ public class OrganizationsHandler {
 
   public OrganizationRead createOrganization(final OrganizationCreateRequestBody organizationCreateRequestBody)
       throws IOException {
+    final UUID idempotencyKey = organizationCreateRequestBody.getIdempotencyKey();
+    if (idempotencyKey != null) {
+      final Optional<Organization> found = organizationPersistence.getOrganizationByIdempotencyKey(idempotencyKey);
+      if (found.isPresent()) {
+        return buildOrganizationRead(found.get());
+      }
+    }
     final String organizationName = organizationCreateRequestBody.getOrganizationName();
     final String email = organizationCreateRequestBody.getEmail();
     final UUID userId = organizationCreateRequestBody.getUserId();

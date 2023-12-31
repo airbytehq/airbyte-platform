@@ -37,6 +37,7 @@ import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
+import io.airbyte.data.services.DestinationService;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
@@ -54,6 +55,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -68,6 +70,7 @@ import java.util.stream.Stream;
 public class DestinationDefinitionsHandler {
 
   private final ConfigRepository configRepository;
+  private final DestinationService destinationService;
   private final Supplier<UUID> uuidSupplier;
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
@@ -82,7 +85,8 @@ public class DestinationDefinitionsHandler {
                                        final RemoteDefinitionsProvider remoteDefinitionsProvider,
                                        final DestinationHandler destinationHandler,
                                        final SupportStateUpdater supportStateUpdater,
-                                       final FeatureFlagClient featureFlagClient) {
+                                       final FeatureFlagClient featureFlagClient,
+                                       final DestinationService destinationService) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
@@ -90,6 +94,7 @@ public class DestinationDefinitionsHandler {
     this.destinationHandler = destinationHandler;
     this.supportStateUpdater = supportStateUpdater;
     this.featureFlagClient = featureFlagClient;
+    this.destinationService = destinationService;
   }
 
   @VisibleForTesting
@@ -233,6 +238,20 @@ public class DestinationDefinitionsHandler {
 
   public DestinationDefinitionRead createCustomDestinationDefinition(final CustomDestinationDefinitionCreate customDestinationDefinitionCreate)
       throws IOException {
+    final UUID idempotencyKey = customDestinationDefinitionCreate.getIdempotencyKey();
+    if (idempotencyKey != null) {
+      final Optional<StandardDestinationDefinition> found = destinationService.getStandardDestinationDefinitionByIdempotencyKey(idempotencyKey);
+      if (found.isPresent()) {
+        final StandardDestinationDefinition destinationDefinition = found.get();
+        final ActorDefinitionVersion actorDefinitionVersion;
+        try {
+          actorDefinitionVersion = configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId());
+          return buildDestinationDefinitionRead(destinationDefinition, actorDefinitionVersion);
+        } catch (ConfigNotFoundException e) {
+          // not found, so must create
+        }
+      }
+    }
     final UUID id = uuidSupplier.get();
     final DestinationDefinitionCreate destinationDefCreate = customDestinationDefinitionCreate.getDestinationDefinition();
     final ActorDefinitionVersion actorDefinitionVersion =

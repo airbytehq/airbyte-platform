@@ -57,6 +57,7 @@ import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
@@ -99,6 +100,7 @@ class SourceDefinitionsHandlerTest {
   private UUID workspaceId;
   private UUID organizationId;
   private FeatureFlagClient featureFlagClient;
+  private SourceService sourceService;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -114,9 +116,10 @@ class SourceDefinitionsHandlerTest {
     sourceDefinition = generateSourceDefinition();
     sourceDefinitionVersion = generateVersionFromSourceDefinition(sourceDefinition);
     featureFlagClient = mock(TestClient.class);
+    sourceService = mock(SourceService.class);
     sourceDefinitionsHandler =
         new SourceDefinitionsHandler(configRepository, uuidSupplier, actorDefinitionHandlerHelper, remoteDefinitionsProvider, sourceHandler,
-            supportStateUpdater, featureFlagClient);
+            supportStateUpdater, featureFlagClient, sourceService);
   }
 
   private StandardSourceDefinition generateSourceDefinition() {
