@@ -36,6 +36,7 @@ object ConnectionCreateMapper {
     connectionCreateOss.sourceId = connectionCreateRequest.sourceId
     connectionCreateOss.destinationId = connectionCreateRequest.destinationId
     connectionCreateOss.name = connectionCreateRequest.name
+    connectionCreateOss.idempotencyKey = connectionCreateRequest.idempotencyKey
     connectionCreateOss.nonBreakingChangesPreference =
       ConnectionHelper.convertNonBreakingSchemaUpdatesBehaviorEnum(
         connectionCreateRequest.nonBreakingSchemaUpdatesBehavior,

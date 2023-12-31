@@ -1221,6 +1221,8 @@ components:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         status:
           $ref: "#/components/schemas/ConnectionStatusEnum"
+        idempotencyKey:
+          $ref: "#/components/schemas/IdempotencyKey"
     ConnectionPatchRequest:
       type: object
       properties:
@@ -1299,6 +1301,8 @@ components:
         secretId:
           description: Optional secretID obtained through the public API OAuth redirect flow.
           type: string
+        idempotencyKey:
+          $ref: "#/components/schemas/IdempotencyKey"
       x-implements: io.airbyte.api.common.ConfigurableActor
     SourcePutRequest:
       required:
@@ -1586,6 +1590,8 @@ components:
           type: string
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        idempotencyKey:
+          $ref: "#/components/schemas/IdempotencyKey"
       x-implements: io.airbyte.api.common.ConfigurableActor
     DestinationPatchRequest:
       type: object
@@ -1614,6 +1620,8 @@ components:
         name:
           description: Name of the workspace
           type: string
+        idempotencyKey:
+          $ref: "#/components/schemas/IdempotencyKey"
     WorkspaceUpdateRequest:
       required:
         - name
@@ -1811,3 +1819,8 @@ components:
       enum:
         - source
         - destination
+    IdempotencyKey:
+      type: string
+      format: uuid
+      description: |
+        An optional UUID that can be provided in a create request to prevent creating duplicates of the same resource

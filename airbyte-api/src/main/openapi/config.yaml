@@ -4428,6 +4428,8 @@ components:
             $ref: "#/components/schemas/WebhookConfigWrite"
         organizationId:
           $ref: "#/components/schemas/OrganizationId"
+        idempotencyKey:
+          $ref: "#/components/schemas/IdempotencyKey"
     WorkspaceCreateWithId:
       type: object
       required:
@@ -4464,6 +4466,8 @@ components:
             $ref: "#/components/schemas/WebhookConfigWrite"
         organizationId:
           $ref: "#/components/schemas/OrganizationId"
+        idempotencyKey:
+          $ref: "#/components/schemas/IdempotencyKey"
     WebhookConfigWrite:
       type: object
       properties:
@@ -4997,6 +5001,8 @@ components:
           type: string
         resourceRequirements:
           $ref: "#/components/schemas/ActorDefinitionResourceRequirements"
+        idempotencyKey:
+          $ref: "#/components/schemas/IdempotencyKey"
     SourceDefinitionUpdate:
       type: object
       description: Update the SourceDefinition. Currently, the only allowed attribute to update is the default docker image version.
@@ -5090,6 +5096,8 @@ components:
           $ref: "#/components/schemas/ScopeType"
         sourceDefinition:
           $ref: "#/components/schemas/SourceDefinitionCreate"
+        idempotencyKey:
+          $ref: "#/components/schemas/IdempotencyKey"
     SourceDefinitionIdWithWorkspaceId:
       type: object
       required:
@@ -5280,6 +5288,8 @@ components:
         secretId:
           example: "airbyte_oauth_workspace_0509f049-d671-48cb-8105-0a23d47e6db6_secret_e0d38206-034e-4d75-9d21-da5a99b02826_v1"
           type: string
+        idempotencyKey:
+          $ref: "#/components/schemas/IdempotencyKey"
     SourceDiscoverSchemaRequestBody:
       type: object
       required:
@@ -5478,6 +5488,8 @@ components:
           type: string
         resourceRequirements:
           $ref: "#/components/schemas/ActorDefinitionResourceRequirements"
+        idempotencyKey:
+          $ref: "#/components/schemas/IdempotencyKey"
     DestinationDefinitionUpdate:
       type: object
       required:
@@ -5558,6 +5570,8 @@ components:
           $ref: "#/components/schemas/ScopeId"
         scopeType:
           $ref: "#/components/schemas/ScopeType"
+        idempotencyKey:
+          $ref: "#/components/schemas/IdempotencyKey"
     DestinationDefinitionIdWithWorkspaceId:
       type: object
       required:
@@ -5657,6 +5671,8 @@ components:
           $ref: "#/components/schemas/DestinationDefinitionId"
         connectionConfiguration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        idempotencyKey:
+          $ref: "#/components/schemas/IdempotencyKey"
     DestinationUpdate:
       type: object
       required:
@@ -5969,6 +5985,8 @@ components:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        idempotencyKey:
+          $ref: "#/components/schemas/IdempotencyKey"
     WebBackendConnectionCreate:
       type: object
       required:
@@ -6020,6 +6038,8 @@ components:
           $ref: "#/components/schemas/Geography"
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        idempotencyKey:
+          $ref: "#/components/schemas/IdempotencyKey"
     ConnectionStateCreateOrUpdate:
       type: object
       required:
@@ -6687,6 +6707,8 @@ components:
           type: boolean
         orgLevelBilling:
           type: boolean
+        idempotencyKey:
+          $ref: "#/components/schemas/IdempotencyKey"
     OrganizationRead:
       type: object
       required:
@@ -7038,7 +7060,8 @@ components:
         news:
           type: boolean
           default: false
-
+        idempotencyKey:
+          $ref: "#/components/schemas/IdempotencyKey"
     UserGetOrCreateByAuthIdResponse:
       type: object
       required:
@@ -9159,7 +9182,11 @@ components:
       properties:
         access_token:
           type: string
-
+    IdempotencyKey:
+      type: string
+      format: uuid
+      description: |
+        An optional UUID that can be provided in a create request to prevent creating duplicates of the same resource
   responses:
     NotFoundResponse:
       description: Object with given id was not found.
