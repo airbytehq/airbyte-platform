@@ -123,6 +123,15 @@ public class SourceServiceJooqImpl implements SourceService {
         .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.STANDARD_SOURCE_DEFINITION, sourceDefinitionId));
   }
 
+  @Override
+  public Optional<StandardSourceDefinition> getStandardSourceDefinitionByIdempotencyKey(UUID idempotencyKey) throws IOException {
+    final Result<Record> result = database.query(ctx -> {
+      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR_DEFINITION);
+      return query.where(ACTOR_DEFINITION.ACTOR_TYPE.eq(ActorType.source)).and(ACTOR_DEFINITION.IDEMPOTENCY_KEY.eq(idempotencyKey)).fetch();
+    });
+    return result.stream().findFirst().map(record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessage));
+  }
+
   /**
    * Get source definition form source.
    *
@@ -266,6 +275,15 @@ public class SourceServiceJooqImpl implements SourceService {
     return listSourceQuery(Optional.of(sourceId))
         .findFirst()
         .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.SOURCE_CONNECTION, sourceId));
+  }
+
+  @Override
+  public Optional<SourceConnection> getSourceConnectionByIdempotencyKey(UUID idempotencyKey) throws IOException {
+    final Result<Record> result = database.query(ctx -> {
+      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR);
+      return query.where(ACTOR.ACTOR_TYPE.eq(ActorType.source)).and(ACTOR.IDEMPOTENCY_KEY.eq(idempotencyKey)).fetch();
+    });
+    return result.stream().findFirst().map(DbConverter::buildSourceConnection);
   }
 
   /**

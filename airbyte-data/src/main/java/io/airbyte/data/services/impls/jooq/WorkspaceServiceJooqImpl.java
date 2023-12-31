@@ -155,6 +155,24 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   }
 
   /**
+   * Retrieves the workspace corresponding to the provided idempotency key.
+   *
+   * @param idempotencyKey The idempotency key used to identify the workspace.
+   * @return workspace
+   * @throws IOException - you never know when you IO
+   * @throws ConfigNotFoundException - throws if no source with that id can be found.
+   */
+  @Override
+  public Optional<StandardWorkspace> getWorkspaceByIdempotencyKey(UUID idempotencyKey) throws IOException {
+    final Result<Record> result;
+    result = database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+        .from(WORKSPACE)
+        .where(WORKSPACE.IDEMPOTENCY_KEY.eq(idempotencyKey))).fetch();
+
+    return result.stream().findFirst().map(DbConverter::buildStandardWorkspace);
+  }
+
+  /**
    * List workspaces.
    *
    * @param includeTombstone include tombstoned workspaces

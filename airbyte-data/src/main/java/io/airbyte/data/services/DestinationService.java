@@ -16,6 +16,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -25,6 +26,8 @@ public interface DestinationService {
 
   StandardDestinationDefinition getStandardDestinationDefinition(UUID destinationDefinitionId)
       throws JsonValidationException, IOException, ConfigNotFoundException;
+
+  Optional<StandardDestinationDefinition> getStandardDestinationDefinitionByIdempotencyKey(UUID idempotencyKey) throws IOException;
 
   StandardDestinationDefinition getDestinationDefinitionFromDestination(UUID destinationId);
 
@@ -43,6 +46,8 @@ public interface DestinationService {
       throws IOException, JsonValidationException, ConfigNotFoundException;
 
   DestinationConnection getDestinationConnection(UUID destinationId) throws JsonValidationException, IOException, ConfigNotFoundException;
+
+  Optional<DestinationConnection> getDestinationConnectionByIdempotencyKey(UUID idempotencyKey) throws IOException;
 
   void writeDestinationConnectionNoSecrets(DestinationConnection partialDestination) throws IOException;
 

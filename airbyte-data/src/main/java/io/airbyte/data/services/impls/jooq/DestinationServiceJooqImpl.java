@@ -120,6 +120,15 @@ public class DestinationServiceJooqImpl implements DestinationService {
         .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.STANDARD_DESTINATION_DEFINITION, destinationDefinitionId));
   }
 
+  @Override
+  public Optional<StandardDestinationDefinition> getStandardDestinationDefinitionByIdempotencyKey(UUID idempotencyKey) throws IOException {
+    final Result<Record> result = database.query(ctx -> {
+      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR_DEFINITION);
+      return query.where(ACTOR_DEFINITION.ACTOR_TYPE.eq(ActorType.destination)).and(ACTOR_DEFINITION.IDEMPOTENCY_KEY.eq(idempotencyKey)).fetch();
+    });
+    return result.stream().findFirst().map(DbConverter::buildStandardDestinationDefinition);
+  }
+
   /**
    * Get destination definition form destination.
    *
@@ -263,6 +272,15 @@ public class DestinationServiceJooqImpl implements DestinationService {
     return listDestinationQuery(Optional.of(destinationId))
         .findFirst()
         .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.DESTINATION_CONNECTION, destinationId));
+  }
+
+  @Override
+  public Optional<DestinationConnection> getDestinationConnectionByIdempotencyKey(UUID idempotencyKey) throws IOException {
+    final Result<Record> result = database.query(ctx -> {
+      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR);
+      return query.where(ACTOR.ACTOR_TYPE.eq(ActorType.destination)).and(ACTOR.IDEMPOTENCY_KEY.eq(idempotencyKey)).fetch();
+    });
+    return result.stream().findFirst().map(DbConverter::buildDestinationConnection);
   }
 
   /**

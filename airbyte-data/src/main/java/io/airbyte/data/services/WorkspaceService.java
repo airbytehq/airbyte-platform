@@ -29,6 +29,8 @@ public interface WorkspaceService {
 
   StandardWorkspace getWorkspaceBySlug(String slug, boolean includeTombstone) throws IOException, ConfigNotFoundException;
 
+  Optional<StandardWorkspace> getWorkspaceByIdempotencyKey(UUID idempotencyKey) throws IOException, ConfigNotFoundException;
+
   List<StandardWorkspace> listStandardWorkspaces(boolean includeTombstone) throws IOException;
 
   List<StandardWorkspace> listAllWorkspacesPaginated(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException;

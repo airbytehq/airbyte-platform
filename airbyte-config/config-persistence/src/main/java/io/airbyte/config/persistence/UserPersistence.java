@@ -110,6 +110,24 @@ public class UserPersistence {
   }
 
   /**
+   * Retrieves a user based on the provided idempotency key.
+   *
+   * @param idempotencyKey The idempotency key used to identify the user.
+   * @return user if found
+   */
+  public Optional<User> getUserByIdempotencyKey(final UUID idempotencyKey) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx
+        .select(asterisk())
+        .from(USER)
+        .where(USER.IDEMPOTENCY_KEY.eq(idempotencyKey)).fetch());
+    if (result.isEmpty()) {
+      return Optional.empty();
+    }
+
+    return Optional.of(createUserFromRecord(result.get(0)));
+  }
+
+  /**
    * Get User.
    *
    * @param userId internal user id
