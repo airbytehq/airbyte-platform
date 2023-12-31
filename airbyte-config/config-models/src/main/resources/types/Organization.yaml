@@ -31,3 +31,5 @@ properties:
   ssoRealm:
     description: This organization's SSO realm, if set via an SsoConfig
     type: string
+  idempotencyKey:
+    $ref: "IdempotencyKey.yaml"

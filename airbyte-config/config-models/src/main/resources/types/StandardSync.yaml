@@ -136,3 +136,5 @@ properties:
       - disable # disable the connection, pausing the sync
       - propagate_columns # Auto propagate schema change for existing streams
       - propagate_fully # Auto propagate schema change for all streams including the new ones
+  idempotencyKey:
+    $ref: "IdempotencyKey.yaml"

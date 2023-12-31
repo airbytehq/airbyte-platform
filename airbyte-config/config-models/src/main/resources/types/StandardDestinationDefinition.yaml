@@ -34,3 +34,5 @@ properties:
     default: false
   resourceRequirements:
     "$ref": ActorDefinitionResourceRequirements.yaml
+  idempotencyKey:
+    $ref: "IdempotencyKey.yaml"

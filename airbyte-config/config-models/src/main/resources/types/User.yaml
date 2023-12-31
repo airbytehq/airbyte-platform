@@ -52,3 +52,5 @@ properties:
     type: object
     description: metadata information required from frontend UI
     existingJavaType: com.fasterxml.jackson.databind.JsonNode
+  idempotencyKey:
+    $ref: "IdempotencyKey.yaml"
