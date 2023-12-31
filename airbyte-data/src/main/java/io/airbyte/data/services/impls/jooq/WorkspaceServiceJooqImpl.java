@@ -270,6 +270,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   public void writeStandardWorkspaceNoSecrets(final StandardWorkspace workspace) throws JsonValidationException, IOException {
     database.transaction(ctx -> {
       final OffsetDateTime timestamp = OffsetDateTime.now();
+      final UUID idempotencyKey = workspace.getIdempotencyKey();
       final boolean isExistingConfig = ctx.fetchExists(select()
           .from(WORKSPACE)
           .where(WORKSPACE.ID.eq(workspace.getWorkspaceId())));
@@ -325,6 +326,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
             .set(WORKSPACE.ORGANIZATION_ID, workspace.getOrganizationId())
             .set(WORKSPACE.WEBHOOK_OPERATION_CONFIGS, workspace.getWebhookOperationConfigs() == null ? null
                 : JSONB.valueOf(Jsons.serialize(workspace.getWebhookOperationConfigs())))
+            .set(WORKSPACE.IDEMPOTENCY_KEY, idempotencyKey)
             .execute();
       }
       return null;

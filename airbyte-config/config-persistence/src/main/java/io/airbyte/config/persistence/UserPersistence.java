@@ -56,6 +56,7 @@ public class UserPersistence {
    */
   public void writeUser(final User user) throws IOException {
     database.transaction(ctx -> {
+      final UUID idempotencyKey = user.getIdempotencyKey();
       final OffsetDateTime timestamp = OffsetDateTime.now();
       final boolean isExistingConfig = ctx.fetchExists(select()
           .from(USER)
@@ -93,6 +94,7 @@ public class UserPersistence {
             .set(USER.NEWS, user.getNews())
             .set(USER.CREATED_AT, timestamp)
             .set(USER.UPDATED_AT, timestamp)
+            .set(USER.IDEMPOTENCY_KEY, idempotencyKey)
             .execute();
       }
       return null;

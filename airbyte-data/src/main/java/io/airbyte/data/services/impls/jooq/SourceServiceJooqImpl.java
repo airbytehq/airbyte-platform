@@ -740,6 +740,7 @@ public class SourceServiceJooqImpl implements SourceService {
   private void writeSourceConnection(final List<SourceConnection> configs, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     configs.forEach((sourceConnection) -> {
+      final UUID idempotencyKey = sourceConnection.getIdempotencyKey();
       final boolean isExistingConfig = ctx.fetchExists(select()
           .from(ACTOR)
           .where(ACTOR.ID.eq(sourceConnection.getSourceId())));
@@ -770,6 +771,7 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(ACTOR.DEFAULT_VERSION_ID, actorDefinitionDefaultVersionId)
             .set(ACTOR.CREATED_AT, timestamp)
             .set(ACTOR.UPDATED_AT, timestamp)
+            .set(ACTOR.IDEMPOTENCY_KEY, idempotencyKey)
             .execute();
       }
     });
@@ -858,6 +860,13 @@ public class SourceServiceJooqImpl implements SourceService {
                                                final SourceConnection source,
                                                final ConnectorSpecification connectorSpecification)
       throws JsonValidationException, IOException, ConfigNotFoundException {
+    final UUID idempotencyKey = source.getIdempotencyKey();
+    if (idempotencyKey != null) {
+      final Optional<SourceConnection> found = getSourceConnectionByIdempotencyKey(idempotencyKey);
+      if (found.isPresent()) {
+        return; // skip write
+      }
+    }
     final Optional<JsonNode> previousSourceConnection =
         getSourceIfExists(source.getSourceId()).map(SourceConnection::getConfiguration);
 

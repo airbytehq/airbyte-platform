@@ -623,6 +623,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   }
 
   private void writeStandardSync(final StandardSync standardSync, final DSLContext ctx) {
+    final UUID idempotencyKey = standardSync.getIdempotencyKey();
     final OffsetDateTime timestamp = OffsetDateTime.now();
     final boolean isExistingConfig = ctx.fetchExists(select()
         .from(CONNECTION)
@@ -713,6 +714,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
           .set(CONNECTION.BREAKING_CHANGE, standardSync.getBreakingChange())
           .set(CONNECTION.CREATED_AT, timestamp)
           .set(CONNECTION.UPDATED_AT, timestamp)
+          .set(CONNECTION.IDEMPOTENCY_KEY, idempotencyKey)
           .execute();
 
       updateOrCreateNotificationConfiguration(standardSync, timestamp, ctx);

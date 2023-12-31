@@ -676,6 +676,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
   private void writeDestinationConnection(final List<DestinationConnection> configs, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     configs.forEach((destinationConnection) -> {
+      final UUID idempotencyKey = destinationConnection.getIdempotencyKey();
       final boolean isExistingConfig = ctx.fetchExists(select()
           .from(ACTOR)
           .where(ACTOR.ID.eq(destinationConnection.getDestinationId())));
@@ -707,6 +708,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
             .set(ACTOR.DEFAULT_VERSION_ID, actorDefinitionDefaultVersionId)
             .set(ACTOR.CREATED_AT, timestamp)
             .set(ACTOR.UPDATED_AT, timestamp)
+            .set(ACTOR.IDEMPOTENCY_KEY, idempotencyKey)
             .execute();
       }
     });
@@ -834,6 +836,13 @@ public class DestinationServiceJooqImpl implements DestinationService {
                                                     final DestinationConnection destination,
                                                     final ConnectorSpecification connectorSpecification)
       throws JsonValidationException, IOException, ConfigNotFoundException {
+    final UUID idempotencyKey = destination.getIdempotencyKey();
+    if (idempotencyKey != null) {
+      final Optional<DestinationConnection> found = getDestinationConnectionByIdempotencyKey(idempotencyKey);
+      if (found.isPresent()) {
+        return; // skip write
+      }
+    }
     final Optional<JsonNode> previousDestinationConnection =
         getDestinationIfExists(destination.getDestinationId()).map(DestinationConnection::getConfiguration);
 
