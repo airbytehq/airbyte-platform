@@ -101,7 +101,7 @@ class ApiBeanFactory {
               "workload_api_client.success",
               *metricTags,
               *arrayOf("retry-attempt", l.attemptCount.toString()),
-            )
+            ).increment()
           }
         }
         .withDelay(Duration.ofSeconds(retryDelaySeconds))
