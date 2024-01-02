@@ -16,9 +16,9 @@ import org.slf4j.LoggerFactory;
 /**
  * Add icon_url to actor_definition table.
  */
-public class V0_50_33_015__AddIconUrlToActorDefinition extends BaseJavaMigration {
+public class V0_50_33_016__AddIconUrlToActorDefinition extends BaseJavaMigration {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(V0_50_33_015__AddIconUrlToActorDefinition.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(V0_50_33_016__AddIconUrlToActorDefinition.class);
 
   @Override
   public void migrate(final Context context) throws Exception {

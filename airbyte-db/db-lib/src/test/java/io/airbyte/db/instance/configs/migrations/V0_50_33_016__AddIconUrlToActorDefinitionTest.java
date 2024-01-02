@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class V0_50_33_015__AddIconUrlToActorDefinitionTest extends AbstractConfigsDatabaseTest {
+class V0_50_33_016__AddIconUrlToActorDefinitionTest extends AbstractConfigsDatabaseTest {
 
   @BeforeEach
   void beforeEach() {
@@ -41,7 +41,7 @@ class V0_50_33_015__AddIconUrlToActorDefinitionTest extends AbstractConfigsDatab
 
     Assertions.assertFalse(iconUrlColumnExists(context));
 
-    V0_50_33_015__AddIconUrlToActorDefinition.addIconUrlToActorDefinition(context);
+    V0_50_33_016__AddIconUrlToActorDefinition.addIconUrlToActorDefinition(context);
 
     Assertions.assertTrue(iconUrlColumnExists(context));
   }
