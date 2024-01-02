@@ -122,6 +122,7 @@ open class SourceServiceImpl(
     sourceCreateOss.workspaceId = sourceCreateRequest.workspaceId
     sourceCreateOss.connectionConfiguration = sourceCreateRequest.configuration
     sourceCreateOss.secretId = sourceCreateRequest.secretId
+    sourceCreateOss.idempotencyKey = sourceCreateRequest.idempotencyKey
 
     val response =
       try {

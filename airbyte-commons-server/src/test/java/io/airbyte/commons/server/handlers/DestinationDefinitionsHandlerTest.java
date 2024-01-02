@@ -56,6 +56,7 @@ import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
+import io.airbyte.data.services.DestinationService;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
@@ -102,6 +103,8 @@ class DestinationDefinitionsHandlerTest {
   private UUID organizationId;
   private FeatureFlagClient featureFlagClient;
 
+  private DestinationService destinationService;
+
   @SuppressWarnings("unchecked")
   @BeforeEach
   void setUp() {
@@ -118,6 +121,7 @@ class DestinationDefinitionsHandlerTest {
     workspaceId = UUID.randomUUID();
     organizationId = UUID.randomUUID();
     featureFlagClient = mock(TestClient.class);
+    destinationService = mock(DestinationService.class);
     destinationDefinitionsHandler = new DestinationDefinitionsHandler(
         configRepository,
         uuidSupplier,
@@ -125,7 +129,8 @@ class DestinationDefinitionsHandlerTest {
         remoteDefinitionsProvider,
         destinationHandler,
         supportStateUpdater,
-        featureFlagClient);
+        featureFlagClient,
+        destinationService);
   }
 
   private StandardDestinationDefinition generateDestinationDefinition() {

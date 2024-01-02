@@ -61,3 +61,5 @@ properties:
   organizationId:
     type: string
     format: uuid
+  idempotencyKey:
+    $ref: "IdempotencyKey.yaml"

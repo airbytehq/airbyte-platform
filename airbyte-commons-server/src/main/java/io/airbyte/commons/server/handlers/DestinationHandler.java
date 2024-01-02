@@ -42,6 +42,7 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -85,6 +86,13 @@ public class DestinationHandler {
 
   public DestinationRead createDestination(final DestinationCreate destinationCreate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
+    final UUID idempotencyKey = destinationCreate.getIdempotencyKey();
+    if (idempotencyKey != null) {
+      final Optional<DestinationConnection> found = destinationService.getDestinationConnectionByIdempotencyKey(idempotencyKey);
+      if (found.isPresent()) {
+        return buildDestinationRead(found.get());
+      }
+    }
     // validate configuration
     final ConnectorSpecification spec = getSpecForWorkspaceId(destinationCreate.getDestinationDefinitionId(), destinationCreate.getWorkspaceId());
     validateDestination(spec, destinationCreate.getConnectionConfiguration());
@@ -98,7 +106,8 @@ public class DestinationHandler {
         destinationId,
         destinationCreate.getConnectionConfiguration(),
         false,
-        spec);
+        spec,
+        destinationCreate.getIdempotencyKey());
 
     // read configuration from db
     return buildDestinationRead(configRepository.getDestinationConnection(destinationId), spec);
@@ -143,7 +152,8 @@ public class DestinationHandler {
         destination.getDestinationId(),
         fullConfig,
         true,
-        spec);
+        spec,
+        null);
   }
 
   public DestinationRead updateDestination(final DestinationUpdate destinationUpdate)
@@ -167,7 +177,8 @@ public class DestinationHandler {
         updatedDestination.getDestinationId(),
         updatedDestination.getConfiguration(),
         updatedDestination.getTombstone(),
-        spec);
+        spec,
+        updatedDestination.getIdempotencyKey());
 
     // read configuration from db
     return buildDestinationRead(
@@ -198,7 +209,8 @@ public class DestinationHandler {
         updatedDestination.getDestinationId(),
         updatedDestination.getConfiguration(),
         updatedDestination.getTombstone(),
-        spec);
+        spec,
+        updatedDestination.getIdempotencyKey());
 
     // read configuration from db
     return buildDestinationRead(
@@ -334,7 +346,8 @@ public class DestinationHandler {
                                             final UUID destinationId,
                                             final JsonNode configurationJson,
                                             final boolean tombstone,
-                                            final ConnectorSpecification spec)
+                                            final ConnectorSpecification spec,
+                                            final UUID idempotencyKey)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final JsonNode oAuthMaskedConfigurationJson =
         oAuthConfigSupplier.maskDestinationOAuthParameters(destinationDefinitionId, workspaceId, configurationJson, spec);
@@ -344,7 +357,8 @@ public class DestinationHandler {
         .withWorkspaceId(workspaceId)
         .withDestinationId(destinationId)
         .withConfiguration(oAuthMaskedConfigurationJson)
-        .withTombstone(tombstone);
+        .withTombstone(tombstone)
+        .withIdempotencyKey(idempotencyKey);
     try {
       destinationService.writeDestinationConnectionWithSecrets(destinationConnection, spec);
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {

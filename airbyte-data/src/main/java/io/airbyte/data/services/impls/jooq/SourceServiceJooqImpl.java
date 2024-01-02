@@ -123,6 +123,15 @@ public class SourceServiceJooqImpl implements SourceService {
         .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.STANDARD_SOURCE_DEFINITION, sourceDefinitionId));
   }
 
+  @Override
+  public Optional<StandardSourceDefinition> getStandardSourceDefinitionByIdempotencyKey(UUID idempotencyKey) throws IOException {
+    final Result<Record> result = database.query(ctx -> {
+      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR_DEFINITION);
+      return query.where(ACTOR_DEFINITION.ACTOR_TYPE.eq(ActorType.source)).and(ACTOR_DEFINITION.IDEMPOTENCY_KEY.eq(idempotencyKey)).fetch();
+    });
+    return result.stream().findFirst().map(record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessage));
+  }
+
   /**
    * Get source definition form source.
    *
@@ -266,6 +275,15 @@ public class SourceServiceJooqImpl implements SourceService {
     return listSourceQuery(Optional.of(sourceId))
         .findFirst()
         .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.SOURCE_CONNECTION, sourceId));
+  }
+
+  @Override
+  public Optional<SourceConnection> getSourceConnectionByIdempotencyKey(UUID idempotencyKey) throws IOException {
+    final Result<Record> result = database.query(ctx -> {
+      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR);
+      return query.where(ACTOR.ACTOR_TYPE.eq(ActorType.source)).and(ACTOR.IDEMPOTENCY_KEY.eq(idempotencyKey)).fetch();
+    });
+    return result.stream().findFirst().map(DbConverter::buildSourceConnection);
   }
 
   /**
@@ -722,6 +740,7 @@ public class SourceServiceJooqImpl implements SourceService {
   private void writeSourceConnection(final List<SourceConnection> configs, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     configs.forEach((sourceConnection) -> {
+      final UUID idempotencyKey = sourceConnection.getIdempotencyKey();
       final boolean isExistingConfig = ctx.fetchExists(select()
           .from(ACTOR)
           .where(ACTOR.ID.eq(sourceConnection.getSourceId())));
@@ -752,6 +771,7 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(ACTOR.DEFAULT_VERSION_ID, actorDefinitionDefaultVersionId)
             .set(ACTOR.CREATED_AT, timestamp)
             .set(ACTOR.UPDATED_AT, timestamp)
+            .set(ACTOR.IDEMPOTENCY_KEY, idempotencyKey)
             .execute();
       }
     });
@@ -840,6 +860,13 @@ public class SourceServiceJooqImpl implements SourceService {
                                                final SourceConnection source,
                                                final ConnectorSpecification connectorSpecification)
       throws JsonValidationException, IOException, ConfigNotFoundException {
+    final UUID idempotencyKey = source.getIdempotencyKey();
+    if (idempotencyKey != null) {
+      final Optional<SourceConnection> found = getSourceConnectionByIdempotencyKey(idempotencyKey);
+      if (found.isPresent()) {
+        return; // skip write
+      }
+    }
     final Optional<JsonNode> previousSourceConnection =
         getSourceIfExists(source.getSourceId()).map(SourceConnection::getConfiguration);
 

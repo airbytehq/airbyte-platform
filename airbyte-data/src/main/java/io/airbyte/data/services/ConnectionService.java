@@ -15,6 +15,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -26,6 +27,8 @@ public interface ConnectionService {
   void deleteStandardSync(UUID syncId) throws IOException;
 
   StandardSync getStandardSync(UUID connectionId) throws JsonValidationException, IOException, ConfigNotFoundException;
+
+  Optional<StandardSync> getStandardSyncByIdempotencyKey(UUID idempotencyKey) throws IOException;
 
   void writeStandardSync(StandardSync standardSync) throws IOException;
 

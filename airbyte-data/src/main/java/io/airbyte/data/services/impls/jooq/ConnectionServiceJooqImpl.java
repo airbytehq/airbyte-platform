@@ -119,6 +119,42 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   }
 
   /**
+   * Retrieves a {@link StandardSync} by its idempotency key.
+   *
+   * @param idempotencyKey the idempotency key of the StandardSync
+   * @return an Optional object containing the StandardSync if found, or an empty Optional if not
+   *         found
+   * @throws IOException if an I/O error occurs
+   */
+  @Override
+  public Optional<StandardSync> getStandardSyncByIdempotencyKey(UUID idempotencyKey) throws IOException {
+    final Result<Record> result = database.query(ctx -> {
+      final SelectJoinStep<Record> query = ctx.select(CONNECTION.asterisk(),
+          SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
+          .from(CONNECTION)
+          // The schema management can be non-existent for a connection id, thus we need to do a left join
+          .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID));
+      return query.where(CONNECTION.IDEMPOTENCY_KEY.eq(idempotencyKey)).fetch();
+    });
+
+    final List<ConfigWithMetadata<StandardSync>> standardSyncs = new ArrayList<>();
+    for (final Record record : result) {
+      final UUID configId = record.get(CONNECTION.ID);
+      final List<NotificationConfigurationRecord> notificationConfigurationRecords = database.query(ctx -> ctx.selectFrom(NOTIFICATION_CONFIGURATION)
+          .where(NOTIFICATION_CONFIGURATION.CONNECTION_ID.eq(configId))
+          .fetch());
+
+      final StandardSync standardSync =
+          DbConverter.buildStandardSync(record, connectionOperationIds(configId), notificationConfigurationRecords);
+      if (ScheduleHelpers.isScheduleTypeMismatch(standardSync)) {
+        throw new RuntimeException("unexpected schedule type mismatch");
+      }
+      return Optional.of(standardSync);
+    }
+    return Optional.empty();
+  }
+
+  /**
    * Write connection.
    *
    * @param standardSync connection
@@ -587,6 +623,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   }
 
   private void writeStandardSync(final StandardSync standardSync, final DSLContext ctx) {
+    final UUID idempotencyKey = standardSync.getIdempotencyKey();
     final OffsetDateTime timestamp = OffsetDateTime.now();
     final boolean isExistingConfig = ctx.fetchExists(select()
         .from(CONNECTION)
@@ -677,6 +714,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
           .set(CONNECTION.BREAKING_CHANGE, standardSync.getBreakingChange())
           .set(CONNECTION.CREATED_AT, timestamp)
           .set(CONNECTION.UPDATED_AT, timestamp)
+          .set(CONNECTION.IDEMPOTENCY_KEY, idempotencyKey)
           .execute();
 
       updateOrCreateNotificationConfiguration(standardSync, timestamp, ctx);

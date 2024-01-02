@@ -60,6 +60,7 @@ public class OrganizationServiceJooqImpl implements OrganizationService {
   @Override
   public void writeOrganization(final Organization organization) throws IOException {
     database.transaction(ctx -> {
+      final UUID idempotencyKey = organization.getIdempotencyKey();
       final OffsetDateTime timestamp = OffsetDateTime.now();
       final boolean isExistingConfig = ctx.fetchExists(select()
           .from(ORGANIZATION)
@@ -86,6 +87,7 @@ public class OrganizationServiceJooqImpl implements OrganizationService {
             .set(WORKSPACE.UPDATED_AT, timestamp)
             .set(ORGANIZATION.PBA, organization.getPba())
             .set(ORGANIZATION.ORG_LEVEL_BILLING, organization.getOrgLevelBilling())
+            .set(ORGANIZATION.IDEMPOTENCY_KEY, idempotencyKey)
             .execute();
       }
       return null;

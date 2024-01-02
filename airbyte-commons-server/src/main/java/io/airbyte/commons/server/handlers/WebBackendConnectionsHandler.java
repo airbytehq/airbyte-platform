@@ -738,6 +738,7 @@ public class WebBackendConnectionsHandler {
     connectionCreate.sourceCatalogId(webBackendConnectionCreate.getSourceCatalogId());
     connectionCreate.geography(webBackendConnectionCreate.getGeography());
     connectionCreate.nonBreakingChangesPreference(webBackendConnectionCreate.getNonBreakingChangesPreference());
+    connectionCreate.idempotencyKey(webBackendConnectionCreate.getIdempotencyKey());
 
     return connectionCreate;
   }

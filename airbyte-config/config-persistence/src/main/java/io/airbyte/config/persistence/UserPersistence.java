@@ -56,6 +56,7 @@ public class UserPersistence {
    */
   public void writeUser(final User user) throws IOException {
     database.transaction(ctx -> {
+      final UUID idempotencyKey = user.getIdempotencyKey();
       final OffsetDateTime timestamp = OffsetDateTime.now();
       final boolean isExistingConfig = ctx.fetchExists(select()
           .from(USER)
@@ -93,6 +94,7 @@ public class UserPersistence {
             .set(USER.NEWS, user.getNews())
             .set(USER.CREATED_AT, timestamp)
             .set(USER.UPDATED_AT, timestamp)
+            .set(USER.IDEMPOTENCY_KEY, idempotencyKey)
             .execute();
       }
       return null;
@@ -107,6 +109,24 @@ public class UserPersistence {
    */
   public boolean deleteUserById(final UUID userId) throws IOException {
     return database.transaction(ctx -> ctx.deleteFrom(USER)).where(field(DSL.name(PRIMARY_KEY)).eq(userId)).execute() > 0;
+  }
+
+  /**
+   * Retrieves a user based on the provided idempotency key.
+   *
+   * @param idempotencyKey The idempotency key used to identify the user.
+   * @return user if found
+   */
+  public Optional<User> getUserByIdempotencyKey(final UUID idempotencyKey) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx
+        .select(asterisk())
+        .from(USER)
+        .where(USER.IDEMPOTENCY_KEY.eq(idempotencyKey)).fetch());
+    if (result.isEmpty()) {
+      return Optional.empty();
+    }
+
+    return Optional.of(createUserFromRecord(result.get(0)));
   }
 
   /**

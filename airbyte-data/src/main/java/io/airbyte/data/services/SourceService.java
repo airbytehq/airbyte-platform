@@ -16,6 +16,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -24,6 +25,8 @@ import java.util.UUID;
 public interface SourceService {
 
   StandardSourceDefinition getStandardSourceDefinition(UUID sourceDefinitionId) throws JsonValidationException, IOException, ConfigNotFoundException;
+
+  Optional<StandardSourceDefinition> getStandardSourceDefinitionByIdempotencyKey(UUID idempotencyKey) throws IOException;
 
   StandardSourceDefinition getSourceDefinitionFromSource(UUID sourceId);
 
@@ -40,6 +43,8 @@ public interface SourceService {
   void updateStandardSourceDefinition(StandardSourceDefinition sourceDefinition) throws IOException, JsonValidationException, ConfigNotFoundException;
 
   SourceConnection getSourceConnection(UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException;
+
+  Optional<SourceConnection> getSourceConnectionByIdempotencyKey(UUID idempotencyKey) throws IOException;
 
   void writeSourceConnectionNoSecrets(SourceConnection partialSource) throws IOException;
 

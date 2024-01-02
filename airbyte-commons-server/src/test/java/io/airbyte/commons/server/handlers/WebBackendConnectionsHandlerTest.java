@@ -621,6 +621,7 @@ class WebBackendConnectionsHandlerTest {
     final UUID newDestinationId = UUID.randomUUID();
     final UUID newOperationId = UUID.randomUUID();
     final UUID sourceCatalogId = UUID.randomUUID();
+    final UUID idempotencyKey = UUID.randomUUID();
     final WebBackendConnectionCreate input = new WebBackendConnectionCreate()
         .name("testConnectionCreate")
         .namespaceDefinition(Enums.convertTo(standardSync.getNamespaceDefinition(), NamespaceDefinitionType.class))
@@ -634,7 +635,8 @@ class WebBackendConnectionsHandlerTest {
         .syncCatalog(catalog)
         .sourceCatalogId(sourceCatalogId)
         .geography(Geography.US)
-        .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE);
+        .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
+        .idempotencyKey(idempotencyKey);
 
     final List<UUID> operationIds = List.of(newOperationId);
 
@@ -651,7 +653,8 @@ class WebBackendConnectionsHandlerTest {
         .syncCatalog(catalog)
         .sourceCatalogId(sourceCatalogId)
         .geography(Geography.US)
-        .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE);
+        .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
+        .idempotencyKey(idempotencyKey);
 
     final ConnectionCreate actual = WebBackendConnectionsHandler.toConnectionCreate(input, operationIds);
 
@@ -713,7 +716,7 @@ class WebBackendConnectionsHandlerTest {
         Set.of("name", "namespaceDefinition", "namespaceFormat", "prefix", "sourceId", "destinationId", "operationIds",
             "addOperationIdsItem", "removeOperationIdsItem", "syncCatalog", "schedule", "scheduleType", "scheduleData",
             "status", "resourceRequirements", "sourceCatalogId", "geography", "nonBreakingChangesPreference", "notifySchemaChanges",
-            "notifySchemaChangesByEmail");
+            "notifySchemaChangesByEmail", "idempotencyKey");
 
     final Set<String> methods = Arrays.stream(ConnectionCreate.class.getMethods())
         .filter(method -> method.getReturnType() == ConnectionCreate.class)

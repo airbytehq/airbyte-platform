@@ -68,6 +68,27 @@ public class OrganizationPersistence {
     return Optional.of(createOrganizationFromRecord(result.get(0)));
   }
 
+  /**
+   * Retrieves an organization based on the specified idempotency key.
+   *
+   * @param idempotencyKey The idempotency key to search for an organization.
+   * @return An Optional that may contain the organization with the specified idempotency key, or
+   *         empty if not found.
+   */
+  public Optional<Organization> getOrganizationByIdempotencyKey(UUID idempotencyKey) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx
+        .select(asterisk())
+        .from(ORGANIZATION)
+        .leftJoin(SSO_CONFIG).on(ORGANIZATION.ID.eq(SSO_CONFIG.ORGANIZATION_ID))
+        .where(ORGANIZATION.IDEMPOTENCY_KEY.eq(idempotencyKey)).fetch());
+
+    if (result.isEmpty()) {
+      return Optional.empty();
+    }
+
+    return Optional.of(createOrganizationFromRecord(result.get(0)));
+  }
+
   public Optional<Organization> getOrganizationByWorkspaceId(final UUID workspaceId) throws IOException {
     final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())

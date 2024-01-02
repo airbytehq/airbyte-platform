@@ -115,6 +115,7 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
     destinationCreateOss.destinationDefinitionId = destinationDefinitionId
     destinationCreateOss.workspaceId = destinationCreateRequest.workspaceId
     destinationCreateOss.connectionConfiguration = destinationCreateRequest.configuration
+    destinationCreateOss.idempotencyKey = destinationCreateRequest.idempotencyKey
 
     val response =
       try {

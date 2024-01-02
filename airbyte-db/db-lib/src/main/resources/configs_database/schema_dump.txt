@@ -21,6 +21,7 @@ create table "public"."actor" (
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "default_version_id" uuid not null,
+  "idempotency_key" uuid,
   constraint "actor_pkey"
     primary key ("id")
 );
@@ -58,6 +59,7 @@ create table "public"."actor_definition" (
   "custom" boolean not null default false,
   "max_seconds_between_messages" int,
   "default_version_id" uuid,
+  "idempotency_key" uuid,
   constraint "actor_definition_pkey"
     primary key ("id")
 );
@@ -100,7 +102,7 @@ create table "public"."actor_definition_version" (
   "allowed_hosts" jsonb,
   "suggested_streams" jsonb,
   "release_stage" "public"."release_stage",
-  "support_state" "public"."support_state" not null default cast('supported' as support_state),
+  "support_state" support_state not null default cast('supported' as support_state),
   "support_level" "public"."support_level" not null,
   constraint "actor_definition_version_pkey"
     primary key ("id"),
@@ -111,7 +113,7 @@ create table "public"."actor_definition_workspace_grant" (
   "actor_definition_id" uuid not null,
   "workspace_id" uuid,
   "scope_id" uuid,
-  "scope_type" "public"."scope_type" not null default cast('workspace' as scope_type),
+  "scope_type" scope_type not null default cast('workspace' as scope_type),
   constraint "actor_definition_workspace_gr_actor_definition_id_scope_id__key"
     unique ("actor_definition_id", "scope_id", "scope_type")
 );
@@ -158,10 +160,11 @@ create table "public"."connection" (
   "source_catalog_id" uuid,
   "schedule_type" "public"."schedule_type",
   "schedule_data" jsonb,
-  "geography" "public"."geography_type" not null default cast('AUTO' as geography_type),
+  "geography" geography_type not null default cast('AUTO' as geography_type),
   "non_breaking_change_preference" varchar(7) not null default cast('ignore' as varchar),
   "breaking_change" boolean not null default false,
   "field_selection_data" jsonb,
+  "idempotency_key" uuid,
   constraint "connection_pkey"
     primary key ("id")
 );
@@ -231,6 +234,7 @@ create table "public"."organization" (
   "pba" boolean not null default false,
   "org_level_billing" boolean not null default false,
   "tombstone" boolean not null default false,
+  "idempotency_key" uuid,
   constraint "organization_pkey"
     primary key ("id")
 );
@@ -264,7 +268,7 @@ create table "public"."schema_management" (
   "connection_id" uuid not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  "auto_propagation_status" "public"."auto_propagation_status" not null default cast('ignore' as auto_propagation_status),
+  "auto_propagation_status" auto_propagation_status not null default cast('ignore' as auto_propagation_status),
   constraint "schema_management_pkey"
     primary key ("id")
 );
@@ -297,7 +301,7 @@ create table "public"."scoped_configuration" (
 create table "public"."secret_persistence_config" (
   "id" uuid not null,
   "scope_id" uuid,
-  "scope_type" "public"."secret_persistence_scope_type" not null default cast('organization' as secret_persistence_scope_type),
+  "scope_type" secret_persistence_scope_type not null default cast('organization' as secret_persistence_scope_type),
   "secret_persistence_config_coordinate" varchar(256),
   "secret_persistence_type" "public"."secret_persistence_type" not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
@@ -328,7 +332,7 @@ create table "public"."state" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "stream_name" text,
   "namespace" text,
-  "type" "public"."state_type" not null default cast('LEGACY' as state_type),
+  "type" state_type not null default cast('LEGACY' as state_type),
   constraint "state_pkey"
     primary key ("id", "connection_id"),
   constraint "state__connection_id__stream_name__namespace__uq"
@@ -357,6 +361,7 @@ create table "public"."user" (
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "auth_provider" "public"."auth_provider" not null,
+  "idempotency_key" uuid,
   constraint "user_pkey"
     primary key ("id"),
   constraint "auth_user_id_auth_provider_key"
@@ -426,6 +431,7 @@ create table "public"."workspace" (
   "webhook_operation_configs" jsonb,
   "notification_settings" jsonb,
   "organization_id" uuid,
+  "idempotency_key" uuid,
   constraint "workspace_pkey"
     primary key ("id")
 );
@@ -570,17 +576,21 @@ alter table "public"."workspace_service_account"
     references "public"."workspace" ("id");
 comment on column "public"."actor_definition"."max_seconds_between_messages" is 'Define the number of seconds allowed between 2 messages emitted by the connector before timing out';
 create index "actor_actor_definition_id_idx" on "public"."actor"("actor_definition_id" asc);
+create unique index "actor_idempotency_key_idx" on "public"."actor"("idempotency_key" asc);
 create index "actor_workspace_id_idx" on "public"."actor"("workspace_id" asc);
 create index "actor_catalog_catalog_hash_id_idx" on "public"."actor_catalog"("catalog_hash" asc);
 create index "actor_catalog_fetch_event_actor_catalog_id_idx" on "public"."actor_catalog_fetch_event"("actor_catalog_id" asc);
 create index "actor_catalog_fetch_event_actor_id_idx" on "public"."actor_catalog_fetch_event"("actor_id" asc);
+create unique index "actor_definition_idempotency_key_idx" on "public"."actor_definition"("idempotency_key" asc);
 create index "actor_oauth_parameter_workspace_definition_idx" on "public"."actor_oauth_parameter"("workspace_id" asc, "actor_definition_id" asc);
 create index "airbyte_configs_migrations_s_idx" on "public"."airbyte_configs_migrations"("success" asc);
 create index "connection_destination_id_idx" on "public"."connection"("destination_id" asc);
+create unique index "connection_idempotency_key_idx" on "public"."connection"("idempotency_key" asc);
 create index "connection_source_id_idx" on "public"."connection"("source_id" asc);
 create index "connection_status_idx" on "public"."connection"("status" asc);
 create index "connection_operation_connection_id_idx" on "public"."connection_operation"("connection_id" asc);
 create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
+create unique index "organization_idempotency_key_idx" on "public"."organization"("idempotency_key" asc);
 create index "organization_email_domain_email_domain_idx" on "public"."organization_email_domain"("email_domain" asc);
 create index "organization_email_domain_organization_id_idx" on "public"."organization_email_domain"("organization_id" asc);
 create index "permission_organization_id_idx" on "public"."permission"("organization_id" asc);
@@ -592,9 +602,11 @@ create index "sso_config_organization_id_idx" on "public"."sso_config"("organiza
 create index "connection_id_stream_name_namespace_idx" on "public"."stream_reset"("connection_id" asc, "stream_name" asc, "stream_namespace" asc);
 create index "user_auth_provider_auth_user_id_idx" on "public"."user"("auth_provider" asc, "auth_user_id" asc);
 create index "user_email_idx" on "public"."user"("email" asc);
+create unique index "user_idempotency_key_idx" on "public"."user"("idempotency_key" asc);
 create index "user_invitation_invite_code_idx" on "public"."user_invitation"("invite_code" asc);
 create index "user_invitation_invited_email_idx" on "public"."user_invitation"("invited_email" asc);
 create index "user_invitation_organization_id_idx" on "public"."user_invitation"("organization_id" asc);
 create index "user_invitation_workspace_id_idx" on "public"."user_invitation"("workspace_id" asc);
 create index "workload_status_idx" on "public"."workload"("status" asc);
 create index "workload_label_workload_id_idx" on "public"."workload_label"("workload_id" asc);
+create unique index "workspace_idempotency_key_idx" on "public"."workspace"("idempotency_key" asc);

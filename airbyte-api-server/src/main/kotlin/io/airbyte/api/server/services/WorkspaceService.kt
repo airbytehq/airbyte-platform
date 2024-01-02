@@ -136,7 +136,7 @@ open class WorkspaceServiceImpl(
     authorization: String?,
     userInfo: String?,
   ): WorkspaceResponse {
-    val workspaceCreate = WorkspaceCreate().name(workspaceCreateRequest.name)
+    val workspaceCreate = WorkspaceCreate().name(workspaceCreateRequest.name).idempotencyKey(workspaceCreateRequest.idempotencyKey)
     val workspaceReadHttpResponse =
       try {
         configApiClient.createWorkspace(workspaceCreate, authorization, userInfo)
