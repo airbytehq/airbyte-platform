@@ -44,6 +44,10 @@ public final class Metadata {
   public static final String ORCHESTRATOR_NORMALIZATION_STEP = "orchestrator-normalization";
   public static final String ORCHESTRATOR_DBT_NORMALIZATION_STEP = "orchestrator-dbt-normalization";
   public static final String ORCHESTRATOR_REPLICATION_STEP = "orchestrator-replication";
+  public static final String AWS_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID";
+  public static final String AWS_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY";
+  public static final String AWS_ASSUME_ROLE_SECRET_NAME = "AWS_ASSUME_ROLE_SECRET_NAME";
+  public static final String AWS_ASSUME_ROLE_EXTERNAL_ID = "AWS_ASSUME_ROLE_EXTERNAL_ID";
 
   public static final String CHECK_STEP_KEY = "check_step";
   public static final String CONNECTOR_STEP = "connector";

@@ -39,6 +39,8 @@ flags:
   # the time the platform waits before it decides that a destination has timed out.
   - name: destination-timeout.seconds
     serve: 86400
+  - name: platform.inject-aws-secrets-to-connector-pods
+    serve: false
   - name: platform.use-workload-api
     serve: false
     context:

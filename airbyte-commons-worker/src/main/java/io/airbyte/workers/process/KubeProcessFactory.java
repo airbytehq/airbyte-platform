@@ -4,6 +4,11 @@
 
 package io.airbyte.workers.process;
 
+import static io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID;
+import static io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID;
+import static io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_SECRET_NAME;
+import static io.airbyte.workers.process.Metadata.AWS_SECRET_ACCESS_KEY;
+
 import autovalue.shaded.org.jetbrains.annotations.NotNull;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.helper.DockerImageNameHelper;
@@ -18,16 +23,19 @@ import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.ImageName;
 import io.airbyte.featureflag.ImageVersion;
+import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.RunSocatInConnectorContainer;
 import io.airbyte.featureflag.UseCustomK8sScheduler;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.ConnectorApmSupportHelper;
+import io.airbyte.workers.models.SecretMetadata;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import java.net.InetAddress;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -181,12 +189,18 @@ public class KubeProcessFactory implements ProcessFactory {
           workerConfigs.getJobBusyboxImage(),
           workerConfigs.getJobCurlImage(),
           runSocatInMainContainer,
-          MoreMaps.merge(jobMetadata, workerConfigs.getEnvMap(), additionalEnvironmentVariables),
+          MoreMaps.merge(jobMetadata, workerConfigs.getEnvMap(), additionalEnvironmentVariables, buildAwsEnvVars(workspaceId)),
+          buildSecretMetadataMap(workspaceId),
           internalToExternalPorts,
           args).toProcess();
     } catch (final Exception e) {
       throw new WorkerException("Failed to create pod for " + jobType + " step", e);
     }
+  }
+
+  private Map<String, String> buildAwsEnvVars(final UUID workspaceId) {
+    return Map.of(
+        AWS_ASSUME_ROLE_EXTERNAL_ID, workspaceId.toString());
   }
 
   @org.jetbrains.annotations.NotNull
@@ -263,6 +277,25 @@ public class KubeProcessFactory implements ProcessFactory {
             new ImageVersion(imageVersionContext),
             new Connection(connectionContext),
             new Workspace(workspaceContext))));
+  }
+
+  private Map<String, SecretMetadata> buildSecretMetadataMap(final UUID workspaceId) {
+    if (shouldInjectAwsSecretsToConnectorPods(workspaceId)) {
+      final String secretName = System.getenv(AWS_ASSUME_ROLE_SECRET_NAME);
+      if (secretName != null) {
+        return Map.of(
+            AWS_ACCESS_KEY_ID, new SecretMetadata(secretName, AWS_ACCESS_KEY_ID),
+            AWS_SECRET_ACCESS_KEY, new SecretMetadata(secretName, AWS_SECRET_ACCESS_KEY));
+      } else {
+        return Collections.emptyMap();
+      }
+    } else {
+      return Collections.emptyMap();
+    }
+  }
+
+  private boolean shouldInjectAwsSecretsToConnectorPods(final UUID workspaceId) {
+    return this.featureFlagClient.boolVariation(InjectAwsSecretsToConnectorPods.INSTANCE, new Workspace(workspaceId));
   }
 
 }

@@ -179,6 +179,8 @@ object PrintLongRecordPks : Temporary<Boolean>(key = "platform.print-long-record
 
 object TrackCommittedStatsWhenUsingGlobalState : Temporary<Boolean>(key = "global-state-committed-stats-tracking-enabled", default = false)
 
+object InjectAwsSecretsToConnectorPods : Temporary<Boolean>(key = "platform.inject-aws-secrets-to-connector-pods", default = false)
+
 object UseWorkloadOutputDocStore : Temporary<Boolean>(key = "platform.use-workload-output-doc-store", default = false)
 
 object UseWorkloadApiForCheck : Temporary<Boolean>(key = "platform.use-workload-api-for-check", default = false)
