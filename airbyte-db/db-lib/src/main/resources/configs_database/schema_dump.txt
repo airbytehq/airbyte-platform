@@ -58,6 +58,7 @@ create table "public"."actor_definition" (
   "custom" boolean not null default false,
   "max_seconds_between_messages" int,
   "default_version_id" uuid,
+  "icon_url" varchar(256),
   constraint "actor_definition_pkey"
     primary key ("id")
 );

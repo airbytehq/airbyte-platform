@@ -43,6 +43,7 @@ import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.SourceDefinition;
+import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
@@ -93,8 +94,10 @@ public class SourceDefinitionsHandler {
   }
 
   @VisibleForTesting
-  static SourceDefinitionRead buildSourceDefinitionRead(final StandardSourceDefinition standardSourceDefinition,
-                                                        final ActorDefinitionVersion sourceVersion) {
+  SourceDefinitionRead buildSourceDefinitionRead(final StandardSourceDefinition standardSourceDefinition,
+                                                 final ActorDefinitionVersion sourceVersion) {
+    final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
+
     try {
       return new SourceDefinitionRead()
           .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
@@ -103,7 +106,7 @@ public class SourceDefinitionsHandler {
           .dockerRepository(sourceVersion.getDockerRepository())
           .dockerImageTag(sourceVersion.getDockerImageTag())
           .documentationUrl(new URI(sourceVersion.getDocumentationUrl()))
-          .icon(loadIcon(standardSourceDefinition.getIcon()))
+          .icon(iconUrlFeatureFlag ? standardSourceDefinition.getIconUrl() : loadIcon(standardSourceDefinition.getIcon()))
           .protocolVersion(sourceVersion.getProtocolVersion())
           .supportLevel(ApiPojoConverters.toApiSupportLevel(sourceVersion.getSupportLevel()))
           .releaseStage(ApiPojoConverters.toApiReleaseStage(sourceVersion.getReleaseStage()))
@@ -139,8 +142,8 @@ public class SourceDefinitionsHandler {
         .stream().collect(Collectors.toMap(ActorDefinitionVersion::getActorDefinitionId, v -> v));
   }
 
-  private static SourceDefinitionReadList toSourceDefinitionReadList(final List<StandardSourceDefinition> defs,
-                                                                     final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
+  private SourceDefinitionReadList toSourceDefinitionReadList(final List<StandardSourceDefinition> defs,
+                                                              final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
     final List<SourceDefinitionRead> reads = defs.stream()
         .map(d -> buildSourceDefinitionRead(d, defIdToVersionMap.get(d.getSourceDefinitionId())))
         .collect(Collectors.toList());
@@ -192,8 +195,8 @@ public class SourceDefinitionsHandler {
     return toPrivateSourceDefinitionReadList(standardSourceDefinitionBooleanMap, sourceDefinitionVersionMap);
   }
 
-  private static PrivateSourceDefinitionReadList toPrivateSourceDefinitionReadList(final List<Entry<StandardSourceDefinition, Boolean>> defs,
-                                                                                   final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
+  private PrivateSourceDefinitionReadList toPrivateSourceDefinitionReadList(final List<Entry<StandardSourceDefinition, Boolean>> defs,
+                                                                            final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
     final List<PrivateSourceDefinitionRead> reads = defs.stream()
         .map(entry -> new PrivateSourceDefinitionRead()
             .sourceDefinition(buildSourceDefinitionRead(entry.getKey(), defIdToVersionMap.get(entry.getKey().getSourceDefinitionId())))

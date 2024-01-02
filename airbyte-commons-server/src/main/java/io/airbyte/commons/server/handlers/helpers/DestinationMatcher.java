@@ -36,6 +36,8 @@ public class DestinationMatcher implements Matchable<DestinationRead> {
     fromSearch.destinationName(
         Strings.isBlank(search.getDestinationName()) ? query.getDestinationName() : search.getDestinationName());
     fromSearch.workspaceId(search.getWorkspaceId() == null ? query.getWorkspaceId() : search.getWorkspaceId());
+    fromSearch.icon(query.getIcon());
+
     if (search.getConnectionConfiguration() == null) {
       fromSearch.connectionConfiguration(query.getConnectionConfiguration());
     } else if (query.getConnectionConfiguration() == null) {

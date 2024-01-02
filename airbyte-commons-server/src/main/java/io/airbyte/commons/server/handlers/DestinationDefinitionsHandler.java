@@ -42,6 +42,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.RunSupportStateUpdater;
+import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
@@ -93,17 +94,17 @@ public class DestinationDefinitionsHandler {
   }
 
   @VisibleForTesting
-  static DestinationDefinitionRead buildDestinationDefinitionRead(final StandardDestinationDefinition standardDestinationDefinition,
-                                                                  final ActorDefinitionVersion destinationVersion) {
+  DestinationDefinitionRead buildDestinationDefinitionRead(final StandardDestinationDefinition standardDestinationDefinition,
+                                                           final ActorDefinitionVersion destinationVersion) {
     try {
-
+      final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
       return new DestinationDefinitionRead()
           .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
           .name(standardDestinationDefinition.getName())
           .dockerRepository(destinationVersion.getDockerRepository())
           .dockerImageTag(destinationVersion.getDockerImageTag())
           .documentationUrl(new URI(destinationVersion.getDocumentationUrl()))
-          .icon(loadIcon(standardDestinationDefinition.getIcon()))
+          .icon(iconUrlFeatureFlag ? standardDestinationDefinition.getIconUrl() : loadIcon(standardDestinationDefinition.getIcon()))
           .protocolVersion(destinationVersion.getProtocolVersion())
           .supportLevel(ApiPojoConverters.toApiSupportLevel(destinationVersion.getSupportLevel()))
           .releaseStage(ApiPojoConverters.toApiReleaseStage(destinationVersion.getReleaseStage()))
@@ -124,8 +125,8 @@ public class DestinationDefinitionsHandler {
     return toDestinationDefinitionReadList(standardDestinationDefinitions, destinationDefinitionVersionMap);
   }
 
-  private static DestinationDefinitionReadList toDestinationDefinitionReadList(final List<StandardDestinationDefinition> defs,
-                                                                               final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
+  private DestinationDefinitionReadList toDestinationDefinitionReadList(final List<StandardDestinationDefinition> defs,
+                                                                        final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
     final List<DestinationDefinitionRead> reads = defs.stream()
         .map(d -> buildDestinationDefinitionRead(d, defIdToVersionMap.get(d.getDestinationDefinitionId())))
         .collect(Collectors.toList());
@@ -189,9 +190,9 @@ public class DestinationDefinitionsHandler {
     return toPrivateDestinationDefinitionReadList(standardDestinationDefinitionBooleanMap, destinationDefinitionVersionMap);
   }
 
-  private static PrivateDestinationDefinitionReadList toPrivateDestinationDefinitionReadList(
-                                                                                             final List<Entry<StandardDestinationDefinition, Boolean>> defs,
-                                                                                             final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
+  private PrivateDestinationDefinitionReadList toPrivateDestinationDefinitionReadList(
+                                                                                      final List<Entry<StandardDestinationDefinition, Boolean>> defs,
+                                                                                      final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
     final List<PrivateDestinationDefinitionRead> reads = defs.stream()
         .map(entry -> new PrivateDestinationDefinitionRead()
             .destinationDefinition(buildDestinationDefinitionRead(entry.getKey(), defIdToVersionMap.get(entry.getKey().getDestinationDefinitionId())))

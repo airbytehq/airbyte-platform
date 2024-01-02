@@ -23,6 +23,8 @@ flags:
     serve: false
   - name: connectors.apm-enabled
     serve: false
+  - name: connectors.useIconUrlInApiResponse
+    serve: true
   - name: platform.use-new-schema-update-notification
     serve: false
   # whether the platform will track destination timeouts. If set to 'true', then the platform will monitor if there has been

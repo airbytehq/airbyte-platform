@@ -4,9 +4,9 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static io.airbyte.protocol.models.CatalogHelpers.createAirbyteStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -55,6 +55,8 @@ import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.UseIconUrlInApiResponse;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.CatalogHelpers;
@@ -96,8 +98,8 @@ class SourceHandlerTest {
   private static final AirbyteCatalog airbyteCatalog = CatalogHelpers.createAirbyteCatalog(SHOES,
       Field.of(SKU, JsonSchemaType.STRING));
 
-  // needs to match name of file in src/test/resources/icons
-  private static final String ICON = "test-source.svg";
+  private static final String ICON_URL = "https://connectors.airbyte.com/files/metadata/airbyte/destination-test/latest/icon.svg";
+
   private SourceService sourceService;
   private WorkspaceService workspaceService;
   private SecretPersistenceConfigService secretPersistenceConfigService;
@@ -115,6 +117,8 @@ class SourceHandlerTest {
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     featureFlagClient = mock(TestClient.class);
+    when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS)))
+        .thenReturn(true);
     sourceService = mock(SourceService.class);
     workspaceService = mock(WorkspaceService.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
@@ -124,7 +128,7 @@ class SourceHandlerTest {
     standardSourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(UUID.randomUUID())
         .withName("marketo")
-        .withIcon(ICON);
+        .withIcon(ICON_URL);
 
     sourceDefinitionVersion = new ActorDefinitionVersion()
         .withDockerRepository("thebestrepo")
@@ -275,9 +279,6 @@ class SourceHandlerTest {
 
     assertEquals(expectedSourceRead, actualSourceRead);
 
-    // make sure the icon was loaded into actual svg content
-    assertTrue(expectedSourceRead.getIcon().startsWith("<svg>"));
-
     verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId());
     verify(secretsProcessor).prepareSecretsForOutput(sourceConnection.getConfiguration(),
@@ -407,13 +408,13 @@ class SourceHandlerTest {
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(sourceConnection.getConfiguration());
 
-    when(connectionsHandler.matchSearch(new SourceSearch(), expectedSourceRead)).thenReturn(true);
-    SourceReadList actualSourceReadList = sourceHandler.searchSources(new SourceSearch());
+    final SourceSearch validSourceSearch = new SourceSearch().name(sourceConnection.getName());
+    SourceReadList actualSourceReadList = sourceHandler.searchSources(validSourceSearch);
     assertEquals(1, actualSourceReadList.getSources().size());
     assertEquals(expectedSourceRead, actualSourceReadList.getSources().get(0));
 
-    when(connectionsHandler.matchSearch(new SourceSearch(), expectedSourceRead)).thenReturn(false);
-    actualSourceReadList = sourceHandler.searchSources(new SourceSearch());
+    final SourceSearch invalidSourceSearch = new SourceSearch().name("invalid");
+    actualSourceReadList = sourceHandler.searchSources(invalidSourceSearch);
     assertEquals(0, actualSourceReadList.getSources().size());
   }
 

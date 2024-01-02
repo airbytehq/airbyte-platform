@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -47,7 +49,9 @@ import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
+import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -325,7 +329,7 @@ public class SourceHandler {
     for (final SourceConnection sci : configRepository.listSourceConnection()) {
       if (!sci.getTombstone()) {
         final SourceRead sourceRead = buildSourceRead(sci);
-        if (connectionsHandler.matchSearch(sourceSearch, sourceRead)) {
+        if (MatchSearchHandler.matchSearch(sourceSearch, sourceRead)) {
           reads.add(sourceRead);
         }
       }
@@ -480,8 +484,10 @@ public class SourceHandler {
     }
   }
 
-  protected static SourceRead toSourceRead(final SourceConnection sourceConnection,
-                                           final StandardSourceDefinition standardSourceDefinition) {
+  protected SourceRead toSourceRead(final SourceConnection sourceConnection,
+                                    final StandardSourceDefinition standardSourceDefinition) {
+
+    final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
     return new SourceRead()
         .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
         .sourceName(standardSourceDefinition.getName())
@@ -490,16 +496,17 @@ public class SourceHandler {
         .sourceDefinitionId(sourceConnection.getSourceDefinitionId())
         .connectionConfiguration(sourceConnection.getConfiguration())
         .name(sourceConnection.getName())
-        .icon(SourceDefinitionsHandler.loadIcon(standardSourceDefinition.getIcon()));
+        .icon(iconUrlFeatureFlag ? standardSourceDefinition.getIconUrl() : SourceDefinitionsHandler.loadIcon(standardSourceDefinition.getIcon()));
   }
 
-  protected static SourceSnippetRead toSourceSnippetRead(final SourceConnection source, final StandardSourceDefinition sourceDefinition) {
+  protected SourceSnippetRead toSourceSnippetRead(final SourceConnection source, final StandardSourceDefinition sourceDefinition) {
+    final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
     return new SourceSnippetRead()
         .sourceId(source.getSourceId())
         .name(source.getName())
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
         .sourceName(sourceDefinition.getName())
-        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()));
+        .icon(iconUrlFeatureFlag ? sourceDefinition.getIconUrl() : SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()));
   }
 
   @VisibleForTesting

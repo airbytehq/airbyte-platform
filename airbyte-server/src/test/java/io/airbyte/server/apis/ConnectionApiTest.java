@@ -112,7 +112,7 @@ class ConnectionApiTest extends BaseControllerTest {
 
   @Test
   void testSearchConnections() throws JsonValidationException, ConfigNotFoundException, IOException {
-    Mockito.when(connectionsHandler.searchConnections(Mockito.any()))
+    Mockito.when(matchSearchHandler.searchConnections(Mockito.any()))
         .thenReturn(new ConnectionReadList())
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/connections/search";

@@ -251,6 +251,7 @@ public class DbConverter {
         .withSourceDefinitionId(record.get(ACTOR_DEFINITION.ID))
         .withDefaultVersionId(record.get(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
         .withIcon(record.get(ACTOR_DEFINITION.ICON))
+        .withIconUrl(record.get(ACTOR_DEFINITION.ICON_URL))
         .withName(record.get(ACTOR_DEFINITION.NAME))
         .withSourceType(record.get(ACTOR_DEFINITION.SOURCE_TYPE) == null ? null
             : Enums.toEnum(record.get(ACTOR_DEFINITION.SOURCE_TYPE, String.class), SourceType.class).orElseThrow())
@@ -276,6 +277,7 @@ public class DbConverter {
         .withDestinationDefinitionId(record.get(ACTOR_DEFINITION.ID))
         .withDefaultVersionId(record.get(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
         .withIcon(record.get(ACTOR_DEFINITION.ICON))
+        .withIconUrl(record.get(ACTOR_DEFINITION.ICON_URL))
         .withName(record.get(ACTOR_DEFINITION.NAME))
         .withTombstone(record.get(ACTOR_DEFINITION.TOMBSTONE))
         .withPublic(record.get(ACTOR_DEFINITION.PUBLIC))

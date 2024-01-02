@@ -953,7 +953,7 @@ class DestinationDefinitionsHandlerTest {
       assertEquals(1, destinationDefinitionReadList.size());
 
       final var destinationDefinitionRead = destinationDefinitionReadList.get(0);
-      assertEquals(DestinationDefinitionsHandler.buildDestinationDefinitionRead(
+      assertEquals(destinationDefinitionsHandler.buildDestinationDefinitionRead(
           ConnectorRegistryConverters.toStandardDestinationDefinition(registryDestinationDefinition),
           ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDefinition)), destinationDefinitionRead);
     }

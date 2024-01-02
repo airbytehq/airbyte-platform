@@ -159,7 +159,7 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
                       justifyContent="center"
                     >
                       <div className={styles.connectorIcon}>
-                        <SvgIcon svg={source?.icon} />
+                        <SvgIcon src={source?.icon} />
                       </div>
                     </FlexContainer>
                   </Link>
@@ -230,7 +230,7 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
                       justifyContent="center"
                     >
                       <div className={styles.connectorIcon}>
-                        <SvgIcon svg={destination?.icon} />
+                        <SvgIcon src={destination?.icon} />
                       </div>
                     </FlexContainer>
                   </Link>

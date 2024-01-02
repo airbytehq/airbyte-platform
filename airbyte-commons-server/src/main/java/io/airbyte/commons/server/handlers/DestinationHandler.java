@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -33,6 +35,9 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.UseIconUrlInApiResponse;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
@@ -62,6 +67,8 @@ public class DestinationHandler {
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final DestinationService destinationService;
 
+  private final FeatureFlagClient featureFlagClient;
+
   @VisibleForTesting
   public DestinationHandler(final ConfigRepository configRepository,
                             final JsonSchemaValidator integrationSchemaValidation,
@@ -71,7 +78,8 @@ public class DestinationHandler {
                             final ConfigurationUpdate configurationUpdate,
                             final OAuthConfigSupplier oAuthConfigSupplier,
                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                            final DestinationService destinationService) {
+                            final DestinationService destinationService,
+                            final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
     this.validator = integrationSchemaValidation;
     this.connectionsHandler = connectionsHandler;
@@ -81,6 +89,7 @@ public class DestinationHandler {
     this.oAuthConfigSupplier = oAuthConfigSupplier;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.destinationService = destinationService;
+    this.featureFlagClient = featureFlagClient;
   }
 
   public DestinationRead createDestination(final DestinationCreate destinationCreate)
@@ -299,7 +308,7 @@ public class DestinationHandler {
     for (final DestinationConnection dci : configRepository.listDestinationConnection()) {
       if (!dci.getTombstone()) {
         final DestinationRead destinationRead = buildDestinationRead(dci);
-        if (connectionsHandler.matchSearch(destinationSearch, destinationRead)) {
+        if (MatchSearchHandler.matchSearch(destinationSearch, destinationRead)) {
           reads.add(destinationRead);
         }
       }
@@ -392,8 +401,10 @@ public class DestinationHandler {
     return toDestinationRead(dci, standardDestinationDefinition);
   }
 
-  protected static DestinationRead toDestinationRead(final DestinationConnection destinationConnection,
-                                                     final StandardDestinationDefinition standardDestinationDefinition) {
+  protected DestinationRead toDestinationRead(final DestinationConnection destinationConnection,
+                                              final StandardDestinationDefinition standardDestinationDefinition) {
+    final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
+
     return new DestinationRead()
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
         .destinationId(destinationConnection.getDestinationId())
@@ -402,17 +413,21 @@ public class DestinationHandler {
         .connectionConfiguration(destinationConnection.getConfiguration())
         .name(destinationConnection.getName())
         .destinationName(standardDestinationDefinition.getName())
-        .icon(DestinationDefinitionsHandler.loadIcon(standardDestinationDefinition.getIcon()));
+        .icon(iconUrlFeatureFlag ? standardDestinationDefinition.getIconUrl()
+            : DestinationDefinitionsHandler.loadIcon(standardDestinationDefinition.getIcon()));
   }
 
-  protected static DestinationSnippetRead toDestinationSnippetRead(final DestinationConnection destinationConnection,
-                                                                   final StandardDestinationDefinition standardDestinationDefinition) {
+  protected DestinationSnippetRead toDestinationSnippetRead(final DestinationConnection destinationConnection,
+                                                            final StandardDestinationDefinition standardDestinationDefinition) {
+    final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
+
     return new DestinationSnippetRead()
         .destinationId(destinationConnection.getDestinationId())
         .name(destinationConnection.getName())
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
         .destinationName(standardDestinationDefinition.getName())
-        .icon(DestinationDefinitionsHandler.loadIcon(standardDestinationDefinition.getIcon()));
+        .icon(iconUrlFeatureFlag ? standardDestinationDefinition.getIconUrl()
+            : DestinationDefinitionsHandler.loadIcon(standardDestinationDefinition.getIcon()));
   }
 
 }

@@ -7,7 +7,6 @@ package io.airbyte.commons.server.helpers;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import java.io.IOException;
@@ -55,6 +54,7 @@ public class DestinationHelpers {
 
   public static DestinationRead getDestinationRead(final DestinationConnection destination,
                                                    final StandardDestinationDefinition standardDestinationDefinition) {
+
     return new DestinationRead()
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
         .workspaceId(destination.getWorkspaceId())
@@ -63,7 +63,7 @@ public class DestinationHelpers {
         .connectionConfiguration(destination.getConfiguration())
         .name(destination.getName())
         .destinationName(standardDestinationDefinition.getName())
-        .icon(DestinationDefinitionsHandler.loadIcon(standardDestinationDefinition.getIcon()));
+        .icon(standardDestinationDefinition.getIconUrl());
   }
 
 }

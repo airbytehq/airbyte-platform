@@ -869,7 +869,7 @@ class SourceDefinitionsHandlerTest {
     when(remoteDefinitionsProvider.getSourceDefinitions()).thenReturn(Collections.singletonList(registrySourceDefinition));
 
     final SourceDefinitionRead expectedRead =
-        SourceDefinitionsHandler.buildSourceDefinitionRead(ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDefinition),
+        sourceDefinitionsHandler.buildSourceDefinitionRead(ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDefinition),
             ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDefinition));
 
     assertEquals(expectedRead.getSupportLevel(), SupportLevel.NONE);
@@ -904,7 +904,7 @@ class SourceDefinitionsHandlerTest {
 
       final var sourceDefinitionRead = sourceDefinitionReadList.get(0);
       final SourceDefinitionRead expectedRead =
-          SourceDefinitionsHandler.buildSourceDefinitionRead(ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDefinition),
+          sourceDefinitionsHandler.buildSourceDefinitionRead(ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDefinition),
               ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDefinition));
 
       assertEquals(expectedRead, sourceDefinitionRead);

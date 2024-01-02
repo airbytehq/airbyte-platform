@@ -54,6 +54,7 @@ public class ConfigWriter {
             .set(Tables.ACTOR_DEFINITION.ID, standardSourceDefinition.getSourceDefinitionId())
             .set(Tables.ACTOR_DEFINITION.NAME, standardSourceDefinition.getName())
             .set(Tables.ACTOR_DEFINITION.ICON, standardSourceDefinition.getIcon())
+            .set(Tables.ACTOR_DEFINITION.ICON_URL, standardSourceDefinition.getIconUrl())
             .set(Tables.ACTOR_DEFINITION.ACTOR_TYPE, ActorType.source)
             .set(Tables.ACTOR_DEFINITION.SOURCE_TYPE,
                 standardSourceDefinition.getSourceType() == null ? null
@@ -77,6 +78,7 @@ public class ConfigWriter {
             .set(Tables.ACTOR_DEFINITION.ID, standardSourceDefinition.getSourceDefinitionId())
             .set(Tables.ACTOR_DEFINITION.NAME, standardSourceDefinition.getName())
             .set(Tables.ACTOR_DEFINITION.ICON, standardSourceDefinition.getIcon())
+            .set(Tables.ACTOR_DEFINITION.ICON_URL, standardSourceDefinition.getIconUrl())
             .set(Tables.ACTOR_DEFINITION.ACTOR_TYPE, ActorType.source)
             .set(Tables.ACTOR_DEFINITION.SOURCE_TYPE,
                 standardSourceDefinition.getSourceType() == null ? null
@@ -110,6 +112,7 @@ public class ConfigWriter {
             .set(Tables.ACTOR_DEFINITION.ID, standardDestinationDefinition.getDestinationDefinitionId())
             .set(Tables.ACTOR_DEFINITION.NAME, standardDestinationDefinition.getName())
             .set(Tables.ACTOR_DEFINITION.ICON, standardDestinationDefinition.getIcon())
+            .set(Tables.ACTOR_DEFINITION.ICON_URL, standardDestinationDefinition.getIconUrl())
             .set(Tables.ACTOR_DEFINITION.ACTOR_TYPE, ActorType.destination)
             .set(Tables.ACTOR_DEFINITION.TOMBSTONE, standardDestinationDefinition.getTombstone())
             .set(Tables.ACTOR_DEFINITION.PUBLIC, standardDestinationDefinition.getPublic())
@@ -126,6 +129,7 @@ public class ConfigWriter {
             .set(Tables.ACTOR_DEFINITION.ID, standardDestinationDefinition.getDestinationDefinitionId())
             .set(Tables.ACTOR_DEFINITION.NAME, standardDestinationDefinition.getName())
             .set(Tables.ACTOR_DEFINITION.ICON, standardDestinationDefinition.getIcon())
+            .set(Tables.ACTOR_DEFINITION.ICON_URL, standardDestinationDefinition.getIconUrl())
             .set(Tables.ACTOR_DEFINITION.ACTOR_TYPE, ActorType.destination)
             .set(Tables.ACTOR_DEFINITION.TOMBSTONE,
                 standardDestinationDefinition.getTombstone() != null && standardDestinationDefinition.getTombstone())
