@@ -30,6 +30,7 @@ public class OrchestratorConstants {
       .addAll(Set.of(
           EnvConfigs.WORKER_ENVIRONMENT,
           EnvConfigs.JOB_KUBE_ANNOTATIONS,
+          EnvConfigs.JOB_KUBE_SERVICEACCOUNT,
           EnvConfigs.JOB_KUBE_TOLERATIONS,
           EnvConfigs.JOB_KUBE_CURL_IMAGE,
           EnvConfigs.JOB_KUBE_BUSYBOX_IMAGE,

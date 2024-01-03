@@ -192,7 +192,7 @@ class ContainerOrchestratorConfigBeanFactory {
     // copy over all local values
     val localEnvMap =
       System.getenv()
-        .filter { (key): Map.Entry<String?, String?> -> OrchestratorConstants.ENV_VARS_TO_TRANSFER.contains(key) }
+        .filter { OrchestratorConstants.ENV_VARS_TO_TRANSFER.contains(it.key) }
 
     envMap.putAll(localEnvMap)
 
@@ -209,21 +209,23 @@ class ContainerOrchestratorConfigBeanFactory {
     @Value("\${airbyte.workload-api.bearer-token-secret-name}") bearerTokenSecretName: String,
     @Value("\${airbyte.workload-api.bearer-token-secret-key}") bearerTokenSecretKey: String,
   ): Map<String, EnvVarSource> {
-    val envMap: MutableMap<String, EnvVarSource> = HashMap()
-    envMap[WORKLOAD_API_BEARER_TOKEN_ENV_VAR] = createEnvVarSource(bearerTokenSecretName, bearerTokenSecretKey)
-    return envMap
+    return mapOf(WORKLOAD_API_BEARER_TOKEN_ENV_VAR to createEnvVarSource(bearerTokenSecretName, bearerTokenSecretKey))
   }
 
   private fun createEnvVarSource(
     secretName: String,
     secretKey: String,
   ): EnvVarSource {
-    val secretKeySelector = SecretKeySelector()
-    secretKeySelector.name = secretName
-    secretKeySelector.key = secretKey
+    val secretKeySelector =
+      SecretKeySelector().apply {
+        name = secretName
+        key = secretKey
+      }
 
-    val envVarSource = EnvVarSource()
-    envVarSource.secretKeyRef = secretKeySelector
+    val envVarSource =
+      EnvVarSource().apply {
+        secretKeyRef = secretKeySelector
+      }
 
     return envVarSource
   }
@@ -241,16 +243,12 @@ class ContainerOrchestratorConfigBeanFactory {
   ): List<EnvVar> {
     val envVars =
       envMap
-        .entries
-        .stream()
-        .map { (name, value): Map.Entry<String, String> -> EnvVar(name, value, null) }
+        .map { EnvVar(it.key, it.value, null) }
         .toList()
 
     val secretEnvVars =
       secretsEnvMap
-        .entries
-        .stream()
-        .map { (name, envVarSource): Map.Entry<String, EnvVarSource> -> EnvVar(name, null, envVarSource) }
+        .map { EnvVar(it.key, null, it.value) }
         .toList()
 
     return envVars + secretEnvVars
