@@ -101,19 +101,6 @@ paths:
                 $ref: "#/components/schemas/UserRead"
         "409":
           $ref: "#/components/responses/ExceptionResponse"
-  /v1/users/list:
-    post:
-      tags:
-        - user
-      summary: Lists users
-      operationId: listUsers
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UserReadList"
   /v1/users/get:
     post:
       tags:
