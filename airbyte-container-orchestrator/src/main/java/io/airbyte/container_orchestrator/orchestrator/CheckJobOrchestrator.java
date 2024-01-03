@@ -45,6 +45,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -86,7 +87,8 @@ public class CheckJobOrchestrator implements JobOrchestrator<CheckConnectionInpu
     // Compare this with CheckConnectionActivityImpl
     final StandardCheckConnectionInput connectionConfiguration = input.getConnectionConfiguration();
     final String workloadId =
-        data.workloadIdGenerator().generateCheckWorkloadId(connectionConfiguration.getActorId(), input.getJobRunConfig().getJobId(),
+        data.workloadIdGenerator().generateCheckWorkloadId(connectionConfiguration.getActorContext().getActorDefinitionId(),
+            input.getJobRunConfig().getJobId(),
             Math.toIntExact(input.getJobRunConfig().getAttemptId()));
     final Path jobRoot = TemporalUtils.getJobRoot(data.configs().getWorkspaceRoot(), workloadId);
 
@@ -150,6 +152,10 @@ public class CheckJobOrchestrator implements JobOrchestrator<CheckConnectionInpu
     final WorkerConfigs workerConfigs = data.workerConfigsProvider().getConfig(WorkerConfigsProvider.ResourceType.CHECK);
     final ResourceRequirements defaultWorkerConfigResourceRequirements = workerConfigs.getResourceRequirements();
 
+    final Map<String, String> additionalEnvVars = launcherConfig.getAdditionalEnvironmentVariables() != null
+        ? launcherConfig.getAdditionalEnvironmentVariables()
+        : Map.of();
+
     final IntegrationLauncher integrationLauncher = new AirbyteIntegrationLauncher(
         launcherConfig.getJobId(),
         Math.toIntExact(launcherConfig.getAttemptId()),
@@ -162,7 +168,7 @@ public class CheckJobOrchestrator implements JobOrchestrator<CheckConnectionInpu
         launcherConfig.getAllowedHosts(),
         launcherConfig.getIsCustomConnector(),
         data.featureFlags(),
-        launcherConfig.getAdditionalEnvironmentVariables(),
+        additionalEnvVars,
         launcherConfig.getAdditionalLabels());
 
     final ConnectorConfigUpdater connectorConfigUpdater = new ConnectorConfigUpdater(
