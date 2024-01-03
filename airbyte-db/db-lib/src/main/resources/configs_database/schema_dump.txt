@@ -368,12 +368,12 @@ create table "public"."user_invitation" (
   "invite_code" varchar(256) not null,
   "inviter_user_id" uuid not null,
   "invited_email" varchar(256) not null,
-  "workspace_id" uuid,
-  "organization_id" uuid,
   "permission_type" "public"."permission_type" not null,
   "status" "public"."invitation_status" not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "scope_id" uuid not null,
+  "scope_type" scope_type not null,
   constraint "user_invitation_pkey"
     primary key ("id"),
   constraint "user_invitation_invite_code_key"
@@ -549,14 +549,6 @@ alter table "public"."user_invitation"
   add constraint "user_invitation_inviter_user_id_fkey"
     foreign key ("inviter_user_id")
     references "public"."user" ("id");
-alter table "public"."user_invitation"
-  add constraint "user_invitation_organization_id_fkey"
-    foreign key ("organization_id")
-    references "public"."organization" ("id");
-alter table "public"."user_invitation"
-  add constraint "user_invitation_workspace_id_fkey"
-    foreign key ("workspace_id")
-    references "public"."workspace" ("id");
 alter table "public"."workload_label"
   add constraint "workload_label_workload_id_fkey"
     foreign key ("workload_id")
@@ -595,7 +587,7 @@ create index "user_auth_provider_auth_user_id_idx" on "public"."user"("auth_prov
 create index "user_email_idx" on "public"."user"("email" asc);
 create index "user_invitation_invite_code_idx" on "public"."user_invitation"("invite_code" asc);
 create index "user_invitation_invited_email_idx" on "public"."user_invitation"("invited_email" asc);
-create index "user_invitation_organization_id_idx" on "public"."user_invitation"("organization_id" asc);
-create index "user_invitation_workspace_id_idx" on "public"."user_invitation"("workspace_id" asc);
+create index "user_invitation_scope_id_index" on "public"."user_invitation"("scope_id" asc);
+create index "user_invitation_scope_type_and_scope_id_index" on "public"."user_invitation"("scope_type" asc, "scope_id" asc);
 create index "workload_status_idx" on "public"."workload"("status" asc);
 create index "workload_label_workload_id_idx" on "public"."workload_label"("workload_id" asc);
