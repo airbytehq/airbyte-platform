@@ -17,7 +17,9 @@ import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodList
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
+import io.micronaut.context.env.Environment
 import io.micronaut.scheduling.annotation.Scheduled
 import io.temporal.worker.WorkerFactory
 import jakarta.inject.Singleton
@@ -30,6 +32,7 @@ private val logger = KotlinLogging.logger {}
  * Monitors for resource exhaustion in the Kubernetes cluster.
  */
 @Singleton
+@Requires(env = [Environment.KUBERNETES])
 open class KubeResourceMonitor(
   private val kubernetesClient: KubernetesClient,
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String,

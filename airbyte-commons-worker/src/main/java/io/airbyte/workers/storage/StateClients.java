@@ -21,7 +21,6 @@ public class StateClients {
    */
   public static DocumentStoreClient create(final CloudStorageConfigs cloudStorageConfigs, final Path prefix) {
     DocumentStoreClient documentStoreClient = null;
-
     switch (cloudStorageConfigs.getType()) {
       case S3 -> {
         documentStoreClient = S3DocumentStoreClient.s3(cloudStorageConfigs.getS3Config(), prefix);
@@ -31,6 +30,9 @@ public class StateClients {
       }
       case GCS -> {
         documentStoreClient = GcsDocumentStoreClient.create(cloudStorageConfigs.getGcsConfig(), prefix);
+      }
+      case LOCAL -> {
+        documentStoreClient = DockerComposeDocumentStoreClient.create(cloudStorageConfigs.getLocalConfig(), prefix);
       }
       default -> {
         // to do

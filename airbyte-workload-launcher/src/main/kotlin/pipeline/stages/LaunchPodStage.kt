@@ -9,7 +9,7 @@ import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
-import io.airbyte.workload.launcher.pods.KubePodClient
+import io.airbyte.workload.launcher.pods.PodClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -23,7 +23,7 @@ private val logger = KotlinLogging.logger {}
  */
 @Singleton
 @Named("launch")
-open class LaunchPodStage(private val launcher: KubePodClient, metricPublisher: CustomMetricPublisher) : LaunchStage(metricPublisher) {
+open class LaunchPodStage(private val launcher: PodClient, metricPublisher: CustomMetricPublisher) : LaunchStage(metricPublisher) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "LaunchPodStage")
   @Instrument(
     start = "WORKLOAD_STAGE_START",

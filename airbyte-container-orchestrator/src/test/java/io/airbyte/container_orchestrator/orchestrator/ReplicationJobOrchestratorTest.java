@@ -23,6 +23,7 @@ import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
+import io.airbyte.workers.process.KubePodProcess;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
@@ -63,6 +64,7 @@ class ReplicationJobOrchestratorTest {
     final JobRunConfig jobRunConfig = new JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_ID);
 
     final ReplicationJobOrchestrator replicationJobOrchestrator = new ReplicationJobOrchestrator(
+        KubePodProcess.CONFIG_DIR,
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,
@@ -90,6 +92,7 @@ class ReplicationJobOrchestratorTest {
     final JobRunConfig jobRunConfig = new JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_ID);
 
     final ReplicationJobOrchestrator replicationJobOrchestrator = new ReplicationJobOrchestrator(
+        KubePodProcess.CONFIG_DIR,
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,
@@ -117,6 +120,7 @@ class ReplicationJobOrchestratorTest {
     final JobRunConfig jobRunConfig = new JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_ID);
 
     final ReplicationJobOrchestrator replicationJobOrchestrator = new ReplicationJobOrchestrator(
+        KubePodProcess.CONFIG_DIR,
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,
@@ -144,6 +148,7 @@ class ReplicationJobOrchestratorTest {
     final JobRunConfig jobRunConfig = new JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_ID);
 
     final ReplicationJobOrchestrator replicationJobOrchestrator = new ReplicationJobOrchestrator(
+        KubePodProcess.CONFIG_DIR,
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,

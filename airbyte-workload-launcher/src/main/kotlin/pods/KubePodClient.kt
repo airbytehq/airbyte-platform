@@ -9,6 +9,8 @@ import io.airbyte.workload.launcher.model.setDestinationLabels
 import io.airbyte.workload.launcher.model.setSourceLabels
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.fabric8.kubernetes.api.model.Pod
+import io.micronaut.context.annotation.Requires
+import io.micronaut.context.env.Environment
 import jakarta.inject.Singleton
 import java.lang.RuntimeException
 import java.time.Duration
@@ -18,16 +20,17 @@ import java.time.Duration
  * Composes raw Kube layer atomic operations to perform business operations.
  */
 @Singleton
+@Requires(env = [Environment.KUBERNETES])
 class KubePodClient(
   private val orchestratorLauncher: OrchestratorPodLauncher,
   private val labeler: PodLabeler,
   private val mapper: PayloadKubeInputMapper,
-) {
-  fun podsExistForWorkload(workloadId: String): Boolean {
+) : PodClient {
+  override fun podsExistForWorkload(workloadId: String): Boolean {
     return orchestratorLauncher.podsExist(labeler.getWorkloadLabels(workloadId))
   }
 
-  fun launchReplication(
+  override fun launchReplication(
     replicationInput: ReplicationInput,
     launcherInput: LauncherInput,
   ) {
@@ -99,7 +102,7 @@ class KubePodClient(
     }
   }
 
-  fun launchCheck(
+  override fun launchCheck(
     checkInput: CheckConnectionInput,
     launcherInput: LauncherInput,
   ) {
@@ -158,7 +161,7 @@ class KubePodClient(
     }
   }
 
-  fun deleteMutexPods(mutexKey: String): Boolean {
+  override fun deleteMutexPods(mutexKey: String): Boolean {
     val labels = labeler.getMutexLabels(mutexKey)
     val deleted = orchestratorLauncher.deleteActivePods(labels)
 

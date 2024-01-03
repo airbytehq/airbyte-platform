@@ -8,7 +8,7 @@ import jakarta.inject.Singleton
 // TODO: add discrete unit tests — this is indirectly tested from the PayloadKubeInputMapper unit tests.
 @Singleton
 class OrchestratorNameGenerator(
-  @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String,
+  @Value("\${airbyte.worker.job.kube.namespace}") val namespace: String,
 ) {
   fun getReplicationOrchestratorPodName(
     jobId: String,

@@ -21,6 +21,8 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.workers.config.DocumentStoreFactory;
+import io.airbyte.workers.config.DocumentType;
 import io.airbyte.workers.general.DefaultCheckConnectionWorker;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory;
@@ -30,7 +32,6 @@ import io.airbyte.workers.process.KubePortManagerSingleton;
 import io.airbyte.workers.process.KubeProcessFactory;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.storage.DocumentStoreClient;
-import io.airbyte.workers.storage.StateClients;
 import io.airbyte.workers.sync.DbtLauncherWorker;
 import io.airbyte.workers.sync.NormalizationLauncherWorker;
 import io.airbyte.workers.sync.OrchestratorConstants;
@@ -48,7 +49,6 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -72,7 +72,6 @@ class ContainerOrchestratorFactory {
     return new EnvConfigs(env);
   }
 
-  // This is currently needed for tests bceause the default env is docker
   @Singleton
   @Requires(notEnv = Environment.KUBERNETES)
   ProcessFactory dockerProcessFactory(final WorkerConfigsProvider workerConfigsProvider, final EnvConfigs configs) {
@@ -113,6 +112,7 @@ class ContainerOrchestratorFactory {
   @Singleton
   JobOrchestrator<?> jobOrchestrator(
                                      @Named("application") final String application,
+                                     @Named("configDir") final String configDir,
                                      final EnvConfigs envConfigs,
                                      final ProcessFactory processFactory,
                                      final WorkerConfigsProvider workerConfigsProvider,
@@ -125,7 +125,7 @@ class ContainerOrchestratorFactory {
                                      final JobOutputDocStore jobOutputDocStore,
                                      final CheckJobOrchestratorDataClass dataClass) {
     return switch (application) {
-      case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(envConfigs, jobRunConfig,
+      case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(configDir, envConfigs, jobRunConfig,
           replicationWorkerFactory, asyncStateManager, workloadApi, workloadIdGenerator, workloadEnabled, jobOutputDocStore);
       case NormalizationLauncherWorker.NORMALIZATION -> new NormalizationJobOrchestrator(envConfigs, processFactory, jobRunConfig, asyncStateManager);
       case DbtLauncherWorker.DBT -> new DbtJobOrchestrator(envConfigs, workerConfigsProvider, processFactory, jobRunConfig, asyncStateManager);
@@ -137,14 +137,14 @@ class ContainerOrchestratorFactory {
 
   @Singleton
   @Named("stateDocumentStore")
-  DocumentStoreClient documentStoreClient(final EnvConfigs config) {
-    return StateClients.create(config.getStateStorageCloudConfigs(), Path.of("/state"));
+  DocumentStoreClient documentStoreClient(final DocumentStoreFactory documentStoreFactory) {
+    return documentStoreFactory.get(DocumentType.STATE);
   }
 
   @Singleton
   @Named("outputDocumentStore")
-  DocumentStoreClient outputDocumentStoreClient(final EnvConfigs config) {
-    return StateClients.create(config.getStateStorageCloudConfigs(), Path.of("/workload/output"));
+  DocumentStoreClient outputDocumentStoreClient(final DocumentStoreFactory documentStoreFactory) {
+    return documentStoreFactory.get(DocumentType.WORKLOAD_OUTPUTS);
   }
 
   @Prototype

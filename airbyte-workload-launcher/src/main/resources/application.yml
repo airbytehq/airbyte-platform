@@ -27,6 +27,10 @@ airbyte:
   kubernetes:
     pending-time-limit-sec: ${WORKLOAD_LAUNCHER_POD_PENDING_TIME_LIMIT:600}
     resource-check-rate: ${WORKLOAD_LAUNCHER_POD_PENDING_RESOURCE_CHECK_RATE:PT30S}
+  docker:
+    network: ${DOCKER_NETWORK:host}
+    workspace-mount-name: ${WORKSPACE_DOCKER_MOUNT:}
+    workspace-mount-path: ${WORKSPACE_ROOT}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}

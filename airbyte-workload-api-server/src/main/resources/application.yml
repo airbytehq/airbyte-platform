@@ -33,7 +33,7 @@ micronaut:
         port: ${STATSD_PORT:}
   security:
     authentication-provider-strategy: ALL
-    enabled: true
+    enabled: ${API_AUTHORIZATION_ENABLED:true}
     token:
       jwt:
         bearer:

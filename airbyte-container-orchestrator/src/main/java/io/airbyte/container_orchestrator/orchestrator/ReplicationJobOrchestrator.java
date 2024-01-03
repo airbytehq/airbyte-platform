@@ -28,7 +28,6 @@ import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.process.AsyncKubePodStatus;
-import io.airbyte.workers.process.KubePodProcess;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
@@ -50,6 +49,7 @@ import org.slf4j.LoggerFactory;
 public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationInput> {
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  private final Path configDir;
   private final Configs configs;
   private final JobRunConfig jobRunConfig;
   private final ReplicationWorkerFactory replicationWorkerFactory;
@@ -60,7 +60,8 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   private final boolean workloadEnabled;
   private final JobOutputDocStore jobOutputDocStore;
 
-  public ReplicationJobOrchestrator(final Configs configs,
+  public ReplicationJobOrchestrator(final String configDir,
+                                    final Configs configs,
                                     final JobRunConfig jobRunConfig,
                                     final ReplicationWorkerFactory replicationWorkerFactory,
                                     final AsyncStateManager asyncStateManager,
@@ -68,6 +69,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
                                     final WorkloadIdGenerator workloadIdGenerator,
                                     final boolean workloadEnabled,
                                     final JobOutputDocStore jobOutputDocStore) {
+    this.configDir = Path.of(configDir);
     this.configs = configs;
     this.jobRunConfig = jobRunConfig;
     this.replicationWorkerFactory = replicationWorkerFactory;
@@ -76,6 +78,11 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
     this.workloadIdGenerator = workloadIdGenerator;
     this.workloadEnabled = workloadEnabled;
     this.jobOutputDocStore = jobOutputDocStore;
+  }
+
+  @Override
+  public Path getConfigDir() {
+    return configDir;
   }
 
   @Override
@@ -94,11 +101,11 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
     final var replicationInput = readInput();
 
     final var sourceLauncherConfig = JobOrchestrator.readAndDeserializeFile(
-        Path.of(KubePodProcess.CONFIG_DIR, ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG),
+        getConfigDir().resolve(ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG),
         IntegrationLauncherConfig.class);
 
     final var destinationLauncherConfig = JobOrchestrator.readAndDeserializeFile(
-        Path.of(KubePodProcess.CONFIG_DIR, ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG),
+        getConfigDir().resolve(ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG),
         IntegrationLauncherConfig.class);
     log.info("sourceLauncherConfig is: " + sourceLauncherConfig.toString());
 

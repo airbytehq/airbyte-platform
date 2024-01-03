@@ -21,57 +21,75 @@ public class CloudStorageConfigs {
   public enum WorkerStorageType {
     S3,
     MINIO,
-    GCS
+    GCS,
+    LOCAL
   }
 
   private final WorkerStorageType type;
   private final S3Config s3Config;
   private final MinioConfig minioConfig;
   private final GcsConfig gcsConfig;
+  private final LocalConfig localConfig;
 
   public static CloudStorageConfigs s3(final S3Config config) {
-    return new CloudStorageConfigs(WorkerStorageType.S3, config, null, null);
+    return new CloudStorageConfigs(WorkerStorageType.S3, config, null, null, null);
   }
 
   public static CloudStorageConfigs minio(final MinioConfig config) {
-    return new CloudStorageConfigs(WorkerStorageType.MINIO, null, config, null);
+    return new CloudStorageConfigs(WorkerStorageType.MINIO, null, config, null, null);
   }
 
   public static CloudStorageConfigs gcs(final GcsConfig config) {
-    return new CloudStorageConfigs(WorkerStorageType.GCS, null, null, config);
+    return new CloudStorageConfigs(WorkerStorageType.GCS, null, null, config, null);
+  }
+
+  public static CloudStorageConfigs local(final LocalConfig config) {
+    return new CloudStorageConfigs(WorkerStorageType.LOCAL, null, null, null, config);
   }
 
   private CloudStorageConfigs(final WorkerStorageType type,
                               final S3Config s3Config,
                               final MinioConfig minioConfig,
-                              final GcsConfig gcsConfig) {
-    validate(type, s3Config, minioConfig, gcsConfig);
+                              final GcsConfig gcsConfig,
+                              final LocalConfig localConfig) {
+    validate(type, s3Config, minioConfig, gcsConfig, localConfig);
 
     this.type = type;
     this.s3Config = s3Config;
     this.minioConfig = minioConfig;
     this.gcsConfig = gcsConfig;
+    this.localConfig = localConfig;
   }
 
   private void validate(final WorkerStorageType type,
                         final S3Config s3Config,
                         final MinioConfig minioConfig,
-                        final GcsConfig gcsConfig) {
+                        final GcsConfig gcsConfig,
+                        final LocalConfig localConfig) {
     switch (type) {
       case S3 -> {
         Preconditions.checkNotNull(s3Config);
         Preconditions.checkArgument(minioConfig == null);
         Preconditions.checkArgument(gcsConfig == null);
+        Preconditions.checkArgument(localConfig == null);
       }
       case MINIO -> {
         Preconditions.checkArgument(s3Config == null);
         Preconditions.checkNotNull(minioConfig);
         Preconditions.checkArgument(gcsConfig == null);
+        Preconditions.checkArgument(localConfig == null);
       }
       case GCS -> {
         Preconditions.checkArgument(s3Config == null);
         Preconditions.checkArgument(minioConfig == null);
         Preconditions.checkNotNull(gcsConfig);
+        Preconditions.checkArgument(localConfig == null);
+      }
+      case LOCAL -> {
+        Preconditions.checkArgument(s3Config == null);
+        Preconditions.checkArgument(minioConfig == null);
+        Preconditions.checkArgument(gcsConfig == null);
+        Preconditions.checkNotNull(localConfig);
       }
       default -> {
         // no op
@@ -93,6 +111,10 @@ public class CloudStorageConfigs {
 
   public GcsConfig getGcsConfig() {
     return gcsConfig;
+  }
+
+  public LocalConfig getLocalConfig() {
+    return localConfig;
   }
 
   /**
@@ -179,6 +201,23 @@ public class CloudStorageConfigs {
 
     public String getGoogleApplicationCredentials() {
       return googleApplicationCredentials;
+    }
+
+  }
+
+  /**
+   * Local Storage Config.
+   */
+  public static class LocalConfig {
+
+    private final String root;
+
+    public LocalConfig(final String root) {
+      this.root = root;
+    }
+
+    public String getRoot() {
+      return root;
     }
 
   }

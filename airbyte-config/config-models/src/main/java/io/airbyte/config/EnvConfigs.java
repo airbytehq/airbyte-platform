@@ -187,6 +187,9 @@ public class EnvConfigs implements Configs {
   private static final String REPLICATION_ORCHESTRATOR_MEMORY_REQUEST = "REPLICATION_ORCHESTRATOR_MEMORY_REQUEST";
   private static final String REPLICATION_ORCHESTRATOR_MEMORY_LIMIT = "REPLICATION_ORCHESTRATOR_MEMORY_LIMIT";
 
+  public static final String WORKER_LOGS_STORAGE_TYPE = "WORKER_LOGS_STORAGE_TYPE";
+  public static final String WORKER_STATE_STORAGE_TYPE = "WORKER_STATE_STORAGE_TYPE";
+
   private static final String VAULT_ADDRESS = "VAULT_ADDRESS";
   private static final String VAULT_PREFIX = "VAULT_PREFIX";
   private static final String VAULT_AUTH_TOKEN = "VAULT_AUTH_TOKEN";

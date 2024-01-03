@@ -26,6 +26,10 @@ public interface JobOrchestrator<INPUT> {
   // used to serialize the loaded input
   Class<INPUT> getInputClass();
 
+  default Path getConfigDir() {
+    return Path.of(KubePodProcess.CONFIG_DIR);
+  }
+
   /**
    * Reads input from a file that was copied to the container launcher.
    *
@@ -34,7 +38,7 @@ public interface JobOrchestrator<INPUT> {
    */
   default INPUT readInput() throws IOException {
     return Jsons.deserialize(
-        Path.of(KubePodProcess.CONFIG_DIR, OrchestratorConstants.INIT_FILE_INPUT).toFile(),
+        getConfigDir().resolve(OrchestratorConstants.INIT_FILE_INPUT).toFile(),
         getInputClass());
   }
 

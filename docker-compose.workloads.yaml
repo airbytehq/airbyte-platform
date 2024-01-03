@@ -1,0 +1,111 @@
+# Adds ports to the db and access to the temporal UI for debugging purposes.
+# Expected to be used like this:
+# VERSION=dev docker compose -f docker-compose.yaml -f docker-compose.debug.yaml up
+version: "3.8"
+x-logging: &default-logging
+  options:
+    max-size: "100m"
+    max-file: "5"
+  driver: json-file
+services:
+  workload-api-server:
+    image: airbyte/workload-api-server:${VERSION}
+    logging: *default-logging
+    container_name: workload-api-server
+    restart: unless-stopped
+    environment:
+      - AIRBYTE_ROLE=${AIRBYTE_ROLE:-}
+      - AIRBYTE_VERSION=${VERSION}
+      - AIRBYTE_API_HOST=${AIRBYTE_API_HOST}
+      # This should default to true
+      - API_AUTHORIZATION_ENABLED=false
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_USER=${DATABASE_USER}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DD_AGENT_HOST=${DD_AGENT_HOST}
+      - DD_DOGSTATSD_PORT=${DD_DOGSTATSD_PORT}
+      - FEATURE_FLAG_CLIENT=${FEATURE_FLAG_CLIENT}
+      - LAUNCHDARKLY_KEY=${LAUNCHDARKLY_KEY}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - METRIC_CLIENT=${METRIC_CLIENT}
+      - MICROMETER_METRICS_ENABLED=${MICROMETER_METRICS_ENABLED}
+      - MICROMETER_METRICS_STATSD_FLAVOR=${MICROMETER_METRICS_STATSD_FLAVOR}
+      - MICRONAUT_ENVIRONMENTS=${WORKERS_MICRONAUT_ENVIRONMENTS}
+      - PUBLISH_METRICS=${PUBLISH_METRICS}
+      - SEGMENT_WRITE_KEY=${SEGMENT_WRITE_KEY}
+      - STATSD_HOST=${STATSD_HOST}
+      - STATSD_PORT=${STATSD_PORT}
+      - TEMPORAL_HOST=${TEMPORAL_HOST}
+      - WORKER_ENVIRONMENT=${WORKER_ENVIRONMENT}
+      - WORKSPACE_ROOT=${WORKSPACE_ROOT}
+    ports:
+      - "8007"
+    configs:
+      - flags
+    volumes:
+      - workspace:${WORKSPACE_ROOT}
+      - data:${CONFIG_ROOT}
+      - ${LOCAL_ROOT}:${LOCAL_ROOT}
+      - ./configs:/app/configs:ro
+    networks:
+      - airbyte_internal
+    depends_on:
+      bootloader:
+        condition: service_completed_successfully
+  workload-launcher:
+    image: airbyte/workload-launcher:${VERSION}
+    logging: *default-logging
+    container_name: workload-launcher
+    restart: unless-stopped
+    environment:
+      - ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS=${ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS}
+      - ACTIVITY_MAX_ATTEMPT=${ACTIVITY_MAX_ATTEMPT}
+      - ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS=${ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS}
+      - AIRBYTE_ROLE=${AIRBYTE_ROLE:-}
+      - AIRBYTE_VERSION=${VERSION}
+      - DATA_PLANE_ID=local
+      - DOCKER_NETWORK=${COMPOSE_PROJECT_NAME}_airbyte_internal
+      - DEPLOYMENT_MODE=${DEPLOYMENT_MODE}
+      - DD_AGENT_HOST=${DD_AGENT_HOST}
+      - DD_DOGSTATSD_PORT=${DD_DOGSTATSD_PORT}
+      - FEATURE_FLAG_CLIENT=${FEATURE_FLAG_CLIENT}
+      - INTERNAL_API_HOST=${INTERNAL_API_HOST}
+      - LAUNCHDARKLY_KEY=${LAUNCHDARKLY_KEY}
+      - LOCAL_DOCKER_MOUNT=${LOCAL_DOCKER_MOUNT}
+      - LOCAL_ROOT=${LOCAL_ROOT}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - METRIC_CLIENT=${METRIC_CLIENT}
+      - MICROMETER_METRICS_ENABLED=${MICROMETER_METRICS_ENABLED}
+      - MICROMETER_METRICS_STATSD_FLAVOR=${MICROMETER_METRICS_STATSD_FLAVOR}
+      - MICRONAUT_ENVIRONMENTS=${WORKERS_MICRONAUT_ENVIRONMENTS}
+      - OTEL_COLLECTOR_ENDPOINT=${OTEL_COLLECTOR_ENDPOINT}
+      - PUBLISH_METRICS=${PUBLISH_METRICS}
+      - SECRET_PERSISTENCE=NONE
+      - SEGMENT_WRITE_KEY=${SEGMENT_WRITE_KEY}
+      - STATSD_HOST=${STATSD_HOST}
+      - STATSD_PORT=${STATSD_PORT}
+      - TEMPORAL_HOST=${TEMPORAL_HOST}
+      - TRACKING_STRATEGY=${TRACKING_STRATEGY}
+      - WORKER_ENVIRONMENT=${WORKER_ENVIRONMENT}
+      - WORKER_LOGS_STORAGE_TYPE=${WORKER_LOGS_STORAGE_TYPE}
+      - WORKER_STATE_STORAGE_TYPE=${WORKER_STATE_STORAGE_TYPE}
+      - WORKFLOW_FAILURE_RESTART_DELAY_SECONDS=${WORKFLOW_FAILURE_RESTART_DELAY_SECONDS}
+      - WORKLOAD_API_HOST=${WORKLOAD_API_URL}
+      - WORKSPACE_DOCKER_MOUNT=${WORKSPACE_DOCKER_MOUNT}
+      - WORKSPACE_ROOT=${WORKSPACE_ROOT}
+    configs:
+      - flags
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - workspace:${WORKSPACE_ROOT}
+      - data:${CONFIG_ROOT}
+      - ${LOCAL_ROOT}:${LOCAL_ROOT}
+      - ./configs:/app/configs:ro
+    networks:
+      - airbyte_internal
+    depends_on:
+      bootloader:
+        condition: service_completed_successfully
+      workload-api-server:
+        condition: service_started
+        # TODO should be service_healthy

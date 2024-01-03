@@ -112,6 +112,8 @@ class ContainerOrchestratorConfigBeanFactory {
     @Value("\${airbyte.workload-api.read-timeout-seconds}") workloadApiReadTimeoutSeconds: String,
     @Value("\${airbyte.workload-api.retries.delay-seconds}") workloadApiRetriesDelaySeconds: String,
     @Value("\${airbyte.workload-api.retries.max}") workloadApiRetriesMax: String,
+    @Value("\${airbyte.cloud.storage.logs.type}") logsStorageType: String,
+    @Value("\${airbyte.cloud.storage.state.type}") stateStorageType: String,
     cloudLoggingConfig: CloudLoggingConfig,
     cloudStateConfig: CloudStateConfig,
     workerEnv: Configs.WorkerEnvironment,
@@ -172,6 +174,10 @@ class ContainerOrchestratorConfigBeanFactory {
       envMap[Environment.ENVIRONMENTS_ENV] = "${envMap[Environment.ENVIRONMENTS_ENV]},${System.getenv(Environment.ENVIRONMENTS_ENV)}"
     }
     envMap[ACCEPTANCE_TEST_ENABLED_VAR] = java.lang.Boolean.toString(isInTestMode)
+
+    // Environment variables for object storage
+    envMap[WORKER_LOGS_STORAGE_TYPE_VAR] = logsStorageType
+    envMap[WORKER_STATE_STORAGE_TYPE_VAR] = stateStorageType
 
     // Manually add the worker environment
     envMap[WorkerConstants.WORKER_ENVIRONMENT] = workerEnv.name
@@ -275,6 +281,8 @@ class ContainerOrchestratorConfigBeanFactory {
     private const val INTERNAL_API_HOST_ENV_VAR = "INTERNAL_API_HOST"
     private const val ACCEPTANCE_TEST_ENABLED_VAR = "ACCEPTANCE_TEST_ENABLED"
     private const val DD_INTEGRATION_ENV_VAR_FORMAT = "DD_INTEGRATION_%s_ENABLED"
+    private const val WORKER_LOGS_STORAGE_TYPE_VAR = "WORKER_LOGS_STORAGE_TYPE"
+    private const val WORKER_STATE_STORAGE_TYPE_VAR = "WORKER_STATE_STORAGE_TYPE"
     private const val WORKER_V2_MICRONAUT_ENV = "worker-v2"
     private const val WORKLOAD_API_HOST_ENV_VAR = "WORKLOAD_API_HOST"
     private const val WORKLOAD_API_CONNECT_TIMEOUT_SECONDS_ENV_VAR = "WORKLOAD_API_CONNECT_TIMEOUT_SECONDS"

@@ -9,10 +9,8 @@ import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.config.Configs;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.EnvConfigs;
-import io.airbyte.config.storage.CloudStorageConfigs;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.storage.DocumentStoreClient;
-import io.airbyte.workers.storage.StateClients;
 import io.airbyte.workers.sync.OrchestratorConstants;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
@@ -23,11 +21,9 @@ import io.micronaut.context.env.Environment;
 import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -53,18 +49,14 @@ public class ContainerOrchestratorConfigBeanFactory {
   private static final String ACCEPTANCE_TEST_ENABLED_VAR = "ACCEPTANCE_TEST_ENABLED";
   private static final String DD_INTEGRATION_ENV_VAR_FORMAT = "DD_INTEGRATION_%s_ENABLED";
 
-  // IMPORTANT: Changing the storage location will orphan already existing kube pods when the new
-  // version is deployed!
-  public static final Path STATE_STORAGE_PREFIX = Path.of("/state");
-  public static final Path OUTPUT_STORAGE_PREFIX = Path.of("/workload/output");
-
   @SuppressWarnings("LineLength")
   @Singleton
   @Requires(property = "airbyte.container.orchestrator.enabled",
             value = "true")
   @Named("containerOrchestratorConfig")
   public ContainerOrchestratorConfig kubernetesContainerOrchestratorConfig(
-                                                                           @Named("stateStorageConfigs") final Optional<CloudStorageConfigs> cloudStateStorageConfiguration,
+                                                                           @Named("stateDocumentStore") final DocumentStoreClient documentStoreClient,
+                                                                           @Named("outputDocumentStore") final DocumentStoreClient outputDocumentStoreClient,
                                                                            @Value("${airbyte.version}") final String airbyteVersion,
                                                                            @Value("${airbyte.container.orchestrator.image}") final String containerOrchestratorImage,
                                                                            @Value("${airbyte.worker.job.kube.main.container.image-pull-policy}") final String containerOrchestratorImagePullPolicy,
@@ -91,14 +83,6 @@ public class ContainerOrchestratorConfigBeanFactory {
                                                                            @Value("${datadog.orchestrator.disabled.integrations}") final String disabledIntegrations,
                                                                            @Value("${airbyte.worker.job.kube.serviceAccount}") final String serviceAccount) {
     final var kubernetesClient = new DefaultKubernetesClient();
-
-    final DocumentStoreClient documentStoreClient = StateClients.create(
-        cloudStateStorageConfiguration.orElse(null),
-        STATE_STORAGE_PREFIX);
-
-    final DocumentStoreClient outputDocumentStoreClient = StateClients.create(
-        cloudStateStorageConfiguration.orElse(null),
-        OUTPUT_STORAGE_PREFIX);
 
     final JobOutputDocStore jobOutputDocStore = new JobOutputDocStore(outputDocumentStoreClient);
 

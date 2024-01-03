@@ -11,7 +11,7 @@ import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOA
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
-import io.airbyte.workload.launcher.pods.KubePodClient
+import io.airbyte.workload.launcher.pods.PodClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -27,7 +27,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 @Named("mutex")
 open class EnforceMutexStage(
-  private val launcher: KubePodClient,
+  private val launcher: PodClient,
   metricPublisher: CustomMetricPublisher,
 ) : LaunchStage(metricPublisher) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "EnforceMutexStage")

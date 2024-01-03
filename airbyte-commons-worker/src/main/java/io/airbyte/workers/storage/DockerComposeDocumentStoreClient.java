@@ -5,6 +5,8 @@
 package io.airbyte.workers.storage;
 
 import io.airbyte.commons.io.IOs;
+import io.airbyte.config.storage.CloudStorageConfigs.LocalConfig;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,11 +18,13 @@ import java.util.Optional;
  */
 public class DockerComposeDocumentStoreClient implements DocumentStoreClient {
 
-  private static final Path STATE_PATH = Path.of("document_store");
   private final Path workspaceMount;
 
-  public static DockerComposeDocumentStoreClient create(final Path workspaceMount) {
-    return new DockerComposeDocumentStoreClient(workspaceMount);
+  public static DockerComposeDocumentStoreClient create(final LocalConfig config, final Path prefix) {
+    // This is a trick to append prefix to root as Path.concat doesn't exist.
+    final File rootFile = new File(config.getRoot());
+    final File prefixFile = new File(rootFile, prefix.toString());
+    return new DockerComposeDocumentStoreClient(prefixFile.toPath());
   }
 
   public DockerComposeDocumentStoreClient(final Path workspaceMount) {
@@ -28,11 +32,11 @@ public class DockerComposeDocumentStoreClient implements DocumentStoreClient {
   }
 
   private Path getRoot() {
-    return workspaceMount.resolve(STATE_PATH);
+    return workspaceMount;
   }
 
   private Path getPath(final String id) {
-    return getRoot().resolve(String.format("%s.yaml", id));
+    return getRoot().resolve(id);
   }
 
   @Override
