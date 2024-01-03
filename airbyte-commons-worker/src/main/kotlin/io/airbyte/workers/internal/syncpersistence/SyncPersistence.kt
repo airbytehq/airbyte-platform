@@ -398,20 +398,14 @@ class SyncPersistenceImpl
       syncStatsTracker.updateEstimates(estimate)
     }
 
-    override fun updateSourceStatesStats(
-      stateMessage: AirbyteStateMessage,
-      trackCommittedStatsWhenUsingGlobalState: Boolean,
-    ) {
+    override fun updateSourceStatesStats(stateMessage: AirbyteStateMessage) {
       isReceivingStats = true
-      syncStatsTracker.updateSourceStatesStats(stateMessage, trackCommittedStatsWhenUsingGlobalState)
+      syncStatsTracker.updateSourceStatesStats(stateMessage)
     }
 
-    override fun updateDestinationStateStats(
-      stateMessage: AirbyteStateMessage,
-      trackCommittedStatsWhenUsingGlobalState: Boolean,
-    ) {
+    override fun updateDestinationStateStats(stateMessage: AirbyteStateMessage) {
       isReceivingStats = true
-      syncStatsTracker.updateDestinationStateStats(stateMessage, trackCommittedStatsWhenUsingGlobalState)
+      syncStatsTracker.updateDestinationStateStats(stateMessage)
     }
   }
 

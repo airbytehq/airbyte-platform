@@ -61,49 +61,33 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
     }
   }
 
-  override fun updateSourceStatesStats(
-    stateMessage: AirbyteStateMessage,
-    trackCommittedStatsWhenUsingGlobalState: Boolean,
-  ) {
-    if (trackCommittedStatsWhenUsingGlobalState) {
-      when (stateMessage.type) {
-        AirbyteStateMessage.AirbyteStateType.GLOBAL -> {
-          stateMessage.global.streamStates.forEach {
-            getOrCreateStreamStatsTracker(getNameNamespacePair(it.streamDescriptor))
-              .trackStateFromSource(stateMessage)
-          }
-        }
-        else -> {
-          getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
+  override fun updateSourceStatesStats(stateMessage: AirbyteStateMessage) {
+    when (stateMessage.type) {
+      AirbyteStateMessage.AirbyteStateType.GLOBAL -> {
+        stateMessage.global.streamStates.forEach {
+          getOrCreateStreamStatsTracker(getNameNamespacePair(it.streamDescriptor))
             .trackStateFromSource(stateMessage)
         }
       }
-    } else {
-      getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
-        .trackStateFromSource(stateMessage)
+      else -> {
+        getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
+          .trackStateFromSource(stateMessage)
+      }
     }
   }
 
-  override fun updateDestinationStateStats(
-    stateMessage: AirbyteStateMessage,
-    trackCommittedStatsWhenUsingGlobalState: Boolean,
-  ) {
-    if (trackCommittedStatsWhenUsingGlobalState) {
-      when (stateMessage.type) {
-        AirbyteStateMessage.AirbyteStateType.GLOBAL -> {
-          stateMessage.global.streamStates.forEach {
-            getOrCreateStreamStatsTracker(getNameNamespacePair(it.streamDescriptor))
-              .trackStateFromDestination(stateMessage)
-          }
-        }
-        else -> {
-          getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
+  override fun updateDestinationStateStats(stateMessage: AirbyteStateMessage) {
+    when (stateMessage.type) {
+      AirbyteStateMessage.AirbyteStateType.GLOBAL -> {
+        stateMessage.global.streamStates.forEach {
+          getOrCreateStreamStatsTracker(getNameNamespacePair(it.streamDescriptor))
             .trackStateFromDestination(stateMessage)
         }
       }
-    } else {
-      getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
-        .trackStateFromDestination(stateMessage)
+      else -> {
+        getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
+          .trackStateFromDestination(stateMessage)
+      }
     }
   }
 
