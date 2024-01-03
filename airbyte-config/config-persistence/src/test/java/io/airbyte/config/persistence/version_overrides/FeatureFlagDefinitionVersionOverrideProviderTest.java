@@ -43,7 +43,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class DefaultDefinitionVersionOverrideProviderTest {
+class FeatureFlagDefinitionVersionOverrideProviderTest {
 
   private static final UUID ACTOR_DEFINITION_ID = UUID.randomUUID();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
@@ -93,7 +93,7 @@ class DefaultDefinitionVersionOverrideProviderTest {
   private static final AirbyteProtocolVersionRange PROTOCOL_VERSION_RANGE =
       new AirbyteProtocolVersionRange(new Version("0.0.0"), new Version("0.3.0"));
 
-  private DefaultDefinitionVersionOverrideProvider overrideProvider;
+  private FeatureFlagDefinitionVersionOverrideProvider overrideProvider;
   private ActorDefinitionVersionResolver mActorDefinitionVersionResolver;
   private FeatureFlagClient mFeatureFlagClient;
 
@@ -102,7 +102,7 @@ class DefaultDefinitionVersionOverrideProviderTest {
     mActorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
     mFeatureFlagClient = mock(TestClient.class);
     overrideProvider =
-        new DefaultDefinitionVersionOverrideProvider(mActorDefinitionVersionResolver, mFeatureFlagClient, PROTOCOL_VERSION_RANGE);
+        new FeatureFlagDefinitionVersionOverrideProvider(mActorDefinitionVersionResolver, mFeatureFlagClient, PROTOCOL_VERSION_RANGE);
     when(mFeatureFlagClient.stringVariation(eq(ConnectorVersionOverride.INSTANCE), any())).thenReturn("");
   }
 

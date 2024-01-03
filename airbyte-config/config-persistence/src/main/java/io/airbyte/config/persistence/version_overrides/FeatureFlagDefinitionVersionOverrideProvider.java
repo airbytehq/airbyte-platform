@@ -21,6 +21,7 @@ import io.airbyte.featureflag.Workspace;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.util.StringUtils;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,17 +36,18 @@ import org.slf4j.LoggerFactory;
  * overrides from the Feature Flag client.
  */
 @Singleton
+@Named("ffVersionOverrideProvider")
 @Requires(bean = ActorDefinitionVersionResolver.class)
-public class DefaultDefinitionVersionOverrideProvider implements DefinitionVersionOverrideProvider {
+public class FeatureFlagDefinitionVersionOverrideProvider implements DefinitionVersionOverrideProvider {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(DefaultDefinitionVersionOverrideProvider.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(FeatureFlagDefinitionVersionOverrideProvider.class);
   private final ActorDefinitionVersionResolver actorDefinitionVersionResolver;
   private final FeatureFlagClient featureFlagClient;
   private final AirbyteProtocolVersionRange protocolVersionRange;
 
-  public DefaultDefinitionVersionOverrideProvider(final ActorDefinitionVersionResolver actorDefinitionVersionResolver,
-                                                  final FeatureFlagClient featureFlagClient,
-                                                  final AirbyteProtocolVersionRange protocolVersionRange) {
+  public FeatureFlagDefinitionVersionOverrideProvider(final ActorDefinitionVersionResolver actorDefinitionVersionResolver,
+                                                      final FeatureFlagClient featureFlagClient,
+                                                      final AirbyteProtocolVersionRange protocolVersionRange) {
     this.actorDefinitionVersionResolver = actorDefinitionVersionResolver;
     this.featureFlagClient = featureFlagClient;
     this.protocolVersionRange = protocolVersionRange;

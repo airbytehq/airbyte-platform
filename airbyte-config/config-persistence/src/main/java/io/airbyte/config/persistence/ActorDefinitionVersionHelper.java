@@ -17,6 +17,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.UseActorScopedDefaultVersions;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -50,16 +51,16 @@ public class ActorDefinitionVersionHelper {
   private static final Logger LOGGER = LoggerFactory.getLogger(ActorDefinitionVersionHelper.class);
 
   private final ConfigRepository configRepository;
-  private final DefinitionVersionOverrideProvider overrideProvider;
+  private final DefinitionVersionOverrideProvider ffOverrideProvider;
   private final FeatureFlagClient featureFlagClient;
 
   public ActorDefinitionVersionHelper(final ConfigRepository configRepository,
-                                      final DefinitionVersionOverrideProvider overrideProvider,
+                                      @Named("ffVersionOverrideProvider") final DefinitionVersionOverrideProvider ffOverrideProvider,
                                       final FeatureFlagClient featureFlagClient) {
-    this.overrideProvider = overrideProvider;
+    this.ffOverrideProvider = ffOverrideProvider;
     this.featureFlagClient = featureFlagClient;
     this.configRepository = configRepository;
-    LOGGER.info("ActorDefinitionVersionHelper initialized with override provider: {}", overrideProvider.getClass().getSimpleName());
+    LOGGER.info("ActorDefinitionVersionHelper initialized with override provider: {}", ffOverrideProvider.getClass().getSimpleName());
   }
 
   private ActorDefinitionVersion getDefaultSourceVersion(final StandardSourceDefinition sourceDefinition,
@@ -117,7 +118,7 @@ public class ActorDefinitionVersionHelper {
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final ActorDefinitionVersion defaultVersion = getDefaultSourceVersion(sourceDefinition, workspaceId, actorId);
 
-    final Optional<ActorDefinitionVersion> versionOverride = overrideProvider.getOverride(
+    final Optional<ActorDefinitionVersion> versionOverride = ffOverrideProvider.getOverride(
         ActorType.SOURCE,
         sourceDefinition.getSourceDefinitionId(),
         workspaceId,
@@ -168,7 +169,7 @@ public class ActorDefinitionVersionHelper {
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final ActorDefinitionVersion defaultVersion = getDefaultDestinationVersion(destinationDefinition, workspaceId, actorId);
 
-    final Optional<ActorDefinitionVersion> versionOverride = overrideProvider.getOverride(
+    final Optional<ActorDefinitionVersion> versionOverride = ffOverrideProvider.getOverride(
         ActorType.DESTINATION,
         destinationDefinition.getDestinationDefinitionId(),
         workspaceId,
