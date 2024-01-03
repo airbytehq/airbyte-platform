@@ -7,13 +7,17 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 
 import { SchemaError as SchemaErrorType, LogsRequestError } from "core/api";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import styles from "./SchemaError.module.scss";
 
-export const SchemaError = ({ schemaError }: { schemaError: Exclude<SchemaErrorType, null> }) => {
+export const SchemaError = ({
+  schemaError,
+  refreshSchema,
+}: {
+  schemaError: Exclude<SchemaErrorType, null>;
+  refreshSchema: () => Promise<void>;
+}) => {
   const job = LogsRequestError.extractJobInfo(schemaError);
-  const { refreshSchema } = useConnectionFormService();
 
   return (
     <Card className={styles.card}>
