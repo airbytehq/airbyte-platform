@@ -178,6 +178,7 @@ open class WorkloadMonitor(
           1,
           MetricAttribute(MetricTags.CANCELLATION_SOURCE, source),
           MetricAttribute(MetricTags.STATUS, status),
+          MetricAttribute(MetricTags.WORKLOAD_TYPE, it.type.value),
         )
       }
     }

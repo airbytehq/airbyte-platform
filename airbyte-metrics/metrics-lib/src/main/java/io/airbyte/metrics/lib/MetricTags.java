@@ -45,6 +45,7 @@ public class MetricTags {
   public static final String SOURCE_ID = "source_id";
   public static final String STATUS = "status";
   public static final String WORKSPACE_ID = "workspace_id";
+  public static final String WORKLOAD_TYPE = "workload_type";
   public static final String UNKNOWN = "unknown";
   public static final String USER_TYPE = "user_type"; // real user, service account, data plane user, etc
   public static final String WILL_RETRY = "will_retry";

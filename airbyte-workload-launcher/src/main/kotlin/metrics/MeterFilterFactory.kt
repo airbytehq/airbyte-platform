@@ -28,6 +28,7 @@ class MeterFilterFactory(
     const val STAGE_NAME_TAG = "stage_name"
     const val STATUS_TAG = "status"
     const val WORKLOAD_ID_TAG = "workload_id"
+    const val WORKLOAD_TYPE_TAG = "workload_type"
     const val MUTEX_KEY_TAG = "mutex_key"
 
     const val LAUNCH_PIPELINE_OPERATION_NAME = "launch-pipeline"

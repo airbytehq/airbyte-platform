@@ -44,7 +44,11 @@ open class CheckStatusStage(
       logger.info {
         "Found pods running for workload ${input.msg.workloadId}. Setting status to RUNNING and SKIP flag to true."
       }
-      customMetricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_ALREADY_RUNNING, MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId))
+      customMetricPublisher.count(
+        WorkloadLauncherMetricMetadata.WORKLOAD_ALREADY_RUNNING,
+        MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId),
+        MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
+      )
 
       return input.apply {
         skip = true

@@ -58,6 +58,7 @@ open class EnforceMutexStage(
       metricPublisher.count(
         WorkloadLauncherMetricMetadata.PODS_DELETED_FOR_MUTEX_KEY,
         MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId),
+        MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
         MetricAttribute(MUTEX_KEY_TAG, key),
       )
     } else {

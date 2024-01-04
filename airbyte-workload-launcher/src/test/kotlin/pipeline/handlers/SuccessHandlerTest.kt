@@ -27,7 +27,7 @@ class SuccessHandlerTest {
 
     every {
       metricClient.count(
-        any(), any(), any(),
+        any(), any(), any(), any(),
       )
     } returns Unit
 
@@ -55,7 +55,7 @@ class SuccessHandlerTest {
 
     every {
       metricClient.count(
-        any(), any(), any(),
+        any(), any(), any(), any(),
       )
     } returns Unit
 

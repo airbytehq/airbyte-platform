@@ -12,6 +12,7 @@ import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_ID_TAG
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_TYPE_TAG
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
@@ -48,14 +49,22 @@ open class ClaimStage(
     val claimed = apiClient.claim(input.msg.workloadId)
 
     if (!claimed) {
-      metricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_NOT_CLAIMED, MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId))
+      metricPublisher.count(
+        WorkloadLauncherMetricMetadata.WORKLOAD_NOT_CLAIMED,
+        MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId),
+        MetricAttribute(WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
+      )
       logger.info { "Workload not claimed. Setting SKIP flag to true." }
       return input.apply {
         skip = true
       }
     }
 
-    metricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_CLAIMED, MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId))
+    metricPublisher.count(
+      WorkloadLauncherMetricMetadata.WORKLOAD_CLAIMED,
+      MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId),
+      MetricAttribute(WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
+    )
     return input
   }
 
