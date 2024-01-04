@@ -10,8 +10,9 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { PageHeader } from "components/ui/PageHeader";
 
-import { useDestinationList } from "core/api";
+import { useCurrentWorkspace, useDestinationList } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useIntent } from "core/utils/rbac";
 
 import { DestinationPaths } from "../../routePaths";
 
@@ -21,6 +22,8 @@ export const AllDestinationsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.DESTINATION_LIST);
 
   const onCreateDestination = () => navigate(`${DestinationPaths.SelectDestinationNew}`);
+  const { workspaceId } = useCurrentWorkspace();
+  const canCreateDestination = useIntent("CreateDestination", { workspaceId });
 
   return destinations.length ? (
     <MainPageWithScroll
@@ -34,7 +37,13 @@ export const AllDestinationsPage: React.FC = () => {
             </Heading>
           }
           endComponent={
-            <Button icon={<Icon type="plus" />} onClick={onCreateDestination} size="sm" data-id="new-destination">
+            <Button
+              disabled={!canCreateDestination}
+              icon={<Icon type="plus" />}
+              onClick={onCreateDestination}
+              size="sm"
+              data-id="new-destination"
+            >
               <FormattedMessage id="destinations.newDestination" />
             </Button>
           }
