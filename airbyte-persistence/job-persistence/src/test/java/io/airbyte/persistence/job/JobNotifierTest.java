@@ -164,6 +164,7 @@ class JobNotifierTest {
 
   private static StandardWorkspace getWorkspace() {
     return new StandardWorkspace()
+        .withWorkspaceId(WORKSPACE_ID)
         .withCustomerId(UUID.randomUUID())
         .withNotifications(List.of(getSlackNotification()))
         .withNotificationSettings(new NotificationSettings()
