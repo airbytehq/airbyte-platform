@@ -13,6 +13,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
@@ -26,7 +27,9 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
+import io.airbyte.config.persistence.version_overrides.ConfigurationDefinitionVersionOverrideProvider;
 import io.airbyte.config.persistence.version_overrides.DefinitionVersionOverrideProvider;
+import io.airbyte.featureflag.EnableConfigurationOverrideProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.UseActorScopedDefaultVersions;
@@ -47,6 +50,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 class ActorDefinitionVersionHelperTest {
 
   private DefinitionVersionOverrideProvider mFFOverrideProvider;
+  private ConfigurationDefinitionVersionOverrideProvider mConfigOverrideProvider;
   private FeatureFlagClient mFeatureFlagClient;
   private ConfigRepository mConfigRepository;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
@@ -87,13 +91,17 @@ class ActorDefinitionVersionHelperTest {
     mFFOverrideProvider = mock(DefinitionVersionOverrideProvider.class);
     when(mFFOverrideProvider.getOverride(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
 
+    mConfigOverrideProvider = mock(ConfigurationDefinitionVersionOverrideProvider.class);
+    when(mConfigOverrideProvider.getOverride(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
+
     mFeatureFlagClient = mock(TestClient.class);
     when(mFeatureFlagClient.boolVariation(eq(UseActorScopedDefaultVersions.INSTANCE), any())).thenReturn(false);
+    when(mFeatureFlagClient.boolVariation(eq(EnableConfigurationOverrideProvider.INSTANCE), any())).thenReturn(true);
 
     mConfigRepository = mock(ConfigRepository.class);
     when(mConfigRepository.getActorDefinitionVersion(DEFAULT_VERSION_ID)).thenReturn(DEFAULT_VERSION);
     actorDefinitionVersionHelper =
-        new ActorDefinitionVersionHelper(mConfigRepository, mFFOverrideProvider, mFeatureFlagClient);
+        new ActorDefinitionVersionHelper(mConfigRepository, mConfigOverrideProvider, mFFOverrideProvider, mFeatureFlagClient);
   }
 
   @Test
@@ -124,6 +132,24 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
+  void testGetSourceVersionWithConfigOverride() throws ConfigNotFoundException, IOException, JsonValidationException {
+    when(mConfigOverrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION))
+        .thenReturn(Optional.of(OVERRIDDEN_VERSION));
+
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(ACTOR_DEFINITION_ID)
+        .withDefaultVersionId(DEFAULT_VERSION_ID);
+
+    final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus =
+        actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
+    assertEquals(OVERRIDDEN_VERSION, versionWithOverrideStatus.actorDefinitionVersion());
+    assertTrue(versionWithOverrideStatus.isOverrideApplied());
+
+    verify(mConfigOverrideProvider).getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
+    verifyNoInteractions(mFFOverrideProvider);
+  }
+
+  @Test
   void testGetSourceVersionWithOverride() throws ConfigNotFoundException, IOException, JsonValidationException {
     when(mFFOverrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION))
         .thenReturn(Optional.of(OVERRIDDEN_VERSION));
@@ -136,6 +162,9 @@ class ActorDefinitionVersionHelperTest {
         actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
     assertEquals(OVERRIDDEN_VERSION, versionWithOverrideStatus.actorDefinitionVersion());
     assertTrue(versionWithOverrideStatus.isOverrideApplied());
+
+    verify(mConfigOverrideProvider).getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
+    verify(mFFOverrideProvider).getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
   }
 
   @Test
@@ -171,6 +200,25 @@ class ActorDefinitionVersionHelperTest {
 
     final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID);
     assertEquals(OVERRIDDEN_VERSION, actual);
+
+    verify(mConfigOverrideProvider).getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, null, DEFAULT_VERSION);
+    verify(mFFOverrideProvider).getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, null, DEFAULT_VERSION);
+  }
+
+  @Test
+  void testGetSourceVersionForWorkspaceWithConfigOverride() throws ConfigNotFoundException, IOException, JsonValidationException {
+    when(mConfigOverrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, null, DEFAULT_VERSION))
+        .thenReturn(Optional.of(OVERRIDDEN_VERSION));
+
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(ACTOR_DEFINITION_ID)
+        .withDefaultVersionId(DEFAULT_VERSION_ID);
+
+    final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID);
+    assertEquals(OVERRIDDEN_VERSION, actual);
+
+    verify(mConfigOverrideProvider).getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, null, DEFAULT_VERSION);
+    verifyNoInteractions(mFFOverrideProvider);
   }
 
   @Test
@@ -213,6 +261,27 @@ class ActorDefinitionVersionHelperTest {
         actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(destinationDefinition, WORKSPACE_ID, ACTOR_ID);
     assertEquals(OVERRIDDEN_VERSION, versionWithOverrideStatus.actorDefinitionVersion());
     assertTrue(versionWithOverrideStatus.isOverrideApplied());
+
+    verify(mConfigOverrideProvider).getOverride(ActorType.DESTINATION, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
+    verify(mFFOverrideProvider).getOverride(ActorType.DESTINATION, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
+  }
+
+  @Test
+  void testGetDestinationVersionWithConfigOverride() throws ConfigNotFoundException, IOException, JsonValidationException {
+    when(mConfigOverrideProvider.getOverride(ActorType.DESTINATION, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION))
+        .thenReturn(Optional.of(OVERRIDDEN_VERSION));
+
+    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+        .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
+        .withDefaultVersionId(DEFAULT_VERSION_ID);
+
+    final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus =
+        actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(destinationDefinition, WORKSPACE_ID, ACTOR_ID);
+    assertEquals(OVERRIDDEN_VERSION, versionWithOverrideStatus.actorDefinitionVersion());
+    assertTrue(versionWithOverrideStatus.isOverrideApplied());
+
+    verify(mConfigOverrideProvider).getOverride(ActorType.DESTINATION, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
+    verifyNoInteractions(mFFOverrideProvider);
   }
 
   @Test
@@ -248,6 +317,25 @@ class ActorDefinitionVersionHelperTest {
 
     final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID);
     assertEquals(OVERRIDDEN_VERSION, actual);
+
+    verify(mConfigOverrideProvider).getOverride(ActorType.DESTINATION, ACTOR_DEFINITION_ID, WORKSPACE_ID, null, DEFAULT_VERSION);
+    verify(mFFOverrideProvider).getOverride(ActorType.DESTINATION, ACTOR_DEFINITION_ID, WORKSPACE_ID, null, DEFAULT_VERSION);
+  }
+
+  @Test
+  void testGetDestinationVersionForWorkspaceWithConfigOverride() throws ConfigNotFoundException, IOException, JsonValidationException {
+    when(mConfigOverrideProvider.getOverride(ActorType.DESTINATION, ACTOR_DEFINITION_ID, WORKSPACE_ID, null, DEFAULT_VERSION))
+        .thenReturn(Optional.of(OVERRIDDEN_VERSION));
+
+    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+        .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
+        .withDefaultVersionId(DEFAULT_VERSION_ID);
+
+    final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID);
+    assertEquals(OVERRIDDEN_VERSION, actual);
+
+    verify(mConfigOverrideProvider).getOverride(ActorType.DESTINATION, ACTOR_DEFINITION_ID, WORKSPACE_ID, null, DEFAULT_VERSION);
+    verifyNoInteractions(mFFOverrideProvider);
   }
 
   @Test

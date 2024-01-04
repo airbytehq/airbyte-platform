@@ -13,6 +13,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
 import io.airbyte.config.persistence.version_overrides.DefinitionVersionOverrideProvider;
+import io.airbyte.featureflag.EnableConfigurationOverrideProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.UseActorScopedDefaultVersions;
 import io.airbyte.featureflag.Workspace;
@@ -51,16 +52,22 @@ public class ActorDefinitionVersionHelper {
   private static final Logger LOGGER = LoggerFactory.getLogger(ActorDefinitionVersionHelper.class);
 
   private final ConfigRepository configRepository;
+  private final DefinitionVersionOverrideProvider configOverrideProvider;
   private final DefinitionVersionOverrideProvider ffOverrideProvider;
   private final FeatureFlagClient featureFlagClient;
 
   public ActorDefinitionVersionHelper(final ConfigRepository configRepository,
+                                      @Named("configurationVersionOverrideProvider") final DefinitionVersionOverrideProvider configOverrideProvider,
                                       @Named("ffVersionOverrideProvider") final DefinitionVersionOverrideProvider ffOverrideProvider,
                                       final FeatureFlagClient featureFlagClient) {
+    this.configOverrideProvider = configOverrideProvider;
     this.ffOverrideProvider = ffOverrideProvider;
     this.featureFlagClient = featureFlagClient;
     this.configRepository = configRepository;
-    LOGGER.info("ActorDefinitionVersionHelper initialized with override provider: {}", ffOverrideProvider.getClass().getSimpleName());
+
+    LOGGER.info("ActorDefinitionVersionHelper initialized with override providers: {}, {}",
+        configOverrideProvider.getClass().getSimpleName(),
+        ffOverrideProvider.getClass().getSimpleName());
   }
 
   private ActorDefinitionVersion getDefaultSourceVersion(final StandardSourceDefinition sourceDefinition,
@@ -118,12 +125,25 @@ public class ActorDefinitionVersionHelper {
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final ActorDefinitionVersion defaultVersion = getDefaultSourceVersion(sourceDefinition, workspaceId, actorId);
 
-    final Optional<ActorDefinitionVersion> versionOverride = ffOverrideProvider.getOverride(
-        ActorType.SOURCE,
-        sourceDefinition.getSourceDefinitionId(),
-        workspaceId,
-        actorId,
-        defaultVersion);
+    Optional<ActorDefinitionVersion> versionOverride = Optional.empty();
+
+    if (featureFlagClient.boolVariation(EnableConfigurationOverrideProvider.INSTANCE, new Workspace(workspaceId))) {
+      versionOverride = configOverrideProvider.getOverride(
+          ActorType.SOURCE,
+          sourceDefinition.getSourceDefinitionId(),
+          workspaceId,
+          actorId,
+          defaultVersion);
+    }
+
+    if (versionOverride.isEmpty()) {
+      versionOverride = ffOverrideProvider.getOverride(
+          ActorType.SOURCE,
+          sourceDefinition.getSourceDefinitionId(),
+          workspaceId,
+          actorId,
+          defaultVersion);
+    }
 
     return new ActorDefinitionVersionWithOverrideStatus(versionOverride.orElse(defaultVersion), versionOverride.isPresent());
   }
@@ -169,12 +189,25 @@ public class ActorDefinitionVersionHelper {
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final ActorDefinitionVersion defaultVersion = getDefaultDestinationVersion(destinationDefinition, workspaceId, actorId);
 
-    final Optional<ActorDefinitionVersion> versionOverride = ffOverrideProvider.getOverride(
-        ActorType.DESTINATION,
-        destinationDefinition.getDestinationDefinitionId(),
-        workspaceId,
-        actorId,
-        defaultVersion);
+    Optional<ActorDefinitionVersion> versionOverride = Optional.empty();
+
+    if (featureFlagClient.boolVariation(EnableConfigurationOverrideProvider.INSTANCE, new Workspace(workspaceId))) {
+      versionOverride = configOverrideProvider.getOverride(
+          ActorType.DESTINATION,
+          destinationDefinition.getDestinationDefinitionId(),
+          workspaceId,
+          actorId,
+          defaultVersion);
+    }
+
+    if (versionOverride.isEmpty()) {
+      versionOverride = ffOverrideProvider.getOverride(
+          ActorType.DESTINATION,
+          destinationDefinition.getDestinationDefinitionId(),
+          workspaceId,
+          actorId,
+          defaultVersion);
+    }
 
     return new ActorDefinitionVersionWithOverrideStatus(versionOverride.orElse(defaultVersion), versionOverride.isPresent());
   }

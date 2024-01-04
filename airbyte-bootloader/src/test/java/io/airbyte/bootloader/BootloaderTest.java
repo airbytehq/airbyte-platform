@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.bootloader.helpers.NoOpDefinitionVersionOverrideProvider;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
@@ -186,7 +187,8 @@ class BootloaderTest {
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
     val breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(configRepository, featureFlagClient);
     val actorDefinitionVersionHelper =
-        new ActorDefinitionVersionHelper(configRepository, new NoOpDefinitionVersionOverrideProvider(), featureFlagClient);
+        new ActorDefinitionVersionHelper(configRepository, new NoOpDefinitionVersionOverrideProvider(), new NoOpDefinitionVersionOverrideProvider(),
+            featureFlagClient);
     val supportStateUpdater =
         new SupportStateUpdater(configRepository, DeploymentMode.OSS, actorDefinitionVersionHelper, breakingChangeNotificationHelper,
             featureFlagClient);
@@ -276,7 +278,8 @@ class BootloaderTest {
     val organizationPersistence = new OrganizationPersistence(jobDatabase);
     val breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(configRepository, featureFlagClient);
     val actorDefinitionVersionHelper =
-        new ActorDefinitionVersionHelper(configRepository, new NoOpDefinitionVersionOverrideProvider(), featureFlagClient);
+        new ActorDefinitionVersionHelper(configRepository, new NoOpDefinitionVersionOverrideProvider(), new NoOpDefinitionVersionOverrideProvider(),
+            featureFlagClient);
     val supportStateUpdater =
         new SupportStateUpdater(configRepository, DeploymentMode.OSS, actorDefinitionVersionHelper, breakingChangeNotificationHelper,
             featureFlagClient);

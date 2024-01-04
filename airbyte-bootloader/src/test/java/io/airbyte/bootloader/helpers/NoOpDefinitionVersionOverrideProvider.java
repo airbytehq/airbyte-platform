@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.bootloader;
+package io.airbyte.bootloader.helpers;
 
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
@@ -15,7 +15,7 @@ import org.jetbrains.annotations.Nullable;
  * Implementation of {@link DefinitionVersionOverrideProvider} that does not override any versions.
  * Used for testing.
  */
-class NoOpDefinitionVersionOverrideProvider implements DefinitionVersionOverrideProvider {
+public class NoOpDefinitionVersionOverrideProvider implements DefinitionVersionOverrideProvider {
 
   @Override
   public Optional<ActorDefinitionVersion> getOverride(final ActorType actorType,

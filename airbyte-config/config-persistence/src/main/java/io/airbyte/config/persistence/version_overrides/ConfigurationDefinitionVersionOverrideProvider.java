@@ -16,6 +16,7 @@ import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ConnectorVersionKey;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.HashMap;
@@ -25,6 +26,7 @@ import java.util.UUID;
 import org.jetbrains.annotations.Nullable;
 
 @Singleton
+@Named("configurationVersionOverrideProvider")
 public class ConfigurationDefinitionVersionOverrideProvider implements DefinitionVersionOverrideProvider {
 
   private final WorkspaceService workspaceService;

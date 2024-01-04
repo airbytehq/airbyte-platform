@@ -69,6 +69,8 @@ object UseActorScopedDefaultVersions : Temporary<Boolean>(key = "connectors.useA
 
 object RunSupportStateUpdater : Temporary<Boolean>(key = "connectors.runSupportStateUpdater", default = true)
 
+object EnableConfigurationOverrideProvider : Temporary<Boolean>(key = "connectors.enableConfigurationOverrideProvider", default = false)
+
 object NotifyOnConnectorBreakingChanges : Temporary<Boolean>(key = "connectors.notifyOnConnectorBreakingChanges", default = true)
 
 object NotifyBreakingChangesOnSupportStateUpdate : Temporary<Boolean>(key = "connectors.notifyBreakingChangesOnSupportStateUpdate", default = true)
