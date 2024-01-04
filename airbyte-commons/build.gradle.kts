@@ -3,10 +3,13 @@ import de.undercouch.gradle.tasks.download.Download
 plugins {
     id("io.airbyte.gradle.jvm.lib")
     id("io.airbyte.gradle.publish")
-    id("de.undercouch.download") version "5.4.0"
+    alias(libs.plugins.de.undercouch.download)
 }
 
 dependencies {
+    annotationProcessor(libs.lombok)
+    annotationProcessor(libs.log4j.core)
+
     implementation(libs.bundles.jackson)
     implementation(libs.guava)
     implementation(libs.bundles.slf4j)
@@ -17,16 +20,15 @@ dependencies {
     implementation(libs.airbyte.protocol)
 
     compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
 
     // this dependency is an exception to the above rule because it is only used INTERNALLY to the commons library.
-    implementation("com.jayway.jsonpath:json-path:2.7.0")
+    implementation(libs.json.path)
 
-    testRuntimeOnly(libs.junit.jupiter.engine)
     testImplementation(libs.bundles.junit)
     testImplementation(libs.assertj.core)
-
     testImplementation(libs.junit.pioneer)
+
+    testRuntimeOnly(libs.junit.jupiter.engine)
 }
 
 airbyte {
