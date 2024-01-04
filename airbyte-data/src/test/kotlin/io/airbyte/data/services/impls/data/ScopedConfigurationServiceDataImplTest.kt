@@ -3,10 +3,10 @@ package io.airbyte.data.services.impls.data
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.ScopedConfigurationRepository
 import io.airbyte.data.repositories.entities.ScopedConfiguration
+import io.airbyte.data.services.impls.data.mappers.ModelConfigScopeType
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
+import io.airbyte.data.services.shared.ScopedConfigurationKey
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigOriginType
-import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigResourceType
-import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigScopeType
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -18,6 +18,10 @@ import java.sql.Date
 import java.time.LocalDate
 import java.util.Optional
 import java.util.UUID
+
+typealias EntityConfigScopeType = io.airbyte.db.instance.configs.jooq.generated.enums.ConfigScopeType
+typealias EntityConfigResourceType = io.airbyte.db.instance.configs.jooq.generated.enums.ConfigResourceType
+typealias ModelConfigResourceType = io.airbyte.config.ConfigResourceType
 
 internal class ScopedConfigurationServiceDataImplTest {
   private val scopedConfigurationRepository = mockk<ScopedConfigurationRepository>()
@@ -37,9 +41,9 @@ internal class ScopedConfigurationServiceDataImplTest {
         id = configId,
         key = "key",
         value = "value",
-        scopeType = ConfigScopeType.workspace,
+        scopeType = EntityConfigScopeType.workspace,
         scopeId = UUID.randomUUID(),
-        resourceType = ConfigResourceType.actor_definition,
+        resourceType = EntityConfigResourceType.actor_definition,
         resourceId = UUID.randomUUID(),
         originType = ConfigOriginType.user,
         origin = "my_user_id",
@@ -74,9 +78,9 @@ internal class ScopedConfigurationServiceDataImplTest {
         id = configId,
         key = "key",
         value = "value",
-        scopeType = ConfigScopeType.workspace,
+        scopeType = EntityConfigScopeType.workspace,
         scopeId = scopeId,
-        resourceType = ConfigResourceType.actor_definition,
+        resourceType = EntityConfigResourceType.actor_definition,
         resourceId = resourceId,
         originType = ConfigOriginType.user,
         origin = "my_user_id",
@@ -86,17 +90,17 @@ internal class ScopedConfigurationServiceDataImplTest {
     every {
       scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
         "key",
-        ConfigResourceType.actor_definition, resourceId,
-        ConfigScopeType.workspace, scopeId,
+        EntityConfigResourceType.actor_definition, resourceId,
+        EntityConfigScopeType.workspace, scopeId,
       )
     } returns config
 
     val retrievedConfig =
       scopedConfigurationService.getScopedConfiguration(
         "key",
-        io.airbyte.config.ConfigResourceType.ACTOR_DEFINITION,
+        ModelConfigResourceType.ACTOR_DEFINITION,
         resourceId,
-        io.airbyte.config.ConfigScopeType.WORKSPACE,
+        ModelConfigScopeType.WORKSPACE,
         scopeId,
       )
 
@@ -105,10 +109,180 @@ internal class ScopedConfigurationServiceDataImplTest {
     verify {
       scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
         "key",
-        ConfigResourceType.actor_definition,
+        EntityConfigResourceType.actor_definition,
         resourceId,
-        ConfigScopeType.workspace,
+        EntityConfigScopeType.workspace,
         scopeId,
+      )
+    }
+  }
+
+  @Test
+  fun `test get configuration by resource, scope and key object`() {
+    val configKey =
+      ScopedConfigurationKey(
+        key = "test-key",
+        supportedScopes = listOf(ModelConfigScopeType.WORKSPACE),
+      )
+
+    val configId = UUID.randomUUID()
+    val scopeId = UUID.randomUUID()
+    val resourceId = UUID.randomUUID()
+
+    val config =
+      ScopedConfiguration(
+        id = configId,
+        key = configKey.key,
+        value = "value",
+        scopeType = EntityConfigScopeType.workspace,
+        scopeId = scopeId,
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+        description = "my_description",
+      )
+
+    every {
+      scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
+        configKey.key,
+        EntityConfigResourceType.actor_definition, resourceId,
+        EntityConfigScopeType.workspace, scopeId,
+      )
+    } returns config
+
+    val retrievedConfig =
+      scopedConfigurationService.getScopedConfiguration(
+        configKey,
+        ModelConfigResourceType.ACTOR_DEFINITION,
+        resourceId,
+        ModelConfigScopeType.WORKSPACE,
+        scopeId,
+      )
+
+    assert(retrievedConfig.get() == config.toConfigModel())
+
+    verify {
+      scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
+        configKey.key,
+        EntityConfigResourceType.actor_definition,
+        resourceId,
+        EntityConfigScopeType.workspace,
+        scopeId,
+      )
+    }
+  }
+
+  @Test
+  fun `test get configuration with unsupported scope throws`() {
+    val configKey =
+      ScopedConfigurationKey(
+        key = "test-key-mismatched-supported-scope",
+        supportedScopes = listOf(ModelConfigScopeType.WORKSPACE),
+      )
+
+    assertThrows<IllegalArgumentException> {
+      scopedConfigurationService.getScopedConfiguration(
+        configKey,
+        ModelConfigResourceType.ACTOR_DEFINITION,
+        UUID.randomUUID(),
+        ModelConfigScopeType.ORGANIZATION,
+        UUID.randomUUID(),
+      )
+    }
+  }
+
+  @Test
+  fun `test get configuration by key, resource and scope map`() {
+    val configKey =
+      ScopedConfigurationKey(
+        key = "test-key",
+        supportedScopes = listOf(ModelConfigScopeType.WORKSPACE, ModelConfigScopeType.ORGANIZATION),
+      )
+
+    val configId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val resourceId = UUID.randomUUID()
+
+    val config =
+      ScopedConfiguration(
+        id = configId,
+        key = configKey.key,
+        value = "value",
+        scopeType = EntityConfigScopeType.organization,
+        scopeId = organizationId,
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+        description = "my_description",
+      )
+
+    every {
+      scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
+        configKey.key,
+        EntityConfigResourceType.actor_definition, resourceId,
+        EntityConfigScopeType.workspace, workspaceId,
+      )
+    } returns null
+
+    every {
+      scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
+        configKey.key,
+        EntityConfigResourceType.actor_definition, resourceId,
+        EntityConfigScopeType.organization, organizationId,
+      )
+    } returns config
+
+    val retrievedConfig =
+      scopedConfigurationService.getScopedConfiguration(
+        configKey,
+        ModelConfigResourceType.ACTOR_DEFINITION,
+        resourceId,
+        mapOf(
+          ModelConfigScopeType.WORKSPACE to workspaceId,
+          ModelConfigScopeType.ORGANIZATION to organizationId,
+        ),
+      )
+
+    assert(retrievedConfig.get() == config.toConfigModel())
+
+    verify {
+      scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
+        configKey.key,
+        EntityConfigResourceType.actor_definition,
+        resourceId,
+        EntityConfigScopeType.workspace,
+        workspaceId,
+      )
+      scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
+        configKey.key,
+        EntityConfigResourceType.actor_definition,
+        resourceId,
+        EntityConfigScopeType.organization,
+        organizationId,
+      )
+    }
+  }
+
+  @Test
+  fun `test get configuration with unsupported scope in map throws`() {
+    val configKey =
+      ScopedConfigurationKey(
+        key = "test-key-mismatched-supported-scope-2",
+        supportedScopes = listOf(ModelConfigScopeType.WORKSPACE),
+      )
+
+    assertThrows<IllegalArgumentException> {
+      scopedConfigurationService.getScopedConfiguration(
+        configKey,
+        ModelConfigResourceType.ACTOR_DEFINITION,
+        UUID.randomUUID(),
+        mapOf(
+          ModelConfigScopeType.ACTOR to UUID.randomUUID(),
+          ModelConfigScopeType.WORKSPACE to UUID.randomUUID(),
+        ),
       )
     }
   }
@@ -125,9 +299,9 @@ internal class ScopedConfigurationServiceDataImplTest {
     val retrievedConfig =
       scopedConfigurationService.getScopedConfiguration(
         "key",
-        io.airbyte.config.ConfigResourceType.ACTOR_DEFINITION,
+        ModelConfigResourceType.ACTOR_DEFINITION,
         resourceId,
-        io.airbyte.config.ConfigScopeType.WORKSPACE,
+        ModelConfigScopeType.WORKSPACE,
         scopeId,
       )
 
@@ -136,10 +310,57 @@ internal class ScopedConfigurationServiceDataImplTest {
     verify {
       scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
         "key",
-        ConfigResourceType.actor_definition,
+        EntityConfigResourceType.actor_definition,
         resourceId,
-        ConfigScopeType.workspace,
+        EntityConfigScopeType.workspace,
         scopeId,
+      )
+    }
+  }
+
+  @Test
+  fun `test get non-existent configuration by scope map returns empty opt`() {
+    val organizationId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val resourceId = UUID.randomUUID()
+
+    val configKey =
+      ScopedConfigurationKey(
+        key = "test-key-no-config",
+        supportedScopes = listOf(ModelConfigScopeType.ORGANIZATION, ModelConfigScopeType.WORKSPACE),
+      )
+
+    every {
+      scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(any(), any(), any(), any(), any())
+    } returns null
+
+    val retrievedConfig =
+      scopedConfigurationService.getScopedConfiguration(
+        configKey,
+        ModelConfigResourceType.ACTOR_DEFINITION,
+        resourceId,
+        mapOf(
+          ModelConfigScopeType.ORGANIZATION to organizationId,
+          ModelConfigScopeType.WORKSPACE to workspaceId,
+        ),
+      )
+
+    assert(retrievedConfig.isEmpty)
+
+    verify {
+      scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
+        configKey.key,
+        EntityConfigResourceType.actor_definition,
+        resourceId,
+        EntityConfigScopeType.workspace,
+        workspaceId,
+      )
+      scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
+        configKey.key,
+        EntityConfigResourceType.actor_definition,
+        resourceId,
+        EntityConfigScopeType.organization,
+        organizationId,
       )
     }
   }
@@ -155,9 +376,9 @@ internal class ScopedConfigurationServiceDataImplTest {
         id = configId,
         key = "key",
         value = "value",
-        scopeType = ConfigScopeType.workspace,
+        scopeType = EntityConfigScopeType.workspace,
         scopeId = scopeId,
-        resourceType = ConfigResourceType.actor_definition,
+        resourceType = EntityConfigResourceType.actor_definition,
         resourceId = resourceId,
         originType = ConfigOriginType.user,
         origin = "my_user_id",
@@ -187,9 +408,9 @@ internal class ScopedConfigurationServiceDataImplTest {
         id = configId,
         key = "key",
         value = "value",
-        scopeType = ConfigScopeType.workspace,
+        scopeType = EntityConfigScopeType.workspace,
         scopeId = scopeId,
-        resourceType = ConfigResourceType.actor_definition,
+        resourceType = EntityConfigResourceType.actor_definition,
         resourceId = resourceId,
         originType = ConfigOriginType.user,
         origin = "my_user_id",
@@ -217,9 +438,9 @@ internal class ScopedConfigurationServiceDataImplTest {
         id = UUID.randomUUID(),
         key = "key",
         value = "value",
-        scopeType = ConfigScopeType.workspace,
+        scopeType = EntityConfigScopeType.workspace,
         scopeId = UUID.randomUUID(),
-        resourceType = ConfigResourceType.actor_definition,
+        resourceType = EntityConfigResourceType.actor_definition,
         resourceId = resourceId,
         originType = ConfigOriginType.user,
         origin = "my_user_id",
@@ -231,9 +452,9 @@ internal class ScopedConfigurationServiceDataImplTest {
         id = UUID.randomUUID(),
         key = "key",
         value = "value2",
-        scopeType = ConfigScopeType.workspace,
+        scopeType = EntityConfigScopeType.workspace,
         scopeId = UUID.randomUUID(),
-        resourceType = ConfigResourceType.actor_definition,
+        resourceType = EntityConfigResourceType.actor_definition,
         resourceId = resourceId,
         originType = ConfigOriginType.user,
         origin = "my_user_id2",
