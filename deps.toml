@@ -150,6 +150,7 @@ sts = { module = "software.amazon.awssdk:sts", version = "2.20.162" }
 segment-java-analytics = { module = "com.segment.analytics.java:analytics", version.ref = "segment" }
 sentry-java = { module = "io.sentry:sentry", version.ref = "sentry" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+slf4j-simple = { module = "org.slf4j:slf4j-simple", version = "2.0.9" }
 slugify = { module = "com.github.slugify:slugify", version = "2.4" }
 spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.8.2" }
 spring-core = { module = "org.springframework:spring-core", version = "6.0.8" }
