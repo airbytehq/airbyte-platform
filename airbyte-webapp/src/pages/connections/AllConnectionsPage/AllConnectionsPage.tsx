@@ -17,10 +17,11 @@ import { ListBox } from "components/ui/ListBox";
 import { PageHeader } from "components/ui/PageHeader";
 import { Text } from "components/ui/Text";
 
-import { useConnectionList } from "core/api";
+import { useConnectionList, useCurrentWorkspace } from "core/api";
 import { JobStatus, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { naturalComparatorBy } from "core/utils/objects";
+import { useIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./AllConnectionsPage.module.scss";
@@ -167,6 +168,9 @@ export const AllConnectionsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_LIST);
   const isConnectionsSummaryEnabled = useExperiment("connections.summaryView", false);
 
+  const { workspaceId } = useCurrentWorkspace();
+  const canCreateConnection = useIntent("CreateConnection", { workspaceId });
+
   const connectionList = useConnectionList();
   const connections = useMemo(() => connectionList?.connections ?? [], [connectionList?.connections]);
 
@@ -270,6 +274,7 @@ export const AllConnectionsPage: React.FC = () => {
                 endComponent={
                   <FlexItem className={styles.alignSelfStart}>
                     <Button
+                      disabled={!canCreateConnection}
                       icon={<Icon type="plus" />}
                       variant="primary"
                       size="sm"

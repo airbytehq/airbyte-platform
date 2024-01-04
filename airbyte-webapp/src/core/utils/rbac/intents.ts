@@ -14,10 +14,6 @@ export const intentToRbacQuery = {
   UpdateWorkspacePermissions: { resourceType: "WORKSPACE", role: "ADMIN" },
   ViewWorkspaceSettings: { resourceType: "WORKSPACE", role: "READER" },
 
-  // connection
-  CreateConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
-  SyncConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
-
   // source
   CreateSource: { resourceType: "WORKSPACE", role: "EDITOR" },
   EditSource: { resourceType: "WORKSPACE", role: "EDITOR" },
@@ -25,4 +21,9 @@ export const intentToRbacQuery = {
   // destination
   CreateDestination: { resourceType: "WORKSPACE", role: "EDITOR" },
   EditDestination: { resourceType: "WORKSPACE", role: "EDITOR" },
+
+  // connection
+  CreateConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
+  SyncConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
+  EditConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
 } as const;

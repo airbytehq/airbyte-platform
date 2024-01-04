@@ -2,7 +2,6 @@ import classNames from "classnames";
 import { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
@@ -13,11 +12,13 @@ import { ConnectorIds, SvgIcon } from "area/connector/utils";
 import { useCurrentWorkspace, useSourceDefinitionList, useDestinationDefinitionList } from "core/api";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { links } from "core/utils/links";
+import { useIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
 import { ConnectionRoutePaths, DestinationPaths, RoutePaths } from "pages/routePaths";
 
 import { AirbyteIllustration, HighlightIndex } from "./AirbyteIllustration";
 import styles from "./ConnectionOnboarding.module.scss";
+import { ConnectionOnboardingConnectorLink } from "./ConnectionOnboardingConnectorLink";
 import { SOURCE_DEFINITION_PARAM } from "../CreateConnection/CreateNewSource";
 import { NEW_SOURCE_TYPE, SOURCE_TYPE_PARAM } from "../CreateConnection/SelectSource";
 
@@ -78,6 +79,7 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
   const { formatMessage } = useIntl();
   const { workspaceId } = useCurrentWorkspace();
   const { sourceDefinitions, destinationDefinitions } = useConnectorSpecificationMap();
+  const canCreateConnection = useIntent("CreateConnection", { workspaceId });
 
   const [highlightedSource, setHighlightedSource] = useState<HighlightIndex>(1);
   const [highlightedDestination, setHighlightedDestination] = useState<HighlightIndex>(0);
@@ -142,47 +144,33 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
           {sources.map((source, index) => {
             const tooltipText = formatMessage({ id: "connection.onboarding.addSource" }, { source: source?.name });
             return (
-              <Tooltip
+              <ConnectionOnboardingConnectorLink
                 key={source?.sourceDefinitionId}
-                placement="right"
-                control={
-                  <Link
-                    data-testid={`onboardingSource-${index}`}
-                    data-source-definition-id={source?.sourceDefinitionId}
-                    aria-label={tooltipText}
-                    to={createSourcePath(source?.sourceDefinitionId)}
-                  >
-                    <FlexContainer
-                      className={styles.connectorButton}
-                      onMouseEnter={() => setHighlightedSource(index as HighlightIndex)}
-                      alignItems="center"
-                      justifyContent="center"
-                    >
-                      <div className={styles.connectorIcon}>
-                        <SvgIcon src={source?.icon} />
-                      </div>
-                    </FlexContainer>
-                  </Link>
-                }
+                testId={`onboardingSource-${index}`}
+                connector={source}
+                connectorType="source"
+                to={createSourcePath(source?.sourceDefinitionId)}
+                tooltipText={tooltipText}
+                onMouseEnter={() => setHighlightedSource(index as HighlightIndex)}
               >
-                {tooltipText}
-              </Tooltip>
+                <div className={styles.connectorIcon}>
+                  <SvgIcon src={source?.icon} />
+                </div>
+              </ConnectionOnboardingConnectorLink>
             );
           })}
 
           <Tooltip
             placement="right"
             control={
-              <Link data-testid="onboardingSource-more" to={createSourcePath()} aria-label={moreSourcesTooltip}>
-                <FlexContainer
-                  onMouseEnter={() => setHighlightedSource(3)}
-                  className={styles.connectorButton}
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  <Icon type="plus" className={styles.moreIcon} />
-                </FlexContainer>
-              </Link>
+              <ConnectionOnboardingConnectorLink
+                testId="onboardingSource-more"
+                to={createSourcePath()}
+                tooltipText={moreSourcesTooltip}
+                onMouseEnter={() => setHighlightedSource(3)}
+              >
+                <Icon type="plus" className={styles.moreIcon} />
+              </ConnectionOnboardingConnectorLink>
             }
           >
             {moreSourcesTooltip}
@@ -213,61 +201,43 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
               { destination: destination?.name }
             );
             return (
-              <Tooltip
+              <ConnectionOnboardingConnectorLink
                 key={destination?.destinationDefinitionId}
-                placement="right"
-                control={
-                  <Link
-                    data-testid={`onboardingDestination-${index}`}
-                    data-destination-definition-id={destination?.destinationDefinitionId}
-                    aria-label={tooltipText}
-                    to={`${createDestinationBasePath}/${destination.destinationDefinitionId}`}
-                  >
-                    <FlexContainer
-                      className={styles.connectorButton}
-                      onMouseEnter={() => setHighlightedDestination(index as HighlightIndex)}
-                      alignItems="center"
-                      justifyContent="center"
-                    >
-                      <div className={styles.connectorIcon}>
-                        <SvgIcon src={destination?.icon} />
-                      </div>
-                    </FlexContainer>
-                  </Link>
-                }
+                testId={`onboardingDestination-${index}`}
+                connector={destination}
+                connectorType="destination"
+                to={`${createDestinationBasePath}/${destination.destinationDefinitionId}`}
+                tooltipText={tooltipText}
+                onMouseEnter={() => setHighlightedDestination(index as HighlightIndex)}
               >
-                {tooltipText}
-              </Tooltip>
+                <div className={styles.connectorIcon}>
+                  <SvgIcon src={destination?.icon} />
+                </div>
+              </ConnectionOnboardingConnectorLink>
             );
           })}
-          <Tooltip
-            placement="right"
-            control={
-              <Link
-                data-testid="onboardingDestination-more"
-                to={createDestinationBasePath}
-                aria-label={moreDestinationsTooltip}
-              >
-                <FlexContainer
-                  onMouseEnter={() => setHighlightedDestination(3)}
-                  className={styles.connectorButton}
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  <Icon type="plus" className={styles.moreIcon} />
-                </FlexContainer>
-              </Link>
-            }
+
+          <ConnectionOnboardingConnectorLink
+            testId="onboardingDestination-more"
+            to={createDestinationBasePath}
+            tooltipText={moreDestinationsTooltip}
+            onMouseEnter={() => setHighlightedDestination(3)}
           >
-            {moreDestinationsTooltip}
-          </Tooltip>
+            <Icon type="plus" className={styles.moreIcon} />
+          </ConnectionOnboardingConnectorLink>
         </div>
       </div>
       <div className={styles.footer}>
         <Link
           to={createConnectionPath}
           data-testid="new-connection-button"
-          className={classNames(styles.button, styles.typePrimary, styles.sizeL, styles.linkText)}
+          className={classNames(
+            styles.button,
+            styles.typePrimary,
+            styles.sizeL,
+            styles.linkText,
+            !canCreateConnection && styles.disabled
+          )}
         >
           <FormattedMessage id="connection.onboarding.createFirst" />
         </Link>

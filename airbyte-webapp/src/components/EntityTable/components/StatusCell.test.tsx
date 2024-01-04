@@ -1,6 +1,7 @@
 import { render, waitFor } from "@testing-library/react";
 
 import { TestWrapper, TestSuspenseBoundary, mockConnection } from "test-utils";
+import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 
 import { StatusCell } from "./StatusCell";
 
@@ -8,6 +9,7 @@ jest.mock("core/api", () => ({
   useConnectionList: jest.fn(() => ({
     connections: [],
   })),
+  useCurrentWorkspace: jest.fn(() => mockWorkspace),
   useSyncConnection: jest.fn(() => ({
     mutateAsync: jest.fn(),
   })),
@@ -15,6 +17,10 @@ jest.mock("core/api", () => ({
     mutateAsync: jest.fn(),
     isLoading: false,
   })),
+}));
+
+jest.mock("core/utils/rbac", () => ({
+  useIntent: jest.fn(() => true),
 }));
 
 const mockId = "mock-id";
