@@ -74,10 +74,10 @@ const AddUserForm: React.FC<{
               value: user.userId,
               label: (
                 <FlexContainer as="span" direction="column" gap="xs">
-                  <Text as="span" size="sm" bold className={styles.addUserControl__userName}>
+                  <Text as="span" size="sm" bold>
                     {user.name}
                   </Text>
-                  <Text as="span" size="sm" color="grey" className={styles.addUserControl__userEmail}>
+                  <Text as="span" size="sm" color="grey">
                     {user.email}
                   </Text>
                 </FlexContainer>

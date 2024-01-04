@@ -19,7 +19,7 @@ export const RoleToolTip: React.FC<{ resourceType: ResourceType }> = ({ resource
         return (
           <Box py="sm" key={permission}>
             <Text inverseColor bold>
-              <FormattedMessage id={permissionStringDictionary[permission]} />
+              <FormattedMessage id={permissionStringDictionary[permission].role} />
             </Text>
             <Text inverseColor>
               <FormattedMessage

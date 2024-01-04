@@ -68,7 +68,7 @@ export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
   if (pageResourceType !== tableResourceType || !canUpdateUserPermissions || isCurrentUsersPermission) {
     return (
       <Box py="sm">
-        <FormattedMessage id={`${permissionStringDictionary[permissionType]}`} />
+        <FormattedMessage id={`${permissionStringDictionary[permissionType].role}`} />
       </Box>
     );
   }
@@ -122,7 +122,7 @@ export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
                   value: permission,
                   label: (
                     <Box px="sm">
-                      <FormattedMessage id={permissionStringDictionary[permission]} />
+                      <FormattedMessage id={permissionStringDictionary[permission].role} />
                     </Box>
                   ),
                   disabled: permission === permissionType,
@@ -139,7 +139,7 @@ export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
       ) : (
         <FlexContainer alignItems="center" gap="2xl">
           <Text className={styles.roleManagementControl__roleLabel_view}>
-            <FormattedMessage id={`${permissionStringDictionary[permissionType]}`} />
+            <FormattedMessage id={`${permissionStringDictionary[permissionType].role}`} />
           </Text>
           <FlexContainer>
             {/* for initial release, there is only a single workspace-level role: workspace_admin */}
