@@ -14,7 +14,8 @@ import java.util.function.Supplier;
 // Instagram Graph API require Facebook API User token
 public class InstagramOAuthFlow extends FacebookMarketingOAuthFlow {
 
-  private static final String SCOPES = "ads_management,instagram_basic,instagram_manage_insights,pages_show_list,pages_read_engagement";
+  private static final String SCOPES =
+      "ads_management,business_management,instagram_basic,instagram_manage_insights,pages_show_list,pages_read_engagement";
 
   public InstagramOAuthFlow(final HttpClient httpClient) {
     super(httpClient);
