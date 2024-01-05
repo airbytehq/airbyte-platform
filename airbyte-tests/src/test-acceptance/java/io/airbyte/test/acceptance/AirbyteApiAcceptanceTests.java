@@ -5,11 +5,11 @@
 package io.airbyte.test.acceptance;
 
 import static com.airbyte.api.models.shared.SourcePostgresPostgres.POSTGRES;
-import static io.airbyte.test.acceptance.BasicAcceptanceTests.FINAL_INTERVAL_SECS;
-import static io.airbyte.test.acceptance.BasicAcceptanceTests.IS_GKE;
-import static io.airbyte.test.acceptance.BasicAcceptanceTests.JITTER_MAX_INTERVAL_SECS;
-import static io.airbyte.test.acceptance.BasicAcceptanceTests.MAX_TRIES;
-import static io.airbyte.test.acceptance.BasicAcceptanceTests.TRUE;
+import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.FINAL_INTERVAL_SECS;
+import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.IS_GKE;
+import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.JITTER_MAX_INTERVAL_SECS;
+import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.MAX_TRIES;
+import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.TRUE;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
 import static io.airbyte.test.utils.AcceptanceTestHarness.waitForSuccessfulJob;
 import static org.junit.jupiter.api.Assertions.assertEquals;

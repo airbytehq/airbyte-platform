@@ -655,9 +655,13 @@ public class AcceptanceTestHarness {
   }
 
   public DestinationRead createPostgresDestination() {
+    return createPostgresDestination(defaultWorkspaceId);
+  }
+
+  public DestinationRead createPostgresDestination(final UUID workspaceId) {
     return createDestination(
         "AccTestDestination-" + UUID.randomUUID(),
-        defaultWorkspaceId,
+        workspaceId,
         getPostgresDestinationDefinitionId(),
         getDestinationDbConfig());
   }
@@ -820,9 +824,13 @@ public class AcceptanceTestHarness {
   }
 
   public SourceRead createPostgresSource() {
+    return createPostgresSource(defaultWorkspaceId);
+  }
+
+  public SourceRead createPostgresSource(final UUID workspaceId) {
     return createSource(
         "acceptanceTestDb-" + UUID.randomUUID(),
-        defaultWorkspaceId,
+        workspaceId,
         getPostgresSourceDefinitionId(),
         getSourceDbConfig());
   }

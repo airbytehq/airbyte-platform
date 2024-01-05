@@ -43,6 +43,7 @@ flags:
     serve: false
   - name: platform.use-workload-api
     serve: false
+    # Override used in order to run an acceptance test
     context:
       - type: "workspace"
         include:
@@ -51,8 +52,17 @@ flags:
         serve: true
   - name: platform.use-workload-output-doc-store
     serve: false
+    # Override used in order to run an acceptance test
     context:
       - type: "workspace"
         include:
           - "480e631f-1c88-4c2d-9081-855981018205"
+        serve: true
+  - name: platform.use-workload-api-for-check
+    serve: false
+    # Override used in order to run an acceptance test
+    context:
+      - type: "workspace"
+        include:
+          - "1bdcfb61-219b-4290-be4f-12f9ac5461be"
         serve: true
