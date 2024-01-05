@@ -17,6 +17,7 @@ import com.amazonaws.services.secretsmanager.model.DeleteSecretRequest
 import com.amazonaws.services.secretsmanager.model.ResourceNotFoundException
 import com.amazonaws.services.secretsmanager.model.Tag
 import com.amazonaws.services.secretsmanager.model.UpdateSecretRequest
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
 import com.google.common.base.Preconditions
 import io.airbyte.config.AwsRoleSecretPersistenceConfig
 import io.airbyte.config.secrets.SecretCoordinate
@@ -133,6 +134,7 @@ class AwsClient(
   private lateinit var externalId: String
   private lateinit var region: String
 
+  // Sets data for usage with Assume Role
   constructor(serializedConfig: AwsRoleSecretPersistenceConfig, airbyteAccessKey: String, airbyteSecretKey: String) :
     this(airbyteAccessKey, airbyteSecretKey, serializedConfig.awsRegion) {
     this.serializedConfig = serializedConfig
@@ -152,8 +154,14 @@ class AwsClient(
         .build()
     } else {
       logger.debug { "fetching role based AWS secret manager" }
+      val stsClient =
+        AWSSecurityTokenServiceClientBuilder.standard()
+          .withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
+          .withRegion(awsRegion)
+          .build()
       val credentialsProvider =
         STSAssumeRoleSessionCredentialsProvider.Builder(roleArn, "airbyte")
+          .withStsClient(stsClient)
           .withExternalId(externalId)
           .build()
       AWSSecretsManagerClientBuilder.standard()
