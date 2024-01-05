@@ -51,7 +51,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
 
   private static final List<Field<?>> BASE_CONNECTOR_BUILDER_PROJECT_COLUMNS =
       Arrays.asList(CONNECTOR_BUILDER_PROJECT.ID, CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, CONNECTOR_BUILDER_PROJECT.NAME,
-          CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, CONNECTOR_BUILDER_PROJECT.TOMBSTONE,
+          CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, CONNECTOR_BUILDER_PROJECT.TOMBSTONE, CONNECTOR_BUILDER_PROJECT.TESTING_VALUES,
           field(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT.isNotNull()).as("hasDraft"));
 
   private final ExceptionWrappingDatabase database;
@@ -555,6 +555,23 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
             .from(ACTIVE_DECLARATIVE_MANIFEST)
             .fetch())
         .stream().map(record -> record.get(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID));
+  }
+
+  /**
+   * Update the testing values of a connector builder project.
+   *
+   * @param projectId builder project to update
+   * @param testingValues testing values to set on the project
+   * @throws IOException exception while interacting with db
+   */
+  @Override
+  public void updateBuilderProjectTestingValues(final UUID projectId, final JsonNode testingValues) throws IOException {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+    database.transaction(ctx -> ctx.update(CONNECTOR_BUILDER_PROJECT)
+        .set(CONNECTOR_BUILDER_PROJECT.TESTING_VALUES, JSONB.valueOf(Jsons.serialize(testingValues)))
+        .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
+        .where(CONNECTOR_BUILDER_PROJECT.ID.eq(projectId))
+        .execute());
   }
 
   private void writeBuilderProjectDraft(final UUID projectId,

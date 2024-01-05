@@ -11,10 +11,12 @@ import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.generated.ConnectorBuilderProjectApi;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectTestingValuesUpdate;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
@@ -108,6 +110,17 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
       connectorBuilderProjectsHandler.updateConnectorBuilderProject(existingConnectorBuilderProjectWithWorkspaceId);
       return null;
     });
+  }
+
+  @Override
+  @Post(uri = "/update_testing_values")
+  @Status(HttpStatus.OK)
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public JsonNode updateConnectorBuilderProjectTestingValues(ConnectorBuilderProjectTestingValuesUpdate connectorBuilderProjectTestingValuesUpdate) {
+    return ApiHelper
+        .execute(() -> connectorBuilderProjectsHandler.updateConnectorBuilderProjectTestingValues(connectorBuilderProjectTestingValuesUpdate));
   }
 
 }

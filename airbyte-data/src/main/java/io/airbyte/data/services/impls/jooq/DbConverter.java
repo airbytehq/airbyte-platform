@@ -413,7 +413,9 @@ public class DbConverter {
         .withHasDraft((Boolean) record.get("hasDraft"))
         .withTombstone(record.get(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
         .withActorDefinitionId(record.get(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID))
-        .withActiveDeclarativeManifestVersion(record.get(ACTIVE_DECLARATIVE_MANIFEST.VERSION));
+        .withActiveDeclarativeManifestVersion(record.get(ACTIVE_DECLARATIVE_MANIFEST.VERSION))
+        .withTestingValues(record.get(CONNECTOR_BUILDER_PROJECT.TESTING_VALUES) == null ? null
+            : Jsons.deserialize(record.get(CONNECTOR_BUILDER_PROJECT.TESTING_VALUES).data()));
   }
 
   /**

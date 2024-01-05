@@ -29,6 +29,8 @@ public interface ConnectorBuilderService {
 
   boolean deleteBuilderProject(UUID builderProjectId) throws IOException;
 
+  void updateBuilderProjectTestingValues(UUID projectId, JsonNode testingValues) throws IOException;
+
   void writeBuilderProjectDraft(UUID projectId, UUID workspaceId, String name, JsonNode manifestDraft) throws IOException;
 
   void deleteBuilderProjectDraft(UUID projectId) throws IOException;

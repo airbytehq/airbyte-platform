@@ -937,6 +937,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectorBuilderProjectRead"
+  /v1/connector_builder_projects/update_testing_values:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Submit a set of testing values to persist for a connector builder project
+      operationId: updateConnectorBuilderProjectTestingValues
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorBuilderProjectTestingValuesUpdate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorBuilderProjectTestingValuesRead"
   /v1/connector_documentation/get:
     post:
       tags:
@@ -4916,6 +4935,21 @@ components:
           type: string
         initialDeclarativeManifest:
           $ref: "#/components/schemas/DeclarativeSourceManifest"
+    ConnectorBuilderProjectTestingValuesUpdate:
+      type: object
+      required:
+        - builderProjectId
+        - spec
+        - testingValues
+      properties:
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        spec:
+          $ref: "#/components/schemas/SourceDefinitionSpecification"
+        testingValues:
+          $ref: "#/components/schemas/SourceConfiguration"
+    ConnectorBuilderProjectTestingValuesRead:
+      $ref: "#/components/schemas/SourceConfiguration"
     ManifestVersion:
       type: integer
       format: int64
