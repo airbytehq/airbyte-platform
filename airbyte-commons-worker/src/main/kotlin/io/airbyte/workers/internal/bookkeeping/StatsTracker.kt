@@ -257,7 +257,7 @@ class StreamStatsTracker(
     }
 }
 
-private fun AirbyteStateMessage.getStateHashCode(hashFunction: HashFunction): Int =
+fun AirbyteStateMessage.getStateHashCode(hashFunction: HashFunction): Int =
   when (type) {
     AirbyteStateMessage.AirbyteStateType.GLOBAL -> hashFunction.hashBytes(Jsons.serialize(global).toByteArray()).hashCode()
     AirbyteStateMessage.AirbyteStateType.STREAM -> hashFunction.hashBytes(Jsons.serialize(stream.streamState).toByteArray()).hashCode()
