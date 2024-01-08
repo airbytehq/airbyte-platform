@@ -1226,11 +1226,19 @@ exports[`CreateConnectionForm should render when loading 1`] = `
         >
           <div
             class="<removed-for-snapshot-test>"
-          />
-          <div
-            class="<removed-for-snapshot-test>"
+            style="animation-duration: 240s;"
           >
-            Please wait a little bit more…
+            <div
+              class="<removed-for-snapshot-test>"
+              style="animation-delay: 240.5s;"
+            >
+              <p
+                class="<removed-for-snapshot-test>"
+                data-type="text"
+              >
+                Please wait a little bit more…
+              </p>
+            </div>
           </div>
         </div>
         <p
