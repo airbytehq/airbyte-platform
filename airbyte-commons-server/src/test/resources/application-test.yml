@@ -1,0 +1,5 @@
+micronaut:
+  server:
+    netty:
+      aggregator:
+        max-content-length: 52428800 # 50MB
