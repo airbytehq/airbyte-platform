@@ -118,6 +118,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   CRON_JOB_RUN_BY_CRON_TYPE(MetricEmittingApps.CRON,
       "cron_jobs_run",
       "number of cron runs by cron type"),
+  CONNECTOR_REGISTRY_DEFINITION_PROCESSED(
+      MetricEmittingApps.CRON, // Actually `cron` or `bootloader` based on which metric client calls the code
+      "connector_registry_definition_processed",
+      "increments when a connector registry definition is processed by the ApplyDefinitionsHelper"),
   EST_NUM_METRICS_EMITTED_BY_REPORTER(
       MetricEmittingApps.METRICS_REPORTER,
       "est_num_metrics_emitted_by_reporter",
