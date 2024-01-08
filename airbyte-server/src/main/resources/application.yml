@@ -24,10 +24,10 @@ micronaut:
     export:
       statsd:
         enabled: ${MICROMETER_METRICS_ENABLED:false}
-        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
         step: ${MICROMETER_METRICS_STEP:PT30S}
-        host: ${STATSD_HOST:}
-        port: ${STATSD_PORT:}
+        host: ${STATSD_HOST:localhost}
+        port: ${STATSD_PORT:8125}
   security:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
