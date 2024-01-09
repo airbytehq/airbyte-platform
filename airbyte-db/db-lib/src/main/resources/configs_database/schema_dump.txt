@@ -393,6 +393,7 @@ create table "public"."workload" (
   "type" "public"."workload_type" not null,
   "termination_source" varchar(2147483647),
   "termination_reason" text,
+  "auto_id" uuid,
   constraint "workload_pkey"
     primary key ("id")
 );

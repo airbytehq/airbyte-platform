@@ -10,6 +10,7 @@ import io.micronaut.data.annotation.TypeDef
 import io.micronaut.data.model.DataType
 import org.jsoup.internal.Normalizer.lowerCase
 import java.time.OffsetDateTime
+import java.util.UUID
 
 @MappedEntity("workload")
 data class Workload(
@@ -43,6 +44,8 @@ data class Workload(
   var terminationSource: String? = null,
   @Nullable
   var terminationReason: String? = null,
+  @Nullable
+  var autoId: UUID? = null,
 ) {
   @JvmOverloads
   constructor(
@@ -70,6 +73,7 @@ data class Workload(
     updatedAt = null,
     terminationSource = null,
     terminationReason = null,
+    autoId = UUID.randomUUID(),
   )
 }
 
