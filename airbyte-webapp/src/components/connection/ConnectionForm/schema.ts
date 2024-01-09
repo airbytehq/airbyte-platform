@@ -52,7 +52,7 @@ const getScheduleDataSchema = (allowSubOneHourCronExpressions: boolean) =>
                 validation.isValid ||
                 createError({
                   path,
-                  message: validation.message ?? "form.cronExpression.invalid",
+                  message: "form.cronExpression.invalid",
                 })
               );
             })

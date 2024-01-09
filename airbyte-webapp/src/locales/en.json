@@ -618,7 +618,7 @@
   "form.frequency": "Replication frequency",
   "form.cronExpression": "Cron expression",
   "form.cronExpression.placeholder": "Cron expression",
-  "form.cronExpression.error": "Invalid cron expression",
+  "form.cronExpression.invalid": "Invalid cron expression. Check the <lnk>Quartz cron expression docs</lnk> to make sure your syntax is correct.",
   "form.cronExpression.underOneHourNotAllowed": "Interested in syncing more frequently than once an hour? <lnk>Contact us</lnk> to unlock this feature.",
   "form.cronExpression.message": "Enter a <lnk>Quartz cron expression</lnk> for when syncs should run (ex. \"0 0 12 * * ?\" => Will sync at 12:00 PM every day)",
   "form.frequency.placeholder": "Select a frequency",

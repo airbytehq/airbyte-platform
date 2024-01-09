@@ -127,7 +127,7 @@ describe("CreateConnectionForm", () => {
       await userEvent.clear(cronExpressionInput);
       await userEvent.type(cronExpressionInput, INVALID_CRON_EXPRESSION, { delay: 1 });
 
-      const errorMessage = container.getByText(/must contain at least 6 fields/);
+      const errorMessage = container.getByText(/invalid cron expression/i);
 
       expect(errorMessage).toBeInTheDocument();
     });

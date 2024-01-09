@@ -1,4 +1,5 @@
-import React, { ChangeEvent } from "react";
+import cronstrue from "cronstrue";
+import React, { ChangeEvent, useMemo } from "react";
 import { Controller, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -44,6 +45,10 @@ export const CronScheduleFormControl: React.FC = () => {
 
   const cronExpression = useWatch({ name: "scheduleData.cron.cronExpression", control });
   const cronTimeZone = useWatch({ name: "scheduleData.cron.cronTimeZone", control });
+  const cronDescription = useMemo(
+    () => cronstrue.toString(cronExpression, { throwExceptionOnParseError: false }),
+    [cronExpression]
+  );
 
   return (
     <Controller
@@ -96,9 +101,20 @@ export const CronScheduleFormControl: React.FC = () => {
                           ),
                         },
                       }
-                    : {})}
+                    : {
+                        values: {
+                          lnk: (lnk: React.ReactNode) => (
+                            <ExternalLink href={links.cronReferenceLink}>{lnk}</ExternalLink>
+                          ),
+                        },
+                      })}
                 />
               </Text>
+            </Box>
+          )}
+          {!cronValidationError && cronExpression && cronDescription && (
+            <Box mt="sm">
+              <Text>{cronDescription}</Text>
             </Box>
           )}
         </FormFieldLayout>
