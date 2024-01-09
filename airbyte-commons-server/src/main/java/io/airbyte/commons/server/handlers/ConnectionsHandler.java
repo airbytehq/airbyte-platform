@@ -938,11 +938,8 @@ public class ConnectionsHandler {
             .toLocalDate();
 
         // Merge it with the bytes synced from the attempt
-        long recordsCommitted = 0;
-        final Optional<JobOutput> attemptOutput = attempt.getAttempt().getOutput();
-        if (attemptOutput.isPresent()) {
-          recordsCommitted = attemptOutput.get().getSync().getStandardSyncSummary().getTotalStats().getRecordsCommitted();
-        }
+        final long recordsCommitted = attempt.getAttempt().getOutput()
+            .map(output -> output.getSync().getStandardSyncSummary().getTotalStats().getRecordsCommitted()).orElse(0L);
 
         // Update the bytes synced for the corresponding day
         final ConnectionDataHistoryReadItem existingItem = connectionDataHistoryReadItemsByDate.get(attemptDateInUserTimeZone);

@@ -101,7 +101,7 @@ public class StreamStatusesHandler {
         .atStartOfDay(ZoneId.of(req.getTimezone()))
         .toOffsetDateTime();
 
-    final var streamStatuses = repo.findLatestStatusPerStreamByConnectionIdAndDayAfterTimestamp(req.getConnectionId(),
+    final var streamStatuses = repo.findLatestTerminalStatusPerStreamByConnectionIdAndDayAfterTimestamp(req.getConnectionId(),
         thirtyDaysAgoInUTC, req.getTimezone())
         .stream()
         .map(mapper::map)

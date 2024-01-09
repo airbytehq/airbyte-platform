@@ -393,11 +393,12 @@ class StreamStatusesRepositoryTest {
   }
 
   @Test
-  void testFindLatestStatusPerStreamByConnectionIdAndDayAfterTimestamp() {
+  void testFindLatestTerminalStatusPerStreamByConnectionIdAndDayAfterTimestamp() {
     final long now = Instant.now().toEpochMilli();
     final OffsetDateTime time1 = Fixtures.timestamp(now);
     final OffsetDateTime time2 = Fixtures.timestamp(now + 1);
     final OffsetDateTime time3 = Fixtures.timestamp(now + 2);
+    final OffsetDateTime time4 = Fixtures.timestamp(now + 3);
 
     // connection 1
     final var p1 = Fixtures.pending().transitionedAt(time1).connectionId(Fixtures.connectionId1).build();
@@ -409,25 +410,27 @@ class StreamStatusesRepositoryTest {
     final var p2 = Fixtures.pending().transitionedAt(time1).connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
     final var f1 = Fixtures.failed().transitionedAt(time2).connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
     final var r2 = Fixtures.reset().transitionedAt(time3).connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
+    final var p3 = Fixtures.pending().transitionedAt(time4).connectionId(Fixtures.connectionId1).streamName(Fixtures.name3).build();
 
     // connection 2
-    final var p3 = Fixtures.pending().transitionedAt(time1).connectionId(Fixtures.connectionId2).build();
+    final var p4 = Fixtures.pending().transitionedAt(time1).connectionId(Fixtures.connectionId2).build();
 
     final var r3 = Fixtures.reset().transitionedAt(time2).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
     final var f2 = Fixtures.failed().transitionedAt(time3).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
 
     final var c3 = Fixtures.complete().transitionedAt(time1).connectionId(Fixtures.connectionId2).streamName(Fixtures.name3).build();
     final var f3 = Fixtures.failed().transitionedAt(time2).connectionId(Fixtures.connectionId2).streamName(Fixtures.name3).build();
+    final var run1 = Fixtures.running().transitionedAt(time3).connectionId(Fixtures.connectionId2).streamName(Fixtures.name3).build();
 
-    repo.saveAll(List.of(p1, p2, p3, r1, r2, r3, c1, c2, c3, f1, f2, f3, r1, r2, r3));
+    repo.saveAll(List.of(p1, p2, p3, p4, r1, r2, r3, c1, c2, c3, f1, f2, f3, r1, r2, r3, run1));
 
-    final var results1 = repo.findLatestStatusPerStreamByConnectionIdAndDayAfterTimestamp(Fixtures.connectionId1,
+    final var results1 = repo.findLatestTerminalStatusPerStreamByConnectionIdAndDayAfterTimestamp(Fixtures.connectionId1,
         time1, ZoneId.systemDefault().getId());
-    final var results2 = repo.findLatestStatusPerStreamByConnectionIdAndDayAfterTimestamp(Fixtures.connectionId2,
+    final var results2 = repo.findLatestTerminalStatusPerStreamByConnectionIdAndDayAfterTimestamp(Fixtures.connectionId2,
         time1, ZoneId.systemDefault().getId());
 
     assertContainsSameElements(List.of(c1, r1, r2), results1);
-    assertContainsSameElements(List.of(p3, f2, f3), results2);
+    assertContainsSameElements(List.of(f2, f3), results2);
   }
 
   private static class Fixtures {
