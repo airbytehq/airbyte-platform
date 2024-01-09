@@ -40,6 +40,7 @@ class SuccessHandler(
           WorkloadLauncherMetricMetadata.PRODUCER_TO_POD_STARTED_LATENCY_MS,
           timeElapsed,
           { it.toDouble() },
+          MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()),
         )
       }
 

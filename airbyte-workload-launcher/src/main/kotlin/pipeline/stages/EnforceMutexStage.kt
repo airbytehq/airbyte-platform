@@ -8,6 +8,7 @@ import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.MUTEX_KEY_TAG
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_ID_TAG
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_TYPE_TAG
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
@@ -58,7 +59,7 @@ open class EnforceMutexStage(
       metricPublisher.count(
         WorkloadLauncherMetricMetadata.PODS_DELETED_FOR_MUTEX_KEY,
         MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId),
-        MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
+        MetricAttribute(WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
         MetricAttribute(MUTEX_KEY_TAG, key),
       )
     } else {

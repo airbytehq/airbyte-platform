@@ -51,7 +51,11 @@ class LaunchPipeline(
     buildPipeline(msg)
       .subscribeOn(Schedulers.immediate())
       .subscribe()
-    metricPublisher.timer(WorkloadLauncherMetricMetadata.WORKLOAD_LAUNCH_DURATION, startTime.elapsedNow().toJavaDuration())
+    metricPublisher.timer(
+      WorkloadLauncherMetricMetadata.WORKLOAD_LAUNCH_DURATION,
+      startTime.elapsedNow().toJavaDuration(),
+      MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, msg.workloadType.toString()),
+    )
   }
 
   fun buildPipeline(msg: LauncherInput): Mono<LaunchStageIO> {

@@ -17,6 +17,7 @@ import io.airbyte.workload.metrics.CustomMetricPublisher
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.QUEUE_NAME_TAG
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_ID_TAG
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_PUBLISHER_OPERATION_NAME
+import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_TYPE_TAG
 import io.airbyte.workload.metrics.WorkloadApiMetricMetadata
 import jakarta.inject.Singleton
 
@@ -55,6 +56,7 @@ open class WorkloadService(
       WorkloadApiMetricMetadata.WORKLOAD_MESSAGE_PUBLISHED.metricName,
       MetricAttribute(WORKLOAD_ID_TAG, workloadId),
       MetricAttribute(QUEUE_NAME_TAG, queue),
+      MetricAttribute(WORKLOAD_TYPE_TAG, workloadType.toString()),
     )
   }
 
