@@ -68,10 +68,14 @@ public class LineGobbler implements VoidCallable {
    * @param mdcScopeBuilder mdc scope to be used during consumption
    */
   public static void gobble(final InputStream is, final Consumer<String> consumer, final String caller, final MdcScope.Builder mdcScopeBuilder) {
-    final ExecutorService executor = Executors.newSingleThreadExecutor();
-    final Map<String, String> mdc = MDC.getCopyOfContextMap();
-    final var gobbler = new LineGobbler(is, consumer, executor, mdc, caller, mdcScopeBuilder);
-    executor.submit(gobbler);
+    if (is != null) {
+      final ExecutorService executor = Executors.newSingleThreadExecutor();
+      final Map<String, String> mdc = MDC.getCopyOfContextMap();
+      final var gobbler = new LineGobbler(is, consumer, executor, mdc, caller, mdcScopeBuilder);
+      executor.submit(gobbler);
+    } else {
+      LOGGER.warn("Unable to gobble line(s) from input stream provided by {}:  input stream is null.", caller);
+    }
   }
 
   /**
