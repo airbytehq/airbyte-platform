@@ -14,7 +14,7 @@ import { DbtOperationReadOrCreate, TransformationForm } from "../TransformationF
 
 export const CustomTransformationsFormField: React.FC = () => {
   const { workspaceId } = useCurrentWorkspace();
-  const { fields, append, remove, update } = useFieldArray<CustomTransformationsFormValues>({
+  const { fields, append, remove, update, move } = useFieldArray<CustomTransformationsFormValues>({
     name: "transformations",
   });
   const { openModal, closeModal } = useModalService();
@@ -66,6 +66,7 @@ export const CustomTransformationsFormField: React.FC = () => {
       onAddItem={() => openEditModal()}
       onStartEdit={openEditModal}
       onRemove={remove}
+      onMove={move}
     />
   );
 };

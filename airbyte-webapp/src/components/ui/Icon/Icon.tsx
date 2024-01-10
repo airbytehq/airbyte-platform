@@ -37,6 +37,7 @@ import DisabledIcon from "./icons/disabledIcon.svg?react";
 import DockerIcon from "./icons/dockerIcon.svg?react";
 import DocsIcon from "./icons/docsIcon.svg?react";
 import DownloadIcon from "./icons/downloadIcon.svg?react";
+import DragHandleIcon from "./icons/dragHandleIcon.svg?react";
 import DuplicateIcon from "./icons/duplicateIcon.svg?react";
 import EarthIcon from "./icons/earthIcon.svg?react";
 import EqualIcon from "./icons/equalIcon.svg?react";
@@ -181,6 +182,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   docs: DocsIcon,
   download: DownloadIcon,
   duplicate: DuplicateIcon,
+  drag: DragHandleIcon,
   earth: EarthIcon,
   equal: EqualIcon,
   errorFilled: ErrorFilledIcon,

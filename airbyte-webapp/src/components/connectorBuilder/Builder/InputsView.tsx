@@ -18,7 +18,6 @@ import { Text } from "components/ui/Text";
 
 import { BuilderConfigView } from "./BuilderConfigView";
 import { KeyboardSensor, PointerSensor } from "./dndSensors";
-import DragHandleIcon from "./drag-handle.svg?react";
 import { InputForm, InputInEditing, newInputInEditing } from "./InputsForm";
 import styles from "./InputsView.module.scss";
 import { BuilderFormInput, orderInputs, useBuilderWatch } from "../types";
@@ -147,7 +146,7 @@ const SortableInput: React.FC<SortableInputProps> = ({ input, isInferred, id, se
   return (
     <div ref={setNodeRef} style={style}>
       <Card className={styles.inputCard} {...attributes} {...listeners}>
-        <DragHandleIcon className={styles.dragHandle} />
+        <Icon type="drag" color="action" />
         <Text size="lg" className={styles.itemLabel}>
           {input.definition.title || input.key}
         </Text>
@@ -162,7 +161,7 @@ const SortableInput: React.FC<SortableInputProps> = ({ input, isInferred, id, se
           }}
           data-no-dnd="true"
         >
-          <Icon type="gear" className={styles.icon} />
+          <Icon type="gear" color="action" />
         </Button>
       </Card>
     </div>

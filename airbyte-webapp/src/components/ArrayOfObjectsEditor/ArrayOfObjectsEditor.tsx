@@ -1,6 +1,9 @@
+import { closestCenter, DndContext, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import React from "react";
 import { FieldArrayWithId } from "react-hook-form";
 
+import { KeyboardSensor, PointerSensor } from "components/connectorBuilder/Builder/dndSensors";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 
@@ -17,6 +20,7 @@ export interface ArrayOfObjectsEditorProps<T> {
   onAddItem: () => void;
   onStartEdit: (n: number) => void;
   onRemove: (index: number) => void;
+  onMove: (source: number, destination: number) => void;
 }
 
 /**
@@ -40,27 +44,50 @@ export const ArrayOfObjectsEditor = <T extends FieldArrayWithId>({
   renderItemDescription,
   onStartEdit,
   onRemove,
-}: ArrayOfObjectsEditorProps<T>) => (
-  <Box mb="xl">
-    <EditorHeader
-      mainTitle={mainTitle}
-      itemsCount={fields.length}
-      addButtonText={addButtonText}
-      onAddItem={onAddItem}
-    />
-    {fields.length ? (
-      <FlexContainer direction="column" gap="xs" className={styles.list}>
-        {fields.map((field, index) => (
-          <EditorRow
-            key={field.id}
-            name={renderItemName?.(field, index)}
-            description={renderItemDescription?.(field, index)}
-            id={index}
-            onEdit={onStartEdit}
-            onRemove={onRemove}
-          />
-        ))}
-      </FlexContainer>
-    ) : null}
-  </Box>
-);
+  onMove,
+}: ArrayOfObjectsEditorProps<T>) => {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      const oldIndex = fields.findIndex((item) => item.id === active.id);
+      const newIndex = fields.findIndex((item) => item.id === over?.id);
+      return onMove(oldIndex, newIndex);
+    }
+  };
+
+  return (
+    <Box pb="xl">
+      <EditorHeader
+        mainTitle={mainTitle}
+        itemsCount={fields.length}
+        addButtonText={addButtonText}
+        onAddItem={onAddItem}
+      />
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={fields} strategy={verticalListSortingStrategy}>
+          <FlexContainer direction="column" gap="xs" className={styles.list}>
+            {fields.map((field, index) => (
+              <EditorRow
+                key={field.id}
+                id={field.id}
+                index={index}
+                name={renderItemName?.(field, index)}
+                description={renderItemDescription?.(field, index)}
+                onEdit={onStartEdit}
+                onRemove={onRemove}
+              />
+            ))}
+          </FlexContainer>
+        </SortableContext>
+      </DndContext>
+    </Box>
+  );
+};

@@ -21,3 +21,11 @@
 .tooltipContainer {
   width: 100%;
 }
+
+.dragHandle {
+  cursor: grab;
+
+  &[aria-pressed="true"] {
+    cursor: grabbing;
+  }
+}

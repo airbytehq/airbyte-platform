@@ -34,6 +34,7 @@ export type IconType =
   | "docs"
   | "download"
   | "duplicate"
+  | "drag"
   | "earth"
   | "equal"
   | "errorFilled"
