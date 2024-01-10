@@ -138,7 +138,7 @@ describe("ConnectionReplicationPage", () => {
       await userEvent.clear(cronExpressionInput);
       await userEvent.type(cronExpressionInput, INVALID_CRON_EXPRESSION, { delay: 1 });
 
-      const errorMessage = renderResult.getByText(/invalid cron expression/i);
+      const errorMessage = await renderResult.findByText(/invalid cron expression/i);
 
       expect(errorMessage).toBeInTheDocument();
     });
@@ -186,7 +186,7 @@ describe("ConnectionReplicationPage", () => {
       await userEvent.clear(cronExpressionField);
       await userEvent.type(cronExpressionField, CRON_EXPRESSION_EVERY_MINUTE, { delay: 1 });
 
-      const errorMessage = container.getByTestId("cronExpressionError");
+      const errorMessage = await container.findByTestId("cronExpressionError");
 
       expect(errorMessage).toBeInTheDocument();
     });

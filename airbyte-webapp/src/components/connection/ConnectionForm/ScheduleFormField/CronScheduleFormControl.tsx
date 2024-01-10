@@ -1,7 +1,8 @@
 import cronstrue from "cronstrue";
-import React, { ChangeEvent, useMemo } from "react";
+import React, { ChangeEvent, useState } from "react";
 import { Controller, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
+import { useDebounce } from "react-use";
 
 import { FormLabel } from "components/forms/FormControl";
 import { Box } from "components/ui/Box";
@@ -29,6 +30,8 @@ export const CRON_DEFAULT_VALUE: ConnectionScheduleDataCron = {
 const cronTimeZones = availableCronTimeZones.map((zone: string) => ({ label: zone, value: zone }));
 
 export const CronScheduleFormControl: React.FC = () => {
+  const [debouncedErrorMessage, setDebouncedErrorMessage] = useState("");
+  const [debouncedCronDescription, setDebouncedCronDescription] = useState("");
   const { formatMessage } = useIntl();
   const { setValue, control } = useFormContext<FormConnectionFormValues>();
   const { errors } = useFormState<FormConnectionFormValues>();
@@ -45,9 +48,18 @@ export const CronScheduleFormControl: React.FC = () => {
 
   const cronExpression = useWatch({ name: "scheduleData.cron.cronExpression", control });
   const cronTimeZone = useWatch({ name: "scheduleData.cron.cronTimeZone", control });
-  const cronDescription = useMemo(
-    () => cronstrue.toString(cronExpression, { throwExceptionOnParseError: false }),
-    [cronExpression]
+
+  useDebounce(
+    () => {
+      setDebouncedErrorMessage(cronValidationError ?? "");
+      try {
+        setDebouncedCronDescription(cronstrue.toString(cronExpression));
+      } catch (e) {
+        setDebouncedErrorMessage("form.cronExpression.invalid");
+      }
+    },
+    300,
+    [cronValidationError, cronExpression]
   );
 
   return (
@@ -87,13 +99,13 @@ export const CronScheduleFormControl: React.FC = () => {
               buttonClassName={styles.cronZonesListBoxBtn}
             />
           </FlexContainer>
-          {cronValidationError && (
+          {debouncedErrorMessage && (
             <Box mt="sm">
               <Text color="red" data-testid="cronExpressionError">
                 <FormattedMessage
-                  id={cronValidationError}
+                  id={debouncedErrorMessage}
                   {...(!allowSubOneHourCronExpressions &&
-                  cronValidationError === "form.cronExpression.underOneHourNotAllowed"
+                  debouncedErrorMessage === "form.cronExpression.underOneHourNotAllowed"
                     ? {
                         values: {
                           lnk: (btnText: React.ReactNode) => (
@@ -112,9 +124,9 @@ export const CronScheduleFormControl: React.FC = () => {
               </Text>
             </Box>
           )}
-          {!cronValidationError && cronExpression && cronDescription && (
+          {!debouncedErrorMessage && debouncedCronDescription && (
             <Box mt="sm">
-              <Text>{cronDescription}</Text>
+              <Text>{debouncedCronDescription}</Text>
             </Box>
           )}
         </FormFieldLayout>
