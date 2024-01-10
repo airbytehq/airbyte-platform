@@ -4,6 +4,7 @@
 
 package io.airbyte.notification;
 
+import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
@@ -77,7 +78,7 @@ public abstract class NotificationClient {
                                                  final String connectionUrl,
                                                  final UUID sourceId,
                                                  final String sourceName,
-                                                 final List<String> changes,
+                                                 final CatalogDiff diff,
                                                  final String recipient,
                                                  boolean isBreaking)
       throws IOException, InterruptedException;

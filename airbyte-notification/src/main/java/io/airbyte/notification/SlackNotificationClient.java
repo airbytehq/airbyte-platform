@@ -4,8 +4,14 @@
 
 package io.airbyte.notification;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
+import io.airbyte.api.common.StreamDescriptorUtils;
+import io.airbyte.api.model.generated.CatalogDiff;
+import io.airbyte.api.model.generated.FieldTransform;
+import io.airbyte.api.model.generated.StreamDescriptor;
+import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
@@ -15,9 +21,11 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import org.apache.logging.log4j.util.Strings;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -154,24 +162,87 @@ public class SlackNotificationClient extends NotificationClient {
                                         final String connectionUrl,
                                         final UUID sourceId,
                                         final String sourceName,
-                                        final List<String> changes,
+                                        final CatalogDiff diff,
                                         final String recipient,
                                         boolean isBreaking)
       throws IOException, InterruptedException {
-    final StringBuilder summary = new StringBuilder();
-    for (String change : changes) {
-      summary.append(" * ");
-      summary.append(change);
-      summary.append("\n");
-    }
+    String summary = buildSummary(diff);
     final String message =
         isBreaking ? renderTemplate("slack/breaking_schema_change_slack_notification_template.txt", connectionId.toString(), connectionUrl)
-            : renderTemplate("slack/schema_propagation_slack_notification_template.txt", connectionName, summary.toString(), connectionUrl);
+            : renderTemplate("slack/schema_propagation_slack_notification_template.txt", connectionName, summary, connectionUrl);
     final String webhookUrl = config.getWebhook();
     if (!Strings.isEmpty(webhookUrl)) {
       return notify(message);
     }
     return false;
+  }
+
+  @NotNull
+  @VisibleForTesting
+  protected static String buildSummary(CatalogDiff diff) {
+    final StringBuilder summaryBuilder = new StringBuilder();
+
+    var newStreams =
+        diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.ADD_STREAM)
+            .sorted(Comparator.comparing(o -> StreamDescriptorUtils.buildFullyQualifiedName(o.getStreamDescriptor()))).toList();
+    var deletedStreams =
+        diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.REMOVE_STREAM)
+            .sorted(Comparator.comparing(o -> StreamDescriptorUtils.buildFullyQualifiedName(o.getStreamDescriptor()))).toList();
+    if (!newStreams.isEmpty() || !deletedStreams.isEmpty()) {
+      summaryBuilder.append(String.format(" * Streams (+%d/-%d)\n", newStreams.size(), deletedStreams.size()));
+      for (var stream : newStreams) {
+        StreamDescriptor descriptor = stream.getStreamDescriptor();
+        String fullyQualifiedStreamName = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
+        summaryBuilder.append(String.format("   * + %s\n", fullyQualifiedStreamName));
+      }
+      for (var stream : deletedStreams) {
+        StreamDescriptor descriptor = stream.getStreamDescriptor();
+        String fullyQualifiedStreamName = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
+        summaryBuilder.append(String.format("   * - %s\n", fullyQualifiedStreamName));
+      }
+    }
+
+    var alteredStreams =
+        diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+            .sorted(Comparator.comparing(o -> StreamDescriptorUtils.buildFullyQualifiedName(o.getStreamDescriptor()))).toList();
+    if (!alteredStreams.isEmpty()) {
+      var newFieldCount = alteredStreams.stream().flatMap(t -> t.getUpdateStream().stream())
+          .filter(t -> t.getTransformType().equals(FieldTransform.TransformTypeEnum.ADD_FIELD)).count();
+      var deletedFieldsCount = alteredStreams.stream().flatMap(t -> t.getUpdateStream().stream())
+          .filter(t -> t.getTransformType().equals(FieldTransform.TransformTypeEnum.REMOVE_FIELD)).count();
+      var alteredFieldsCount = alteredStreams.stream().flatMap(t -> t.getUpdateStream().stream())
+          .filter(t -> t.getTransformType().equals(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA)).count();
+      summaryBuilder.append(String.format(" * Fields (+%d/~%d/-%d)\n", newFieldCount, alteredFieldsCount, deletedFieldsCount));
+      for (var stream : alteredStreams) {
+        StreamDescriptor descriptor = stream.getStreamDescriptor();
+        String fullyQualifiedStreamName = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
+        summaryBuilder.append(String.format("   * ~ %s\n", fullyQualifiedStreamName));
+        for (var fieldChange : stream.getUpdateStream().stream().sorted((o1, o2) -> {
+          if (o1.getTransformType().equals(o2.getTransformType())) {
+            return StreamDescriptorUtils.buildFieldName(o1.getFieldName())
+                .compareTo(StreamDescriptorUtils.buildFieldName(o2.getFieldName()));
+          }
+          if (o1.getTransformType() == FieldTransform.TransformTypeEnum.ADD_FIELD
+              || (o1.getTransformType() == FieldTransform.TransformTypeEnum.REMOVE_FIELD
+                  && o2.getTransformType() != FieldTransform.TransformTypeEnum.ADD_FIELD)) {
+            return -1;
+          }
+          return 1;
+        }).toList()) {
+          String fieldName = StreamDescriptorUtils.buildFieldName(fieldChange.getFieldName());
+          String operation;
+          switch (fieldChange.getTransformType()) {
+            case ADD_FIELD -> operation = "+";
+            case REMOVE_FIELD -> operation = "-";
+            case UPDATE_FIELD_SCHEMA -> operation = "~";
+            default -> operation = "?";
+          }
+          summaryBuilder.append(String.format("     * %s %s\n", operation, fieldName));
+        }
+      }
+    }
+
+    return summaryBuilder.toString();
   }
 
   private boolean notify(final String message) throws IOException, InterruptedException {

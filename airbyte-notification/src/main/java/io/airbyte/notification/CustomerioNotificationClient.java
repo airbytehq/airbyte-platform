@@ -5,8 +5,12 @@
 package io.airbyte.notification;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.api.common.StreamDescriptorUtils;
+import io.airbyte.api.model.generated.CatalogDiff;
+import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.resources.MoreResources;
@@ -228,12 +232,31 @@ public class CustomerioNotificationClient extends NotificationClient {
                                         final String connectionUrl,
                                         final UUID sourceId,
                                         final String sourceName,
-                                        final List<String> changes,
+                                        final CatalogDiff diff,
                                         final String recipient,
                                         final boolean isBreaking)
       throws IOException {
     String transactionalMessageId = isBreaking ? SCHEMA_BREAKING_CHANGE_TRANSACTION_ID : SCHEMA_CHANGE_TRANSACTION_ID;
 
+    ObjectNode node =
+        buildSchemaPropagationJson(workspaceId, workspaceName, connectionId, connectionName, sourceId, sourceName, diff, recipient,
+            transactionalMessageId);
+
+    String payload = Jsons.serialize(node);
+    return notifyByEmail(payload);
+  }
+
+  @NotNull
+  @VisibleForTesting
+  static ObjectNode buildSchemaPropagationJson(UUID workspaceId,
+                                               String workspaceName,
+                                               UUID connectionId,
+                                               String connectionName,
+                                               UUID sourceId,
+                                               String sourceName,
+                                               CatalogDiff diff,
+                                               String recipient,
+                                               String transactionalMessageId) {
     ObjectMapper mapper = new ObjectMapper();
     ObjectNode node = mapper.createObjectNode();
     node.put("transactional_message_id", transactionalMessageId);
@@ -248,7 +271,52 @@ public class CustomerioNotificationClient extends NotificationClient {
     messageDataNode.put("connection_id", connectionId.toString());
     messageDataNode.put("workspace_id", workspaceId.toString());
     messageDataNode.put("workspace_name", workspaceName);
-    messageDataNode.put("changes_details", String.join("\n", changes));
+
+    ObjectNode changesNode = mapper.createObjectNode();
+    messageDataNode.set("changes", changesNode);
+
+    var newStreams = diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.ADD_STREAM).toList();
+    ArrayNode newStreamsNodes = mapper.createArrayNode();
+    changesNode.set("new_streams", newStreamsNodes);
+    for (var stream : newStreams) {
+      newStreamsNodes.add(StreamDescriptorUtils.buildFullyQualifiedName(stream.getStreamDescriptor()));
+    }
+
+    var deletedStreams =
+        diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.REMOVE_STREAM).toList();
+    ArrayNode deletedStreamsNodes = mapper.createArrayNode();
+    changesNode.set("deleted_streams", deletedStreamsNodes);
+    for (var stream : deletedStreams) {
+      deletedStreamsNodes.add(StreamDescriptorUtils.buildFullyQualifiedName(stream.getStreamDescriptor()));
+    }
+
+    var alteredStreams =
+        diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.UPDATE_STREAM).toList();
+    ObjectNode modifiedStreamsNodes = mapper.createObjectNode();
+    changesNode.set("modified_streams", modifiedStreamsNodes);
+    for (var stream : alteredStreams) {
+
+      var streamNode = mapper.createObjectNode();
+      modifiedStreamsNodes.set(StreamDescriptorUtils.buildFullyQualifiedName(stream.getStreamDescriptor()), streamNode);
+      ArrayNode newFields = mapper.createArrayNode();
+      ArrayNode deletedFields = mapper.createArrayNode();
+      ArrayNode modifiedFields = mapper.createArrayNode();
+
+      streamNode.set("new", newFields);
+      streamNode.set("deleted", deletedFields);
+      streamNode.set("altered", modifiedFields);
+
+      for (var fieldChange : stream.getUpdateStream()) {
+        String fieldName = StreamDescriptorUtils.buildFieldName(fieldChange.getFieldName());
+        switch (fieldChange.getTransformType()) {
+          case ADD_FIELD -> newFields.add(fieldName);
+          case REMOVE_FIELD -> deletedFields.add(fieldName);
+          case UPDATE_FIELD_SCHEMA -> modifiedFields.add(fieldName);
+          default -> LOGGER.warn("Unknown TransformType: '{}'", fieldChange.getTransformType());
+        }
+      }
+    }
+
     messageDataNode.put("source", sourceName);
     messageDataNode.put("source_name", sourceName);
     messageDataNode.put("source_id", sourceId.toString());
@@ -260,9 +328,7 @@ public class CustomerioNotificationClient extends NotificationClient {
     node.put("tracked", false);
     node.put("queue_draft", false);
     node.put("disable_css_preprocessing", true);
-
-    String payload = Jsons.serialize(node);
-    return notifyByEmail(payload);
+    return node;
   }
 
   @Override

@@ -4,14 +4,16 @@
 
 package io.airbyte.notification;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import io.airbyte.api.model.generated.CatalogDiff;
+import io.airbyte.api.model.generated.FieldTransform;
+import io.airbyte.api.model.generated.StreamDescriptor;
+import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.SlackNotificationConfiguration;
 import java.io.IOException;
@@ -163,7 +165,7 @@ class SlackNotificationClientTest {
   void testNotifySchemaPropagated() throws IOException, InterruptedException {
     final UUID connectionId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
-    final List<String> changes = List.of("Change1", "Some other change");
+    final CatalogDiff diff = new CatalogDiff();
     String workspaceName = "";
     String connectionName = "PSQL ->> BigQuery";
     String sourceName = "";
@@ -171,23 +173,116 @@ class SlackNotificationClientTest {
     String connectionUrl = "http://airbyte.io/your_connection";
     String recipient = "";
 
-    final String expectedNotificationMessage = String.format(
+    final String expectedNotificationMessage =
         """
-        Your source schema has changed for connection '%s' and the following changes were automatically propagated:
-         * Change1
-         * Some other change
+        Your source schema has changed for connection 'PSQL ->> BigQuery' and the following changes were automatically propagated:
 
-        Visit the connection page: %s
-        """, connectionName, connectionUrl);
+        Visit the connection page: http://airbyte.io/your_connection
+        """;
     server.createContext(TEST_PATH, new ServerHandler(expectedNotificationMessage));
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
 
     assertTrue(
-        client.notifySchemaPropagated(UUID.randomUUID(), workspaceName, connectionId, connectionName, connectionUrl, sourceId, sourceName, changes,
+        client.notifySchemaPropagated(UUID.randomUUID(), workspaceName, connectionId, connectionName, connectionUrl, sourceId, sourceName, diff,
             recipient,
             isBreaking));
 
+  }
+
+  @Test
+  public void buildSummaryNewStreamTest() {
+    CatalogDiff diff = new CatalogDiff();
+    diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
+        .streamDescriptor(new StreamDescriptor().name("foo").namespace("ns")));
+    diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
+        .streamDescriptor(new StreamDescriptor().name("invoices")));
+
+    String expected = """
+                       * Streams (+2/-0)
+                         * + invoices
+                         * + ns.foo
+                      """;
+    assertEquals(expected, SlackNotificationClient.buildSummary(diff));
+  }
+
+  @Test
+  public void buildSummaryDeletedStreamTest() {
+    CatalogDiff diff = new CatalogDiff();
+    diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
+        .streamDescriptor(new StreamDescriptor().name("deprecated")));
+    diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
+        .streamDescriptor(new StreamDescriptor().name("also_removed").namespace("schema1")));
+
+    String expected = """
+                       * Streams (+0/-2)
+                         * - deprecated
+                         * - schema1.also_removed
+                      """;
+    assertEquals(expected, SlackNotificationClient.buildSummary(diff));
+
+  }
+
+  @Test
+  public void buildSummaryAlteredStreamTest() {
+    CatalogDiff diff = new CatalogDiff();
+    diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+        .streamDescriptor(new StreamDescriptor().name("users").namespace("main"))
+        .updateStream(List.of(
+            new FieldTransform().transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD)
+                .fieldName(List.of("alpha", "beta", "delta")),
+            new FieldTransform().transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD)
+                .fieldName(List.of("another_removal")),
+            new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
+                .fieldName(List.of("new", "field")),
+            new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
+                .fieldName(List.of("added_too")),
+            new FieldTransform().transformType(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA)
+                .fieldName(List.of("cow")))));
+
+    String expected = """
+                       * Fields (+2/~1/-2)
+                         * ~ main.users
+                           * + added_too
+                           * + new.field
+                           * - alpha.beta.delta
+                           * - another_removal
+                           * ~ cow
+                      """;
+    assertEquals(expected, SlackNotificationClient.buildSummary(diff));
+  }
+
+  @Test
+  void buildSummaryComplexChangeTest() {
+    CatalogDiff diff = new CatalogDiff();
+    diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
+        .streamDescriptor(new StreamDescriptor().name("foo").namespace("ns")));
+    diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
+        .streamDescriptor(new StreamDescriptor().name("deprecated")));
+    diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
+        .streamDescriptor(new StreamDescriptor().name("also_removed").namespace("schema1")));
+    diff.addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+        .streamDescriptor(new StreamDescriptor().name("users").namespace("main"))
+        .updateStream(List.of(
+            new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
+                .fieldName(List.of("new", "field")),
+            new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
+                .fieldName(List.of("added_too")),
+            new FieldTransform().transformType(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA)
+                .fieldName(List.of("cow")))));
+
+    String expected = """
+                       * Streams (+1/-2)
+                         * + ns.foo
+                         * - deprecated
+                         * - schema1.also_removed
+                       * Fields (+2/~1/-0)
+                         * ~ main.users
+                           * + added_too
+                           * + new.field
+                           * ~ cow
+                      """;
+    assertEquals(expected, SlackNotificationClient.buildSummary(diff));
   }
 
   static class ServerHandler implements HttpHandler {
@@ -213,8 +308,11 @@ class SlackNotificationClientTest {
       if (message != null && message.has("text") && expectedMessage.equals(message.get("text").asText())) {
         response = "Notification acknowledged!";
         t.sendResponseHeaders(200, response.length());
+      } else if (message == null || !message.has("text")) {
+        response = "No notification message or message missing `text` node";
+        t.sendResponseHeaders(500, response.length());
       } else {
-        response = "Wrong notification message";
+        response = String.format("Wrong notification messge: %s", message.get("text").asText());
         t.sendResponseHeaders(500, response.length());
       }
       final OutputStream os = t.getResponseBody();

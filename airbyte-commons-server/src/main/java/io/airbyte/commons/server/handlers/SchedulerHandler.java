@@ -488,7 +488,7 @@ public class SchedulerHandler {
                 connectionUrl,
                 source.getSourceId(),
                 source.getName(),
-                result.changeDescription(),
+                result.appliedDiff(),
                 email,
                 isBreakingChange);
           }
@@ -502,7 +502,7 @@ public class SchedulerHandler {
                 connectionUrl,
                 source.getSourceId(),
                 source.getName(),
-                result.changeDescription(),
+                result.appliedDiff(),
                 email,
                 isBreakingChange);
           }
