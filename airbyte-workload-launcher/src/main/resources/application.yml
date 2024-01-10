@@ -100,6 +100,14 @@ airbyte:
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+      check:
+        annotations: ${CHECK_JOB_KUBE_ANNOTATIONS:}
+        labels: ${CHECK_JOB_KUBE_LABELS:}
+        node-selectors: ${CHECK_JOB_KUBE_NODE_SELECTORS:}
+        cpu-limit: ${CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
     isolated:
       kube:
         use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
