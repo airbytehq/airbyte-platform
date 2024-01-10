@@ -87,7 +87,7 @@ class DocumentStoreConfigFactory(private val applicationContext: ApplicationCont
             getProperty("$prefix.bucket"),
             getProperty("$prefix.access-key"),
             getProperty("$prefix.secret-access-key"),
-            getProperty("$prefix.endpoint"),
+            getProperty("$prefix.region"),
           ),
         )
     }
