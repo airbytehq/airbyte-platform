@@ -4,6 +4,7 @@ import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadType
+import java.util.UUID
 
 typealias ApiWorkloadStatus = io.airbyte.workload.api.domain.WorkloadStatus
 typealias DomainWorkload = Workload
@@ -65,6 +66,7 @@ fun DomainWorkload.toApi(): ApiWorkload {
     geography = this.geography,
     mutexKey = this.mutexKey,
     type = this.type.toApi(),
+    autoId = if (this.autoId == null) UUID(0, 0) else this.autoId!!,
   )
 }
 
@@ -81,6 +83,7 @@ fun ApiWorkload.toDomain(): DomainWorkload {
     type = this.type.toDomain(),
     terminationReason = terminationReason,
     terminationSource = terminationSource,
+    autoId = this.autoId,
   )
 }
 

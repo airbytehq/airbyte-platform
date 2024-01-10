@@ -5,6 +5,7 @@ import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
 import jakarta.transaction.Transactional
 import java.time.OffsetDateTime
+import java.util.UUID
 
 /**
  * In order to mock a class it needs to be open. We have added this interface to avoid making [WorkloadHandler] an open class.
@@ -30,6 +31,7 @@ interface WorkloadHandler {
     geography: String,
     mutexKey: String,
     type: WorkloadType,
+    autoId: UUID,
   )
 
   fun claimWorkload(

@@ -24,7 +24,7 @@ class WorkloadIdGeneratorTest {
   ) {
     val generatedWorkloadId = generator.generateCheckWorkloadId(actorId, jobId, attemptNumber)
     assertEquals(
-      "${actorId}_${jobId.take(8)}_${attemptNumber}_check",
+      "${actorId}_${jobId}_${attemptNumber}_check",
       generatedWorkloadId,
     )
   }

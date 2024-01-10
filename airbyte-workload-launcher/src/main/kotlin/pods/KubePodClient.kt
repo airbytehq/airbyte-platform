@@ -14,6 +14,7 @@ import io.micronaut.context.env.Environment
 import jakarta.inject.Singleton
 import java.lang.RuntimeException
 import java.time.Duration
+import java.util.UUID
 
 /**
  * Interface layer between domain and Kube layers.
@@ -26,15 +27,15 @@ class KubePodClient(
   private val labeler: PodLabeler,
   private val mapper: PayloadKubeInputMapper,
 ) : PodClient {
-  override fun podsExistForWorkload(workloadId: String): Boolean {
-    return orchestratorLauncher.podsExist(labeler.getWorkloadLabels(workloadId))
+  override fun podsExistForAutoId(autoId: UUID): Boolean {
+    return orchestratorLauncher.podsExist(labeler.getAutoIdLabels(autoId))
   }
 
   override fun launchReplication(
     replicationInput: ReplicationInput,
     launcherInput: LauncherInput,
   ) {
-    val sharedLabels = labeler.getSharedLabels(launcherInput.workloadId, launcherInput.mutexKey, launcherInput.labels)
+    val sharedLabels = labeler.getSharedLabels(launcherInput.workloadId, launcherInput.mutexKey, launcherInput.labels, launcherInput.autoId)
 
     val inputWithLabels =
       replicationInput
@@ -106,7 +107,14 @@ class KubePodClient(
     checkInput: CheckConnectionInput,
     launcherInput: LauncherInput,
   ) {
-    val sharedLabels = labeler.getSharedLabels(launcherInput.workloadId, launcherInput.mutexKey, launcherInput.labels)
+    // For check the workload id is too long to be store as a kube label thus it is not added
+    val sharedLabels =
+      labeler.getSharedLabels(
+        workloadId = null,
+        mutexKey = launcherInput.mutexKey,
+        passThroughLabels = launcherInput.labels,
+        autoId = launcherInput.autoId,
+      )
 
     val inputWithLabels = checkInput.setConnectorLabels(sharedLabels)
 

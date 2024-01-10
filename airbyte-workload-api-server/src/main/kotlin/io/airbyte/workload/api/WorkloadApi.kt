@@ -42,6 +42,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.parameters.RequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import java.util.UUID
 import javax.ws.rs.Consumes
 import javax.ws.rs.GET
 import javax.ws.rs.POST
@@ -94,6 +95,8 @@ open class WorkloadApi(
       return HttpResponse.status(HttpStatus.OK)
     }
 
+    val autoId = UUID.randomUUID()
+
     workloadHandler.createWorkload(
       workloadCreateRequest.workloadId,
       workloadCreateRequest.labels,
@@ -102,6 +105,7 @@ open class WorkloadApi(
       workloadCreateRequest.geography,
       workloadCreateRequest.mutexKey,
       workloadCreateRequest.type,
+      autoId,
     )
     workloadService.create(
       workloadId = workloadCreateRequest.workloadId,
@@ -111,6 +115,7 @@ open class WorkloadApi(
       workloadCreateRequest.geography,
       workloadCreateRequest.mutexKey,
       workloadCreateRequest.type,
+      autoId,
     )
     return HttpResponse.status(HttpStatus.NO_CONTENT)
   }

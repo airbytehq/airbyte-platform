@@ -63,7 +63,7 @@ class KubePodClientTest {
     checkInput =
       CheckConnectionInput(null, IntegrationLauncherConfig(), null)
 
-    every { labeler.getSharedLabels(any(), any(), any()) } returns sharedLabels
+    every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
 
     every { mapper.toKubeInput(replInput, sharedLabels) } returns replKubeInput
 
@@ -100,7 +100,7 @@ class KubePodClientTest {
 
   @Test
   fun `launchReplication sets pass-through labels for propagation to source and destination`() {
-    every { labeler.getSharedLabels(any(), any(), any()) } returns sharedLabels
+    every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
     every { mapper.toKubeInput(replInput, sharedLabels) } returns replKubeInput
 
     client.launchReplication(replInput, launcherInput)
@@ -178,7 +178,7 @@ class KubePodClientTest {
 
   @Test
   fun `launchCheck sets pass-through labels for propagation to connector`() {
-    every { labeler.getSharedLabels(any(), any(), any()) } returns sharedLabels
+    every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
     every { mapper.toKubeInput(checkInput, sharedLabels) } returns checkKubeInput
 
     client.launchCheck(checkInput, launcherInput)

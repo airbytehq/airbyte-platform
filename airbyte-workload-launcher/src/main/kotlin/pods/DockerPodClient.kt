@@ -19,6 +19,7 @@ import io.micronaut.context.env.Environment
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.nio.file.Path
+import java.util.UUID
 
 /**
  * Interface layer between domain and Docker layers.
@@ -32,7 +33,7 @@ class DockerPodClient(
   @Named("orchestratorKubeContainerInfo") private val orchestratorInfo: KubeContainerInfo,
   private val orchestratorNameGenerator: OrchestratorNameGenerator,
 ) : PodClient {
-  override fun podsExistForWorkload(workloadId: String): Boolean = podLauncher.exists(workloadId)
+  override fun podsExistForAutoId(autoId: UUID): Boolean = podLauncher.exists(autoId.toString())
 
   override fun launchReplication(
     replicationInput: ReplicationInput,

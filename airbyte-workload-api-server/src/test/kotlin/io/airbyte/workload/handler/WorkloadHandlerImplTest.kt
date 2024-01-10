@@ -28,6 +28,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import java.time.OffsetDateTime
 import java.util.Optional
+import java.util.UUID
 
 class WorkloadHandlerImplTest {
   @BeforeEach
@@ -48,6 +49,7 @@ class WorkloadHandlerImplTest {
         geography = "US",
         mutexKey = null,
         type = WorkloadType.SYNC,
+        autoId = UUID.randomUUID(),
       )
 
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.of(domainWorkload))
@@ -79,6 +81,7 @@ class WorkloadHandlerImplTest {
       "US",
       "mutex-this",
       io.airbyte.config.WorkloadType.SYNC,
+      UUID.randomUUID(),
     )
     verify {
       workloadRepository.save(
@@ -105,7 +108,7 @@ class WorkloadHandlerImplTest {
   fun `test create workload id conflict`() {
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(true)
     assertThrows<ConflictException> {
-      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC)
+      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID())
     }
   }
 

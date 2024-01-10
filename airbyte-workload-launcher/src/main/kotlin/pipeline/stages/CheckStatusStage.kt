@@ -40,7 +40,9 @@ open class CheckStatusStage(
   }
 
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
-    if (podClient.podsExistForWorkload(input.msg.workloadId)) {
+    val podExists = podClient.podsExistForAutoId(input.msg.autoId)
+
+    if (podExists) {
       logger.info {
         "Found pods running for workload ${input.msg.workloadId}. Setting status to RUNNING and SKIP flag to true."
       }

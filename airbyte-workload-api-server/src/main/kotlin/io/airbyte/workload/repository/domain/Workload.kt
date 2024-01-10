@@ -1,5 +1,6 @@
 package io.airbyte.workload.repository.domain
 
+import com.google.common.annotations.VisibleForTesting
 import io.micronaut.core.annotation.Nullable
 import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.DateUpdated
@@ -47,6 +48,7 @@ data class Workload(
   @Nullable
   var autoId: UUID? = null,
 ) {
+  @VisibleForTesting
   @JvmOverloads
   constructor(
     id: String,

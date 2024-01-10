@@ -34,6 +34,7 @@ class LauncherMessageConsumer(
         mutexKey = input.mutexKey,
         workloadType = input.workloadType,
         startTimeMs = input.startTimeMs,
+        autoId = input.autoId,
       ),
     )
   }

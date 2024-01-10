@@ -11,6 +11,7 @@ import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.time.OffsetDateTime
+import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
 
@@ -57,6 +58,7 @@ class WorkloadHandlerImpl(
     geography: String,
     mutexKey: String,
     type: WorkloadType,
+    autoId: UUID,
   ) {
     val workloadAlreadyExists = workloadRepository.existsById(workloadId)
     if (workloadAlreadyExists) {
@@ -73,6 +75,7 @@ class WorkloadHandlerImpl(
         geography = geography,
         mutexKey = mutexKey,
         type = type.toDomain(),
+        autoId = autoId,
       )
 
     workloadRepository.save(domainWorkload).toApi()

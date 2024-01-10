@@ -20,6 +20,7 @@ import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_P
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_TYPE_TAG
 import io.airbyte.workload.metrics.WorkloadApiMetricMetadata
 import jakarta.inject.Singleton
+import java.util.UUID
 
 /**
  * Placeholder class to interact with the launcher queue for testing.
@@ -40,6 +41,7 @@ open class WorkloadService(
     geography: String,
     mutexKey: String?,
     workloadType: WorkloadType,
+    autoId: UUID,
   ) {
     // TODO feature flag geography
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadId) as Map<String, Any>?)
@@ -49,7 +51,7 @@ open class WorkloadService(
     val startTimeMs = System.currentTimeMillis()
     messageProducer.publish(
       queue,
-      LauncherInputMessage(workloadId, workloadInput, labels, logPath, mutexKey, workloadType, startTimeMs),
+      LauncherInputMessage(workloadId, workloadInput, labels, logPath, mutexKey, workloadType, startTimeMs, autoId),
       "wl-create_$workloadId",
     )
     metricPublisher.count(

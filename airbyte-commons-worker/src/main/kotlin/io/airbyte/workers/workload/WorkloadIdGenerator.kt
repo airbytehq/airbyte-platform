@@ -24,8 +24,7 @@ class WorkloadIdGenerator {
     jobId: String,
     attemptNumber: Int,
   ): String {
-    val truncatedJobId = jobId.take(8)
-    return "${actorDefinitionId}_${truncatedJobId}_${attemptNumber}_check"
+    return "${actorDefinitionId}_${jobId}_${attemptNumber}_check"
   }
 
   fun generateDiscoverWorkloadId(

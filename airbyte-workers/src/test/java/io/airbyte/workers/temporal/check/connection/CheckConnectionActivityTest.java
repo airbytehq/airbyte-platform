@@ -166,6 +166,7 @@ public class CheckConnectionActivityTest {
         "",
         "",
         WorkloadType.CHECK,
+        UUID.randomUUID(),
         null,
         status,
         null,
