@@ -91,6 +91,10 @@ public final class AuthenticationFields {
 
   public static final String PERMISSION_ID_FIELD_NAME = "permissionId";
 
+  public static final String SCOPE_TYPE_FIELD_NAME = "scopeType";
+
+  public static final String SCOPE_ID_FIELD_NAME = "scopeId";
+
   private AuthenticationFields() {}
 
 }

@@ -15,6 +15,8 @@ import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.OPERATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.PERMISSION_ID_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SCOPE_ID_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SCOPE_TYPE_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_IDS_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_ID_HEADER;
@@ -258,6 +260,24 @@ class AuthenticationHeaderResolverTest {
 
     final String resolvedAuthUserId = resolver.resolveUserAuthId(properties);
     assertEquals(expectedUser.getAuthUserId(), resolvedAuthUserId);
+  }
+
+  @Test
+  void testResolvingWorkspaceIdFromScopeTypeAndScopeId() {
+    final UUID workspaceId = UUID.randomUUID();
+    final Map<String, String> properties = Map.of(SCOPE_TYPE_HEADER, "workspace", SCOPE_ID_HEADER, workspaceId.toString());
+
+    final List<UUID> result = resolver.resolveWorkspace(properties);
+    assertEquals(List.of(workspaceId), result);
+  }
+
+  @Test
+  void testResolvingOrganizationIdFromScopeTypeAndScopeId() {
+    final UUID organizationId = UUID.randomUUID();
+    final Map<String, String> properties = Map.of(SCOPE_TYPE_HEADER, "organization", SCOPE_ID_HEADER, organizationId.toString());
+
+    final List<UUID> result = resolver.resolveOrganization(properties);
+    assertEquals(List.of(organizationId), result);
   }
 
 }
