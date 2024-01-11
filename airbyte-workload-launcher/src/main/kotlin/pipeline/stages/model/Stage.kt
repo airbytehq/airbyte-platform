@@ -2,8 +2,11 @@ package io.airbyte.workload.launcher.pipeline.stages.model
 
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.FAILURE_STATUS
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.STAGE_NAME_TAG
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.SUCCESS_STATUS
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_TYPE_TAG
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.StageName
@@ -12,8 +15,8 @@ import io.github.oshai.kotlinlogging.withLoggingContext
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toMono
 import java.util.function.Function
+import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
-import kotlin.time.toJavaDuration
 
 typealias StageFunction<T> = Function<T, Mono<T>>
 
@@ -22,26 +25,29 @@ private val logger = KotlinLogging.logger {}
 abstract class Stage<T : StageIO>(protected val metricPublisher: CustomMetricPublisher) : StageFunction<T> {
   override fun apply(input: T): Mono<T> {
     withLoggingContext(input.logCtx) {
-      val startTime = TimeSource.Monotonic.markNow()
-
       if (skipStage(input)) {
         logger.info { "SKIP Stage: ${getStageName()} — (workloadId = ${input.msg.workloadId})" }
         return input.toMono()
       }
+
+      val startTime = TimeSource.Monotonic.markNow()
+      var success = true
 
       logger.info { "APPLY Stage: ${getStageName()} — (workloadId = ${input.msg.workloadId})" }
 
       return try {
         applyStage(input).toMono()
       } catch (t: Throwable) {
+        success = false
         ApmTraceUtils.addExceptionToTrace(t)
         Mono.error(StageError(input, getStageName(), t))
       } finally {
-        metricPublisher.timer(
-          WorkloadLauncherMetricMetadata.WORKLOAD_STAGE_DURATION_TIMER,
-          startTime.elapsedNow().toJavaDuration(),
+        metricPublisher.distribution(
+          WorkloadLauncherMetricMetadata.WORKLOAD_STAGE_DURATION,
+          startTime.elapsedNow().toDouble(DurationUnit.MILLISECONDS),
           *getMetricAttrs(input).toTypedArray(),
           MetricAttribute(STAGE_NAME_TAG, getStageName().toString()),
+          MetricAttribute(MetricTags.STATUS, if (success) SUCCESS_STATUS else FAILURE_STATUS),
         )
       }
     }

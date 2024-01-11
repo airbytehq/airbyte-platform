@@ -32,7 +32,6 @@ open class CheckStatusStage(
   @Instrument(
     start = "WORKLOAD_STAGE_START",
     end = "WORKLOAD_STAGE_DONE",
-    duration = "WORKLOAD_STAGE_DURATION",
     tags = [Tag(key = MeterFilterFactory.STAGE_NAME_TAG, value = "check_status")],
   )
   override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {

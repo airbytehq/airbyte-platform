@@ -18,6 +18,9 @@ class SharedMocks {
         every {
           gauge<Any>(any(), any(), any(), any())
         } returns Unit
+        every {
+          distribution(any(), any(), any(), any())
+        } returns Unit
       }
 
     val processClaimedScheduler: Scheduler = mockk()
