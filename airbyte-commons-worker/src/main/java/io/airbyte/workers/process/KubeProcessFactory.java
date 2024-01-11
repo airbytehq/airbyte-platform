@@ -199,6 +199,10 @@ public class KubeProcessFactory implements ProcessFactory {
   }
 
   private Map<String, String> buildAwsEnvVars(final UUID workspaceId) {
+    if (workspaceId == null) {
+      return Map.of();
+    }
+
     return Map.of(
         AWS_ASSUME_ROLE_EXTERNAL_ID, workspaceId.toString());
   }
