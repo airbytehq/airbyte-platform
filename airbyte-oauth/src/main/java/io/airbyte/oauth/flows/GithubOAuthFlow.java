@@ -37,6 +37,7 @@ public class GithubOAuthFlow extends BaseOAuth2Flow {
       "read:org",
       "read:repo_hook",
       "read:user",
+      "read:project",
       "read:discussion",
       "workflow");
 
