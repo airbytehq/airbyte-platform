@@ -42,7 +42,7 @@ class DockerPodClient(
     val podConfig =
       DockerPodConfig(
         jobDir = Path.of(replicationInput.getJobId()).resolve(replicationInput.getAttemptId().toString()).resolve("orchestrator"),
-        name = launcherInput.workloadId,
+        name = launcherInput.autoId.toString(),
         imageName = orchestratorInfo.image,
         mutex = launcherInput.mutexKey,
         envMap = orchestratorEnvMap,
