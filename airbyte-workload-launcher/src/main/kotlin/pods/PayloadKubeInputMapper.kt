@@ -14,6 +14,7 @@ import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.REPLICATION
+import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
@@ -77,8 +78,9 @@ class PayloadKubeInputMapper(
   ): CheckOrchestratorKubeInput {
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
+    val actorType = input.getActorType()
 
-    val orchestratorPodName = orchestratorNameGenerator.getCheckOrchestratorPodName(jobId, attemptId)
+    val orchestratorPodName = orchestratorNameGenerator.getCheckOrchestratorPodName(jobId, attemptId, actorType)
 
     val orchestratorPodInfo =
       KubePodInfo(

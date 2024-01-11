@@ -1,6 +1,7 @@
 package io.airbyte.workload.launcher.pods
 
 import io.airbyte.commons.workers.config.WorkerConfigs
+import io.airbyte.config.ActorType
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -15,6 +16,7 @@ import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.sync.ReplicationLauncherWorker
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
+import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
@@ -145,6 +147,7 @@ class PayloadKubeInputMapperTest {
 
     every { input.getJobId() } returns jobId
     every { input.getAttemptId() } returns attemptId
+    every { input.getActorType() } returns ActorType.SOURCE
     every { input.usesCustomConnector() } returns customConnector
     every { input.jobRunConfig } returns mockk<JobRunConfig>()
     every { input.launcherConfig } returns mockk<IntegrationLauncherConfig>()
@@ -163,7 +166,7 @@ class PayloadKubeInputMapperTest {
     assert(result.orchestratorLabels == orchestratorLabels + sharedLabels)
     assert(result.connectorLabels == connectorLabels + sharedLabels)
     assert(result.nodeSelectors == if (customConnector) checkCustomSelectors else checkSelectors)
-    assert(result.kubePodInfo == KubePodInfo(namespace, "orchestrator-check-job-415-attempt-7654", containerInfo))
+    assert(result.kubePodInfo == KubePodInfo(namespace, "orchestrator-check-source-job-415-attempt-7654", containerInfo))
     assert(
       result.fileMap ==
         mapOf(

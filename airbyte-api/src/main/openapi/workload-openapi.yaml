@@ -393,7 +393,6 @@ components:
       - geography
       - labels
       - logPath
-      - mutexKey
       - type
       - workloadId
       - workloadInput
@@ -413,6 +412,7 @@ components:
           type: string
         mutexKey:
           type: string
+          nullable: true
         type:
           $ref: '#/components/schemas/WorkloadType'
     WorkloadFailureRequest:

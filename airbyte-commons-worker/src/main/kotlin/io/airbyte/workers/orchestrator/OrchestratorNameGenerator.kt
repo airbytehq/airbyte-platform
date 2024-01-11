@@ -1,5 +1,6 @@
 package io.airbyte.workers.orchestrator
 
+import io.airbyte.config.ActorType
 import io.airbyte.workers.process.AsyncKubePodStatus
 import io.airbyte.workers.sync.ReplicationLauncherWorker.POD_NAME_PREFIX
 import io.micronaut.context.annotation.Value
@@ -20,8 +21,9 @@ class OrchestratorNameGenerator(
   fun getCheckOrchestratorPodName(
     jobId: String,
     attemptId: Long,
+    actorType: ActorType,
   ): String {
-    return "$CHECK_POD_PREFIX-job-$jobId-attempt-$attemptId"
+    return "$CHECK_POD_PREFIX-$actorType-job-$jobId-attempt-$attemptId"
   }
 
   fun getOrchestratorOutputLocation(

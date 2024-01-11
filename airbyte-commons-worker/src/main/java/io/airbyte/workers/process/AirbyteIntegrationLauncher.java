@@ -160,7 +160,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         null,
         buildGenericConnectorResourceRequirements(resourceRequirement),
         allowedHosts,
-        Map.of(JOB_TYPE_KEY, CHECK_JOB, CHECK_STEP_KEY, CONNECTOR_STEP),
+        getLabels(Map.of(JOB_TYPE_KEY, CHECK_JOB, CHECK_STEP_KEY, CONNECTOR_STEP)),
         getWorkerMetadata(),
         Collections.emptyMap(),
         additionalEnvironmentVariables,

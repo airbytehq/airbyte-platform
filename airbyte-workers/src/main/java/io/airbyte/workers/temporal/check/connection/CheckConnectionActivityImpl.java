@@ -238,8 +238,8 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         serializedInput,
         fullLogPath(Path.of(workloadId)),
         geo.getValue(),
-        UUID.randomUUID().toString(),
-        WorkloadType.CHECK);
+        WorkloadType.CHECK,
+        null);
 
     createWorkload(workloadCreateRequest);
 

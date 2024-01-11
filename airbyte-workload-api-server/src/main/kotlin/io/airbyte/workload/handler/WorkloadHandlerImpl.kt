@@ -56,7 +56,7 @@ class WorkloadHandlerImpl(
     input: String,
     logPath: String,
     geography: String,
-    mutexKey: String,
+    mutexKey: String?,
     type: WorkloadType,
     autoId: UUID,
   ) {
