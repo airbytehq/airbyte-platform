@@ -10,10 +10,10 @@ interface ConnectionsTableProps {
   variant?: React.ComponentProps<typeof ConnectionTable>["variant"];
 }
 
-const ConnectionsTable: React.FC<ConnectionsTableProps> = ({ connections, variant }) => {
+const ConnectionsTable: React.FC<ConnectionsTableProps> = React.memo(({ connections, variant }) => {
   const data = getConnectionTableData(connections, "connection");
 
   return <ConnectionTable data={data} entity="connection" variant={variant} />;
-};
-
+});
+ConnectionsTable.displayName = "ConnectionsTable";
 export default ConnectionsTable;
