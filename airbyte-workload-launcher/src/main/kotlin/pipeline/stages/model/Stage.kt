@@ -15,8 +15,8 @@ import io.github.oshai.kotlinlogging.withLoggingContext
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toMono
 import java.util.function.Function
-import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
+import kotlin.time.toJavaDuration
 
 typealias StageFunction<T> = Function<T, Mono<T>>
 
@@ -42,9 +42,9 @@ abstract class Stage<T : StageIO>(protected val metricPublisher: CustomMetricPub
         ApmTraceUtils.addExceptionToTrace(t)
         Mono.error(StageError(input, getStageName(), t))
       } finally {
-        metricPublisher.distribution(
+        metricPublisher.timer(
           WorkloadLauncherMetricMetadata.WORKLOAD_STAGE_DURATION,
-          startTime.elapsedNow().toDouble(DurationUnit.MILLISECONDS),
+          startTime.elapsedNow().toJavaDuration(),
           *getMetricAttrs(input).toTypedArray(),
           MetricAttribute(STAGE_NAME_TAG, getStageName().toString()),
           MetricAttribute(MetricTags.STATUS, if (success) SUCCESS_STATUS else FAILURE_STATUS),
