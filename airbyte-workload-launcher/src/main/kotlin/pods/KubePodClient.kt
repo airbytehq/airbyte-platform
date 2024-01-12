@@ -4,6 +4,7 @@ import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEO
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
+import io.airbyte.workload.launcher.model.CheckEnvVar
 import io.airbyte.workload.launcher.model.setConnectorLabels
 import io.airbyte.workload.launcher.model.setDestinationLabels
 import io.airbyte.workload.launcher.model.setSourceLabels
@@ -12,7 +13,6 @@ import io.fabric8.kubernetes.api.model.Pod
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.env.Environment
 import jakarta.inject.Singleton
-import java.lang.RuntimeException
 import java.time.Duration
 import java.util.UUID
 
@@ -26,6 +26,7 @@ class KubePodClient(
   private val orchestratorLauncher: OrchestratorPodLauncher,
   private val labeler: PodLabeler,
   private val mapper: PayloadKubeInputMapper,
+  private val checkEnvVar: CheckEnvVar,
 ) : PodClient {
   override fun podsExistForAutoId(autoId: UUID): Boolean {
     return orchestratorLauncher.podsExist(labeler.getAutoIdLabels(autoId))
@@ -53,6 +54,7 @@ class KubePodClient(
           kubeInput.nodeSelectors,
           kubeInput.kubePodInfo,
           kubeInput.annotations,
+          mapOf(),
         )
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
@@ -120,6 +122,8 @@ class KubePodClient(
 
     val kubeInput = mapper.toKubeInput(inputWithLabels, sharedLabels)
 
+    val extraEnv = checkEnvVar.getEnvMap()
+
     val pod: Pod
     try {
       pod =
@@ -129,6 +133,7 @@ class KubePodClient(
           kubeInput.nodeSelectors,
           kubeInput.kubePodInfo,
           kubeInput.annotations,
+          extraEnv,
         )
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)

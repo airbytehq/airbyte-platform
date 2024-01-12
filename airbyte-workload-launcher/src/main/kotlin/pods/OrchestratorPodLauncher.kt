@@ -60,7 +60,7 @@ class OrchestratorPodLauncher(
   @Value("\${airbyte.container.orchestrator.data-plane-creds.secret-name}") private val dataPlaneCredsSecretName: String?,
   @Value("\${airbyte.container.orchestrator.data-plane-creds.secret-mount-path}") private val dataPlaneCredsSecretMountPath: String?,
   @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
-  @Named("orchestratorEnvVars") private val envVars: List<EnvVar>,
+  @Named("orchestratorEnvVars") private val sharedEnvVars: List<EnvVar>,
   @Named("orchestratorContainerPorts") private val containerPorts: List<ContainerPort>,
   private val metricClient: MetricClient,
 ) {
@@ -70,6 +70,7 @@ class OrchestratorPodLauncher(
     nodeSelectors: Map<String, String>,
     kubePodInfo: KubePodInfo,
     annotations: Map<String, String>,
+    additionalEnvVars: Map<String, String>,
   ): Pod {
     val volumes: MutableList<Volume> = ArrayList()
     val volumeMounts: MutableList<VolumeMount> = ArrayList()
@@ -164,13 +165,15 @@ class OrchestratorPodLauncher(
         )
         .build()
 
+    val extraKubeEnv = additionalEnvVars.map { (k, v) -> EnvVar(k, v, null) }
+
     val mainContainer =
       ContainerBuilder()
         .withName(KubePodProcess.MAIN_CONTAINER_NAME)
         .withImage(kubePodInfo.mainContainerInfo.image)
         .withImagePullPolicy(kubePodInfo.mainContainerInfo.pullPolicy)
         .withResources(KubePodProcess.getResourceRequirementsBuilder(resourceRequirements).build())
-        .withEnv(envVars)
+        .withEnv(sharedEnvVars + extraKubeEnv)
         .withPorts(containerPorts)
         .withVolumeMounts(volumeMounts)
         .build()

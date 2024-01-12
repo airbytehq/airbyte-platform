@@ -66,6 +66,7 @@ class OrchestratorPodLauncherTest {
         mapOf(),
         KubePodInfo("", "", KubeContainerInfo("", "")),
         mapOf(),
+        mapOf(),
       )
     }
 
