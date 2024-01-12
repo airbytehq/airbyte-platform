@@ -146,6 +146,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.WORKER,
       "json_string_length",
       "string length of a raw json string"),
+  RECORD_SIZE_ERROR(
+      MetricEmittingApps.WORKER,
+      "record_size_error",
+      "length of a raw record json string exceeding the limit"),
   KUBE_POD_PROCESS_CREATE_TIME_MILLISECS(
       MetricEmittingApps.WORKER,
       "kube_pod_process_create_time_millisecs",

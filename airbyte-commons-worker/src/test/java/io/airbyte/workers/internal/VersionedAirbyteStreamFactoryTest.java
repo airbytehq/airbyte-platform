@@ -282,7 +282,7 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreate() {
       final Version initialVersion = new Version("0.1.2");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(),
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), Optional.empty(),
               new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
               gsonPksExtractor);
 
@@ -296,7 +296,7 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreateWithVersionDetection() {
       final Version initialVersion = new Version("0.0.0");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(),
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), Optional.empty(),
               new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
               gsonPksExtractor)
                   .withDetectVersion(true);
@@ -313,7 +313,7 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreateWithVersionDetectionFallback() {
       final Version initialVersion = new Version("0.0.6");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(),
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), Optional.empty(),
               new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
               gsonPksExtractor)
                   .withDetectVersion(true);
@@ -330,7 +330,7 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreateWithVersionDetectionWithoutSpecMessage() {
       final Version initialVersion = new Version("0.0.1");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(),
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), Optional.empty(),
               new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
               gsonPksExtractor)
                   .withDetectVersion(true);
