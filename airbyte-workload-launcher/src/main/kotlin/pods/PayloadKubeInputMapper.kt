@@ -4,13 +4,13 @@ import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workers.general.DefaultCheckConnectionWorker
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.orchestrator.OrchestratorNameGenerator
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.sync.OrchestratorConstants
+import io.airbyte.workers.sync.OrchestratorConstants.CHECK_APPLICATION_NAME
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.REPLICATION
@@ -139,7 +139,7 @@ class PayloadKubeInputMapper(
     return sharedFileMap(jobRunConfig, kubePodInfo) +
       mapOf(
         OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
-        OrchestratorConstants.INIT_FILE_APPLICATION to DefaultCheckConnectionWorker.CHECK,
+        OrchestratorConstants.INIT_FILE_APPLICATION to CHECK_APPLICATION_NAME,
       )
   }
 

@@ -4,6 +4,8 @@
 
 package io.airbyte.container_orchestrator.config;
 
+import static io.airbyte.workers.sync.OrchestratorConstants.CHECK_APPLICATION_NAME;
+
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
@@ -23,7 +25,6 @@ import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.config.DocumentStoreFactory;
 import io.airbyte.workers.config.DocumentType;
-import io.airbyte.workers.general.DefaultCheckConnectionWorker;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
@@ -129,7 +130,7 @@ class ContainerOrchestratorFactory {
           replicationWorkerFactory, asyncStateManager, workloadApi, workloadIdGenerator, workloadEnabled, jobOutputDocStore);
       case NormalizationLauncherWorker.NORMALIZATION -> new NormalizationJobOrchestrator(envConfigs, processFactory, jobRunConfig, asyncStateManager);
       case DbtLauncherWorker.DBT -> new DbtJobOrchestrator(envConfigs, workerConfigsProvider, processFactory, jobRunConfig, asyncStateManager);
-      case DefaultCheckConnectionWorker.CHECK -> new CheckJobOrchestrator(dataClass);
+      case CHECK_APPLICATION_NAME -> new CheckJobOrchestrator(dataClass);
       case AsyncOrchestratorPodProcess.NO_OP -> new NoOpOrchestrator();
       default -> throw new IllegalStateException("Could not find job orchestrator for application: " + application);
     };

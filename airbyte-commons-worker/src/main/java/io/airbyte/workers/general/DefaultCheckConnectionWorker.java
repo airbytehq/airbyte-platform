@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
 public class DefaultCheckConnectionWorker implements CheckConnectionWorker {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultCheckConnectionWorker.class);
-  public static final String CHECK = "check-orchestrator";
+  public static final String LOG_SECTION_NAME = "CHECK";
 
   private final IntegrationLauncher integrationLauncher;
   private final ConnectorConfigUpdater connectorConfigUpdater;
@@ -63,7 +63,7 @@ public class DefaultCheckConnectionWorker implements CheckConnectionWorker {
   @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public ConnectorJobOutput run(final StandardCheckConnectionInput input, final Path jobRoot) throws WorkerException {
-    LineGobbler.startSection(CHECK);
+    LineGobbler.startSection(LOG_SECTION_NAME);
     ApmTraceUtils.addTagsToTrace(Map.of(JOB_ROOT_KEY, jobRoot));
 
     try {
@@ -119,19 +119,19 @@ public class DefaultCheckConnectionWorker implements CheckConnectionWorker {
       } else if (failureReason.isEmpty()) {
         WorkerUtils.throwWorkerException("Error checking connection status: no status nor failure reason were outputted", process);
       }
-      LineGobbler.endSection(CHECK);
+      LineGobbler.endSection(LOG_SECTION_NAME);
       return jobOutput;
 
     } catch (final IOException e) {
       ApmTraceUtils.addExceptionToTrace(e);
       final String errorMessage = String.format("Lost connection to the %s: ", input.getActorType());
       LOGGER.error(errorMessage, e);
-      LineGobbler.endSection(CHECK);
+      LineGobbler.endSection(LOG_SECTION_NAME);
       throw new WorkerException(errorMessage, e);
     } catch (final Exception e) {
       ApmTraceUtils.addExceptionToTrace(e);
       LOGGER.error("Unexpected error while checking connection: ", e);
-      LineGobbler.endSection(CHECK);
+      LineGobbler.endSection(LOG_SECTION_NAME);
       throw new WorkerException("Unexpected error while getting checking connection.", e);
     }
   }

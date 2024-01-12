@@ -100,6 +100,8 @@ public class OrchestratorConstants {
   public static final String INIT_FILE_JOB_RUN_CONFIG = "jobRunConfig.json";
   public static final String INIT_FILE_APPLICATION = "application.txt";
 
+  public static final String CHECK_APPLICATION_NAME = "check-orchestrator";
+
   // define two ports for stdout/stderr usage on the container orchestrator pod
   public static final int PORT1 = 9877;
   public static final int PORT2 = 9878;
