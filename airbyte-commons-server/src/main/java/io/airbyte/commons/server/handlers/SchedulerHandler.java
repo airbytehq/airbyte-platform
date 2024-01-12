@@ -448,7 +448,10 @@ public class SchedulerHandler {
             connectionRead.getConnectionId(), sourceAutoPropagateChange.getCatalogId());
         final boolean newNotificationsEnabled = featureFlagClient.boolVariation(
             UseNewSchemaUpdateNotification.INSTANCE, new Workspace(sourceAutoPropagateChange.getWorkspaceId()));
-        if (notificationSettings != null && newNotificationsEnabled && notificationSettings.getSendOnConnectionUpdate() != null) {
+        if (notificationSettings != null
+            && newNotificationsEnabled
+            && notificationSettings.getSendOnConnectionUpdate() != null
+            && !result.appliedDiff().getTransforms().isEmpty()) {
           notifySchemaPropagated(notificationSettings, diff, workspace, connectionRead, source,
               workspace.getEmail(), result);
         }

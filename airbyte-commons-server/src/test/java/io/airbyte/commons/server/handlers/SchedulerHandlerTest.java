@@ -90,6 +90,8 @@ import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobTypeResourceLimit;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
+import io.airbyte.config.NotificationItem;
+import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.OperatorNormalization;
 import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.ResourceRequirements;
@@ -109,7 +111,9 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.FieldSelectionWorkspaces;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -1831,6 +1835,58 @@ class SchedulerHandlerTest {
     schedulerHandler.applySchemaChangeForSource(request);
     verifyNoInteractions(connectionsHandler);
 
+  }
+
+  @Test
+  void testSchemaPropagatedEmptyDiff() throws IOException, JsonValidationException, ConfigNotFoundException {
+
+    final UUID sourceId = UUID.randomUUID();
+    final UUID workspaceId = UUID.randomUUID();
+    final UUID catalogId = UUID.randomUUID();
+    final UUID connectionId = UUID.randomUUID();
+
+    final io.airbyte.api.model.generated.AirbyteCatalog oldCatalog = new io.airbyte.api.model.generated.AirbyteCatalog()
+        .addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name("foo").namespace("ns")));
+    final io.airbyte.api.model.generated.AirbyteCatalog configuredCatalog = new io.airbyte.api.model.generated.AirbyteCatalog()
+        .addStreamsItem(new AirbyteStreamAndConfiguration()
+            .stream(new AirbyteStream().name("foo").namespace("ns").supportedSyncModes(List.of(SyncMode.FULL_REFRESH)))
+            .config(new AirbyteStreamConfiguration().selected(true).syncMode(SyncMode.FULL_REFRESH)));
+
+    final io.airbyte.api.model.generated.AirbyteCatalog newCatalog = new io.airbyte.api.model.generated.AirbyteCatalog()
+        .addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name("foo").namespace("ns")));
+
+    NotificationSettings notificationSettings = new NotificationSettings().withSendOnConnectionUpdate(new NotificationItem());
+    when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true))
+        .thenReturn(new StandardWorkspace().withWorkspaceId(workspaceId).withNotificationSettings(notificationSettings));
+    when(configRepository.getSourceConnection(sourceId))
+        .thenReturn(new SourceConnection().withSourceId(sourceId));
+    ConnectionRead connectionRead = new ConnectionRead()
+        .connectionId(connectionId)
+        .sourceId(sourceId)
+        .syncCatalog(configuredCatalog)
+        .nonBreakingChangesPreference(NonBreakingChangesPreference.PROPAGATE_COLUMNS);
+    when(connectionsHandler.listConnectionsForSource(sourceId, false))
+        .thenReturn(new ConnectionReadList().addConnectionsItem(connectionRead));
+    when(connectionsHandler.getConnectionAirbyteCatalog(connectionId))
+        .thenReturn(Optional.of(oldCatalog));
+
+    var diff = new CatalogDiff().addTransformsItem(new StreamTransform()
+        .transformType(TransformTypeEnum.ADD_STREAM)
+        .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name("new_stream")));
+    when(connectionsHandler.getDiff(any(), any(), any()))
+        .thenReturn(diff);
+
+    when(featureFlagClient.boolVariation(eq(FieldSelectionWorkspaces.UseNewSchemaUpdateNotification.INSTANCE), eq(new Workspace(workspaceId))))
+        .thenReturn(true);
+    var spySchedulerHandler = spy(schedulerHandler);
+    final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
+        .sourceId(sourceId)
+        .workspaceId(workspaceId)
+        .catalogId(catalogId)
+        .catalog(newCatalog);
+    spySchedulerHandler.applySchemaChangeForSource(request);
+    verify(connectionsHandler).updateConnection(any());
+    verify(spySchedulerHandler, never()).notifySchemaPropagated(any(), any(), any(), any(), any(), any(), any());
   }
 
   private SourceAutoPropagateChange getMockedSourceAutoPropagateChange() {
