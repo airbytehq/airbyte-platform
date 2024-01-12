@@ -50,6 +50,10 @@ jest.mock("core/api", () => ({
   LogsRequestError: jest.requireActual("core/api/errors").LogsRequestError,
 }));
 
+jest.mock("core/utils/rbac", () => ({
+  useIntent: () => true,
+}));
+
 jest.mock("hooks/theme/useAirbyteTheme", () => ({
   useAirbyteTheme: () => mockTheme,
 }));

@@ -3,13 +3,20 @@ import { useContext, useState, createContext, useCallback } from "react";
 import { useIntl } from "react-intl";
 import { useAsyncFn } from "react-use";
 
-import { SchemaError, useGetConnection, useGetConnectionQuery, useUpdateConnection } from "core/api";
+import {
+  SchemaError,
+  useCurrentWorkspace,
+  useGetConnection,
+  useGetConnectionQuery,
+  useUpdateConnection,
+} from "core/api";
 import {
   AirbyteCatalog,
   ConnectionStatus,
   WebBackendConnectionRead,
   WebBackendConnectionUpdate,
 } from "core/api/types/AirbyteClient";
+import { useIntent } from "core/utils/rbac";
 
 import { ConnectionFormServiceProvider } from "../ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "../Notification";
@@ -129,10 +136,12 @@ export const ConnectionEditServiceProvider: React.FC<React.PropsWithChildren<Con
   ...props
 }) => {
   const { refreshSchema, schemaError, ...data } = useConnectionEdit(props);
+  const { workspaceId } = useCurrentWorkspace();
+  const canEditConnection = useIntent("EditConnection", { workspaceId });
   return (
     <ConnectionEditContext.Provider value={data}>
       <ConnectionFormServiceProvider
-        mode={data.connection.status === ConnectionStatus.deprecated ? "readonly" : "edit"}
+        mode={data.connection.status === ConnectionStatus.deprecated || !canEditConnection ? "readonly" : "edit"}
         connection={data.connection}
         schemaError={schemaError as SchemaError}
         refreshSchema={refreshSchema}
