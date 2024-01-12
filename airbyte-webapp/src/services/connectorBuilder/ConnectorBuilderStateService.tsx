@@ -24,6 +24,7 @@ import {
   BuilderProject,
   BuilderProjectPublishBody,
   BuilderProjectWithManifest,
+  CommonRequestError,
   NewVersionBody,
   useBuilderProject,
   usePublishBuilderProject,
@@ -82,7 +83,7 @@ interface FormStateContext {
 interface TestReadContext {
   resolvedManifest: ConnectorManifest;
   resolveErrorMessage: string | undefined;
-  resolveError: Error | KnownExceptionInfo | null;
+  resolveError: CommonRequestError<KnownExceptionInfo> | null;
   streamRead: UseQueryResult<StreamRead, unknown>;
   isResolving: boolean;
   testInputJson: ConnectorConfig;
