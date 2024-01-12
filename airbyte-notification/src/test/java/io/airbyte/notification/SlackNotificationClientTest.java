@@ -199,9 +199,9 @@ class SlackNotificationClientTest {
         .streamDescriptor(new StreamDescriptor().name("invoices")));
 
     String expected = """
-                       * Streams (+2/-0)
-                         * + invoices
-                         * + ns.foo
+                       • Streams (+2/-0)
+                         ＋ invoices
+                         ＋ ns.foo
                       """;
     assertEquals(expected, SlackNotificationClient.buildSummary(diff));
   }
@@ -215,9 +215,9 @@ class SlackNotificationClientTest {
         .streamDescriptor(new StreamDescriptor().name("also_removed").namespace("schema1")));
 
     String expected = """
-                       * Streams (+0/-2)
-                         * - deprecated
-                         * - schema1.also_removed
+                       • Streams (+0/-2)
+                         － deprecated
+                         － schema1.also_removed
                       """;
     assertEquals(expected, SlackNotificationClient.buildSummary(diff));
 
@@ -241,13 +241,13 @@ class SlackNotificationClientTest {
                 .fieldName(List.of("cow")))));
 
     String expected = """
-                       * Fields (+2/~1/-2)
-                         * ~ main.users
-                           * + added_too
-                           * + new.field
-                           * - alpha.beta.delta
-                           * - another_removal
-                           * ~ cow
+                       • Fields (+2/~1/-2)
+                         • main.users
+                           ＋ added_too
+                           ＋ new.field
+                           － alpha.beta.delta
+                           － another_removal
+                           ～ cow
                       """;
     assertEquals(expected, SlackNotificationClient.buildSummary(diff));
   }
@@ -272,15 +272,15 @@ class SlackNotificationClientTest {
                 .fieldName(List.of("cow")))));
 
     String expected = """
-                       * Streams (+1/-2)
-                         * + ns.foo
-                         * - deprecated
-                         * - schema1.also_removed
-                       * Fields (+2/~1/-0)
-                         * ~ main.users
-                           * + added_too
-                           * + new.field
-                           * ~ cow
+                       • Streams (+1/-2)
+                         ＋ ns.foo
+                         － deprecated
+                         － schema1.also_removed
+                       • Fields (+2/~1/-0)
+                         • main.users
+                           ＋ added_too
+                           ＋ new.field
+                           ～ cow
                       """;
     assertEquals(expected, SlackNotificationClient.buildSummary(diff));
   }

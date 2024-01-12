@@ -189,16 +189,16 @@ public class SlackNotificationClient extends NotificationClient {
         diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.REMOVE_STREAM)
             .sorted(Comparator.comparing(o -> StreamDescriptorUtils.buildFullyQualifiedName(o.getStreamDescriptor()))).toList();
     if (!newStreams.isEmpty() || !deletedStreams.isEmpty()) {
-      summaryBuilder.append(String.format(" * Streams (+%d/-%d)\n", newStreams.size(), deletedStreams.size()));
+      summaryBuilder.append(String.format(" • Streams (+%d/-%d)\n", newStreams.size(), deletedStreams.size()));
       for (var stream : newStreams) {
         StreamDescriptor descriptor = stream.getStreamDescriptor();
         String fullyQualifiedStreamName = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
-        summaryBuilder.append(String.format("   * + %s\n", fullyQualifiedStreamName));
+        summaryBuilder.append(String.format("   ＋ %s\n", fullyQualifiedStreamName));
       }
       for (var stream : deletedStreams) {
         StreamDescriptor descriptor = stream.getStreamDescriptor();
         String fullyQualifiedStreamName = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
-        summaryBuilder.append(String.format("   * - %s\n", fullyQualifiedStreamName));
+        summaryBuilder.append(String.format("   － %s\n", fullyQualifiedStreamName));
       }
     }
 
@@ -212,11 +212,11 @@ public class SlackNotificationClient extends NotificationClient {
           .filter(t -> t.getTransformType().equals(FieldTransform.TransformTypeEnum.REMOVE_FIELD)).count();
       var alteredFieldsCount = alteredStreams.stream().flatMap(t -> t.getUpdateStream().stream())
           .filter(t -> t.getTransformType().equals(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA)).count();
-      summaryBuilder.append(String.format(" * Fields (+%d/~%d/-%d)\n", newFieldCount, alteredFieldsCount, deletedFieldsCount));
+      summaryBuilder.append(String.format(" • Fields (+%d/~%d/-%d)\n", newFieldCount, alteredFieldsCount, deletedFieldsCount));
       for (var stream : alteredStreams) {
         StreamDescriptor descriptor = stream.getStreamDescriptor();
         String fullyQualifiedStreamName = StreamDescriptorUtils.buildFullyQualifiedName(descriptor);
-        summaryBuilder.append(String.format("   * ~ %s\n", fullyQualifiedStreamName));
+        summaryBuilder.append(String.format("   • %s\n", fullyQualifiedStreamName));
         for (var fieldChange : stream.getUpdateStream().stream().sorted((o1, o2) -> {
           if (o1.getTransformType().equals(o2.getTransformType())) {
             return StreamDescriptorUtils.buildFieldName(o1.getFieldName())
@@ -232,12 +232,12 @@ public class SlackNotificationClient extends NotificationClient {
           String fieldName = StreamDescriptorUtils.buildFieldName(fieldChange.getFieldName());
           String operation;
           switch (fieldChange.getTransformType()) {
-            case ADD_FIELD -> operation = "+";
-            case REMOVE_FIELD -> operation = "-";
-            case UPDATE_FIELD_SCHEMA -> operation = "~";
+            case ADD_FIELD -> operation = "＋";
+            case REMOVE_FIELD -> operation = "－";
+            case UPDATE_FIELD_SCHEMA -> operation = "～";
             default -> operation = "?";
           }
-          summaryBuilder.append(String.format("     * %s %s\n", operation, fieldName));
+          summaryBuilder.append(String.format("     %s %s\n", operation, fieldName));
         }
       }
     }
