@@ -614,7 +614,7 @@
   "connection.overview.graph.dataMoved.tooltipLabel": "{value, plural, one {<b>#</b> record} other {<b>#</b> records}} committed",
 
   "form.scheduleType": "Schedule type",
-  "form.scheduleType.message": "Set how often data should sync to the destination",
+  "form.scheduleType.message": "Choose how syncs for this connection should be scheduled",
   "form.frequency": "Replication frequency",
   "form.cronExpression": "Cron expression",
   "form.cronExpression.placeholder": "Cron expression",
@@ -622,10 +622,9 @@
   "form.cronExpression.underOneHourNotAllowed": "Interested in syncing more frequently than once an hour? <lnk>Contact us</lnk> to unlock this feature.",
   "form.cronExpression.message": "Enter a <lnk>Quartz cron expression</lnk> for when syncs should run (ex. \"0 0 12 * * ?\" => Will sync at 12:00 PM every day)",
   "form.frequency.placeholder": "Select a frequency",
-  "form.frequency.message": "Set how often data should sync to the destination",
+  "form.frequency.message": "Set how frequently the sync should execute",
 
   "connection.replicationFrequency": "Replication frequency*",
-  "connection.replicationFrequency.subtitle": "Set how often data should sync to the destination",
   "connection.normalization": "Normalization",
   "connection.normalization.successMessage": "Normalization settings were updated successfully!",
   "connection.normalization.errorMessage": "There was an error during updating your normalization settings",
