@@ -13,6 +13,7 @@ export const intentToRbacQuery = {
   UpdateWorkspace: { resourceType: "WORKSPACE", role: "ADMIN" },
   UpdateWorkspacePermissions: { resourceType: "WORKSPACE", role: "ADMIN" },
   ViewWorkspaceSettings: { resourceType: "WORKSPACE", role: "READER" },
+  BuyCredits: { resourceType: "WORKSPACE", role: "ADMIN" },
 
   // source
   CreateSource: { resourceType: "WORKSPACE", role: "EDITOR" },

@@ -1,6 +1,6 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import { ReactNode, useEffect } from "react";
-import { useForm, FormProvider, KeepStateOptions, DefaultValues, UseFormReturn } from "react-hook-form";
+import { useForm, FormProvider, KeepStateOptions, DefaultValues, UseFormReturn, UseFormProps } from "react-hook-form";
 import { SchemaOf } from "yup";
 
 import { FormChangeTracker } from "components/common/FormChangeTracker";
@@ -28,6 +28,8 @@ interface FormProps<T extends FormValues> {
   defaultValues: DefaultValues<T>;
   children?: ReactNode | undefined;
   trackDirtyChanges?: boolean;
+  mode?: UseFormProps<T>["mode"];
+  reValidateMode?: UseFormProps<T>["reValidateMode"];
   /**
    * Reinitialize form values when defaultValues changes. This will only work if the form is not dirty. Defaults to false.
    */
@@ -48,13 +50,16 @@ export const Form = <T extends FormValues>({
   schema,
   trackDirtyChanges = false,
   reinitializeDefaultValues = false,
+  mode = "onChange",
+  reValidateMode,
   disabled = false,
   dataTestId,
 }: FormProps<T>) => {
   const methods = useForm<T>({
     defaultValues,
     resolver: yupResolver(schema),
-    mode: "onChange",
+    mode,
+    reValidateMode,
   });
 
   useEffect(() => {

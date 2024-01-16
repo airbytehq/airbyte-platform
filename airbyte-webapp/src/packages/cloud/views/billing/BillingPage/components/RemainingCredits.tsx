@@ -17,6 +17,7 @@ import { useGetCloudWorkspace, useInvalidateCloudWorkspace } from "core/api/clou
 import { CloudWorkspaceRead } from "core/api/types/CloudApi";
 import { useAuthService } from "core/services/auth";
 import { links } from "core/utils/links";
+import { useIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
@@ -47,6 +48,7 @@ export const RemainingCredits: React.FC = () => {
   const invalidateCloudWorkspace = useInvalidateCloudWorkspace(currentWorkspace.workspaceId);
   const [isWaitingForCredits, setIsWaitingForCredits] = useState(false);
   const { openModal } = useModalService();
+  const canBuyCredits = useIntent("BuyCredits", { workspaceId: currentWorkspace.workspaceId });
 
   const isAutoRechargeEnabled = useExperiment("billing.autoRecharge", false);
 
@@ -126,7 +128,7 @@ export const RemainingCredits: React.FC = () => {
           <FlexContainer>
             <Button
               variant="dark"
-              disabled={!emailVerified}
+              disabled={!emailVerified || !canBuyCredits}
               type="button"
               size="xs"
               onClick={showCreditsModal}

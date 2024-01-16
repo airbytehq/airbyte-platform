@@ -7,6 +7,7 @@ import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 
 import { useCurrentWorkspace, useUpdateWorkspace } from "core/api";
+import { useIntent } from "core/utils/rbac";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -24,6 +25,7 @@ export const MetricsForm: React.FC = () => {
   const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
+  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId });
 
   const onSubmit = async ({ anonymousDataCollection }: MetricsFormValues) => {
     await updateWorkspace({
@@ -59,6 +61,7 @@ export const MetricsForm: React.FC = () => {
       onSubmit={onSubmit}
       onSuccess={onSuccess}
       onError={onError}
+      disabled={!canUpdateWorkspace}
     >
       <FormControl<MetricsFormValues>
         name="anonymousDataCollection"

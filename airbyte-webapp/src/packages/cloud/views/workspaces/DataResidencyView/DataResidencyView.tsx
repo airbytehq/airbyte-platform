@@ -15,6 +15,7 @@ import { Geography } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { trackError } from "core/utils/datadog";
 import { links } from "core/utils/links";
+import { useIntent } from "core/utils/rbac";
 import { useNotificationService } from "hooks/services/Notification";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 
@@ -41,6 +42,7 @@ export const DataResidencyView: React.FC = () => {
   const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
+  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId: workspace.workspaceId });
 
   useTrackPage(PageTrackingCodes.SETTINGS_DATA_RESIDENCY);
 
@@ -87,6 +89,7 @@ export const DataResidencyView: React.FC = () => {
             onSubmit={handleSubmit}
             onSuccess={onSuccess}
             onError={onError}
+            disabled={!canUpdateWorkspace}
           >
             <DataResidencyDropdown<DefaultDataResidencyFormValues>
               labelId="settings.defaultGeography"

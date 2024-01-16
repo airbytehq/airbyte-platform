@@ -11,6 +11,7 @@ import { useListUsers, useUserHook } from "core/api/cloud";
 import { WorkspaceUserRead } from "core/api/types/CloudApi";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
+import { useIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useModalService } from "hooks/services/Modal";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
@@ -22,6 +23,7 @@ const RemoveUserSection: React.VFC<{ workspaceId: string; email: string }> = ({ 
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { removeUserLogic } = useUserHook();
   const { isLoading, mutate: removeUser } = removeUserLogic;
+  const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId });
 
   const onRemoveUserButtonClick = () => {
     openConfirmationModal({
@@ -37,7 +39,12 @@ const RemoveUserSection: React.VFC<{ workspaceId: string; email: string }> = ({ 
   };
 
   return (
-    <Button variant="secondary" onClick={onRemoveUserButtonClick} isLoading={isLoading}>
+    <Button
+      variant="secondary"
+      onClick={onRemoveUserButtonClick}
+      isLoading={isLoading}
+      disabled={!canUpdateWorkspacePermissions}
+    >
       <FormattedMessage id="userSettings.user.remove" />
     </Button>
   );
@@ -46,6 +53,8 @@ const RemoveUserSection: React.VFC<{ workspaceId: string; email: string }> = ({ 
 const Header: React.VFC = () => {
   const { openModal } = useModalService();
   const { formatMessage } = useIntl();
+  const { workspaceId } = useCurrentWorkspace();
+  const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId });
 
   const onOpenInviteUsersModal = () =>
     openModal({
@@ -59,7 +68,12 @@ const Header: React.VFC = () => {
       <Heading as="h1" size="sm">
         <FormattedMessage id="userSettings.table.title" />
       </Heading>
-      <Button onClick={onOpenInviteUsersModal} icon={<Icon type="plus" />} data-testid="userSettings.button.addNewUser">
+      <Button
+        onClick={onOpenInviteUsersModal}
+        icon={<Icon type="plus" />}
+        data-testid="userSettings.button.addNewUser"
+        disabled={!canUpdateWorkspacePermissions}
+      >
         <FormattedMessage id="userSettings.button.addNewUser" />
       </Button>
     </div>

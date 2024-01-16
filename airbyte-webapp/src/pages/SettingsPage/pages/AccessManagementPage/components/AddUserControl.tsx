@@ -13,6 +13,7 @@ import { Text } from "components/ui/Text";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCreatePermission } from "core/api";
 import { OrganizationUserRead, PermissionCreate, PermissionType } from "core/api/types/AirbyteClient";
+import { useIntent } from "core/utils/rbac";
 
 import styles from "./AddUserControl.module.scss";
 
@@ -35,6 +36,7 @@ const AddUserForm: React.FC<{
   setIsEditMode: (mode: boolean) => void;
 }> = ({ usersToAdd, workspaceId, setIsEditMode }) => {
   const { mutateAsync: createPermission } = useCreatePermission();
+  const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId });
 
   const onSubmitClick = async (values: PermissionCreate) => {
     await createPermission(values).then(() => setIsEditMode(false));
@@ -62,6 +64,7 @@ const AddUserForm: React.FC<{
         workspaceId,
       }}
       onSubmit={onSubmitClick}
+      disabled={!canUpdateWorkspacePermissions}
     >
       <FlexContainer alignItems="baseline">
         <FormControl<PermissionCreate>
@@ -97,9 +100,10 @@ const AddUserForm: React.FC<{
 export const AddUserControl: React.FC<{ usersToAdd: OrganizationUserRead[] }> = ({ usersToAdd }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const workspaceId = useCurrentWorkspaceId();
+  const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId });
 
   return !isEditMode ? (
-    <Button onClick={() => setIsEditMode(true)} icon={<Icon type="plus" />}>
+    <Button onClick={() => setIsEditMode(true)} icon={<Icon type="plus" />} disabled={!canUpdateWorkspacePermissions}>
       <FormattedMessage id="role.addUser" />
     </Button>
   ) : (

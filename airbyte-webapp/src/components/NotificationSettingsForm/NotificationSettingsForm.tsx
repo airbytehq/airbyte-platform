@@ -1,11 +1,11 @@
-import { yupResolver } from "@hookform/resolvers/yup";
 import classNames from "classnames";
 import React from "react";
-import { FormProvider, useForm } from "react-hook-form";
+import { UseFormReturn } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
 import { SchemaOf } from "yup";
 
+import { Form } from "components/forms";
 import { FormDevTools } from "components/forms/FormDevTools";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Box } from "components/ui/Box";
@@ -15,6 +15,7 @@ import { useCurrentWorkspace, useTryNotificationWebhook } from "core/api";
 import { NotificationReadStatus, NotificationSettings, NotificationTrigger } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { isFulfilled } from "core/utils/promises";
+import { useIntent } from "core/utils/rbac";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
@@ -35,14 +36,13 @@ export const NotificationSettingsForm: React.FC = () => {
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
-  const methods = useForm<NotificationSettingsFormValues>({
-    defaultValues,
-    reValidateMode: "onChange",
-    mode: "onBlur",
-    resolver: yupResolver(validationSchema),
-  });
+  const { workspaceId } = useCurrentWorkspace();
+  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId });
 
-  const onSubmit = async (values: NotificationSettingsFormValues) => {
+  const onSubmit = async (
+    values: NotificationSettingsFormValues,
+    methods: UseFormReturn<NotificationSettingsFormValues>
+  ) => {
     // Additional validation of each webhook is done here to avoid spamming the API during the normal form validation cycle
     const webhookErrors = (
       await Promise.allSettled(
@@ -52,7 +52,8 @@ export const NotificationSettingsForm: React.FC = () => {
           // If Slack is not set as a notification type, or if the webhook has not changed, we can skip the validation
           if (
             !notification.slack ||
-            (!methods.formState.dirtyFields[key]?.slack && !methods.formState.dirtyFields[key]?.slackWebhookLink)
+            (!methods.getFieldState(`${key}.slack`).isDirty &&
+              !methods.getFieldState(`${key}.slackWebhookLink`).isDirty)
           ) {
             return { key, isValid: true };
           }
@@ -86,11 +87,22 @@ export const NotificationSettingsForm: React.FC = () => {
       );
     } else {
       // If there are no invalid webhooks we can actually update the workspace with the new notification settings
-      await updateEmailNotifications(values);
+      await updateEmailNotifications(values, methods);
     }
+
+    return {
+      resetValues: values,
+      keepStateOptions: {
+        keepErrors: true, // don't overwrite webhook errors set above
+        keepDirtyValues: true, // keep dirty fields and their values for the next save attempt
+      },
+    };
   };
 
-  const updateEmailNotifications = async (values: NotificationSettingsFormValues) => {
+  const updateEmailNotifications = async (
+    values: NotificationSettingsFormValues,
+    methods: UseFormReturn<NotificationSettingsFormValues>
+  ) => {
     const newNotificationSettings = formValuesToNotificationSettings(values);
     try {
       await updateNotificationSettings(newNotificationSettings);
@@ -115,61 +127,67 @@ export const NotificationSettingsForm: React.FC = () => {
   };
 
   return (
-    <FormProvider {...methods}>
-      <form onSubmit={methods.handleSubmit(onSubmit)} data-testid="notification-settings-form">
-        <FormDevTools />
-        <Box mb="xl">
-          <Text>
-            <FormattedMessage id="settings.notifications.description" />
-          </Text>
-        </Box>
-        <Box
-          mb="md"
-          className={classNames(styles.inputGrid, {
-            [styles["inputGrid--withoutEmail"]]: !emailNotificationsFeatureEnabled,
-          })}
-        >
-          <span />
-          {emailNotificationsFeatureEnabled && (
-            <Text align="center" color="grey">
-              <FormattedMessage id="settings.notifications.email" />
-            </Text>
-          )}
+    <Form<NotificationSettingsFormValues>
+      onSubmit={onSubmit}
+      dataTestId="notification-settings-form"
+      schema={validationSchema}
+      defaultValues={defaultValues}
+      reValidateMode="onChange"
+      mode="onBlur"
+      disabled={!canUpdateWorkspace}
+    >
+      <FormDevTools />
+      <Box mb="xl">
+        <Text>
+          <FormattedMessage id="settings.notifications.description" />
+        </Text>
+      </Box>
+      <Box
+        mb="md"
+        className={classNames(styles.inputGrid, {
+          [styles["inputGrid--withoutEmail"]]: !emailNotificationsFeatureEnabled,
+        })}
+      >
+        <span />
+        {emailNotificationsFeatureEnabled && (
           <Text align="center" color="grey">
-            <FormattedMessage id="settings.notifications.webhook" />
+            <FormattedMessage id="settings.notifications.email" />
           </Text>
-          <Text color="grey">
-            <FormattedMessage id="settings.notifications.webhookUrl" />
-          </Text>
-          <span />
-        </Box>
-        <div
-          className={classNames(styles.inputGrid, {
-            [styles["inputGrid--withoutEmail"]]: !emailNotificationsFeatureEnabled,
-          })}
-        >
-          <NotificationItemField name="sendOnFailure" />
-          <NotificationItemField name="sendOnSuccess" />
-          <NotificationItemField name="sendOnConnectionUpdate" />
-          <NotificationItemField name="sendOnConnectionUpdateActionRequired" emailNotificationRequired />
-          <NotificationItemField name="sendOnSyncDisabledWarning" />
-          <NotificationItemField name="sendOnSyncDisabled" emailNotificationRequired />
-          {breakingChangeNotificationsExperimentEnabled && (
-            <>
-              <NotificationItemField name="sendOnBreakingChangeWarning" slackNotificationUnsupported />
-              <NotificationItemField
-                name="sendOnBreakingChangeSyncsDisabled"
-                emailNotificationRequired
-                slackNotificationUnsupported
-              />
-            </>
-          )}
-        </div>
-        <Box mt="lg">
-          <FormSubmissionButtons submitKey="form.saveChanges" />
-        </Box>
-      </form>
-    </FormProvider>
+        )}
+        <Text align="center" color="grey">
+          <FormattedMessage id="settings.notifications.webhook" />
+        </Text>
+        <Text color="grey">
+          <FormattedMessage id="settings.notifications.webhookUrl" />
+        </Text>
+        <span />
+      </Box>
+      <div
+        className={classNames(styles.inputGrid, {
+          [styles["inputGrid--withoutEmail"]]: !emailNotificationsFeatureEnabled,
+        })}
+      >
+        <NotificationItemField name="sendOnFailure" />
+        <NotificationItemField name="sendOnSuccess" />
+        <NotificationItemField name="sendOnConnectionUpdate" />
+        <NotificationItemField name="sendOnConnectionUpdateActionRequired" emailNotificationRequired />
+        <NotificationItemField name="sendOnSyncDisabledWarning" />
+        <NotificationItemField name="sendOnSyncDisabled" emailNotificationRequired />
+        {breakingChangeNotificationsExperimentEnabled && (
+          <>
+            <NotificationItemField name="sendOnBreakingChangeWarning" slackNotificationUnsupported />
+            <NotificationItemField
+              name="sendOnBreakingChangeSyncsDisabled"
+              emailNotificationRequired
+              slackNotificationUnsupported
+            />
+          </>
+        )}
+      </div>
+      <Box mt="lg">
+        <FormSubmissionButtons submitKey="form.saveChanges" />
+      </Box>
+    </Form>
   );
 };
 
