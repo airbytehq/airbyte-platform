@@ -60,7 +60,7 @@ public class CustomerioNotificationClient extends NotificationClient {
   private static final String AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID = "8";
   private static final String BREAKING_CHANGE_WARNING_BROADCAST_ID = "32";
   private static final String BREAKING_CHANGE_SYNCS_DISABLED_BROADCAST_ID = "33";
-  private static final String SCHEMA_CHANGE_TRANSACTION_ID = "23";
+  private static final String SCHEMA_CHANGE_TRANSACTION_ID = "25";
   private static final String SCHEMA_BREAKING_CHANGE_TRANSACTION_ID = "24";
 
   private static final String SYNC_SUCCEED_MESSAGE_ID = "18";
