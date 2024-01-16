@@ -299,6 +299,10 @@ public class KubeProcessFactory implements ProcessFactory {
   }
 
   private boolean shouldInjectAwsSecretsToConnectorPods(final UUID workspaceId) {
+    if (workspaceId == null) {
+      return false;
+    }
+
     return this.featureFlagClient.boolVariation(InjectAwsSecretsToConnectorPods.INSTANCE, new Workspace(workspaceId));
   }
 
