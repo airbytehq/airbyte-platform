@@ -213,3 +213,11 @@ data class ImageVersion(override val key: String) : Context {
 data class Geography(override val key: String) : Context {
   override val kind: String = "geography"
 }
+
+data class Priority(override val key: String) : Context {
+  override val kind: String = "priority"
+
+  companion object {
+    val HIGH_PRIORITY = "high"
+  }
+}

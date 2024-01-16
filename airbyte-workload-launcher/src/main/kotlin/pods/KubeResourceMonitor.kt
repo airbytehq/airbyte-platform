@@ -22,6 +22,7 @@ import io.micronaut.context.annotation.Value
 import io.micronaut.context.env.Environment
 import io.micronaut.scheduling.annotation.Scheduled
 import io.temporal.worker.WorkerFactory
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.time.Instant
@@ -38,7 +39,7 @@ open class KubeResourceMonitor(
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String,
   @Value("\${airbyte.kubernetes.pending-time-limit-sec}") private val pendingTimeLimitSec: Long,
   private val customMetricPublisher: CustomMetricPublisher,
-  private val workerFactory: WorkerFactory,
+  @Named("workerFactory") private val workerFactory: WorkerFactory,
 ) {
   var isPollingSuspended: Boolean = false
 

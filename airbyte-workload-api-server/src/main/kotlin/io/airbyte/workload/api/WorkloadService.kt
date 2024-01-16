@@ -10,6 +10,9 @@ import io.airbyte.config.WorkloadType
 import io.airbyte.config.messages.LauncherInputMessage
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Geography
+import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.Priority
+import io.airbyte.featureflag.Priority.Companion.HIGH_PRIORITY
 import io.airbyte.featureflag.WorkloadApiRouting
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
@@ -45,7 +48,7 @@ open class WorkloadService(
   ) {
     // TODO feature flag geography
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadId) as Map<String, Any>?)
-    val queue = getQueueName(geography)
+    val queue = getQueueName(geography, workloadType)
     // TODO: We could pass through created_at, but I'm use using system time for now.
     // This may get just replaced by tracing at some point if we manage to set it up properly.
     val startTimeMs = System.currentTimeMillis()
@@ -62,8 +65,15 @@ open class WorkloadService(
     )
   }
 
-  private fun getQueueName(geography: String): String {
+  private fun getQueueName(
+    geography: String,
+    workloadType: WorkloadType,
+  ): String {
     val context = Geography(geography)
-    return featureFlagClient.stringVariation(WorkloadApiRouting, context)
+    return if (workloadType == WorkloadType.SYNC) {
+      featureFlagClient.stringVariation(WorkloadApiRouting, context)
+    } else {
+      featureFlagClient.stringVariation(WorkloadApiRouting, Multi(listOf(context, Priority(HIGH_PRIORITY))))
+    }
   }
 }
