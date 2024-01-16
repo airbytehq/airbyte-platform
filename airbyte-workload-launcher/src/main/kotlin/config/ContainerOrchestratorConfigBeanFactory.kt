@@ -257,9 +257,12 @@ class ContainerOrchestratorConfigBeanFactory {
   @Singleton
   @Named("checkOrchestratorReqs")
   fun check(): ResourceRequirements {
+    // TODO: Make these env-driven
     return ResourceRequirements()
-      .withMemoryRequest("500Mi") // TODO: Tweak this ideally to something smaller
-      .withCpuRequest("0.5") // TODO: Tweak this to ideally something smaller
+      .withMemoryRequest("500Mi")
+      .withMemoryLimit("500Mi")
+      .withCpuRequest("2")
+      .withCpuLimit("2")
   }
 
   companion object {
