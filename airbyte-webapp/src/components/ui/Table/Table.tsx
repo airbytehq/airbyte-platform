@@ -31,7 +31,7 @@ export interface TableProps<T> {
   columnVisibility?: VisibilityState;
   sorting?: boolean;
   getRowClassName?: (data: T) => string | undefined;
-  initialSortBy?: [{ id: string; desc: boolean }];
+  initialSortBy?: Array<{ id: string; desc: boolean }>;
   /**
    * If true, the table will be rendered using react-virtuoso. Defaults to false.
    */

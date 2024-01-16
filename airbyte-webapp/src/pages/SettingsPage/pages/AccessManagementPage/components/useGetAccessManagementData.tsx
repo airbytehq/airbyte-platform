@@ -147,7 +147,7 @@ export const useNextGetWorkspaceAccessUsers = (): NextAccessUsers => {
   const orgUsersToAdd = organizationUsers
     .filter(
       (user) =>
-        user.permissionType !== "organization_member" &&
+        user.permissionType === "organization_member" &&
         !workspaceUsers.find((workspaceUser) => workspaceUser.userId === user.userId)
     )
     .map((orgUser) => ({
@@ -165,4 +165,39 @@ export const useGetOrganizationAccessUsers = (): AccessUsers => {
   return {
     organization: { users: organizationUsers, usersToAdd: [] },
   };
+};
+
+export const getHighestPermissionType = (
+  user: NextAccessUserRead,
+  resourceType: "workspace" | "organization" | "instance"
+) => {
+  const orgPermissionType = user.organizationPermission ? user.organizationPermission.permissionType : undefined;
+  const workspacePermissionType = user.workspacePermission ? user.workspacePermission.permissionType : undefined;
+
+  switch (resourceType) {
+    case "instance":
+      return undefined;
+    case "organization":
+      switch (orgPermissionType) {
+        case "organization_admin":
+          return "admin";
+        case "organization_editor":
+          return "editor";
+        case "organization_reader":
+          return "reader";
+        default:
+          return "member";
+      }
+    default:
+      switch (true) {
+        case workspacePermissionType === "workspace_admin" || orgPermissionType === "organization_admin":
+          return "admin";
+        case workspacePermissionType === "workspace_editor" || orgPermissionType === "organization_editor":
+          return "editor";
+        case workspacePermissionType === "workspace_reader" || orgPermissionType === "organization_reader":
+          return "reader";
+        default:
+          return "member";
+      }
+  }
 };

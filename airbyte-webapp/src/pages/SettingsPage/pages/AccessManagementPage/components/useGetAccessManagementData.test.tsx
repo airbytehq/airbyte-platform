@@ -71,4 +71,18 @@ describe("useNextGetWorkspaceAccessUsers", () => {
     expect(result.current.workspace?.users[0].workspacePermission).toBeUndefined();
     expect(result.current.workspace?.users[0].organizationPermission?.permissionType).toEqual("organization_admin");
   });
+  it("should only list organization_members for usersToAdd", () => {
+    mockedUseListUsersInOrganization.mockImplementationOnce(() => {
+      return mockOrganizationUserReadList;
+    });
+    mockedUseListUsersInWorkspace.mockImplementationOnce(() => {
+      return mockWorkspaceUserReadList;
+    });
+
+    const { result } = renderHook(() => useNextGetWorkspaceAccessUsers());
+
+    expect(result.current.workspace).toBeDefined();
+    expect(result.current.workspace?.usersToAdd).toHaveLength(1);
+    expect(result.current.workspace?.usersToAdd[0].permissionType).toEqual("organization_member");
+  });
 });
