@@ -40,6 +40,7 @@ class PayloadKubeInputMapper(
   @Named("checkOrchestratorReqs") private val checkOrchestratorReqs: ResourceRequirements,
 ) {
   fun toKubeInput(
+    workloadId: String,
     input: ReplicationInput,
     sharedLabels: Map<String, String>,
   ): ReplicationOrchestratorKubeInput {
@@ -58,7 +59,7 @@ class PayloadKubeInputMapper(
     val orchestratorReqs = input.getOrchestratorResourceReqs()
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs)
 
-    val fileMap = buildFileMap(input, input.jobRunConfig, orchestratorPodInfo)
+    val fileMap = buildFileMap(workloadId, input, input.jobRunConfig, orchestratorPodInfo)
 
     return ReplicationOrchestratorKubeInput(
       labeler.getReplicationOrchestratorLabels() + sharedLabels,
@@ -73,6 +74,7 @@ class PayloadKubeInputMapper(
   }
 
   fun toKubeInput(
+    workloadId: String,
     input: CheckConnectionInput,
     sharedLabels: Map<String, String>,
   ): CheckOrchestratorKubeInput {
@@ -91,7 +93,7 @@ class PayloadKubeInputMapper(
 
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), checkWorkerConfigs)
 
-    val fileMap = buildFileMap(input, input.jobRunConfig, orchestratorPodInfo)
+    val fileMap = buildFileMap(workloadId, input, input.jobRunConfig, orchestratorPodInfo)
 
     return CheckOrchestratorKubeInput(
       labeler.getCheckOrchestratorLabels() + sharedLabels,
@@ -118,6 +120,7 @@ class PayloadKubeInputMapper(
   // TODO: This is the way we pass data into the pods we launch. This should be extracted to
   //  some shared interface between parent / child to make it less brittle.
   private fun buildFileMap(
+    workloadId: String,
     input: ReplicationInput,
     jobRunConfig: JobRunConfig,
     kubePodInfo: KubePodInfo,
@@ -126,12 +129,14 @@ class PayloadKubeInputMapper(
       mapOf(
         OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
         OrchestratorConstants.INIT_FILE_APPLICATION to REPLICATION,
+        OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
         INIT_FILE_SOURCE_LAUNCHER_CONFIG to serializer.serialize(input.sourceLauncherConfig),
         INIT_FILE_DESTINATION_LAUNCHER_CONFIG to serializer.serialize(input.destinationLauncherConfig),
       )
   }
 
   private fun buildFileMap(
+    workloadId: String,
     input: CheckConnectionInput,
     jobRunConfig: JobRunConfig,
     kubePodInfo: KubePodInfo,
@@ -140,6 +145,7 @@ class PayloadKubeInputMapper(
       mapOf(
         OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
         OrchestratorConstants.INIT_FILE_APPLICATION to CHECK_APPLICATION_NAME,
+        OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
       )
   }
 

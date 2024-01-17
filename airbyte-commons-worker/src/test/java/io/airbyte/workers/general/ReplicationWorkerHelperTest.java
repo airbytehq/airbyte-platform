@@ -39,7 +39,6 @@ import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker;
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
-import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -74,8 +73,9 @@ class ReplicationWorkerHelperTest {
         mock(ThreadedTimeTracker.class),
         mock(VoidCallable.class),
         mock(WorkloadApi.class),
-        new WorkloadIdGenerator(),
-        false, analyticsMessageTracker));
+        false,
+        analyticsMessageTracker,
+        Optional.empty()));
   }
 
   @Test

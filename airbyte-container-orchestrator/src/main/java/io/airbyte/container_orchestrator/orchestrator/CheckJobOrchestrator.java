@@ -58,9 +58,11 @@ public class CheckJobOrchestrator implements JobOrchestrator<CheckConnectionInpu
   private static final Logger LOGGER = LoggerFactory.getLogger(CheckJobOrchestrator.class);
   private final CheckJobOrchestratorDataClass data;
   private final ExecutorService heartbeatExecutorService;
+  private final Path configDir;
 
-  public CheckJobOrchestrator(final CheckJobOrchestratorDataClass data) {
+  public CheckJobOrchestrator(final String configDir, final CheckJobOrchestratorDataClass data) {
     this.data = data;
+    this.configDir = Path.of(configDir);
     this.heartbeatExecutorService = Executors.newSingleThreadExecutor(r -> {
       Thread thread = new Thread(r, "check-job-orchestrator-heartbeat");
       thread.setDaemon(true);
@@ -86,10 +88,7 @@ public class CheckJobOrchestrator implements JobOrchestrator<CheckConnectionInpu
     // inputHydrator, get this verified.
     // Compare this with CheckConnectionActivityImpl
     final StandardCheckConnectionInput connectionConfiguration = input.getConnectionConfiguration();
-    final String workloadId =
-        data.workloadIdGenerator().generateCheckWorkloadId(connectionConfiguration.getActorContext().getActorDefinitionId(),
-            input.getJobRunConfig().getJobId(),
-            Math.toIntExact(input.getJobRunConfig().getAttemptId()));
+    final String workloadId = JobOrchestrator.workloadId(configDir);
     final Path jobRoot = TemporalUtils.getJobRoot(data.configs().getWorkspaceRoot(), workloadId);
 
     try {

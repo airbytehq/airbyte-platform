@@ -57,13 +57,13 @@ import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageE
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workers.process.IntegrationLauncher;
-import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.micronaut.context.event.ApplicationEventListener;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
@@ -178,8 +178,9 @@ public abstract class ReplicationWorkerPerformanceTest {
 
     final ReplicationWorkerHelper replicationWorkerHelper =
         new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, dstNamespaceMapper, messageTracker, syncPersistence,
-            replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), () -> {}, mock(WorkloadApi.class),
-            new WorkloadIdGenerator(), false, analyticsMessageTracker);
+            replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), () -> {}, mock(WorkloadApi.class), false,
+            analyticsMessageTracker,
+            Optional.empty());
 
     final var worker = getReplicationWorker("1", 0,
         versionedAbSource,

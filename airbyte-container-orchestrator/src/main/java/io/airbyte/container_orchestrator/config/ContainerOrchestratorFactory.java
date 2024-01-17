@@ -130,7 +130,7 @@ class ContainerOrchestratorFactory {
           replicationWorkerFactory, asyncStateManager, workloadApi, workloadIdGenerator, workloadEnabled, jobOutputDocStore);
       case NormalizationLauncherWorker.NORMALIZATION -> new NormalizationJobOrchestrator(envConfigs, processFactory, jobRunConfig, asyncStateManager);
       case DbtLauncherWorker.DBT -> new DbtJobOrchestrator(envConfigs, workerConfigsProvider, processFactory, jobRunConfig, asyncStateManager);
-      case CHECK_APPLICATION_NAME -> new CheckJobOrchestrator(dataClass);
+      case CHECK_APPLICATION_NAME -> new CheckJobOrchestrator(configDir, dataClass);
       case AsyncOrchestratorPodProcess.NO_OP -> new NoOpOrchestrator();
       default -> throw new IllegalStateException("Could not find job orchestrator for application: " + application);
     };

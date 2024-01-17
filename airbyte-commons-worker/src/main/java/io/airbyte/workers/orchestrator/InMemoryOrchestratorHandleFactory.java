@@ -14,6 +14,7 @@ import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.micronaut.context.annotation.Requires;
 import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Singleton;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
@@ -39,13 +40,12 @@ public class InMemoryOrchestratorHandleFactory implements OrchestratorHandleFact
                                                                                         JobRunConfig jobRunConfig,
                                                                                         ReplicationInput replicationInput,
                                                                                         final Supplier<ActivityExecutionContext> activityContext) {
-    return () -> replicationWorkerFactory.create(replicationInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, /*
-                                                                                                                                   * this is used to
-                                                                                                                                   * track async
-                                                                                                                                   * state, but we
-                                                                                                                                   * don't do that
-                                                                                                                                   * in-memory
-                                                                                                                                   */() -> {});
+    return () -> replicationWorkerFactory.create(replicationInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig,
+        /*
+         * this is used to track async state, but we don't do that in-memory
+         */
+        () -> {},
+        Optional.empty());
   }
 
 }

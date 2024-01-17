@@ -52,7 +52,6 @@ import io.airbyte.workers.internal.bookkeeping.getTotalStats
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
-import io.airbyte.workers.workload.WorkloadIdGenerator
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -78,9 +77,9 @@ class ReplicationWorkerHelper(
   private val timeTracker: ThreadedTimeTracker,
   private val onReplicationRunning: VoidCallable,
   private val workloadApi: WorkloadApi,
-  private val workloadIdGenerator: WorkloadIdGenerator,
   private val workloadEnabled: Boolean,
   private val analyticsMessageTracker: AnalyticsMessageTracker,
+  private val workloadId: Optional<String>,
 ) {
   private val metricClient = MetricClientFactory.getMetricClient()
   private val metricAttrs: MutableList<MetricAttribute> = mutableListOf()
@@ -113,10 +112,13 @@ class ReplicationWorkerHelper(
   }
 
   fun getWorkloadStatusHeartbeat(): Runnable {
-    return getWorkloadStatusHeartbeat(Duration.ofSeconds(replicationFeatureFlags.workloadHeartbeatRate.toLong()))
+    return getWorkloadStatusHeartbeat(Duration.ofSeconds(replicationFeatureFlags.workloadHeartbeatRate.toLong()), workloadId)
   }
 
-  private fun getWorkloadStatusHeartbeat(heartbeatInterval: Duration): Runnable {
+  private fun getWorkloadStatusHeartbeat(
+    heartbeatInterval: Duration,
+    workloadId: Optional<String>,
+  ): Runnable {
     return Runnable {
       logger.info { "Starting workload heartbeat" }
       var lastSuccessfulHeartbeat: Instant = Instant.now()
@@ -125,14 +127,11 @@ class ReplicationWorkerHelper(
         Thread.sleep(heartbeatInterval.toMillis())
         ctx?.let {
           try {
+            if (workloadId.isEmpty) {
+              throw RuntimeException("workloadId should always be present")
+            }
             workloadApi.workloadHeartbeat(
-              WorkloadHeartbeatRequest(
-                workloadIdGenerator.generateSyncWorkloadId(
-                  it.connectionId,
-                  it.jobId,
-                  it.attempt,
-                ),
-              ),
+              WorkloadHeartbeatRequest(workloadId.get()),
             )
             lastSuccessfulHeartbeat = Instant.now()
           }

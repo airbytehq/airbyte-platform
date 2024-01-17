@@ -16,6 +16,7 @@ import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.checkKubeInp
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.launcherInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.replKubeInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.sharedLabels
+import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.workloadId
 import io.fabric8.kubernetes.api.model.Pod
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
@@ -70,9 +71,9 @@ class KubePodClientTest {
 
     every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
 
-    every { mapper.toKubeInput(replInput, sharedLabels) } returns replKubeInput
+    every { mapper.toKubeInput(workloadId, replInput, sharedLabels) } returns replKubeInput
 
-    every { mapper.toKubeInput(checkInput, sharedLabels) } returns checkKubeInput
+    every { mapper.toKubeInput(workloadId, checkInput, sharedLabels) } returns checkKubeInput
 
     every { launcher.create(any(), any(), any(), any(), any(), any()) } returns pod
     every { launcher.waitForPodInit(any(), any()) } returns Unit
@@ -109,13 +110,13 @@ class KubePodClientTest {
   @Test
   fun `launchReplication sets pass-through labels for propagation to source and destination`() {
     every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
-    every { mapper.toKubeInput(replInput, sharedLabels) } returns replKubeInput
+    every { mapper.toKubeInput(workloadId, replInput, sharedLabels) } returns replKubeInput
 
     client.launchReplication(replInput, launcherInput)
 
     val inputWithLabels = replInput.setDestinationLabels(sharedLabels).setSourceLabels(sharedLabels)
 
-    verify { mapper.toKubeInput(inputWithLabels, sharedLabels) }
+    verify { mapper.toKubeInput(workloadId, inputWithLabels, sharedLabels) }
   }
 
   @Test
@@ -188,13 +189,13 @@ class KubePodClientTest {
   @Test
   fun `launchCheck sets pass-through labels for propagation to connector`() {
     every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
-    every { mapper.toKubeInput(checkInput, sharedLabels) } returns checkKubeInput
+    every { mapper.toKubeInput(workloadId, checkInput, sharedLabels) } returns checkKubeInput
 
     client.launchCheck(checkInput, launcherInput)
 
     val inputWithLabels = checkInput.setConnectorLabels(sharedLabels)
 
-    verify { mapper.toKubeInput(inputWithLabels, sharedLabels) }
+    verify { mapper.toKubeInput(workloadId, inputWithLabels, sharedLabels) }
   }
 
   @Test

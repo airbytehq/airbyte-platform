@@ -28,6 +28,7 @@ import io.mockk.mockkStatic
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.util.Optional
+import java.util.UUID
 
 class PayloadKubeInputMapperTest {
   @ParameterizedTest
@@ -85,8 +86,8 @@ class PayloadKubeInputMapperTest {
     every { labeler.getReplicationOrchestratorLabels() } returns orchestratorLabels
     every { labeler.getSourceLabels() } returns sourceLabels
     every { labeler.getDestinationLabels() } returns destinationLabels
-
-    val result = mapper.toKubeInput(input, sharedLabels)
+    val workloadId = UUID.randomUUID().toString()
+    val result = mapper.toKubeInput(workloadId, input, sharedLabels)
 
     assert(result.orchestratorLabels == orchestratorLabels + sharedLabels)
     assert(result.sourceLabels == sourceLabels + sharedLabels)
@@ -103,6 +104,7 @@ class PayloadKubeInputMapperTest {
           INIT_FILE_SOURCE_LAUNCHER_CONFIG to mockSerializedOutput,
           INIT_FILE_DESTINATION_LAUNCHER_CONFIG to mockSerializedOutput,
           KUBE_POD_INFO to mockSerializedOutput,
+          OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
         ),
     )
     assert(result.resourceReqs == resourceReqs)
@@ -160,8 +162,8 @@ class PayloadKubeInputMapperTest {
     val sharedLabels = mapOf("pass through" to "labels")
     every { labeler.getCheckOrchestratorLabels() } returns orchestratorLabels
     every { labeler.getCheckConnectorLabels() } returns connectorLabels
-
-    val result = mapper.toKubeInput(input, sharedLabels)
+    val workloadId = UUID.randomUUID().toString()
+    val result = mapper.toKubeInput(workloadId, input, sharedLabels)
 
     assert(result.orchestratorLabels == orchestratorLabels + sharedLabels)
     assert(result.connectorLabels == connectorLabels + sharedLabels)
@@ -175,6 +177,7 @@ class PayloadKubeInputMapperTest {
           OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to mockSerializedOutput,
           OrchestratorConstants.INIT_FILE_INPUT to mockSerializedOutput,
           KUBE_POD_INFO to mockSerializedOutput,
+          OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
         ),
     )
     assert(result.resourceReqs == checkResourceReqs)

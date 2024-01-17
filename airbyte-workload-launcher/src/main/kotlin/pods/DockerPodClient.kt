@@ -46,7 +46,7 @@ class DockerPodClient(
         imageName = orchestratorInfo.image,
         mutex = launcherInput.mutexKey,
         envMap = orchestratorEnvMap,
-        fileMap = buildFileMap(replicationInput, replicationInput.jobRunConfig),
+        fileMap = buildFileMap(launcherInput.workloadId, replicationInput, replicationInput.jobRunConfig),
         orchestratorReqs = replicationInput.getOrchestratorResourceReqs(),
       )
     podLauncher.launch(podConfig)
@@ -67,6 +67,7 @@ class DockerPodClient(
   // TODO: This is the way we pass data into the pods we launch. This should be extracted to
   //  some shared interface between parent / child to make it less brittle.
   private fun buildFileMap(
+    workloadId: String,
     input: ReplicationInput,
     jobRunConfig: JobRunConfig,
   ): Map<String, String> {
@@ -83,6 +84,7 @@ class DockerPodClient(
         ),
       OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
       OrchestratorConstants.INIT_FILE_APPLICATION to ReplicationLauncherWorker.REPLICATION,
+      OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
       ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG to serializer.serialize(input.sourceLauncherConfig),
       ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG to serializer.serialize(input.destinationLauncherConfig),
     )

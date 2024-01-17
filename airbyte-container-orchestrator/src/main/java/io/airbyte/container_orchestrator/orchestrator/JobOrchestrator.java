@@ -7,6 +7,7 @@ package io.airbyte.container_orchestrator.orchestrator;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.workers.process.KubePodProcess;
 import io.airbyte.workers.sync.OrchestratorConstants;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -51,6 +52,15 @@ public interface JobOrchestrator<INPUT> {
 
   static <T> T readAndDeserializeFile(final Path path, final Class<T> type) throws IOException {
     return Jsons.deserialize(Files.readString(path), type);
+  }
+
+  static String workloadId(final Path configDir) throws IOException {
+    final Path workloadIdFile = configDir.resolve(OrchestratorConstants.WORKLOAD_ID_FILE);
+    if (Files.exists(workloadIdFile)) {
+      return Files.readString(workloadIdFile);
+    } else {
+      throw new FileNotFoundException("Workload file not found at path " + workloadIdFile);
+    }
   }
 
 }

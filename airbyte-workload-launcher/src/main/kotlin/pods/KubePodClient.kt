@@ -49,7 +49,7 @@ class KubePodClient(
         .setSourceLabels(sharedLabels)
         .setDestinationLabels(sharedLabels)
 
-    val kubeInput = mapper.toKubeInput(inputWithLabels, sharedLabels)
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, inputWithLabels, sharedLabels)
 
     val pod: Pod
     try {
@@ -149,7 +149,7 @@ class KubePodClient(
 
     val inputWithLabels = checkInput.setConnectorLabels(sharedLabels)
 
-    val kubeInput = mapper.toKubeInput(inputWithLabels, sharedLabels)
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, inputWithLabels, sharedLabels)
 
     val extraEnv = checkEnvVar.getEnvMap()
 
