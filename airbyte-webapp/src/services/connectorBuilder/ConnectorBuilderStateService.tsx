@@ -33,6 +33,7 @@ import {
   useUpdateBuilderProject,
   useBuilderResolvedManifest,
   useBuilderResolvedManifestSuspense,
+  useCurrentWorkspace,
 } from "core/api";
 import { useIsForeignWorkspace } from "core/api/cloud";
 import { SourceDefinitionIdBody } from "core/api/types/AirbyteClient";
@@ -44,6 +45,7 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { FeatureItem, useFeature } from "core/services/features";
 import { Blocker, useBlocker } from "core/services/navigation";
 import { removeEmptyProperties } from "core/utils/form";
+import { useIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { setDefaultValues } from "views/Connector/ConnectorForm/useBuildForm";
 
@@ -58,11 +60,14 @@ export type BuilderView = "global" | "inputs" | number;
 
 export type SavingState = "loading" | "invalid" | "saved" | "error" | "readonly";
 
+export type ConnectorBuilderPermission = "write" | "readOnly" | "adminReadOnly";
+
 interface FormStateContext {
   jsonManifest: DeclarativeComponentSchema;
   yamlEditorIsMounted: boolean;
   yamlIsValid: boolean;
   savingState: SavingState;
+  permission: ConnectorBuilderPermission;
   blockedOnInvalidState: boolean;
   projectId: string;
   currentProject: BuilderProject;
@@ -111,22 +116,17 @@ export const ConnectorBuilderMainRHFContext = React.createContext<UseFormReturn<
 
 export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const restrictAdminInForeignWorkspace = useFeature(FeatureItem.RestrictAdminInForeignWorkspace);
-  if (restrictAdminInForeignWorkspace) {
-    return <RestrictedConnectorBuilderFormStateProvider>{children}</RestrictedConnectorBuilderFormStateProvider>;
-  }
-  return (
-    <InternalConnectorBuilderFormStateProvider readOnlyMode={false}>
-      {children}
-    </InternalConnectorBuilderFormStateProvider>
-  );
-};
-
-export const RestrictedConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({
-  children,
-}) => {
+  const { workspaceId } = useCurrentWorkspace();
+  const canUpdateConnector = useIntent("UpdateCustomConnector", { workspaceId });
   const isForeignWorkspace = useIsForeignWorkspace();
+
+  let permission: ConnectorBuilderPermission = "readOnly";
+  if (canUpdateConnector) {
+    permission = restrictAdminInForeignWorkspace && isForeignWorkspace ? "adminReadOnly" : "write";
+  }
+
   return (
-    <InternalConnectorBuilderFormStateProvider readOnlyMode={isForeignWorkspace}>
+    <InternalConnectorBuilderFormStateProvider permission={permission}>
       {children}
     </InternalConnectorBuilderFormStateProvider>
   );
@@ -139,8 +139,8 @@ function convertJsonToYaml(json: object): string {
 }
 
 export const InternalConnectorBuilderFormStateProvider: React.FC<
-  React.PropsWithChildren<{ readOnlyMode: boolean }>
-> = ({ children, readOnlyMode }) => {
+  React.PropsWithChildren<{ permission: ConnectorBuilderPermission }>
+> = ({ children, permission }) => {
   const { projectId, builderProject, updateProject, updateError } = useInitializedBuilderProject();
 
   const currentProject: BuilderProject = useMemo(
@@ -337,13 +337,13 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     persistedState,
     displayedVersion,
     updateError,
-    readOnlyMode
+    permission
   );
 
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const triggerUpdate = useCallback(async () => {
-    if (readOnlyMode) {
+    if (permission !== "write") {
       // do not save the project if the user is not a member of the workspace to allow testing with connectors without changing them
       return;
     }
@@ -358,7 +358,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     const newProject: BuilderProjectWithManifest = { name, manifest: jsonManifest };
     await updateProject(newProject);
     setPersistedState(newProject);
-  }, [readOnlyMode, name, formValuesValid, jsonManifest, updateProject]);
+  }, [permission, name, formValuesValid, jsonManifest, updateProject]);
 
   useDebounce(
     () => {
@@ -383,6 +383,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     yamlEditorIsMounted,
     yamlIsValid,
     savingState,
+    permission,
     blockedOnInvalidState,
     projectId,
     currentProject,
@@ -522,7 +523,7 @@ function getSavingState(
   persistedState: { name: string; manifest?: DeclarativeComponentSchema },
   displayedVersion: number | undefined,
   updateError: Error | null,
-  readOnlyMode: boolean
+  permission: ConnectorBuilderPermission
 ): SavingState {
   if (updateError) {
     return "error";
@@ -536,7 +537,7 @@ function getSavingState(
   if (mode === "yaml" && !yamlIsValid) {
     return "invalid";
   }
-  if (readOnlyMode) {
+  if (permission !== "write") {
     return "readonly";
   }
   const currentStateIsPersistedState = persistedState.manifest === currentJsonManifest && persistedState.name === name;

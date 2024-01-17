@@ -16,10 +16,11 @@ import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
-import { useListBuilderProjects } from "core/api";
+import { useCurrentWorkspace, useListBuilderProjects } from "core/api";
 import { ConnectorManifest } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
+import { useIntent } from "core/utils/rbac";
 import { useNotificationService } from "hooks/services/Notification";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
 
@@ -45,6 +46,9 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const { convertToBuilderFormValues } = useManifestToBuilderForm();
   const [importYamlLoading, setImportYamlLoading] = useState(false);
+
+  const { workspaceId } = useCurrentWorkspace();
+  const canCreateConnector = useIntent("CreateCustomConnector", { workspaceId });
 
   useEffect(() => {
     analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONNECTOR_BUILDER_START, {
@@ -128,6 +132,8 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
 
   const isLoading = isCreateProjectLoading || importYamlLoading;
 
+  const buttonsDisabledState = isLoading || !canCreateConnector;
+
   return (
     <FlexContainer direction="column" alignItems="center" gap="2xl">
       <AirbyteTitle title={<FormattedMessage id="connectorBuilder.createPage.prompt" />} />
@@ -138,7 +144,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
           title="connectorBuilder.createPage.importYaml.title"
           description="connectorBuilder.createPage.importYaml.description"
           buttonText="connectorBuilder.createPage.importYaml.button"
-          buttonProps={{ isLoading: activeTile === "yaml" && isLoading, disabled: isLoading }}
+          buttonProps={{ isLoading: activeTile === "yaml" && isLoading, disabled: buttonsDisabledState }}
           onClick={() => {
             unregisterNotificationById(YAML_UPLOAD_ERROR_ID);
             setActiveTile("yaml");
@@ -152,7 +158,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
             title="connectorBuilder.createPage.loadExistingConnector.title"
             description="connectorBuilder.createPage.loadExistingConnector.description"
             buttonText="connectorBuilder.createPage.loadExistingConnector.button"
-            buttonProps={{ disabled: isLoading }}
+            buttonProps={{ disabled: buttonsDisabledState }}
             onClick={() => {
               navigate(`../${ConnectorBuilderRoutePaths.Fork}`);
             }}
@@ -164,7 +170,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
           title="connectorBuilder.createPage.startFromScratch.title"
           description="connectorBuilder.createPage.startFromScratch.description"
           buttonText="connectorBuilder.createPage.startFromScratch.button"
-          buttonProps={{ isLoading: activeTile === "empty" && isLoading, disabled: isLoading }}
+          buttonProps={{ isLoading: activeTile === "empty" && isLoading, disabled: buttonsDisabledState }}
           onClick={() => {
             setActiveTile("empty");
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.START_FROM_SCRATCH, {

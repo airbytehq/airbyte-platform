@@ -15,6 +15,10 @@ export const intentToRbacQuery = {
   ViewWorkspaceSettings: { resourceType: "WORKSPACE", role: "READER" },
   BuyCredits: { resourceType: "WORKSPACE", role: "ADMIN" },
 
+  // builder
+  CreateCustomConnector: { resourceType: "WORKSPACE", role: "EDITOR" },
+  UpdateCustomConnector: { resourceType: "WORKSPACE", role: "EDITOR" },
+
   // source
   CreateSource: { resourceType: "WORKSPACE", role: "EDITOR" },
   EditSource: { resourceType: "WORKSPACE", role: "EDITOR" },

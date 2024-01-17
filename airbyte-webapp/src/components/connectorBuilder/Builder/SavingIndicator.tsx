@@ -8,12 +8,21 @@ import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { SavingState, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import {
+  ConnectorBuilderPermission,
+  SavingState,
+  useConnectorBuilderFormState,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./SavingIndicator.module.scss";
 import { VersionModal } from "../VersionModal";
 
-function getMessage(savingState: SavingState, displayedVersion: number | undefined, triggerUpdate: () => void) {
+function getMessage(
+  savingState: SavingState,
+  permission: ConnectorBuilderPermission,
+  displayedVersion: number | undefined,
+  triggerUpdate: () => void
+) {
   if (savingState === "invalid") {
     return (
       <Tooltip
@@ -38,7 +47,13 @@ function getMessage(savingState: SavingState, displayedVersion: number | undefin
           </span>
         }
       >
-        <FormattedMessage id="connectorBuilder.loadingState.readonly.tooltip" />
+        <FormattedMessage
+          id={
+            permission === "adminReadOnly"
+              ? "connectorBuilder.loadingState.readonlyAdmin.tooltip"
+              : "connectorBuilder.loadingState.readonly.tooltip"
+          }
+        />
       </Tooltip>
     );
   }
@@ -68,7 +83,7 @@ function getMessage(savingState: SavingState, displayedVersion: number | undefin
 }
 
 export const SavingIndicator: React.FC = () => {
-  const { savingState, triggerUpdate, currentProject, displayedVersion } = useConnectorBuilderFormState();
+  const { savingState, permission, triggerUpdate, currentProject, displayedVersion } = useConnectorBuilderFormState();
   const [pendingUpdate, setPendingUpdate] = useState(false);
   const [changeInProgress, setChangeInProgress] = useState(false);
   const timeoutRef = useRef<number>();
@@ -86,7 +101,7 @@ export const SavingIndicator: React.FC = () => {
 
   const message = (
     <Text size="sm" color="grey" as="div" className={styles.text}>
-      {getMessage(pendingUpdate ? "loading" : savingState, displayedVersion, () => {
+      {getMessage(pendingUpdate ? "loading" : savingState, permission, displayedVersion, () => {
         setPendingUpdate(true);
         if (timeoutRef.current) {
           window.clearTimeout(timeoutRef.current);

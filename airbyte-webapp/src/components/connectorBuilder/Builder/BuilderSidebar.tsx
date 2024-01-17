@@ -65,7 +65,7 @@ interface BuilderSidebarProps {
 export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ className }) => {
   const analyticsService = useAnalyticsService();
   const { hasErrors } = useBuilderErrors();
-  const { toggleUI } = useConnectorBuilderFormState();
+  const { toggleUI, permission } = useConnectorBuilderFormState();
   const { setValue } = useFormContext();
   const formValues = useBuilderWatch("formValues");
   const name = useBuilderWatch("name");
@@ -146,6 +146,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
 
           <AddStreamButton
             onAddStream={(addedStreamNum) => handleViewSelect(addedStreamNum)}
+            disabled={permission === "readOnly"}
             data-testid="add-stream"
           />
         </FlexContainer>

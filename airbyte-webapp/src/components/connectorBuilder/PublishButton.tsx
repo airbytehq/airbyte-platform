@@ -20,12 +20,12 @@ interface PublishButtonProps {
 
 export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
   const [isModalOpen, setModalOpen] = useState(false);
-  const { currentProject, yamlIsValid, formValuesValid } = useConnectorBuilderFormState();
+  const { currentProject, yamlIsValid, formValuesValid, permission } = useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
 
   const { resolveErrorMessage } = useConnectorBuilderTestRead();
 
-  let buttonDisabled = false;
+  let buttonDisabled = permission === "readOnly";
   let showWarningIcon = false;
   let tooltipContent = undefined;
 

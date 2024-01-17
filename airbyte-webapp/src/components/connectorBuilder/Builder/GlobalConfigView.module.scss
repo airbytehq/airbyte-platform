@@ -3,3 +3,14 @@
 .content {
   margin-top: variables.$spacing-lg;
 }
+
+.fieldset {
+  all: unset;
+  width: 100%;
+
+  &[disabled] {
+    *:hover {
+      cursor: default;
+    }
+  }
+}

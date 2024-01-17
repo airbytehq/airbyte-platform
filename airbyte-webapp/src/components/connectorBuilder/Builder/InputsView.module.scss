@@ -39,3 +39,14 @@
     box-shadow: variables.$box-shadow-raised;
   }
 }
+
+.fieldset {
+  all: unset;
+  width: 100%;
+
+  &[disabled] {
+    *:hover {
+      cursor: default;
+    }
+  }
+}
