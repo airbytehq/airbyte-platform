@@ -6,6 +6,7 @@ import styles from "./FlexContainer.module.scss";
 interface FlexContainerProps {
   as?: "div" | "span";
   className?: string;
+  display?: "flex" | "inline-flex";
   /**
    * The flex-direction css property
    */
@@ -37,6 +38,7 @@ export const FlexContainer = React.forwardRef<
       as = "div",
       className,
       direction = "row",
+      display = "flex",
       gap = "md",
       alignItems = "stretch",
       justifyContent = "flex-start",
@@ -47,6 +49,7 @@ export const FlexContainer = React.forwardRef<
   ) => {
     const fullClassName = classNames(
       {
+        [styles["container--inline"]]: display === "inline-flex",
         [styles.directionRow]: direction === "row",
         [styles.directionColumn]: direction === "column",
         [styles.directionRowReverse]: direction === "row-reverse",

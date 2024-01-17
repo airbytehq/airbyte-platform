@@ -2,6 +2,10 @@
 
 .container {
   display: flex;
+
+  &--inline {
+    display: inline-flex;
+  }
 }
 
 .directionRow {

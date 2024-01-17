@@ -6,7 +6,7 @@
     position: relative;
   }
 
-  &__lineCount {
+  &__searchControls {
     white-space: nowrap;
     position: absolute;
     top: 0;
@@ -14,6 +14,17 @@
     height: 100%;
     display: flex;
     align-items: center;
-    padding-right: variables.$spacing-lg;
+    padding-right: variables.$spacing-md;
+    gap: variables.$spacing-sm;
+  }
+
+  &__button {
+    background: none;
+    border: none;
+    padding: 0;
+
+    &:not(:disabled) {
+      cursor: pointer;
+    }
   }
 }
