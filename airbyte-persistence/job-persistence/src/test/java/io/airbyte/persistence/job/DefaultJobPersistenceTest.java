@@ -1733,11 +1733,9 @@ class DefaultJobPersistenceTest {
       final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
       final Job job = jobPersistence.getJob(jobId);
       final Long jobCreatedAtSeconds = job.getCreatedAtInSecond();
-      final Long oneHourEarlierSeconds = jobCreatedAtSeconds - (60 * 60);
-      final Long oneHourLaterSeconds = jobCreatedAtSeconds + (60 * 60);
 
-      final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond((oneHourEarlierSeconds)), ZoneOffset.UTC);
-      final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond((oneHourLaterSeconds)), ZoneOffset.UTC);
+      final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobCreatedAtSeconds)), ZoneOffset.UTC).minusHours(1);
+      final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobCreatedAtSeconds)), ZoneOffset.UTC).plusHours(1);
 
       final Long numJobsCreatedAtStartOneHourEarlier =
           jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, oneHourEarlier, null, null, null);
@@ -1754,11 +1752,9 @@ class DefaultJobPersistenceTest {
       final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
       final Job job = jobPersistence.getJob(jobId);
       final Long jobCreatedAtSeconds = job.getCreatedAtInSecond();
-      final Long oneHourEarlierSeconds = jobCreatedAtSeconds - (60 * 60);
-      final Long oneHourLaterSeconds = jobCreatedAtSeconds + (60 * 60);
 
-      final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond((oneHourEarlierSeconds)), ZoneOffset.UTC);
-      final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond((oneHourLaterSeconds)), ZoneOffset.UTC);
+      final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobCreatedAtSeconds), ZoneOffset.UTC).minusHours(1);
+      final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobCreatedAtSeconds), ZoneOffset.UTC).plusHours(1);
 
       final Long numJobsCreatedAtEndOneHourEarlier =
           jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, null, oneHourEarlier, null, null);
@@ -1775,11 +1771,9 @@ class DefaultJobPersistenceTest {
       final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
       final Job job = jobPersistence.getJob(jobId);
       final Long jobUpdatedAtSeconds = job.getUpdatedAtInSecond();
-      final Long oneHourEarlierSeconds = jobUpdatedAtSeconds - (60 * 60);
-      final Long oneHourLaterSeconds = jobUpdatedAtSeconds + (60 * 60);
 
-      final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond((oneHourEarlierSeconds)), ZoneOffset.UTC);
-      final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond((oneHourLaterSeconds)), ZoneOffset.UTC);
+      final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobUpdatedAtSeconds)), ZoneOffset.UTC).minusHours(1);
+      final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobUpdatedAtSeconds)), ZoneOffset.UTC).plusHours(1);
 
       final Long numJobsUpdatedAtStartOneHourEarlier =
           jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, null, null, oneHourEarlier, null);
@@ -1796,11 +1790,9 @@ class DefaultJobPersistenceTest {
       final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
       final Job job = jobPersistence.getJob(jobId);
       final Long jobUpdatedAtSeconds = job.getUpdatedAtInSecond();
-      final Long oneHourEarlierSeconds = jobUpdatedAtSeconds - (60 * 60);
-      final Long oneHourLaterSeconds = jobUpdatedAtSeconds + (60 * 60);
 
-      final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond((oneHourEarlierSeconds)), ZoneOffset.UTC);
-      final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond((oneHourLaterSeconds)), ZoneOffset.UTC);
+      final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobUpdatedAtSeconds)), ZoneOffset.UTC).minusHours(1);
+      final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobUpdatedAtSeconds)), ZoneOffset.UTC).plusHours(1);
 
       final Long numJobsUpdatedAtEndOneHourEarlier =
           jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, null, null, null, oneHourEarlier);
