@@ -388,6 +388,12 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   WORKLOAD_LAUNCHER_KUBE_ERROR(MetricEmittingApps.WORKLOAD_LAUNCHER,
       "workload_kube_error",
       "Number of kube error in the workload launcher"),
+  JOB_OUTPUT_WRITE(MetricEmittingApps.ORCHESTRATOR,
+      "job_output_write",
+      "Write a job output in the output folder"),
+  JOB_OUTPUT_READ(MetricEmittingApps.WORKER,
+      "job_output_read",
+      "Read a job output from the output folder"),
   SYNC_STATE_RECORD_COUNT(MetricEmittingApps.ORCHESTRATOR,
       "sync_state_record_count",
       "The record count emitted between state messages.");

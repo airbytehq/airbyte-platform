@@ -9,6 +9,7 @@ import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.config.Configs;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.EnvConfigs;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.sync.OrchestratorConstants;
@@ -81,10 +82,11 @@ public class ContainerOrchestratorConfigBeanFactory {
                                                                            @Value("${airbyte.container.orchestrator.data-plane-creds.secret-name}") final String containerOrchestratorDataPlaneCredsSecretName,
                                                                            @Value("${airbyte.acceptance.test.enabled}") final boolean isInTestMode,
                                                                            @Value("${datadog.orchestrator.disabled.integrations}") final String disabledIntegrations,
-                                                                           @Value("${airbyte.worker.job.kube.serviceAccount}") final String serviceAccount) {
+                                                                           @Value("${airbyte.worker.job.kube.serviceAccount}") final String serviceAccount,
+                                                                           final MetricClient metricClientInstance) {
     final var kubernetesClient = new DefaultKubernetesClient();
 
-    final JobOutputDocStore jobOutputDocStore = new JobOutputDocStore(outputDocumentStoreClient);
+    final JobOutputDocStore jobOutputDocStore = new JobOutputDocStore(outputDocumentStoreClient, metricClientInstance);
 
     // Build the map of additional environment variables to be passed to the container orchestrator
     final Map<String, String> environmentVariables = new HashMap<>();

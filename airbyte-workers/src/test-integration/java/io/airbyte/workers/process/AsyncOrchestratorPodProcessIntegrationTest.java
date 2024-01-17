@@ -42,8 +42,9 @@ import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 @Disabled
 class AsyncOrchestratorPodProcessIntegrationTest {
 
-  private static KubernetesClient kubernetesClient;
   private static DocumentStoreClient documentStoreClient;
+  private static KubernetesClient kubernetesClient;
+  private static MetricClient metricClient;
   private static Process portForwardProcess;
 
   @BeforeAll
@@ -98,6 +99,8 @@ class AsyncOrchestratorPodProcessIntegrationTest {
     documentStoreClient = S3DocumentStoreClient.minio(
         minioConfig,
         Path.of("/"));
+
+    metricClient = mock(MetricClient.class);
   }
 
   @ValueSource(strings = {"IfNotPresent", " Always"})
@@ -124,9 +127,9 @@ class AsyncOrchestratorPodProcessIntegrationTest {
         serverPort,
         "airbyte-admin",
         null,
-        mock(MetricClient.class),
+        metricClient,
         "test",
-        new JobOutputDocStore(documentStoreClient),
+        new JobOutputDocStore(documentStoreClient, metricClient),
         "workload_id");
 
     final Map<Integer, Integer> portMap = Map.of(
@@ -182,9 +185,9 @@ class AsyncOrchestratorPodProcessIntegrationTest {
         serverPort,
         "airbyte-admin",
         null,
-        mock(MetricClient.class),
+        metricClient,
         "test",
-        new JobOutputDocStore(documentStoreClient),
+        new JobOutputDocStore(documentStoreClient, metricClient),
         "workload_id");
 
     final Map<Integer, Integer> portMap = Map.of(
