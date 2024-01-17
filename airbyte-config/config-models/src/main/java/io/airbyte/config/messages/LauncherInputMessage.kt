@@ -39,14 +39,14 @@ data class LauncherInputMessage(
 
     fun build() =
       LauncherInputMessage(
-        workloadId = workloadId!!,
-        workloadInput = workloadInput!!,
-        labels = labels!!,
-        logPath = logPath!!,
+        workloadId = workloadId ?: throw IllegalArgumentException("workloadId cannot be null"),
+        workloadInput = workloadInput ?: throw IllegalArgumentException("workloadInput cannot be null"),
+        labels = labels ?: throw IllegalArgumentException("labels cannot be null"),
+        logPath = logPath ?: throw IllegalArgumentException("logPath cannot be null"),
+        workloadType = workloadType ?: throw IllegalArgumentException("workloadType cannot be null"),
+        autoId = autoId ?: throw IllegalArgumentException("autoId cannot be null"),
         mutexKey = mutexKey,
-        workloadType = workloadType!!,
         startTimeMs = startTimeMs,
-        autoId = autoId!!,
       )
   }
 }
