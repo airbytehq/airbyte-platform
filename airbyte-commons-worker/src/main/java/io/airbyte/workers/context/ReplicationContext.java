@@ -18,6 +18,8 @@ import java.util.UUID;
  * @param jobId The job ID associated with the sync.
  * @param attempt The attempt number of the sync.
  * @param workspaceId The workspace ID associated with the sync.
+ * @param sourceImage The name and version of the source image.
+ * @param destinationImage The name and version of the destination image.
  */
 public record ReplicationContext(boolean isReset,
                                  UUID connectionId,
@@ -25,4 +27,6 @@ public record ReplicationContext(boolean isReset,
                                  UUID destinationId,
                                  Long jobId,
                                  Integer attempt,
-                                 UUID workspaceId) {}
+                                 UUID workspaceId,
+                                 String sourceImage,
+                                 String destinationImage) {}

@@ -58,6 +58,8 @@ flags:
         include:
           - "480e631f-1c88-4c2d-9081-855981018205"
         serve: true
+  - name: platform.fail-sync-on-invalid-checksum
+    serve: false
   - name: platform.use-workload-api-for-check
     serve: false
     # Override used in order to run an acceptance test

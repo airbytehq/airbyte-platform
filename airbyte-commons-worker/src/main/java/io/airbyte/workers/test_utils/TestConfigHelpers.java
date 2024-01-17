@@ -19,6 +19,7 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.State;
+import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
@@ -40,6 +41,8 @@ public class TestConfigHelpers {
   private static final String STREAM_NAME = "user_preferences";
   private static final String FIELD_NAME = "favorite_color";
   private static final long LAST_SYNC_TIME = 1598565106;
+  public static final String DESTINATION_IMAGE = "destination:1.1";
+  public static final String SOURCE_IMAGE = "source:1.1";
 
   /**
    * Create sync config and appropriate sync input.
@@ -167,8 +170,10 @@ public class TestConfigHelpers {
         .withConnectionId(connectionId)
         .withPrefix(standardSync.getPrefix())
         .withSourceId(sourceId)
+        .withSourceLauncherConfig(new IntegrationLauncherConfig().withDockerImage(SOURCE_IMAGE))
         .withDestinationId(destinationId)
         .withDestinationConfiguration(destinationConnectionConfig.getConfiguration())
+        .withDestinationLauncherConfig(new IntegrationLauncherConfig().withDockerImage(DESTINATION_IMAGE))
         .withCatalog(standardSync.getCatalog())
         .withSourceConfiguration(sourceConnectionConfig.getConfiguration())
         .withState(state)

@@ -130,7 +130,7 @@ public abstract class ReplicationWorkerPerformanceTest {
         CatalogHelpers.fieldsToJsonSchema(io.airbyte.protocol.models.Field.of("data", JsonSchemaType.STRING))));
     final var airbyteMessageDataExtractor = new AirbyteMessageDataExtractor();
     final var replicationFeatureFlagReader = mock(ReplicationFeatureFlagReader.class);
-    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 0, 4));
+    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 0, 4, false));
 
     // final IntegrationLauncher integrationLauncher = new LimitedIntegrationLauncher(new
     // LimitedThinRecordSourceProcess());

@@ -387,7 +387,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "Too long line distribution"),
   WORKLOAD_LAUNCHER_KUBE_ERROR(MetricEmittingApps.WORKLOAD_LAUNCHER,
       "workload_kube_error",
-      "Number of kube error in the workload launcher");
+      "Number of kube error in the workload launcher"),
+  SYNC_STATE_RECORD_COUNT(MetricEmittingApps.ORCHESTRATOR,
+      "sync_state_record_count",
+      "The record count emitted between state messages.");
 
   private final MetricEmittingApp application;
   private final String metricName;

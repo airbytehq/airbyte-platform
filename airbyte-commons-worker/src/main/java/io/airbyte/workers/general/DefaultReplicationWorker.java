@@ -131,11 +131,11 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           .stream()
           .collect(Collectors.toMap(s -> s.getStream().getNamespace() + "." + s.getStream().getName(),
               s -> String.format("%s - %s", s.getSyncMode(), s.getDestinationSyncMode()))));
-
       final ReplicationContext replicationContext =
           new ReplicationContext(replicationInput.getIsReset(), replicationInput.getConnectionId(), replicationInput.getSourceId(),
               replicationInput.getDestinationId(), Long.parseLong(jobId),
-              attempt, replicationInput.getWorkspaceId());
+              attempt, replicationInput.getWorkspaceId(), replicationInput.getSourceLauncherConfig().getDockerImage(),
+              replicationInput.getDestinationLauncherConfig().getDockerImage());
 
       final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags();
       replicationWorkerHelper.initialize(replicationContext, flags, jobRoot);

@@ -9,6 +9,8 @@ import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin
+import io.airbyte.workers.test_utils.TestConfigHelpers.DESTINATION_IMAGE
+import io.airbyte.workers.test_utils.TestConfigHelpers.SOURCE_IMAGE
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -30,7 +32,11 @@ class AnalyticsMessageTrackerTest {
     trackingClient = mockk()
     every { trackingClient.track(any(), any(), any()) } returns Unit
     analyticsMessageTracker = AnalyticsMessageTracker(trackingClient)
-    ctx = ReplicationContext(false, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 1, 1, UUID.randomUUID())
+    ctx =
+      ReplicationContext(
+        false, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+        1, 1, UUID.randomUUID(), SOURCE_IMAGE, DESTINATION_IMAGE,
+      )
     analyticsMessageTracker.ctx = ctx
   }
 

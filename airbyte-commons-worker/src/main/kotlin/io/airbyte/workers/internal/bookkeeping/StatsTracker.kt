@@ -59,7 +59,7 @@ data class StreamStatsCounters(
  * destination yet. Those stats are "emitted". They will eventually add up to the committed stats
  * once the state is acked by the destination.
  */
-private data class EmittedStatsCounters(
+data class EmittedStatsCounters(
   val remittedRecordsCount: AtomicLong = AtomicLong(),
   val emittedBytesCount: AtomicLong = AtomicLong(),
 )
@@ -100,6 +100,7 @@ class StreamStatsTracker(
   private val stateHashes = ConcurrentHashMap.newKeySet<Int>()
   private val stagedStatsList = ConcurrentLinkedQueue<StagedStats>()
   private var emittedStats = EmittedStatsCounters()
+  private var previousEmittedStats = EmittedStatsCounters()
   private var previousStateMessageReceivedAt: LocalDateTime? = null
 
   /**
@@ -164,13 +165,13 @@ class StreamStatsTracker(
     }
 
     // Rollover stat bucket
-    val previousEmittedStats: EmittedStatsCounters = emittedStats
+    previousEmittedStats = emittedStats
     emittedStats = EmittedStatsCounters()
 
     stagedStatsList.add(StagedStats(stateHash, stateMessage, previousEmittedStats, currentTime))
 
     // Updating state checkpointing metrics
-    // previsousStateMessageReceivedAt is null when it's the first state message of a stream.
+    // previousStateMessageReceivedAt is null when it's the first state message of a stream.
     previousStateMessageReceivedAt?.let {
       val timeSinceLastState: Long = it.until(currentTime, ChronoUnit.SECONDS)
       streamStats.maxSecondsToReceiveState.accumulate(timeSinceLastState)
@@ -255,13 +256,22 @@ class StreamStatsTracker(
       estimatedBytesCount.set(msg.byteEstimate)
       estimatedRecordsCount.set(msg.rowEstimate)
     }
+
+  fun getTrackedEmittedRecordsSinceLastStateMessage(): Long {
+    return previousEmittedStats.remittedRecordsCount.get()
+  }
+
+  fun getTrackedCommittedRecordsSinceLastStateMessage(stateMessage: AirbyteStateMessage): Long {
+    val stagedStats: StagedStats? = stagedStatsList.find { it.stateHash == stateMessage.getStateHashCode(hashFunction) }
+    return stagedStats?.emittedStatsCounters?.remittedRecordsCount?.get() ?: 0
+  }
 }
 
 fun AirbyteStateMessage.getStateHashCode(hashFunction: HashFunction): Int =
   when (type) {
     AirbyteStateMessage.AirbyteStateType.GLOBAL -> hashFunction.hashBytes(Jsons.serialize(global).toByteArray()).hashCode()
     AirbyteStateMessage.AirbyteStateType.STREAM -> hashFunction.hashBytes(Jsons.serialize(stream.streamState).toByteArray()).hashCode()
-// state type is legacy
+    // state type is legacy
     else -> hashFunction.hashBytes(Jsons.serialize(data).toByteArray()).hashCode()
   }
 

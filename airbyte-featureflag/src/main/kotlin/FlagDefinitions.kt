@@ -186,3 +186,5 @@ object UseWorkloadOutputDocStore : Temporary<Boolean>(key = "platform.use-worklo
 object UseWorkloadApiForCheck : Temporary<Boolean>(key = "platform.use-workload-api-for-check", default = false)
 
 object WorkloadCheckFrequencyInSeconds : Permanent<Int>(key = "platform.workload-check-frequency-in-seconds", default = 1)
+
+object FailSyncOnInvalidChecksum : Temporary<Boolean>(key = "platform.fail-sync-on-invalid-checksum", default = false)
