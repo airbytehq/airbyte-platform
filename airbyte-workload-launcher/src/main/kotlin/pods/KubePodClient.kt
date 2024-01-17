@@ -1,9 +1,14 @@
 package io.airbyte.workload.launcher.pods
 
+import datadog.trace.api.Trace
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_REPLICATION_OPERATION_NAME
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_DESTINATION_OPERATION_NAME
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_ORCHESTRATOR_OPERATION_NAME
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_SOURCE_OPERATION_NAME
 import io.airbyte.workload.launcher.model.CheckEnvVar
 import io.airbyte.workload.launcher.model.setConnectorLabels
 import io.airbyte.workload.launcher.model.setDestinationLabels
@@ -32,6 +37,7 @@ class KubePodClient(
     return orchestratorLauncher.podsExist(labeler.getAutoIdLabels(autoId))
   }
 
+  @Trace(operationName = LAUNCH_REPLICATION_OPERATION_NAME)
   override fun launchReplication(
     replicationInput: ReplicationInput,
     launcherInput: LauncherInput,
@@ -64,6 +70,17 @@ class KubePodClient(
       )
     }
 
+    waitOrchestratorPodInit(kubeInput)
+
+    copyFileToOrchestrator(kubeInput, pod)
+
+    waitSourceReadyOrTerminalInit(kubeInput)
+
+    waitDestinationReadyOrTerminalInit(kubeInput)
+  }
+
+  @Trace(operationName = WAIT_ORCHESTRATOR_OPERATION_NAME)
+  fun waitOrchestratorPodInit(kubeInput: ReplicationOrchestratorKubeInput) {
     try {
       orchestratorLauncher.waitForPodInit(kubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
@@ -73,7 +90,13 @@ class KubePodClient(
         e,
       )
     }
+  }
 
+  @Trace(operationName = WAIT_ORCHESTRATOR_OPERATION_NAME)
+  fun copyFileToOrchestrator(
+    kubeInput: ReplicationOrchestratorKubeInput,
+    pod: Pod,
+  ) {
     try {
       orchestratorLauncher.copyFilesToKubeConfigVolumeMain(pod, kubeInput.fileMap)
     } catch (e: RuntimeException) {
@@ -83,7 +106,10 @@ class KubePodClient(
         e,
       )
     }
+  }
 
+  @Trace(operationName = WAIT_SOURCE_OPERATION_NAME)
+  fun waitSourceReadyOrTerminalInit(kubeInput: ReplicationOrchestratorKubeInput) {
     try {
       orchestratorLauncher.waitForPodReadyOrTerminal(kubeInput.sourceLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
@@ -93,7 +119,10 @@ class KubePodClient(
         e,
       )
     }
+  }
 
+  @Trace(operationName = WAIT_DESTINATION_OPERATION_NAME)
+  fun waitDestinationReadyOrTerminalInit(kubeInput: ReplicationOrchestratorKubeInput) {
     try {
       orchestratorLauncher.waitForPodReadyOrTerminal(kubeInput.destinationLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
