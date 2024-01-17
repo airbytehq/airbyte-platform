@@ -8,14 +8,12 @@ import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin
-import jakarta.inject.Singleton
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicInteger
 
 const val MAX_ANALYTICS_MESSAGES_PER_SYNC = 1000
 const val MAX_ANALYTICS_MESSAGES_PER_BATCH = 100
 
-@Singleton
 class AnalyticsMessageTracker(private val trackingClient: TrackingClient) {
   var ctx: ReplicationContext? = null
   private val messages = Collections.synchronizedList(mutableListOf<JsonNode>())

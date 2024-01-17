@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.general;
 
+import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
@@ -89,7 +90,7 @@ public class ReplicationWorkerFactory {
   private final FeatureFlags featureFlags;
   private final MetricClient metricClient;
   private final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
-  private final AnalyticsMessageTracker analyticsMessageTracker;
+  private final TrackingClient trackingClient;
   private final WorkloadApi workloadApi;
 
   private final WorkloadIdGenerator workloadIdGenerator;
@@ -108,7 +109,7 @@ public class ReplicationWorkerFactory {
                                   final MetricClient metricClient,
                                   final WorkloadApi workloadApi,
                                   final WorkloadIdGenerator workloadIdGenerator,
-                                  final AnalyticsMessageTracker analyticsMessageTracker,
+                                  final TrackingClient trackingClient,
                                   @Value("${airbyte.workload.enabled}") final boolean workloadEnabled) {
     this.airbyteIntegrationLauncherFactory = airbyteIntegrationLauncherFactory;
     this.sourceApi = sourceApi;
@@ -124,7 +125,7 @@ public class ReplicationWorkerFactory {
     this.workloadApi = workloadApi;
     this.workloadIdGenerator = workloadIdGenerator;
     this.workloadEnabled = workloadEnabled;
-    this.analyticsMessageTracker = analyticsMessageTracker;
+    this.trackingClient = trackingClient;
   }
 
   /**
@@ -161,6 +162,8 @@ public class ReplicationWorkerFactory {
         replicationInput.getSyncResourceRequirements(), replicationInput.getCatalog(), destinationTimeout);
 
     final WorkerMetricReporter metricReporter = new WorkerMetricReporter(metricClient, sourceLauncherConfig.getDockerImage());
+
+    final AnalyticsMessageTracker analyticsMessageTracker = new AnalyticsMessageTracker(trackingClient);
 
     final FieldSelector fieldSelector =
         createFieldSelector(recordSchemaValidator, metricReporter, featureFlagClient, replicationInput.getWorkspaceId(), sourceDefinitionId);
