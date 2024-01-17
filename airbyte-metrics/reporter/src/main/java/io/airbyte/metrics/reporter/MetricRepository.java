@@ -97,7 +97,7 @@ class MetricRepository {
         """
         SELECT
           cast(connection.geography as varchar) AS geography,
-          MAX(EXTRACT(EPOCH FROM (current_timestamp - jobs.created_at))) AS run_duration_seconds
+          MAX(EXTRACT(EPOCH FROM (current_timestamp - jobs.created_at)))::float AS run_duration_seconds
         FROM jobs
         JOIN connection
         ON jobs.scope::uuid = connection.id
@@ -119,7 +119,8 @@ class MetricRepository {
   Map<String, Double> oldestRunningJobAgeSecsByTaskQueue() {
     final var query =
         """
-        SELECT attempts.processing_task_queue AS task_queue, MAX(EXTRACT(EPOCH FROM (current_timestamp - jobs.created_at))) AS run_duration_seconds
+        SELECT attempts.processing_task_queue AS task_queue,
+        MAX(EXTRACT(EPOCH FROM (current_timestamp - jobs.created_at)))::float AS run_duration_seconds
         FROM jobs
         JOIN attempts
         ON jobs.id = attempts.job_id
