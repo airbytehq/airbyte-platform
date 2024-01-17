@@ -1,5 +1,5 @@
 import {
-  getPostgresToPostgresUpdateConnectionBody,
+  getUpdateConnectionBody,
   requestDeleteConnection,
   requestDeleteDestination,
   requestDeleteSource,
@@ -364,6 +364,44 @@ describe("Connection Configuration", () => {
         });
         replicationPage.checkSuccessResult();
       });
+      it("can remove destination prefix", () => {
+        createNewConnectionViaApi(pokeApiSource, jsonDestination)
+          .then((connection) => {
+            requestUpdateConnection(
+              getUpdateConnectionBody(connection.connectionId, {
+                prefix: "auto_test",
+              })
+            );
+          })
+          .as("pokeConnection");
+
+        cy.get<WebBackendConnectionRead>("@pokeConnection").then((connection) => {
+          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Replication}`);
+        });
+
+        connectionForm.expandConfigurationSection();
+
+        const row = streamsTable.getRow("no-namespace", "pokemon");
+
+        connectionForm.removeDestinationPrefix();
+
+        // Ensures the prefix is applied to the streams
+        row.checkDestinationStreamName("pokemon");
+
+        submitButtonClick();
+
+        waitForUpdateConnectionRequest().then((interception) => {
+          assert.isNotNull(interception.response?.statusCode, "200");
+          expect(interception.request.method).to.eq("POST");
+          expect(interception.request).property("body").to.contain({
+            prefix: "",
+          });
+          expect(interception.response).property("body").to.contain({
+            prefix: "",
+          });
+          replicationPage.checkSuccessResult();
+        });
+      });
     });
   });
 
@@ -402,7 +440,7 @@ describe("Connection Configuration", () => {
         };
 
         requestUpdateConnection(
-          getPostgresToPostgresUpdateConnectionBody(postgresConnection.connectionId, { syncCatalog: newSyncCatalog })
+          getUpdateConnectionBody(postgresConnection.connectionId, { syncCatalog: newSyncCatalog })
         );
 
         requestDeleteConnection({
@@ -523,7 +561,7 @@ describe("Connection Configuration", () => {
       createNewConnectionViaApi(postgresSource, postgresDestination)
         .then((connection) => {
           requestUpdateConnection(
-            getPostgresToPostgresUpdateConnectionBody(connection.connectionId, {
+            getUpdateConnectionBody(connection.connectionId, {
               status: ConnectionStatus.inactive,
             })
           );
@@ -546,13 +584,12 @@ describe("Connection Configuration", () => {
         cy.visit(`/${RoutePaths.Connections}/${postgresConnection.connectionId}/${ConnectionRoutePaths.Replication}`);
         cy.get(replicationPage.refreshSourceSchemaBtn).should("not.be.disabled");
         connectionForm.expandConfigurationSection();
-        connectionForm.selectScheduleType("Manual");
+        connectionForm.selectScheduleType("Scheduled");
         submitButtonClick();
 
         waitForUpdateConnectionRequest().then((interception) => {
-          // Schedule is pulled out here, but we don't do anything with is as it's legacy
           const { scheduleType } = interception.response?.body;
-          expect(scheduleType).to.eq("manual");
+          expect(scheduleType).to.eq("basic");
         });
       });
     });

@@ -40,7 +40,7 @@ export interface FormConnectionFormValues {
   scheduleData?: ConnectionScheduleData;
   namespaceDefinition: NamespaceDefinitionType;
   namespaceFormat?: string;
-  prefix?: string;
+  prefix: string;
   nonBreakingChangesPreference?: NonBreakingChangesPreference;
   geography?: Geography;
   normalization?: NormalizationType;
@@ -182,11 +182,8 @@ export const useInitialFormValues = (
           namespaceFormat: connection.namespaceFormat,
         }),
       },
-      // prefix is not required, so we don't need to set it to empty string if it's not defined in connection
       ...{
-        ...(connection.prefix && {
-          prefix: connection.prefix,
-        }),
+        prefix: connection.prefix ?? "",
       },
       nonBreakingChangesPreference: connection.nonBreakingChangesPreference ?? defaultNonBreakingChangesPreference,
       geography: connection.geography || workspace.defaultGeography || "auto",

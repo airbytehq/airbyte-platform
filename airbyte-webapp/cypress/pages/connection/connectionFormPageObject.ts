@@ -9,7 +9,7 @@ export const getListBoxDropdownOption = (option: string) => `${getTestId(`${opti
 export const destinationPrefixEditButton = getTestId("destination-stream-prefix-edit-button");
 const destinationPrefixApplyButton = getTestId("destination-stream-names-apply-button");
 // const destinationPrefixCancelButton = getTestId("destination-stream-names-cancel-button");
-// const destinationMirror = getTestId("destination-stream-names-mirror-radio");
+const destinationMirror = getTestId("destination-stream-names-mirror-radio");
 const destinationPrefix = getTestId("destination-stream-names-prefix-radio");
 const destinationPrefixInput = getTestId("destination-stream-names-prefix-input");
 
@@ -52,6 +52,12 @@ export const fillOutDestinationPrefix = (value: string) => {
   cy.get(destinationPrefixInput).clear();
   cy.get(destinationPrefixInput).type(value);
   cy.get(destinationPrefixInput).should("have.value", value);
+  cy.get(destinationPrefixApplyButton).click();
+};
+
+export const removeDestinationPrefix = () => {
+  cy.get(destinationPrefixEditButton).click();
+  cy.get(destinationMirror).click({ force: true });
   cy.get(destinationPrefixApplyButton).click();
 };
 

@@ -83,7 +83,7 @@ export const getLocalJSONCreateDestinationBody = (name: string): DestinationCrea
   },
 });
 
-export const getPostgresToPostgresUpdateConnectionBody = (
+export const getUpdateConnectionBody = (
   connectionId: string,
   updateParams: Partial<WebBackendConnectionUpdate>
 ): WebBackendConnectionUpdate => ({

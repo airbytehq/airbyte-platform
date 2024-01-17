@@ -28,8 +28,10 @@ export const DestinationStreamPrefixNameFormField = () => {
     (value: DestinationStreamNamesFormValues) => {
       setValue(
         "prefix",
-        value.streamNameDefinition === StreamNameDefinitionValueType.Prefix ? value.prefix : undefined,
-        { shouldDirty: true }
+        value.streamNameDefinition === StreamNameDefinitionValueType.Prefix ? value.prefix ?? "" : "",
+        {
+          shouldDirty: true,
+        }
       );
     },
     [setValue]
