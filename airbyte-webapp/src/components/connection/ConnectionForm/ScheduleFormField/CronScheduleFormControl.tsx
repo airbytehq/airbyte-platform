@@ -1,4 +1,3 @@
-import cronstrue from "cronstrue";
 import React, { ChangeEvent, useState } from "react";
 import { Controller, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -14,6 +13,7 @@ import { Text } from "components/ui/Text";
 
 import { ConnectionScheduleDataCron } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
+import { humanizeCron } from "core/utils/cron";
 import { links } from "core/utils/links";
 
 import availableCronTimeZones from "./availableCronTimeZones.json";
@@ -53,7 +53,7 @@ export const CronScheduleFormControl: React.FC = () => {
     () => {
       setDebouncedErrorMessage(cronValidationError ?? "");
       try {
-        setDebouncedCronDescription(cronstrue.toString(cronExpression));
+        setDebouncedCronDescription(humanizeCron(cronExpression));
       } catch (e) {
         setDebouncedErrorMessage("form.cronExpression.invalid");
       }
