@@ -617,6 +617,7 @@ class BasicAcceptanceTests {
 
   @Test
   void testIncrementalSync() throws Exception {
+
     testResources.runIncrementalSyncForAWorkspaceId(workspaceId);
   }
 

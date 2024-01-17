@@ -272,6 +272,49 @@ public class BasicAcceptanceTestsResources {
     Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead3, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
+  void runSmallSyncForAWorkspaceId(final UUID workspaceId) throws Exception {
+    LOGGER.info("Starting runSmallSyncForAWorkspaceId()");
+    final UUID sourceId = testHarness.createPostgresSource(workspaceId).getSourceId();
+    final UUID destinationId = testHarness.createPostgresDestination(workspaceId).getDestinationId();
+    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
+    final AirbyteCatalog catalog = discoverResult.getCatalog();
+    final AirbyteStream stream = catalog.getStreams().get(0).getStream();
+
+    Assertions.assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream.getSupportedSyncModes());
+    // instead of assertFalse to avoid NPE from unboxed.
+    Assertions.assertNull(stream.getSourceDefinedCursor());
+    Assertions.assertTrue(stream.getDefaultCursorField().isEmpty());
+    Assertions.assertTrue(stream.getSourceDefinedPrimaryKey().isEmpty());
+
+    final SyncMode srcSyncMode = SyncMode.INCREMENTAL;
+    final DestinationSyncMode dstSyncMode = DestinationSyncMode.APPEND;
+    catalog.getStreams().forEach(s -> s.getConfig()
+        .syncMode(srcSyncMode)
+        .selected(true)
+        .cursorField(List.of(AcceptanceTestHarness.COLUMN_ID))
+        .destinationSyncMode(dstSyncMode));
+    final var conn =
+        testHarness.createConnection(new Builder(
+            sourceId,
+            destinationId,
+            catalog,
+            discoverResult.getCatalogId())
+                .build());
+    LOGGER.info("Beginning runSmallSyncForAWorkspaceId() sync");
+
+    final var connectionId = conn.getConnectionId();
+    final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
+    AcceptanceTestHarness.waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
+    LOGGER.info(STATE_AFTER_SYNC_ONE,
+        apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+
+    final var src = testHarness.getSourceDatabase();
+    final var dst = testHarness.getDestinationDatabase();
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(src, dst, conn.getNamespaceFormat(), AcceptanceTestHarness.PUBLIC_SCHEMA_NAME, false,
+        WITHOUT_SCD_TABLE);
+    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead1, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+  }
+
   void init() throws URISyntaxException, IOException, InterruptedException, ApiException {
     // TODO(mfsiega-airbyte): clean up and centralize the way we do config.
     final boolean isGke = System.getenv().containsKey(IS_GKE);

@@ -64,8 +64,6 @@ public class WorkloadBasicAcceptanceTests {
   }
 
   @Test
-  @EnabledIfEnvironmentVariable(named = KUBE,
-                                matches = TRUE)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
@@ -78,12 +76,10 @@ public class WorkloadBasicAcceptanceTests {
             .email("acceptance-tests@airbyte.io")
             .name("Airbyte Acceptance Tests" + UUID.randomUUID()));
 
-    testResources.runIncrementalSyncForAWorkspaceId(RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID);
+    testResources.runSmallSyncForAWorkspaceId(RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID);
   }
 
   @Test
-  @EnabledIfEnvironmentVariable(named = KUBE,
-                                matches = TRUE)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
@@ -96,7 +92,7 @@ public class WorkloadBasicAcceptanceTests {
             .email("acceptance-tests@airbyte.io")
             .name("Airbyte Acceptance Tests" + UUID.randomUUID()));
 
-    testResources.runIncrementalSyncForAWorkspaceId(RUN_WITH_WORKLOAD_WITH_DOC_STORE_WORKSPACE_ID);
+    testResources.runSmallSyncForAWorkspaceId(RUN_WITH_WORKLOAD_WITH_DOC_STORE_WORKSPACE_ID);
   }
 
   @Test
