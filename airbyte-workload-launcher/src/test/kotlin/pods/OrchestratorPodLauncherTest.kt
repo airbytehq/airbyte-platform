@@ -8,10 +8,12 @@ import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workload.launcher.pods.OrchestratorPodLauncher
+import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.BeforeEach
@@ -54,6 +56,7 @@ class OrchestratorPodLauncherTest {
 
     every { featureFlagClient.stringVariation(any(), any()) } returns ""
     every { kubernetesClient.pods() } throws IllegalStateException()
+    every { kubernetesClient.resource(any<Pod>()) } throws IllegalStateException()
     every { metricClient.count(any(), any(), any()) } returns Unit
   }
 
@@ -75,9 +78,11 @@ class OrchestratorPodLauncherTest {
 
   @Test
   fun `test fail to wait for pod init`() {
+    val pod: Pod = mockk()
+
     assertThrows<IllegalStateException> {
       orchestratorPodLauncher.waitForPodInit(
-        mapOf(),
+        pod,
         Duration.ZERO,
       )
     }

@@ -70,7 +70,7 @@ class KubePodClient(
       )
     }
 
-    waitOrchestratorPodInit(kubeInput)
+    waitOrchestratorPodInit(pod)
 
     copyFileToOrchestrator(kubeInput, pod)
 
@@ -80,9 +80,9 @@ class KubePodClient(
   }
 
   @Trace(operationName = WAIT_ORCHESTRATOR_OPERATION_NAME)
-  fun waitOrchestratorPodInit(kubeInput: ReplicationOrchestratorKubeInput) {
+  fun waitOrchestratorPodInit(orchestratorPod: Pod) {
     try {
-      orchestratorLauncher.waitForPodInit(kubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE)
+      orchestratorLauncher.waitForPodInit(orchestratorPod, ORCHESTRATOR_INIT_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
@@ -173,7 +173,7 @@ class KubePodClient(
     }
 
     try {
-      orchestratorLauncher.waitForPodInit(kubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE)
+      orchestratorLauncher.waitForPodInit(pod, ORCHESTRATOR_INIT_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(

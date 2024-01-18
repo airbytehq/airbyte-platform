@@ -215,53 +215,37 @@ class OrchestratorPodLauncher(
   }
 
   fun waitForPodInit(
-    labels: Map<String, String>,
+    pod: Pod,
     waitDuration: Duration,
   ) {
-    runKubeCommand(
-      {
-        kubernetesClient.pods()
-          .inNamespace(namespace)
-          .withLabels(labels)
-          .waitUntilCondition(
-            { p: Pod ->
-              (
-                p.status.initContainerStatuses.isNotEmpty() &&
-                  p.status.initContainerStatuses[0].state.waiting == null
-              )
-            },
-            waitDuration.toMinutes(),
-            TimeUnit.MINUTES,
-          )
-      },
-      "wait",
-    )
-
-    val pods =
+    val initializedPod =
       runKubeCommand(
         {
-          kubernetesClient.pods()
-            .inNamespace(namespace)
-            .withLabels(labels)
-            .list()
-            .items
+          kubernetesClient
+            .resource(pod)
+            .waitUntilCondition(
+              { p: Pod ->
+                (
+                  p.status.initContainerStatuses.isNotEmpty() &&
+                    p.status.initContainerStatuses[0].state.waiting == null
+                )
+              },
+              waitDuration.toMinutes(),
+              TimeUnit.MINUTES,
+            )
         },
-        "list",
+        "wait",
       )
 
-    if (pods.isEmpty()) {
-      throw RuntimeException("No pods found for labels: $labels. Nothing to wait for.")
-    }
-
     val containerState =
-      pods[0]
+      initializedPod
         .status
         .initContainerStatuses[0]
         .state
 
     if (containerState.running == null) {
       throw RuntimeException(
-        "Init container for Pod with labels: $labels was not in a running state after: ${waitDuration.toMinutes()} ${TimeUnit.MINUTES}. " +
+        "Init container for Pod: ${pod.fullResourceName} was not in a running state after: ${waitDuration.toMinutes()} ${TimeUnit.MINUTES}. " +
           "Actual container state: $containerState.",
       )
     }

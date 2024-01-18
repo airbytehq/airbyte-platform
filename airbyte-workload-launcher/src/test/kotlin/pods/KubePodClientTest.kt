@@ -98,7 +98,7 @@ class KubePodClientTest {
       )
     }
 
-    verify { launcher.waitForPodInit(replKubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE) }
+    verify { launcher.waitForPodInit(pod, ORCHESTRATOR_INIT_TIMEOUT_VALUE) }
 
     verify { launcher.copyFilesToKubeConfigVolumeMain(pod, replKubeInput.fileMap) }
 
@@ -130,7 +130,7 @@ class KubePodClientTest {
 
   @Test
   fun `launchReplication propagates orchestrator wait for init error`() {
-    every { launcher.waitForPodInit(replKubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE) } throws RuntimeException("bang")
+    every { launcher.waitForPodInit(pod, ORCHESTRATOR_INIT_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
     assertThrows<KubePodInitException> {
       client.launchReplication(replInput, launcherInput)
@@ -179,7 +179,7 @@ class KubePodClientTest {
       )
     }
 
-    verify { launcher.waitForPodInit(checkKubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE) }
+    verify { launcher.waitForPodInit(pod, ORCHESTRATOR_INIT_TIMEOUT_VALUE) }
 
     verify { launcher.copyFilesToKubeConfigVolumeMain(pod, checkKubeInput.fileMap) }
 
@@ -209,7 +209,7 @@ class KubePodClientTest {
 
   @Test
   fun `launchCheck propagates orchestrator wait for init error`() {
-    every { launcher.waitForPodInit(checkKubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE) } throws RuntimeException("bang")
+    every { launcher.waitForPodInit(pod, ORCHESTRATOR_INIT_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
     assertThrows<KubePodInitException> {
       client.launchCheck(checkInput, launcherInput)
