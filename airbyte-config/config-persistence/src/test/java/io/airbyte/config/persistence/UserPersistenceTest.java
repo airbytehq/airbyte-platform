@@ -6,13 +6,13 @@ package io.airbyte.config.persistence;
 
 import static org.mockito.Mockito.mock;
 
+import io.airbyte.config.AuthProvider;
 import io.airbyte.config.Geography;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
-import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -114,6 +114,22 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     void getUserByAuthIdTest() throws IOException {
       for (final User user : MockData.users()) {
         final Optional<User> userFromDb = userPersistence.getUserByAuthId(user.getAuthUserId());
+        Assertions.assertEquals(user, userFromDb.get());
+      }
+    }
+
+    @Test
+    void getUserByAuthIdFromUserTableTest() throws IOException {
+      for (final User user : MockData.users()) {
+        final Optional<User> userFromDb = userPersistence.getUserByAuthIdFromUserTable(user.getAuthUserId());
+        Assertions.assertEquals(user, userFromDb.get());
+      }
+    }
+
+    @Test
+    void getUserByAuthIdFromAuthUserTableTest() throws IOException {
+      for (final User user : MockData.users()) {
+        final Optional<User> userFromDb = userPersistence.getUserByAuthIdFromAuthUserTable(user.getAuthUserId());
         Assertions.assertEquals(user, userFromDb.get());
       }
     }

@@ -9,8 +9,8 @@ import static io.airbyte.commons.server.support.JwtTokenParser.JWT_SSO_REALM;
 import static io.airbyte.commons.server.support.JwtTokenParser.JWT_USER_EMAIL;
 import static io.airbyte.commons.server.support.JwtTokenParser.JWT_USER_NAME;
 
+import io.airbyte.config.AuthProvider;
 import io.airbyte.config.User;
-import io.airbyte.config.User.AuthProvider;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.security.utils.SecurityService;
 import jakarta.inject.Singleton;

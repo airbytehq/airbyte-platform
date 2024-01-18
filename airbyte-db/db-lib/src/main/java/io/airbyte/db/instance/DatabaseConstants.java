@@ -64,6 +64,7 @@ public final class DatabaseConstants {
   public static final String SCHEMA_MANAGEMENT_TABLE = "schema_management";
 
   public static final String USER_TABLE = "user";
+  public static final String AUTH_USER_TABLE = "auth_user";
 
   public static final String PERMISSION_TABLE = "permission";
 

@@ -12,8 +12,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.config.AuthProvider;
 import io.airbyte.config.User;
-import io.airbyte.config.User.AuthProvider;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.security.utils.SecurityService;
 import java.util.Map;

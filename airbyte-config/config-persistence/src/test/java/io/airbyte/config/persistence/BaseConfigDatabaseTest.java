@@ -118,6 +118,7 @@ class BaseConfigDatabaseTest {
               actor_definition_workspace_grant,
               actor_definition_config_injection,
               actor_oauth_parameter,
+              auth_user,
               connection,
               connection_operation,
               connector_builder_project,

@@ -141,6 +141,18 @@ create table "public"."airbyte_configs_migrations" (
   constraint "airbyte_configs_migrations_pk"
     primary key ("installed_rank")
 );
+create table "public"."auth_user" (
+  "id" uuid not null,
+  "user_id" uuid not null,
+  "auth_user_id" varchar(256) not null,
+  "auth_provider" "public"."auth_provider" not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "auth_user_pkey"
+    primary key ("id"),
+  constraint "auth_user_auth_user_id_auth_provider_key"
+    unique ("auth_user_id", "auth_provider")
+);
 create table "public"."connection" (
   "id" uuid not null,
   "namespace_definition" "public"."namespace_definition_type" not null,
@@ -486,6 +498,10 @@ alter table "public"."actor_definition_workspace_grant"
   add constraint "actor_definition_workspace_grant_actor_definition_id_fkey"
     foreign key ("actor_definition_id")
     references "public"."actor_definition" ("id");
+alter table "public"."auth_user"
+  add constraint "auth_user_user_id_fkey"
+    foreign key ("user_id")
+    references "public"."user" ("id");
 alter table "public"."connection"
   add constraint "connection_actor_catalog_id_fk"
     foreign key ("source_catalog_id")

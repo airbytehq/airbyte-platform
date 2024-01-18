@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.airbyte.config.User.AuthProvider;
+import io.airbyte.config.AuthProvider;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 

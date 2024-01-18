@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.AUTH_USER;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.USER;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.field;
@@ -62,6 +63,8 @@ public class UserPersistence {
           .where(USER.ID.eq(user.getUserId())));
 
       if (isExistingConfig) {
+        // TODO: authUserId and authProvider will be removed from user table once we migrate to auth_user
+        // table https://github.com/airbytehq/airbyte-platform-internal/issues/10641
         ctx.update(USER)
             .set(USER.ID, user.getUserId())
             .set(USER.NAME, user.getName())
@@ -77,8 +80,16 @@ public class UserPersistence {
             .set(USER.UPDATED_AT, timestamp)
             .where(USER.ID.eq(user.getUserId()))
             .execute();
-
+        ctx.update(AUTH_USER)
+            .set(AUTH_USER.AUTH_USER_ID, user.getAuthUserId())
+            .set(AUTH_USER.AUTH_PROVIDER, user.getAuthProvider() == null ? null
+                : Enums.toEnum(user.getAuthProvider().value(), AuthProvider.class).orElseThrow())
+            .set(AUTH_USER.UPDATED_AT, timestamp)
+            .where(AUTH_USER.USER_ID.eq(user.getUserId()))
+            .execute();
       } else {
+        // TODO: authUserId and authProvider will be removed from user table once we migrate to auth_user
+        // table https://github.com/airbytehq/airbyte-platform-internal/issues/10641
         ctx.insertInto(USER)
             .set(USER.ID, user.getUserId())
             .set(USER.NAME, user.getName())
@@ -93,6 +104,15 @@ public class UserPersistence {
             .set(USER.NEWS, user.getNews())
             .set(USER.CREATED_AT, timestamp)
             .set(USER.UPDATED_AT, timestamp)
+            .execute();
+        ctx.insertInto(AUTH_USER)
+            .set(AUTH_USER.ID, UUID.randomUUID())
+            .set(AUTH_USER.USER_ID, user.getUserId())
+            .set(AUTH_USER.AUTH_USER_ID, user.getAuthUserId())
+            .set(AUTH_USER.AUTH_PROVIDER, user.getAuthProvider() == null ? null
+                : Enums.toEnum(user.getAuthProvider().value(), AuthProvider.class).orElseThrow())
+            .set(AUTH_USER.CREATED_AT, timestamp)
+            .set(AUTH_USER.UPDATED_AT, timestamp)
             .execute();
       }
       return null;
@@ -135,7 +155,7 @@ public class UserPersistence {
         .withName(record.get(USER.NAME))
         .withAuthUserId(record.get(USER.AUTH_USER_ID))
         .withAuthProvider(record.get(USER.AUTH_PROVIDER) == null ? null
-            : Enums.toEnum(record.get(USER.AUTH_PROVIDER, String.class), User.AuthProvider.class).orElseThrow())
+            : Enums.toEnum(record.get(USER.AUTH_PROVIDER, String.class), io.airbyte.config.AuthProvider.class).orElseThrow())
         .withDefaultWorkspaceId(record.get(USER.DEFAULT_WORKSPACE_ID))
         .withStatus(record.get(USER.STATUS) == null ? null : Enums.toEnum(record.get(USER.STATUS, String.class), User.Status.class).orElseThrow())
         .withCompanyName(record.get(USER.COMPANY_NAME))
@@ -152,6 +172,44 @@ public class UserPersistence {
    */
   public Optional<User> getUserByAuthId(final String userAuthId) throws IOException {
 
+    final var resultFromAuthUsersTable = getUserByAuthIdFromAuthUserTable(userAuthId);
+
+    if (!resultFromAuthUsersTable.isEmpty()) {
+      return resultFromAuthUsersTable;
+    } else {
+      log.warn("User with auth user id {} not found in auth_user table", userAuthId);
+    }
+
+    return getUserByAuthIdFromUserTable(userAuthId);
+  }
+
+  public Optional<User> getUserByAuthIdFromAuthUserTable(final String userAuthId) throws IOException {
+    final var result = database.query(ctx -> ctx
+        .select(
+            AUTH_USER.AUTH_USER_ID,
+            AUTH_USER.AUTH_PROVIDER,
+            USER.ID,
+            USER.NAME,
+            USER.DEFAULT_WORKSPACE_ID,
+            USER.STATUS,
+            USER.COMPANY_NAME,
+            USER.EMAIL,
+            USER.NEWS)
+        .from(AUTH_USER)
+        .innerJoin(USER).on(AUTH_USER.USER_ID.eq(USER.ID))
+        .where(AUTH_USER.AUTH_USER_ID.eq(userAuthId)).fetch());
+
+    if (result.isEmpty()) {
+      return Optional.empty();
+    }
+
+    return Optional.of(createUserFromRecord(result.get(0)));
+  }
+
+  // TODO: To be removed once the migration to the auth user table is finished
+  // https://github.com/airbytehq/airbyte-platform-internal/issues/10641
+  @Deprecated(forRemoval = true)
+  public Optional<User> getUserByAuthIdFromUserTable(final String userAuthId) throws IOException {
     final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())
         .from(USER)
@@ -162,7 +220,6 @@ public class UserPersistence {
     }
 
     return Optional.of(createUserFromRecord(result.get(0)));
-
   }
 
   /**
