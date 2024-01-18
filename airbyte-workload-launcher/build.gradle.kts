@@ -19,6 +19,8 @@ dependencies {
     implementation(libs.bundles.temporal)
     implementation(libs.bundles.temporal.telemetry)
     implementation(libs.failsafe.okhttp)
+    implementation(libs.kubernetes.client)
+    implementation(libs.kubernetes.httpclient.okhttp)
     implementation(libs.google.cloud.storage)
     implementation(libs.guava)
     implementation(libs.kotlin.logging)

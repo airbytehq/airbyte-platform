@@ -25,6 +25,14 @@ airbyte:
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
   kubernetes:
+    client:
+      call-timeout-sec: ${KUBERNETES_CLIENT_CALL_TIMEOUT_SECONDS:30}
+      connect-timeout-sec: ${KUBERNETES_CLIENT_CONNECT_TIMEOUT_SECONDS:30}
+      read-timeout-sec: ${KUBERNETES_CLIENT_READ_TIMEOUT_SECONDS:30}
+      write-timeout-sec: ${KUBERNETES_CLIENT_WRITE_TIMEOUT_SECONDS:30}
+      connection-pool:
+        keep-alive-sec: ${KUBERNETES_CLIENT_CONNECTION_KEEP_ALIVE_SECONDS:600}
+        max-idle-connections: ${KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS:25}
     pending-time-limit-sec: ${WORKLOAD_LAUNCHER_POD_PENDING_TIME_LIMIT:600}
     resource-check-rate: ${WORKLOAD_LAUNCHER_POD_PENDING_RESOURCE_CHECK_RATE:PT30S}
   docker:

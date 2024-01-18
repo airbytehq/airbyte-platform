@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.config
 
 import io.airbyte.commons.constants.WorkerConstants
@@ -34,8 +38,10 @@ import java.util.function.Consumer
 @Factory
 class ContainerOrchestratorConfigBeanFactory {
   @Singleton
-  fun kubeClient(): KubernetesClient {
-    return KubernetesClientBuilder().build()
+  fun kubeClient(customOkHttpClientFactory: CustomOkHttpClientFactory): KubernetesClient {
+    return KubernetesClientBuilder()
+      .withHttpClientFactory(customOkHttpClientFactory)
+      .build()
   }
 
   @Singleton
