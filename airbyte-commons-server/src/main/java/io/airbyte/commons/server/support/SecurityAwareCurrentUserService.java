@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.support;
 
+import io.airbyte.commons.server.errors.AuthException;
 import io.airbyte.config.User;
 import io.airbyte.config.persistence.UserPersistence;
 import io.micronaut.context.annotation.Replaces;
@@ -43,7 +44,7 @@ public class SecurityAwareCurrentUserService implements CurrentUserService {
         this.retrievedCurrentUser = userPersistence.getUserByAuthId(authUserId).orElseThrow();
         log.debug("Setting current user for request to: {}", retrievedCurrentUser);
       } catch (final Exception e) {
-        throw new RuntimeException("Could not get the current Airbyte user due to an internal error.", e);
+        throw new AuthException("Could not get the current Airbyte user due to an internal error.", e);
       }
     }
     return this.retrievedCurrentUser;

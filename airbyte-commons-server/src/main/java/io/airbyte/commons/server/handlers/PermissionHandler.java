@@ -357,6 +357,10 @@ public class PermissionHandler {
     return permissionPersistence.isUserInstanceAdmin(userId);
   }
 
+  public Boolean isAuthUserInstanceAdmin(final String authUserId) throws IOException {
+    return permissionPersistence.isAuthUserInstanceAdmin(authUserId);
+  }
+
   /**
    * Lists the permissions for a workspace.
    *

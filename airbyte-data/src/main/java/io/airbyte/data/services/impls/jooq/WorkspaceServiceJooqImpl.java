@@ -339,7 +339,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   }
 
   /**
-   * Test if workspace is has access to a custom connector definition.
+   * Test if workspace has access to a custom connector definition.
    *
    * @param actorDefinitionId custom actor definition id
    * @param workspaceId workspace id
