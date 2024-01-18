@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.reporter;
@@ -40,17 +40,17 @@ class MetricRepository {
   }
 
   Map<String, Integer> numberOfPendingJobsByGeography() {
-    String geographyResultAlias = "geography";
-    String countResultAlias = "result";
-    var result = ctx.select(CONNECTION.GEOGRAPHY.cast(String.class).as(geographyResultAlias), count(asterisk()).as(countResultAlias))
+    final String geographyResultAlias = "geography";
+    final String countResultAlias = "result";
+    final var result = ctx.select(CONNECTION.GEOGRAPHY.cast(String.class).as(geographyResultAlias), count(asterisk()).as(countResultAlias))
         .from(JOBS)
         .join(CONNECTION)
         .on(CONNECTION.ID.cast(VARCHAR(255)).eq(JOBS.SCOPE))
         .where(JOBS.STATUS.eq(JobStatus.pending))
         .groupBy(CONNECTION.GEOGRAPHY);
-    Field<String> geographyResultField = DSL.field(name(geographyResultAlias), String.class);
-    Field<Integer> countResultField = DSL.field(name(countResultAlias), Integer.class);
-    Map<String, Integer> queriedMap = result.fetchMap(geographyResultField, countResultField);
+    final Field<String> geographyResultField = DSL.field(name(geographyResultAlias), String.class);
+    final Field<Integer> countResultField = DSL.field(name(countResultAlias), Integer.class);
+    final Map<String, Integer> queriedMap = result.fetchMap(geographyResultField, countResultField);
     for (final String potentialGeography : REGISTERED_GEOGRAPHY) {
       if (!queriedMap.containsKey(potentialGeography)) {
         queriedMap.put(potentialGeography, 0);
@@ -60,8 +60,8 @@ class MetricRepository {
   }
 
   Map<String, Integer> numberOfRunningJobsByTaskQueue() {
-    String countFieldName = "count";
-    var result = ctx.select(ATTEMPTS.PROCESSING_TASK_QUEUE, count(asterisk()).as(countFieldName))
+    final String countFieldName = "count";
+    final var result = ctx.select(ATTEMPTS.PROCESSING_TASK_QUEUE, count(asterisk()).as(countFieldName))
         .from(JOBS)
         .join(CONNECTION)
         .on(CONNECTION.ID.cast(VARCHAR(255)).eq(JOBS.SCOPE))
@@ -71,8 +71,8 @@ class MetricRepository {
         .and(ATTEMPTS.STATUS.eq(AttemptStatus.running))
         .groupBy(ATTEMPTS.PROCESSING_TASK_QUEUE);
 
-    Field<Integer> countResultField = DSL.field(name(countFieldName), Integer.class);
-    Map<String, Integer> queriedMap = result.fetchMap(ATTEMPTS.PROCESSING_TASK_QUEUE, countResultField);
+    final Field<Integer> countResultField = DSL.field(name(countFieldName), Integer.class);
+    final Map<String, Integer> queriedMap = result.fetchMap(ATTEMPTS.PROCESSING_TASK_QUEUE, countResultField);
     for (final String potentialAttemptQueue : REGISTERED_ATTEMPT_QUEUE) {
       if (!queriedMap.containsKey(potentialAttemptQueue)) {
         queriedMap.put(potentialAttemptQueue, 0);
@@ -105,9 +105,9 @@ class MetricRepository {
         GROUP BY geography;
         """;
     final var result = ctx.fetch(query);
-    Field<String> geographyResultField = DSL.field(name("geography"), String.class);
-    Field<Double> runDurationSecondsField = DSL.field(name("run_duration_seconds"), Double.class);
-    Map<String, Double> queriedMap = result.intoMap(geographyResultField, runDurationSecondsField);
+    final Field<String> geographyResultField = DSL.field(name("geography"), String.class);
+    final Field<Double> runDurationSecondsField = DSL.field(name("run_duration_seconds"), Double.class);
+    final Map<String, Double> queriedMap = result.intoMap(geographyResultField, runDurationSecondsField);
     for (final String potentialGeography : REGISTERED_GEOGRAPHY) {
       if (!queriedMap.containsKey(potentialGeography)) {
         queriedMap.put(potentialGeography, 0.0);
@@ -128,9 +128,9 @@ class MetricRepository {
         GROUP BY task_queue;
         """;
     final var result = ctx.fetch(query);
-    Field<String> taskQueueResultField = DSL.field(name("task_queue"), String.class);
-    Field<Double> runDurationSecondsField = DSL.field(name("run_duration_seconds"), Double.class);
-    Map<String, Double> queriedMap = result.intoMap(taskQueueResultField, runDurationSecondsField);
+    final Field<String> taskQueueResultField = DSL.field(name("task_queue"), String.class);
+    final Field<Double> runDurationSecondsField = DSL.field(name("run_duration_seconds"), Double.class);
+    final Map<String, Double> queriedMap = result.intoMap(taskQueueResultField, runDurationSecondsField);
     for (final String potentialAttemptQueue : REGISTERED_ATTEMPT_QUEUE) {
       if (!queriedMap.containsKey(potentialAttemptQueue)) {
         queriedMap.put(potentialAttemptQueue, 0.0);

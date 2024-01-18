@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.lib;
@@ -76,15 +76,15 @@ public class OpenTelemetryMetricClient implements MetricClient {
     synchronized (gauges) { // sync so we don't create the same gauge concurrently
       if (!gauges.containsKey(name)) {
         // create an in-memory sync map for reading the latest value given the attribute set
-        var valueMap = Collections.synchronizedMap(new HashMap<Attributes, Double>());
+        final var valueMap = Collections.synchronizedMap(new HashMap<Attributes, Double>());
         gaugeValues.put(name, valueMap); // Register this in-memory map with this gauge
         valueMap.put(attr, val); // Must insert the initial value so the callback will see it on its first poll
 
         // Build the gauge with a callback that reads from the sync map to get the current values for each
         // attribute set
         // The OpenTelemetry SDK will call this periodically to read the current values.
-        var gauge = meter.gaugeBuilder(name).setDescription(metric.getMetricDescription()).buildWithCallback(measurement -> {
-          for (Map.Entry<Attributes, Double> entry : valueMap.entrySet()) {
+        final var gauge = meter.gaugeBuilder(name).setDescription(metric.getMetricDescription()).buildWithCallback(measurement -> {
+          for (final Map.Entry<Attributes, Double> entry : valueMap.entrySet()) {
             measurement.record(entry.getValue(), entry.getKey());
           }
         });
@@ -94,7 +94,7 @@ public class OpenTelemetryMetricClient implements MetricClient {
     }
     // This is outside the sync block since we don't need to create a new gauge/gaugeValues map
     // and at this point they are both guaranteed to exist.
-    var valueMap = gaugeValues.get(name);
+    final var valueMap = gaugeValues.get(name);
     valueMap.put(attr, val);
   }
 
@@ -160,7 +160,7 @@ public class OpenTelemetryMetricClient implements MetricClient {
 
   private void closeGauges() {
     synchronized (gauges) {
-      for (Map.Entry<String, ObservableDoubleGauge> entry : gauges.entrySet()) {
+      for (final Map.Entry<String, ObservableDoubleGauge> entry : gauges.entrySet()) {
         entry.getValue().close();
       }
       gauges.clear();

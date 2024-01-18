@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance.configs.migrations;
@@ -22,7 +22,7 @@ public class V0_50_33_009__DropKeycloakTables extends BaseJavaMigration {
   public void migrate(final Context context) throws Exception {
     LOGGER.info("Running migration: {}", this.getClass().getSimpleName());
 
-    List<String> tablesToDelete = Arrays.asList(
+    final List<String> tablesToDelete = Arrays.asList(
         "admin_event_entity", "associated_policy", "authentication_execution", "authentication_flow", "authenticator_config",
         "authenticator_config_entry", "broker_link", "client", "client_attributes", "client_auth_flow_bindings", "client_initial_access",
         "client_node_registrations", "client_scope", "client_scope_attributes", "client_scope_client", "client_scope_role_mapping", "client_session",

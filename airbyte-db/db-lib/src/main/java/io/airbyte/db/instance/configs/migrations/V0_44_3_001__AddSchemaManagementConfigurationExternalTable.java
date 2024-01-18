@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance.configs.migrations;
@@ -90,18 +90,18 @@ public class V0_44_3_001__AddSchemaManagementConfigurationExternalTable extends 
     addIndexOnConnectionId(ctx);
   }
 
-  private static void addIndexOnConnectionId(DSLContext ctx) {
+  private static void addIndexOnConnectionId(final DSLContext ctx) {
     ctx.createIndexIfNotExists("connection_idx").on(SCHEMA_MANAGEMENT_TABLE, CONNECTION_ID_COLUMN.getName()).execute();
   }
 
-  private static void addSchemaManagementTable(DSLContext ctx) {
+  private static void addSchemaManagementTable(final DSLContext ctx) {
     ctx.createTableIfNotExists(SCHEMA_MANAGEMENT_TABLE)
         .columns(ID_COLUMN, AUTO_PROPAGATION_STATUS_COLUMN, CONNECTION_ID_COLUMN, CREATED_AT_COLUMN, UPDATED_AT_COLUMN)
         .constraints(primaryKey(ID_COLUMN), foreignKey(CONNECTION_ID_COLUMN).references(CONNECTION_TABLE, "id").onDeleteCascade())
         .execute();
   }
 
-  private static void addAutoPropagationTypeEnum(DSLContext ctx) {
+  private static void addAutoPropagationTypeEnum(final DSLContext ctx) {
     ctx.createType(AUTO_PROPAGATION_STATUS).asEnum(ENABLED, DISABLED).execute();
   }
 

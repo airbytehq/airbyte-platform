@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance.configs.migrations;
@@ -72,7 +72,7 @@ public class V0_50_41_002__AddAuthUsersTable extends BaseJavaMigration {
   }
 
   static void populateAuthUserTable(final DSLContext ctx) {
-    var userRecords = ctx.select(
+    final var userRecords = ctx.select(
         DSL.field("id"),
         DSL.field("auth_user_id"),
         DSL.field("auth_provider"),

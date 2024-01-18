@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance.configs.migrations;
@@ -22,7 +22,7 @@ public class V0_50_33_009__DropKeycloakTablesTest extends AbstractConfigsDatabas
   void testDropTables() throws IOException {
     final DSLContext context = getDslContext();
 
-    List<String> tablesToDelete = Arrays.asList(
+    final List<String> tablesToDelete = Arrays.asList(
         "admin_event_entity", "associated_policy", "authentication_execution", "authentication_flow", "authenticator_config",
         "authenticator_config_entry", "broker_link", "client", "client_attributes", "client_auth_flow_bindings", "client_initial_access",
         "client_node_registrations", "client_scope", "client_scope_attributes", "client_scope_client", "client_scope_role_mapping", "client_session",
@@ -40,21 +40,21 @@ public class V0_50_33_009__DropKeycloakTablesTest extends AbstractConfigsDatabas
         "user_federation_mapper", "user_federation_mapper_config", "user_federation_provider", "user_group_membership", "user_required_action",
         "user_role_mapping", "user_session", "user_session_note", "username_login_failure", "web_origins");
 
-    for (String tableName : tablesToDelete) {
+    for (final String tableName : tablesToDelete) {
       assertTrue("Table " + tableName + " should exist before dropping", tableExists(context, tableName));
     }
 
-    List<String> tablesBeforeMigration = fetchAllTableNames(context);
+    final List<String> tablesBeforeMigration = fetchAllTableNames(context);
 
     // Drop the tables
     V0_50_33_009__DropKeycloakTables.dropTables(context, tablesToDelete);
 
     // Verify that each table does not exist after the drop operation
-    for (String tableName : tablesToDelete) {
+    for (final String tableName : tablesToDelete) {
       assertFalse("Table " + tableName + " should not exist after dropping", tableExists(context, tableName));
     }
 
-    List<String> tablesAfterMigration = fetchAllTableNames(context);
+    final List<String> tablesAfterMigration = fetchAllTableNames(context);
 
     tablesBeforeMigration.removeAll(tablesToDelete);
 
@@ -62,13 +62,13 @@ public class V0_50_33_009__DropKeycloakTablesTest extends AbstractConfigsDatabas
     assertEquals(tablesBeforeMigration, tablesAfterMigration);
   }
 
-  private List<String> fetchAllTableNames(DSLContext ctx) {
+  private List<String> fetchAllTableNames(final DSLContext ctx) {
     return ctx.meta().getTables().stream()
         .map(org.jooq.Table::getName)
         .collect(java.util.stream.Collectors.toList());
   }
 
-  private boolean tableExists(final DSLContext context, String tableName) {
+  private boolean tableExists(final DSLContext context, final String tableName) {
     return context.fetchExists(
         org.jooq.impl.DSL.select()
             .from("information_schema.tables")
