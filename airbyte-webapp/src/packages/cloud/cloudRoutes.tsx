@@ -6,16 +6,26 @@ import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useCurrentWorkspace, useInvalidateAllWorkspaceScopeOnChange } from "core/api";
+import { useCurrentOrganizationInfo, useCurrentWorkspace, useInvalidateAllWorkspaceScopeOnChange } from "core/api";
 import { usePrefetchCloudWorkspaceData } from "core/api/cloud";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
 import { useAuthService } from "core/services/auth";
+import { FeatureItem, useFeature } from "core/services/features";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
+import { useExperiment } from "hooks/services/Experiment";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths, DestinationPaths, SourcePaths } from "pages/routePaths";
+import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/GeneralOrganizationSettingsPage";
+import { OrganizationAccessManagementPage } from "pages/SettingsPage/pages/AccessManagementPage/OrganizationAccessManagementPage";
+import { WorkspaceAccessManagementPage } from "pages/SettingsPage/pages/AccessManagementPage/WorkspaceAccessManagementPage";
+import {
+  SourcesPage as SettingsSourcesPage,
+  DestinationsPage as SettingsDestinationsPage,
+} from "pages/SettingsPage/pages/ConnectorsPage";
+import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
 import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 
 import { CloudRoutes } from "./cloudRoutePaths";
@@ -23,6 +33,13 @@ import { LDExperimentServiceProvider } from "./services/thirdParty/launchdarkly"
 import { SSOBookmarkPage } from "./views/auth/SSOBookmarkPage";
 import { SSOIdentifierPage } from "./views/auth/SSOIdentifierPage";
 import { FirebaseActionRoute } from "./views/FirebaseActionRoute";
+import { DbtCloudSettingsView } from "./views/settings/integrations/DbtCloudSettingsView";
+import { CloudSettingsRoutePaths } from "./views/settings/routePaths";
+import { AccountSettingsView } from "./views/users/AccountSettingsView";
+import { ApplicationSettingsView } from "./views/users/ApplicationSettingsView/ApplicationSettingsView";
+import { UsersSettingsView } from "./views/users/UsersSettingsView";
+import { DataResidencyView } from "./views/workspaces/DataResidencyView";
+import { WorkspaceSettingsView } from "./views/workspaces/WorkspaceSettingsView";
 
 const LoginPage = React.lazy(() => import("./views/auth/LoginPage"));
 const ResetPasswordPage = React.lazy(() => import("./views/auth/ResetPasswordPage"));
@@ -54,6 +71,9 @@ const CloudSettingsPage = React.lazy(() => import("./views/settings/CloudSetting
 
 const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
+  const organization = useCurrentOrganizationInfo();
+  const isSsoEnabled = organization?.sso;
+  const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
 
   const analyticsContext = useMemo(
     () => ({
@@ -63,6 +83,9 @@ const MainRoutes: React.FC = () => {
     [workspace]
   );
   useAnalyticsRegisterValues(analyticsContext);
+
+  const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
+  const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
 
   return (
     <ApiErrorBoundary>
@@ -86,7 +109,38 @@ const MainRoutes: React.FC = () => {
           </Route>
         </Route>
         <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
-        <Route path={`${RoutePaths.Settings}/*`} element={<CloudSettingsPage />} />
+        <Route path={`${RoutePaths.Settings}/*`} element={<CloudSettingsPage />}>
+          <Route path={CloudSettingsRoutePaths.Account} element={<AccountSettingsView />} />
+          {isTokenManagementEnabled && (
+            <Route path={CloudSettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
+          )}
+          <Route path={CloudSettingsRoutePaths.Workspace} element={<WorkspaceSettingsView />} />
+          {supportsDataResidency && (
+            <Route path={CloudSettingsRoutePaths.DataResidency} element={<DataResidencyView />} />
+          )}
+          <Route path={CloudSettingsRoutePaths.Source} element={<SettingsSourcesPage />} />
+          <Route path={CloudSettingsRoutePaths.Destination} element={<SettingsDestinationsPage />} />
+          <Route
+            path={CloudSettingsRoutePaths.AccessManagement}
+            element={isSsoEnabled ? <WorkspaceAccessManagementPage /> : <UsersSettingsView />}
+          />
+          <Route path={CloudSettingsRoutePaths.Notifications} element={<NotificationPage />} />
+          {supportsCloudDbtIntegration && (
+            <Route path={CloudSettingsRoutePaths.DbtCloud} element={<DbtCloudSettingsView />} />
+          )}
+          {organization && (
+            <>
+              <Route path={CloudSettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
+              {isSsoEnabled && (
+                <Route
+                  path={`${CloudSettingsRoutePaths.Organization}/${CloudSettingsRoutePaths.AccessManagement}`}
+                  element={<OrganizationAccessManagementPage />}
+                />
+              )}
+            </>
+          )}
+          <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Account} replace />} />
+        </Route>
         <Route path={CloudRoutes.Billing} element={<BillingPage />} />
         <Route path={CloudRoutes.UpcomingFeatures} element={<UpcomingFeaturesPage />} />
         <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
