@@ -91,7 +91,9 @@ class PayloadKubeInputMapper(
         kubeContainerInfo,
       )
 
-    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), checkWorkerConfigs)
+    // We pass the replication worker configs in order to use the regular node selectors.
+    // TODO: Change back to checkWorkerConfigs. For now this makes it easier to test latency.
+    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs)
 
     val fileMap = buildFileMap(workloadId, input, input.jobRunConfig, orchestratorPodInfo)
 

@@ -119,14 +119,14 @@ class PayloadKubeInputMapperTest {
     val orchestratorNameGenerator = OrchestratorNameGenerator(namespace = namespace)
     val containerInfo = KubeContainerInfo("img-name", "pull-policy")
     val envMap: Map<String, String> = mapOf()
-    val checkConfigs: WorkerConfigs = mockk()
     val checkSelectors = mapOf("test-selector" to "normal-check")
     val checkCustomSelectors = mapOf("test-selector" to "custom-check")
-    every { checkConfigs.getworkerKubeNodeSelectors() } returns checkSelectors
-    every { checkConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(checkCustomSelectors)
+    val checkConfigs: WorkerConfigs = mockk()
     every { checkConfigs.workerKubeAnnotations } returns mapOf("annotation" to "value1")
-
     val replConfigs: WorkerConfigs = mockk()
+    every { replConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(checkCustomSelectors)
+    every { replConfigs.getworkerKubeNodeSelectors() } returns checkSelectors
+
     val checkResourceReqs = ResourceRequirements().withCpuRequest("1").withMemoryLimit("100MiB")
 
     val mapper =
