@@ -14,6 +14,7 @@ type TextColor =
   | "red200"
   | "grey600"
   | "grey400"
+  | "grey500"
   | "blue";
 type TextElementType = "p" | "span" | "div";
 type TextHTMLElement = HTMLParagraphElement | HTMLSpanElement | HTMLDivElement;
@@ -51,6 +52,7 @@ const colors: Record<TextColor, string> = {
   red200: styles.red200,
   blue: styles.blue,
   grey400: styles.grey400,
+  grey500: styles.grey500,
   grey600: styles.grey600,
 };
 

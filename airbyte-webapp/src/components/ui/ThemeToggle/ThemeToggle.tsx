@@ -1,23 +1,24 @@
+import { useIntl } from "react-intl";
+
 import { Icon } from "components/ui/Icon";
 
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
-
-import styles from "./ThemeToggle.module.scss";
+import { NavItem } from "views/layout/SideBar/components/NavItem";
 
 export const ThemeToggle: React.FC = () => {
   const { theme, setTheme } = useAirbyteTheme();
+  const { formatMessage } = useIntl();
 
   return (
-    <button
-      className={styles.button}
-      type="button"
+    <NavItem
+      as="button"
+      label={
+        theme === "airbyteThemeLight"
+          ? formatMessage({ id: "sidebar.lightMode" })
+          : formatMessage({ id: "sidebar.darkMode" })
+      }
+      icon={<Icon type={theme === "airbyteThemeLight" ? "day" : "moon"} />}
       onClick={() => setTheme(theme === "airbyteThemeLight" ? "airbyteThemeDark" : "airbyteThemeLight")}
-    >
-      {theme === "airbyteThemeLight" ? (
-        <Icon type="day" className={styles.icon} />
-      ) : (
-        <Icon type="moon" className={styles.icon} />
-      )}
-    </button>
+    />
   );
 };

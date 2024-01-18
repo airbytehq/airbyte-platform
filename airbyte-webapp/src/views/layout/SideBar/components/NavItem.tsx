@@ -1,83 +1,110 @@
 import classNames from "classnames";
 import React from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { FormattedMessage } from "react-intl";
+import { NavLink } from "react-router-dom";
 
+import { Badge } from "components/ui/Badge";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import styles from "./NavItem.module.scss";
 import { NotificationIndicator } from "../NotificationIndicator";
 
-interface NavItemProps extends NavItemInnerProps {
-  to: string;
-  as?: "a";
+interface NavItemBaseProps extends NavItemInnerProps {
   className?: string;
   activeClassName?: string;
   testId?: string;
 }
 
+interface LinkNavItemProps extends NavItemBaseProps {
+  as?: "a";
+  to: string;
+  onClick?: undefined;
+}
+
+interface ButtonNavItemProps extends NavItemBaseProps {
+  as: "button";
+  onClick?: () => void;
+  to?: undefined;
+}
+
+type NavItemProps = LinkNavItemProps | ButtonNavItemProps;
+
 interface NavItemInnerProps {
   label: React.ReactNode;
   icon: React.ReactNode;
   withNotification?: boolean;
+  isActive?: boolean;
+  withBadge?: "beta";
 }
 
-const NavItemInner: React.FC<NavItemInnerProps> = ({ icon, label, withNotification }) => {
+const NavItemInner: React.FC<NavItemInnerProps> = ({ icon, label, withNotification, isActive, withBadge }) => {
   return (
-    <FlexContainer direction="column" alignItems="center" justifyContent="center" className={styles.fullHeight}>
-      {icon}
-      {withNotification && (
-        <React.Suspense fallback={null}>
-          <NotificationIndicator />
-        </React.Suspense>
+    <FlexContainer direction="row" alignItems="center" gap="md">
+      <span className={styles.icon}>{icon}</span>
+      <Text size="sm" color={isActive ? "darkBlue" : "grey500"} bold className={styles.label}>
+        {label}
+      </Text>
+      {withBadge && (
+        <Badge variant="blue" className={styles.badge}>
+          {withBadge === "beta" && <FormattedMessage id="sidebar.beta" />}
+        </Badge>
       )}
-      <Text size="sm">{label}</Text>
+      {withNotification && <NotificationIndicator />}
     </FlexContainer>
   );
 };
 
-export const NavItem: React.FC<NavItemProps> = ({
-  label,
-  icon,
-  to,
-  testId,
-  as,
-  className,
-  activeClassName,
-  withNotification = false,
-}) => {
-  const location = useLocation();
+export const NavItem = React.forwardRef<HTMLButtonElement | null, NavItemProps>(
+  (
+    { label, icon, to, testId, as, className, activeClassName, onClick, withNotification = false, isActive, withBadge },
+    ref
+  ) => {
+    const menuItemStyle = (isActive?: boolean) => {
+      return classNames(
+        styles.menuItem,
+        className,
+        {
+          [styles.active]: isActive,
+        },
+        isActive && activeClassName
+      );
+    };
 
-  const menuItemStyle = (isActive?: boolean) => {
-    const isChild = location.pathname.split("/").length > 4 && location.pathname.split("/")[3] !== "settings";
+    if (as === "button") {
+      return (
+        <button
+          type="button"
+          onClick={onClick}
+          className={classNames(styles.menuItem, className, { [styles.active]: isActive })}
+          data-testid={testId}
+          ref={ref}
+        >
+          <NavItemInner
+            label={label}
+            icon={icon}
+            withNotification={withNotification}
+            isActive={isActive}
+            withBadge={withBadge}
+          />
+        </button>
+      );
+    }
 
-    return classNames(
-      styles.menuItem,
-      className,
-      {
-        [styles.active]: isActive,
-        [styles.activeChild]: isChild && isActive,
-      },
-      isActive && activeClassName
-    );
-  };
-
-  if (as === "a") {
     return (
-      <a
-        href={to}
-        target="_blank"
-        rel="noreferrer"
-        className={classNames(styles.menuItem, className)}
-        data-testid={testId}
-      >
-        <NavItemInner label={label} icon={icon} withNotification={withNotification} />
-      </a>
+      <NavLink className={({ isActive }) => menuItemStyle(isActive)} to={to} data-testid={testId}>
+        {({ isActive }) => (
+          <NavItemInner
+            label={label}
+            icon={icon}
+            withNotification={withNotification}
+            isActive={isActive}
+            withBadge={withBadge}
+          />
+        )}
+      </NavLink>
     );
   }
-  return (
-    <NavLink className={({ isActive }) => menuItemStyle(isActive)} to={to} data-testid={testId}>
-      <NavItemInner label={label} icon={icon} withNotification={withNotification} />
-    </NavLink>
-  );
-};
+);
+
+NavItem.displayName = "NavItem";

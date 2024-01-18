@@ -19,6 +19,7 @@ import CheckIcon from "./icons/checkIcon.svg?react";
 import ChevronDownIcon from "./icons/chevronDownIcon.svg?react";
 import ChevronLeftIcon from "./icons/chevronLeftIcon.svg?react";
 import ChevronRightIcon from "./icons/chevronRightIcon.svg?react";
+import ChevronUpDownIcon from "./icons/chevronUpDownIcon.svg?react";
 import ChevronUpIcon from "./icons/chevronUpIcon.svg?react";
 import ClockFilledIcon from "./icons/clockFilledIcon.svg?react";
 import ClockOutlineIcon from "./icons/clockOutlineIcon.svg?react";
@@ -98,6 +99,7 @@ import SelectIcon from "./icons/selectIcon.svg?react";
 import ShareIcon from "./icons/shareIcon.svg?react";
 import ShortVideoIcon from "./icons/shortVideoIcon.svg?react";
 import ShrinkIcon from "./icons/shrinkIcon.svg?react";
+import SignoutIcon from "./icons/signout.svg?react";
 import SimpleCircleIcon from "./icons/simpleCircleIcon.svg?react";
 import SlackIcon from "./icons/slackIcon.svg?react";
 import SleepIcon from "./icons/sleepIcon.svg?react";
@@ -164,6 +166,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   chevronLeft: ChevronLeftIcon,
   chevronRight: ChevronRightIcon,
   chevronUp: ChevronUpIcon,
+  chevronUpDown: ChevronUpDownIcon,
   clockFilled: ClockFilledIcon,
   clockOutline: ClockOutlineIcon,
   comments: CommentsIcon,
@@ -242,6 +245,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   share: ShareIcon,
   shortVideo: ShortVideoIcon,
   shrink: ShrinkIcon,
+  signout: SignoutIcon,
   simpleCircle: SimpleCircleIcon,
   slack: SlackIcon,
   sleep: SleepIcon,

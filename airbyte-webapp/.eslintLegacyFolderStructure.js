@@ -118,7 +118,7 @@ module.exports = [
   "src/views/CompleteOauthRequest.tsx",
   "src/views/layout/MainView/MainView.tsx",
   "src/views/layout/MainView/index.tsx",
-  "src/views/layout/SideBar/components/ResourcesDropdown.tsx",
+  "src/views/layout/SideBar/components/HelpDropdown.tsx",
   "src/views/layout/SideBar/components/NavDropdown.tsx",
   "src/views/layout/SideBar/components/MenuContent.tsx",
   "src/views/layout/SideBar/components/NavItem.tsx",

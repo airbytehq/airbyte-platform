@@ -8,14 +8,14 @@
 
 .workspacesPicker__button {
   width: 100%;
-  border: variables.$border-thin solid colors.$grey-300;
+  border: 0;
+  color: colors.$dark-blue-900;
   background: colors.$foreground;
   padding: 0;
-  border-radius: variables.$border-radius-sm;
 
   &:focus-visible,
   &:hover {
-    box-shadow: 0 3px 4px -2px rgba(26, 25, 77, 21%);
+    background: colors.$grey-50;
   }
 
   &:focus-visible {
@@ -33,7 +33,7 @@
 }
 
 .workspacesPicker__buttonContent {
-  padding: variables.$spacing-sm variables.$spacing-xs variables.$spacing-sm variables.$spacing-sm;
+  padding: variables.$spacing-md variables.$spacing-sm variables.$spacing-md variables.$spacing-md;
   display: flex;
   flex-direction: row;
   align-items: center;
