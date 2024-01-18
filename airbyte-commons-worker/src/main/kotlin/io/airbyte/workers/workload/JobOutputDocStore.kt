@@ -63,7 +63,9 @@ class JobOutputDocStore(
   ) {
     try {
       documentStoreClient.write(workloadId, Jsons.serialize(connectorJobOutput))
+      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "success"))
     } catch (e: Exception) {
+      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error"))
       throw DocStoreAccessException("Unable to write output for $workloadId", e)
     }
   }

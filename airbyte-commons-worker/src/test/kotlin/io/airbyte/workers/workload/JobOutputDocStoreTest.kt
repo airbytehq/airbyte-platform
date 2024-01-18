@@ -13,7 +13,7 @@ import io.airbyte.workers.workload.exception.DocStoreAccessException
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
-import io.mockk.verify
+import io.mockk.verifyOrder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -56,8 +56,10 @@ internal class JobOutputDocStoreTest {
 
     jobOutputDocStore.write(workloadId, connectorJobOutput)
 
-    verify { documentStoreClient.write(workloadId, connectorJobOutputSerialized) }
-    verify { metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "success")) }
+    verifyOrder {
+      documentStoreClient.write(workloadId, connectorJobOutputSerialized)
+      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "success"))
+    }
   }
 
   @Test
@@ -66,7 +68,10 @@ internal class JobOutputDocStoreTest {
     every { metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error")) } returns Unit
 
     assertThrows<DocStoreAccessException> { jobOutputDocStore.write(workloadId, connectorJobOutput) }
-    verify { metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error")) }
+    verifyOrder {
+      documentStoreClient.write(workloadId, connectorJobOutputSerialized)
+      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error"))
+    }
   }
 
   @Test
@@ -98,17 +103,26 @@ internal class JobOutputDocStoreTest {
   @Test
   fun `properly create an output for syncs`() {
     every { documentStoreClient.write(workloadId, replicationOutputSerialized) } returns Unit
+    every { metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "success")) } returns Unit
 
     jobOutputDocStore.writeSyncOutput(workloadId, replicationOutput)
 
-    verify { documentStoreClient.write(workloadId, replicationOutputSerialized) }
+    verifyOrder {
+      documentStoreClient.write(workloadId, replicationOutputSerialized)
+      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "success"))
+    }
   }
 
   @Test
   fun `properly wrap writing error for syncs`() {
     every { documentStoreClient.write(workloadId, replicationOutputSerialized) } throws RuntimeException()
+    every { metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error")) } returns Unit
 
     assertThrows<DocStoreAccessException> { jobOutputDocStore.writeSyncOutput(workloadId, replicationOutput) }
+    verifyOrder {
+      documentStoreClient.write(workloadId, replicationOutputSerialized)
+      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error"))
+    }
   }
 
   @Test
@@ -120,7 +134,10 @@ internal class JobOutputDocStoreTest {
 
     assertTrue(output.isPresent)
     assertEquals(replicationOutput, output.get())
-    verify { metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "success")) }
+    verifyOrder {
+      documentStoreClient.read(workloadId)
+      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "success"))
+    }
   }
 
   @Test
@@ -131,7 +148,10 @@ internal class JobOutputDocStoreTest {
     val output: Optional<ReplicationOutput> = jobOutputDocStore.readSyncOutput(workloadId)
 
     assertTrue(output.isEmpty)
-    verify { metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "success")) }
+    verifyOrder {
+      documentStoreClient.read(workloadId)
+      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "success"))
+    }
   }
 
   @Test
@@ -140,6 +160,9 @@ internal class JobOutputDocStoreTest {
     every { metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "error")) } returns Unit
 
     assertThrows<DocStoreAccessException> { jobOutputDocStore.readSyncOutput(workloadId) }
-    verify { metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "error")) }
+    verifyOrder {
+      documentStoreClient.read(workloadId)
+      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "error"))
+    }
   }
 }
