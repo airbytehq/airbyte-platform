@@ -451,7 +451,8 @@ public class SchedulerHandler {
         if (notificationSettings != null
             && newNotificationsEnabled
             && notificationSettings.getSendOnConnectionUpdate() != null
-            && !result.appliedDiff().getTransforms().isEmpty()) {
+            && !result.appliedDiff().getTransforms().isEmpty()
+            && (Boolean.TRUE == connectionRead.getNotifySchemaChanges())) {
           notifySchemaPropagated(notificationSettings, diff, workspace, connectionRead, source,
               workspace.getEmail(), result);
         }
