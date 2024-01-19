@@ -11,6 +11,10 @@
   padding: variables.$spacing-sm variables.$spacing-md;
   height: variables.$height-breadcrumb;
 
+  &__link {
+    display: flex;
+  }
+
   &__logo {
     color: colors.$dark-blue-900;
   }

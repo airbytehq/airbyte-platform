@@ -24,7 +24,6 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-left: variables.$width-size-menu;
 
   &--noSidebarOffset {
     margin-left: 0;
@@ -40,7 +39,7 @@
   position: relative;
   background: colors.$foreground;
   border-radius: variables.$border-radius-lg;
-  max-width: calc(100vw - #{variables.$width-size-menu} - #{variables.$spacing-lg} * 2);
+  max-width: calc(100vw - #{variables.$spacing-lg} * 2);
   display: flex;
   flex-direction: column;
 

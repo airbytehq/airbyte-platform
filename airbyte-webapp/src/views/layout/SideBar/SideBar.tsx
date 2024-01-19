@@ -12,7 +12,7 @@ import type { WorkspaceFetcher } from "components/workspace/WorkspacesPickerList
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
-import { RoutePaths, SettingsRoutePaths } from "pages/routePaths";
+import { RoutePaths } from "pages/routePaths";
 
 import { AirbyteHomeLink } from "./AirbyteHomeLink";
 import { MenuContent } from "./components/MenuContent";
@@ -80,7 +80,7 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
           <NavItem
             label={<FormattedMessage id="sidebar.settings" />}
             icon={<Icon type="gear" />}
-            to={`${RoutePaths.Settings}/${SettingsRoutePaths.Workspace}`}
+            to={RoutePaths.Settings}
             withNotification={settingHighlight}
           />
         </MenuContent>

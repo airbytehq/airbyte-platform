@@ -40,7 +40,7 @@ export const StreamDetailsPanel: React.FC<StreamDetailsPanelProps> = ({
   toggleAllFieldsSelected,
 }) => {
   return (
-    <Dialog className={styles.dialog} open onClose={onClose}>
+    <Dialog open onClose={onClose}>
       <Overlay />
       <Dialog.Panel className={styles.container} data-testid="stream-details">
         <StreamPanelHeader
