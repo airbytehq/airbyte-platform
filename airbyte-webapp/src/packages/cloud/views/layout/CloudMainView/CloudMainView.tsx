@@ -15,9 +15,9 @@ import { useExperimentSpeedyConnection } from "packages/cloud/components/experim
 import { SpeedyConnectionBanner } from "packages/cloud/components/experiments/SpeedyConnection/SpeedyConnectionBanner";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
-import { HelpDropdown } from "views/layout/SideBar/components/HelpDropdown";
 import { SideBar } from "views/layout/SideBar/SideBar";
 
+import { CloudHelpDropdown } from "./CloudHelpDropdown";
 import styles from "./CloudMainView.module.scss";
 import { InsufficientPermissionsErrorBoundary } from "./InsufficientPermissionsErrorBoundary";
 import { WorkspaceStatusBanner } from "./WorkspaceStatusBanner";
@@ -44,7 +44,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   return (
     <div className={classNames(styles.mainContainer)}>
       <InsufficientPermissionsErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
-        <SideBar workspaceFetcher={useListCloudWorkspacesInfinite} bottomSlot={<HelpDropdown />} />
+        <SideBar workspaceFetcher={useListCloudWorkspacesInfinite} bottomSlot={<CloudHelpDropdown />} />
         <div className={styles.content}>
           {cloudWorkspace &&
             (showExperimentBanner ? (
