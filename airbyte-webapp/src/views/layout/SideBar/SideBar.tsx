@@ -89,6 +89,7 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
           <ThemeToggle />
           {logout && user && (
             <NavDropdown
+              buttonTestId="sidebar.userDropdown"
               onChange={({ value }) => {
                 value === "logout" && logout();
               }}
@@ -106,6 +107,7 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
                   icon: <Icon type="signout" />,
                   value: "logout",
                   className: styles.sidebar__logoutButton,
+                  "data-testid": "sidebar.signout",
                 },
               ]}
               icon={<Icon type="user" />}
