@@ -278,6 +278,7 @@ create table "public"."schema_management" (
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "auto_propagation_status" "public"."auto_propagation_status" not null default cast('ignore' as auto_propagation_status),
+  "backfill_preference" "public"."backfill_preference" not null default cast('disabled' as backfill_preference),
   constraint "schema_management_pkey"
     primary key ("id")
 );
