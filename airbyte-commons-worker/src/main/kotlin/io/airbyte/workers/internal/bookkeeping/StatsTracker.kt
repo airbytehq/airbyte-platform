@@ -49,7 +49,7 @@ data class StreamStatsCounters(
   val meanSecondsToReceiveState: AtomicDouble = AtomicDouble(),
   val maxSecondsBetweenStateEmittedAndCommitted: LongAccumulator = LongAccumulator(Math::max, 0),
   val meanSecondsBetweenStateEmittedAndCommitted: AtomicDouble = AtomicDouble(),
-  val unreliableStateOperations: AtomicBoolean = AtomicBoolean(),
+  val unreliableStateOperations: AtomicBoolean = AtomicBoolean(false),
 )
 
 /**
@@ -264,6 +264,10 @@ class StreamStatsTracker(
   fun getTrackedCommittedRecordsSinceLastStateMessage(stateMessage: AirbyteStateMessage): Long {
     val stagedStats: StagedStats? = stagedStatsList.find { it.stateHash == stateMessage.getStateHashCode(hashFunction) }
     return stagedStats?.emittedStatsCounters?.remittedRecordsCount?.get() ?: 0
+  }
+
+  fun areStreamStatsReliable(): Boolean {
+    return !streamStats.unreliableStateOperations.get()
   }
 }
 

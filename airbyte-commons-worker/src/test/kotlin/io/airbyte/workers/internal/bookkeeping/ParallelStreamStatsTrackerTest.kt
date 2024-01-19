@@ -21,6 +21,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
@@ -717,6 +718,42 @@ class ParallelStreamStatsTrackerTest {
   }
 
   @Test
+  internal fun `test that no exception is raised when the state message checksum comparison is disabled due to collisions`() {
+    val name = "name"
+    val namespace = "namespace"
+    val recordCount = 10
+    val stateMessage1 =
+      AirbyteStateMessage()
+        .withStream(
+          AirbyteStreamState()
+            .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
+            .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
+        )
+        .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+        .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+        .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
+
+    val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
+    val replicationFeatureFlagReader: ReplicationFeatureFlagReader = mockk()
+    every { replicationFeatureFlags.failOnInvalidChecksum } returns true
+    every { replicationFeatureFlagReader.readReplicationFeatureFlags() } returns replicationFeatureFlags
+    statsTracker.setReplicationFeatureFlagReader(replicationFeatureFlagReader)
+
+    assertDoesNotThrow {
+      trackRecords(recordCount, name, namespace)
+      // First assert that the checksums match
+      statsTracker.updateSourceStatesStats(stateMessage1)
+
+      trackRecords(recordCount, name, namespace)
+      statsTracker.updateSourceStatesStats(stateMessage1)
+
+      statsTracker.updateDestinationStateStats(stateMessage1)
+      statsTracker.updateDestinationStateStats(stateMessage1)
+    }
+    assertFalse(statsTracker.isChecksumValidationEnabled())
+  }
+
+  @Test
   internal fun `test that no exception is raised when the state message checksum comparison passes for global state`() {
     val name1 = "name1"
     val namespace1 = "namespace1"
@@ -851,6 +888,58 @@ class ParallelStreamStatsTrackerTest {
       statsTracker.updateDestinationStateStats(stateMessage1)
       statsTracker.updateDestinationStateStats(stateMessage2)
     }
+  }
+
+  @Test
+  internal fun `test that no exception is raised when the state message checksum comparison is disables for global state collision`() {
+    val name1 = "name1"
+    val namespace1 = "namespace1"
+    val name2 = "name2"
+    val namespace2 = "namespace2"
+    val recordCountStream1 = 10
+    val recordCountStream2 = 15
+    val stateMessage1 =
+      AirbyteStateMessage()
+        .withGlobal(
+          AirbyteGlobalState()
+            .withSharedState(Jsons.jsonNode(mapOf("wal" to 10)))
+            .withStreamStates(
+              listOf(
+                AirbyteStreamState()
+                  .withStreamDescriptor(StreamDescriptor().withName(name1).withNamespace(namespace1))
+                  .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
+                AirbyteStreamState()
+                  .withStreamDescriptor(StreamDescriptor().withName(name2).withNamespace(namespace2))
+                  .withStreamState(Jsons.jsonNode(mapOf("id" to 15))),
+              ),
+            ),
+        )
+        .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+        .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+        .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
+
+    val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
+    val replicationFeatureFlagReader: ReplicationFeatureFlagReader = mockk()
+    every { replicationFeatureFlags.failOnInvalidChecksum } returns true
+    every { replicationFeatureFlagReader.readReplicationFeatureFlags() } returns replicationFeatureFlags
+    statsTracker.setReplicationFeatureFlagReader(replicationFeatureFlagReader)
+
+    assertDoesNotThrow {
+      trackRecords(recordCountStream1, name1, namespace1)
+      trackRecords(recordCountStream2, name2, namespace2)
+
+      // First assert that the checksums match
+      statsTracker.updateSourceStatesStats(stateMessage1)
+
+      trackRecords(recordCountStream1, name1, namespace1)
+      trackRecords(recordCountStream2, name2, namespace2)
+      statsTracker.updateSourceStatesStats(stateMessage1)
+
+      statsTracker.updateDestinationStateStats(stateMessage1)
+      statsTracker.updateDestinationStateStats(stateMessage1)
+    }
+
+    assertFalse(statsTracker.isChecksumValidationEnabled())
   }
 
   @Test
