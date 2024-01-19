@@ -164,7 +164,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           // TODO: remove this once migration to workloads complete
           if (useWorkloadApi(replicationActivityInput)) {
             worker = new WorkloadApiWorker(documentStoreClient, orchestratorNameGenerator, jobOutputDocStore, airbyteApiClient,
-                workloadApi, workloadIdGenerator, replicationActivityInput, featureFlagClient, replicationActivityInput.getUseNewDocStoreApi());
+                workloadApi, workloadIdGenerator, replicationActivityInput, featureFlagClient);
           } else {
             final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =
                 orchestratorHandleFactory.create(hydratedReplicationInput.getSourceLauncherConfig(),

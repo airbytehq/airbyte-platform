@@ -67,7 +67,7 @@ public class WorkloadBasicAcceptanceTests {
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
-  void testIncrementalSyncWithWorkloadWithoutOutputDocStore() throws Exception {
+  void testIncrementalSyncWithWorkload() throws Exception {
     // Create workspace with static ID for test which is used in the flags.yaml to perform an override
     // in order to exercise the workload path.
     testResources.getApiClient().getWorkspaceApi()
@@ -77,22 +77,6 @@ public class WorkloadBasicAcceptanceTests {
             .name("Airbyte Acceptance Tests" + UUID.randomUUID()));
 
     testResources.runSmallSyncForAWorkspaceId(RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID);
-  }
-
-  @Test
-  @DisabledIfEnvironmentVariable(named = IS_GKE,
-                                 matches = TRUE,
-                                 disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
-  void testIncrementalSyncWithWorkloadWithOutputDocStore() throws Exception {
-    // Create workspace with static ID for test which is used in the flags.yaml to perform an override
-    // in order to exercise the workload path.
-    testResources.getApiClient().getWorkspaceApi()
-        .createWorkspaceIfNotExist(new WorkspaceCreateWithId()
-            .id(RUN_WITH_WORKLOAD_WITH_DOC_STORE_WORKSPACE_ID)
-            .email("acceptance-tests@airbyte.io")
-            .name("Airbyte Acceptance Tests" + UUID.randomUUID()));
-
-    testResources.runSmallSyncForAWorkspaceId(RUN_WITH_WORKLOAD_WITH_DOC_STORE_WORKSPACE_ID);
   }
 
   @Test

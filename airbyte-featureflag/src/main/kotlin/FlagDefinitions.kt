@@ -181,8 +181,6 @@ object PrintLongRecordPks : Temporary<Boolean>(key = "platform.print-long-record
 
 object InjectAwsSecretsToConnectorPods : Temporary<Boolean>(key = "platform.inject-aws-secrets-to-connector-pods", default = false)
 
-object UseWorkloadOutputDocStore : Temporary<Boolean>(key = "platform.use-workload-output-doc-store", default = false)
-
 object UseWorkloadApiForCheck : Temporary<Boolean>(key = "platform.use-workload-api-for-check", default = false)
 
 object WorkloadCheckFrequencyInSeconds : Permanent<Int>(key = "platform.workload-check-frequency-in-seconds", default = 1)

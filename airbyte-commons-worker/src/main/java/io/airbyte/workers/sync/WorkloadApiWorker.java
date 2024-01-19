@@ -76,7 +76,6 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   private final WorkloadIdGenerator workloadIdGenerator;
   private final ReplicationActivityInput input;
   private final FeatureFlagClient featureFlagClient;
-  private final boolean useOutputDocStore;
 
   private String workloadId = null;
 
@@ -87,8 +86,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
                            final WorkloadApi workloadApi,
                            final WorkloadIdGenerator workloadIdGenerator,
                            final ReplicationActivityInput input,
-                           final FeatureFlagClient featureFlagClient,
-                           final boolean useOutputDocStore) {
+                           final FeatureFlagClient featureFlagClient) {
     this.documentStoreClient = documentStoreClient;
     this.orchestratorNameGenerator = orchestratorNameGenerator;
     this.jobOutputDocStore = jobOutputDocStore;
@@ -97,7 +95,6 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     this.workloadIdGenerator = workloadIdGenerator;
     this.input = input;
     this.featureFlagClient = featureFlagClient;
-    this.useOutputDocStore = useOutputDocStore;
   }
 
   @Override
@@ -216,18 +213,14 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
         input.getJobRunConfig().getAttemptId());
 
     final Optional<ReplicationOutput> output;
-    if (useOutputDocStore) {
-      output = fetchReplicationOutput(workloadId, (location) -> {
-        try {
-          return jobOutputDocStore.readSyncOutput(location);
-        } catch (final DocStoreAccessException e) {
-          throw new RuntimeException(e);
-        }
-      });
-    } else {
-      output = fetchReplicationOutput(outputLocation,
-          (location) -> documentStoreClient.read(outputLocation).map(s -> Jsons.deserialize(s, ReplicationOutput.class)));
-    }
+
+    output = fetchReplicationOutput(workloadId, (location) -> {
+      try {
+        return jobOutputDocStore.readSyncOutput(location);
+      } catch (final DocStoreAccessException e) {
+        throw new RuntimeException(e);
+      }
+    });
 
     log.info("Replication output for workload {} : {}", workloadId, output.orElse(null));
     return output.orElse(null);
