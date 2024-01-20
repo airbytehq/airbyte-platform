@@ -273,7 +273,7 @@ open class JobsController(
     var field: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT
     var method: OrderByMethodEnum = OrderByMethodEnum.ASC
     if (orderBy != null) {
-      val pattern: java.util.regex.Pattern = java.util.regex.Pattern.compile("([a-zA-Z0-9]+)|(ASC|DESC)")
+      val pattern: java.util.regex.Pattern = java.util.regex.Pattern.compile("([a-zA-Z0-9]+)\\|(ASC|DESC)")
       val matcher: java.util.regex.Matcher = pattern.matcher(orderBy)
       if (!matcher.find()) {
         throw BadRequestProblem("Invalid order by clause provided: $orderBy")
