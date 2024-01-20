@@ -279,6 +279,7 @@ public class SourceDefinitionsHandler {
         .withSourceDefinitionId(currentSourceDefinition.getSourceDefinitionId())
         .withName(currentSourceDefinition.getName())
         .withIcon(currentSourceDefinition.getIcon())
+        .withIconUrl(currentSourceDefinition.getIconUrl())
         .withTombstone(currentSourceDefinition.getTombstone())
         .withPublic(currentSourceDefinition.getPublic())
         .withCustom(currentSourceDefinition.getCustom())

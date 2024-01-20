@@ -277,6 +277,7 @@ public class DestinationDefinitionsHandler {
         .withDestinationDefinitionId(currentDestination.getDestinationDefinitionId())
         .withName(currentDestination.getName())
         .withIcon(currentDestination.getIcon())
+        .withIconUrl(currentDestination.getIconUrl())
         .withTombstone(currentDestination.getTombstone())
         .withPublic(currentDestination.getPublic())
         .withCustom(currentDestination.getCustom())

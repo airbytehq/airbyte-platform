@@ -63,6 +63,7 @@ import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
@@ -80,12 +81,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class SourceDefinitionsHandlerTest {
 
   private static final String TODAY_DATE_STRING = LocalDate.now().toString();
   private static final String DEFAULT_PROTOCOL_VERSION = "0.2.0";
+  private static final String ICON_URL = "https://connectors.airbyte.com/files/metadata/airbyte/source-presto/latest/icon.svg";
 
   private ConfigRepository configRepository;
   private StandardSourceDefinition sourceDefinition;
@@ -125,6 +127,7 @@ class SourceDefinitionsHandlerTest {
         .withDefaultVersionId(UUID.randomUUID())
         .withName("presto")
         .withIcon("rss.svg")
+        .withIconUrl(ICON_URL)
         .withTombstone(false)
         .withResourceRequirements(new ActorDefinitionResourceRequirements()
             .withDefault(new ResourceRequirements().withCpuRequest("2")));
@@ -539,7 +542,8 @@ class SourceDefinitionsHandlerTest {
     verify(configRepository).writeCustomConnectorMetadata(
         newSourceDefinition
             .withCustom(true)
-            .withDefaultVersionId(null),
+            .withDefaultVersionId(null)
+            .withIconUrl(null),
         sourceDefinitionVersion,
         workspaceId,
         ScopeType.WORKSPACE);
@@ -603,7 +607,8 @@ class SourceDefinitionsHandlerTest {
     verify(configRepository).writeCustomConnectorMetadata(
         newSourceDefinition
             .withCustom(true)
-            .withDefaultVersionId(null),
+            .withDefaultVersionId(null)
+            .withIconUrl(null),
         sourceDefinitionVersion,
         workspaceId,
         ScopeType.WORKSPACE);
@@ -667,10 +672,12 @@ class SourceDefinitionsHandlerTest {
   }
 
   @ParameterizedTest
-  @ValueSource(booleans = {true, false})
+  @CsvSource({"true,true", "true,false", "false,true", "false, false"})
   @DisplayName("updateSourceDefinition should correctly update a sourceDefinition")
-  void testUpdateSource(final boolean runSupportStateUpdaterFlagValue) throws ConfigNotFoundException, IOException, JsonValidationException {
+  void testUpdateSource(final boolean runSupportStateUpdaterFlagValue, final boolean useIconUrlInApiResponseFlagValue)
+      throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException {
     when(featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(runSupportStateUpdaterFlagValue);
+    when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(useIconUrlInApiResponseFlagValue);
 
     final String newDockerImageTag = "averydifferenttag";
     final StandardSourceDefinition updatedSource =
@@ -701,7 +708,22 @@ class SourceDefinitionsHandlerTest {
             new SourceDefinitionUpdate().sourceDefinitionId(this.sourceDefinition.getSourceDefinitionId())
                 .dockerImageTag(newDockerImageTag));
 
-    assertEquals(newDockerImageTag, sourceRead.getDockerImageTag());
+    final SourceDefinitionRead expectedSourceDefinitionRead = new SourceDefinitionRead()
+        .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .name(sourceDefinition.getName())
+        .dockerRepository(sourceDefinitionVersion.getDockerRepository())
+        .dockerImageTag(newDockerImageTag)
+        .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
+        .icon(useIconUrlInApiResponseFlagValue ? ICON_URL : SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
+        .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
+        .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
+        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+            ._default(new io.airbyte.api.model.generated.ResourceRequirements()
+                .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
+            .jobSpecific(Collections.emptyList()));
+
+    assertEquals(expectedSourceDefinitionRead, sourceRead);
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
         sourceDefinition.getCustom());
     verify(actorDefinitionHandlerHelper).getBreakingChanges(updatedSourceDefVersion, ActorType.SOURCE);
