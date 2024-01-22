@@ -98,16 +98,14 @@ export const SelectDestination: React.FC = () => {
             </PageContainer>
           </Box>
         )}
-        <Box mt="xl">
-          {selectedDestinationType === EXISTING_DESTINATION_TYPE && (
-            <Box px="md">
-              <PageContainer centered>
-                <SelectExistingConnector connectors={sortedDestinations} selectConnector={selectDestination} />
-              </PageContainer>
-            </Box>
-          )}
-          {selectedDestinationType === NEW_DESTINATION_TYPE && <CreateNewDestination />}
-        </Box>
+        {selectedDestinationType === EXISTING_DESTINATION_TYPE && (
+          <Box px="md">
+            <PageContainer centered>
+              <SelectExistingConnector connectors={sortedDestinations} selectConnector={selectDestination} />
+            </PageContainer>
+          </Box>
+        )}
+        {selectedDestinationType === NEW_DESTINATION_TYPE && <CreateNewDestination />}
         <CloudInviteUsersHint connectorType="destination" />
       </FlexContainer>
     </Box>
