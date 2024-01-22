@@ -1,7 +1,7 @@
 import { useCurrentWorkspace, useListUsersInOrganization, useListUsersInWorkspace } from "core/api";
 import { OrganizationUserRead, PermissionRead, PermissionType, WorkspaceUserRead } from "core/api/types/AirbyteClient";
 import { useIntent } from "core/utils/rbac";
-
+import { RbacRole, RbacRoleHierarchy, partitionPermissionType } from "core/utils/rbac/rbacPermissionsQuery";
 export type ResourceType = "workspace" | "organization" | "instance";
 
 export const permissionStringDictionary: Record<PermissionType, Record<string, string>> = {
@@ -67,7 +67,10 @@ export interface AccessUsers {
 export interface NextAccessUsers {
   workspace?: { users: NextAccessUserRead[]; usersToAdd: OrganizationUserRead[] };
 }
-
+/**
+ *
+ * @deprecated this will be removed with RBAC UI v2.  For now, use useNextGetWorkspaceAccessUsers instead.  However, that will be, at least in part, replaced by a new endpoint instead.
+ */
 export const useGetWorkspaceAccessUsers = (): AccessUsers => {
   const workspace = useCurrentWorkspace();
   const canListOrganizationUsers = useIntent("ListOrganizationMembers", { organizationId: workspace.organizationId });
@@ -167,37 +170,19 @@ export const useGetOrganizationAccessUsers = (): AccessUsers => {
   };
 };
 
-export const getHighestPermissionType = (
-  user: NextAccessUserRead,
-  resourceType: "workspace" | "organization" | "instance"
-) => {
-  const orgPermissionType = user.organizationPermission ? user.organizationPermission.permissionType : undefined;
-  const workspacePermissionType = user.workspacePermission ? user.workspacePermission.permissionType : undefined;
+export const getWorkspaceAccessLevel = (user: NextAccessUserRead): RbacRole => {
+  const orgPermissionType = user.organizationPermission?.permissionType;
+  const workspacePermissionType = user.workspacePermission?.permissionType;
 
-  switch (resourceType) {
-    case "instance":
-      return undefined;
-    case "organization":
-      switch (orgPermissionType) {
-        case "organization_admin":
-          return "admin";
-        case "organization_editor":
-          return "editor";
-        case "organization_reader":
-          return "reader";
-        default:
-          return "member";
-      }
-    default:
-      switch (true) {
-        case workspacePermissionType === "workspace_admin" || orgPermissionType === "organization_admin":
-          return "admin";
-        case workspacePermissionType === "workspace_editor" || orgPermissionType === "organization_editor":
-          return "editor";
-        case workspacePermissionType === "workspace_reader" || orgPermissionType === "organization_reader":
-          return "reader";
-        default:
-          return "member";
-      }
-  }
+  const orgRole = orgPermissionType ? partitionPermissionType(orgPermissionType)[1] : undefined;
+  const workspaceRole = workspacePermissionType ? partitionPermissionType(workspacePermissionType)[1] : undefined;
+
+  // return whatever is the "highest" role ie the lowest index greater than -1.
+  // the reason we set the index to the length of the array is so that if there is not a given type of role, it will not be the lowest index.
+  return RbacRoleHierarchy[
+    Math.min(
+      orgRole ? RbacRoleHierarchy.indexOf(orgRole) : RbacRoleHierarchy.length,
+      workspaceRole ? RbacRoleHierarchy.indexOf(workspaceRole) : RbacRoleHierarchy.length
+    )
+  ];
 };

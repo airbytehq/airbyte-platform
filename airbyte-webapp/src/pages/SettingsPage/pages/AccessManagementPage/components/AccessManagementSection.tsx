@@ -6,12 +6,10 @@ import { Heading } from "components/ui/Heading";
 import { Text } from "components/ui/Text";
 
 import { OrganizationUserRead, WorkspaceUserRead } from "core/api/types/AirbyteClient";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { AccessManagementTable } from "./AccessManagementTable";
 import { AddUserControl } from "./AddUserControl";
-import { NextAccessManagementTable } from "./NextAccessManagementTable";
-import { ResourceType, tableTitleDictionary, useNextGetWorkspaceAccessUsers } from "./useGetAccessManagementData";
+import { ResourceType, tableTitleDictionary } from "./useGetAccessManagementData";
 
 interface AccessManagementSectionProps {
   users?: WorkspaceUserRead[] | OrganizationUserRead[];
@@ -20,6 +18,10 @@ interface AccessManagementSectionProps {
   pageResourceType: ResourceType;
   pageResourceName: string;
 }
+
+/**
+ * @deprecated will be removed when RBAC UI v2 is turned on
+ */
 export const AccessManagementSection: React.FC<AccessManagementSectionProps> = ({
   users,
   usersToAdd,
@@ -27,13 +29,7 @@ export const AccessManagementSection: React.FC<AccessManagementSectionProps> = (
   pageResourceType,
   pageResourceName,
 }) => {
-  const updatedOrganizationsUI = useExperiment("settings.organizationsUpdates", false);
-  const nextAccessData = useNextGetWorkspaceAccessUsers();
-  const nextAccessUsers = nextAccessData.workspace?.users ?? [];
-  const nextUsersToAdd = nextAccessData.workspace?.usersToAdd ?? [];
-
-  const showAddUsersButton =
-    (usersToAdd && usersToAdd.length > 0) || (updatedOrganizationsUI && nextUsersToAdd && nextUsersToAdd.length > 0);
+  const showAddUsersButton = usersToAdd && usersToAdd.length > 0;
 
   return (
     <FlexContainer direction="column" gap="xl">
@@ -45,17 +41,10 @@ export const AccessManagementSection: React.FC<AccessManagementSectionProps> = (
         </Box>
         {showAddUsersButton && (
           // the empty array is not a possible state, but is required to prevent a type error... will be cleaner when types are moved over in full
-          <AddUserControl usersToAdd={updatedOrganizationsUI ? nextUsersToAdd : usersToAdd ?? []} />
+          <AddUserControl usersToAdd={usersToAdd} />
         )}
       </FlexContainer>
-      {updatedOrganizationsUI === true && nextAccessUsers.length > 0 && pageResourceType === "workspace" ? (
-        <NextAccessManagementTable
-          users={nextAccessUsers}
-          tableResourceType="workspace"
-          pageResourceType="workspace"
-          pageResourceName=""
-        />
-      ) : users && users.length > 0 ? (
+      {users && users.length > 0 ? (
         <AccessManagementTable
           users={users}
           tableResourceType={tableResourceType}

@@ -50,6 +50,12 @@ const SelectSourcePage = React.lazy(() => import("./source/SelectSourcePage"));
 const SourceItemPage = React.lazy(() => import("./source/SourceItemPage"));
 const SourceSettingsPage = React.lazy(() => import("./source/SourceSettingsPage"));
 const SourceConnectionsPage = React.lazy(() => import("./source/SourceConnectionsPage"));
+const NextOrganizationAccessManagementPage = React.lazy(
+  () => import("./SettingsPage/pages/AccessManagementPage/NextOrganizationAccessManagementPage")
+);
+const NextWorkspaceAccessManagementPage = React.lazy(
+  () => import("./SettingsPage/pages/AccessManagementPage/NextWorkspaceAccessManagementPage")
+);
 
 const WorkspacesPage = React.lazy(() => import("./workspaces/WorkspacesPage"));
 
@@ -70,6 +76,7 @@ const MainViewRoutes: React.FC = () => {
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
   const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
+  const isUpdatedOrganizationsUi = useExperiment("settings.organizationsUpdates", false);
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
 
@@ -115,7 +122,9 @@ const MainViewRoutes: React.FC = () => {
             {multiWorkspaceUI && isAccessManagementEnabled && (
               <Route
                 path={`${SettingsRoutePaths.Workspace}/${SettingsRoutePaths.AccessManagement}`}
-                element={<WorkspaceAccessManagementPage />}
+                element={
+                  isUpdatedOrganizationsUi ? <NextWorkspaceAccessManagementPage /> : <WorkspaceAccessManagementPage />
+                }
               />
             )}
             {multiWorkspaceUI && organizationId && canViewOrganizationSettings && (
@@ -124,7 +133,13 @@ const MainViewRoutes: React.FC = () => {
                 {isAccessManagementEnabled && (
                   <Route
                     path={`${SettingsRoutePaths.Organization}/${SettingsRoutePaths.AccessManagement}`}
-                    element={<OrganizationAccessManagementPage />}
+                    element={
+                      isUpdatedOrganizationsUi ? (
+                        <NextOrganizationAccessManagementPage />
+                      ) : (
+                        <OrganizationAccessManagementPage />
+                      )
+                    }
                   />
                 )}
               </>

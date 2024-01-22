@@ -4,6 +4,7 @@ import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationInfo, useCurrentWorkspace, useDeletePermissions } from "core/api";
+import { useCurrentUser } from "core/services/auth";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
 import styles from "./RemoveRoleMenuItem.module.scss";
@@ -28,6 +29,7 @@ export const RemoveRoleMenuItem: React.FC<RemoveRoleMenuItemProps> = ({ user, re
   const organizationName = useCurrentOrganizationInfo()?.organizationName;
   const { name: workspaceName } = useCurrentWorkspace();
   const { formatMessage } = useIntl();
+  const { userId: currentUserId } = useCurrentUser();
   const resourceName = resourceType === "organization" ? organizationName : workspaceName;
 
   const { mutateAsync: removePermission } = useDeletePermissions();
@@ -48,9 +50,13 @@ export const RemoveRoleMenuItem: React.FC<RemoveRoleMenuItemProps> = ({ user, re
     });
 
   return (
-    <button onClick={onClick} disabled={permissionToRemove.length === 0} className={styles.removeRoleMenuItem__button}>
+    <button
+      onClick={onClick}
+      disabled={currentUserId === user.userId || permissionToRemove.length === 0}
+      className={styles.removeRoleMenuItem__button}
+    >
       <Box py="lg" px="md">
-        <Text color={permissionToRemove.length === 0 ? "red200" : "red"}>
+        <Text color={currentUserId === user.userId || permissionToRemove.length === 0 ? "red200" : "red"}>
           <FormattedMessage id="settings.accessManagement.removeUser" />
         </Text>
       </Box>

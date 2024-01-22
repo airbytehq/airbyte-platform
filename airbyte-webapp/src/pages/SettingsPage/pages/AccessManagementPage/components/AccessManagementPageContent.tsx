@@ -19,6 +19,11 @@ interface AccessManagementContentProps {
   accessUsers: AccessUsers;
   pageResourceType: ResourceType;
 }
+
+/**
+ * @deprecated will be removed when RBAC UI v2 is turned on.  Use NextOrganizationAccessManagementPage or NextWorkspaceAccessManagementPage instead.
+ */
+
 export const AccessManagementPageContent: React.FC<AccessManagementContentProps> = ({
   resourceName,
   accessUsers,

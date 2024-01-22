@@ -68,12 +68,19 @@ const SourceConnectionsPage = React.lazy(() => import("pages/source/SourceConnec
 const SourceSettingsPage = React.lazy(() => import("pages/source/SourceSettingsPage"));
 const CloudDefaultView = React.lazy(() => import("./views/CloudDefaultView"));
 const CloudSettingsPage = React.lazy(() => import("./views/settings/CloudSettingsPage"));
+const NextOrganizationAccessManagementPage = React.lazy(
+  () => import("pages/SettingsPage/pages/AccessManagementPage/NextOrganizationAccessManagementPage")
+);
+const NextWorkspaceAccessManagementPage = React.lazy(
+  () => import("pages/SettingsPage/pages/AccessManagementPage/NextWorkspaceAccessManagementPage")
+);
 
 const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
   const organization = useCurrentOrganizationInfo();
   const isSsoEnabled = organization?.sso;
   const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
+  const isUpdatedOrganizationsUi = useExperiment("settings.organizationsUpdates", false);
 
   const analyticsContext = useMemo(
     () => ({
@@ -122,7 +129,17 @@ const MainRoutes: React.FC = () => {
           <Route path={CloudSettingsRoutePaths.Destination} element={<SettingsDestinationsPage />} />
           <Route
             path={CloudSettingsRoutePaths.AccessManagement}
-            element={isSsoEnabled ? <WorkspaceAccessManagementPage /> : <UsersSettingsView />}
+            element={
+              isSsoEnabled ? (
+                isUpdatedOrganizationsUi ? (
+                  <NextWorkspaceAccessManagementPage />
+                ) : (
+                  <WorkspaceAccessManagementPage />
+                )
+              ) : (
+                <UsersSettingsView />
+              )
+            }
           />
           <Route path={CloudSettingsRoutePaths.Notifications} element={<NotificationPage />} />
           {supportsCloudDbtIntegration && (
@@ -134,7 +151,13 @@ const MainRoutes: React.FC = () => {
               {isSsoEnabled && (
                 <Route
                   path={`${CloudSettingsRoutePaths.Organization}/${CloudSettingsRoutePaths.AccessManagement}`}
-                  element={<OrganizationAccessManagementPage />}
+                  element={
+                    isUpdatedOrganizationsUi ? (
+                      <NextOrganizationAccessManagementPage />
+                    ) : (
+                      <OrganizationAccessManagementPage />
+                    )
+                  }
                 />
               )}
             </>

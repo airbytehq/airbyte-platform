@@ -2,9 +2,8 @@ import React, { Suspense } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Outlet } from "react-router-dom";
 
-import { LoadingPage } from "components";
+import { LoadingPage, MainPageWithScroll } from "components";
 import { HeadTitle } from "components/common/HeadTitle";
-import { MainPageWithScroll } from "components/common/MainPageWithScroll";
 import {
   SettingsButton,
   SettingsLink,
@@ -95,7 +94,7 @@ export const CloudSettingsPage: React.FC = () => {
               />
               {isSsoEnabled && (
                 <SettingsLink
-                  name={formatMessage({ id: "settings.accessManagementSettings" })}
+                  name={formatMessage({ id: "settings.accessManagement" })}
                   to={`${CloudSettingsRoutePaths.Organization}/${CloudSettingsRoutePaths.AccessManagement}`}
                 />
               )}

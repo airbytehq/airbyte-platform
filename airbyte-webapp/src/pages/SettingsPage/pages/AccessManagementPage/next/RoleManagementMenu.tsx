@@ -12,7 +12,7 @@ import { useIntent } from "core/utils/rbac";
 import styles from "./RoleManagementMenu.module.scss";
 import { RoleManagementMenuBody } from "./RoleManagementMenuBody";
 import { RoleIndicator } from "../components/RoleIndicator";
-import { NextAccessUserRead, getHighestPermissionType } from "../components/useGetAccessManagementData";
+import { NextAccessUserRead, getWorkspaceAccessLevel } from "../components/useGetAccessManagementData";
 import { UserRoleText } from "../components/UserRoleText";
 
 type ResourceType = "workspace" | "organization" | "instance";
@@ -42,7 +42,7 @@ export const RoleManagementMenu: React.FC<RoleManagementMenuProps> = ({ user, re
   });
   const { workspaceId } = useCurrentWorkspace();
   const organizationInfo = useCurrentOrganizationInfo();
-  const highestPermissionType = getHighestPermissionType(user, resourceType);
+  const highestPermissionType = getWorkspaceAccessLevel(user);
   const orgPermissionType = user.organizationPermission ? user.organizationPermission.permissionType : undefined;
   const canEditPermissions = useIntent(
     resourceType === "workspace" ? "UpdateWorkspacePermissions" : "UpdateOrganizationPermissions",

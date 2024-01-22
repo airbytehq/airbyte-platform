@@ -106,34 +106,32 @@ export const ChangeRoleMenuItem: React.FC<RoleMenuItemProps> = ({ user, permissi
   const roleIsInvalid = disallowedRoles(user, resourceType, isCurrentUser).includes(permissionType);
 
   return (
-    <Box mb="xs">
-      <button
-        disabled={roleIsInvalid || roleIsActive}
-        onClick={async () => {
-          await createOrUpdateRole();
-          onClose();
-        }}
-        className={classNames(styles.changeRoleMenuItem__button, {
-          [styles["changeRoleMenuItem__button--active"]]: roleIsActive,
-        })}
-      >
-        <Box px="md" py="lg">
-          <FlexContainer alignItems="center" justifyContent="space-between">
-            <FlexItem>
-              <Text color={roleIsInvalid ? "grey300" : undefined}>
-                <FormattedMessage id={permissionStringDictionary[permissionType].role} />
-              </Text>
-              <Text color={roleIsInvalid ? "grey300" : "grey"}>
-                <FormattedMessage
-                  id={permissionDescriptionDictionary[permissionType].id}
-                  values={permissionDescriptionDictionary[permissionType].values}
-                />
-              </Text>
-            </FlexItem>
-            {roleIsActive && <Icon type="check" color="primary" />}
-          </FlexContainer>
-        </Box>
-      </button>
-    </Box>
+    <button
+      disabled={roleIsInvalid || roleIsActive}
+      onClick={async () => {
+        await createOrUpdateRole();
+        onClose();
+      }}
+      className={classNames(styles.changeRoleMenuItem__button, {
+        [styles["changeRoleMenuItem__button--active"]]: roleIsActive,
+      })}
+    >
+      <Box px="md" py="lg">
+        <FlexContainer alignItems="center" justifyContent="space-between">
+          <FlexItem>
+            <Text color={roleIsInvalid ? "grey300" : undefined}>
+              <FormattedMessage id={permissionStringDictionary[permissionType].role} />
+            </Text>
+            <Text color={roleIsInvalid ? "grey300" : "grey"}>
+              <FormattedMessage
+                id={permissionDescriptionDictionary[permissionType].id}
+                values={permissionDescriptionDictionary[permissionType].values}
+              />
+            </Text>
+          </FlexItem>
+          {roleIsActive && <Icon type="check" color="primary" />}
+        </FlexContainer>
+      </Box>
+    </button>
   );
 };

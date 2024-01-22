@@ -2,19 +2,19 @@ import { FormattedMessage } from "react-intl";
 
 import { Text } from "components/ui/Text";
 
-export const UserRoleText: React.FC<{ highestPermissionType?: "admin" | "editor" | "reader" | "member" }> = ({
-  highestPermissionType,
-}) => {
+import { RbacRole } from "core/utils/rbac/rbacPermissionsQuery";
+
+export const UserRoleText: React.FC<{ highestPermissionType?: RbacRole }> = ({ highestPermissionType }) => {
   if (!highestPermissionType) {
     return null;
   }
 
   const roleId =
-    highestPermissionType === "admin"
+    highestPermissionType === "ADMIN"
       ? "role.admin"
-      : highestPermissionType === "editor"
+      : highestPermissionType === "EDITOR"
       ? "role.editor"
-      : highestPermissionType === "reader"
+      : highestPermissionType === "READER"
       ? "role.reader"
       : "role.member";
 

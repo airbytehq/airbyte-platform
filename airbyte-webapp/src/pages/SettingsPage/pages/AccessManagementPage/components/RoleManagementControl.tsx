@@ -31,7 +31,10 @@ const roleManagementFormSchema = yup.object().shape({
   permissionType: yup.mixed<PermissionType>().oneOf(Object.values(PermissionType)).required(),
   permissionId: yup.string().required(),
 });
-
+/**
+ *
+ * @deprecated this component will be removed when RBAC UI v2 is turned on. Use RoleManagementMenu instead.
+ */
 export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
   permission,
   pageResourceType,

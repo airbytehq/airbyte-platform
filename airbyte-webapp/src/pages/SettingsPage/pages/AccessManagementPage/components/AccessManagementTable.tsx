@@ -14,6 +14,10 @@ import { RoleManagementControl } from "./RoleManagementControl";
 import { RoleToolTip } from "./RoleToolTip";
 import { ResourceType } from "./useGetAccessManagementData";
 
+/**
+ * @deprecated will be removed when RBAC UI v2 is turned on. Use WorkspaceUsersTable or OrganizationUsersTable instead.
+ */
+
 export const AccessManagementTable: React.FC<{
   users: WorkspaceUserRead[] | OrganizationUserRead[];
   tableResourceType: ResourceType;

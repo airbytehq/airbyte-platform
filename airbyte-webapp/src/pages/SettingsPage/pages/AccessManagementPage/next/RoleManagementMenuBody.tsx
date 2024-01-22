@@ -20,9 +20,10 @@ interface RoleManagementMenuBodyProps {
 export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ user, resourceType, close }) => {
   return (
     <ul className={styles.roleManagementMenu__rolesList}>
-      {user.organizationPermission?.permissionType &&
+      {resourceType === "workspace" &&
+        user.organizationPermission?.permissionType &&
         user.organizationPermission?.permissionType !== "organization_member" && (
-          <li className={styles.roleManagementMenu__role}>
+          <li className={styles.roleManagementMenu__listItem}>
             <Box pt="xl" pb="xl" px="lg" className={styles.roleManagementMenu__menuTitle}>
               <Text
                 color="grey"
@@ -48,7 +49,7 @@ export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ 
         )}
       {permissionsByResourceType[resourceType].map((permissionOption) => {
         return (
-          <li key={permissionOption}>
+          <li key={permissionOption} className={styles.roleManagementMenu__listItem}>
             <ChangeRoleMenuItem
               permissionType={permissionOption}
               resourceType={resourceType}
@@ -59,9 +60,11 @@ export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ 
         );
       })}
 
-      <li>
-        <RemoveRoleMenuItem user={user} resourceType={resourceType} />
-      </li>
+      {resourceType === "workspace" && (
+        <li className={styles.roleManagementMenu__listItem}>
+          <RemoveRoleMenuItem user={user} resourceType={resourceType} />
+        </li>
+      )}
     </ul>
   );
 };
