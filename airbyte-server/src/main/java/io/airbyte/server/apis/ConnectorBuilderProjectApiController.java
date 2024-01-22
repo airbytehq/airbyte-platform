@@ -16,6 +16,8 @@ import io.airbyte.api.generated.ConnectorBuilderProjectApi;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamRead;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadRequestBody;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectTestingValuesUpdate;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody;
@@ -51,8 +53,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public ConnectorBuilderProjectIdWithWorkspaceId createConnectorBuilderProject(
-                                                                                final ConnectorBuilderProjectWithWorkspaceId project) {
+  public ConnectorBuilderProjectIdWithWorkspaceId createConnectorBuilderProject(final ConnectorBuilderProjectWithWorkspaceId project) {
     return ApiHelper.execute(() -> connectorBuilderProjectsHandler.createConnectorBuilderProject(project));
   }
 
@@ -75,8 +76,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public ConnectorBuilderProjectRead getConnectorBuilderProject(
-                                                                final ConnectorBuilderProjectIdWithWorkspaceId project) {
+  public ConnectorBuilderProjectRead getConnectorBuilderProject(final ConnectorBuilderProjectIdWithWorkspaceId project) {
     return ApiHelper.execute(() -> connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(project));
   }
 
@@ -100,6 +100,17 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   }
 
   @Override
+  @Post(uri = "/read_stream")
+  @Status(HttpStatus.OK)
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @SuppressWarnings("LineLength")
+  public ConnectorBuilderProjectStreamRead readConnectorBuilderProjectStream(final ConnectorBuilderProjectStreamReadRequestBody connectorBuilderProjectStreamReadRequestBody) {
+    return ApiHelper.execute(() -> connectorBuilderProjectsHandler.readConnectorBuilderProjectStream(connectorBuilderProjectStreamReadRequestBody));
+  }
+
+  @Override
   @Post(uri = "/update")
   @Status(HttpStatus.NO_CONTENT)
   @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
@@ -118,7 +129,8 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public JsonNode updateConnectorBuilderProjectTestingValues(ConnectorBuilderProjectTestingValuesUpdate connectorBuilderProjectTestingValuesUpdate) {
+  @SuppressWarnings("LineLength")
+  public JsonNode updateConnectorBuilderProjectTestingValues(final ConnectorBuilderProjectTestingValuesUpdate connectorBuilderProjectTestingValuesUpdate) {
     return ApiHelper
         .execute(() -> connectorBuilderProjectsHandler.updateConnectorBuilderProjectTestingValues(connectorBuilderProjectTestingValuesUpdate));
   }

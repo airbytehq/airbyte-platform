@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import datadog.trace.api.Trace;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.connector_builder.TracingHelper;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
@@ -129,16 +130,16 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
   }
 
   private String adaptConfig(final JsonNode manifest, final JsonNode config, final String command) throws IOException {
-    final JsonNode adaptedConfig = config.deepCopy();
-    ((ObjectNode) adaptedConfig).set(manifestKey, manifest);
+    final JsonNode adaptedConfig = Jsons.deserializeIfText(config).deepCopy();
+    ((ObjectNode) adaptedConfig).set(manifestKey, Jsons.deserializeIfText(manifest));
     ((ObjectNode) adaptedConfig).put(commandKey, command);
 
     return OBJECT_WRITER.writeValueAsString(adaptedConfig);
   }
 
   private String adaptConfig(final JsonNode manifest, final JsonNode config, final String command, final Integer recordLimit) throws IOException {
-    final JsonNode adaptedConfig = config.deepCopy();
-    ((ObjectNode) adaptedConfig).set(manifestKey, manifest);
+    final JsonNode adaptedConfig = Jsons.deserializeIfText(config).deepCopy();
+    ((ObjectNode) adaptedConfig).set(manifestKey, Jsons.deserializeIfText(manifest));
     ((ObjectNode) adaptedConfig).put(commandKey, command);
 
     final ObjectMapper mapper = new ObjectMapper();

@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import io.airbyte.commons.jackson.MoreMappers;
@@ -705,6 +706,21 @@ public class Jsons {
     } else {
       return jsonNode;
     }
+  }
+
+  /**
+   * If the supplied object is a TextNode, attempt to deserialize it and return the result. Otherwise,
+   * return the object as-is.
+   *
+   * @param jsonNode the object to deserialize if in text form
+   * @return the deserialized JSON object
+   * @throws RuntimeException if the jsonNode is text that cannot be deserialized
+   */
+  public static JsonNode deserializeIfText(final JsonNode jsonNode) {
+    if (jsonNode instanceof TextNode) {
+      return Jsons.deserialize(jsonNode.asText());
+    }
+    return jsonNode;
   }
 
 }
