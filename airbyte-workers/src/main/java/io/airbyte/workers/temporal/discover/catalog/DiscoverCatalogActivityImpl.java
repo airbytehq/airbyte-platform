@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.discover.catalog;
@@ -188,7 +188,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
               launcherConfig.getAllowedHosts(), launcherConfig.getIsCustomConnector(),
               featureFlags, Collections.emptyMap(), Collections.emptyMap());
       final AirbyteStreamFactory streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(), Optional.empty(),
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(), Optional.empty(), Optional.empty(),
               Optional.empty(), new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false), gsonPksExtractor);
       final ConnectorConfigUpdater connectorConfigUpdater =
           new ConnectorConfigUpdater(airbyteApiClient.getSourceApi(), airbyteApiClient.getDestinationApi());

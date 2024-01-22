@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.process;
@@ -164,7 +164,8 @@ public class AirbyteIntegrationLauncherFactory {
                                                 final MdcScope.Builder mdcScopeBuilder,
                                                 final VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration invalidLineFailureConfiguration) {
     return new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(),
-        Optional.of(configuredAirbyteCatalog), mdcScopeBuilder, Optional.of(exceptionClass), invalidLineFailureConfiguration, gsonPksExtractor);
+        Optional.of(launcherConfig.getConnectionId()), Optional.of(configuredAirbyteCatalog), mdcScopeBuilder, Optional.of(exceptionClass),
+        invalidLineFailureConfiguration, gsonPksExtractor);
   }
 
 }

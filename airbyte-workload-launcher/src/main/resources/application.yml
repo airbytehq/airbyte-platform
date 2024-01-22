@@ -12,10 +12,10 @@ micronaut:
     export:
       statsd:
         enabled: ${MICROMETER_METRICS_ENABLED:false}
-        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
         step: ${MICROMETER_METRICS_STEP:PT30S}
-        host: ${STATSD_HOST:}
-        port: ${STATSD_PORT:}
+        host: ${STATSD_HOST:localhost}
+        port: ${STATSD_PORT:8125}
 
 airbyte:
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
@@ -25,8 +25,20 @@ airbyte:
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
   kubernetes:
+    client:
+      call-timeout-sec: ${KUBERNETES_CLIENT_CALL_TIMEOUT_SECONDS:30}
+      connect-timeout-sec: ${KUBERNETES_CLIENT_CONNECT_TIMEOUT_SECONDS:30}
+      read-timeout-sec: ${KUBERNETES_CLIENT_READ_TIMEOUT_SECONDS:30}
+      write-timeout-sec: ${KUBERNETES_CLIENT_WRITE_TIMEOUT_SECONDS:30}
+      connection-pool:
+        keep-alive-sec: ${KUBERNETES_CLIENT_CONNECTION_KEEP_ALIVE_SECONDS:600}
+        max-idle-connections: ${KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS:25}
     pending-time-limit-sec: ${WORKLOAD_LAUNCHER_POD_PENDING_TIME_LIMIT:600}
     resource-check-rate: ${WORKLOAD_LAUNCHER_POD_PENDING_RESOURCE_CHECK_RATE:PT30S}
+  docker:
+    network: ${DOCKER_NETWORK:host}
+    workspace-mount-name: ${WORKSPACE_DOCKER_MOUNT:}
+    workspace-mount-path: ${WORKSPACE_ROOT}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
@@ -96,6 +108,14 @@ airbyte:
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+      check:
+        annotations: ${CHECK_JOB_KUBE_ANNOTATIONS:}
+        labels: ${CHECK_JOB_KUBE_LABELS:}
+        node-selectors: ${CHECK_JOB_KUBE_NODE_SELECTORS:}
+        cpu-limit: ${CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
     isolated:
       kube:
         use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}

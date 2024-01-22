@@ -119,6 +119,9 @@ export const CreateConnectionForm: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schemaErrorStatus]);
 
+  if (schemaErrorStatus) {
+    return <SchemaError schemaError={schemaErrorStatus} refreshSchema={onDiscoverSchema} />;
+  }
   if (!schema) {
     return <LoadingSchema />;
   }
@@ -137,13 +140,7 @@ export const CreateConnectionForm: React.FC = () => {
       refreshSchema={onDiscoverSchema}
       schemaError={schemaErrorStatus}
     >
-      {isLoading ? (
-        <LoadingSchema />
-      ) : schemaErrorStatus ? (
-        <SchemaError schemaError={schemaErrorStatus} />
-      ) : (
-        <CreateConnectionFormInner />
-      )}
+      {isLoading ? <LoadingSchema /> : <CreateConnectionFormInner />}
     </ConnectionFormServiceProvider>
   );
 };

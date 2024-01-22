@@ -1,5 +1,6 @@
 package io.airbyte.workload.launcher.model
 
+import io.airbyte.config.ActorType
 import io.airbyte.workers.models.CheckConnectionInput
 
 fun CheckConnectionInput.getJobId(): String {
@@ -10,12 +11,19 @@ fun CheckConnectionInput.getAttemptId(): Long {
   return this.jobRunConfig.attemptId
 }
 
+fun CheckConnectionInput.getActorType(): ActorType {
+  return this.connectionConfiguration.actorType
+}
+
 fun CheckConnectionInput.usesCustomConnector(): Boolean {
   return this.launcherConfig.isCustomConnector
 }
 
 fun CheckConnectionInput.setConnectorLabels(labels: Map<String, String>): CheckConnectionInput {
   return this.apply {
-    launcherConfig.additionalLabels = labels
+    launcherConfig =
+      launcherConfig.apply {
+        additionalLabels = labels
+      }
   }
 }

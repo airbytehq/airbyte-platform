@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -9,13 +9,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
+import io.airbyte.config.AuthProvider;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.SsoConfig;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
-import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
@@ -72,7 +72,7 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
 
   @Test
   void createOrganization() throws Exception {
-    Organization organization = new Organization()
+    final Organization organization = new Organization()
         .withOrganizationId(UUID.randomUUID())
         .withUserId(UUID.randomUUID())
         .withEmail("octavia@airbyte.io")
@@ -80,7 +80,7 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
         .withPba(false)
         .withOrgLevelBilling(false);
     organizationPersistence.createOrganization(organization);
-    Optional<Organization> result = organizationPersistence.getOrganization(organization.getOrganizationId());
+    final Optional<Organization> result = organizationPersistence.getOrganization(organization.getOrganizationId());
     assertTrue(result.isPresent());
     assertEquals(organization, result.get());
   }
@@ -100,14 +100,14 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
         .withKeycloakRealm("realm");
     organizationPersistence.createOrganization(org);
     organizationPersistence.createSsoConfig(ssoConfig);
-    Optional<SsoConfig> result = organizationPersistence.getSsoConfigForOrganization(org.getOrganizationId());
+    final Optional<SsoConfig> result = organizationPersistence.getSsoConfigForOrganization(org.getOrganizationId());
     assertTrue(result.isPresent());
     assertEquals(ssoConfig, result.get());
   }
 
   @Test
   void getOrganization() throws Exception {
-    Optional<Organization> result = organizationPersistence.getOrganization(MockData.ORGANIZATION_ID_1);
+    final Optional<Organization> result = organizationPersistence.getOrganization(MockData.ORGANIZATION_ID_1);
     assertTrue(result.isPresent());
     // expecting organization 1 to have sso realm from sso config 1
     final Organization expected = MockData.organizations().get(0).withSsoRealm(MockData.ssoConfigs().get(0).getKeycloakRealm());
@@ -116,7 +116,7 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
 
   @Test
   void getOrganization_notExist() throws Exception {
-    Optional<Organization> result = organizationPersistence.getOrganization(UUID.randomUUID());
+    final Optional<Organization> result = organizationPersistence.getOrganization(UUID.randomUUID());
     assertFalse(result.isPresent());
   }
 
@@ -144,7 +144,7 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
 
   @Test
   void getSsoConfigForOrganization() throws Exception {
-    Optional<SsoConfig> result = organizationPersistence.getSsoConfigForOrganization(MockData.ORGANIZATION_ID_1);
+    final Optional<SsoConfig> result = organizationPersistence.getSsoConfigForOrganization(MockData.ORGANIZATION_ID_1);
     assertTrue(result.isPresent());
     assertEquals(MockData.SSO_CONFIG_ID_1, result.get().getSsoConfigId());
   }

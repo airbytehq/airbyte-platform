@@ -28,16 +28,16 @@ export const ExistingConnectorButton = <T extends SourceRead | DestinationRead>(
 
   return (
     <button onClick={() => onClick(connectorId)} className={styles.existingConnectorButton} data-testid={testId}>
-      <Text size="lg">{connector.name}</Text>
+      <Text size="sm">{connector.name}</Text>
       {isSource(connector) ? (
         <ConnectorDefinitionBranding sourceDefinitionId={connector.sourceDefinitionId} />
       ) : (
         <ConnectorDefinitionBranding destinationDefinitionId={connector.destinationDefinitionId} />
       )}
-      <Text>
+      <Text color="grey" size="xs">
         <FormattedMessage id="connectionForm.sourceExisting.connectionCount" values={{ count: connectionCount }} />
       </Text>
-      <Icon type="chevronRight" size="lg" />
+      <Icon type="chevronRight" size="md" />
     </button>
   );
 };

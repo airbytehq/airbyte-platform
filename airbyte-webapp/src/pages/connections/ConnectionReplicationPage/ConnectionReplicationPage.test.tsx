@@ -50,6 +50,10 @@ jest.mock("core/api", () => ({
   LogsRequestError: jest.requireActual("core/api/errors").LogsRequestError,
 }));
 
+jest.mock("core/utils/rbac", () => ({
+  useIntent: () => true,
+}));
+
 jest.mock("hooks/theme/useAirbyteTheme", () => ({
   useAirbyteTheme: () => mockTheme,
 }));
@@ -138,7 +142,7 @@ describe("ConnectionReplicationPage", () => {
       await userEvent.clear(cronExpressionInput);
       await userEvent.type(cronExpressionInput, INVALID_CRON_EXPRESSION, { delay: 1 });
 
-      const errorMessage = renderResult.getByText(/must contain at least 6 fields/);
+      const errorMessage = await renderResult.findByText(/invalid cron expression/i);
 
       expect(errorMessage).toBeInTheDocument();
     });
@@ -186,7 +190,7 @@ describe("ConnectionReplicationPage", () => {
       await userEvent.clear(cronExpressionField);
       await userEvent.type(cronExpressionField, CRON_EXPRESSION_EVERY_MINUTE, { delay: 1 });
 
-      const errorMessage = container.getByTestId("cronExpressionError");
+      const errorMessage = await container.findByTestId("cronExpressionError");
 
       expect(errorMessage).toBeInTheDocument();
     });

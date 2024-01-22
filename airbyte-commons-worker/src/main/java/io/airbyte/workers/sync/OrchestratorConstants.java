@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.sync;
@@ -30,6 +30,7 @@ public class OrchestratorConstants {
       .addAll(Set.of(
           EnvConfigs.WORKER_ENVIRONMENT,
           EnvConfigs.JOB_KUBE_ANNOTATIONS,
+          EnvConfigs.JOB_KUBE_SERVICEACCOUNT,
           EnvConfigs.JOB_KUBE_TOLERATIONS,
           EnvConfigs.JOB_KUBE_CURL_IMAGE,
           EnvConfigs.JOB_KUBE_BUSYBOX_IMAGE,
@@ -40,7 +41,6 @@ public class OrchestratorConstants {
           EnvConfigs.JOB_KUBE_NODE_SELECTORS,
           EnvConfigs.JOB_ISOLATED_KUBE_NODE_SELECTORS,
           EnvConfigs.USE_CUSTOM_NODE_SELECTOR,
-          EnvConfigs.DOCKER_NETWORK,
           EnvConfigs.LOCAL_DOCKER_MOUNT,
           EnvConfigs.WORKSPACE_DOCKER_MOUNT,
           EnvConfigs.WORKSPACE_ROOT,
@@ -76,6 +76,8 @@ public class OrchestratorConstants {
           EnvConfigs.STATE_STORAGE_S3_ACCESS_KEY,
           EnvConfigs.STATE_STORAGE_S3_SECRET_ACCESS_KEY,
           EnvConfigs.STATE_STORAGE_S3_REGION,
+          EnvConfigs.WORKER_LOGS_STORAGE_TYPE,
+          EnvConfigs.WORKER_STATE_STORAGE_TYPE,
           EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA,
           EnvVariableFeatureFlags.APPLY_FIELD_SELECTION,
           EnvVariableFeatureFlags.FIELD_SELECTION_WORKSPACES,
@@ -96,6 +98,9 @@ public class OrchestratorConstants {
   public static final String INIT_FILE_INPUT = "input.json";
   public static final String INIT_FILE_JOB_RUN_CONFIG = "jobRunConfig.json";
   public static final String INIT_FILE_APPLICATION = "application.txt";
+  public static final String WORKLOAD_ID_FILE = "workload.txt";
+
+  public static final String CHECK_APPLICATION_NAME = "check-orchestrator";
 
   // define two ports for stdout/stderr usage on the container orchestrator pod
   public static final int PORT1 = 9877;

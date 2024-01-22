@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -84,7 +84,7 @@ public class PermissionPersistence {
     final Permission priorPermission;
     try {
       priorPermission = getPermission(updatedPermission.getPermissionId()).orElseThrow();
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new SQLException(e);
     }
 
@@ -244,7 +244,7 @@ public class PermissionPersistence {
   }
 
   private List<UserPermission> listInstanceAdminPermissions(final DSLContext ctx) {
-    var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
+    final var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))
@@ -286,7 +286,7 @@ public class PermissionPersistence {
   private PermissionType findPermissionTypeForUserAndWorkspace(final DSLContext ctx,
                                                                final UUID workspaceId,
                                                                final String authUserId) {
-    var record = ctx.select(PERMISSION.PERMISSION_TYPE)
+    final var record = ctx.select(PERMISSION.PERMISSION_TYPE)
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))
@@ -310,7 +310,7 @@ public class PermissionPersistence {
   private PermissionType findPermissionTypeForUserAndOrganization(final DSLContext ctx,
                                                                   final UUID organizationId,
                                                                   final String authUserId) {
-    var record = ctx.select(PERMISSION.PERMISSION_TYPE)
+    final var record = ctx.select(PERMISSION.PERMISSION_TYPE)
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))
@@ -327,7 +327,7 @@ public class PermissionPersistence {
   }
 
   private List<UserPermission> listPermissionsForWorkspace(final DSLContext ctx, final UUID workspaceId) {
-    var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
+    final var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))
@@ -345,7 +345,7 @@ public class PermissionPersistence {
   }
 
   private List<UserPermission> listPermissionsForOrganization(final DSLContext ctx, final UUID organizationId) {
-    var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
+    final var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))

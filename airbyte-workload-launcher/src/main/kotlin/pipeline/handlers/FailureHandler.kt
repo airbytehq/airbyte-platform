@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.pipeline.handlers
@@ -44,6 +44,7 @@ class FailureHandler(
       metricPublisher.count(
         WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED,
         MetricAttribute(MeterFilterFactory.WORKLOAD_ID_TAG, io.msg.workloadId),
+        MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()),
         MetricAttribute(MeterFilterFactory.STATUS_TAG, MeterFilterFactory.FAILURE_STATUS),
       )
       logger.info { logMsgTemplate.orElse { id -> "Pipeline aborted after error for workload: $id." }.apply(io.msg.workloadId) }

@@ -24,7 +24,6 @@ class AirbyteMessageTracker(
   featureFlags: FeatureFlags,
   private val sourceDockerImage: String,
   private val destinationDockerImage: String,
-  private val trackCommittedStatsWhenUsingGlobalState: Boolean,
 ) {
   private val dstErrorTraceMsgs = ArrayList<AirbyteTraceMessage>()
   private val srcErrorTraceMsgs = ArrayList<AirbyteTraceMessage>()
@@ -43,7 +42,7 @@ class AirbyteMessageTracker(
     when (msg.type) {
       AirbyteMessage.Type.TRACE -> handleEmittedTrace(msg.trace, AirbyteMessageOrigin.SOURCE)
       AirbyteMessage.Type.RECORD -> syncStatsTracker.updateStats(msg.record)
-      AirbyteMessage.Type.STATE -> syncStatsTracker.updateSourceStatesStats(msg.state, trackCommittedStatsWhenUsingGlobalState)
+      AirbyteMessage.Type.STATE -> syncStatsTracker.updateSourceStatesStats(msg.state)
       AirbyteMessage.Type.CONTROL -> logger.debug { "Control message not currently tracked." }
       else -> logger.warn { "Invalid message type for message: $msg" }
     }
@@ -63,7 +62,7 @@ class AirbyteMessageTracker(
       AirbyteMessage.Type.STATE ->
         msg.state?.let {
           stateAggregator.ingest(it)
-          syncStatsTracker.updateDestinationStateStats(it, trackCommittedStatsWhenUsingGlobalState)
+          syncStatsTracker.updateDestinationStateStats(it)
         }
       AirbyteMessage.Type.CONTROL -> logger.debug { "Control message not currently tracked." }
       else -> logger.warn { " Invalid message type for message: $msg" }

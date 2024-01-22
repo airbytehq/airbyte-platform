@@ -323,6 +323,7 @@ components:
           nullable: true
     Workload:
       required:
+      - autoId
       - geography
       - id
       - inputPayload
@@ -361,6 +362,9 @@ components:
         terminationReason:
           type: string
           nullable: true
+        autoId:
+          type: string
+          format: uuid
     WorkloadCancelRequest:
       required:
       - reason
@@ -389,7 +393,6 @@ components:
       - geography
       - labels
       - logPath
-      - mutexKey
       - type
       - workloadId
       - workloadInput
@@ -409,6 +412,7 @@ components:
           type: string
         mutexKey:
           type: string
+          nullable: true
         type:
           $ref: '#/components/schemas/WorkloadType'
     WorkloadFailureRequest:

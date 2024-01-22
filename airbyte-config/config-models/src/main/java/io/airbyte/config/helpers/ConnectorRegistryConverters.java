@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.helpers;
@@ -41,6 +41,7 @@ public class ConnectorRegistryConverters {
         .withSourceDefinitionId(def.getSourceDefinitionId())
         .withName(def.getName())
         .withIcon(def.getIcon())
+        .withIconUrl(def.getIconUrl())
         .withSourceType(toStandardSourceType(def.getSourceType()))
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
@@ -61,6 +62,7 @@ public class ConnectorRegistryConverters {
         .withDestinationDefinitionId(def.getDestinationDefinitionId())
         .withName(def.getName())
         .withIcon(def.getIcon())
+        .withIconUrl(def.getIconUrl())
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
         .withCustom(def.getCustom())

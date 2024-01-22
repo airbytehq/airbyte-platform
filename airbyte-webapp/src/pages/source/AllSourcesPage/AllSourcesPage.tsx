@@ -9,8 +9,9 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { PageHeader } from "components/ui/PageHeader";
 
-import { useSourceList } from "core/api";
+import { useCurrentWorkspace, useSourceList } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useIntent } from "core/utils/rbac";
 
 import { SourcesTable } from "./SourcesTable";
 import { SourcePaths } from "../../routePaths";
@@ -20,6 +21,8 @@ const AllSourcesPage: React.FC = () => {
   const { sources } = useSourceList();
   useTrackPage(PageTrackingCodes.SOURCE_LIST);
   const onCreateSource = () => navigate(`${SourcePaths.SelectSourceNew}`);
+  const { workspaceId } = useCurrentWorkspace();
+  const canCreateSource = useIntent("CreateSource", { workspaceId });
 
   return sources.length ? (
     <MainPageWithScroll
@@ -33,7 +36,13 @@ const AllSourcesPage: React.FC = () => {
             </Heading>
           }
           endComponent={
-            <Button icon={<Icon type="plus" />} onClick={onCreateSource} size="sm" data-id="new-source">
+            <Button
+              disabled={!canCreateSource}
+              icon={<Icon type="plus" />}
+              onClick={onCreateSource}
+              size="sm"
+              data-id="new-source"
+            >
               <FormattedMessage id="sources.newSource" />
             </Button>
           }

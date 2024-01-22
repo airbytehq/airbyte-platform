@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.process;
@@ -22,18 +22,21 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.workers.helper.ConnectorApmSupportHelper;
+import io.airbyte.workers.models.SecretMetadata;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.ContainerPortBuilder;
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
 import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.EnvVarSource;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodFluent;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
+import io.fabric8.kubernetes.api.model.SecretKeySelector;
 import io.fabric8.kubernetes.api.model.Toleration;
 import io.fabric8.kubernetes.api.model.TolerationBuilder;
 import io.fabric8.kubernetes.api.model.Volume;
@@ -218,6 +221,7 @@ public class KubePodProcess implements KubePod {
                                    final Map<Integer, Integer> internalToExternalPorts,
                                    final String socatCommands,
                                    final Map<String, String> envMap,
+                                   final Map<String, SecretMetadata> secretMap,
                                    final String... args)
       throws IOException {
     final var argsStr = String.join(" ", args);
@@ -242,6 +246,27 @@ public class KubePodProcess implements KubePod {
         .map(entry -> new EnvVar(entry.getKey(), entry.getValue(), null))
         .collect(Collectors.toList());
 
+    final List<EnvVar> secretEnvVars = secretMap.entrySet().stream()
+        .map(entry -> {
+          SecretMetadata secretMetadata = entry.getValue();
+
+          SecretKeySelector secretKeySelector = new SecretKeySelector();
+          secretKeySelector.setName(secretMetadata.secretName());
+          secretKeySelector.setKey(secretMetadata.secretKey());
+
+          EnvVarSource envVarSource = new EnvVarSource();
+          envVarSource.setSecretKeyRef(secretKeySelector);
+
+          EnvVar envVar = new EnvVar();
+          String envVarName = entry.getKey();
+          envVar.setName(envVarName);
+          envVar.setValueFrom(envVarSource);
+          return envVar;
+        })
+        .collect(Collectors.toList());
+
+    List<EnvVar> allEnvVars = Lists.concat(envVars, secretEnvVars);
+
     if (featureFlagClient.boolVariation(ConnectorApmEnabled.INSTANCE, featureFlagContext)) {
       CONNECTOR_DATADOG_SUPPORT_HELPER.addApmEnvVars(envVars);
       CONNECTOR_DATADOG_SUPPORT_HELPER.addServerNameAndVersionToEnvVars(image, envVars);
@@ -253,7 +278,7 @@ public class KubePodProcess implements KubePod {
         .withImage(image)
         .withImagePullPolicy(imagePullPolicy)
         .withCommand("sh", "-c", mainCommand)
-        .withEnv(envVars)
+        .withEnv(allEnvVars)
         .withWorkingDir(CONFIG_DIR)
         .withVolumeMounts(mainVolumeMounts);
 
@@ -418,6 +443,7 @@ public class KubePodProcess implements KubePod {
                         final String curlImage,
                         final boolean runSocatInMainContainer,
                         final Map<String, String> envMap,
+                        final Map<String, SecretMetadata> secretMap,
                         final Map<Integer, Integer> internalToExternalPorts,
                         final String... args)
       throws IOException, InterruptedException {
@@ -544,6 +570,7 @@ public class KubePodProcess implements KubePod {
           internalToExternalPorts,
           socatCommands,
           envMap,
+          secretMap,
           args);
 
       // communicates via a file if it isn't able to reach the heartbeating server and succeeds if the

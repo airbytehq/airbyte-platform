@@ -27,6 +27,10 @@ import {
 import { ConnectionEditServiceProvider, useConnectionEditService } from "./ConnectionEditService";
 import { useConnectionFormService } from "../ConnectionForm/ConnectionFormService";
 
+jest.mock("core/utils/rbac", () => ({
+  useIntent: () => true,
+}));
+
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
   useGetConnection: () => mockConnection,

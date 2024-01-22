@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -16,6 +16,8 @@ import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.OPERATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.PERMISSION_ID_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SCOPE_ID_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SCOPE_TYPE_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_IDS_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_ID_HEADER;
@@ -24,6 +26,7 @@ import io.airbyte.api.model.generated.PermissionIdRequestBody;
 import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.PermissionHandler;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.User;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.UserPersistence;
@@ -67,6 +70,12 @@ public class AuthenticationHeaderResolver {
     try {
       if (properties.containsKey(ORGANIZATION_ID_HEADER)) {
         return List.of(UUID.fromString(properties.get(ORGANIZATION_ID_HEADER)));
+      } else if (properties.containsKey(SCOPE_TYPE_HEADER) && properties.containsKey(SCOPE_ID_HEADER) && properties.get(SCOPE_TYPE_HEADER)
+          .equals(ScopeType.ORGANIZATION.value().toLowerCase())) {
+        // if the scope type is organization, we can use the scope id directly to resolve an organization
+        // id.
+        final String organizationId = properties.get(SCOPE_ID_HEADER);
+        return List.of(UUID.fromString(organizationId));
       } else {
         // resolving by permission id requires a database fetch, so we
         // handle it last and with a dedicated check to minimize latency.
@@ -134,6 +143,11 @@ public class AuthenticationHeaderResolver {
         return List.of(workspaceHelper.getWorkspaceForConnectionId(UUID.fromString(configId)));
       } else if (properties.containsKey(WORKSPACE_IDS_HEADER)) {
         return resolveWorkspaces(properties);
+      } else if (properties.containsKey(SCOPE_TYPE_HEADER) && properties.containsKey(SCOPE_ID_HEADER) && properties.get(SCOPE_TYPE_HEADER)
+          .equals(ScopeType.WORKSPACE.value().toLowerCase())) {
+        // if the scope type is workspace, we can use the scope id directly to resolve a workspace id.
+        final String workspaceId = properties.get(SCOPE_ID_HEADER);
+        return List.of(UUID.fromString(workspaceId));
       } else {
         // resolving by permission id requires a database fetch, so we
         // handle it last and with a dedicated check to minimize latency.

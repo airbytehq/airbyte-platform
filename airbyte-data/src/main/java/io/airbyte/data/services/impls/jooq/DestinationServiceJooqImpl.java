@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -748,6 +748,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
             .set(Tables.ACTOR_DEFINITION.ID, standardDestinationDefinition.getDestinationDefinitionId())
             .set(Tables.ACTOR_DEFINITION.NAME, standardDestinationDefinition.getName())
             .set(Tables.ACTOR_DEFINITION.ICON, standardDestinationDefinition.getIcon())
+            .set(Tables.ACTOR_DEFINITION.ICON_URL, standardDestinationDefinition.getIconUrl())
             .set(Tables.ACTOR_DEFINITION.ACTOR_TYPE, ActorType.destination)
             .set(Tables.ACTOR_DEFINITION.TOMBSTONE, standardDestinationDefinition.getTombstone())
             .set(Tables.ACTOR_DEFINITION.PUBLIC, standardDestinationDefinition.getPublic())
@@ -764,6 +765,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
             .set(Tables.ACTOR_DEFINITION.ID, standardDestinationDefinition.getDestinationDefinitionId())
             .set(Tables.ACTOR_DEFINITION.NAME, standardDestinationDefinition.getName())
             .set(Tables.ACTOR_DEFINITION.ICON, standardDestinationDefinition.getIcon())
+            .set(Tables.ACTOR_DEFINITION.ICON_URL, standardDestinationDefinition.getIconUrl())
             .set(Tables.ACTOR_DEFINITION.ACTOR_TYPE, ActorType.destination)
             .set(Tables.ACTOR_DEFINITION.TOMBSTONE,
                 standardDestinationDefinition.getTombstone() != null && standardDestinationDefinition.getTombstone())

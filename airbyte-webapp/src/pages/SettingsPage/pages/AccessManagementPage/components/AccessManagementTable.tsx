@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Badge } from "components/ui/Badge";
+import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Table } from "components/ui/Table";
 
@@ -12,6 +13,10 @@ import { useCurrentUser } from "core/services/auth";
 import { RoleManagementControl } from "./RoleManagementControl";
 import { RoleToolTip } from "./RoleToolTip";
 import { ResourceType } from "./useGetAccessManagementData";
+
+/**
+ * @deprecated will be removed when RBAC UI v2 is turned on. Use WorkspaceUsersTable or OrganizationUsersTable instead.
+ */
 
 export const AccessManagementTable: React.FC<{
   users: WorkspaceUserRead[] | OrganizationUserRead[];
@@ -75,5 +80,9 @@ export const AccessManagementTable: React.FC<{
     [activeEditRow, columnHelper, pageResourceName, pageResourceType, tableResourceType, userId]
   );
 
-  return <Table data={users} columns={columns} variant="white" />;
+  return (
+    <Card>
+      <Table data={users} columns={columns} variant="white" />
+    </Card>
+  );
 };

@@ -1,16 +1,20 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.init;
 
 import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
+import static io.airbyte.metrics.lib.OssMetricsRegistry.CONNECTOR_REGISTRY_DEFINITION_PROCESSED;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -20,6 +24,8 @@ import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.ConnectorReleases;
 import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
+import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingFailureReason;
+import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingSuccessOutcome;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.DefinitionsProvider;
@@ -27,6 +33,8 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
@@ -53,6 +61,8 @@ class ApplyDefinitionsHelperTest {
   private JobPersistence jobPersistence;
   private SupportStateUpdater supportStateUpdater;
   private FeatureFlagClient featureFlagClient;
+
+  private MetricClient metricClient;
   private ApplyDefinitionsHelper applyDefinitionsHelper;
 
   private static final String PROTOCOL_VERSION = "2.0.0";
@@ -101,9 +111,10 @@ class ApplyDefinitionsHelperTest {
     jobPersistence = mock(JobPersistence.class);
     supportStateUpdater = mock(SupportStateUpdater.class);
     featureFlagClient = mock(TestClient.class);
+    metricClient = mock(MetricClient.class);
 
     applyDefinitionsHelper =
-        new ApplyDefinitionsHelper(definitionsProvider, jobPersistence, configRepository, featureFlagClient, supportStateUpdater);
+        new ApplyDefinitionsHelper(definitionsProvider, jobPersistence, configRepository, featureFlagClient, metricClient, supportStateUpdater);
 
     when(featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
 
@@ -142,9 +153,11 @@ class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3),
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3));
+    verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
+        new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()));
     verify(supportStateUpdater).updateSupportStates();
 
-    verifyNoMoreInteractions(configRepository, supportStateUpdater);
+    verifyNoMoreInteractions(configRepository, supportStateUpdater, metricClient);
   }
 
   @ParameterizedTest
@@ -169,9 +182,11 @@ class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
+    verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
+        new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED.toString()));
     verify(supportStateUpdater).updateSupportStates();
 
-    verifyNoMoreInteractions(configRepository, supportStateUpdater);
+    verifyNoMoreInteractions(configRepository, supportStateUpdater, metricClient);
   }
 
   @ParameterizedTest
@@ -196,13 +211,17 @@ class ApplyDefinitionsHelperTest {
           ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
           ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
           ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
+      verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
+          new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED.toString()));
     } else {
       verify(configRepository).updateStandardSourceDefinition(ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2));
       verify(configRepository).updateStandardDestinationDefinition(ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2));
+      verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
+          new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED.toString()));
     }
     verify(supportStateUpdater).updateSupportStates();
 
-    verifyNoMoreInteractions(configRepository, supportStateUpdater);
+    verifyNoMoreInteractions(configRepository, supportStateUpdater, metricClient);
   }
 
   @ParameterizedTest
@@ -222,6 +241,14 @@ class ApplyDefinitionsHelperTest {
     applyDefinitionsHelper.apply(updateAll);
     verifyConfigRepositoryGetInteractions();
 
+    List.of("airbyte/source-postgres", "airbyte/destination-s3").forEach(
+        dockerRepo -> verify(metricClient, times(1)).count(
+            CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
+            1,
+            new MetricAttribute("status", "failed"),
+            new MetricAttribute("failure_reason", DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION.toString()),
+            new MetricAttribute("docker_repository", dockerRepo)));
+
     verify(configRepository, never()).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardSourceDefinition(postgresWithOldProtocolVersion),
         ConnectorRegistryConverters.toActorDefinitionVersion(s3withOldProtocolVersion),
@@ -240,8 +267,10 @@ class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
     verify(supportStateUpdater).updateSupportStates();
+    verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
+        new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()));
 
-    verifyNoMoreInteractions(configRepository, supportStateUpdater);
+    verifyNoMoreInteractions(configRepository, supportStateUpdater, metricClient);
   }
 
   @Test
@@ -262,9 +291,59 @@ class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
+    verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
+        new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()));
 
     verify(supportStateUpdater, never()).updateSupportStates();
-    verifyNoMoreInteractions(configRepository, supportStateUpdater);
+    verifyNoMoreInteractions(configRepository, supportStateUpdater, metricClient);
+  }
+
+  @Test
+  void testMalformedDefinitionDoesNotBlockOtherDefinitionsFromUpdating() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final ConnectorRegistrySourceDefinition malformedRegistrySourceDefinition =
+        Jsons.clone(SOURCE_POSTGRES).withDockerImageTag("a-non-semantic-version-for-example");
+    assertThrows(RuntimeException.class, () -> ConnectorRegistryConverters.toActorDefinitionVersion(malformedRegistrySourceDefinition));
+
+    final ConnectorRegistryDestinationDefinition malformedRegistryDestinationDefinition =
+        Jsons.clone(DESTINATION_S3).withDockerImageTag("a-non-semantic-version-for-example");
+    assertThrows(RuntimeException.class, () -> ConnectorRegistryConverters.toActorDefinitionVersion(malformedRegistryDestinationDefinition));
+
+    when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(SOURCE_POSTGRES, malformedRegistrySourceDefinition, SOURCE_POSTGRES_2));
+    when(definitionsProvider.getDestinationDefinitions())
+        .thenReturn(List.of(DESTINATION_S3, malformedRegistryDestinationDefinition, DESTINATION_S3_2));
+
+    applyDefinitionsHelper.apply(true);
+    verifyConfigRepositoryGetInteractions();
+    List.of("airbyte/source-postgres", "airbyte/destination-s3").forEach(
+        dockerRepo -> verify(metricClient, times(1)).count(
+            CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
+            1,
+            new MetricAttribute("status", "failed"),
+            new MetricAttribute("failure_reason", DefinitionProcessingFailureReason.DEFINITION_CONVERSION_FAILED.toString()),
+            new MetricAttribute("docker_repository", dockerRepo)));
+
+    verify(configRepository).writeConnectorMetadata(
+        ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES),
+        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES));
+    verify(configRepository).writeConnectorMetadata(
+        ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3),
+        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3));
+    verify(configRepository).writeConnectorMetadata(
+        ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
+        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2));
+    verify(configRepository).writeConnectorMetadata(
+        ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
+        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
+    verify(supportStateUpdater).updateSupportStates();
+    verify(metricClient, times(4)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
+        new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()));
+
+    // The malformed definitions should not have been written.
+    verifyNoMoreInteractions(configRepository, supportStateUpdater, metricClient);
   }
 
 }

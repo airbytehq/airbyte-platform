@@ -125,7 +125,7 @@ airbyte {
         defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
             @Suppress("UNCHECKED_CAST")
             localEnvVars.putAll(env.toMap() as Map<String, String>)
-    localEnvVars.putAll(mapOf(
+            localEnvVars.putAll(mapOf(
                 "AIRBYTE_ROLE"                     to (System.getenv("AIRBYTE_ROLE") ?: "undefined"),
                 "AIRBYTE_VERSION"                  to env["VERSION"].toString(),
                 "DATABASE_USER"                    to env["DATABASE_USER"].toString(),
@@ -141,7 +141,7 @@ airbyte {
                 "TRACKING_STRATEGY"                to env["TRACKING_STRATEGY"].toString(),
                 "TEMPORAL_HOST"                    to "localhost:7233",
                 "MICRONAUT_ENVIRONMENTS"           to "control-plane",
-    ))
+            ))
     }
 
     docker {

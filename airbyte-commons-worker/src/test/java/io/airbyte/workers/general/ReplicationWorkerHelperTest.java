@@ -1,9 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
 
+import static io.airbyte.workers.test_utils.TestConfigHelpers.DESTINATION_IMAGE;
+import static io.airbyte.workers.test_utils.TestConfigHelpers.SOURCE_IMAGE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -37,7 +39,6 @@ import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker;
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
-import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -51,13 +52,14 @@ class ReplicationWorkerHelperTest {
   private AirbyteMapper mapper;
   private SyncStatsTracker syncStatsTracker;
   private AirbyteMessageTracker messageTracker;
-
+  private SyncPersistence syncPersistence;
   private AnalyticsMessageTracker analyticsMessageTracker;
 
   @BeforeEach
   void setUp() {
     mapper = mock(AirbyteMapper.class);
     syncStatsTracker = mock(SyncStatsTracker.class);
+    syncPersistence = mock(SyncPersistence.class);
     messageTracker = mock(AirbyteMessageTracker.class);
     analyticsMessageTracker = mock(AnalyticsMessageTracker.class);
     when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
@@ -66,20 +68,22 @@ class ReplicationWorkerHelperTest {
         mock(FieldSelector.class),
         mapper,
         messageTracker,
-        mock(SyncPersistence.class),
+        syncPersistence,
         mock(ReplicationAirbyteMessageEventPublishingHelper.class),
         mock(ThreadedTimeTracker.class),
         mock(VoidCallable.class),
         mock(WorkloadApi.class),
-        new WorkloadIdGenerator(),
-        false, analyticsMessageTracker));
+        false,
+        analyticsMessageTracker,
+        Optional.empty()));
   }
 
   @Test
   void testGetReplicationOutput() throws JsonProcessingException {
     // Need to pass in a replication context
     replicationWorkerHelper.initialize(
-        new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L, 1, UUID.randomUUID()),
+        new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L,
+            1, UUID.randomUUID(), SOURCE_IMAGE, DESTINATION_IMAGE),
         mock(ReplicationFeatureFlags.class),
         mock(Path.class));
     // Need to have a configured catalog for getReplicationOutput
@@ -101,7 +105,8 @@ class ReplicationWorkerHelperTest {
   @Test
   void testAnalyticsMessageHandling() {
     final ReplicationContext context =
-        new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L, 1, UUID.randomUUID());
+        new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L,
+            1, UUID.randomUUID(), SOURCE_IMAGE, DESTINATION_IMAGE);
     // Need to pass in a replication context
     replicationWorkerHelper.initialize(
         context,

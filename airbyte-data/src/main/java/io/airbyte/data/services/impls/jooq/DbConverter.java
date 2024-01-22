@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -251,6 +251,7 @@ public class DbConverter {
         .withSourceDefinitionId(record.get(ACTOR_DEFINITION.ID))
         .withDefaultVersionId(record.get(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
         .withIcon(record.get(ACTOR_DEFINITION.ICON))
+        .withIconUrl(record.get(ACTOR_DEFINITION.ICON_URL))
         .withName(record.get(ACTOR_DEFINITION.NAME))
         .withSourceType(record.get(ACTOR_DEFINITION.SOURCE_TYPE) == null ? null
             : Enums.toEnum(record.get(ACTOR_DEFINITION.SOURCE_TYPE, String.class), SourceType.class).orElseThrow())
@@ -276,6 +277,7 @@ public class DbConverter {
         .withDestinationDefinitionId(record.get(ACTOR_DEFINITION.ID))
         .withDefaultVersionId(record.get(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
         .withIcon(record.get(ACTOR_DEFINITION.ICON))
+        .withIconUrl(record.get(ACTOR_DEFINITION.ICON_URL))
         .withName(record.get(ACTOR_DEFINITION.NAME))
         .withTombstone(record.get(ACTOR_DEFINITION.TOMBSTONE))
         .withPublic(record.get(ACTOR_DEFINITION.PUBLIC))
@@ -411,7 +413,9 @@ public class DbConverter {
         .withHasDraft((Boolean) record.get("hasDraft"))
         .withTombstone(record.get(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
         .withActorDefinitionId(record.get(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID))
-        .withActiveDeclarativeManifestVersion(record.get(ACTIVE_DECLARATIVE_MANIFEST.VERSION));
+        .withActiveDeclarativeManifestVersion(record.get(ACTIVE_DECLARATIVE_MANIFEST.VERSION))
+        .withTestingValues(record.get(CONNECTOR_BUILDER_PROJECT.TESTING_VALUES) == null ? null
+            : Jsons.deserialize(record.get(CONNECTOR_BUILDER_PROJECT.TESTING_VALUES).data()));
   }
 
   /**

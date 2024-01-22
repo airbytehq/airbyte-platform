@@ -15,10 +15,10 @@ micronaut:
     export:
       statsd:
         enabled: ${MICROMETER_METRICS_ENABLED:false}
-        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
         step: ${MICROMETER_METRICS_STEP:PT30S}
-        host: ${STATSD_HOST:}
-        port: ${STATSD_PORT:}
+        host: ${STATSD_HOST:localhost}
+        port: ${STATSD_PORT:8125}
   security:
     enabled: false
 
@@ -26,10 +26,63 @@ airbyte:
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   role: ${AIRBYTE_ROLE:dev}
   version: ${AIRBYTE_VERSION:dev}
-  config-dir: /config
+  config-dir: ${AIRBYTE_CONFIG_DIR:/config}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}
+  cloud:
+    storage:
+      logs:
+        type: ${WORKER_LOGS_STORAGE_TYPE:}
+        gcs:
+          application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
+          bucket: ${GCS_LOG_BUCKET:}
+        minio:
+          access-key: ${AWS_ACCESS_KEY_ID:}
+          bucket: ${S3_LOG_BUCKET:}
+          endpoint: ${S3_MINIO_ENDPOINT:}
+          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+        s3:
+          access-key: ${AWS_ACCESS_KEY_ID:}
+          bucket: ${S3_LOG_BUCKET:}
+          region: ${S3_LOG_BUCKET_REGION:}
+          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+        local:
+          root: ${WORKSPACE_ROOT:}
+      state:
+        type: ${WORKER_STATE_STORAGE_TYPE:}
+        gcs:
+          application-credentials: ${STATE_STORAGE_GCS_APPLICATION_CREDENTIALS:}
+          bucket: ${STATE_STORAGE_GCS_BUCKET_NAME:}
+        minio:
+          access-key: ${STATE_STORAGE_MINIO_ACCESS_KEY:}
+          bucket: ${STATE_STORAGE_MINIO_BUCKET_NAME:}
+          endpoint: ${STATE_STORAGE_MINIO_ENDPOINT:}
+          secret-access-key: ${STATE_STORAGE_MINIO_SECRET_ACCESS_KEY:}
+        s3:
+          access-key: ${STATE_STORAGE_S3_ACCESS_KEY:}
+          bucket: ${STATE_STORAGE_S3_BUCKET_NAME:}
+          region: ${STATE_STORAGE_S3_REGION:}
+          secret-access-key: ${STATE_STORAGE_S3_SECRET_ACCESS_KEY:}
+        local:
+          root: ${WORKSPACE_ROOT:}
+      workload-outputs:
+        type: ${WORKER_STATE_STORAGE_TYPE:}
+        gcs:
+          application-credentials: ${STATE_STORAGE_GCS_APPLICATION_CREDENTIALS:}
+          bucket: ${STATE_STORAGE_GCS_BUCKET_NAME:}
+        minio:
+          access-key: ${STATE_STORAGE_MINIO_ACCESS_KEY:}
+          bucket: ${STATE_STORAGE_MINIO_BUCKET_NAME:}
+          endpoint: ${STATE_STORAGE_MINIO_ENDPOINT:}
+          secret-access-key: ${STATE_STORAGE_MINIO_SECRET_ACCESS_KEY:}
+        s3:
+          access-key: ${STATE_STORAGE_S3_ACCESS_KEY:}
+          bucket: ${STATE_STORAGE_S3_BUCKET_NAME:}
+          region: ${STATE_STORAGE_S3_REGION:}
+          secret-access-key: ${STATE_STORAGE_S3_SECRET_ACCESS_KEY:}
+        local:
+          root: ${WORKSPACE_ROOT:}
   control:
     plane:
       auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
@@ -91,6 +144,14 @@ airbyte:
         cpu-request: ${REPLICATION_ORCHESTRATOR_CPU_REQUEST:}
         memory-limit: ${REPLICATION_ORCHESTRATOR_MEMORY_LIMIT:}
         memory-request: ${REPLICATION_ORCHESTRATOR_MEMORY_REQUEST:}
+      check:
+        annotations: ${CHECK_JOB_KUBE_ANNOTATIONS:}
+        labels: ${CHECK_JOB_KUBE_LABELS:}
+        node-selectors: ${CHECK_JOB_KUBE_NODE_SELECTORS:}
+        cpu-limit: ${CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
     replication:
       persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:60}
   workload-api:

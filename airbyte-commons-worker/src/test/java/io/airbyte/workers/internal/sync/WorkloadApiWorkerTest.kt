@@ -4,7 +4,6 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.ConnectionApi
 import io.airbyte.api.client.model.generated.ConnectionRead
 import io.airbyte.api.client.model.generated.Geography
-import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardSyncSummary
@@ -66,7 +65,6 @@ internal class WorkloadApiWorkerTest {
         workloadIdGenerator,
         replicationActivityInput,
         featureFlagClient,
-        false,
       )
   }
 
@@ -87,7 +85,7 @@ internal class WorkloadApiWorkerTest {
     every { workloadApi.workloadCreate(any()) } returns Unit
     every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.SUCCESS)
 
-    every { documentStoreClient.read("$expectedDocPrefix/SUCCEEDED") } returns Optional.of(Jsons.serialize(expectedOutput))
+    every { jobOutputDocStore.readSyncOutput(workloadId) } returns Optional.of(expectedOutput)
 
     val output = workloadApiWorker.run(replicationInput, jobRoot)
     assertEquals(expectedOutput, output)
@@ -110,44 +108,10 @@ internal class WorkloadApiWorkerTest {
     every { workloadApi.workloadCreate(any()) } returns Unit
     every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.FAILURE)
 
-    every { documentStoreClient.read("$expectedDocPrefix/SUCCEEDED") } returns Optional.of(Jsons.serialize(expectedOutput))
-
-    val output = workloadApiWorker.run(replicationInput, jobRoot)
-    // We expect the output to be returned if it exists, even on a failure
-    assertEquals(expectedOutput, output)
-  }
-
-  @Test
-  fun testSuccessfulReplicationWithDocOutput() {
-    workloadApiWorker =
-      WorkloadApiWorker(
-        documentStoreClient,
-        OrchestratorNameGenerator("testNs"),
-        jobOutputDocStore,
-        apiClient,
-        workloadApi,
-        workloadIdGenerator,
-        replicationActivityInput,
-        featureFlagClient,
-        true,
-      )
-    val jobId = 13L
-    val attemptNumber = 37
-    val workloadId = "my-workload"
-    val expectedOutput =
-      ReplicationOutput()
-        .withReplicationAttemptSummary(ReplicationAttemptSummary().withStatus(StandardSyncSummary.ReplicationStatus.COMPLETED))
-    initializeReplicationInput(jobId, attemptNumber)
-
-    every { workloadIdGenerator.generateSyncWorkloadId(replicationInput.connectionId, jobId, attemptNumber) } returns workloadId
-
-    every { connectionApi.getConnection(any()) } returns ConnectionRead().geography(Geography.US)
-    every { workloadApi.workloadCreate(any()) } returns Unit
-    every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.SUCCESS)
-
     every { jobOutputDocStore.readSyncOutput(workloadId) } returns Optional.of(expectedOutput)
 
     val output = workloadApiWorker.run(replicationInput, jobRoot)
+    // We expect the output to be returned if it exists, even on a failure
     assertEquals(expectedOutput, output)
   }
 
@@ -168,7 +132,7 @@ internal class WorkloadApiWorkerTest {
     every { workloadApi.workloadCreate(any()) } throws ServerException(statusCode = 409)
     every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.SUCCESS)
 
-    every { documentStoreClient.read("$expectedDocPrefix/SUCCEEDED") } returns Optional.of(Jsons.serialize(expectedOutput))
+    every { jobOutputDocStore.readSyncOutput(workloadId) } returns Optional.of(expectedOutput)
 
     val output = workloadApiWorker.run(replicationInput, jobRoot)
     assertEquals(expectedOutput, output)

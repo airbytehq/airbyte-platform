@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
@@ -110,7 +110,7 @@ public class WorkspaceHelper {
     this.workspaceToOrganizationCache = getExpiringCache(new CacheLoader<>() {
 
       @Override
-      public UUID load(UUID workspaceId) throws Exception {
+      public UUID load(final UUID workspaceId) throws Exception {
         return configRepository.getStandardWorkspaceNoSecrets(workspaceId, false).getOrganizationId();
       }
 

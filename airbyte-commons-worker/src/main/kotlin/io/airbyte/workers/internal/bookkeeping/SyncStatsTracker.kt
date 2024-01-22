@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 package io.airbyte.workers.internal.bookkeeping
 
@@ -7,6 +7,7 @@ import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair
+import io.airbyte.workers.general.ReplicationFeatureFlagReader
 
 /**
  * Track stats during a sync.
@@ -32,18 +33,12 @@ interface SyncStatsTracker {
   /**
    * Update the stats count from the source state message.
    */
-  fun updateSourceStatesStats(
-    stateMessage: AirbyteStateMessage,
-    trackCommittedStatsWhenUsingGlobalState: Boolean,
-  )
+  fun updateSourceStatesStats(stateMessage: AirbyteStateMessage)
 
   /**
    * Update the stats count from the source state message.
    */
-  fun updateDestinationStateStats(
-    stateMessage: AirbyteStateMessage,
-    trackCommittedStatsWhenUsingGlobalState: Boolean,
-  )
+  fun updateDestinationStateStats(stateMessage: AirbyteStateMessage)
 
   /**
    * Get the per-stream committed bytes count.
@@ -157,4 +152,6 @@ interface SyncStatsTracker {
   fun getMeanSecondsBetweenStateMessageEmittedAndCommitted(): Long?
 
   fun getUnreliableStateTimingMetrics(): Boolean
+
+  fun setReplicationFeatureFlagReader(replicationFeatureFlagReader: ReplicationFeatureFlagReader)
 }

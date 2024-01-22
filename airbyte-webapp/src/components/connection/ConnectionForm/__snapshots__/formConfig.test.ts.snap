@@ -8,6 +8,7 @@ exports[`#useInitialFormValues should generate initial values w/ 'not create' mo
   "namespaceFormat": "\${SOURCE_NAMESPACE}",
   "nonBreakingChangesPreference": "ignore",
   "normalization": "basic",
+  "prefix": "",
   "scheduleType": "manual",
   "syncCatalog": {
     "streams": [
@@ -1566,6 +1567,7 @@ exports[`#useInitialFormValues should generate initial values w/ 'not create' mo
   "namespaceFormat": "\${SOURCE_NAMESPACE}",
   "nonBreakingChangesPreference": "ignore",
   "normalization": "basic",
+  "prefix": "",
   "scheduleType": "manual",
   "syncCatalog": {
     "streams": [
@@ -3125,6 +3127,7 @@ exports[`#useInitialFormValues should generate initial values w/ no 'not create'
   "namespaceFormat": "\${SOURCE_NAMESPACE}",
   "nonBreakingChangesPreference": "ignore",
   "normalization": "basic",
+  "prefix": "",
   "scheduleType": "manual",
   "syncCatalog": {
     "streams": [

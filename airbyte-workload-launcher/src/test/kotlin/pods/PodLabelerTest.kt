@@ -13,6 +13,7 @@ import io.airbyte.workers.process.Metadata.SYNC_JOB
 import io.airbyte.workers.process.Metadata.SYNC_STEP_KEY
 import io.airbyte.workers.process.Metadata.WRITE_STEP
 import io.airbyte.workers.process.ProcessFactory
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.AUTO_ID
 import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.MUTEX_KEY
 import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.WORKLOAD_ID
 import org.junit.jupiter.api.Test
@@ -127,21 +128,37 @@ class PodLabelerTest {
     )
   }
 
+  @Test
+  fun getAutoIdLabels() {
+    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
+    val id = UUID.randomUUID()
+    val result = labeler.getAutoIdLabels(id)
+
+    assert(
+      result ==
+        mapOf(
+          AUTO_ID to id.toString(),
+        ),
+    )
+  }
+
   @ParameterizedTest
   @MethodSource("replInputWorkloadIdMatrix")
   fun getSharedLabels(
-    workloadId: String,
+    workloadId: String?,
     mutexKey: String?,
     passThroughLabels: Map<String, String>,
+    autoId: UUID,
   ) {
     val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
-    val result = labeler.getSharedLabels(workloadId, mutexKey, passThroughLabels)
+    val result = labeler.getSharedLabels(workloadId, mutexKey, passThroughLabels, autoId)
 
     assert(
       result ==
         passThroughLabels +
         labeler.getWorkloadLabels(workloadId) +
-        labeler.getMutexLabels(mutexKey),
+        labeler.getMutexLabels(mutexKey) +
+        labeler.getAutoIdLabels(autoId),
     )
   }
 
@@ -155,16 +172,25 @@ class PodLabelerTest {
           UUID.randomUUID().toString(),
           UUID.randomUUID().toString(),
           mapOf("random labels1" to "from input msg1"),
+          UUID.randomUUID().toString(),
         ),
         Arguments.of(
           UUID.randomUUID().toString(),
           UUID.randomUUID().toString(),
           mapOf("random labels2" to "from input msg2"),
+          UUID.randomUUID().toString(),
         ),
         Arguments.of(
           UUID.randomUUID().toString(),
           null,
           mapOf("random labels3" to "from input msg3"),
+          UUID.randomUUID().toString(),
+        ),
+        Arguments.of(
+          null,
+          null,
+          mapOf("random labels3" to "from input msg3"),
+          UUID.randomUUID().toString(),
         ),
       )
     }

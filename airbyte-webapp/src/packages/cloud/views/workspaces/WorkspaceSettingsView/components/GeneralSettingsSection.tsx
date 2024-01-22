@@ -9,6 +9,7 @@ import { Card } from "components/ui/Card";
 
 import { useCurrentWorkspace, useInvalidateWorkspace } from "core/api";
 import { useUpdateCloudWorkspace } from "core/api/cloud";
+import { useIntent } from "core/utils/rbac";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -27,6 +28,7 @@ export const GeneralSettingsSection: React.FC = () => {
   const { trackError } = useAppMonitoringService();
   const { workspaceId, name, email } = useCurrentWorkspace();
   const invalidateWorkspace = useInvalidateWorkspace(workspaceId);
+  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId });
 
   const onSubmit = async ({ name }: WorkspaceFormValues) => {
     await updateCloudWorkspace({
@@ -66,6 +68,7 @@ export const GeneralSettingsSection: React.FC = () => {
           onSubmit={onSubmit}
           onSuccess={onSuccess}
           onError={onError}
+          disabled={!canUpdateWorkspace}
         >
           <FormControl<WorkspaceFormValues>
             name="name"

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -113,7 +113,7 @@ public class UserHandler {
         .withName(userCreate.getName())
         .withUserId(userId)
         .withAuthUserId(userCreate.getAuthUserId())
-        .withAuthProvider(Enums.convertTo(userCreate.getAuthProvider(), User.AuthProvider.class))
+        .withAuthProvider(Enums.convertTo(userCreate.getAuthProvider(), io.airbyte.config.AuthProvider.class))
         .withStatus(Enums.convertTo(userCreate.getStatus(), User.Status.class))
         .withCompanyName(userCreate.getCompanyName())
         .withEmail(userCreate.getEmail())
@@ -273,7 +273,7 @@ public class UserHandler {
         .withName(userRead.getName())
         .withUserId(userRead.getUserId())
         .withAuthUserId(userRead.getAuthUserId())
-        .withAuthProvider(Enums.convertTo(userRead.getAuthProvider(), User.AuthProvider.class))
+        .withAuthProvider(Enums.convertTo(userRead.getAuthProvider(), io.airbyte.config.AuthProvider.class))
         .withDefaultWorkspaceId(userRead.getDefaultWorkspaceId())
         .withStatus(Enums.convertTo(userRead.getStatus(), Status.class))
         .withCompanyName(userRead.getCompanyName())

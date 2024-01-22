@@ -12,8 +12,6 @@ import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
-import { CommonRequestError } from "core/api";
-import { KnownExceptionInfo } from "core/api/types/ConnectorBuilderClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
@@ -62,6 +60,8 @@ export const StreamTester: React.FC<{
 
   const analyticsService = useAnalyticsService();
 
+  const requestErrorStatus = resolveError?.status;
+
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const errorMessage = isError
     ? error instanceof Error
@@ -69,7 +69,7 @@ export const StreamTester: React.FC<{
       : unknownErrorMessage
     : undefined;
 
-  const errorExceptionStack = (resolveError as CommonRequestError<KnownExceptionInfo>)?.payload?.exceptionStack;
+  const errorExceptionStack = resolveError?.payload?.exceptionStack;
 
   const [errorLogs, nonErrorLogs] = useMemo(
     () =>
@@ -153,16 +153,29 @@ export const StreamTester: React.FC<{
             </Collapsible>
           )}
           <Text>
-            <FormattedMessage
-              id="connectorBuilder.ensureProperYaml"
-              values={{
-                a: (node: React.ReactNode) => (
-                  <a href={links.lowCodeYamlDescription} target="_blank" rel="noreferrer">
-                    {node}
-                  </a>
-                ),
-              }}
-            />
+            {[400, 422].includes(requestErrorStatus as number) ? (
+              <FormattedMessage
+                id="connectorBuilder.ensureProperYaml"
+                values={{
+                  a: (node: React.ReactNode) => (
+                    <a href={links.lowCodeYamlDescription} target="_blank" rel="noreferrer">
+                      {node}
+                    </a>
+                  ),
+                }}
+              />
+            ) : (
+              <FormattedMessage
+                id="connectorBuilder.contactSupport"
+                values={{
+                  a: (node: React.ReactNode) => (
+                    <a href={links.supportPortal} target="_blank" rel="noreferrer">
+                      {node}
+                    </a>
+                  ),
+                }}
+              />
+            )}
           </Text>
         </div>
       )}

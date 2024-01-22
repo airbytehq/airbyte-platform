@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification;
@@ -7,6 +7,10 @@ package io.airbyte.notification;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.airbyte.api.model.generated.CatalogDiff;
+import io.airbyte.api.model.generated.StreamDescriptor;
+import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
@@ -167,6 +171,35 @@ class CustomerioNotificationClientTest {
     final RecordedRequest recordedRequest = mockWebServer.takeRequest();
     assertEquals("/v1/send/email", recordedRequest.getPath());
     assertEquals("Bearer " + API_KEY, recordedRequest.getHeader(HttpHeaders.AUTHORIZATION));
+  }
+
+  @Test
+  void testBuildJson() {
+    UUID workspaceId = UUID.randomUUID();
+    String workspaceName = "test_workspace";
+    UUID connectionId = UUID.randomUUID();
+    String connectionName = "connection foo";
+    UUID sourceId = UUID.randomUUID();
+    String sourceName = "facebook marketing";
+    CatalogDiff diff = new CatalogDiff()
+        .addTransformsItem(
+            new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM).streamDescriptor(new StreamDescriptor().name("foo")))
+        .addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
+            .streamDescriptor(new StreamDescriptor().name("removed")));
+    String recipient = "airbyte@airbyte.io";
+    String transactionMessageId = "455";
+    ObjectNode node =
+        CustomerioNotificationClient.buildSchemaPropagationJson(workspaceId, workspaceName, connectionId, connectionName, sourceId, sourceName, diff,
+            recipient, transactionMessageId);
+
+    assertEquals(transactionMessageId, node.get("transactional_message_id").asText());
+    assertEquals(recipient, node.get("to").asText());
+    assertEquals(sourceName, node.get("message_data").get("source_name").asText());
+    assertEquals(connectionName, node.get("message_data").get("connection_name").asText());
+
+    assertTrue(node.get("message_data").get("changes").get("new_streams").isArray());
+    assertTrue(node.get("message_data").get("changes").get("deleted_streams").isArray());
+    assertTrue(node.get("message_data").get("changes").get("modified_streams").isObject());
   }
 
 }

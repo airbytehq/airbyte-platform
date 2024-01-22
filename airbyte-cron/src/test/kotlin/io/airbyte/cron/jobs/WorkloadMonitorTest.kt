@@ -9,6 +9,7 @@ import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadListRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadListResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus
+import io.airbyte.workload.api.client.model.generated.WorkloadType
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkClass
@@ -79,6 +80,7 @@ class WorkloadMonitorTest {
         1,
         MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-start"),
         MetricAttribute(MetricTags.STATUS, "ok"),
+        MetricAttribute(MetricTags.WORKLOAD_TYPE, "sync"),
       )
     }
     verify(exactly = 1) {
@@ -87,6 +89,7 @@ class WorkloadMonitorTest {
         1,
         MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-start"),
         MetricAttribute(MetricTags.STATUS, "fail"),
+        MetricAttribute(MetricTags.WORKLOAD_TYPE, "sync"),
       )
     }
   }
@@ -116,6 +119,7 @@ class WorkloadMonitorTest {
         1,
         MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-claim"),
         MetricAttribute(MetricTags.STATUS, "ok"),
+        MetricAttribute(MetricTags.WORKLOAD_TYPE, "sync"),
       )
     }
     verify(exactly = 1) {
@@ -124,6 +128,7 @@ class WorkloadMonitorTest {
         1,
         MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-claim"),
         MetricAttribute(MetricTags.STATUS, "fail"),
+        MetricAttribute(MetricTags.WORKLOAD_TYPE, "sync"),
       )
     }
   }
@@ -160,6 +165,7 @@ class WorkloadMonitorTest {
         1,
         MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-heartbeat"),
         MetricAttribute(MetricTags.STATUS, "ok"),
+        MetricAttribute(MetricTags.WORKLOAD_TYPE, "sync"),
       )
     }
     verify(exactly = 1) {
@@ -168,6 +174,7 @@ class WorkloadMonitorTest {
         1,
         MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-heartbeat"),
         MetricAttribute(MetricTags.STATUS, "fail"),
+        MetricAttribute(MetricTags.WORKLOAD_TYPE, "sync"),
       )
     }
   }
@@ -197,6 +204,7 @@ class WorkloadMonitorTest {
         1,
         MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-non-sync-timeout"),
         MetricAttribute(MetricTags.STATUS, "ok"),
+        MetricAttribute(MetricTags.WORKLOAD_TYPE, "sync"),
       )
     }
     verify(exactly = 1) {
@@ -205,6 +213,7 @@ class WorkloadMonitorTest {
         1,
         MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-non-sync-timeout"),
         MetricAttribute(MetricTags.STATUS, "fail"),
+        MetricAttribute(MetricTags.WORKLOAD_TYPE, "sync"),
       )
     }
   }
@@ -234,6 +243,7 @@ class WorkloadMonitorTest {
         1,
         MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-sync-timeout"),
         MetricAttribute(MetricTags.STATUS, "ok"),
+        MetricAttribute(MetricTags.WORKLOAD_TYPE, "sync"),
       )
     }
     verify(exactly = 1) {
@@ -242,6 +252,7 @@ class WorkloadMonitorTest {
         1,
         MetricAttribute(MetricTags.CANCELLATION_SOURCE, "workload-monitor-sync-timeout"),
         MetricAttribute(MetricTags.STATUS, "fail"),
+        MetricAttribute(MetricTags.WORKLOAD_TYPE, "sync"),
       )
     }
   }
@@ -249,6 +260,7 @@ class WorkloadMonitorTest {
   fun getWorkload(id: String): Workload {
     return mockkClass(Workload::class).also {
       every { it.id } returns id
+      every { it.type } returns WorkloadType.SYNC
     }
   }
 }

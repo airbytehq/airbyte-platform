@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal.syncpersistence;
@@ -466,12 +466,12 @@ class SyncPersistenceImplTest {
     verify(syncStatsTracker).updateEstimates(new AirbyteEstimateTraceMessage());
     clearInvocations();
 
-    syncPersistence.updateDestinationStateStats(new AirbyteStateMessage(), false);
-    verify(syncStatsTracker).updateDestinationStateStats(new AirbyteStateMessage(), false);
+    syncPersistence.updateDestinationStateStats(new AirbyteStateMessage());
+    verify(syncStatsTracker).updateDestinationStateStats(new AirbyteStateMessage());
     clearInvocations();
 
-    syncPersistence.updateSourceStatesStats(new AirbyteStateMessage(), false);
-    verify(syncStatsTracker).updateSourceStatesStats(new AirbyteStateMessage(), false);
+    syncPersistence.updateSourceStatesStats(new AirbyteStateMessage());
+    verify(syncStatsTracker).updateSourceStatesStats(new AirbyteStateMessage());
     clearInvocations();
 
     syncPersistence.getStreamToCommittedBytes();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.helpers;
@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.generated.JobRetryStatesApi;
+import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.RetryStateRead;
 import io.airbyte.featureflag.CompleteFailureBackoffBase;
@@ -36,11 +37,15 @@ class RetryStateClientTest {
   private JobRetryStatesApi mJobRetryStatesApi;
 
   @Mock
+  private WorkspaceApi mWorkspaceApi;
+
+  @Mock
   private FeatureFlagClient mFeatureFlagClient;
 
   @BeforeEach
   public void setup() {
     mJobRetryStatesApi = Mockito.mock(JobRetryStatesApi.class);
+    mWorkspaceApi = Mockito.mock(WorkspaceApi.class);
     mFeatureFlagClient = Mockito.mock(TestClient.class);
     when(mFeatureFlagClient.intVariation(Mockito.any(), Mockito.any())).thenReturn(-1);
   }
@@ -49,6 +54,7 @@ class RetryStateClientTest {
   void hydratesBackoffAndLimitsFromConstructor() {
     final var client = new RetryStateClient(
         mJobRetryStatesApi,
+        mWorkspaceApi,
         mFeatureFlagClient,
         Fixtures.successiveCompleteFailureLimit,
         Fixtures.totalCompleteFailureLimit,
@@ -75,6 +81,7 @@ class RetryStateClientTest {
   void featureFlagsOverrideValues() {
     final var client = new RetryStateClient(
         mJobRetryStatesApi,
+        mWorkspaceApi,
         mFeatureFlagClient,
         Fixtures.successiveCompleteFailureLimit,
         Fixtures.totalCompleteFailureLimit,
@@ -122,6 +129,7 @@ class RetryStateClientTest {
 
     final var client = new RetryStateClient(
         mJobRetryStatesApi,
+        mWorkspaceApi,
         mFeatureFlagClient,
         Fixtures.successiveCompleteFailureLimit,
         Fixtures.totalCompleteFailureLimit,
@@ -146,6 +154,7 @@ class RetryStateClientTest {
 
     final var client = new RetryStateClient(
         mJobRetryStatesApi,
+        mWorkspaceApi,
         mFeatureFlagClient,
         Fixtures.successiveCompleteFailureLimit,
         Fixtures.totalCompleteFailureLimit,
@@ -167,6 +176,7 @@ class RetryStateClientTest {
   void initializesFailureCountsFreshWhenJobIdNull() {
     final var client = new RetryStateClient(
         mJobRetryStatesApi,
+        mWorkspaceApi,
         mFeatureFlagClient,
         Fixtures.successiveCompleteFailureLimit,
         Fixtures.totalCompleteFailureLimit,

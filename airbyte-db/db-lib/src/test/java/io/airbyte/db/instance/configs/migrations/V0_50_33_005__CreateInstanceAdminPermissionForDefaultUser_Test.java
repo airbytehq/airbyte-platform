@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance.configs.migrations;
@@ -60,7 +60,7 @@ class V0_50_33_005__CreateInstanceAdminPermissionForDefaultUser_Test extends Abs
     final DSLContext ctx = getDslContext();
 
     // a prior migration should have already inserted the default user
-    var userRecord = ctx.selectFrom(DSL.table(USER_TABLE))
+    final var userRecord = ctx.selectFrom(DSL.table(USER_TABLE))
         .where(ID_COLUMN.eq(DEFAULT_USER_ID))
         .fetchOne();
     assertNotNull(userRecord);
@@ -90,12 +90,12 @@ class V0_50_33_005__CreateInstanceAdminPermissionForDefaultUser_Test extends Abs
     final DSLContext ctx = getDslContext();
 
     // a prior migration should have already inserted the default user
-    var userRecord = ctx.selectFrom(DSL.table(USER_TABLE))
+    final var userRecord = ctx.selectFrom(DSL.table(USER_TABLE))
         .where(ID_COLUMN.eq(DEFAULT_USER_ID))
         .fetchOne();
     assertNotNull(userRecord);
 
-    var instanceAdminPermission = ctx.selectFrom(DSL.table(PERMISSION_TABLE))
+    final var instanceAdminPermission = ctx.selectFrom(DSL.table(PERMISSION_TABLE))
         .where(USER_ID_COLUMN.eq(DEFAULT_USER_ID))
         .and(PERMISSION_TYPE_COLUMN.eq(PermissionType.INSTANCE_ADMIN))
         .fetchOne();
@@ -125,12 +125,12 @@ class V0_50_33_005__CreateInstanceAdminPermissionForDefaultUser_Test extends Abs
     final DSLContext ctx = getDslContext();
 
     // a prior migration should have already inserted the default user
-    var userRecord = ctx.selectFrom(DSL.table(USER_TABLE))
+    final var userRecord = ctx.selectFrom(DSL.table(USER_TABLE))
         .where(ID_COLUMN.eq(DEFAULT_USER_ID))
         .fetchOne();
     assertNotNull(userRecord);
 
-    var instanceAdminPermission = ctx.selectFrom(DSL.table(PERMISSION_TABLE))
+    final var instanceAdminPermission = ctx.selectFrom(DSL.table(PERMISSION_TABLE))
         .where(USER_ID_COLUMN.eq(DEFAULT_USER_ID))
         .and(PERMISSION_TYPE_COLUMN.eq(PermissionType.INSTANCE_ADMIN))
         .fetchOne();

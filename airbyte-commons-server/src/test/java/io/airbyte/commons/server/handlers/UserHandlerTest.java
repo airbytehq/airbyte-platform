@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -37,11 +37,11 @@ import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.config.InitialUserConfiguration;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.support.JwtUserAuthenticationResolver;
+import io.airbyte.config.AuthProvider;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.User;
-import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.User.Status;
 import io.airbyte.config.UserPermission;
 import io.airbyte.config.persistence.ConfigNotFoundException;

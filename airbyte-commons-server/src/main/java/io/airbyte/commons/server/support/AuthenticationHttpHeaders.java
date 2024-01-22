@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -82,6 +82,17 @@ public final class AuthenticationHttpHeaders {
 
   public static final String ORGANIZATION_ID_HEADER = AIRBYTE_HEADER_PREFIX + "Organization-Id";
   public static final String PERMISSION_ID_HEADER = AIRBYTE_HEADER_PREFIX + "Permission-Id";
+
+  /**
+   * HTTP header that contains the scope type (ie 'workspace' or 'organization') for authorization
+   * purposes.
+   */
+  public static final String SCOPE_TYPE_HEADER = AIRBYTE_HEADER_PREFIX + "Scope-Type";
+
+  /**
+   * HTTP header that contains the scope ID for authorization purposes.
+   */
+  public static final String SCOPE_ID_HEADER = AIRBYTE_HEADER_PREFIX + "Scope-Id";
 
   private AuthenticationHttpHeaders() {}
 

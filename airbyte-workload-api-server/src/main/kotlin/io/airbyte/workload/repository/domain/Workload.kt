@@ -1,5 +1,6 @@
 package io.airbyte.workload.repository.domain
 
+import com.google.common.annotations.VisibleForTesting
 import io.micronaut.core.annotation.Nullable
 import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.DateUpdated
@@ -10,6 +11,7 @@ import io.micronaut.data.annotation.TypeDef
 import io.micronaut.data.model.DataType
 import org.jsoup.internal.Normalizer.lowerCase
 import java.time.OffsetDateTime
+import java.util.UUID
 
 @MappedEntity("workload")
 data class Workload(
@@ -43,7 +45,10 @@ data class Workload(
   var terminationSource: String? = null,
   @Nullable
   var terminationReason: String? = null,
+  @Nullable
+  var autoId: UUID? = null,
 ) {
+  @VisibleForTesting
   @JvmOverloads
   constructor(
     id: String,
@@ -70,6 +75,7 @@ data class Workload(
     updatedAt = null,
     terminationSource = null,
     terminationReason = null,
+    autoId = UUID.randomUUID(),
   )
 }
 

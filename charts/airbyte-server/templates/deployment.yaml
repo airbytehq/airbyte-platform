@@ -269,6 +269,15 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: KEYCLOAK_INTERNAL_HOST
+        - name: CONNECTOR_BUILDER_SERVER_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONNECTOR_BUILDER_SERVER_API_HOST
+        - name: AIRBYTE_API_AUTH_HEADER_NAME
+          value: "X-Airbyte-Auth"
+        - name: AIRBYTE_API_AUTH_HEADER_VALUE
+          value: "Internal server"
         {{- end }}
         # Values from secret
         {{- if .Values.secrets }}

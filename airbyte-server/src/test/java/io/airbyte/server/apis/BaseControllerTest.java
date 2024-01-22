@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -17,6 +17,7 @@ import io.airbyte.commons.server.handlers.DestinationHandler;
 import io.airbyte.commons.server.handlers.HealthCheckHandler;
 import io.airbyte.commons.server.handlers.JobHistoryHandler;
 import io.airbyte.commons.server.handlers.LogsHandler;
+import io.airbyte.commons.server.handlers.MatchSearchHandler;
 import io.airbyte.commons.server.handlers.NotificationsHandler;
 import io.airbyte.commons.server.handlers.OAuthHandler;
 import io.airbyte.commons.server.handlers.OpenApiConfigHandler;
@@ -97,6 +98,14 @@ abstract class BaseControllerTest {
   @Replaces(ConnectionsHandler.class)
   ConnectionsHandler mmConnectionsHandler() {
     return connectionsHandler;
+  }
+
+  MatchSearchHandler matchSearchHandler = Mockito.mock(MatchSearchHandler.class);
+
+  @MockBean(MatchSearchHandler.class)
+  @Replaces(MatchSearchHandler.class)
+  MatchSearchHandler mmMatchSearchHandler() {
+    return matchSearchHandler;
   }
 
   UserHandler userHandler = Mockito.mock(UserHandler.class);

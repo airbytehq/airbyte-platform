@@ -52,7 +52,7 @@ const getScheduleDataSchema = (allowSubOneHourCronExpressions: boolean) =>
                 validation.isValid ||
                 createError({
                   path,
-                  message: validation.message ?? "form.cronExpression.invalid",
+                  message: "form.cronExpression.invalid",
                 })
               );
             })
@@ -196,7 +196,7 @@ export const createConnectionValidationSchema = (
       scheduleData: getScheduleDataSchema(allowSubOneHourCronExpressions),
       namespaceDefinition: namespaceDefinitionSchema.required("form.empty.error"),
       namespaceFormat: namespaceFormatSchema,
-      prefix: yup.string().optional(),
+      prefix: yup.string().default(""),
       nonBreakingChangesPreference: allowAutoDetectSchema
         ? yup.mixed().oneOf(Object.values(NonBreakingChangesPreference)).required("form.empty.error")
         : yup.mixed().notRequired(),

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.bootloader;
@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.bootloader.helpers.NoOpDefinitionVersionOverrideProvider;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
@@ -52,6 +53,7 @@ import io.airbyte.db.instance.jobs.JobsDatabaseMigrator;
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.lib.NotImplementedMetricClient;
 import io.airbyte.persistence.job.DefaultJobPersistence;
 import java.util.Map;
 import java.util.Optional;
@@ -95,7 +97,7 @@ class BootloaderTest {
 
   // ⚠️ This line should change with every new migration to show that you meant to make a new
   // migration to the prod database
-  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.50.33.014";
+  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.50.41.003";
   private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.50.4.001";
   private static final String CDK_VERSION = "1.2.3";
 
@@ -186,12 +188,14 @@ class BootloaderTest {
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
     val breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(configRepository, featureFlagClient);
     val actorDefinitionVersionHelper =
-        new ActorDefinitionVersionHelper(configRepository, new NoOpDefinitionVersionOverrideProvider(), featureFlagClient);
+        new ActorDefinitionVersionHelper(configRepository, new NoOpDefinitionVersionOverrideProvider(), new NoOpDefinitionVersionOverrideProvider(),
+            featureFlagClient);
     val supportStateUpdater =
         new SupportStateUpdater(configRepository, DeploymentMode.OSS, actorDefinitionVersionHelper, breakingChangeNotificationHelper,
             featureFlagClient);
+    val metricClient = new NotImplementedMetricClient();
     val applyDefinitionsHelper =
-        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, featureFlagClient, supportStateUpdater);
+        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, featureFlagClient, metricClient, supportStateUpdater);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
@@ -276,13 +280,15 @@ class BootloaderTest {
     val organizationPersistence = new OrganizationPersistence(jobDatabase);
     val breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(configRepository, featureFlagClient);
     val actorDefinitionVersionHelper =
-        new ActorDefinitionVersionHelper(configRepository, new NoOpDefinitionVersionOverrideProvider(), featureFlagClient);
+        new ActorDefinitionVersionHelper(configRepository, new NoOpDefinitionVersionOverrideProvider(), new NoOpDefinitionVersionOverrideProvider(),
+            featureFlagClient);
     val supportStateUpdater =
         new SupportStateUpdater(configRepository, DeploymentMode.OSS, actorDefinitionVersionHelper, breakingChangeNotificationHelper,
             featureFlagClient);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
+    val metricClient = new NotImplementedMetricClient();
     val applyDefinitionsHelper =
-        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, featureFlagClient, supportStateUpdater);
+        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, featureFlagClient, metricClient, supportStateUpdater);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);

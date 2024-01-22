@@ -4,16 +4,17 @@ import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workers.general.DefaultCheckConnectionWorker
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.orchestrator.OrchestratorNameGenerator
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.sync.OrchestratorConstants
+import io.airbyte.workers.sync.OrchestratorConstants.CHECK_APPLICATION_NAME
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.REPLICATION
+import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
@@ -39,6 +40,7 @@ class PayloadKubeInputMapper(
   @Named("checkOrchestratorReqs") private val checkOrchestratorReqs: ResourceRequirements,
 ) {
   fun toKubeInput(
+    workloadId: String,
     input: ReplicationInput,
     sharedLabels: Map<String, String>,
   ): ReplicationOrchestratorKubeInput {
@@ -57,7 +59,7 @@ class PayloadKubeInputMapper(
     val orchestratorReqs = input.getOrchestratorResourceReqs()
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs)
 
-    val fileMap = buildFileMap(input, input.jobRunConfig, orchestratorPodInfo)
+    val fileMap = buildFileMap(workloadId, input, input.jobRunConfig, orchestratorPodInfo)
 
     return ReplicationOrchestratorKubeInput(
       labeler.getReplicationOrchestratorLabels() + sharedLabels,
@@ -72,13 +74,15 @@ class PayloadKubeInputMapper(
   }
 
   fun toKubeInput(
+    workloadId: String,
     input: CheckConnectionInput,
     sharedLabels: Map<String, String>,
   ): CheckOrchestratorKubeInput {
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
+    val actorType = input.getActorType()
 
-    val orchestratorPodName = orchestratorNameGenerator.getCheckOrchestratorPodName(jobId, attemptId)
+    val orchestratorPodName = orchestratorNameGenerator.getCheckOrchestratorPodName(jobId, attemptId, actorType)
 
     val orchestratorPodInfo =
       KubePodInfo(
@@ -87,9 +91,11 @@ class PayloadKubeInputMapper(
         kubeContainerInfo,
       )
 
-    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), checkWorkerConfigs)
+    // We pass the replication worker configs in order to use the regular node selectors.
+    // TODO: Change back to checkWorkerConfigs. For now this makes it easier to test latency.
+    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs)
 
-    val fileMap = buildFileMap(input, input.jobRunConfig, orchestratorPodInfo)
+    val fileMap = buildFileMap(workloadId, input, input.jobRunConfig, orchestratorPodInfo)
 
     return CheckOrchestratorKubeInput(
       labeler.getCheckOrchestratorLabels() + sharedLabels,
@@ -116,6 +122,7 @@ class PayloadKubeInputMapper(
   // TODO: This is the way we pass data into the pods we launch. This should be extracted to
   //  some shared interface between parent / child to make it less brittle.
   private fun buildFileMap(
+    workloadId: String,
     input: ReplicationInput,
     jobRunConfig: JobRunConfig,
     kubePodInfo: KubePodInfo,
@@ -124,12 +131,14 @@ class PayloadKubeInputMapper(
       mapOf(
         OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
         OrchestratorConstants.INIT_FILE_APPLICATION to REPLICATION,
+        OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
         INIT_FILE_SOURCE_LAUNCHER_CONFIG to serializer.serialize(input.sourceLauncherConfig),
         INIT_FILE_DESTINATION_LAUNCHER_CONFIG to serializer.serialize(input.destinationLauncherConfig),
       )
   }
 
   private fun buildFileMap(
+    workloadId: String,
     input: CheckConnectionInput,
     jobRunConfig: JobRunConfig,
     kubePodInfo: KubePodInfo,
@@ -137,7 +146,8 @@ class PayloadKubeInputMapper(
     return sharedFileMap(jobRunConfig, kubePodInfo) +
       mapOf(
         OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
-        OrchestratorConstants.INIT_FILE_APPLICATION to DefaultCheckConnectionWorker.CHECK,
+        OrchestratorConstants.INIT_FILE_APPLICATION to CHECK_APPLICATION_NAME,
+        OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
       )
   }
 

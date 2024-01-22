@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -355,6 +355,10 @@ public class PermissionHandler {
 
   public Boolean isUserInstanceAdmin(final UUID userId) throws IOException {
     return permissionPersistence.isUserInstanceAdmin(userId);
+  }
+
+  public Boolean isAuthUserInstanceAdmin(final String authUserId) throws IOException {
+    return permissionPersistence.isAuthUserInstanceAdmin(authUserId);
   }
 
   /**

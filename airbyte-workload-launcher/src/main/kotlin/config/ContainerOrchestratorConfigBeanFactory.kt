@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.config
 
 import io.airbyte.commons.constants.WorkerConstants
@@ -34,8 +38,10 @@ import java.util.function.Consumer
 @Factory
 class ContainerOrchestratorConfigBeanFactory {
   @Singleton
-  fun kubeClient(): KubernetesClient {
-    return KubernetesClientBuilder().build()
+  fun kubeClient(customOkHttpClientFactory: CustomOkHttpClientFactory): KubernetesClient {
+    return KubernetesClientBuilder()
+      .withHttpClientFactory(customOkHttpClientFactory)
+      .build()
   }
 
   @Singleton
@@ -112,6 +118,8 @@ class ContainerOrchestratorConfigBeanFactory {
     @Value("\${airbyte.workload-api.read-timeout-seconds}") workloadApiReadTimeoutSeconds: String,
     @Value("\${airbyte.workload-api.retries.delay-seconds}") workloadApiRetriesDelaySeconds: String,
     @Value("\${airbyte.workload-api.retries.max}") workloadApiRetriesMax: String,
+    @Value("\${airbyte.cloud.storage.logs.type}") logsStorageType: String,
+    @Value("\${airbyte.cloud.storage.state.type}") stateStorageType: String,
     cloudLoggingConfig: CloudLoggingConfig,
     cloudStateConfig: CloudStateConfig,
     workerEnv: Configs.WorkerEnvironment,
@@ -173,6 +181,10 @@ class ContainerOrchestratorConfigBeanFactory {
     }
     envMap[ACCEPTANCE_TEST_ENABLED_VAR] = java.lang.Boolean.toString(isInTestMode)
 
+    // Environment variables for object storage
+    envMap[WORKER_LOGS_STORAGE_TYPE_VAR] = logsStorageType
+    envMap[WORKER_STATE_STORAGE_TYPE_VAR] = stateStorageType
+
     // Manually add the worker environment
     envMap[WorkerConstants.WORKER_ENVIRONMENT] = workerEnv.name
     envMap[LogClientSingleton.GOOGLE_APPLICATION_CREDENTIALS] = googleApplicationCredentials
@@ -186,7 +198,7 @@ class ContainerOrchestratorConfigBeanFactory {
     // copy over all local values
     val localEnvMap =
       System.getenv()
-        .filter { (key): Map.Entry<String?, String?> -> OrchestratorConstants.ENV_VARS_TO_TRANSFER.contains(key) }
+        .filter { OrchestratorConstants.ENV_VARS_TO_TRANSFER.contains(it.key) }
 
     envMap.putAll(localEnvMap)
 
@@ -203,21 +215,23 @@ class ContainerOrchestratorConfigBeanFactory {
     @Value("\${airbyte.workload-api.bearer-token-secret-name}") bearerTokenSecretName: String,
     @Value("\${airbyte.workload-api.bearer-token-secret-key}") bearerTokenSecretKey: String,
   ): Map<String, EnvVarSource> {
-    val envMap: MutableMap<String, EnvVarSource> = HashMap()
-    envMap[WORKLOAD_API_BEARER_TOKEN_ENV_VAR] = createEnvVarSource(bearerTokenSecretName, bearerTokenSecretKey)
-    return envMap
+    return mapOf(WORKLOAD_API_BEARER_TOKEN_ENV_VAR to createEnvVarSource(bearerTokenSecretName, bearerTokenSecretKey))
   }
 
   private fun createEnvVarSource(
     secretName: String,
     secretKey: String,
   ): EnvVarSource {
-    val secretKeySelector = SecretKeySelector()
-    secretKeySelector.name = secretName
-    secretKeySelector.key = secretKey
+    val secretKeySelector =
+      SecretKeySelector().apply {
+        name = secretName
+        key = secretKey
+      }
 
-    val envVarSource = EnvVarSource()
-    envVarSource.secretKeyRef = secretKeySelector
+    val envVarSource =
+      EnvVarSource().apply {
+        secretKeyRef = secretKeySelector
+      }
 
     return envVarSource
   }
@@ -235,16 +249,12 @@ class ContainerOrchestratorConfigBeanFactory {
   ): List<EnvVar> {
     val envVars =
       envMap
-        .entries
-        .stream()
-        .map { (name, value): Map.Entry<String, String> -> EnvVar(name, value, null) }
+        .map { EnvVar(it.key, it.value, null) }
         .toList()
 
     val secretEnvVars =
       secretsEnvMap
-        .entries
-        .stream()
-        .map { (name, envVarSource): Map.Entry<String, EnvVarSource> -> EnvVar(name, null, envVarSource) }
+        .map { EnvVar(it.key, null, it.value) }
         .toList()
 
     return envVars + secretEnvVars
@@ -253,9 +263,12 @@ class ContainerOrchestratorConfigBeanFactory {
   @Singleton
   @Named("checkOrchestratorReqs")
   fun check(): ResourceRequirements {
+    // TODO: Make these env-driven
     return ResourceRequirements()
-      .withMemoryRequest("500Mi") // TODO: Tweak this ideally to something smaller
-      .withCpuRequest("0.5") // TODO: Tweak this to ideally something smaller
+      .withMemoryRequest("500Mi")
+      .withMemoryLimit("500Mi")
+      .withCpuRequest("2")
+      .withCpuLimit("2")
   }
 
   companion object {
@@ -275,6 +288,8 @@ class ContainerOrchestratorConfigBeanFactory {
     private const val INTERNAL_API_HOST_ENV_VAR = "INTERNAL_API_HOST"
     private const val ACCEPTANCE_TEST_ENABLED_VAR = "ACCEPTANCE_TEST_ENABLED"
     private const val DD_INTEGRATION_ENV_VAR_FORMAT = "DD_INTEGRATION_%s_ENABLED"
+    private const val WORKER_LOGS_STORAGE_TYPE_VAR = "WORKER_LOGS_STORAGE_TYPE"
+    private const val WORKER_STATE_STORAGE_TYPE_VAR = "WORKER_STATE_STORAGE_TYPE"
     private const val WORKER_V2_MICRONAUT_ENV = "worker-v2"
     private const val WORKLOAD_API_HOST_ENV_VAR = "WORKLOAD_API_HOST"
     private const val WORKLOAD_API_CONNECT_TIMEOUT_SECONDS_ENV_VAR = "WORKLOAD_API_CONNECT_TIMEOUT_SECONDS"

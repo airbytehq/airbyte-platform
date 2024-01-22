@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.lib;
@@ -118,6 +118,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   CRON_JOB_RUN_BY_CRON_TYPE(MetricEmittingApps.CRON,
       "cron_jobs_run",
       "number of cron runs by cron type"),
+  CONNECTOR_REGISTRY_DEFINITION_PROCESSED(
+      MetricEmittingApps.CRON, // Actually `cron` or `bootloader` based on which metric client calls the code
+      "connector_registry_definition_processed",
+      "increments when a connector registry definition is processed by the ApplyDefinitionsHelper"),
   EST_NUM_METRICS_EMITTED_BY_REPORTER(
       MetricEmittingApps.METRICS_REPORTER,
       "est_num_metrics_emitted_by_reporter",
@@ -142,6 +146,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.WORKER,
       "json_string_length",
       "string length of a raw json string"),
+  RECORD_SIZE_ERROR(
+      MetricEmittingApps.WORKER,
+      "record_size_error",
+      "length of a raw record json string exceeding the limit"),
   KUBE_POD_PROCESS_CREATE_TIME_MILLISECS(
       MetricEmittingApps.WORKER,
       "kube_pod_process_create_time_millisecs",
@@ -379,7 +387,16 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "Too long line distribution"),
   WORKLOAD_LAUNCHER_KUBE_ERROR(MetricEmittingApps.WORKLOAD_LAUNCHER,
       "workload_kube_error",
-      "Number of kube error in the workload launcher");
+      "Number of kube error in the workload launcher"),
+  JOB_OUTPUT_WRITE(MetricEmittingApps.ORCHESTRATOR,
+      "job_output_write",
+      "Write a job output in the output folder"),
+  JOB_OUTPUT_READ(MetricEmittingApps.WORKER,
+      "job_output_read",
+      "Read a job output from the output folder"),
+  SYNC_STATE_RECORD_COUNT(MetricEmittingApps.ORCHESTRATOR,
+      "sync_state_record_count",
+      "The record count emitted between state messages.");
 
   private final MetricEmittingApp application;
   private final String metricName;

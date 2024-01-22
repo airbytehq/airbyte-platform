@@ -36,7 +36,7 @@ export interface Experiments {
   "settings.emailNotifications": boolean;
   "settings.breakingChangeNotifications": boolean;
   "upcomingFeaturesPage.url": string;
-  "settings.accessManagement": boolean;
   "settings.token-management-ui": boolean;
+  "settings.organizationsUpdates": boolean;
   "catalog.skipInitialCalculation": boolean;
 }

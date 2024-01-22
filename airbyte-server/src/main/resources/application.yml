@@ -24,10 +24,10 @@ micronaut:
     export:
       statsd:
         enabled: ${MICROMETER_METRICS_ENABLED:false}
-        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
         step: ${MICROMETER_METRICS_STEP:PT30S}
-        host: ${STATSD_HOST:}
-        port: ${STATSD_PORT:}
+        host: ${STATSD_HOST:localhost}
+        port: ${STATSD_PORT:8125}
   security:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
@@ -272,6 +272,16 @@ airbyte:
     base-path: ${KEYCLOAK_BASE_PATH:`/auth`}
     airbyte-realm: ${KEYCLOAK_AIRBYTE_REALM:airbyte}
     web-client-id: ${KEYCLOAK_WEB_CLIENT_ID:airbyte-webapp}
+
+  connector-builder-server-api:
+    base-path: ${CONNECTOR_BUILDER_SERVER_API_HOST:}
+    connect-timeout-seconds: ${CONNECTOR_BUILDER_SERVER_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${CONNECTOR_BUILDER_SERVER_API_READ_TIMEOUT_SECONDS:300}
+
+  internal-api:
+    auth-header:
+      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
 
 temporal:
   cloud:

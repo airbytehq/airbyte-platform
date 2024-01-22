@@ -6,6 +6,9 @@ import io.airbyte.commons.temporal.queue.QueueActivityImpl
 import io.airbyte.config.messages.LauncherInputMessage
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Geography
+import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.Priority
+import io.airbyte.featureflag.Priority.Companion.HIGH_PRIORITY
 import io.airbyte.featureflag.WorkloadApiRouting
 import io.airbyte.micronaut.temporal.TemporalProxyHelper
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherMessageConsumer
@@ -41,11 +44,32 @@ class TemporalBeanFactory {
     return QueueActivityImpl(launcherMessageConsumer)
   }
 
+  @Named("workerFactory")
   @Singleton
   fun workloadStarterWorkerFactory(
     workflowClient: WorkflowClient,
     temporalProxyHelper: TemporalProxyHelper,
     @Named("workloadLauncherQueue") launcherQueue: String,
+    @Named("starterActivities") workloadStarterActivities: QueueActivity<LauncherInputMessage>,
+    @Property(name = "airbyte.workload-launcher.parallelism") paralellism: Int,
+  ): WorkerFactory {
+    val workerFactoryOptions =
+      WorkerFactoryOptions.newBuilder()
+        .setWorkerInterceptors(OpenTracingWorkerInterceptor())
+        .build()
+    val workerFactory = WorkerFactory.newInstance(workflowClient, workerFactoryOptions)
+    val worker = workerFactory.newWorker(launcherQueue, WorkerOptions.newBuilder().setMaxConcurrentActivityExecutionSize(paralellism).build())
+    worker.registerActivitiesImplementations(workloadStarterActivities)
+    worker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(LauncherWorkflowImpl::class.java))
+    return workerFactory
+  }
+
+  @Named("highPriorityWorkerFactory")
+  @Singleton
+  fun workloadStarterHighPriorityWorkerFactory(
+    workflowClient: WorkflowClient,
+    temporalProxyHelper: TemporalProxyHelper,
+    @Named("workloadLauncherHighPriorityQueue") launcherQueue: String,
     @Named("starterActivities") workloadStarterActivities: QueueActivity<LauncherInputMessage>,
     @Property(name = "airbyte.workload-launcher.parallelism") paralellism: Int,
   ): WorkerFactory {
@@ -67,5 +91,14 @@ class TemporalBeanFactory {
     @Property(name = "airbyte.workload-launcher.geography") geography: String,
   ): String {
     return featureFlagClient.stringVariation(WorkloadApiRouting, Geography(geography))
+  }
+
+  @Named("workloadLauncherHighPriorityQueue")
+  @Singleton
+  fun highPriorityLauncherQueue(
+    featureFlagClient: FeatureFlagClient,
+    @Property(name = "airbyte.workload-launcher.geography") geography: String,
+  ): String {
+    return featureFlagClient.stringVariation(WorkloadApiRouting, Multi(listOf(Geography(geography), Priority(HIGH_PRIORITY))))
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.specs;
@@ -188,7 +188,7 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
         .header(ACCEPT, MediaType.APPLICATION_JSON)
         .build();
 
-    try (Response response = okHttpClient.newCall(request).execute()) {
+    try (final Response response = okHttpClient.newCall(request).execute()) {
       if (response.isSuccessful() && response.body() != null) {
         final String responseBody = response.body().string();
         LOGGER.info("Fetched latest remote definitions ({})", responseBody.hashCode());
@@ -210,7 +210,7 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
         .header(ACCEPT, MediaType.APPLICATION_JSON)
         .build();
 
-    try (Response response = okHttpClient.newCall(request).execute()) {
+    try (final Response response = okHttpClient.newCall(request).execute()) {
       if (response.code() == NOT_FOUND) {
         return Optional.empty();
       } else if (response.isSuccessful() && response.body() != null) {
@@ -236,7 +236,7 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
         .header(ACCEPT, MediaType.APPLICATION_JSON)
         .build();
 
-    try (Response response = okHttpClient.newCall(request).execute()) {
+    try (final Response response = okHttpClient.newCall(request).execute()) {
       if (response.code() == NOT_FOUND) {
         return Optional.empty();
       } else if (response.isSuccessful() && response.body() != null) {

@@ -12,10 +12,12 @@ import io.airbyte.workers.process.Metadata.SYNC_JOB
 import io.airbyte.workers.process.Metadata.SYNC_STEP_KEY
 import io.airbyte.workers.process.Metadata.WRITE_STEP
 import io.airbyte.workers.process.ProcessFactory
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.AUTO_ID
 import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.MUTEX_KEY
 import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.WORKLOAD_ID
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import java.util.UUID
 
 @Singleton
 class PodLabeler(
@@ -66,7 +68,17 @@ class PodLabeler(
     )
   }
 
-  fun getWorkloadLabels(workloadId: String): Map<String, String> {
+  fun getAutoIdLabels(autoId: UUID): Map<String, String> {
+    return mapOf(
+      AUTO_ID to autoId.toString(),
+    )
+  }
+
+  fun getWorkloadLabels(workloadId: String?): Map<String, String> {
+    if (workloadId == null) {
+      return mapOf()
+    }
+
     return mapOf(
       WORKLOAD_ID to workloadId,
     )
@@ -83,15 +95,17 @@ class PodLabeler(
   }
 
   fun getSharedLabels(
-    workloadId: String,
+    workloadId: String?,
     mutexKey: String?,
     passThroughLabels: Map<String, String>,
+    autoId: UUID,
   ): Map<String, String> {
-    return passThroughLabels + getMutexLabels(mutexKey) + getWorkloadLabels(workloadId)
+    return passThroughLabels + getMutexLabels(mutexKey) + getWorkloadLabels(workloadId) + getAutoIdLabels(autoId)
   }
 
   object LabelKeys {
-    const val WORKLOAD_ID = "workload_id"
+    const val AUTO_ID = "auto_id"
     const val MUTEX_KEY = "mutex_key"
+    const val WORKLOAD_ID = "workload_id"
   }
 }

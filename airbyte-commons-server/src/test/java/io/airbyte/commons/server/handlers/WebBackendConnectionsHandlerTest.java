@@ -1,9 +1,10 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -35,7 +36,6 @@ import io.airbyte.api.model.generated.ConnectionState;
 import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.ConnectionStatus;
 import io.airbyte.api.model.generated.ConnectionUpdate;
-import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.FieldAdd;
@@ -57,7 +57,6 @@ import io.airbyte.api.model.generated.SchemaChange;
 import io.airbyte.api.model.generated.SelectedFieldInfo;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody;
-import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
@@ -75,6 +74,7 @@ import io.airbyte.api.model.generated.WebBackendOperationCreateOrUpdate;
 import io.airbyte.api.model.generated.WebBackendWorkspaceState;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
@@ -83,6 +83,7 @@ import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -95,11 +96,23 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.DestinationAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.SourceAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
+import io.airbyte.config.secrets.JsonSecretsProcessor;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.UseIconUrlInApiResponse;
+import io.airbyte.featureflag.Workspace;
+import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.models.JobStatusSummary;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -110,6 +123,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -145,23 +159,56 @@ class WebBackendConnectionsHandlerTest {
   private static final String FIELD3 = "field3";
   private static final String FIELD5 = "field5";
 
-  // needs to match name of file in src/test/resources/icons
-  private static final String SOURCE_ICON = "test-source.svg";
-  private static final String DESTINATION_ICON = "test-destination.svg";
-  private static final String SVG = "<svg>";
+  private static final String ICON_URL = "https://connectors.airbyte.com/files/metadata/airbyte/destination-test/latest/icon.svg";
 
   @BeforeEach
   void setup() throws IOException, JsonValidationException, ConfigNotFoundException {
     connectionsHandler = mock(ConnectionsHandler.class);
     stateHandler = mock(StateHandler.class);
     operationsHandler = mock(OperationsHandler.class);
-    final SourceHandler sourceHandler = mock(SourceHandler.class);
-    final DestinationHandler destinationHandler = mock(DestinationHandler.class);
     final JobHistoryHandler jobHistoryHandler = mock(JobHistoryHandler.class);
     configRepository = mock(ConfigRepository.class);
     schedulerHandler = mock(SchedulerHandler.class);
     eventRunner = mock(EventRunner.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+
+    final JsonSchemaValidator validator = mock(JsonSchemaValidator.class);
+    final JsonSecretsProcessor secretsProcessor = mock(JsonSecretsProcessor.class);
+    final ConfigurationUpdate configurationUpdate = mock(ConfigurationUpdate.class);
+    final OAuthConfigSupplier oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
+    final DestinationService destinationService = mock(DestinationService.class);
+
+    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
+    final SourceService sourceService = mock(SourceService.class);
+    final WorkspaceService workspaceService = mock(WorkspaceService.class);
+    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+
+    final TestClient featureFlagClient = mock(TestClient.class);
+    final Supplier uuidGenerator = mock(Supplier.class);
+    when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS)))
+        .thenReturn(true);
+
+    final DestinationHandler destinationHandler = new DestinationHandler(configRepository,
+        validator,
+        connectionsHandler,
+        uuidGenerator,
+        secretsProcessor,
+        configurationUpdate,
+        oAuthConfigSupplier,
+        actorDefinitionVersionHelper,
+        destinationService,
+        featureFlagClient);
+
+    final SourceHandler sourceHandler = new SourceHandler(configRepository,
+        secretsRepositoryReader,
+        validator,
+        connectionsHandler,
+        uuidGenerator,
+        secretsProcessor,
+        configurationUpdate,
+        oAuthConfigSupplier,
+        actorDefinitionVersionHelper, featureFlagClient, sourceService, workspaceService, secretPersistenceConfigService);
+
     wbHandler = new WebBackendConnectionsHandler(
         connectionsHandler,
         stateHandler,
@@ -177,14 +224,14 @@ class WebBackendConnectionsHandlerTest {
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(UUID.randomUUID())
         .withName("marketo")
-        .withIcon(SOURCE_ICON);
+        .withIconUrl(ICON_URL);
     final SourceConnection source = SourceHelpers.generateSource(sourceDefinition.getSourceDefinitionId());
     sourceRead = SourceHelpers.getSourceRead(source, sourceDefinition);
 
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(UUID.randomUUID())
         .withName("db2")
-        .withIcon(DESTINATION_ICON);
+        .withIconUrl(ICON_URL);
     final DestinationConnection destination = DestinationHelpers.generateDestination(destinationDefinition.getDestinationDefinitionId());
     final DestinationRead destinationRead = DestinationHelpers.getDestinationRead(destination, destinationDefinition);
 
@@ -200,6 +247,23 @@ class WebBackendConnectionsHandlerTest {
     when(configRepository.getDestinationAndDefinitionsFromDestinationIds(Collections.singletonList(destination.getDestinationId())))
         .thenReturn(Collections.singletonList(new DestinationAndDefinition(destination, destinationDefinition)));
 
+    when(secretsProcessor.prepareSecretsForOutput(eq(source.getConfiguration()), any())).thenReturn(source.getConfiguration());
+    when(secretsProcessor.prepareSecretsForOutput(eq(destination.getConfiguration()), any())).thenReturn(destination.getConfiguration());
+
+    when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
+    when(configRepository.getDestinationConnection(destination.getDestinationId())).thenReturn(destination);
+
+    when(configRepository.getSourceDefinitionFromSource(source.getSourceId())).thenReturn(sourceDefinition);
+    when(configRepository.getDestinationDefinitionFromDestination(destination.getDestinationId())).thenReturn(destinationDefinition);
+
+    when(configRepository.getStandardSourceDefinition(source.getSourceDefinitionId())).thenReturn(sourceDefinition);
+    when(configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId())).thenReturn(destinationDefinition);
+
+    final ConnectorSpecification mockSpec = mock(ConnectorSpecification.class);
+    final ActorDefinitionVersion mockADV = new ActorDefinitionVersion().withSpec(mockSpec);
+    when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(mockADV);
+    when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any())).thenReturn(mockADV);
+
     connectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync);
     brokenConnectionRead = ConnectionHelpers.generateExpectedConnectionRead(brokenStandardSync);
     operationReadList = new OperationReadList()
@@ -210,14 +274,6 @@ class WebBackendConnectionsHandlerTest {
         .operations(List.of(new OperationRead()
             .operationId(brokenConnectionRead.getOperationIds().get(0))
             .name("Test Operation")));
-
-    final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody();
-    sourceIdRequestBody.setSourceId(connectionRead.getSourceId());
-    when(sourceHandler.getSource(sourceIdRequestBody)).thenReturn(sourceRead);
-
-    final DestinationIdRequestBody destinationIdRequestBody = new DestinationIdRequestBody();
-    destinationIdRequestBody.setDestinationId(connectionRead.getDestinationId());
-    when(destinationHandler.getDestination(destinationIdRequestBody)).thenReturn(destinationRead);
 
     final Instant now = Instant.now();
     final JobWithAttemptsRead jobRead = new JobWithAttemptsRead()
@@ -386,9 +442,8 @@ class WebBackendConnectionsHandlerTest {
     assertEquals(1, WebBackendConnectionReadList.getConnections().size());
     assertEquals(expectedListItem, WebBackendConnectionReadList.getConnections().get(0));
 
-    // make sure the icons were loaded into actual svg content
-    assertTrue(expectedListItem.getSource().getIcon().startsWith(SVG));
-    assertTrue(expectedListItem.getDestination().getIcon().startsWith(SVG));
+    assertEquals(expectedListItem.getSource().getIcon(), ICON_URL);
+    assertEquals(expectedListItem.getDestination().getIcon(), ICON_URL);
   }
 
   @Test
@@ -406,9 +461,8 @@ class WebBackendConnectionsHandlerTest {
 
     assertEquals(expected, webBackendConnectionRead);
 
-    // make sure the icons were loaded into actual svg content
-    assertTrue(expected.getSource().getIcon().startsWith(SVG));
-    assertTrue(expected.getDestination().getIcon().startsWith(SVG));
+    assertEquals(expectedListItem.getSource().getIcon(), ICON_URL);
+    assertEquals(expectedListItem.getDestination().getIcon(), ICON_URL);
   }
 
   WebBackendConnectionRead testWebBackendGetConnection(final boolean withCatalogRefresh,

@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.init;
 
 import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
+import static io.airbyte.metrics.lib.OssMetricsRegistry.CONNECTOR_REGISTRY_DEFINITION_PROCESSED;
 
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
@@ -15,12 +16,16 @@ import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
+import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingFailureReason;
+import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingSuccessOutcome;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -43,6 +48,7 @@ import org.slf4j.LoggerFactory;
 @Singleton
 @Requires(bean = JobPersistence.class)
 @Requires(bean = ConfigRepository.class)
+@Requires(bean = MetricClient.class)
 @Slf4j
 public class ApplyDefinitionsHelper {
 
@@ -51,6 +57,7 @@ public class ApplyDefinitionsHelper {
   private final ConfigRepository configRepository;
   private final FeatureFlagClient featureFlagClient;
   private final SupportStateUpdater supportStateUpdater;
+  private final MetricClient metricClient;
   private int newConnectorCount;
   private int changedConnectorCount;
   private static final Logger LOGGER = LoggerFactory.getLogger(ApplyDefinitionsHelper.class);
@@ -59,10 +66,12 @@ public class ApplyDefinitionsHelper {
                                 final JobPersistence jobPersistence,
                                 final ConfigRepository configRepository,
                                 final FeatureFlagClient featureFlagClient,
+                                final MetricClient metricClient,
                                 final SupportStateUpdater supportStateUpdater) {
     this.definitionsProvider = definitionsProvider;
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
+    this.metricClient = metricClient;
     this.supportStateUpdater = supportStateUpdater;
     this.featureFlagClient = featureFlagClient;
   }
@@ -113,8 +122,7 @@ public class ApplyDefinitionsHelper {
                                      final Set<UUID> actorDefinitionIdsInUse,
                                      final boolean updateAll)
       throws IOException, JsonValidationException, ConfigNotFoundException {
-
-    // Skip and log if unable to parse is registry entry.
+    // Skip and log if unable to parse registry entry.
     final StandardSourceDefinition newSourceDef;
     final ActorDefinitionVersion newADV;
     final List<ActorDefinitionBreakingChange> breakingChangesForDef;
@@ -124,14 +132,16 @@ public class ApplyDefinitionsHelper {
       breakingChangesForDef = ConnectorRegistryConverters.toActorDefinitionBreakingChanges(newDef);
     } catch (final IllegalArgumentException e) {
       LOGGER.error("Failed to convert source definition: {}", newDef.getName(), e);
+      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingFailureReason.DEFINITION_CONVERSION_FAILED);
       return;
     }
 
     final boolean connectorIsNew = !actorDefinitionIdsAndDefaultVersions.containsKey(newSourceDef.getSourceDefinitionId());
     if (connectorIsNew) {
       LOGGER.info("Adding new connector {}:{}", newDef.getDockerRepository(), newDef.getDockerImageTag());
-      newConnectorCount++;
       configRepository.writeConnectorMetadata(newSourceDef, newADV, breakingChangesForDef);
+      newConnectorCount++;
+      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED);
       return;
     }
 
@@ -143,10 +153,12 @@ public class ApplyDefinitionsHelper {
       LOGGER.info("Updating default version for connector {}: {} -> {}", currentDefaultADV.getDockerRepository(),
           currentDefaultADV.getDockerImageTag(),
           newADV.getDockerImageTag());
-      changedConnectorCount++;
       configRepository.writeConnectorMetadata(newSourceDef, newADV, breakingChangesForDef);
+      changedConnectorCount++;
+      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED);
     } else {
       configRepository.updateStandardSourceDefinition(newSourceDef);
+      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED);
     }
   }
 
@@ -155,8 +167,7 @@ public class ApplyDefinitionsHelper {
                                           final Set<UUID> actorDefinitionIdsInUse,
                                           final boolean updateAll)
       throws IOException, JsonValidationException, ConfigNotFoundException {
-
-    // Skip and log if unable to parse is registry entry.
+    // Skip and log if unable to parse registry entry.
     final StandardDestinationDefinition newDestinationDef;
     final ActorDefinitionVersion newADV;
     final List<ActorDefinitionBreakingChange> breakingChangesForDef;
@@ -166,14 +177,16 @@ public class ApplyDefinitionsHelper {
       breakingChangesForDef = ConnectorRegistryConverters.toActorDefinitionBreakingChanges(newDef);
     } catch (final IllegalArgumentException e) {
       LOGGER.error("Failed to convert source definition: {}", newDef.getName(), e);
+      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingFailureReason.DEFINITION_CONVERSION_FAILED);
       return;
     }
 
     final boolean connectorIsNew = !actorDefinitionIdsAndDefaultVersions.containsKey(newDestinationDef.getDestinationDefinitionId());
     if (connectorIsNew) {
       LOGGER.info("Adding new connector {}:{}", newDef.getDockerRepository(), newDef.getDockerImageTag());
-      newConnectorCount++;
       configRepository.writeConnectorMetadata(newDestinationDef, newADV, breakingChangesForDef);
+      newConnectorCount++;
+      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED);
       return;
     }
 
@@ -185,10 +198,12 @@ public class ApplyDefinitionsHelper {
       LOGGER.info("Updating default version for connector {}: {} -> {}", currentDefaultADV.getDockerRepository(),
           currentDefaultADV.getDockerImageTag(),
           newADV.getDockerImageTag());
-      changedConnectorCount++;
       configRepository.writeConnectorMetadata(newDestinationDef, newADV, breakingChangesForDef);
+      changedConnectorCount++;
+      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED);
     } else {
       configRepository.updateStandardDestinationDefinition(newDestinationDef);
+      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED);
     }
 
   }
@@ -215,6 +230,7 @@ public class ApplyDefinitionsHelper {
       if (!isSupported) {
         LOGGER.warn("Destination {} {} has an incompatible protocol version ({})... ignoring.",
             def.getDestinationDefinitionId(), def.getName(), def.getSpec().getProtocolVersion());
+        trackDefinitionProcessed(def.getDockerRepository(), DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION);
       }
       return isSupported;
     }).toList();
@@ -231,6 +247,7 @@ public class ApplyDefinitionsHelper {
       if (!isSupported) {
         LOGGER.warn("Source {} {} has an incompatible protocol version ({})... ignoring.",
             def.getSourceDefinitionId(), def.getName(), def.getSpec().getProtocolVersion());
+        trackDefinitionProcessed(def.getDockerRepository(), DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION);
       }
       return isSupported;
     }).toList();
@@ -238,6 +255,16 @@ public class ApplyDefinitionsHelper {
 
   private boolean isProtocolVersionSupported(final AirbyteProtocolVersionRange protocolVersionRange, final String protocolVersion) {
     return protocolVersionRange.isSupported(AirbyteProtocolVersion.getWithDefault(protocolVersion));
+  }
+
+  private void trackDefinitionProcessed(final DefinitionProcessingSuccessOutcome successOutcome) {
+    final MetricAttribute[] attributes = ApplyDefinitionMetricsHelper.getSuccessAttributes(successOutcome);
+    metricClient.count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, attributes);
+  }
+
+  private void trackDefinitionProcessed(final String dockerRepository, final DefinitionProcessingFailureReason failureReason) {
+    final MetricAttribute[] attributes = ApplyDefinitionMetricsHelper.getFailureAttributes(dockerRepository, failureReason);
+    metricClient.count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, attributes);
   }
 
 }

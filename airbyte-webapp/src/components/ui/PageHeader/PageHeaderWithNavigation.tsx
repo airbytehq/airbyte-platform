@@ -1,3 +1,4 @@
+import classNames from "classnames";
 import React, { PropsWithChildren } from "react";
 
 import styles from "./PageHeaderWithNavigation.module.scss";
@@ -15,7 +16,7 @@ export const PageHeaderWithNavigation: React.FC<PropsWithChildren<PageHeaderWith
 }) => {
   return (
     <FlexContainer direction="column" gap="none" className={styles.container}>
-      <Box py="lg" px="xl" className={styles.section}>
+      <Box px="xl" className={classNames(styles.section, styles.breadcrumbs)}>
         <Breadcrumbs data={breadcrumbsData} />
       </Box>
       {children && (

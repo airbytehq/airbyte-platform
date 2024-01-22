@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services;
@@ -28,6 +28,8 @@ public interface ConnectorBuilderService {
   Stream<ConnectorBuilderProject> getConnectorBuilderProjectsByWorkspace(UUID workspaceId) throws IOException;
 
   boolean deleteBuilderProject(UUID builderProjectId) throws IOException;
+
+  void updateBuilderProjectTestingValues(UUID projectId, JsonNode testingValues) throws IOException;
 
   void writeBuilderProjectDraft(UUID projectId, UUID workspaceId, String name, JsonNode manifestDraft) throws IOException;
 

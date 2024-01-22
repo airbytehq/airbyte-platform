@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config;
@@ -71,6 +71,7 @@ public class EnvConfigs implements Configs {
   public static final String WEBAPP_URL = "WEBAPP_URL";
   public static final String JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY = "JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY";
   public static final String JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY = "JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY";
+  public static final String JOB_KUBE_SERVICEACCOUNT = "JOB_KUBE_SERVICEACCOUNT";
   public static final String JOB_KUBE_TOLERATIONS = "JOB_KUBE_TOLERATIONS";
   public static final String JOB_KUBE_NODE_SELECTORS = "JOB_KUBE_NODE_SELECTORS";
   public static final String JOB_ISOLATED_KUBE_NODE_SELECTORS = "JOB_ISOLATED_KUBE_NODE_SELECTORS";
@@ -186,6 +187,9 @@ public class EnvConfigs implements Configs {
   private static final String REPLICATION_ORCHESTRATOR_CPU_LIMIT = "REPLICATION_ORCHESTRATOR_CPU_LIMIT";
   private static final String REPLICATION_ORCHESTRATOR_MEMORY_REQUEST = "REPLICATION_ORCHESTRATOR_MEMORY_REQUEST";
   private static final String REPLICATION_ORCHESTRATOR_MEMORY_LIMIT = "REPLICATION_ORCHESTRATOR_MEMORY_LIMIT";
+
+  public static final String WORKER_LOGS_STORAGE_TYPE = "WORKER_LOGS_STORAGE_TYPE";
+  public static final String WORKER_STATE_STORAGE_TYPE = "WORKER_STATE_STORAGE_TYPE";
 
   private static final String VAULT_ADDRESS = "VAULT_ADDRESS";
   private static final String VAULT_PREFIX = "VAULT_PREFIX";

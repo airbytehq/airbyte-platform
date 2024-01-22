@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.container_orchestrator.orchestrator;
@@ -45,6 +45,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -57,9 +58,11 @@ public class CheckJobOrchestrator implements JobOrchestrator<CheckConnectionInpu
   private static final Logger LOGGER = LoggerFactory.getLogger(CheckJobOrchestrator.class);
   private final CheckJobOrchestratorDataClass data;
   private final ExecutorService heartbeatExecutorService;
+  private final Path configDir;
 
-  public CheckJobOrchestrator(final CheckJobOrchestratorDataClass data) {
+  public CheckJobOrchestrator(final String configDir, final CheckJobOrchestratorDataClass data) {
     this.data = data;
+    this.configDir = Path.of(configDir);
     this.heartbeatExecutorService = Executors.newSingleThreadExecutor(r -> {
       Thread thread = new Thread(r, "check-job-orchestrator-heartbeat");
       thread.setDaemon(true);
@@ -85,9 +88,7 @@ public class CheckJobOrchestrator implements JobOrchestrator<CheckConnectionInpu
     // inputHydrator, get this verified.
     // Compare this with CheckConnectionActivityImpl
     final StandardCheckConnectionInput connectionConfiguration = input.getConnectionConfiguration();
-    final String workloadId =
-        data.workloadIdGenerator().generateCheckWorkloadId(connectionConfiguration.getActorId(), input.getJobRunConfig().getJobId(),
-            Math.toIntExact(input.getJobRunConfig().getAttemptId()));
+    final String workloadId = JobOrchestrator.workloadId(configDir);
     final Path jobRoot = TemporalUtils.getJobRoot(data.configs().getWorkspaceRoot(), workloadId);
 
     try {
@@ -150,6 +151,10 @@ public class CheckJobOrchestrator implements JobOrchestrator<CheckConnectionInpu
     final WorkerConfigs workerConfigs = data.workerConfigsProvider().getConfig(WorkerConfigsProvider.ResourceType.CHECK);
     final ResourceRequirements defaultWorkerConfigResourceRequirements = workerConfigs.getResourceRequirements();
 
+    final Map<String, String> additionalEnvVars = launcherConfig.getAdditionalEnvironmentVariables() != null
+        ? launcherConfig.getAdditionalEnvironmentVariables()
+        : Map.of();
+
     final IntegrationLauncher integrationLauncher = new AirbyteIntegrationLauncher(
         launcherConfig.getJobId(),
         Math.toIntExact(launcherConfig.getAttemptId()),
@@ -162,7 +167,7 @@ public class CheckJobOrchestrator implements JobOrchestrator<CheckConnectionInpu
         launcherConfig.getAllowedHosts(),
         launcherConfig.getIsCustomConnector(),
         data.featureFlags(),
-        launcherConfig.getAdditionalEnvironmentVariables(),
+        additionalEnvVars,
         launcherConfig.getAdditionalLabels());
 
     final ConnectorConfigUpdater connectorConfigUpdater = new ConnectorConfigUpdater(
@@ -173,6 +178,7 @@ public class CheckJobOrchestrator implements JobOrchestrator<CheckConnectionInpu
         launcherConfig.getProtocolVersion() != null ? launcherConfig.getProtocolVersion() : AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION;
     final AirbyteStreamFactory streamFactory =
         new VersionedAirbyteStreamFactory<>(data.serDeProvider(), data.migratorFactory(), protocolVersion, Optional.empty(), Optional.empty(),
+            Optional.empty(),
             new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
             data.gsonPksExtractor());
 

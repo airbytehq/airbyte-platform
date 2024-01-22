@@ -80,7 +80,11 @@ const DestinationPrefix: React.FC = () => {
         <FormattedMessage id="form.prefix" />:
       </Text>
       <Text size="md" color="grey">
-        {prefix ? prefix : <FormattedMessage id="connectionForm.modal.destinationStreamNames.radioButton.mirror" />}
+        {prefix.length ? (
+          prefix
+        ) : (
+          <FormattedMessage id="connectionForm.modal.destinationStreamNames.radioButton.mirror" />
+        )}
       </Text>
     </div>
   );

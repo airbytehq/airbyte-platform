@@ -90,7 +90,7 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
         <Button
           type="button"
           {...actionBtnProps}
-          variant="dark"
+          variant="primaryDark"
           onClick={onAction}
           data-testid={testId ? `${testId}-button` : undefined}
         >

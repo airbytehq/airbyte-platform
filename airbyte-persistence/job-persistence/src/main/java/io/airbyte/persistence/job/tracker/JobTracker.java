@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job.tracker;
@@ -327,7 +327,7 @@ public class JobTracker {
   private static String mapToJsonString(final Map<String, Object> map) {
     try {
       return OBJECT_MAPPER.writeValueAsString(map);
-    } catch (JsonProcessingException e) {
+    } catch (final JsonProcessingException e) {
       return "<failed to convert to JSON>";
     }
   }

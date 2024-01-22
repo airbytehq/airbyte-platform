@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -41,6 +41,7 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.ConnectionsHandler;
+import io.airbyte.commons.server.handlers.MatchSearchHandler;
 import io.airbyte.commons.server.handlers.OperationsHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
@@ -68,17 +69,20 @@ public class ConnectionApiController implements ConnectionApi {
   private final SchedulerHandler schedulerHandler;
   private final RouterService routerService;
   private final StreamStatusesHandler streamStatusesHandler;
+  private final MatchSearchHandler matchSearchHandler;
 
   public ConnectionApiController(final ConnectionsHandler connectionsHandler,
                                  final OperationsHandler operationsHandler,
                                  final SchedulerHandler schedulerHandler,
                                  final RouterService routerService,
-                                 final StreamStatusesHandler streamStatusesHandler) {
+                                 final StreamStatusesHandler streamStatusesHandler,
+                                 final MatchSearchHandler matchSearchHandler) {
     this.connectionsHandler = connectionsHandler;
     this.operationsHandler = operationsHandler;
     this.schedulerHandler = schedulerHandler;
     this.routerService = routerService;
     this.streamStatusesHandler = streamStatusesHandler;
+    this.matchSearchHandler = matchSearchHandler;
   }
 
   @Override
@@ -147,7 +151,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/search")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectionReadList searchConnections(@Body final ConnectionSearch connectionSearch) {
-    return ApiHelper.execute(() -> connectionsHandler.searchConnections(connectionSearch));
+    return ApiHelper.execute(() -> matchSearchHandler.searchConnections(connectionSearch));
   }
 
   @Override

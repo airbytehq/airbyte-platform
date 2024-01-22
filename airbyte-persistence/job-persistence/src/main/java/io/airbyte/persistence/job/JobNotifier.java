@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
@@ -78,7 +78,7 @@ public class JobNotifier {
     try {
       final UUID workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.getId());
       final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);
-      notifyJob(reason, action, job, workspaceId, workspace);
+      notifyJob(reason, action, job, workspace);
     } catch (final Exception e) {
       LOGGER.error("Unable to read configuration:", e);
     }
@@ -87,7 +87,6 @@ public class JobNotifier {
   private void notifyJob(final String reason,
                          final String action,
                          final Job job,
-                         final UUID workspaceId,
                          final StandardWorkspace workspace) {
     final UUID connectionId = UUID.fromString(job.getScope());
     final NotificationSettings notificationSettings = workspace.getNotificationSettings();
@@ -96,21 +95,21 @@ public class JobNotifier {
       final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
       final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
       final ActorDefinitionVersion sourceVersion =
-          actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, standardSync.getSourceId());
+          actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspace.getWorkspaceId(), standardSync.getSourceId());
       final ActorDefinitionVersion destinationVersion =
-          actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, standardSync.getDestinationId());
+          actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspace.getWorkspaceId(), standardSync.getDestinationId());
       final Map<String, Object> jobMetadata = TrackingMetadata.generateJobAttemptMetadata(job);
       final Map<String, Object> sourceMetadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
       final Map<String, Object> destinationMetadata =
           TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
 
       final NotificationItem notificationItem = createAndSend(notificationSettings, action, connectionId,
-          destinationDefinition, job, reason, sourceDefinition, standardSync, workspace, workspaceId);
+          destinationDefinition, job, reason, sourceDefinition, standardSync, workspace);
 
       if (notificationItem != null) {
         final Map<String, Object> notificationMetadata = buildNotificationMetadata(connectionId, notificationItem);
         trackingClient.track(
-            workspaceId,
+            workspace.getWorkspaceId(),
             action,
             MoreMaps.merge(jobMetadata, sourceMetadata, destinationMetadata, notificationMetadata));
       }
@@ -175,7 +174,7 @@ public class JobNotifier {
     try {
       final UUID workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.getId());
       final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);
-      notifyJob(reason, action, job, workspaceId, workspace);
+      notifyJob(reason, action, job, workspace);
     } catch (final Exception e) {
       LOGGER.error("Unable to read configuration:", e);
     }
@@ -242,14 +241,13 @@ public class JobNotifier {
                                          final String reason,
                                          final StandardSourceDefinition sourceDefinition,
                                          final StandardSync standardSync,
-                                         final StandardWorkspace workspace,
-                                         final UUID workspaceId) {
+                                         final StandardWorkspace workspace) {
     NotificationItem notificationItem = null;
     final String sourceConnector = sourceDefinition.getName();
     final String destinationConnector = destinationDefinition.getName();
     final String failReason = Strings.isNullOrEmpty(reason) ? "" : String.format(", as the %s", reason);
     final String jobDescription = getJobDescription(job, failReason);
-    final String logUrl = webUrlHelper.getConnectionUrl(workspaceId, connectionId);
+    final String logUrl = webUrlHelper.getConnectionUrl(workspace.getWorkspaceId(), connectionId);
 
     if (notificationSettings != null) {
       if (FAILURE_NOTIFICATION.equalsIgnoreCase(action)) {
@@ -266,12 +264,12 @@ public class JobNotifier {
         notificationItem = notificationSettings.getSendOnSyncDisabled();
         sendNotification(notificationItem, CONNECTION_DISABLED_NOTIFICATION,
             (notificationClient) -> notificationClient.notifyConnectionDisabled(workspace.getEmail(),
-                sourceConnector, destinationConnector, jobDescription, workspaceId, connectionId));
+                sourceConnector, destinationConnector, jobDescription, workspace.getWorkspaceId(), connectionId));
       } else if (CONNECTION_DISABLED_WARNING_NOTIFICATION.equalsIgnoreCase(action)) {
         notificationItem = notificationSettings.getSendOnSyncDisabledWarning();
         sendNotification(notificationItem, CONNECTION_DISABLED_WARNING_NOTIFICATION,
             (notificationClient) -> notificationClient.notifyConnectionDisableWarning(workspace.getEmail(),
-                sourceConnector, destinationConnector, jobDescription, workspaceId, connectionId));
+                sourceConnector, destinationConnector, jobDescription, workspace.getWorkspaceId(), connectionId));
       }
     } else {
       LOGGER.warn("Unable to send notification:  notification settings are not present.");

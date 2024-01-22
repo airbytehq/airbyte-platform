@@ -25,7 +25,7 @@ interface BoxProps {
   "data-testid"?: string;
 }
 
-function toClassName(key: keyof Omit<BoxProps, "className">, value: SpacingSize | undefined) {
+function toClassName(key: keyof Omit<BoxProps, "className" | "as" | "data-testid">, value: SpacingSize | undefined) {
   if (!value) {
     return undefined;
   }

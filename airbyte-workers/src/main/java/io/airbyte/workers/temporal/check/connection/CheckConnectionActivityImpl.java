@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.check.connection;
@@ -238,8 +238,8 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         serializedInput,
         fullLogPath(Path.of(workloadId)),
         geo.getValue(),
-        UUID.randomUUID().toString(),
-        WorkloadType.CHECK);
+        WorkloadType.CHECK,
+        null);
 
     createWorkload(workloadCreateRequest);
 
@@ -359,7 +359,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
       final var protocolVersion =
           launcherConfig.getProtocolVersion() != null ? launcherConfig.getProtocolVersion() : AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION;
       final AirbyteStreamFactory streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(), Optional.empty(),
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(), Optional.empty(), Optional.empty(),
               new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
               gsonPksExtractor);
 

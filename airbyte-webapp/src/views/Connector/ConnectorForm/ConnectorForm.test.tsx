@@ -5,6 +5,7 @@ import { BroadcastChannel } from "broadcast-channel";
 import React from "react";
 import selectEvent from "react-select-event";
 
+import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { render, useMockIntersectionObserver } from "test-utils/testutils";
 
 import { useCompleteOAuth } from "core/api";
@@ -28,6 +29,11 @@ jest.mock("core/api", () => ({
     completeSourceOAuth: () => Promise.resolve({}),
     completeDestinationOAuth: () => Promise.resolve({}),
   })),
+  useCurrentWorkspace: () => mockWorkspace,
+}));
+
+jest.mock("core/utils/rbac", () => ({
+  useIntent: () => true,
 }));
 
 jest.mock("../ConnectorDocumentationLayout/DocumentationPanelContext", () => {

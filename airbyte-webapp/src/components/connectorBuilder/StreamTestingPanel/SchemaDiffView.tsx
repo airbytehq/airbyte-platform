@@ -98,7 +98,7 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
                   <Button
                     full
                     type="button"
-                    variant="dark"
+                    variant="primaryDark"
                     disabled={value === formattedSchema}
                     onClick={() => {
                       setValue(path, formattedSchema);
@@ -123,7 +123,7 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
                       control={
                         <Button
                           full
-                          variant="dark"
+                          variant="primaryDark"
                           type="button"
                           onClick={() => {
                             setValue(path, schemaDiff.mergedSchema);

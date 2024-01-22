@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -20,16 +20,25 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest;
+import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest.HttpMethodEnum;
+import io.airbyte.api.model.generated.ConnectorBuilderHttpResponse;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetails;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamRead;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadRequestBody;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInner;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInnerPagesInner;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectTestingValuesUpdate;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody;
 import io.airbyte.api.model.generated.DeclarativeSourceManifest;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -44,9 +53,29 @@ import io.airbyte.config.SupportLevel;
 import io.airbyte.config.init.CdkVersionProvider;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.secrets.JsonSecretsProcessor;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.connectorbuilderserver.api.client.generated.ConnectorBuilderServerApi;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpRequest;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpRequest.HttpMethod;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpResponse;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamRead;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRequestBody;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInner;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInnerPagesInner;
+import io.airbyte.data.services.ConnectorBuilderService;
+import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -85,6 +114,14 @@ class ConnectorBuilderProjectsHandlerTest {
   private Supplier<UUID> uuidSupplier;
   private DeclarativeSourceManifestInjector manifestInjector;
   private CdkVersionProvider cdkVersionProvider;
+  private WorkspaceService workspaceService;
+  private FeatureFlagClient featureFlagClient;
+  private SecretsRepositoryReader secretsRepositoryReader;
+  private SecretsRepositoryWriter secretsRepositoryWriter;
+  private SecretPersistenceConfigService secretPersistenceConfigService;
+  private ConnectorBuilderService connectorBuilderService;
+  private JsonSecretsProcessor secretsProcessor;
+  private ConnectorBuilderServerApi connectorBuilderServerApiClient;
   private ConnectorSpecification adaptedConnectorSpecification;
   private UUID workspaceId;
   private final String draftJsonString = "{\"test\":123,\"empty\":{\"array_in_object\":[]}}";
@@ -96,12 +133,23 @@ class ConnectorBuilderProjectsHandlerTest {
     uuidSupplier = mock(Supplier.class);
     manifestInjector = mock(DeclarativeSourceManifestInjector.class);
     cdkVersionProvider = mock(CdkVersionProvider.class);
+    workspaceService = mock(WorkspaceService.class);
+    featureFlagClient = mock(TestClient.class);
+    secretsRepositoryReader = mock(SecretsRepositoryReader.class);
+    secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    connectorBuilderService = mock(ConnectorBuilderService.class);
+    secretsProcessor = mock(JsonSecretsProcessor.class);
+    connectorBuilderServerApiClient = mock(ConnectorBuilderServerApi.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     adaptedConnectorSpecification = mock(ConnectorSpecification.class);
     setupConnectorSpecificationAdapter(any(), "");
     workspaceId = UUID.randomUUID();
 
-    connectorBuilderProjectsHandler = new ConnectorBuilderProjectsHandler(configRepository, cdkVersionProvider, uuidSupplier, manifestInjector);
+    connectorBuilderProjectsHandler =
+        new ConnectorBuilderProjectsHandler(configRepository, cdkVersionProvider, uuidSupplier, manifestInjector, workspaceService, featureFlagClient,
+            secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService, connectorBuilderService, secretsProcessor,
+            connectorBuilderServerApiClient);
   }
 
   private ConnectorBuilderProject generateBuilderProject() throws JsonProcessingException {
@@ -423,6 +471,207 @@ class ConnectorBuilderProjectsHandlerTest {
         .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC).version(A_VERSION).description(A_DESCRIPTION)));
 
     verify(configRepository, times(1)).deleteBuilderProjectDraft(A_BUILDER_PROJECT_ID);
+  }
+
+  @Test
+  void testUpdateTestingValuesOnProjectWithNoExistingValues()
+      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    final ConnectorBuilderProject project = generateBuilderProject();
+    final JsonNode testingValues = Jsons.deserialize(
+        """
+        {
+          "username": "bob",
+          "password": "hunter1"
+        }""");
+    final JsonNode testingValuesWithSecretCoordinates = Jsons.deserialize(
+        """
+        {
+          "username": "bob",
+          "password": {
+            "_secret": "airbyte_workspace_123_secret_456_v1"
+          }
+        }""");
+    final JsonNode testingValuesWithObfuscatedSecrets = Jsons.deserialize(
+        """
+        {
+          "username": "bob",
+          "password": "**********"
+        }""");
+    final JsonNode spec = Jsons.deserialize(
+        """
+        {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string"
+            },
+            "password": {
+              "type": "string",
+              "airbyte_secret": true
+            }
+          }
+        }""");
+
+    when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
+    when(secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(workspaceId, Optional.empty(), testingValues, spec, true))
+        .thenReturn(testingValuesWithSecretCoordinates);
+    when(secretsProcessor.prepareSecretsForOutput(testingValuesWithSecretCoordinates, spec)).thenReturn(testingValuesWithObfuscatedSecrets);
+
+    final JsonNode response = connectorBuilderProjectsHandler.updateConnectorBuilderProjectTestingValues(
+        new ConnectorBuilderProjectTestingValuesUpdate().builderProjectId(project.getBuilderProjectId()).testingValues(testingValues).spec(spec));
+    assertEquals(response, testingValuesWithObfuscatedSecrets);
+    verify(connectorBuilderService, times(1)).updateBuilderProjectTestingValues(project.getBuilderProjectId(), testingValuesWithSecretCoordinates);
+  }
+
+  @Test
+  void testUpdateTestingValuesOnProjectWithExistingValues()
+      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    final JsonNode oldTestingValues = Jsons.deserialize(
+        """
+        {
+          "username": "bob",
+          "password": "hunter1"
+        }""");
+    final JsonNode oldTestingValuesWithSecretCoordinates = Jsons.deserialize(
+        """
+        {
+          "username": "bob",
+          "password": {
+            "_secret": "airbyte_workspace_123_secret_456_v1"
+          }
+        }""");
+    final ConnectorBuilderProject project = generateBuilderProject().withTestingValues(oldTestingValuesWithSecretCoordinates);
+    final JsonNode newTestingValues = Jsons.deserialize(
+        """
+        {
+          "username": "bob",
+          "password": "hunter2"
+        }""");
+    final JsonNode newTestingValuesWithSecretCoordinates = Jsons.deserialize(
+        """
+        {
+          "username": "bob",
+          "password": {
+            "_secret": "airbyte_workspace_123_secret_456_v2"
+          }
+        }""");
+    final JsonNode newTestingValuesWithObfuscatedSecrets = Jsons.deserialize(
+        """
+        {
+          "username": "bob",
+          "password": "**********"
+        }""");
+    final JsonNode spec = Jsons.deserialize(
+        """
+        {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string"
+            },
+            "password": {
+              "type": "string",
+              "airbyte_secret": true
+            }
+          }
+        }""");
+
+    when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
+    when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(oldTestingValuesWithSecretCoordinates)).thenReturn(oldTestingValues);
+    when(secretsProcessor.copySecrets(oldTestingValues, newTestingValues, spec)).thenReturn(newTestingValues);
+    when(secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(workspaceId, Optional.of(oldTestingValuesWithSecretCoordinates),
+        newTestingValues, spec, true)).thenReturn(newTestingValuesWithSecretCoordinates);
+    when(secretsProcessor.prepareSecretsForOutput(newTestingValuesWithSecretCoordinates, spec)).thenReturn(newTestingValuesWithObfuscatedSecrets);
+
+    final JsonNode response = connectorBuilderProjectsHandler.updateConnectorBuilderProjectTestingValues(
+        new ConnectorBuilderProjectTestingValuesUpdate().builderProjectId(project.getBuilderProjectId()).testingValues(newTestingValues).spec(spec));
+    assertEquals(response, newTestingValuesWithObfuscatedSecrets);
+    verify(connectorBuilderService, times(1)).updateBuilderProjectTestingValues(project.getBuilderProjectId(), newTestingValuesWithSecretCoordinates);
+  }
+
+  @Test
+  void testReadStreamWithNoExistingTestingValues() throws IOException, io.airbyte.data.exceptions.ConfigNotFoundException, ConfigNotFoundException {
+    final ConnectorBuilderProject project = generateBuilderProject();
+
+    testStreamReadForProject(project, Jsons.emptyObject());
+  }
+
+  @Test
+  void testReadStreamWithExistingTestingValues() throws IOException, io.airbyte.data.exceptions.ConfigNotFoundException, ConfigNotFoundException {
+    final JsonNode testingValuesWithSecretCoordinates = Jsons.deserialize(
+        """
+        {
+          "username": "bob",
+          "password": {
+            "_secret": "airbyte_workspace_123_secret_456_v1"
+          }
+        }""");
+    final JsonNode hydratedTestingValues = Jsons.deserialize(
+        """
+        {
+          "username": "bob",
+          "password": "hunter1"
+        }""");
+    final ConnectorBuilderProject project = generateBuilderProject().withTestingValues(testingValuesWithSecretCoordinates);
+    when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(testingValuesWithSecretCoordinates)).thenReturn(hydratedTestingValues);
+
+    testStreamReadForProject(project, hydratedTestingValues);
+  }
+
+  private void testStreamReadForProject(ConnectorBuilderProject project, JsonNode testingValues)
+      throws io.airbyte.data.exceptions.ConfigNotFoundException, IOException, ConfigNotFoundException {
+    final String streamName = "stream1";
+    final ConnectorBuilderProjectStreamReadRequestBody projectStreamReadRequestBody = new ConnectorBuilderProjectStreamReadRequestBody()
+        .builderProjectId(project.getBuilderProjectId())
+        .manifest(project.getManifestDraft())
+        .streamName(streamName)
+        .workspaceId(project.getWorkspaceId().toString())
+        .formGeneratedManifest(false);
+
+    final StreamReadRequestBody streamReadRequestBody = new StreamReadRequestBody(testingValues, project.getManifestDraft(), streamName, false,
+        project.getBuilderProjectId().toString(), null, null, project.getWorkspaceId().toString());
+
+    final JsonNode record1 = Jsons.deserialize(
+        """
+        {
+          "type": "object",
+          "properties": {
+            "id": 1,
+            "name": "Bob"
+          }
+        }""");
+    final JsonNode record2 = Jsons.deserialize(
+        """
+        {
+          "type": "object",
+          "properties": {
+            "id": 2,
+            "name": "Alice"
+          }
+        }""");
+    final String responseBody = "[" + Jsons.serialize(record1) + "," + Jsons.serialize(record2) + "]";
+    final String requestUrl = "https://api.com/users";
+    final int responseStatus = 200;
+    final HttpRequest httpRequest = new HttpRequest(requestUrl, HttpMethod.GET, null, null, null);
+    final HttpResponse httpResponse = new HttpResponse(responseStatus, responseBody, null);
+    final StreamRead streamRead = new StreamRead(Collections.emptyList(), List.of(
+        new StreamReadSlicesInner(List.of(new StreamReadSlicesInnerPagesInner(List.of(record1, record2), httpRequest, httpResponse)), null, null)),
+        false, null, null, null, null);
+
+    when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
+    when(connectorBuilderServerApiClient.readStream(streamReadRequestBody)).thenReturn(streamRead);
+
+    final ConnectorBuilderProjectStreamRead expectedProjectStreamRead = new ConnectorBuilderProjectStreamRead()
+        .logs(Collections.emptyList())
+        .slices(List.of(new ConnectorBuilderProjectStreamReadSlicesInner()
+            .pages(List.of(new ConnectorBuilderProjectStreamReadSlicesInnerPagesInner()
+                .records(List.of(record1, record2))
+                .request(new ConnectorBuilderHttpRequest().url(requestUrl).httpMethod(HttpMethodEnum.GET))
+                .response(new ConnectorBuilderHttpResponse().status(responseStatus).body(responseBody))))))
+        .testReadLimitReached(false);
+    final ConnectorBuilderProjectStreamRead actualProjectStreamRead =
+        connectorBuilderProjectsHandler.readConnectorBuilderProjectStream(projectStreamReadRequestBody);
+    assertEquals(expectedProjectStreamRead, actualProjectStreamRead);
   }
 
   private static ConnectorBuilderPublishRequestBody anyConnectorBuilderProjectRequest() {

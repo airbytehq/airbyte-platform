@@ -1,20 +1,22 @@
 package io.airbyte.workload.launcher.pods
 
 import io.airbyte.commons.workers.config.WorkerConfigs
+import io.airbyte.config.ActorType
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workers.general.DefaultCheckConnectionWorker
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.orchestrator.OrchestratorNameGenerator
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.sync.OrchestratorConstants
+import io.airbyte.workers.sync.OrchestratorConstants.CHECK_APPLICATION_NAME
 import io.airbyte.workers.sync.ReplicationLauncherWorker
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
+import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
@@ -26,6 +28,7 @@ import io.mockk.mockkStatic
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.util.Optional
+import java.util.UUID
 
 class PayloadKubeInputMapperTest {
   @ParameterizedTest
@@ -83,8 +86,8 @@ class PayloadKubeInputMapperTest {
     every { labeler.getReplicationOrchestratorLabels() } returns orchestratorLabels
     every { labeler.getSourceLabels() } returns sourceLabels
     every { labeler.getDestinationLabels() } returns destinationLabels
-
-    val result = mapper.toKubeInput(input, sharedLabels)
+    val workloadId = UUID.randomUUID().toString()
+    val result = mapper.toKubeInput(workloadId, input, sharedLabels)
 
     assert(result.orchestratorLabels == orchestratorLabels + sharedLabels)
     assert(result.sourceLabels == sourceLabels + sharedLabels)
@@ -101,6 +104,7 @@ class PayloadKubeInputMapperTest {
           INIT_FILE_SOURCE_LAUNCHER_CONFIG to mockSerializedOutput,
           INIT_FILE_DESTINATION_LAUNCHER_CONFIG to mockSerializedOutput,
           KUBE_POD_INFO to mockSerializedOutput,
+          OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
         ),
     )
     assert(result.resourceReqs == resourceReqs)
@@ -115,14 +119,14 @@ class PayloadKubeInputMapperTest {
     val orchestratorNameGenerator = OrchestratorNameGenerator(namespace = namespace)
     val containerInfo = KubeContainerInfo("img-name", "pull-policy")
     val envMap: Map<String, String> = mapOf()
-    val checkConfigs: WorkerConfigs = mockk()
     val checkSelectors = mapOf("test-selector" to "normal-check")
     val checkCustomSelectors = mapOf("test-selector" to "custom-check")
-    every { checkConfigs.getworkerKubeNodeSelectors() } returns checkSelectors
-    every { checkConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(checkCustomSelectors)
+    val checkConfigs: WorkerConfigs = mockk()
     every { checkConfigs.workerKubeAnnotations } returns mapOf("annotation" to "value1")
-
     val replConfigs: WorkerConfigs = mockk()
+    every { replConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(checkCustomSelectors)
+    every { replConfigs.getworkerKubeNodeSelectors() } returns checkSelectors
+
     val checkResourceReqs = ResourceRequirements().withCpuRequest("1").withMemoryLimit("100MiB")
 
     val mapper =
@@ -145,6 +149,7 @@ class PayloadKubeInputMapperTest {
 
     every { input.getJobId() } returns jobId
     every { input.getAttemptId() } returns attemptId
+    every { input.getActorType() } returns ActorType.SOURCE
     every { input.usesCustomConnector() } returns customConnector
     every { input.jobRunConfig } returns mockk<JobRunConfig>()
     every { input.launcherConfig } returns mockk<IntegrationLauncherConfig>()
@@ -157,21 +162,22 @@ class PayloadKubeInputMapperTest {
     val sharedLabels = mapOf("pass through" to "labels")
     every { labeler.getCheckOrchestratorLabels() } returns orchestratorLabels
     every { labeler.getCheckConnectorLabels() } returns connectorLabels
-
-    val result = mapper.toKubeInput(input, sharedLabels)
+    val workloadId = UUID.randomUUID().toString()
+    val result = mapper.toKubeInput(workloadId, input, sharedLabels)
 
     assert(result.orchestratorLabels == orchestratorLabels + sharedLabels)
     assert(result.connectorLabels == connectorLabels + sharedLabels)
     assert(result.nodeSelectors == if (customConnector) checkCustomSelectors else checkSelectors)
-    assert(result.kubePodInfo == KubePodInfo(namespace, "orchestrator-check-job-415-attempt-7654", containerInfo))
+    assert(result.kubePodInfo == KubePodInfo(namespace, "orchestrator-check-source-job-415-attempt-7654", containerInfo))
     assert(
       result.fileMap ==
         mapOf(
           OrchestratorConstants.INIT_FILE_ENV_MAP to mockSerializedOutput,
-          OrchestratorConstants.INIT_FILE_APPLICATION to DefaultCheckConnectionWorker.CHECK,
+          OrchestratorConstants.INIT_FILE_APPLICATION to CHECK_APPLICATION_NAME,
           OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to mockSerializedOutput,
           OrchestratorConstants.INIT_FILE_INPUT to mockSerializedOutput,
           KUBE_POD_INFO to mockSerializedOutput,
+          OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
         ),
     )
     assert(result.resourceReqs == checkResourceReqs)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -118,6 +118,7 @@ class BaseConfigDatabaseTest {
               actor_definition_workspace_grant,
               actor_definition_config_injection,
               actor_oauth_parameter,
+              auth_user,
               connection,
               connection_operation,
               connector_builder_project,

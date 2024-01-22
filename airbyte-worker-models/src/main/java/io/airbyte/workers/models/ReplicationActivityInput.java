@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.models;
@@ -68,7 +68,8 @@ public class ReplicationActivityInput {
   private ConnectionContext connectionContext;
   // Whether to use workload API
   private Boolean useWorkloadApi;
-  // Whether to use workload API
+  // TODO: remove with another temporal version
+  @Deprecated
   private Boolean useNewDocStoreApi;
 
 }

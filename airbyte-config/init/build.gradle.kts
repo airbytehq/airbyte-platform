@@ -15,6 +15,7 @@ dependencies {
     implementation(project(":airbyte-config:config-persistence"))
     implementation(project(":airbyte-featureflag"))
     implementation(project(":airbyte-notification"))
+    implementation(project(":airbyte-metrics:metrics-lib"))
     implementation(project(":airbyte-persistence:job-persistence"))
     implementation(libs.airbyte.protocol)
     implementation(project(":airbyte-json-validation"))

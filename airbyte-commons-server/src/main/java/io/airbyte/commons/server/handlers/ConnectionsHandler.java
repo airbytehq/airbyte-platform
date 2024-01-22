@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -27,15 +27,12 @@ import io.airbyte.api.model.generated.ConnectionDataHistoryReadItem;
 import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
-import io.airbyte.api.model.generated.ConnectionSearch;
 import io.airbyte.api.model.generated.ConnectionStatusRead;
 import io.airbyte.api.model.generated.ConnectionStatusesRequestBody;
 import io.airbyte.api.model.generated.ConnectionStreamHistoryReadItem;
 import io.airbyte.api.model.generated.ConnectionStreamHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
-import io.airbyte.api.model.generated.DestinationRead;
-import io.airbyte.api.model.generated.DestinationSearch;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.FailureOrigin;
 import io.airbyte.api.model.generated.FailureReason;
@@ -43,8 +40,6 @@ import io.airbyte.api.model.generated.FailureType;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
-import io.airbyte.api.model.generated.SourceRead;
-import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
@@ -57,11 +52,8 @@ import io.airbyte.commons.server.converters.CatalogDiffConverters;
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.UpdateSchemaResult;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
-import io.airbyte.commons.server.handlers.helpers.ConnectionMatcher;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
-import io.airbyte.commons.server.handlers.helpers.DestinationMatcher;
 import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
-import io.airbyte.commons.server.handlers.helpers.SourceMatcher;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -795,59 +787,6 @@ public class ConnectionsHandler {
     return convertedCatalog;
   }
 
-  public ConnectionReadList searchConnections(final ConnectionSearch connectionSearch)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    final List<ConnectionRead> reads = Lists.newArrayList();
-    for (final StandardSync standardSync : configRepository.listStandardSyncs()) {
-      if (standardSync.getStatus() != StandardSync.Status.DEPRECATED) {
-        final ConnectionRead connectionRead = ApiPojoConverters.internalToConnectionRead(standardSync);
-        if (matchSearch(connectionSearch, connectionRead)) {
-          reads.add(connectionRead);
-        }
-      }
-    }
-
-    return new ConnectionReadList().connections(reads);
-  }
-
-  public boolean matchSearch(final ConnectionSearch connectionSearch, final ConnectionRead connectionRead)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-
-    final SourceConnection sourceConnection = configRepository.getSourceConnection(connectionRead.getSourceId());
-    final StandardSourceDefinition sourceDefinition =
-        configRepository.getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
-    final SourceRead sourceRead = SourceHandler.toSourceRead(sourceConnection, sourceDefinition);
-
-    final DestinationConnection destinationConnection = configRepository.getDestinationConnection(connectionRead.getDestinationId());
-    final StandardDestinationDefinition destinationDefinition =
-        configRepository.getStandardDestinationDefinition(destinationConnection.getDestinationDefinitionId());
-    final DestinationRead destinationRead = DestinationHandler.toDestinationRead(destinationConnection, destinationDefinition);
-
-    final ConnectionMatcher connectionMatcher = new ConnectionMatcher(connectionSearch);
-    final ConnectionRead connectionReadFromSearch = connectionMatcher.match(connectionRead);
-
-    return (connectionReadFromSearch == null || connectionReadFromSearch.equals(connectionRead))
-        && matchSearch(connectionSearch.getSource(), sourceRead)
-        && matchSearch(connectionSearch.getDestination(), destinationRead);
-  }
-
-  // todo (cgardens) - make this static. requires removing one bad dependency in SourceHandlerTest
-  public boolean matchSearch(final SourceSearch sourceSearch, final SourceRead sourceRead) {
-    final SourceMatcher sourceMatcher = new SourceMatcher(sourceSearch);
-    final SourceRead sourceReadFromSearch = sourceMatcher.match(sourceRead);
-
-    return (sourceReadFromSearch == null || sourceReadFromSearch.equals(sourceRead));
-  }
-
-  // todo (cgardens) - make this static. requires removing one bad dependency in
-  // DestinationHandlerTest
-  public boolean matchSearch(final DestinationSearch destinationSearch, final DestinationRead destinationRead) {
-    final DestinationMatcher destinationMatcher = new DestinationMatcher(destinationSearch);
-    final DestinationRead destinationReadFromSearch = destinationMatcher.match(destinationRead);
-
-    return (destinationReadFromSearch == null || destinationReadFromSearch.equals(destinationRead));
-  }
-
   public void deleteConnection(final UUID connectionId) throws JsonValidationException, ConfigNotFoundException, IOException {
     connectionHelper.deleteConnection(connectionId);
     eventRunner.forceDeleteConnection(connectionId);
@@ -999,11 +938,8 @@ public class ConnectionsHandler {
             .toLocalDate();
 
         // Merge it with the bytes synced from the attempt
-        long recordsCommitted = 0;
-        final Optional<JobOutput> attemptOutput = attempt.getAttempt().getOutput();
-        if (attemptOutput.isPresent()) {
-          recordsCommitted = attemptOutput.get().getSync().getStandardSyncSummary().getTotalStats().getRecordsCommitted();
-        }
+        final long recordsCommitted = attempt.getAttempt().getOutput()
+            .map(output -> output.getSync().getStandardSyncSummary().getTotalStats().getRecordsCommitted()).orElse(0L);
 
         // Update the bytes synced for the corresponding day
         final ConnectionDataHistoryReadItem existingItem = connectionDataHistoryReadItemsByDate.get(attemptDateInUserTimeZone);

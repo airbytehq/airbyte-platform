@@ -12,7 +12,7 @@ import styles from "./LoadingSchema.module.scss";
 const PROGRESS_BAR_TIME = 60 * 4;
 
 const LoadingSchema: React.FC = () => (
-  <Box p="2xl" className={styles.container}>
+  <Box p="2xl">
     <FlexContainer direction="column" gap="lg" alignItems="center">
       <ProgressBar runTime={PROGRESS_BAR_TIME} />
       <Text size="md" className={styles.message} align="center">

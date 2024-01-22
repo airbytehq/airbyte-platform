@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance.configs.migrations;
@@ -64,7 +64,7 @@ public class V0_44_5_004__BackFillNotificationSettingsColumn extends BaseJavaMig
       }
       final var originalNotificationList =
           Jsons.deserialize(workspaceRecord.get(NOTIFICATION_COLUMN).data(), new TypeReference<List<Notification>>() {});
-      var notificationSettings = new NotificationSettings();
+      final var notificationSettings = new NotificationSettings();
       if (!originalNotificationList.isEmpty()) {
         final var originalNotification = Iterators.getOnlyElement(originalNotificationList.listIterator());
         final NotificationType notificationType = originalNotification.getNotificationType();

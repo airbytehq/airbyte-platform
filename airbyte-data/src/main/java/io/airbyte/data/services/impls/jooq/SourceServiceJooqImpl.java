@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -675,6 +675,7 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(Tables.ACTOR_DEFINITION.ID, standardSourceDefinition.getSourceDefinitionId())
             .set(Tables.ACTOR_DEFINITION.NAME, standardSourceDefinition.getName())
             .set(Tables.ACTOR_DEFINITION.ICON, standardSourceDefinition.getIcon())
+            .set(Tables.ACTOR_DEFINITION.ICON_URL, standardSourceDefinition.getIconUrl())
             .set(Tables.ACTOR_DEFINITION.ACTOR_TYPE, ActorType.source)
             .set(Tables.ACTOR_DEFINITION.SOURCE_TYPE,
                 standardSourceDefinition.getSourceType() == null ? null
@@ -698,6 +699,7 @@ public class SourceServiceJooqImpl implements SourceService {
             .set(Tables.ACTOR_DEFINITION.ID, standardSourceDefinition.getSourceDefinitionId())
             .set(Tables.ACTOR_DEFINITION.NAME, standardSourceDefinition.getName())
             .set(Tables.ACTOR_DEFINITION.ICON, standardSourceDefinition.getIcon())
+            .set(Tables.ACTOR_DEFINITION.ICON_URL, standardSourceDefinition.getIconUrl())
             .set(Tables.ACTOR_DEFINITION.ACTOR_TYPE, ActorType.source)
             .set(Tables.ACTOR_DEFINITION.SOURCE_TYPE,
                 standardSourceDefinition.getSourceType() == null ? null

@@ -6,6 +6,7 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useDeleteModal } from "hooks/useDeleteModal";
 
 import styles from "./DeleteBlock.module.scss";
@@ -17,6 +18,7 @@ interface IProps {
 }
 
 export const DeleteBlock: React.FC<IProps> = ({ type, onDelete }) => {
+  const { mode } = useConnectionFormService();
   const onDeleteButtonClick = useDeleteModal(type, onDelete);
 
   return (
@@ -29,7 +31,7 @@ export const DeleteBlock: React.FC<IProps> = ({ type, onDelete }) => {
           <FormattedMessage id={`tables.${type}DataDelete`} />
         </Text>
       </FlexContainer>
-      <Button variant="danger" onClick={onDeleteButtonClick} data-id="open-delete-modal">
+      <Button variant="danger" onClick={onDeleteButtonClick} data-id="open-delete-modal" disabled={mode === "readonly"}>
         <FormattedMessage id={`tables.${type}Delete`} />
       </Button>
     </Card>

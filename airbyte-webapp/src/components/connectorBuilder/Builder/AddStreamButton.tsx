@@ -37,6 +37,7 @@ interface AddStreamButtonProps {
   initialValues?: Partial<BuilderStream>;
   "data-testid"?: string;
   modalTitle?: string;
+  disabled?: boolean;
 }
 
 export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
@@ -45,6 +46,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
   initialValues,
   "data-testid": testId,
   modalTitle,
+  disabled,
 }) => {
   const analyticsService = useAnalyticsService();
   const authenticator = useBuilderWatch("formValues.global.authenticator");
@@ -104,15 +106,18 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
         React.cloneElement(button, {
           onClick: buttonClickHandler,
           "data-testid": testId,
+          disabled: disabled ?? button.props.disabled, // respect `disabled` from both AddStreamButton and the custom button
+          className: classNames(button.props.className, styles.disableable),
         })
       ) : (
         <div className={classNames(styles.buttonContainer, { [styles["buttonContainer--pulse"]]: shouldPulse })}>
           <Button
             type="button"
-            className={styles.addButton}
+            className={classNames(styles.addButton, styles.disableable)}
             onClick={buttonClickHandler}
             icon={<Icon type="plus" />}
             data-testid={testId}
+            disabled={disabled}
           />
         </div>
       )}

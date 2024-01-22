@@ -5,17 +5,13 @@
 $container-left-space: variables.$spacing-xl;
 $container-right-space: variables.$spacing-xl * 2;
 
-.dialog {
-  z-index: z-indices.$modal;
-}
-
 .container {
   position: fixed;
   bottom: 0;
-  left: variables.$width-size-menu + $container-left-space;
-  width: calc(100% - (variables.$width-size-menu + $container-right-space));
+  left: $container-left-space;
+  width: calc(100% - $container-right-space);
   min-width: 736px;
-  z-index: 1000;
+  z-index: z-indices.$overlay + 1;
   height: calc(100vh - 100px);
   display: flex;
   flex-direction: column;

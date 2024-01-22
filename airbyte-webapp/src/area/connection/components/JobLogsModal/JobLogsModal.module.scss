@@ -1,3 +1,5 @@
+@use "scss/variables";
+
 .attemptDropdown {
   white-space: nowrap;
 
@@ -8,4 +10,27 @@
 
 .downloadLogs {
   margin-left: auto;
+}
+
+.searchOptions {
+  margin-left: variables.$spacing-sm;
+
+  &__button {
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  &__chevron {
+    transition: 0.2s transform;
+
+    &--open {
+      transform: rotate(90deg);
+    }
+  }
+
+  &__container {
+    padding-left: variables.$spacing-sm;
+  }
 }

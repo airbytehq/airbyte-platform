@@ -8,6 +8,7 @@ import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { Icon } from "components/ui/Icon";
 
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { ConnectionRoutePaths } from "pages/routePaths";
 
 interface StreamActionsMenuProps {
@@ -19,12 +20,13 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
   const navigate = useNavigate();
 
   const { syncStarting, jobSyncRunning, resetStarting, jobResetRunning, resetStreams } = useConnectionSyncContext();
+  const { mode } = useConnectionFormService();
 
   const options: DropdownMenuOptionType[] = [
     {
       displayName: formatMessage({ id: "connection.stream.actions.resetThisStream" }),
       value: "resetThisStream",
-      disabled: syncStarting || jobSyncRunning || resetStarting || jobResetRunning,
+      disabled: syncStarting || jobSyncRunning || resetStarting || jobResetRunning || mode === "readonly",
     },
     {
       displayName: formatMessage({ id: "connection.stream.actions.showInReplicationTable" }),

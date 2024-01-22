@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.container_orchestrator.config;
@@ -35,6 +35,7 @@ import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.env.Environment;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +44,10 @@ import org.junit.jupiter.api.Test;
 // this test
 @MicronautTest(environments = Environment.TEST)
 class ContainerOrchestratorFactoryTest {
+
+  @Inject
+  @Named("configDir")
+  String configDir;
 
   @Inject
   FeatureFlags featureFlags;
@@ -121,28 +126,29 @@ class ContainerOrchestratorFactoryTest {
     final var factory = new ContainerOrchestratorFactory();
 
     final var repl = factory.jobOrchestrator(
-        ReplicationLauncherWorker.REPLICATION, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
+        ReplicationLauncherWorker.REPLICATION, configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
         asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore, dataClass);
     assertEquals("Replication", repl.getOrchestratorName());
 
     final var norm = factory.jobOrchestrator(
-        NormalizationLauncherWorker.NORMALIZATION, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
+        NormalizationLauncherWorker.NORMALIZATION, configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig,
+        replicationWorkerFactory,
         asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore, dataClass);
     assertEquals("Normalization", norm.getOrchestratorName());
 
     final var dbt = factory.jobOrchestrator(
-        DbtLauncherWorker.DBT, envConfigs, processFactory, workerConfigsProvider, jobRunConfig,
+        DbtLauncherWorker.DBT, configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig,
         replicationWorkerFactory, asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore, dataClass);
     assertEquals("DBT Transformation", dbt.getOrchestratorName());
 
     final var noop = factory.jobOrchestrator(
-        AsyncOrchestratorPodProcess.NO_OP, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
+        AsyncOrchestratorPodProcess.NO_OP, configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
         asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore, dataClass);
     assertEquals("NO_OP", noop.getOrchestratorName());
 
     var caught = false;
     try {
-      factory.jobOrchestrator("does not exist", envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
+      factory.jobOrchestrator("does not exist", configDir, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory,
           asyncStateManager, workloadApi, new WorkloadIdGenerator(), false, jobOutputDocStore, dataClass);
     } catch (final Exception e) {
       caught = true;

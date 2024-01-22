@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -339,7 +339,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   }
 
   /**
-   * Test if workspace is has access to a custom connector definition.
+   * Test if workspace has access to a custom connector definition.
    *
    * @param actorDefinitionId custom actor definition id
    * @param workspaceId workspace id

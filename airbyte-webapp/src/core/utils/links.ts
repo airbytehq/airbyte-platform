@@ -20,7 +20,6 @@ export const links = {
   configurationArchiveLink: `${BASE_DOCS_LINK}/operator-guides/upgrading-airbyte/`,
   normalizationLink: `${BASE_DOCS_LINK}/understanding-airbyte/connections#airbyte-basic-normalization`,
   namespaceLink: `${BASE_DOCS_LINK}/understanding-airbyte/namespaces`,
-  tutorialLink: "https://www.youtube.com/watch?v=Rcpt5SVsMpk&feature=emb_logo",
   statusLink: "https://status.airbyte.io/",
   tutorialsLink: "https://airbyte.com/tutorials",
   syncModeLink: `${BASE_DOCS_LINK}/understanding-airbyte/connections`,
@@ -51,6 +50,7 @@ export const links = {
   interpolationMacroDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference#macros`,
   creditDescription: "https://airbyte.com/pricing#what-is-a-credit",
   usingCustomConnectors: `${BASE_DOCS_LINK}/operator-guides/using-custom-connectors/`,
+  gettingSupport: `${BASE_DOCS_LINK}/community/getting-support`,
 } as const;
 
 export type OutboundLinks = typeof links;

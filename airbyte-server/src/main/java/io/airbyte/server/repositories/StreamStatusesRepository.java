@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.repositories;
@@ -79,15 +79,17 @@ public interface StreamStatusesRepository extends PageableRepository<StreamStatu
   List<StreamStatus> findAllPerRunStateByConnectionId(final UUID connectionId);
 
   /**
-   * Returns the latest stream status per stream per day for a connection after a given timestamp.
+   * Returns the latest terminal stream status per stream per day for a connection after a given
+   * timestamp. Filters for complete and incomplete so we don't report an effectively unknown overview
+   * status
    */
-
   @Query("SELECT DISTINCT ON (stream_name, stream_namespace, 1) DATE_TRUNC('day', transitioned_at, :timezone), * "
       + "FROM stream_statuses WHERE connection_id = :connectionId AND transitioned_at >= :timestamp "
+      + "AND run_state IN ('complete', 'incomplete') "
       + "ORDER BY stream_name, stream_namespace, 1, transitioned_at DESC")
-  List<StreamStatus> findLatestStatusPerStreamByConnectionIdAndDayAfterTimestamp(final UUID connectionId,
-                                                                                 final OffsetDateTime timestamp,
-                                                                                 final String timezone);
+  List<StreamStatus> findLatestTerminalStatusPerStreamByConnectionIdAndDayAfterTimestamp(final UUID connectionId,
+                                                                                         final OffsetDateTime timestamp,
+                                                                                         final String timezone);
 
   /**
    * Pagination params.

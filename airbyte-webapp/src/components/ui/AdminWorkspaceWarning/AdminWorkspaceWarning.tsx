@@ -15,11 +15,12 @@ export const AdminWorkspaceWarning = () => {
     return (
       <div className={styles.adminWorkspaceWarning}>
         <Tooltip
+          containerClassName={styles.adminWorkspaceTooltipWrapper}
           placement="right"
           control={
-            <div className={styles.adminWorkspaceWarning__pill}>
-              <Text inverseColor>{formatMessage({ id: "workspace.adminWorkspaceWarning" })}</Text>
-            </div>
+            <Text as="div" size="xs" inverseColor bold align="center" className={styles.adminWorkspaceWarning__pill}>
+              {formatMessage({ id: "workspace.adminWorkspaceWarning" })}
+            </Text>
           }
         >
           <FormattedMessage id="workspace.adminWorkspaceWarningTooltip" />

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.handlers;
@@ -101,7 +101,7 @@ public class StreamStatusesHandler {
         .atStartOfDay(ZoneId.of(req.getTimezone()))
         .toOffsetDateTime();
 
-    final var streamStatuses = repo.findLatestStatusPerStreamByConnectionIdAndDayAfterTimestamp(req.getConnectionId(),
+    final var streamStatuses = repo.findLatestTerminalStatusPerStreamByConnectionIdAndDayAfterTimestamp(req.getConnectionId(),
         thirtyDaysAgoInUTC, req.getTimezone())
         .stream()
         .map(mapper::map)

@@ -10,9 +10,11 @@ import { FlexContainer } from "components/ui/Flex";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
+import { useCurrentWorkspace } from "core/api";
 import { useDbtCloudServiceToken } from "core/api/cloud";
 import { trackError } from "core/utils/datadog";
 import { links } from "core/utils/links";
+import { useIntent } from "core/utils/rbac";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { useDbtTokenRemovalModal } from "./useDbtTokenRemovalModal";
@@ -32,6 +34,8 @@ export const DbtCloudSettingsView: React.FC = () => {
   const { formatMessage } = useIntl();
   const { hasExistingToken, saveToken } = useDbtCloudServiceToken();
   const { registerNotification } = useNotificationService();
+  const { workspaceId } = useCurrentWorkspace();
+  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId });
 
   const onDeleteClick = useDbtTokenRemovalModal();
 
@@ -76,6 +80,7 @@ export const DbtCloudSettingsView: React.FC = () => {
             onSuccess={onSuccess}
             onError={onError}
             schema={ServiceTokenFormSchema}
+            disabled={!canUpdateWorkspace}
           >
             <FormControl
               name="serviceToken"

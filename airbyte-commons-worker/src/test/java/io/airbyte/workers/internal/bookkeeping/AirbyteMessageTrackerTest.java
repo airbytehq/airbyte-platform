@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal.bookkeeping;
@@ -34,7 +34,7 @@ class AirbyteMessageTrackerTest {
   @BeforeEach
   void setup() {
     this.messageTracker =
-        new AirbyteMessageTracker(syncStatsTracker, new EnvVariableFeatureFlags(), "airbyte/source-image", "airbyte/destination-image", false);
+        new AirbyteMessageTracker(syncStatsTracker, new EnvVariableFeatureFlags(), "airbyte/source-image", "airbyte/destination-image");
   }
 
   @Test
@@ -88,7 +88,7 @@ class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromSource(state);
 
-    verify(syncStatsTracker).updateSourceStatesStats(state.getState(), false);
+    verify(syncStatsTracker).updateSourceStatesStats(state.getState());
   }
 
   @Test
@@ -169,7 +169,7 @@ class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromDestination(state);
 
-    verify(syncStatsTracker).updateDestinationStateStats(state.getState(), false);
+    verify(syncStatsTracker).updateDestinationStateStats(state.getState());
   }
 
   @Test

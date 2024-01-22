@@ -23,6 +23,8 @@ flags:
     serve: false
   - name: connectors.apm-enabled
     serve: false
+  - name: connectors.useIconUrlInApiResponse
+    serve: true
   - name: platform.use-new-schema-update-notification
     serve: false
   # whether the platform will track destination timeouts. If set to 'true', then the platform will monitor if there has been
@@ -37,18 +39,24 @@ flags:
   # the time the platform waits before it decides that a destination has timed out.
   - name: destination-timeout.seconds
     serve: 86400
+  - name: platform.inject-aws-secrets-to-connector-pods
+    serve: false
   - name: platform.use-workload-api
     serve: false
+    # Override used in order to run an acceptance test
     context:
       - type: "workspace"
         include:
           - "3d2985a0-a412-45f4-9124-e15800b739be"
           - "480e631f-1c88-4c2d-9081-855981018205"
         serve: true
-  - name: platform.use-workload-output-doc-store
+  - name: platform.fail-sync-on-invalid-checksum
     serve: false
+  - name: platform.use-workload-api-for-check
+    serve: false
+    # Override used in order to run an acceptance test
     context:
       - type: "workspace"
         include:
-          - "480e631f-1c88-4c2d-9081-855981018205"
+          - "1bdcfb61-219b-4290-be4f-12f9ac5461be"
         serve: true

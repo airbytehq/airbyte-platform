@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
@@ -52,6 +52,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -492,7 +493,7 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   private static long getEpoch(final Record record, final String fieldName) {
-    return record.get(fieldName, LocalDateTime.class).toEpochSecond(ZoneOffset.UTC);
+    return record.get(fieldName, OffsetDateTime.class).toEpochSecond();
   }
 
   /**
@@ -509,7 +510,7 @@ public class DefaultJobPersistence implements JobPersistence {
   @Override
   public Optional<Long> enqueueJob(final String scope, final JobConfig jobConfig) throws IOException {
     LOGGER.info("enqueuing pending job for scope: {}", scope);
-    final LocalDateTime now = LocalDateTime.ofInstant(timeSupplier.get(), ZoneOffset.UTC);
+    final LocalDateTime now = LocalDateTime.ofInstant(timeSupplier.get(), ZoneId.systemDefault());
 
     final String queueingRequest = Job.REPLICATION_TYPES.contains(jobConfig.getConfigType())
         ? String.format("WHERE NOT EXISTS (SELECT 1 FROM jobs WHERE config_type IN (%s) AND scope = '%s' AND status NOT IN (%s)) ",

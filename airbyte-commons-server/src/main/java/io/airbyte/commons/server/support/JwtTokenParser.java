@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.airbyte.config.User.AuthProvider;
+import io.airbyte.config.AuthProvider;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -62,13 +62,17 @@ public class JwtTokenParser {
     if (jwtNode.containsKey("email")) {
       jwtMap.put(JWT_USER_EMAIL, jwtNode.get("email"));
     }
-    if (AuthProvider.GOOGLE_IDENTITY_PLATFORM.equals(authProvider) && jwtNode.containsKey("authUserId")) {
-      jwtMap.put(JWT_AUTH_USER_ID, jwtNode.get("authUserId"));
+    if (AuthProvider.GOOGLE_IDENTITY_PLATFORM.equals(authProvider)) {
+      if (jwtNode.containsKey("authUserId")) {
+        jwtMap.put(JWT_AUTH_USER_ID, jwtNode.get("authUserId"));
+      } else if (jwtNode.containsKey("user_id")) {
+        // speakeasy generated jwt tokens contain the auth user id under the userId field
+        jwtMap.put(JWT_AUTH_USER_ID, jwtNode.get("user_id"));
+      }
     }
 
     // For keycloak user, the authUserId is the sub field in the jwt token.
     if (AuthProvider.KEYCLOAK.equals(authProvider) && jwtNode.containsKey("sub")) {
-
       jwtMap.put(JWT_AUTH_USER_ID, jwtNode.get("sub"));
     }
 

@@ -8,6 +8,7 @@ import { isDefined } from "core/utils/common";
 
 import { useRemoveConnectionsFromList } from "./connections";
 import { useCurrentWorkspace } from "./workspaces";
+import { CommonRequestError, LogsRequestError } from "../errors";
 import {
   createSource,
   deleteSource,
@@ -205,6 +206,7 @@ const useDiscoverSchema = (
         const e = result.jobInfo?.logs ? new LogsRequestError(result.jobInfo) : new CommonRequestError(result);
         // Generate error with failed status and received logs
         e._status = 400;
+        // @ts-expect-error TODO: address this case
         e.response = result.jobInfo;
         throw e;
       }

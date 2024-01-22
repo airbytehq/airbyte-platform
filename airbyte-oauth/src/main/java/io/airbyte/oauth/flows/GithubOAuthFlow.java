@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.oauth.flows;
@@ -37,6 +37,7 @@ public class GithubOAuthFlow extends BaseOAuth2Flow {
       "read:org",
       "read:repo_hook",
       "read:user",
+      "read:project",
       "read:discussion",
       "workflow");
 

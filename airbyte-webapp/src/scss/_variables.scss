@@ -33,7 +33,7 @@ $spacing-xl: 20px;
 $spacing-2xl: 40px;
 $spacing-page-bottom-cloud: 88px;
 
-$width-size-menu: 93px;
+$width-side-menu: 200px;
 $width-wide-menu: 200px;
 $width-sync-mode-dropdown: 225px;
 $width-extra-wide-menu: 300px;
@@ -48,10 +48,12 @@ $width-modal-lg: 940px;
 $width-modal-xl: 1008px;
 
 // large total width - sidebar width - main layout padding-left - main layout padding-right
-$min-width-wide-table-container: 1280px - $width-size-menu - $spacing-xl - $spacing-xl;
+$min-width-wide-table-container: 1280px - $width-side-menu - $spacing-xl - $spacing-xl;
 $height-empty-sync-catalog: 300px;
 $height-connection-header: 167px;
 $height-long-listbox-options-list: 300px;
+
+$height-breadcrumb: 45px;
 
 $height-soft-edge: 15px;
 

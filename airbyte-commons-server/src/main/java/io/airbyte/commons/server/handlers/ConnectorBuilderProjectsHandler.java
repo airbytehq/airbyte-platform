@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -8,16 +8,25 @@ import static io.airbyte.commons.version.AirbyteProtocolVersion.DEFAULT_AIRBYTE_
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest;
+import io.airbyte.api.model.generated.ConnectorBuilderHttpResponse;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetailsRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamRead;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadAuxiliaryRequestsInner;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadRequestBody;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInner;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInnerPagesInner;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectTestingValuesUpdate;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody;
 import io.airbyte.api.model.generated.DeclarativeManifestRead;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
@@ -26,20 +35,39 @@ import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ScopeType;
+import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.init.CdkVersionProvider;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.secrets.JsonSecretsProcessor;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.connectorbuilderserver.api.client.generated.ConnectorBuilderServerApi;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpRequest;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpResponse;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamRead;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRequestBody;
+import io.airbyte.data.services.ConnectorBuilderService;
+import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Organization;
+import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 
 /**
  * ConnectorBuilderProjectsHandler. Javadocs suppressed because api docs should be used as source of
@@ -52,16 +80,40 @@ public class ConnectorBuilderProjectsHandler {
   private final Supplier<UUID> uuidSupplier;
   private final DeclarativeSourceManifestInjector manifestInjector;
   private final CdkVersionProvider cdkVersionProvider;
+  private final WorkspaceService workspaceService;
+  private final FeatureFlagClient featureFlagClient;
+  private final SecretsRepositoryReader secretsRepositoryReader;
+  private final SecretsRepositoryWriter secretsRepositoryWriter;
+  private final SecretPersistenceConfigService secretPersistenceConfigService;
+  private final ConnectorBuilderService connectorBuilderService;
+  private final JsonSecretsProcessor secretsProcessor;
+  private final ConnectorBuilderServerApi connectorBuilderServerApiClient;
 
   @Inject
   public ConnectorBuilderProjectsHandler(final ConfigRepository configRepository,
                                          final CdkVersionProvider cdkVersionProvider,
                                          @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
-                                         final DeclarativeSourceManifestInjector manifestInjector) {
+                                         final DeclarativeSourceManifestInjector manifestInjector,
+                                         final WorkspaceService workspaceService,
+                                         final FeatureFlagClient featureFlagClient,
+                                         final SecretsRepositoryReader secretsRepositoryReader,
+                                         final SecretsRepositoryWriter secretsRepositoryWriter,
+                                         final SecretPersistenceConfigService secretPersistenceConfigService,
+                                         final ConnectorBuilderService connectorBuilderService,
+                                         @Named("jsonSecretsProcessorWithCopy") final JsonSecretsProcessor secretsProcessor,
+                                         final ConnectorBuilderServerApi connectorBuilderServerApiClient) {
     this.configRepository = configRepository;
     this.cdkVersionProvider = cdkVersionProvider;
     this.uuidSupplier = uuidSupplier;
     this.manifestInjector = manifestInjector;
+    this.workspaceService = workspaceService;
+    this.featureFlagClient = featureFlagClient;
+    this.secretsRepositoryReader = secretsRepositoryReader;
+    this.secretsRepositoryWriter = secretsRepositoryWriter;
+    this.secretPersistenceConfigService = secretPersistenceConfigService;
+    this.connectorBuilderService = connectorBuilderService;
+    this.secretsProcessor = secretsProcessor;
+    this.connectorBuilderServerApiClient = connectorBuilderServerApiClient;
   }
 
   private static ConnectorBuilderProjectDetailsRead builderProjectToDetailsRead(final ConnectorBuilderProject project) {
@@ -228,6 +280,133 @@ public class ConnectorBuilderProjectsHandler {
     configRepository.writeActorDefinitionConfigInjectionForPath(manifestInjector.createConfigInjection(source.getSourceDefinitionId(), manifest));
 
     return source.getSourceDefinitionId();
+  }
+
+  @SuppressWarnings("PMD.PreserveStackTrace")
+  public JsonNode updateConnectorBuilderProjectTestingValues(final ConnectorBuilderProjectTestingValuesUpdate testingValuesUpdate)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    try {
+      final ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(testingValuesUpdate.getBuilderProjectId(), false);
+      final Optional<JsonNode> existingTestingValues = Optional.ofNullable(project.getTestingValues());
+
+      final Optional<SecretPersistenceConfig> secretPersistenceConfig = getSecretPersistenceConfig(project.getWorkspaceId());
+      final Optional<JsonNode> existingHydratedTestingValues = getHydratedTestingValues(project, secretPersistenceConfig.orElse(null));
+
+      final JsonNode updatedTestingValues = existingHydratedTestingValues.isPresent()
+          ? secretsProcessor.copySecrets(existingHydratedTestingValues.get(),
+              testingValuesUpdate.getTestingValues(),
+              testingValuesUpdate.getSpec())
+          : testingValuesUpdate.getTestingValues();
+
+      final JsonNode updatedTestingValuesWithSecretCoordinates = secretPersistenceConfig.isPresent()
+          ? secretsRepositoryWriter.statefulUpdateSecretsToRuntimeSecretPersistence(
+              project.getWorkspaceId(),
+              existingTestingValues,
+              updatedTestingValues,
+              testingValuesUpdate.getSpec(),
+              true,
+              new RuntimeSecretPersistence(secretPersistenceConfig.get()))
+          : secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(
+              project.getWorkspaceId(),
+              existingTestingValues,
+              updatedTestingValues,
+              testingValuesUpdate.getSpec(),
+              true);
+
+      connectorBuilderService.updateBuilderProjectTestingValues(testingValuesUpdate.getBuilderProjectId(), updatedTestingValuesWithSecretCoordinates);
+      return secretsProcessor.prepareSecretsForOutput(updatedTestingValuesWithSecretCoordinates, testingValuesUpdate.getSpec());
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    }
+  }
+
+  public ConnectorBuilderProjectStreamRead readConnectorBuilderProjectStream(ConnectorBuilderProjectStreamReadRequestBody requestBody)
+      throws ConfigNotFoundException, IOException {
+    try {
+      final ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(requestBody.getBuilderProjectId(), false);
+      final Optional<SecretPersistenceConfig> secretPersistenceConfig = getSecretPersistenceConfig(project.getWorkspaceId());
+      final JsonNode existingHydratedTestingValues =
+          getHydratedTestingValues(project, secretPersistenceConfig.orElse(null)).orElse(Jsons.emptyObject());
+
+      final StreamReadRequestBody streamReadRequestBody =
+          new StreamReadRequestBody(existingHydratedTestingValues, requestBody.getManifest(), requestBody.getStreamName(),
+              requestBody.getFormGeneratedManifest(), requestBody.getBuilderProjectId().toString(), requestBody.getRecordLimit(),
+              requestBody.getState(), requestBody.getWorkspaceId());
+      final StreamRead streamRead = connectorBuilderServerApiClient.readStream(streamReadRequestBody);
+
+      return convertStreamRead(streamRead);
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    }
+  }
+
+  private ConnectorBuilderProjectStreamRead convertStreamRead(StreamRead streamRead) {
+    return new ConnectorBuilderProjectStreamRead()
+        .logs(streamRead.getLogs())
+        .slices(streamRead.getSlices().stream().map(slice -> new ConnectorBuilderProjectStreamReadSlicesInner()
+            .sliceDescriptor(slice.getSliceDescriptor())
+            .state(slice.getState())
+            .pages(slice.getPages().stream().map(page -> new ConnectorBuilderProjectStreamReadSlicesInnerPagesInner()
+                .records(page.getRecords())
+                .request(convertHttpRequest(page.getRequest()))
+                .response(convertHttpResponse(page.getResponse()))).toList()))
+            .toList())
+        .testReadLimitReached(streamRead.getTestReadLimitReached())
+        .auxiliaryRequests(streamRead.getAuxiliaryRequests() != null
+            ? streamRead.getAuxiliaryRequests().stream().map(auxRequest -> new ConnectorBuilderProjectStreamReadAuxiliaryRequestsInner()
+                .description(auxRequest.getDescription())
+                .request(convertHttpRequest(auxRequest.getRequest()))
+                .response(convertHttpResponse(auxRequest.getResponse()))
+                .title(auxRequest.getTitle())).toList()
+            : null)
+        .inferredSchema(streamRead.getInferredSchema())
+        .inferredDatetimeFormats(streamRead.getInferredDatetimeFormats())
+        .latestConfigUpdate(streamRead.getLatestConfigUpdate());
+  }
+
+  private ConnectorBuilderHttpRequest convertHttpRequest(@Nullable HttpRequest request) {
+    return request != null
+        ? new ConnectorBuilderHttpRequest()
+            .url(request.getUrl())
+            .httpMethod(ConnectorBuilderHttpRequest.HttpMethodEnum.fromString(request.getHttpMethod().getValue()))
+            .parameters(request.getParameters())
+            .body(request.getBody())
+            .headers(request.getHeaders())
+        : null;
+  }
+
+  private ConnectorBuilderHttpResponse convertHttpResponse(HttpResponse response) {
+    return response != null
+        ? new ConnectorBuilderHttpResponse()
+            .status(response.getStatus())
+            .body(response.getBody())
+            .headers(response.getHeaders())
+        : null;
+  }
+
+  private Optional<SecretPersistenceConfig> getSecretPersistenceConfig(final UUID workspaceId) throws IOException, ConfigNotFoundException {
+    try {
+      final Optional<UUID> organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId);
+      return organizationId.isPresent()
+          && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))
+              ? Optional.of(secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get()))
+              : Optional.empty();
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    }
+  }
+
+  private Optional<JsonNode> getHydratedTestingValues(final ConnectorBuilderProject project,
+                                                      @Nullable final SecretPersistenceConfig secretPersistenceConfig) {
+    final Optional<JsonNode> testingValues = Optional.ofNullable(project.getTestingValues());
+    final Optional<SecretPersistenceConfig> secretPersistenceConfigOptional = Optional.ofNullable(secretPersistenceConfig);
+
+    return testingValues.isPresent()
+        ? secretPersistenceConfigOptional.isPresent()
+            ? Optional.ofNullable(secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(testingValues.get(),
+                new RuntimeSecretPersistence(secretPersistenceConfigOptional.get())))
+            : Optional.ofNullable(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(project.getTestingValues()))
+        : Optional.empty();
   }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -90,6 +90,10 @@ public final class AuthenticationFields {
   public static final String ORGANIZATION_ID_FIELD_NAME = "organizationId";
 
   public static final String PERMISSION_ID_FIELD_NAME = "permissionId";
+
+  public static final String SCOPE_TYPE_FIELD_NAME = "scopeType";
+
+  public static final String SCOPE_ID_FIELD_NAME = "scopeId";
 
   private AuthenticationFields() {}
 

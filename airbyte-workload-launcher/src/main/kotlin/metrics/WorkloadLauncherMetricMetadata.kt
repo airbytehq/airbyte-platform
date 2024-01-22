@@ -66,7 +66,7 @@ enum class WorkloadLauncherMetricMetadata(
   ),
   WORKLOAD_STAGE_DURATION(
     "workload_stage_duration",
-    "tracks the duration of a workload stage",
+    "a distribution of the duration of a workload stage",
   ),
   PODS_DELETED_FOR_MUTEX_KEY(
     "workload_pods_deleted_for_mutex_key",

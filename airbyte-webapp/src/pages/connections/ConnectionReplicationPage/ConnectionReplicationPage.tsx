@@ -248,7 +248,7 @@ export const ConnectionReplicationPage: React.FC = () => {
   return (
     <FlexContainer direction="column" className={styles.content}>
       {schemaError && !schemaRefreshing ? (
-        <SchemaError schemaError={schemaError} />
+        <SchemaError schemaError={schemaError} refreshSchema={refreshSchema} />
       ) : !schemaRefreshing && connection ? (
         <Form<FormConnectionFormValues>
           defaultValues={initialValues}

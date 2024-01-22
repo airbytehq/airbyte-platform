@@ -8,9 +8,10 @@ import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationInfo, useCurrentWorkspace } from "core/api";
 import { useIntent } from "core/utils/rbac";
+import { useExperiment } from "hooks/services/Experiment";
 
-import { AccessManagementCard } from "./AccessManagementCard";
 import styles from "./AccessManagementPageContent.module.scss";
+import { AccessManagementSection } from "./AccessManagementSection";
 import { AccessUsers, ResourceType } from "./useGetAccessManagementData";
 
 interface AccessManagementContentProps {
@@ -18,6 +19,11 @@ interface AccessManagementContentProps {
   accessUsers: AccessUsers;
   pageResourceType: ResourceType;
 }
+
+/**
+ * @deprecated will be removed when RBAC UI v2 is turned on.  Use NextOrganizationAccessManagementPage or NextWorkspaceAccessManagementPage instead.
+ */
+
 export const AccessManagementPageContent: React.FC<AccessManagementContentProps> = ({
   resourceName,
   accessUsers,
@@ -27,6 +33,7 @@ export const AccessManagementPageContent: React.FC<AccessManagementContentProps>
   const workspace = useCurrentWorkspace();
   const canListOrganizationUsers = useIntent("ListOrganizationMembers", { organizationId: workspace.organizationId });
   const organizationInfo = useCurrentOrganizationInfo();
+  const updatedOrganizationsUI = useExperiment("settings.organizationsUpdates", false);
 
   return (
     <>
@@ -37,34 +44,42 @@ export const AccessManagementPageContent: React.FC<AccessManagementContentProps>
         </Text>
       </Box>
       <FlexContainer direction="column" gap="xl" className={styles.pageContent}>
-        {Object.keys(accessUsers).map((key) => {
-          const resourceType = key as keyof typeof accessUsers;
-          const data = accessUsers[resourceType];
-          const users = data?.users ?? [];
-          const usersToAdd = data?.usersToAdd ?? [];
+        {updatedOrganizationsUI && pageResourceType === "workspace" ? (
+          <AccessManagementSection
+            tableResourceType="workspace"
+            pageResourceType={pageResourceType}
+            pageResourceName={workspace.name}
+          />
+        ) : (
+          Object.keys(accessUsers).map((key) => {
+            const resourceType = key as keyof typeof accessUsers;
+            const data = accessUsers[resourceType];
+            const users = data?.users ?? [];
+            const usersToAdd = data?.usersToAdd ?? [];
 
-          if (resourceType === "organization" && !canListOrganizationUsers) {
+            if (resourceType === "organization" && !canListOrganizationUsers) {
+              return (
+                <Message
+                  text={formatMessage(
+                    { id: "settings.accessManagement.invisibleOrgUsers" },
+                    { organization: organizationInfo?.organizationName }
+                  )}
+                />
+              );
+            }
+
             return (
-              <Message
-                text={formatMessage(
-                  { id: "settings.accessManagement.invisibleOrgUsers" },
-                  { organization: organizationInfo?.organizationName }
-                )}
+              <AccessManagementSection
+                users={users}
+                usersToAdd={usersToAdd}
+                tableResourceType={resourceType}
+                key={resourceType}
+                pageResourceType={pageResourceType}
+                pageResourceName={resourceName}
               />
             );
-          }
-
-          return (
-            <AccessManagementCard
-              users={users}
-              usersToAdd={usersToAdd}
-              tableResourceType={resourceType}
-              key={resourceType}
-              pageResourceType={pageResourceType}
-              pageResourceName={resourceName}
-            />
-          );
-        })}
+          })
+        )}
       </FlexContainer>
     </>
   );

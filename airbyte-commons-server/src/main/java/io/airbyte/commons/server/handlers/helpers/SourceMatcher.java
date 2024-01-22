@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
@@ -33,6 +33,8 @@ public class SourceMatcher implements Matchable<SourceRead> {
     fromSearch.sourceId(search.getSourceId() == null ? query.getSourceId() : search.getSourceId());
     fromSearch.sourceName(Strings.isBlank(search.getSourceName()) ? query.getSourceName() : search.getSourceName());
     fromSearch.workspaceId(search.getWorkspaceId() == null ? query.getWorkspaceId() : search.getWorkspaceId());
+    fromSearch.icon(query.getIcon());
+
     if (search.getConnectionConfiguration() == null) {
       fromSearch.connectionConfiguration(query.getConnectionConfiguration());
     } else if (query.getConnectionConfiguration() == null) {

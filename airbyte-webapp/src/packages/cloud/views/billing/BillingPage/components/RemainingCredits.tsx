@@ -17,6 +17,7 @@ import { useGetCloudWorkspace, useInvalidateCloudWorkspace } from "core/api/clou
 import { CloudWorkspaceRead } from "core/api/types/CloudApi";
 import { useAuthService } from "core/services/auth";
 import { links } from "core/utils/links";
+import { useIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
@@ -47,6 +48,7 @@ export const RemainingCredits: React.FC = () => {
   const invalidateCloudWorkspace = useInvalidateCloudWorkspace(currentWorkspace.workspaceId);
   const [isWaitingForCredits, setIsWaitingForCredits] = useState(false);
   const { openModal } = useModalService();
+  const canBuyCredits = useIntent("BuyCredits", { workspaceId: currentWorkspace.workspaceId });
 
   const isAutoRechargeEnabled = useExperiment("billing.autoRecharge", false);
 
@@ -124,9 +126,12 @@ export const RemainingCredits: React.FC = () => {
             </Text>
           </FlexItem>
           <FlexContainer>
+            <Button variant="secondaryDark" size="xs" onClick={() => window.open(links.contactSales, "_blank")}>
+              <FormattedMessage id="credits.talkToSales" />
+            </Button>
             <Button
-              variant="dark"
-              disabled={!emailVerified}
+              variant="primaryDark"
+              disabled={!emailVerified || !canBuyCredits}
               type="button"
               size="xs"
               onClick={showCreditsModal}
@@ -134,9 +139,6 @@ export const RemainingCredits: React.FC = () => {
               icon={<Icon type="plus" />}
             >
               <FormattedMessage id="credits.buyCredits" />
-            </Button>
-            <Button size="xs" onClick={() => window.open(links.contactSales, "_blank")} variant="dark">
-              <FormattedMessage id="credits.talkToSales" />
             </Button>
           </FlexContainer>
         </FlexContainer>

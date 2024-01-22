@@ -27,7 +27,7 @@ export const GenerateTokenControl: React.FC<{ clientId: string; clientSecret: st
   }, [generateToken, clientId, clientSecret, openModal]);
 
   return (
-    <Button className={styles.actionButton} onClick={onGenerateToken} variant="dark" isLoading={isLoading}>
+    <Button className={styles.actionButton} onClick={onGenerateToken} variant="primaryDark" isLoading={isLoading}>
       <FormattedMessage id="settings.applications.table.generateToken" />
     </Button>
   );

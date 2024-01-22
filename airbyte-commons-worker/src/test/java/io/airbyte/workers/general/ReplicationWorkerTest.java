@@ -1,11 +1,13 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
 
 import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT;
+import static io.airbyte.workers.test_utils.TestConfigHelpers.DESTINATION_IMAGE;
+import static io.airbyte.workers.test_utils.TestConfigHelpers.SOURCE_IMAGE;
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -230,7 +232,7 @@ abstract class ReplicationWorkerTest {
     when(mapper.mapMessage(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
     when(mapper.revertMap(STATE_MESSAGE)).thenReturn(STATE_MESSAGE);
     when(mapper.revertMap(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
-    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 60, 4));
+    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 60, 4, false));
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true));
   }
 
@@ -526,7 +528,7 @@ abstract class ReplicationWorkerTest {
     verify(replicationAirbyteMessageEventPublishingHelper).publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE,
         CONFIG_MESSAGE,
         new ReplicationContext(false, replicationInput.getConnectionId(), replicationInput.getSourceId(), replicationInput.getDestinationId(),
-            Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId())));
+            Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE)));
   }
 
   @Test
@@ -539,7 +541,7 @@ abstract class ReplicationWorkerTest {
         .publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE,
             CONFIG_MESSAGE,
             new ReplicationContext(false, replicationInput.getConnectionId(), replicationInput.getSourceId(), replicationInput.getDestinationId(),
-                Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId())));
+                Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE)));
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
@@ -560,7 +562,7 @@ abstract class ReplicationWorkerTest {
     verify(replicationAirbyteMessageEventPublishingHelper).publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION,
         CONFIG_MESSAGE,
         new ReplicationContext(false, replicationInput.getConnectionId(), replicationInput.getSourceId(), replicationInput.getDestinationId(),
-            Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId())));
+            Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE)));
   }
 
   @Test
@@ -574,7 +576,7 @@ abstract class ReplicationWorkerTest {
         .publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION,
             CONFIG_MESSAGE,
             new ReplicationContext(false, replicationInput.getConnectionId(), replicationInput.getSourceId(), replicationInput.getDestinationId(),
-                Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId())));
+                Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE)));
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
@@ -980,7 +982,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationAcceptTimeout() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0, 4));
+        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         UUID.randomUUID(),
@@ -1028,7 +1030,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationNotifyEndOfInputTimeout() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0, 4));
+        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         UUID.randomUUID(),
@@ -1074,7 +1076,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationTimeoutWithCloseFailure() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0, 4));
+        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         UUID.randomUUID(),
@@ -1171,7 +1173,9 @@ abstract class ReplicationWorkerTest {
         replicationInput.getDestinationId(),
         Long.valueOf(JOB_ID),
         JOB_ATTEMPT,
-        replicationInput.getWorkspaceId());
+        replicationInput.getWorkspaceId(),
+        SOURCE_IMAGE,
+        DESTINATION_IMAGE);
   }
 
 }

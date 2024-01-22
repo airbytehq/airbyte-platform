@@ -40,6 +40,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
     jobResetRunning,
   } = useConnectionSyncContext();
   const { mode, connection } = useConnectionFormService();
+  const isReadOnly = mode === "readonly";
 
   const connectionStatus = useConnectionStatus(connection.connectionId ?? "");
 
@@ -77,7 +78,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
           className={buttonClassName}
           isLoading={syncStarting}
           data-testid="manual-sync-button"
-          disabled={syncStarting || resetStarting || !connectionEnabled}
+          disabled={syncStarting || resetStarting || !connectionEnabled || isReadOnly}
         >
           {buttonText}
         </Button>
@@ -85,7 +86,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
       {connectionStatus.isRunning && cancelJob && (
         <Button
           onClick={cancelJob}
-          disabled={syncStarting || resetStarting}
+          disabled={syncStarting || resetStarting || isReadOnly}
           isLoading={cancelStarting}
           variant="danger"
           className={buttonClassName}

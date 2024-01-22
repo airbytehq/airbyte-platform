@@ -1,6 +1,7 @@
-import React, { ChangeEvent } from "react";
+import React, { ChangeEvent, useState } from "react";
 import { Controller, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
+import { useDebounce } from "react-use";
 
 import { FormLabel } from "components/forms/FormControl";
 import { Box } from "components/ui/Box";
@@ -12,6 +13,7 @@ import { Text } from "components/ui/Text";
 
 import { ConnectionScheduleDataCron } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
+import { humanizeCron } from "core/utils/cron";
 import { links } from "core/utils/links";
 
 import availableCronTimeZones from "./availableCronTimeZones.json";
@@ -28,6 +30,8 @@ export const CRON_DEFAULT_VALUE: ConnectionScheduleDataCron = {
 const cronTimeZones = availableCronTimeZones.map((zone: string) => ({ label: zone, value: zone }));
 
 export const CronScheduleFormControl: React.FC = () => {
+  const [debouncedErrorMessage, setDebouncedErrorMessage] = useState("");
+  const [debouncedCronDescription, setDebouncedCronDescription] = useState("");
   const { formatMessage } = useIntl();
   const { setValue, control } = useFormContext<FormConnectionFormValues>();
   const { errors } = useFormState<FormConnectionFormValues>();
@@ -44,6 +48,19 @@ export const CronScheduleFormControl: React.FC = () => {
 
   const cronExpression = useWatch({ name: "scheduleData.cron.cronExpression", control });
   const cronTimeZone = useWatch({ name: "scheduleData.cron.cronTimeZone", control });
+
+  useDebounce(
+    () => {
+      setDebouncedErrorMessage(cronValidationError ?? "");
+      try {
+        setDebouncedCronDescription(humanizeCron(cronExpression));
+      } catch (e) {
+        setDebouncedErrorMessage("form.cronExpression.invalid");
+      }
+    },
+    300,
+    [cronValidationError, cronExpression]
+  );
 
   return (
     <Controller
@@ -82,13 +99,13 @@ export const CronScheduleFormControl: React.FC = () => {
               buttonClassName={styles.cronZonesListBoxBtn}
             />
           </FlexContainer>
-          {cronValidationError && (
+          {debouncedErrorMessage && (
             <Box mt="sm">
               <Text color="red" data-testid="cronExpressionError">
                 <FormattedMessage
-                  id={cronValidationError}
+                  id={debouncedErrorMessage}
                   {...(!allowSubOneHourCronExpressions &&
-                  cronValidationError === "form.cronExpression.underOneHourNotAllowed"
+                  debouncedErrorMessage === "form.cronExpression.underOneHourNotAllowed"
                     ? {
                         values: {
                           lnk: (btnText: React.ReactNode) => (
@@ -96,9 +113,20 @@ export const CronScheduleFormControl: React.FC = () => {
                           ),
                         },
                       }
-                    : {})}
+                    : {
+                        values: {
+                          lnk: (lnk: React.ReactNode) => (
+                            <ExternalLink href={links.cronReferenceLink}>{lnk}</ExternalLink>
+                          ),
+                        },
+                      })}
                 />
               </Text>
+            </Box>
+          )}
+          {!debouncedErrorMessage && debouncedCronDescription && (
+            <Box mt="sm">
+              <Text>{debouncedCronDescription}</Text>
             </Box>
           )}
         </FormFieldLayout>

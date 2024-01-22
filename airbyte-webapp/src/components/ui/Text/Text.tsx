@@ -4,7 +4,18 @@ import React, { HTMLAttributes } from "react";
 import styles from "./Text.module.scss";
 
 type TextSize = "xs" | "sm" | "md" | "lg" | "xl";
-type TextColor = "darkBlue" | "grey" | "grey300" | "green" | "green600" | "red" | "grey600" | "grey400" | "blue";
+type TextColor =
+  | "darkBlue"
+  | "grey"
+  | "grey300"
+  | "green"
+  | "green600"
+  | "red"
+  | "red200"
+  | "grey600"
+  | "grey400"
+  | "grey500"
+  | "blue";
 type TextElementType = "p" | "span" | "div";
 type TextHTMLElement = HTMLParagraphElement | HTMLSpanElement | HTMLDivElement;
 
@@ -38,8 +49,10 @@ const colors: Record<TextColor, string> = {
   grey: styles.grey,
   grey300: styles.grey300,
   red: styles.red,
+  red200: styles.red200,
   blue: styles.blue,
   grey400: styles.grey400,
+  grey500: styles.grey500,
   grey600: styles.grey600,
 };
 

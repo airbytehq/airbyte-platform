@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.MoreBooleans;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.AuthProvider;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
 import io.airbyte.config.Organization;
@@ -26,7 +27,6 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.User;
-import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.config.secrets.SecretsRepositoryReader;

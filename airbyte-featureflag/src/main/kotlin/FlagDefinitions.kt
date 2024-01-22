@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 /**
@@ -69,6 +69,8 @@ object UseActorScopedDefaultVersions : Temporary<Boolean>(key = "connectors.useA
 
 object RunSupportStateUpdater : Temporary<Boolean>(key = "connectors.runSupportStateUpdater", default = true)
 
+object EnableConfigurationOverrideProvider : Temporary<Boolean>(key = "connectors.enableConfigurationOverrideProvider", default = false)
+
 object NotifyOnConnectorBreakingChanges : Temporary<Boolean>(key = "connectors.notifyOnConnectorBreakingChanges", default = true)
 
 object NotifyBreakingChangesOnSupportStateUpdate : Temporary<Boolean>(key = "connectors.notifyBreakingChangesOnSupportStateUpdate", default = true)
@@ -102,6 +104,8 @@ object UseCustomK8sScheduler : Temporary<String>(key = "platform.use-custom-k8s-
 object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideActorDefinitionFromList", default = false)
 
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
+
+object UseIconUrlInApiResponse : Temporary<Boolean>(key = "connectors.useIconUrlInApiResponse", default = false)
 
 object SunsetFCP : Temporary<Boolean>(key = "platform.sunset-fcp", default = false)
 
@@ -175,10 +179,10 @@ object FailMissingPks : Temporary<Boolean>(key = "platform.fail-missing-pks", de
 
 object PrintLongRecordPks : Temporary<Boolean>(key = "platform.print-long-record-pks", default = false)
 
-object TrackCommittedStatsWhenUsingGlobalState : Temporary<Boolean>(key = "global-state-committed-stats-tracking-enabled", default = false)
-
-object UseWorkloadOutputDocStore : Temporary<Boolean>(key = "platform.use-workload-output-doc-store", default = false)
+object InjectAwsSecretsToConnectorPods : Temporary<Boolean>(key = "platform.inject-aws-secrets-to-connector-pods", default = false)
 
 object UseWorkloadApiForCheck : Temporary<Boolean>(key = "platform.use-workload-api-for-check", default = false)
 
 object WorkloadCheckFrequencyInSeconds : Permanent<Int>(key = "platform.workload-check-frequency-in-seconds", default = 1)
+
+object FailSyncOnInvalidChecksum : Temporary<Boolean>(key = "platform.fail-sync-on-invalid-checksum", default = false)

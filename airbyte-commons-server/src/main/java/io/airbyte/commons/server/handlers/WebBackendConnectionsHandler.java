@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -195,14 +195,14 @@ public class WebBackendConnectionsHandler {
   private Map<UUID, SourceSnippetRead> getSourceSnippetReadById(final List<UUID> sourceIds) throws IOException {
     return configRepositoryDoNotUse.getSourceAndDefinitionsFromSourceIds(sourceIds)
         .stream()
-        .map(sourceAndDefinition -> SourceHandler.toSourceSnippetRead(sourceAndDefinition.source(), sourceAndDefinition.definition()))
+        .map(sourceAndDefinition -> sourceHandler.toSourceSnippetRead(sourceAndDefinition.source(), sourceAndDefinition.definition()))
         .collect(Collectors.toMap(SourceSnippetRead::getSourceId, Function.identity()));
   }
 
   private Map<UUID, DestinationSnippetRead> getDestinationSnippetReadById(final List<UUID> destinationIds) throws IOException {
     return configRepositoryDoNotUse.getDestinationAndDefinitionsFromDestinationIds(destinationIds)
         .stream()
-        .map(destinationAndDefinition -> DestinationHandler.toDestinationSnippetRead(destinationAndDefinition.destination(),
+        .map(destinationAndDefinition -> destinationHandler.toDestinationSnippetRead(destinationAndDefinition.destination(),
             destinationAndDefinition.definition()))
         .collect(Collectors.toMap(DestinationSnippetRead::getDestinationId, Function.identity()));
   }

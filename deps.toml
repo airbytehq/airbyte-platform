@@ -19,7 +19,7 @@ junit-jupiter = "5.9.2"
 keycloak = "21.1.1" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
 kotlin-logging = "5.1.0"
 kubernetes-client = "6.5.1"
-log4j = "2.17.2"
+log4j = "2.22.1"
 lombok = "1.18.30"
 micronaut = "3.10.1"
 micronaut-data = "3.10.0"
@@ -40,7 +40,7 @@ postgresql = "42.5.4"
 reactor = "3.5.5"
 segment = "2.1.1"
 sentry = "6.14.0"
-slf4j = "1.7.36"
+slf4j = "2.0.9"
 swagger = "1.6.2"
 temporal = "1.22.3"
 v3-swagger = "2.2.16"
@@ -54,7 +54,7 @@ apache-commons-collections = { module = "org.apache.commons:commons-collections4
 apache-commons-lang = { module = "org.apache.commons:commons-lang3", version = "3.11" }
 apache-commons-text = { module = "org.apache.commons:commons-text", version = "1.10.0" }
 apache-cxf-core = { module = "org.apache.cxf:cxf-core", version = "3.4.2" }
-appender-log4j2 = { module = "com.therealvan:appender-log4j2", version = "3.6.0" }
+appender-log4j2 = { module = "com.therealvan:appender-log4j2", version = "5.0.0" }
 assertj-core = { module = "org.assertj:assertj-core", version = "3.21.0" }
 aws-java-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version = "1.12.6" }
 aws-java-sdk-sts = {module = "com.amazonaws:aws-java-sdk-sts", version = "1.12.6"}
@@ -115,11 +115,13 @@ kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version = "1.
 kotlin-test-runner-junit5 = { module = "io.kotlintest:kotlintest-runner-junit5", version = "3.4.2" }
 kubernetes-client = { module = "io.fabric8:kubernetes-client", version.ref = "kubernetes-client" }
 kubernetes-client-api = { module = "io.fabric8:kubernetes-client-api", version.ref = "kubernetes-client" }
+kubernetes-httpclient-okhttp = { module = "io.fabric8:kubernetes-httpclient-okhttp", version.ref = "kubernetes-client" }
 launchdarkly = { module = "com.launchdarkly:launchdarkly-java-server-sdk", version = "6.0.1" }
 log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
 log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
 log4j-impl = { module = "org.apache.logging.log4j:log4j-slf4j-impl", version.ref = "log4j" }
 log4j-over-slf4j = { module = "org.slf4j:log4j-over-slf4j", version.ref = "slf4j" }
+log4j-slf4j2-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j" }
 log4j-web = { module = "org.apache.logging.log4j:log4j-web", version.ref = "log4j" }
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 micrometer-statsd = { module = "io.micrometer:micrometer-registry-statsd", version = "1.9.3" }
@@ -150,6 +152,7 @@ sts = { module = "software.amazon.awssdk:sts", version = "2.20.162" }
 segment-java-analytics = { module = "com.segment.analytics.java:analytics", version.ref = "segment" }
 sentry-java = { module = "io.sentry:sentry", version.ref = "sentry" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+slf4j-simple = { module = "org.slf4j:slf4j-simple", version = "2.0.9" }
 slugify = { module = "com.github.slugify:slugify", version = "2.4" }
 spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.8.2" }
 spring-core = { module = "org.springframework:spring-core", version = "6.0.8" }
@@ -213,7 +216,7 @@ jackson = ["jackson-databind", "jackson-annotations", "jackson-dataformat", "jac
 junit = ["junit-jupiter-api", "junit-jupiter-engine", "junit-jupiter-params", "mockito-junit-jupiter"]
 keycloak-client = ["keycloak-admin-client", "keycloak-client-registration-api"]
 kubernetes-client = ["kubernetes-client-api", "kubernetes-client"]
-log4j = ["log4j-api", "log4j-core", "log4j-impl", "log4j-web"]
+log4j = ["log4j-api", "log4j-core", "log4j-impl", "log4j-slf4j2-impl", "log4j-web", "appender-log4j2"]
 micronaut = ["jakarta-inject", "javax-transaction", "micronaut-http-server-netty", "micronaut-http-client", "micronaut-inject", "micronaut-validation", "micronaut-runtime", "micronaut-management", "micronaut-jaxrs-server", "micronaut-flyway", "micronaut-jdbc-hikari", "micronaut-jooq"]
 micronaut-annotation = ["jakarta-inject", "micronaut-inject-java", "micronaut-openapi"]
 micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor", "micronaut-http-validation", "micronaut-openapi"]
@@ -232,3 +235,4 @@ temporal-telemetry = ["temporal-opentracing"]
 [plugins]
 node-gradle = { id = "com.github.node-gradle.node", version = "3.4.0" }
 nu-studer-jooq = { id = "nu.studer.jooq", version = "8.1" }
+de-undercouch-download = { id = "de.undercouch.download", version = "5.5.0" }

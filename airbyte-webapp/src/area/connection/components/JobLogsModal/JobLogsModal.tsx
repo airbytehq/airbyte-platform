@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { useDebounce } from "react-use";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { ListBox } from "components/ui/ListBox";
+import { Switch } from "components/ui/Switch";
+import { Text } from "components/ui/Text";
 
 import { AttemptDetails } from "area/connection/components/AttemptDetails";
 import { LogSearchInput } from "area/connection/components/JobHistoryItem/LogSearchInput";
-import { useCleanLogs } from "area/connection/components/JobHistoryItem/useCleanLogs";
+import { JobLogOrigins, KNOWN_LOG_ORIGINS, useCleanLogs } from "area/connection/components/JobHistoryItem/useCleanLogs";
 import { VirtualLogs } from "area/connection/components/JobHistoryItem/VirtualLogs";
 import { LinkToAttemptButton } from "area/connection/components/JobLogsModal/LinkToAttemptButton";
 import { useAttemptForJob, useJobInfoWithoutLogs } from "core/api";
@@ -34,7 +36,10 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
     initialAttemptId ?? job.attempts[job.attempts.length - 1].attempt.id
   );
   const jobAttempt = useAttemptForJob(jobId, selectedAttemptId);
-  const logLines = useCleanLogs(jobAttempt);
+  const { logLines, origins } = useCleanLogs(jobAttempt);
+  const [selectedLogOrigins, setSelectedLogOrigins] = useState<JobLogOrigins[] | null>(
+    KNOWN_LOG_ORIGINS.map(({ key }) => key)
+  );
   const firstMatchIndex = 0;
   const lastMatchIndex = matchingLines.length - 1;
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -62,6 +67,33 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
     setInputValue("");
   };
 
+  const logOriginOptions = useMemo<Array<{ label: string; value: JobLogOrigins }>>(
+    () =>
+      KNOWN_LOG_ORIGINS.map(({ key }) => {
+        return { label: formatMessage({ id: `jobHistory.logs.logOrigin.${key}` }), value: key };
+      }),
+    [formatMessage]
+  );
+
+  const onSelectLogOrigin = useCallback(
+    (origin: JobLogOrigins) => {
+      if (!selectedLogOrigins) {
+        setSelectedLogOrigins(origins.filter((o) => o !== origin));
+      } else {
+        setSelectedLogOrigins(
+          selectedLogOrigins.includes(origin)
+            ? selectedLogOrigins.filter((o) => o !== origin)
+            : [...selectedLogOrigins, origin]
+        );
+      }
+    },
+    [origins, selectedLogOrigins]
+  );
+
+  const filteredLogLines = useMemo(() => {
+    return logLines.filter((line) => selectedLogOrigins?.includes(line.domain ?? JobLogOrigins.Other) ?? true);
+  }, [logLines, selectedLogOrigins]);
+
   // Debounces changes to the search input so we don't recompute the matching lines on every keystroke
   useDebounce(
     () => {
@@ -70,9 +102,9 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
       const searchTermLowerCase = inputValue.toLowerCase();
       if (inputValue.length > 0) {
         const matchingLines: number[] = [];
-        logLines.forEach(
-          (line, index) => line.text.toLocaleLowerCase().includes(searchTermLowerCase) && matchingLines.push(index)
-        );
+        filteredLogLines.forEach((line, index) => {
+          return line.text.toLocaleLowerCase().includes(searchTermLowerCase) && matchingLines.push(index);
+        });
         setMatchingLines(matchingLines);
         if (matchingLines.length > 0) {
           setHighlightedMatchIndex(firstMatchIndex);
@@ -85,7 +117,7 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
       }
     },
     150,
-    [inputValue, logLines]
+    [inputValue, filteredLogLines]
   );
 
   const onSearchTermChange = (searchTerm: string) => {
@@ -156,25 +188,42 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemp
           </FlexContainer>
         </FlexContainer>
       </Box>
-      <Box px="md">
-        <FlexContainer alignItems="center">
-          <LogSearchInput
-            ref={searchInputRef}
-            inputValue={inputValue}
-            onSearchInputKeydown={onSearchInputKeydown}
-            onSearchTermChange={onSearchTermChange}
-            highlightedMatchDisplay={highlightedMatchingLineNumber}
-            highlightedMatchIndex={highlightedMatchIndex}
-            matches={matchingLines}
-            scrollToNextMatch={scrollToNextMatch}
-            scrollToPreviousMatch={scrollToPreviousMatch}
-          />
-        </FlexContainer>
-      </Box>
       <JobLogsModalFailureMessage failureSummary={jobAttempt.attempt.failureSummary} />
+      <Box px="md">
+        <LogSearchInput
+          ref={searchInputRef}
+          inputValue={inputValue}
+          onSearchInputKeydown={onSearchInputKeydown}
+          onSearchTermChange={onSearchTermChange}
+          highlightedMatchDisplay={highlightedMatchingLineNumber}
+          highlightedMatchIndex={highlightedMatchIndex}
+          matches={matchingLines}
+          scrollToNextMatch={scrollToNextMatch}
+          scrollToPreviousMatch={scrollToPreviousMatch}
+        />
+      </Box>
+
+      {origins.length > 0 && (
+        <Box px="md">
+          <FlexContainer gap="lg">
+            {logOriginOptions.map((option) => (
+              <label key={option.value}>
+                <FlexContainer key={option.value} alignItems="center" as="span" display="inline-flex" gap="sm">
+                  <Switch
+                    size="xs"
+                    checked={selectedLogOrigins?.includes(option.value) ?? true}
+                    onChange={() => onSelectLogOrigin(option.value)}
+                  />
+                  <Text>{option.label}</Text>
+                </FlexContainer>
+              </label>
+            ))}
+          </FlexContainer>
+        </Box>
+      )}
       <VirtualLogs
         selectedAttempt={selectedAttemptId}
-        logLines={logLines}
+        logLines={filteredLogLines}
         searchTerm={debouncedSearchTerm}
         scrollTo={scrollTo}
         hasFailure={!!jobAttempt.attempt.failureSummary}

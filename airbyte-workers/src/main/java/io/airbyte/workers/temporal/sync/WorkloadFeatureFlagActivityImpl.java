@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync;
@@ -10,7 +10,6 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseWorkloadApi;
-import io.airbyte.featureflag.UseWorkloadOutputDocStore;
 import io.airbyte.featureflag.Workspace;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
@@ -34,9 +33,7 @@ public class WorkloadFeatureFlagActivityImpl implements WorkloadFeatureFlagActiv
 
   @Override
   public Boolean useOutputDocStore(final Input input) {
-    final var context = getContext(input);
-
-    return featureFlagClient.boolVariation(UseWorkloadOutputDocStore.INSTANCE, context);
+    return true;
   }
 
   private Context getContext(final Input input) {

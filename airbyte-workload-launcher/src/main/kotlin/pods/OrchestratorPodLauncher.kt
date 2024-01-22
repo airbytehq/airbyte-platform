@@ -60,7 +60,7 @@ class OrchestratorPodLauncher(
   @Value("\${airbyte.container.orchestrator.data-plane-creds.secret-name}") private val dataPlaneCredsSecretName: String?,
   @Value("\${airbyte.container.orchestrator.data-plane-creds.secret-mount-path}") private val dataPlaneCredsSecretMountPath: String?,
   @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
-  @Named("orchestratorEnvVars") private val envVars: List<EnvVar>,
+  @Named("orchestratorEnvVars") private val sharedEnvVars: List<EnvVar>,
   @Named("orchestratorContainerPorts") private val containerPorts: List<ContainerPort>,
   private val metricClient: MetricClient,
 ) {
@@ -70,6 +70,7 @@ class OrchestratorPodLauncher(
     nodeSelectors: Map<String, String>,
     kubePodInfo: KubePodInfo,
     annotations: Map<String, String>,
+    additionalEnvVars: Map<String, String>,
   ): Pod {
     val volumes: MutableList<Volume> = ArrayList()
     val volumeMounts: MutableList<VolumeMount> = ArrayList()
@@ -164,13 +165,15 @@ class OrchestratorPodLauncher(
         )
         .build()
 
+    val extraKubeEnv = additionalEnvVars.map { (k, v) -> EnvVar(k, v, null) }
+
     val mainContainer =
       ContainerBuilder()
         .withName(KubePodProcess.MAIN_CONTAINER_NAME)
         .withImage(kubePodInfo.mainContainerInfo.image)
         .withImagePullPolicy(kubePodInfo.mainContainerInfo.pullPolicy)
         .withResources(KubePodProcess.getResourceRequirementsBuilder(resourceRequirements).build())
-        .withEnv(envVars)
+        .withEnv(sharedEnvVars + extraKubeEnv)
         .withPorts(containerPorts)
         .withVolumeMounts(volumeMounts)
         .build()
@@ -212,53 +215,37 @@ class OrchestratorPodLauncher(
   }
 
   fun waitForPodInit(
-    labels: Map<String, String>,
+    pod: Pod,
     waitDuration: Duration,
   ) {
-    runKubeCommand(
-      {
-        kubernetesClient.pods()
-          .inNamespace(namespace)
-          .withLabels(labels)
-          .waitUntilCondition(
-            { p: Pod ->
-              (
-                p.status.initContainerStatuses.isNotEmpty() &&
-                  p.status.initContainerStatuses[0].state.waiting == null
-              )
-            },
-            waitDuration.toMinutes(),
-            TimeUnit.MINUTES,
-          )
-      },
-      "wait",
-    )
-
-    val pods =
+    val initializedPod =
       runKubeCommand(
         {
-          kubernetesClient.pods()
-            .inNamespace(namespace)
-            .withLabels(labels)
-            .list()
-            .items
+          kubernetesClient
+            .resource(pod)
+            .waitUntilCondition(
+              { p: Pod ->
+                (
+                  p.status.initContainerStatuses.isNotEmpty() &&
+                    p.status.initContainerStatuses[0].state.waiting == null
+                )
+              },
+              waitDuration.toMinutes(),
+              TimeUnit.MINUTES,
+            )
         },
-        "list",
+        "wait",
       )
 
-    if (pods.isEmpty()) {
-      throw RuntimeException("No pods found for labels: $labels. Nothing to wait for.")
-    }
-
     val containerState =
-      pods[0]
+      initializedPod
         .status
         .initContainerStatuses[0]
         .state
 
     if (containerState.running == null) {
       throw RuntimeException(
-        "Init container for Pod with labels: $labels was not in a running state after: ${waitDuration.toMinutes()} ${TimeUnit.MINUTES}. " +
+        "Init container for Pod: ${pod.fullResourceName} was not in a running state after: ${waitDuration.toMinutes()} ${TimeUnit.MINUTES}. " +
           "Actual container state: $containerState.",
       )
     }

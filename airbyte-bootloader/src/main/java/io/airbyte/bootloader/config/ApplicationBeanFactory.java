@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.bootloader.config;
@@ -8,6 +8,9 @@ import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
@@ -28,6 +31,12 @@ public class ApplicationBeanFactory {
   @Singleton
   public FeatureFlags featureFlags() {
     return new EnvVariableFeatureFlags();
+  }
+
+  @Singleton
+  public MetricClient metricClient() {
+    MetricClientFactory.initialize(MetricEmittingApps.BOOTLOADER);
+    return io.airbyte.metrics.lib.MetricClientFactory.getMetricClient();
   }
 
 }

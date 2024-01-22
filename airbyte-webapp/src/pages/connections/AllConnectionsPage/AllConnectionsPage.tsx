@@ -1,4 +1,4 @@
-import React, { Suspense, useMemo, useState } from "react";
+import React, { Suspense, useDeferredValue, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
@@ -15,12 +15,14 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { ListBox } from "components/ui/ListBox";
 import { PageHeader } from "components/ui/PageHeader";
+import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import { useConnectionList } from "core/api";
+import { useConnectionList, useCurrentWorkspace } from "core/api";
 import { JobStatus, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { naturalComparatorBy } from "core/utils/objects";
+import { useIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./AllConnectionsPage.module.scss";
@@ -167,20 +169,25 @@ export const AllConnectionsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_LIST);
   const isConnectionsSummaryEnabled = useExperiment("connections.summaryView", false);
 
+  const { workspaceId } = useCurrentWorkspace();
+  const canCreateConnection = useIntent("CreateConnection", { workspaceId });
+
   const connectionList = useConnectionList();
   const connections = useMemo(() => connectionList?.connections ?? [], [connectionList?.connections]);
 
-  const availableSourceOptions = getAvailableSourceOptions(connections);
-  const availableDestinationOptions = getAvailableDestinationOptions(connections);
+  const availableSourceOptions = useMemo(() => getAvailableSourceOptions(connections), [connections]);
+  const availableDestinationOptions = useMemo(() => getAvailableDestinationOptions(connections), [connections]);
 
   const [statusFilterSelection, setStatusFilterSelection] = useState<FilterOption>(statusFilterOptions[0]);
   const [sourceFilterSelection, setSourceFilterSelection] = useState<SortableFilterOption>(availableSourceOptions[0]);
   const [destinationFilterSelection, setDestinationFilterSelection] = useState<SortableFilterOption>(
     availableDestinationOptions[0]
   );
-  const hasAnyFilterSelected = [statusFilterSelection, sourceFilterSelection, destinationFilterSelection].some(
-    (selection) => !!selection.value
-  );
+  const [searchFilter, setSearchFilter] = useState<string>("");
+  const debouncedSearchFilter = useDeferredValue(searchFilter);
+  const hasAnyFilterSelected =
+    [statusFilterSelection, sourceFilterSelection, destinationFilterSelection].some((selection) => !!selection.value) ||
+    debouncedSearchFilter;
 
   const filteredConnections = useMemo(() => {
     const statusFilter = statusFilterSelection?.value;
@@ -211,9 +218,34 @@ export const AllConnectionsPage: React.FC = () => {
         return false;
       }
 
+      if (debouncedSearchFilter) {
+        const searchValue = debouncedSearchFilter.toLowerCase();
+
+        const sourceName = connection.source.sourceName.toLowerCase();
+        const destinationName = connection.destination.destinationName.toLowerCase();
+        const connectionName = connection.name.toLowerCase();
+        const sourceDefinitionName = connection.source.name.toLowerCase();
+        const destinationDefinitionName = connection.destination.name.toLowerCase();
+        if (
+          !sourceName.includes(searchValue) &&
+          !destinationName.includes(searchValue) &&
+          !connectionName.includes(searchValue) &&
+          !sourceDefinitionName.includes(searchValue) &&
+          !destinationDefinitionName.includes(searchValue)
+        ) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [connections, statusFilterSelection, sourceFilterSelection, destinationFilterSelection]);
+  }, [
+    connections,
+    debouncedSearchFilter,
+    destinationFilterSelection?.value,
+    sourceFilterSelection?.value,
+    statusFilterSelection?.value,
+  ]);
 
   const connectionsSummary = connections.reduce<Record<SummaryKey, number>>(
     (acc, connection) => {
@@ -270,6 +302,7 @@ export const AllConnectionsPage: React.FC = () => {
                 endComponent={
                   <FlexItem className={styles.alignSelfStart}>
                     <Button
+                      disabled={!canCreateConnection}
                       icon={<Icon type="plus" />}
                       variant="primary"
                       size="sm"
@@ -326,6 +359,9 @@ export const AllConnectionsPage: React.FC = () => {
                         }
                       />
                     </FlexItem>
+                    <FlexItem>
+                      <SearchInput value={searchFilter} onChange={(event) => setSearchFilter(event.target.value)} />
+                    </FlexItem>
                     {hasAnyFilterSelected && (
                       <FlexItem>
                         <ClearFiltersButton
@@ -333,6 +369,7 @@ export const AllConnectionsPage: React.FC = () => {
                             setStatusFilterSelection(statusFilterOptions[0]);
                             setSourceFilterSelection(availableSourceOptions[0]);
                             setDestinationFilterSelection(availableDestinationOptions[0]);
+                            setSearchFilter("");
                           }}
                         />
                       </FlexItem>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.pipeline.handlers
@@ -31,6 +31,7 @@ class SuccessHandler(
       metricPublisher.count(
         WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED,
         MetricAttribute(MeterFilterFactory.WORKLOAD_ID_TAG, io.msg.workloadId),
+        MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()),
         MetricAttribute(MeterFilterFactory.STATUS_TAG, MeterFilterFactory.SUCCESS_STATUS),
       )
       if (io.msg.startTimeMs != null) {
@@ -39,6 +40,7 @@ class SuccessHandler(
           WorkloadLauncherMetricMetadata.PRODUCER_TO_POD_STARTED_LATENCY_MS,
           timeElapsed,
           { it.toDouble() },
+          MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()),
         )
       }
 

@@ -10,7 +10,7 @@ import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOA
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
-import io.airbyte.workload.launcher.pods.KubePodClient
+import io.airbyte.workload.launcher.pods.PodClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -25,14 +25,13 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 @Named("check")
 open class CheckStatusStage(
-  private val kubeClient: KubePodClient,
+  private val podClient: PodClient,
   private val customMetricPublisher: CustomMetricPublisher,
 ) : LaunchStage(customMetricPublisher) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "CheckStatusStage")
   @Instrument(
     start = "WORKLOAD_STAGE_START",
     end = "WORKLOAD_STAGE_DONE",
-    duration = "WORKLOAD_STAGE_DURATION",
     tags = [Tag(key = MeterFilterFactory.STAGE_NAME_TAG, value = "check_status")],
   )
   override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
@@ -40,11 +39,17 @@ open class CheckStatusStage(
   }
 
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
-    if (kubeClient.podsExistForWorkload(input.msg.workloadId)) {
+    val podExists = podClient.podsExistForAutoId(input.msg.autoId)
+
+    if (podExists) {
       logger.info {
         "Found pods running for workload ${input.msg.workloadId}. Setting status to RUNNING and SKIP flag to true."
       }
-      customMetricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_ALREADY_RUNNING, MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId))
+      customMetricPublisher.count(
+        WorkloadLauncherMetricMetadata.WORKLOAD_ALREADY_RUNNING,
+        MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId),
+        MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
+      )
 
       return input.apply {
         skip = true

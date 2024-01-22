@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -11,10 +11,14 @@ import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.generated.ConnectorBuilderProjectApi;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamRead;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadRequestBody;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectTestingValuesUpdate;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
@@ -49,8 +53,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public ConnectorBuilderProjectIdWithWorkspaceId createConnectorBuilderProject(
-                                                                                final ConnectorBuilderProjectWithWorkspaceId project) {
+  public ConnectorBuilderProjectIdWithWorkspaceId createConnectorBuilderProject(final ConnectorBuilderProjectWithWorkspaceId project) {
     return ApiHelper.execute(() -> connectorBuilderProjectsHandler.createConnectorBuilderProject(project));
   }
 
@@ -73,8 +76,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public ConnectorBuilderProjectRead getConnectorBuilderProject(
-                                                                final ConnectorBuilderProjectIdWithWorkspaceId project) {
+  public ConnectorBuilderProjectRead getConnectorBuilderProject(final ConnectorBuilderProjectIdWithWorkspaceId project) {
     return ApiHelper.execute(() -> connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(project));
   }
 
@@ -98,6 +100,17 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   }
 
   @Override
+  @Post(uri = "/read_stream")
+  @Status(HttpStatus.OK)
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @SuppressWarnings("LineLength")
+  public ConnectorBuilderProjectStreamRead readConnectorBuilderProjectStream(final ConnectorBuilderProjectStreamReadRequestBody connectorBuilderProjectStreamReadRequestBody) {
+    return ApiHelper.execute(() -> connectorBuilderProjectsHandler.readConnectorBuilderProjectStream(connectorBuilderProjectStreamReadRequestBody));
+  }
+
+  @Override
   @Post(uri = "/update")
   @Status(HttpStatus.NO_CONTENT)
   @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
@@ -108,6 +121,18 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
       connectorBuilderProjectsHandler.updateConnectorBuilderProject(existingConnectorBuilderProjectWithWorkspaceId);
       return null;
     });
+  }
+
+  @Override
+  @Post(uri = "/update_testing_values")
+  @Status(HttpStatus.OK)
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @SuppressWarnings("LineLength")
+  public JsonNode updateConnectorBuilderProjectTestingValues(final ConnectorBuilderProjectTestingValuesUpdate connectorBuilderProjectTestingValuesUpdate) {
+    return ApiHelper
+        .execute(() -> connectorBuilderProjectsHandler.updateConnectorBuilderProjectTestingValues(connectorBuilderProjectTestingValuesUpdate));
   }
 
 }
