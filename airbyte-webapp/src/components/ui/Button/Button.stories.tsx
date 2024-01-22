@@ -85,9 +85,16 @@ Clear.args = {
   disabled: false,
 };
 
-export const Dark = Template.bind({});
-Dark.args = {
-  variant: "dark",
-  children: "Dark",
+export const PrimaryDark = Template.bind({});
+PrimaryDark.args = {
+  variant: "primaryDark",
+  children: "primaryDark",
+  disabled: false,
+};
+
+export const SecondaryDark = Template.bind({});
+SecondaryDark.args = {
+  variant: "primaryDark",
+  children: "primaryDark",
   disabled: false,
 };
