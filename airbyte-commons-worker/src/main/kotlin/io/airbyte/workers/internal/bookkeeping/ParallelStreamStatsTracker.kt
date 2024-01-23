@@ -148,7 +148,7 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
     failOnInvalidChecksum: Boolean,
   ) {
     val expectedRecordCount = streamTrackers.values.sumOf { getEmittedCount(origin, stateMessage, it).toDouble() }
-    validateStateChecksum(stateMessage, expectedRecordCount, origin, failOnInvalidChecksum)
+    validateStateChecksum(stateMessage, expectedRecordCount, origin, failOnInvalidChecksum, false)
   }
 
   private fun getEmittedCount(
@@ -168,6 +168,7 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
     expectedRecordCount: Double,
     origin: AirbyteMessageOrigin,
     failOnInvalidChecksum: Boolean,
+    includeStreamInLogs: Boolean = true,
   ) {
     if (checksumValidationEnabled) {
       val stats: AirbyteStateStats? =
@@ -181,7 +182,8 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
         if (stateRecordCount != expectedRecordCount) {
           val errorMessage =
             "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: state " +
-              "record count $stateRecordCount does not equal tracked record count $expectedRecordCount."
+              "record count $stateRecordCount does not equal tracked record count $expectedRecordCount" +
+              if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
           logger.error { errorMessage }
           if (failOnInvalidChecksum) {
             throw InvalidChecksumException(errorMessage)
@@ -194,7 +196,8 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
             if (sourceRecordCount != destinationRecordCount) {
               val errorMessage =
                 "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: " +
-                  "state source record count $sourceRecordCount does not equal state destination record count $destinationRecordCount."
+                  "state source record count $sourceRecordCount does not equal state destination record count $destinationRecordCount" +
+                  if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
               logger.error { errorMessage }
               if (failOnInvalidChecksum) {
                 throw InvalidChecksumException(errorMessage)
@@ -203,7 +206,8 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
               logger.info {
                 "${
                   origin.name.lowercase().replaceFirstChar { it.uppercase() }
-                } state message checksum is valid."
+                } state message checksum is valid" +
+                  if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
               }
             }
           }
@@ -211,7 +215,8 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
           logger.info {
             "${
               origin.name.lowercase().replaceFirstChar { it.uppercase() }
-            } state message checksum is valid."
+            } state message checksum is valid" +
+              if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
           }
         }
       }
