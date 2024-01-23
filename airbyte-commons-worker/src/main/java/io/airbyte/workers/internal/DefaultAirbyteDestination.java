@@ -27,6 +27,7 @@ import io.airbyte.workers.process.IntegrationLauncher;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.net.SocketException;
 import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
@@ -130,7 +131,11 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
   @Override
   public void notifyEndOfInput() throws IOException {
     destinationTimeoutMonitor.startNotifyEndOfInputTimer();
-    notifyEndOfInputWithNoTimeoutMonitor();
+    try {
+      notifyEndOfInputWithNoTimeoutMonitor();
+    } catch (SocketException e) {
+      LOGGER.warn("Try to close a destination which is already close");
+    }
     destinationTimeoutMonitor.resetNotifyEndOfInputTimer();
   }
 
