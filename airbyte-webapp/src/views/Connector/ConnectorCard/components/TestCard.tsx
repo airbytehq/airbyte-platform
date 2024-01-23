@@ -11,7 +11,6 @@ import { Text } from "components/ui/Text";
 
 import { SynchronousJobRead } from "core/api/types/AirbyteClient";
 
-import styles from "./TestCard.module.scss";
 import TestingConnectionSuccess from "./TestingConnectionSuccess";
 
 interface IProps {
@@ -53,7 +52,7 @@ export const TestCard: React.FC<IProps> = ({
   };
 
   return (
-    <Card className={styles.cardTest}>
+    <Card>
       <FlexContainer direction="column">
         <FlexContainer alignItems="center">
           <FlexItem grow>

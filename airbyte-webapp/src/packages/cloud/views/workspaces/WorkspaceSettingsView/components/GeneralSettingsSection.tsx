@@ -1,5 +1,5 @@
 import React from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { useIntl } from "react-intl";
 import * as yup from "yup";
 import { SchemaOf } from "yup";
 
@@ -58,29 +58,27 @@ export const GeneralSettingsSection: React.FC = () => {
   };
 
   return (
-    <Card title={<FormattedMessage id="settings.generalSettings" />}>
-      <Card withPadding>
-        <Form<WorkspaceFormValues>
-          defaultValues={{
-            name,
-          }}
-          schema={ValidationSchema}
-          onSubmit={onSubmit}
-          onSuccess={onSuccess}
-          onError={onError}
-          disabled={!canUpdateWorkspace}
-        >
-          <FormControl<WorkspaceFormValues>
-            name="name"
-            fieldType="input"
-            label={formatMessage({ id: "settings.workspaceSettings.updateWorkspaceNameForm.name.label" })}
-            placeholder={formatMessage({
-              id: "settings.workspaceSettings.updateWorkspaceNameForm.name.placeholder",
-            })}
-          />
-          <FormSubmissionButtons submitKey="form.saveChanges" />
-        </Form>
-      </Card>
+    <Card title={formatMessage({ id: "settings.generalSettings" })} titleWithBottomBorder>
+      <Form<WorkspaceFormValues>
+        defaultValues={{
+          name,
+        }}
+        schema={ValidationSchema}
+        onSubmit={onSubmit}
+        onSuccess={onSuccess}
+        onError={onError}
+        disabled={!canUpdateWorkspace}
+      >
+        <FormControl<WorkspaceFormValues>
+          name="name"
+          fieldType="input"
+          label={formatMessage({ id: "settings.workspaceSettings.updateWorkspaceNameForm.name.label" })}
+          placeholder={formatMessage({
+            id: "settings.workspaceSettings.updateWorkspaceNameForm.name.placeholder",
+          })}
+        />
+        <FormSubmissionButtons submitKey="form.saveChanges" />
+      </Form>
     </Card>
   );
 };

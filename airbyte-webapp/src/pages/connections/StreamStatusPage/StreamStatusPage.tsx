@@ -1,5 +1,5 @@
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
-import { Box } from "components/ui/Box";
+import { FlexContainer } from "components/ui/Flex";
 
 import { ConnectionStatusCard } from "./ConnectionStatusCard";
 import { StreamsList } from "./StreamsList";
@@ -9,10 +9,10 @@ export const StreamStatusPage = () => {
   return (
     <ConnectionSyncContextProvider>
       <StreamsListContextProvider>
-        <Box mb="md">
+        <FlexContainer direction="column" gap="md">
           <ConnectionStatusCard />
-        </Box>
-        <StreamsList />
+          <StreamsList />
+        </FlexContainer>
       </StreamsListContextProvider>
     </ConnectionSyncContextProvider>
   );

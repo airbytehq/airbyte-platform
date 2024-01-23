@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { useAuth } from "react-oidc-context";
 
 import { HeadTitle } from "components/common/HeadTitle";
@@ -14,12 +14,13 @@ import { AccountForm } from "./components/AccountForm";
 import { KeycloakAccountForm } from "./components/KeycloakAccountForm";
 
 export const AccountPage: React.FC = () => {
+  const { formatMessage } = useIntl();
   const isKeycloakAuthenticationEnabled = useFeature(FeatureItem.KeycloakAuthentication);
 
   return (
     <>
       <HeadTitle titles={[{ id: "sidebar.settings" }, { id: "settings.account" }]} />
-      <Card title={<FormattedMessage id="settings.accountSettings" />}>
+      <Card title={formatMessage({ id: "settings.accountSettings" })}>
         <Box p="xl">{isKeycloakAuthenticationEnabled ? <KeycloakAccountForm /> : <AccountForm />}</Box>
       </Card>
       {isKeycloakAuthenticationEnabled && <SignoutButton />}

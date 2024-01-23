@@ -1,10 +1,5 @@
 @use "scss/variables";
 
-.header {
-  margin: variables.$spacing-md 0 0;
-  padding: variables.$spacing-md variables.$spacing-xl;
-}
-
 .withScrollbar {
   padding-right: 0;
 }
