@@ -30,12 +30,12 @@
   }
 
   &.blue--outline {
-    border: variables.$border-thick solid colors.$blue;
+    border: variables.$border-thin solid colors.$blue;
     background: colors.$foreground;
   }
 
   &.grey--outline {
-    border: variables.$border-thick solid colors.$grey-300;
+    border: variables.$border-thin solid colors.$grey-300;
     background: colors.$foreground;
   }
 }
