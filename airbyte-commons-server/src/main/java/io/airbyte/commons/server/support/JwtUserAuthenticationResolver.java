@@ -11,7 +11,6 @@ import static io.airbyte.commons.server.support.JwtTokenParser.JWT_USER_NAME;
 
 import io.airbyte.config.AuthProvider;
 import io.airbyte.config.User;
-import io.micronaut.context.annotation.Requires;
 import io.micronaut.security.utils.SecurityService;
 import jakarta.inject.Singleton;
 import java.util.Optional;
@@ -22,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Singleton
 @Slf4j
-@Requires(notEnv = "local-test")
 public class JwtUserAuthenticationResolver implements UserAuthenticationResolver {
 
   private final Optional<SecurityService> securityService;
