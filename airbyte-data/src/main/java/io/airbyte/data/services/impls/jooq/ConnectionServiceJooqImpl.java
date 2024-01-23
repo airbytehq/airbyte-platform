@@ -33,6 +33,7 @@ import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
+import io.airbyte.db.instance.configs.jooq.generated.enums.BackfillPreference;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
@@ -157,7 +158,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
         .from(CONNECTION)
 
         // inner join with all connection_operation rows that match the connection's id
@@ -172,7 +173,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
                 .where(CONNECTION_OPERATION.OPERATION_ID.eq(operationId))))
 
         // group by connection.id so that the groupConcat above works
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -208,7 +209,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
         .from(CONNECTION)
 
         // left join with all connection_operation rows that match the connection's id.
@@ -228,7 +229,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
                     StatusType.deprecated)))
 
         // group by connection.id so that the groupConcat above works
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -270,7 +271,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
             ACTOR.WORKSPACE_ID,
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
         .from(CONNECTION)
 
         // left join with all connection_operation rows that match the connection's id.
@@ -288,7 +289,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
                 : CONNECTION.SOURCE_ID.in(standardSyncsQueryPaginated.sourceId()))
             .and(standardSyncsQueryPaginated.includeDeleted() ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
         // group by connection.id so that the groupConcat above works
-        .groupBy(CONNECTION.ID, ACTOR.WORKSPACE_ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS))
+        .groupBy(CONNECTION.ID, ACTOR.WORKSPACE_ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE))
         .limit(standardSyncsQueryPaginated.pageSize())
         .offset(standardSyncsQueryPaginated.rowOffset())
         .fetch();
@@ -312,13 +313,13 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
         .from(CONNECTION)
         .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
         .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
         .where(CONNECTION.SOURCE_ID.eq(sourceId)
             .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -348,14 +349,14 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
         .from(CONNECTION)
         .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
         .leftJoin(ACTOR).on(actorDefinitionJoinCondition)
         .leftJoin(SCHEMA_MANAGEMENT).on(CONNECTION.ID.eq(SCHEMA_MANAGEMENT.CONNECTION_ID))
         .where(ACTOR.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
             .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -534,7 +535,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   private List<ConfigWithMetadata<StandardSync>> listStandardSyncWithMetadata(final Optional<UUID> configId) throws IOException {
     final Result<Record> result = database.query(ctx -> {
       final SelectJoinStep<Record> query = ctx.select(CONNECTION.asterisk(),
-          SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
+          SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
           .from(CONNECTION)
           // The schema management can be non-existent for a connection id, thus we need to do a left join
           .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID));
@@ -630,7 +631,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
           .execute();
 
       updateOrCreateNotificationConfiguration(standardSync, timestamp, ctx);
-      updateOrCreateSchemaChangeNotificationPreference(standardSync.getConnectionId(), standardSync.getNonBreakingChangesPreference(), timestamp,
+      updateOrCreateSchemaChangePreference(standardSync.getConnectionId(), standardSync.getNonBreakingChangesPreference(),
+          standardSync.getBackfillPreference(), timestamp,
           ctx);
 
       ctx.deleteFrom(CONNECTION_OPERATION)
@@ -680,7 +682,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
           .execute();
 
       updateOrCreateNotificationConfiguration(standardSync, timestamp, ctx);
-      updateOrCreateSchemaChangeNotificationPreference(standardSync.getConnectionId(), standardSync.getNonBreakingChangesPreference(), timestamp,
+      updateOrCreateSchemaChangePreference(standardSync.getConnectionId(), standardSync.getNonBreakingChangesPreference(),
+          standardSync.getBackfillPreference(), timestamp,
           ctx);
 
       for (final UUID operationIdFromStandardSync : standardSync.getOperationIds()) {
@@ -714,10 +717,11 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * foreign key on the Connection Table.
    */
   @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
-  private void updateOrCreateSchemaChangeNotificationPreference(final UUID connectionId,
-                                                                final StandardSync.NonBreakingChangesPreference nonBreakingChangesPreference,
-                                                                final OffsetDateTime timestamp,
-                                                                final DSLContext ctx) {
+  private void updateOrCreateSchemaChangePreference(final UUID connectionId,
+                                                    final StandardSync.NonBreakingChangesPreference nonBreakingChangesPreference,
+                                                    final StandardSync.BackfillPreference backfillPreference,
+                                                    final OffsetDateTime timestamp,
+                                                    final DSLContext ctx) {
     if (nonBreakingChangesPreference == null) {
       return;
     }
@@ -729,12 +733,16 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
           .set(SCHEMA_MANAGEMENT.ID, UUID.randomUUID())
           .set(SCHEMA_MANAGEMENT.CONNECTION_ID, connectionId)
           .set(SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, AutoPropagationStatus.valueOf(nonBreakingChangesPreference.value()))
+          .set(SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE,
+              backfillPreference == null ? BackfillPreference.disabled : BackfillPreference.valueOf(backfillPreference.value()))
           .set(SCHEMA_MANAGEMENT.CREATED_AT, timestamp)
           .set(SCHEMA_MANAGEMENT.UPDATED_AT, timestamp)
           .execute();
     } else if (schemaManagementConfigurations.size() == 1) {
       ctx.update(SCHEMA_MANAGEMENT)
           .set(SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, AutoPropagationStatus.valueOf(nonBreakingChangesPreference.value()))
+          .set(SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE,
+              backfillPreference == null ? BackfillPreference.disabled : BackfillPreference.valueOf(backfillPreference.value()))
           .set(SCHEMA_MANAGEMENT.UPDATED_AT, timestamp)
           .where(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(connectionId))
           .execute();

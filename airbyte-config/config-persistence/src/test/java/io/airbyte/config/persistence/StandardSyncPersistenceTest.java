@@ -537,6 +537,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withStatus(Status.ACTIVE)
         .withGeography(Geography.AUTO)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+        .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(false)
         .withBreakingChange(false);

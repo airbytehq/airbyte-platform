@@ -8,10 +8,6 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.noCondition;
@@ -23,13 +19,11 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
-import io.airbyte.config.ConfigWithMetadata;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSync;
-import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
@@ -43,7 +37,6 @@ import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord;
-import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
@@ -88,6 +81,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
   private final SecretsRepositoryReader secretsRepositoryReader;
   private final SecretsRepositoryWriter secretsRepositoryWriter;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
+  private final ConnectionServiceJooqImpl connectionService;
 
   @VisibleForTesting
   public DestinationServiceJooqImpl(@Named("configDatabase") final Database database,
@@ -96,6 +90,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
                                     final SecretsRepositoryWriter secretsRepositoryWriter,
                                     final SecretPersistenceConfigService secretPersistenceConfigService) {
     this.database = new ExceptionWrappingDatabase(database);
+    this.connectionService = new ConnectionServiceJooqImpl(database);
     this.featureFlagClient = featureFlagClient;
     this.secretsRepositoryReader = secretsRepositoryReader;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
@@ -145,7 +140,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
   @Override
   public StandardDestinationDefinition getDestinationDefinitionFromConnection(final UUID connectionId) {
     try {
-      final StandardSync sync = getStandardSyncWithMetadata(connectionId).getConfig();
+      final StandardSync sync = connectionService.getStandardSync(connectionId);
       return getDestinationDefinitionFromDestination(sync.getDestinationId());
     } catch (final Exception e) {
       throw new RuntimeException(e);
@@ -519,73 +514,6 @@ public class DestinationServiceJooqImpl implements DestinationService {
         .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL, breakingChange.getMigrationDocumentationUrl())
         .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.SCOPED_IMPACT, JSONB.valueOf(Jsons.serialize(breakingChange.getScopedImpact())))
         .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPDATED_AT, timestamp);
-  }
-
-  private ConfigWithMetadata<StandardSync> getStandardSyncWithMetadata(final UUID connectionId) throws IOException, ConfigNotFoundException {
-    final List<ConfigWithMetadata<StandardSync>> result = listStandardSyncWithMetadata(Optional.of(connectionId));
-
-    final boolean foundMoreThanOneConfig = result.size() > 1;
-    if (result.isEmpty()) {
-      throw new ConfigNotFoundException(ConfigSchema.STANDARD_SYNC, connectionId.toString());
-    } else if (foundMoreThanOneConfig) {
-      throw new IllegalStateException(String.format("Multiple %s configs found for ID %s: %s", ConfigSchema.STANDARD_SYNC, connectionId, result));
-    }
-    return result.get(0);
-  }
-
-  private List<ConfigWithMetadata<StandardSync>> listStandardSyncWithMetadata(final Optional<UUID> configId) throws IOException {
-    final Result<Record> result = database.query(ctx -> {
-      final SelectJoinStep<Record> query = ctx.select(CONNECTION.asterisk(),
-          SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
-          .from(CONNECTION)
-          // The schema management can be non-existent for a connection id, thus we need to do a left join
-          .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID));
-      if (configId.isPresent()) {
-        return query.where(CONNECTION.ID.eq(configId.get())).fetch();
-      }
-      return query.fetch();
-    });
-
-    final List<ConfigWithMetadata<StandardSync>> standardSyncs = new ArrayList<>();
-    for (final Record record : result) {
-      final List<NotificationConfigurationRecord> notificationConfigurationRecords = database.query(ctx -> {
-        if (configId.isPresent()) {
-          return ctx.selectFrom(NOTIFICATION_CONFIGURATION)
-              .where(NOTIFICATION_CONFIGURATION.CONNECTION_ID.eq(configId.get()))
-              .fetch();
-        } else {
-          return ctx.selectFrom(NOTIFICATION_CONFIGURATION)
-              .fetch();
-        }
-      });
-
-      final StandardSync standardSync =
-          DbConverter.buildStandardSync(record, connectionOperationIds(record.get(CONNECTION.ID)), notificationConfigurationRecords);
-      if (ScheduleHelpers.isScheduleTypeMismatch(standardSync)) {
-        throw new RuntimeException("unexpected schedule type mismatch");
-      }
-      standardSyncs.add(new ConfigWithMetadata<>(
-          record.get(CONNECTION.ID).toString(),
-          ConfigSchema.STANDARD_SYNC.name(),
-          record.get(CONNECTION.CREATED_AT).toInstant(),
-          record.get(CONNECTION.UPDATED_AT).toInstant(),
-          standardSync));
-    }
-    return standardSyncs;
-  }
-
-  private List<UUID> connectionOperationIds(final UUID connectionId) throws IOException {
-    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
-        .from(CONNECTION_OPERATION)
-        .where(CONNECTION_OPERATION.CONNECTION_ID.eq(connectionId))
-        .fetch());
-
-    final List<UUID> ids = new ArrayList<>();
-    for (final Record record : result) {
-      ids.add(record.get(CONNECTION_OPERATION.OPERATION_ID));
-    }
-
-    return ids;
   }
 
   private <T> List<T> listStandardActorDefinitions(final ActorType actorType,

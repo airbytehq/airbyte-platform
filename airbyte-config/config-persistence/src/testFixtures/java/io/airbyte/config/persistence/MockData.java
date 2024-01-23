@@ -664,6 +664,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+        .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(false);
 
@@ -684,6 +685,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+        .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(false);
 
@@ -704,6 +706,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+        .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(false);
 
@@ -724,6 +727,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+        .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(false);
 
@@ -744,6 +748,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+        .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(false);
 
@@ -764,6 +769,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+        .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(false);
 
