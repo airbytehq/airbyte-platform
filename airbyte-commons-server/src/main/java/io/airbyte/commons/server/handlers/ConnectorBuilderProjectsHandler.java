@@ -89,6 +89,9 @@ public class ConnectorBuilderProjectsHandler {
   private final JsonSecretsProcessor secretsProcessor;
   private final ConnectorBuilderServerApi connectorBuilderServerApiClient;
 
+  static final String SPEC_FIELD = "spec";
+  static final String CONNECTION_SPECIFICATION_FIELD = "connection_specification";
+
   @Inject
   public ConnectorBuilderProjectsHandler(final ConfigRepository configRepository,
                                          final CdkVersionProvider cdkVersionProvider,
@@ -197,6 +200,7 @@ public class ConnectorBuilderProjectsHandler {
       response.setDeclarativeManifest(new DeclarativeManifestRead()
           .manifest(project.getManifestDraft())
           .isDraft(true));
+      response.setTestingValues(maskSecrets(project.getTestingValues(), project.getManifestDraft()));
     } else if (project.getActorDefinitionId() != null) {
       final DeclarativeManifest declarativeManifest = configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(
           project.getActorDefinitionId());
@@ -205,11 +209,12 @@ public class ConnectorBuilderProjectsHandler {
           .manifest(declarativeManifest.getManifest())
           .version(declarativeManifest.getVersion())
           .description(declarativeManifest.getDescription()));
+      response.setTestingValues(maskSecrets(project.getTestingValues(), declarativeManifest.getManifest()));
     }
     return response;
   }
 
-  private static ConnectorBuilderProjectRead buildConnectorBuilderProjectVersionManifestRead(final ConnectorBuilderProjectVersionedManifest project) {
+  private ConnectorBuilderProjectRead buildConnectorBuilderProjectVersionManifestRead(final ConnectorBuilderProjectVersionedManifest project) {
     return new ConnectorBuilderProjectRead()
         .builderProject(new ConnectorBuilderProjectDetailsRead()
             .builderProjectId(project.getBuilderProjectId())
@@ -221,7 +226,19 @@ public class ConnectorBuilderProjectsHandler {
             .isDraft(false)
             .manifest(project.getManifest())
             .version(project.getManifestVersion())
-            .description(project.getManifestDescription()));
+            .description(project.getManifestDescription()))
+        .testingValues(maskSecrets(project.getTestingValues(), project.getManifest()));
+  }
+
+  private JsonNode maskSecrets(final JsonNode testingValues, final JsonNode manifest) {
+    final JsonNode spec = manifest.get(SPEC_FIELD);
+    if (spec != null) {
+      final JsonNode connectionSpecification = spec.get(CONNECTION_SPECIFICATION_FIELD);
+      if (connectionSpecification != null && testingValues != null) {
+        return secretsProcessor.prepareSecretsForOutput(testingValues, connectionSpecification);
+      }
+    }
+    return testingValues;
   }
 
   public ConnectorBuilderProjectReadList listConnectorBuilderProjects(final WorkspaceIdRequestBody workspaceIdRequestBody)

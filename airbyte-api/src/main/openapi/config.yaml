@@ -4929,6 +4929,8 @@ components:
           $ref: "#/components/schemas/ConnectorBuilderProjectDetailsRead"
         declarativeManifest:
           $ref: "#/components/schemas/DeclarativeManifestRead"
+        testingValues:
+          $ref: "#/components/schemas/SourceConfiguration"
     ConnectorBuilderProjectReadList:
       type: object
       required:
