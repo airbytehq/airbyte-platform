@@ -868,7 +868,7 @@
   "settings.applications.table.createdAt": "Created",
   "settings.applications.table.generateToken": "Generate access token",
   "settings.applications.table.delete": "Delete",
-  "settings.applications.tooltip": "Your access tokens have the same permissions that you do. <learnMoreLink>Learn more</learnMoreLink>.",
+  "settings.applications.tooltip": "Your applications have the same permissions that you do. <learnMoreLink>Learn more</learnMoreLink>.",
   "settings.application.create": "Create an application",
   "settings.application.name": "Name your application",
   "settings.application.name.placeholder": "Enter name",
