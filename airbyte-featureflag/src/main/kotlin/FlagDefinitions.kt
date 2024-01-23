@@ -37,8 +37,6 @@ object CatalogCanonicalJson : Temporary<Boolean>(key = "catalog-canonical-json",
 
 object EarlySyncEnabled : Temporary<Boolean>(key = "billing.early-sync-enabled", default = false)
 
-object FetchEarlySyncJobs : Temporary<Boolean>(key = "billing.fetch-early-sync-jobs", default = false)
-
 object ShouldRunOnGkeDataplane : Temporary<Boolean>(key = "should-run-on-gke-dataplane", default = false)
 
 object ShouldRunOnExpandedGkeDataplane : Temporary<Boolean>(key = "should-run-on-expanded-gke-dataplane", default = false)
@@ -106,8 +104,6 @@ object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideAc
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
 
 object UseIconUrlInApiResponse : Temporary<Boolean>(key = "connectors.useIconUrlInApiResponse", default = false)
-
-object SunsetFCP : Temporary<Boolean>(key = "platform.sunset-fcp", default = false)
 
 object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides", default = "")
 
