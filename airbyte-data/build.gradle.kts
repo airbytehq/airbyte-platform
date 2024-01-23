@@ -19,6 +19,7 @@ dependencies {
     implementation(libs.bundles.micronaut.data.jdbc)
     implementation(libs.guava)
     implementation(project(":airbyte-commons"))
+    implementation(project(":airbyte-commons-auth"))
     implementation(project(":airbyte-commons-protocol"))
     implementation(project(":airbyte-config:config-models"))
     implementation(project(":airbyte-config:config-secrets"))
@@ -27,6 +28,8 @@ dependencies {
     implementation(project(":airbyte-json-validation"))
     implementation(project(":airbyte-featureflag"))
     implementation(libs.airbyte.protocol)
+    // For Keycloak Application Management
+    implementation(libs.bundles.keycloak.client)
 
     testImplementation(libs.bundles.micronaut.test)
     testImplementation(libs.postgresql)
@@ -35,6 +38,9 @@ dependencies {
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
+
+    testImplementation(libs.bundles.micronaut.test)
+    testImplementation(libs.bundles.junit)
 }
 
 // Even though Kotlin is excluded on Spotbugs, this project

@@ -28,6 +28,7 @@ public class AirbyteKeycloakConfiguration {
   String basePath;
   String airbyteRealm;
   String realm;
+  String clientRealm;
   String clientId;
   String redirectUri;
   String webClientId;
