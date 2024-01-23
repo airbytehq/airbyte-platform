@@ -7,7 +7,7 @@ import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair
-import io.airbyte.workers.general.ReplicationFeatureFlagReader
+import io.airbyte.workers.context.ReplicationFeatureFlags
 
 /**
  * Track stats during a sync.
@@ -21,7 +21,6 @@ interface SyncStatsTracker {
   /**
    * There are several assumptions here:
    *
-   *f
    * - Assume the estimate is a whole number and not a sum i.e. each estimate replaces the previous
    * estimate.
    *
@@ -153,5 +152,5 @@ interface SyncStatsTracker {
 
   fun getUnreliableStateTimingMetrics(): Boolean
 
-  fun setReplicationFeatureFlagReader(replicationFeatureFlagReader: ReplicationFeatureFlagReader)
+  fun setReplicationFeatureFlags(replicationFeatureFlags: ReplicationFeatureFlags?): Unit
 }

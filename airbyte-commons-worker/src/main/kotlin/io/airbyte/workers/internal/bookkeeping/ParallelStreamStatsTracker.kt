@@ -10,8 +10,8 @@ import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStateStats
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair
 import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.workers.context.ReplicationFeatureFlags
 import io.airbyte.workers.exception.InvalidChecksumException
-import io.airbyte.workers.general.ReplicationFeatureFlagReader
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Prototype
 import jakarta.inject.Named
@@ -31,7 +31,7 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
   private val streamTrackers: MutableMap<AirbyteStreamNameNamespacePair, StreamStatsTracker> = ConcurrentHashMap()
   private val syncStatsCounters = SyncStatsCounters()
   private var expectedEstimateType: Type? = null
-  private var replicationFeatureFlagReader: ReplicationFeatureFlagReader? = null
+  private var replicationFeatureFlags: ReplicationFeatureFlags? = null
 
   @Volatile
   private var hasEstimatesErrors = false
@@ -69,7 +69,7 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
   }
 
   override fun updateSourceStatesStats(stateMessage: AirbyteStateMessage) {
-    val failOnInvalidChecksum = replicationFeatureFlagReader?.readReplicationFeatureFlags()?.failOnInvalidChecksum ?: false
+    val failOnInvalidChecksum = replicationFeatureFlags?.failOnInvalidChecksum ?: false
 
     when (stateMessage.type) {
       AirbyteStateMessage.AirbyteStateType.GLOBAL -> {
@@ -100,7 +100,7 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
   }
 
   override fun updateDestinationStateStats(stateMessage: AirbyteStateMessage) {
-    val failOnInvalidChecksum = replicationFeatureFlagReader?.readReplicationFeatureFlags()?.failOnInvalidChecksum ?: false
+    val failOnInvalidChecksum = replicationFeatureFlags?.failOnInvalidChecksum ?: false
 
     when (stateMessage.type) {
       AirbyteStateMessage.AirbyteStateType.GLOBAL -> {
@@ -367,8 +367,8 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
 
   override fun getUnreliableStateTimingMetrics() = hasSourceStateErrors()
 
-  override fun setReplicationFeatureFlagReader(replicationFeatureFlagReader: ReplicationFeatureFlagReader) {
-    this.replicationFeatureFlagReader = replicationFeatureFlagReader
+  override fun setReplicationFeatureFlags(replicationFeatureFlags: ReplicationFeatureFlags?) {
+    this.replicationFeatureFlags = replicationFeatureFlags
   }
 
   private fun hasSourceStateErrors(): Boolean = streamTrackers.any { it.value.streamStats.unreliableStateOperations.get() }
