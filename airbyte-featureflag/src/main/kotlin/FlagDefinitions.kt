@@ -31,10 +31,6 @@ object ContainerOrchestratorJavaOpts : Temporary<String>(key = "container-orches
 
 object NewTrialPolicyEnabled : Temporary<Boolean>(key = "billing.newTrialPolicy", default = false)
 
-object CanonicalCatalogSchema : Temporary<Boolean>(key = "canonical-catalog-schema", default = false)
-
-object CatalogCanonicalJson : Temporary<Boolean>(key = "catalog-canonical-json", default = false)
-
 object EarlySyncEnabled : Temporary<Boolean>(key = "billing.early-sync-enabled", default = false)
 
 object ShouldRunOnGkeDataplane : Temporary<Boolean>(key = "should-run-on-gke-dataplane", default = false)
