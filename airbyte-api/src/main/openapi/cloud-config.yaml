@@ -1619,6 +1619,7 @@ components:
       enum:
         - instance_admin # Permission to do anything (all permissions below)
         - workspace_owner # Permission to own a workspace (and being billed for it)
+        - workspace_admin # Permission to edit a workspace (all permissions below)
         # - workspace_permissions_editor # Permission to change the permissions of a workspace
         # - workspace_editor # Permission to edit a workspace content (all permissions below)
         # - sources_editor # Permission to edit sources from a workspace

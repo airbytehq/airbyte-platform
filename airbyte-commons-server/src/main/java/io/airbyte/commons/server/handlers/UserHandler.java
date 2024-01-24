@@ -30,8 +30,6 @@ import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.config.InitialUserConfiguration;
 import io.airbyte.commons.enums.Enums;
-import io.airbyte.commons.server.errors.InternalServerKnownException;
-import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.support.UserAuthenticationResolver;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Organization;
@@ -105,9 +103,6 @@ public class UserHandler {
    */
   public UserRead createUser(final UserCreate userCreate) throws IOException, ConfigNotFoundException, JsonValidationException {
 
-    final UserAuthIdRequestBody userAuthIdRequestBody = new UserAuthIdRequestBody().authUserId(userCreate.getAuthUserId());
-    assertAuthIdHasNotBeenUsed(userAuthIdRequestBody);
-
     final UUID userId = userCreate.getUserId() != null ? userCreate.getUserId() : uuidGenerator.get();
     final User user = new User()
         .withName(userCreate.getName())
@@ -120,23 +115,6 @@ public class UserHandler {
         .withNews(userCreate.getNews());
     userPersistence.writeUser(user);
     return buildUserRead(userId);
-  }
-
-  private void assertAuthIdHasNotBeenUsed(final UserAuthIdRequestBody userAuthIdRequestBody) {
-    UserRead userRead = null;
-    try {
-      userRead = getUserByAuthId(userAuthIdRequestBody);
-    } catch (final ConfigNotFoundException e) {
-      // This is "expected" if we want to create a new user.
-      LOGGER.debug("Unable to find user with auth ID {}.", userAuthIdRequestBody.getAuthUserId());
-    } catch (final IOException | JsonValidationException e) {
-      LOGGER.error("Error checking if auth id in unique: {}.", e.toString());
-      throw new InternalServerKnownException("Error performing auth id checks..", e);
-    }
-    if (userRead != null) {
-      // The user has already existed. Avoid to create a dup user.
-      throw new ValueConflictKnownException("Auth Id was already used to sign up");
-    }
   }
 
   /**
