@@ -42,15 +42,24 @@ export const SettingsPage: React.FC = () => {
       <FlexContainer direction="row" gap="2xl">
         <SettingsNavigation>
           <SettingsNavigationBlock title={formatMessage({ id: "settings.userSettings" })}>
-            <SettingsLink name={formatMessage({ id: "settings.account" })} to={SettingsRoutePaths.Account} />
+            <SettingsLink
+              iconType="user"
+              name={formatMessage({ id: "settings.account" })}
+              to={SettingsRoutePaths.Account}
+            />
           </SettingsNavigationBlock>
           {apiTokenManagement && (
-            <SettingsLink name={formatMessage({ id: "settings.applications" })} to={SettingsRoutePaths.Applications} />
+            <SettingsLink
+              iconType="grid"
+              name={formatMessage({ id: "settings.applications" })}
+              to={SettingsRoutePaths.Applications}
+            />
           )}
           {canViewWorkspaceSettings && (
             <SettingsNavigationBlock title={formatMessage({ id: "settings.workspaceSettings" })}>
               {multiWorkspaceUI && (
                 <SettingsLink
+                  iconType="gear"
                   name={formatMessage({ id: "settings.generalSettings" })}
                   to={SettingsRoutePaths.Workspace}
                 />
@@ -58,11 +67,14 @@ export const SettingsPage: React.FC = () => {
               {!multiWorkspaceUI && (
                 <>
                   <SettingsLink
+                    iconType="source"
                     count={countNewSourceVersion}
                     name={formatMessage({ id: "tables.sources" })}
                     to={SettingsRoutePaths.Source}
                   />
+
                   <SettingsLink
+                    iconType="destination"
                     count={countNewDestinationVersion}
                     name={formatMessage({ id: "tables.destinations" })}
                     to={SettingsRoutePaths.Destination}
@@ -70,12 +82,18 @@ export const SettingsPage: React.FC = () => {
                 </>
               )}
               <SettingsLink
+                iconType="bell"
                 name={formatMessage({ id: "settings.notifications" })}
                 to={SettingsRoutePaths.Notifications}
               />
-              <SettingsLink name={formatMessage({ id: "settings.metrics" })} to={SettingsRoutePaths.Metrics} />
+              <SettingsLink
+                iconType="chart"
+                name={formatMessage({ id: "settings.metrics" })}
+                to={SettingsRoutePaths.Metrics}
+              />
               {multiWorkspaceUI && isAccessManagementEnabled && (
                 <SettingsLink
+                  iconType="community"
                   name={formatMessage({ id: "settings.accessManagement" })}
                   to={`${SettingsRoutePaths.Workspace}/${SettingsRoutePaths.AccessManagement}`}
                 />
@@ -85,11 +103,13 @@ export const SettingsPage: React.FC = () => {
           {multiWorkspaceUI && organizationId && canViewOrganizationSettings && (
             <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
               <SettingsLink
+                iconType="gear"
                 name={formatMessage({ id: "settings.generalSettings" })}
                 to={SettingsRoutePaths.Organization}
               />
               {isAccessManagementEnabled && (
                 <SettingsLink
+                  iconType="community"
                   name={formatMessage({ id: "settings.accessManagement" })}
                   to={`${SettingsRoutePaths.Organization}/${SettingsRoutePaths.AccessManagement}`}
                 />
@@ -99,11 +119,13 @@ export const SettingsPage: React.FC = () => {
           {multiWorkspaceUI && canViewWorkspaceSettings && (
             <SettingsNavigationBlock title={formatMessage({ id: "settings.instanceSettings" })}>
               <SettingsLink
+                iconType="source"
                 count={countNewSourceVersion}
                 name={formatMessage({ id: "tables.sources" })}
                 to={SettingsRoutePaths.Source}
               />
               <SettingsLink
+                iconType="destination"
                 count={countNewDestinationVersion}
                 name={formatMessage({ id: "tables.destinations" })}
                 to={SettingsRoutePaths.Destination}

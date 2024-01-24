@@ -47,15 +47,21 @@ export const CloudSettingsPage: React.FC = () => {
       <FlexContainer direction="row" gap="2xl">
         <SettingsNavigation>
           <SettingsNavigationBlock title={formatMessage({ id: "settings.userSettings" })}>
-            <SettingsLink name={formatMessage({ id: "settings.account" })} to={CloudSettingsRoutePaths.Account} />
+            <SettingsLink
+              iconType="user"
+              name={formatMessage({ id: "settings.account" })}
+              to={CloudSettingsRoutePaths.Account}
+            />
             {isTokenManagementEnabled && (
               <SettingsLink
+                iconType="grid"
                 name={formatMessage({ id: "settings.applications" })}
                 to={CloudSettingsRoutePaths.Applications}
               />
             )}
             {isOsanoActive() && (
               <SettingsButton
+                iconType="parameters"
                 onClick={() => showOsanoDrawer()}
                 name={formatMessage({ id: "settings.cookiePreferences" })}
               />
@@ -63,25 +69,41 @@ export const CloudSettingsPage: React.FC = () => {
           </SettingsNavigationBlock>
           <SettingsNavigationBlock title={formatMessage({ id: "settings.workspaceSettings" })}>
             <SettingsLink
+              iconType="gear"
               name={formatMessage({ id: "settings.generalSettings" })}
               to={CloudSettingsRoutePaths.Workspace}
             />
             {supportsDataResidency && (
               <SettingsLink
+                iconType="globe"
                 name={formatMessage({ id: "settings.dataResidency" })}
                 to={CloudSettingsRoutePaths.DataResidency}
               />
             )}
-            <SettingsLink name={formatMessage({ id: "tables.sources" })} to={CloudSettingsRoutePaths.Source} />
             <SettingsLink
+              iconType="source"
+              name={formatMessage({ id: "tables.sources" })}
+              to={CloudSettingsRoutePaths.Source}
+            />
+            <SettingsLink
+              iconType="destination"
               name={formatMessage({ id: "tables.destinations" })}
               to={CloudSettingsRoutePaths.Destination}
             />
+            {supportsCloudDbtIntegration && (
+              <SettingsLink
+                iconType="integrations"
+                name={formatMessage({ id: "settings.integrationSettings" })}
+                to={CloudSettingsRoutePaths.DbtCloud}
+              />
+            )}
             <SettingsLink
+              iconType="community"
               name={formatMessage({ id: "settings.accessManagement" })}
               to={CloudSettingsRoutePaths.AccessManagement}
             />
             <SettingsLink
+              iconType="bell"
               name={formatMessage({ id: "settings.notifications" })}
               to={CloudSettingsRoutePaths.Notifications}
             />
@@ -89,23 +111,17 @@ export const CloudSettingsPage: React.FC = () => {
           {organization && canViewOrgSettings && (
             <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
               <SettingsLink
+                iconType="gear"
                 name={formatMessage({ id: "settings.generalSettings" })}
                 to={CloudSettingsRoutePaths.Organization}
               />
               {isSsoEnabled && (
                 <SettingsLink
+                  iconType="community"
                   name={formatMessage({ id: "settings.accessManagement" })}
                   to={`${CloudSettingsRoutePaths.Organization}/${CloudSettingsRoutePaths.AccessManagement}`}
                 />
               )}
-            </SettingsNavigationBlock>
-          )}
-          {supportsCloudDbtIntegration && (
-            <SettingsNavigationBlock title={formatMessage({ id: "settings.integrationSettings" })}>
-              <SettingsLink
-                name={formatMessage({ id: "settings.integrationSettings.dbtCloudSettings" })}
-                to={CloudSettingsRoutePaths.DbtCloud}
-              />
             </SettingsNavigationBlock>
           )}
         </SettingsNavigation>

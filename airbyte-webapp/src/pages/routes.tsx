@@ -111,7 +111,7 @@ const MainViewRoutes: React.FC = () => {
             {canViewWorkspaceSettings && multiWorkspaceUI && (
               <Route path={SettingsRoutePaths.Workspace} element={<GeneralWorkspaceSettingsPage />} />
             )}
-            {canViewWorkspaceSettings && !multiWorkspaceUI && (
+            {canViewWorkspaceSettings && (
               <>
                 <Route path={SettingsRoutePaths.Source} element={<SourcesPage />} />
                 <Route path={SettingsRoutePaths.Destination} element={<DestinationsPage />} />

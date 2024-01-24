@@ -19,7 +19,7 @@ export const HelpDropdown: React.FC = () => {
         {
           as: "a",
           href: links.docsLink,
-          icon: <Icon type="docs" size="lg" />,
+          icon: <Icon type="docs" />,
           displayName: formatMessage({ id: "sidebar.documentation" }),
         },
         {

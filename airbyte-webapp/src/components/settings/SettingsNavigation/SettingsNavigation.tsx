@@ -4,6 +4,7 @@ import { NavLink } from "react-router-dom";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon, IconType } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import styles from "./SettingsNavigation.module.scss";
@@ -38,12 +39,13 @@ export const SettingsNavigationBlock: React.FC<PropsWithChildren<SettingsNavigat
 
 interface SettingsLinkProps {
   name: string | React.ReactNode;
+  iconType: IconType;
   count?: number;
   id?: string;
   to: string;
 }
 
-export const SettingsLink: React.FC<SettingsLinkProps> = ({ count = 0, name, id, to }) => {
+export const SettingsLink: React.FC<SettingsLinkProps> = ({ count = 0, name, id, to, iconType }) => {
   return (
     <NavLink
       end
@@ -55,6 +57,7 @@ export const SettingsLink: React.FC<SettingsLinkProps> = ({ count = 0, name, id,
         })
       }
     >
+      <Icon type={iconType} size="sm" className={styles.settingsNavigation__linkIcon} />
       {name}
       {count > 0 && <div className={styles.settingsNavigation__counter}>{count}</div>}
     </NavLink>
@@ -65,11 +68,13 @@ interface SettingsButtonProps {
   name: string | React.ReactNode;
   id?: string;
   onClick: () => void;
+  iconType: IconType;
 }
 
-export const SettingsButton: React.FC<SettingsButtonProps> = ({ name, id, onClick }) => {
+export const SettingsButton: React.FC<SettingsButtonProps> = ({ name, id, onClick, iconType }) => {
   return (
     <button onClick={onClick} className={styles.settingsNavigation__button} data-test-id={id}>
+      <Icon type={iconType} size="sm" className={styles.settingsNavigation__buttonIcon} />
       {name}
     </button>
   );
