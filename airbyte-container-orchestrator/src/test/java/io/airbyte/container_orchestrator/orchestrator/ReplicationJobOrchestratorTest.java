@@ -76,9 +76,11 @@ class ReplicationJobOrchestratorTest {
 
     final ReplicationOutput actualReplicationOutput =
         replicationJobOrchestrator.runWithWorkloadEnabled(replicationWorker, new ReplicationInput().withConnectionId(UUID.randomUUID()),
-            mock(Path.class));
+            mock(Path.class), WORKLOAD_ID);
 
     assertEquals(replicationOutput, actualReplicationOutput);
+
+    replicationJobOrchestrator.updateStatusInWorkloadApi(actualReplicationOutput, WORKLOAD_ID);
     verify(workloadApi).workloadCancel(new WorkloadCancelRequest(WORKLOAD_ID, "Replication job has been cancelled", "orchestrator"));
   }
 
@@ -104,9 +106,10 @@ class ReplicationJobOrchestratorTest {
 
     final ReplicationOutput actualReplicationOutput =
         replicationJobOrchestrator.runWithWorkloadEnabled(replicationWorker, new ReplicationInput().withConnectionId(UUID.randomUUID()),
-            mock(Path.class));
+            mock(Path.class), WORKLOAD_ID);
 
     assertEquals(replicationOutput, actualReplicationOutput);
+    replicationJobOrchestrator.updateStatusInWorkloadApi(actualReplicationOutput, WORKLOAD_ID);
     verify(workloadApi).workloadSuccess(new WorkloadSuccessRequest(WORKLOAD_ID));
   }
 
@@ -132,9 +135,10 @@ class ReplicationJobOrchestratorTest {
 
     final ReplicationOutput actualReplicationOutput =
         replicationJobOrchestrator.runWithWorkloadEnabled(replicationWorker, new ReplicationInput().withConnectionId(UUID.randomUUID()),
-            mock(Path.class));
+            mock(Path.class), WORKLOAD_ID);
 
     assertEquals(replicationOutput, actualReplicationOutput);
+    replicationJobOrchestrator.updateStatusInWorkloadApi(actualReplicationOutput, WORKLOAD_ID);
     verify(workloadApi).workloadFailure(new WorkloadFailureRequest(WORKLOAD_ID, null, null));
   }
 
@@ -161,7 +165,7 @@ class ReplicationJobOrchestratorTest {
     when(replicationWorker.run(any(), any())).thenThrow(new WorkerException("test"));
 
     assertThrows(WorkerException.class, () -> replicationJobOrchestrator.runWithWorkloadEnabled(replicationWorker,
-        new ReplicationInput().withConnectionId(UUID.randomUUID()), mock(Path.class)));
+        new ReplicationInput().withConnectionId(UUID.randomUUID()), mock(Path.class), WORKLOAD_ID));
     verify(workloadApi)
         .workloadFailure(new WorkloadFailureRequest(WORKLOAD_ID, "airbyte_platform", "Something went wrong within the airbyte platform"));
   }

@@ -18,7 +18,6 @@ import io.airbyte.featureflag.Destination;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Source;
-import io.airbyte.featureflag.WorkloadHeartbeatRate;
 import io.airbyte.featureflag.WorkloadPollingInterval;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -44,8 +43,6 @@ import io.micronaut.http.HttpStatus;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -209,9 +206,6 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   }
 
   private ReplicationOutput getReplicationOutput(final String workloadId) throws DocStoreAccessException {
-    final String outputLocation = orchestratorNameGenerator.getOrchestratorOutputLocation(input.getJobRunConfig().getJobId(),
-        input.getJobRunConfig().getAttemptId());
-
     final Optional<ReplicationOutput> output;
 
     output = fetchReplicationOutput(workloadId, (location) -> {
@@ -228,16 +222,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
 
   private Optional<ReplicationOutput> fetchReplicationOutput(final String location,
                                                              final Function<String, Optional<ReplicationOutput>> replicationFetcher) {
-    final Context context = getFeatureFlagContext();
-    final int workloadHeartbeatRate = featureFlagClient.intVariation(WorkloadHeartbeatRate.INSTANCE, context);
-    final Instant cutoffTime = Instant.now().plus(workloadHeartbeatRate, ChronoUnit.SECONDS);
-    do {
-      final Optional<ReplicationOutput> output = replicationFetcher.apply(location);
-      if (output.isPresent()) {
-        return output;
-      }
-    } while (Instant.now().isBefore(cutoffTime));
-    return Optional.empty();
+    return replicationFetcher.apply(location);
   }
 
   private Context getFeatureFlagContext() {
