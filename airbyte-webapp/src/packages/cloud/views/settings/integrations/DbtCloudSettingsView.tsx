@@ -61,47 +61,51 @@ export const DbtCloudSettingsView: React.FC = () => {
   };
 
   return (
-    <Card title={formatMessage({ id: "settings.integrationSettings.dbtCloudSettings" })} titleWithBottomBorder>
-      <FlexContainer direction="column">
-        <Text color="grey300">
-          <FormattedMessage
-            id="settings.integrationSettings.dbtCloudSettings.form.description"
-            values={{
-              lnk: (node: React.ReactNode) => <ExternalLink href={links.dbtCloudIntegrationDocs}>{node}</ExternalLink>,
-            }}
-          />
-        </Text>
-        <Form<ServiceTokenFormValues>
-          defaultValues={{ serviceToken: "" }}
-          onSubmit={onSubmit}
-          onSuccess={onSuccess}
-          onError={onError}
-          schema={ServiceTokenFormSchema}
-          disabled={!canUpdateWorkspace}
-        >
-          <FormControl
-            name="serviceToken"
-            fieldType="input"
-            type="password"
-            disabled={hasExistingToken}
-            label={formatMessage({ id: "settings.integrationSettings.dbtCloudSettings.form.serviceTokenLabel" })}
-            placeholder={formatMessage({
-              id: hasExistingToken
-                ? "settings.integrationSettings.dbtCloudSettings.form.serviceTokenAlreadyExist"
-                : "settings.integrationSettings.dbtCloudSettings.form.serviceTokenInputHidden",
-            })}
-          />
-          {hasExistingToken ? (
-            <FlexContainer justifyContent="flex-end">
-              <Button variant="danger" type="button" onClick={onDeleteClick}>
-                <FormattedMessage id="settings.integrationSettings.dbtCloudSettings.actions.delete" />
-              </Button>
-            </FlexContainer>
-          ) : (
-            <FormSubmissionButtons submitKey="form.saveChanges" />
-          )}
-        </Form>
-      </FlexContainer>
+    <Card title={<FormattedMessage id="settings.integrationSettings.dbtCloudSettings" />}>
+      <Card withPadding>
+        <FlexContainer direction="column">
+          <Text color="grey300">
+            <FormattedMessage
+              id="settings.integrationSettings.dbtCloudSettings.form.description"
+              values={{
+                lnk: (node: React.ReactNode) => (
+                  <ExternalLink href={links.dbtCloudIntegrationDocs}>{node}</ExternalLink>
+                ),
+              }}
+            />
+          </Text>
+          <Form<ServiceTokenFormValues>
+            defaultValues={{ serviceToken: "" }}
+            onSubmit={onSubmit}
+            onSuccess={onSuccess}
+            onError={onError}
+            schema={ServiceTokenFormSchema}
+            disabled={!canUpdateWorkspace}
+          >
+            <FormControl
+              name="serviceToken"
+              fieldType="input"
+              type="password"
+              disabled={hasExistingToken}
+              label={formatMessage({ id: "settings.integrationSettings.dbtCloudSettings.form.serviceTokenLabel" })}
+              placeholder={formatMessage({
+                id: hasExistingToken
+                  ? "settings.integrationSettings.dbtCloudSettings.form.serviceTokenAlreadyExist"
+                  : "settings.integrationSettings.dbtCloudSettings.form.serviceTokenInputHidden",
+              })}
+            />
+            {hasExistingToken ? (
+              <FlexContainer justifyContent="flex-end">
+                <Button variant="danger" type="button" onClick={onDeleteClick}>
+                  <FormattedMessage id="settings.integrationSettings.dbtCloudSettings.actions.delete" />
+                </Button>
+              </FlexContainer>
+            ) : (
+              <FormSubmissionButtons submitKey="form.saveChanges" />
+            )}
+          </Form>
+        </FlexContainer>
+      </Card>
     </Card>
   );
 };

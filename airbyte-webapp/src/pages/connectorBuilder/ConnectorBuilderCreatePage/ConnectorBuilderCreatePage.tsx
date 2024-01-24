@@ -227,7 +227,7 @@ interface TileProps {
 
 const Tile: React.FC<TileProps> = ({ image, title, description, buttonText, buttonProps, onClick, dataTestId }) => {
   return (
-    <Card className={styles.tile} noPadding>
+    <Card className={styles.tile}>
       <FlexContainer direction="column" gap="xl" alignItems="center">
         <FlexContainer justifyContent="center" className={styles.tileImage}>
           {image}

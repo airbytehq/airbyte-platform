@@ -34,7 +34,7 @@ export const OperationsSectionCard: React.FC = () => {
   }
 
   return (
-    <Card>
+    <Card withPadding>
       <FlexContainer direction="column" gap="lg">
         {supportsNormalization || supportsTransformations ? (
           <Heading as="h2" size="sm">

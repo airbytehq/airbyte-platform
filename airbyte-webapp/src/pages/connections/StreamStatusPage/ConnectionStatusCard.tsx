@@ -1,7 +1,6 @@
 import { FormattedMessage } from "react-intl";
 
 import { ConnectionSyncButtons } from "components/connection/ConnectionSync/ConnectionSyncButtons";
-import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 
@@ -9,7 +8,6 @@ import { HistoricalOverview } from "area/connection/components";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperiment } from "hooks/services/Experiment";
 
-import styles from "./ConnectionStatusCard.module.scss";
 import { ConnectionStatusMessages } from "./ConnectionStatusMessages";
 import { ConnectionStatusOverview } from "./ConnectionStatusOverview";
 
@@ -23,13 +21,14 @@ export const ConnectionStatusCard: React.FC = () => {
   const showHistoricalOverview = useExperiment("connection.streamCentricUI.historicalOverview", false);
 
   return (
-    <Card noPadding>
-      <Box p="xl" className={styles.header}>
+    <Card
+      title={
         <FlexContainer justifyContent="space-between" alignItems="center">
           <ConnectionStatusOverview />
           <ConnectionSyncButtons buttonText={<FormattedMessage id="connection.startSync" values={{ streamCount }} />} />
         </FlexContainer>
-      </Box>
+      }
+    >
       <ConnectionStatusMessages />
       {showHistoricalOverview && <HistoricalOverview />}
     </Card>

@@ -1,5 +1,12 @@
 @use "scss/variables";
 
+.deleteBlock {
+  padding: variables.$spacing-xl;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .text {
   white-space: pre-line;
 }

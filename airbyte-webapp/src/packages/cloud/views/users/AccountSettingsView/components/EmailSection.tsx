@@ -20,7 +20,7 @@ export const EmailSection: React.FC = () => {
   const user = useCurrentUser();
 
   return (
-    <Card>
+    <Card withPadding>
       <Form<EmailFormValues>
         defaultValues={{
           email: user.email,

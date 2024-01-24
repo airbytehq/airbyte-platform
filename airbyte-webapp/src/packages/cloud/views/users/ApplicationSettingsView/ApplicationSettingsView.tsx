@@ -86,26 +86,29 @@ export const ApplicationSettingsView = () => {
   }, [columnHelper]);
 
   return (
-    <Card>
-      <FlexContainer direction="row" justifyContent="space-between">
-        <FlexContainer gap="none">
-          <Heading as="h2">
-            <FormattedMessage id="settings.applications" />
-          </Heading>
-          <InfoTooltip>
-            <Text inverseColor align="center">
-              <FormattedMessage
-                id="settings.applications.tooltip"
-                values={{
-                  // todo: add link to docs once available
-                  learnMoreLink: (children) => <ExternalLink href="">{children}</ExternalLink>,
-                }}
-              />
-            </Text>
-          </InfoTooltip>
+    <Card
+      title={
+        <FlexContainer direction="row" justifyContent="space-between">
+          <FlexContainer gap="none">
+            <Heading as="h2">
+              <FormattedMessage id="settings.applications" />
+            </Heading>
+            <InfoTooltip>
+              <Text inverseColor align="center">
+                <FormattedMessage
+                  id="settings.applications.tooltip"
+                  values={{
+                    // todo: add link to docs once available
+                    learnMoreLink: (children) => <ExternalLink href="">{children}</ExternalLink>,
+                  }}
+                />
+              </Text>
+            </InfoTooltip>
+          </FlexContainer>
+          <CreateApplicationControl />
         </FlexContainer>
-        <CreateApplicationControl />
-      </FlexContainer>
+      }
+    >
       <Box py="lg" px="xl">
         {applications.length ? (
           <Table columns={columns} data={applications} variant="light" />

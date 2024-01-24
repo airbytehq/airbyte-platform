@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
@@ -23,7 +23,6 @@ import { ConnectorCardValues } from "views/Connector/ConnectorForm";
 import styles from "./SourceSettingsPage.module.scss";
 
 export const SourceSettingsPage: React.FC = () => {
-  const { formatMessage } = useIntl();
   const source = useGetSourceFromParams();
   const connectionList = useConnectionList({ sourceId: [source.sourceId] });
   const connectionsWithSource = useMemo(() => connectionList?.connections ?? [], [connectionList]);
@@ -80,7 +79,7 @@ export const SourceSettingsPage: React.FC = () => {
     <div className={styles.content}>
       <ConnectorCard
         formType="source"
-        title={formatMessage({ id: "sources.sourceSettings" })}
+        title={<FormattedMessage id="sources.sourceSettings" />}
         isEditMode
         formId={formId}
         availableConnectorDefinitions={[sourceDefinition]}

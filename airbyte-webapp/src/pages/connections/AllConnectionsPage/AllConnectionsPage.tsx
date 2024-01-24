@@ -316,7 +316,7 @@ export const AllConnectionsPage: React.FC = () => {
               />
             }
           >
-            <Card noPadding>
+            <Card>
               {isConnectionsSummaryEnabled && (
                 <Box pt="lg" pb="lg" pl="lg">
                   <FlexContainer justifyContent="flex-start">

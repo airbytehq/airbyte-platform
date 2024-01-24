@@ -76,7 +76,7 @@ const ConnectorBuilderForkPageInner: React.FC = () => {
     <FlexContainer direction="column" gap="2xl" className={styles.container}>
       <AirbyteTitle title={<FormattedMessage id="connectorBuilder.forkPage.prompt" />} />
       <FlexContainer direction="column" gap="xl">
-        <Card className={styles.form} noPadding>
+        <Card className={styles.form}>
           <FlexContainer direction="column" gap="lg">
             <ControlLabels label="Select a connector">
               <ListBox<BuilderProject>

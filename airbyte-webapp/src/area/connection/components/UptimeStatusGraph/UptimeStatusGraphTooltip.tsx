@@ -60,28 +60,30 @@ export const UptimeStatusGraphTooltip: ContentType<number, string> = ({ active, 
 
   return (
     <Card>
-      <Box pb="md">
-        <Text size="md">{new Date(date).toLocaleDateString()}</Text>
-      </Box>
+      <Box p="lg">
+        <Box pb="md">
+          <Text size="md">{new Date(date).toLocaleDateString()}</Text>
+        </Box>
 
-      {Object.entries(statusesByCount ?? []).map(([_status, count]) => {
-        const status = _status as PresentingStatuses;
-        return count === 0 ? null : (
-          <FlexContainer key={status} alignItems="center" gap="sm" className={styles.statusLine}>
-            <FlexItem>
-              <ConnectionStatusIndicator withBox status={status} />
-            </FlexItem>
-            <FlexItem>
-              <Text size="lg">
-                <strong>{count}</strong>
-              </Text>
-            </FlexItem>
-            <FlexItem>
-              <Text size="md">{formatMessage({ id: MESSAGE_BY_STATUS[status] })}</Text>
-            </FlexItem>
-          </FlexContainer>
-        );
-      })}
+        {Object.entries(statusesByCount ?? []).map(([_status, count]) => {
+          const status = _status as PresentingStatuses;
+          return count === 0 ? null : (
+            <FlexContainer key={status} alignItems="center" gap="sm" className={styles.statusLine}>
+              <FlexItem>
+                <ConnectionStatusIndicator withBox status={status} />
+              </FlexItem>
+              <FlexItem>
+                <Text size="lg">
+                  <strong>{count}</strong>
+                </Text>
+              </FlexItem>
+              <FlexItem>
+                <Text size="md">{formatMessage({ id: MESSAGE_BY_STATUS[status] })}</Text>
+              </FlexItem>
+            </FlexContainer>
+          );
+        })}
+      </Box>
     </Card>
   );
 };

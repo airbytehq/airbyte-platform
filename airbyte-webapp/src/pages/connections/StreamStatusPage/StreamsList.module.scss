@@ -3,10 +3,6 @@
 @use "scss/variables";
 @use "scss/z-indices";
 
-.cardHeader {
-  border-bottom: variables.$border-thin solid colors.$grey-100;
-}
-
 .clickableHeader {
   background-color: inherit;
   border: none;

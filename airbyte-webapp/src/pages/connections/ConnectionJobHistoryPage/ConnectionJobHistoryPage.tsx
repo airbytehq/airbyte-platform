@@ -14,7 +14,6 @@ import { Card } from "components/ui/Card";
 import { ClearFiltersButton } from "components/ui/ClearFiltersButton";
 import { DatePicker } from "components/ui/DatePicker/DatePicker";
 import { FlexContainer } from "components/ui/Flex";
-import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { ListBox, Option } from "components/ui/ListBox";
@@ -115,13 +114,11 @@ export const ConnectionJobHistoryPage: React.FC = () => {
   return (
     <PageContainer centered>
       <ConnectionSyncContextProvider>
-        <Card noPadding>
-          <Box p="xl">
+        <Card
+          title={
             <FlexContainer direction="column">
               <FlexContainer justifyContent="space-between" alignItems="center">
-                <Heading as="h5" size="sm">
-                  <FormattedMessage id="connectionForm.jobHistory" />
-                </Heading>
+                <FormattedMessage id="connectionForm.jobHistory" />
                 <ConnectionSyncButtons buttonText={<FormattedMessage id="connection.startSync" />} />
               </FlexContainer>
               <FlexContainer alignItems="center">
@@ -173,7 +170,8 @@ export const ConnectionJobHistoryPage: React.FC = () => {
                 </span>
               </FlexContainer>
             </FlexContainer>
-          </Box>
+          }
+        >
           {isLoading ? (
             <Box py="2xl">
               <FlexContainer justifyContent="center">

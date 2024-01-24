@@ -11,36 +11,29 @@ import { useDeleteModal } from "hooks/useDeleteModal";
 
 import styles from "./DeleteBlock.module.scss";
 
-interface DeleteBlockProps {
+interface IProps {
   type: "source" | "destination" | "connection";
   onDelete: () => Promise<unknown>;
   modalAdditionalContent?: React.ReactNode;
 }
 
-export const DeleteBlock: React.FC<DeleteBlockProps> = ({ type, onDelete }) => {
+export const DeleteBlock: React.FC<IProps> = ({ type, onDelete }) => {
   const { mode } = useConnectionFormService();
   const onDeleteButtonClick = useDeleteModal(type, onDelete);
 
   return (
-    <Card>
-      <FlexContainer direction="row" justifyContent="space-between" alignItems="center" className={styles.text}>
-        <FlexContainer direction="column">
-          <Text size="lg">
-            <FormattedMessage id={`tables.${type}Delete.title`} />
-          </Text>
-          <Text size="xs" color="grey">
-            <FormattedMessage id={`tables.${type}DataDelete`} />
-          </Text>
-        </FlexContainer>
-        <Button
-          variant="danger"
-          onClick={onDeleteButtonClick}
-          data-id="open-delete-modal"
-          disabled={mode === "readonly"}
-        >
-          <FormattedMessage id={`tables.${type}Delete`} />
-        </Button>
+    <Card className={styles.deleteBlock}>
+      <FlexContainer direction="column" className={styles.text}>
+        <Text size="lg">
+          <FormattedMessage id={`tables.${type}Delete.title`} />
+        </Text>
+        <Text size="xs" color="grey">
+          <FormattedMessage id={`tables.${type}DataDelete`} />
+        </Text>
       </FlexContainer>
+      <Button variant="danger" onClick={onDeleteButtonClick} data-id="open-delete-modal" disabled={mode === "readonly"}>
+        <FormattedMessage id={`tables.${type}Delete`} />
+      </Button>
     </Card>
   );
 };

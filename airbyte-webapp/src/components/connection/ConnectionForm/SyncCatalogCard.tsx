@@ -91,26 +91,24 @@ export const SyncCatalogCard: React.FC = () => {
   }, [locationState?.action, locationState?.namespace, locationState?.streamName, filteredStreams]);
 
   return (
-    <Card noPadding>
-      <Box m="xl">
-        <FlexContainer justifyContent="space-between" alignItems="center">
-          <Heading as="h2" size="sm">
-            <FormattedMessage id={mode === "readonly" ? "form.dataSync.readonly" : "form.dataSync"} />
-          </Heading>
-          {mode !== "readonly" && (
-            <Button
-              onClick={refreshSchema}
-              type="button"
-              variant="secondary"
-              data-testid="refresh-source-schema-btn"
-              disabled={isSubmitting}
-              icon={<Icon type="sync" />}
-            >
-              <FormattedMessage id="connection.updateSchema" />
-            </Button>
-          )}
-        </FlexContainer>
-      </Box>
+    <Card>
+      <FlexContainer justifyContent="space-between" alignItems="center" className={styles.header}>
+        <Heading as="h2" size="sm">
+          <FormattedMessage id={mode === "readonly" ? "form.dataSync.readonly" : "form.dataSync"} />
+        </Heading>
+        {mode !== "readonly" && (
+          <Button
+            onClick={refreshSchema}
+            type="button"
+            variant="secondary"
+            data-testid="refresh-source-schema-btn"
+            disabled={isSubmitting}
+            icon={<Icon type="sync" />}
+          >
+            <FormattedMessage id="connection.updateSchema" />
+          </Button>
+        )}
+      </FlexContainer>
       <LoadingBackdrop loading={isSubmitting}>
         <SyncCatalogStreamSearch onSearch={setSearchString} />
         <DisabledStreamsSwitch checked={hideDisabledStreams} onChange={toggleHideDisabledStreams} />

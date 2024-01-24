@@ -1,10 +1,11 @@
 import React, { useEffect } from "react";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
 import { AnySchema } from "yup";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
+import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 
 import { useCurrentWorkspace, useUpdateOrganization, useOrganization } from "core/api";
@@ -22,12 +23,11 @@ const organizationValidationSchema = yup.object().shape<Record<keyof Organizatio
 type OrganizationFormValues = Pick<OrganizationUpdateRequestBody, "organizationName" | "email">;
 
 export const GeneralOrganizationSettingsPage: React.FC = () => {
-  const { formatMessage } = useIntl();
   const { organizationId } = useCurrentWorkspace();
 
   return (
-    <Card title={formatMessage({ id: "settings.generalSettings" })} titleWithBottomBorder>
-      {organizationId && <OrganizationSettingsForm organizationId={organizationId} />}
+    <Card title={<FormattedMessage id="settings.generalSettings" />}>
+      <Box p="xl">{organizationId && <OrganizationSettingsForm organizationId={organizationId} />}</Box>
     </Card>
   );
 };

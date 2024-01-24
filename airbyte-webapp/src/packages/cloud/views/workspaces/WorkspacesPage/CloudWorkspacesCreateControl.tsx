@@ -77,7 +77,7 @@ export const CloudWorkspacesCreateControl: React.FC = () => {
   return (
     <>
       {isEditMode ? (
-        <Card className={styles.animate}>
+        <Card withPadding className={styles.animate}>
           <Form<CreateCloudWorkspaceFormValues>
             defaultValues={{
               name: "",

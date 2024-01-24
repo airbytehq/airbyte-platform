@@ -1,12 +1,11 @@
 import React from "react";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { SchemaOf } from "yup";
 import * as yup from "yup";
 
 import { Form } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
-import { Card } from "components/ui/Card";
-import { FlexContainer } from "components/ui/Flex";
+import { CollapsibleCard } from "components/ui/CollapsibleCard";
 
 import { DbtCloudJob, isSameJob, useDbtIntegration } from "core/api/cloud";
 import { DbtCloudJobInfo } from "core/api/types/CloudApi";
@@ -90,17 +89,15 @@ export const DbtCloudTransformationsForm: React.FC<DbtCloudTransformationsFormPr
       onError={onError}
       trackDirtyChanges
     >
-      <Card title={formatMessage({ id: "connection.dbtCloudJobs.cardTitle" })} collapsible>
-        <FlexContainer direction="column">
-          <DbtCloudTransformationsFormControls
-            availableDbtCloudJobs={availableDbtCloudJobs}
-            hasDbtIntegration={hasDbtIntegration}
-          />
-          {hasDbtIntegration || jobs.length || dbtCloudJobs.length ? (
-            <FormSubmissionButtons submitKey="form.saveChanges" />
-          ) : null}
-        </FlexContainer>
-      </Card>
+      <CollapsibleCard title={<FormattedMessage id="connection.dbtCloudJobs.cardTitle" />} collapsible>
+        <DbtCloudTransformationsFormControls
+          availableDbtCloudJobs={availableDbtCloudJobs}
+          hasDbtIntegration={hasDbtIntegration}
+        />
+        {hasDbtIntegration || jobs.length || dbtCloudJobs.length ? (
+          <FormSubmissionButtons submitKey="form.saveChanges" />
+        ) : null}
+      </CollapsibleCard>
     </Form>
   );
 };

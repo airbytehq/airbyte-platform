@@ -38,7 +38,7 @@ import { WarningMessage } from "../ConnectorForm/components/WarningMessage";
 // since some of props are used in both components, and some of them used just as a prop-drill
 // https://github.com/airbytehq/airbyte/issues/18553
 interface ConnectorCardBaseProps {
-  title?: string;
+  title?: React.ReactNode;
   headerBlock?: React.ReactNode;
   description?: React.ReactNode;
   full?: boolean;

@@ -70,35 +70,37 @@ export const DataResidencyView: React.FC = () => {
   };
 
   return (
-    <Card title={formatMessage({ id: "settings.defaultDataResidency" })} titleWithBottomBorder>
-      <FlexContainer direction="column">
-        <Text color="grey300" size="sm">
-          <FormattedMessage
-            id="settings.defaultDataResidencyDescription"
-            values={{
-              lnk: (node: React.ReactNode) => <ExternalLink href={links.cloudAllowlistIPsLink}>{node}</ExternalLink>,
+    <Card title={<FormattedMessage id="settings.defaultDataResidency" />}>
+      <Card withPadding>
+        <FlexContainer direction="column">
+          <Text color="grey300" size="sm">
+            <FormattedMessage
+              id="settings.defaultDataResidencyDescription"
+              values={{
+                lnk: (node: React.ReactNode) => <ExternalLink href={links.cloudAllowlistIPsLink}>{node}</ExternalLink>,
+              }}
+            />
+          </Text>
+          <Form<DefaultDataResidencyFormValues>
+            defaultValues={{
+              defaultGeography: workspace.defaultGeography,
             }}
-          />
-        </Text>
-        <Form<DefaultDataResidencyFormValues>
-          defaultValues={{
-            defaultGeography: workspace.defaultGeography,
-          }}
-          schema={schema}
-          onSubmit={handleSubmit}
-          onSuccess={onSuccess}
-          onError={onError}
-          disabled={!canUpdateWorkspace}
-        >
-          <DataResidencyDropdown<DefaultDataResidencyFormValues>
-            labelId="settings.defaultGeography"
-            description={fieldDescription}
-            name="defaultGeography"
-            inline
-          />
-          <FormSubmissionButtons submitKey="form.saveChanges" />
-        </Form>
-      </FlexContainer>
+            schema={schema}
+            onSubmit={handleSubmit}
+            onSuccess={onSuccess}
+            onError={onError}
+            disabled={!canUpdateWorkspace}
+          >
+            <DataResidencyDropdown<DefaultDataResidencyFormValues>
+              labelId="settings.defaultGeography"
+              description={fieldDescription}
+              name="defaultGeography"
+              inline
+            />
+            <FormSubmissionButtons submitKey="form.saveChanges" />
+          </Form>
+        </FlexContainer>
+      </Card>
     </Card>
   );
 };

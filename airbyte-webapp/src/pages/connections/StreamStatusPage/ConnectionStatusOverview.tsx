@@ -8,7 +8,6 @@ import {
 } from "components/connection/ConnectionStatusIndicator";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
-import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
@@ -36,41 +35,35 @@ export const ConnectionStatusOverview: React.FC = () => {
     <FlexContainer alignItems="center" gap="sm">
       <ConnectionStatusIndicator status={status} withBox loading={isRunning} />
       <Box ml="md">
-        <FlexContainer alignItems="center" gap="sm">
-          <Heading as="h5" size="sm" data-testid="connection-status-text">
-            <FormattedMessage id={MESSAGE_BY_STATUS[status]} />
-          </Heading>
-          {status === ConnectionStatusIndicatorStatus.OnTrack && (
-            <Tooltip
-              containerClassName={styles.onTrackInfo}
-              control={<Icon type="infoOutline" color="action" size="sm" />}
-              placement="top"
-            >
-              <FormattedMessage
-                id={
-                  lastSyncJobStatus === JobStatus.failed
-                    ? "connection.status.onTrack.failureDescription"
-                    : "connection.status.onTrack.delayedDescription"
-                }
-              />
-            </Tooltip>
-          )}
-          <Box as="span" ml="md">
-            <Text color="grey" bold size="sm" as="span">
-              {status === ConnectionStatusIndicatorStatus.OnTime && nextSync && (
-                <FormattedMessage id="connection.stream.status.nextSync" values={{ sync: dayjs(nextSync).fromNow() }} />
+        <span data-testid="connection-status-text">
+          <FormattedMessage id={MESSAGE_BY_STATUS[status]} />
+        </span>
+        {status === ConnectionStatusIndicatorStatus.OnTrack && (
+          <Tooltip
+            containerClassName={styles.onTrackInfo}
+            control={<Icon type="infoOutline" color="action" size="sm" />}
+            placement="top"
+          >
+            <FormattedMessage
+              id={
+                lastSyncJobStatus === JobStatus.failed
+                  ? "connection.status.onTrack.failureDescription"
+                  : "connection.status.onTrack.delayedDescription"
+              }
+            />
+          </Tooltip>
+        )}
+        <Box as="span" ml="md">
+          <Text color="grey" bold size="sm" as="span">
+            {status === ConnectionStatusIndicatorStatus.OnTime && nextSync && (
+              <FormattedMessage id="connection.stream.status.nextSync" values={{ sync: dayjs(nextSync).fromNow() }} />
+            )}
+            {(status === ConnectionStatusIndicatorStatus.Late || status === ConnectionStatusIndicatorStatus.OnTrack) &&
+              nextSync && (
+                <FormattedMessage id="connection.stream.status.nextTry" values={{ sync: dayjs(nextSync).fromNow() }} />
               )}
-              {(status === ConnectionStatusIndicatorStatus.Late ||
-                status === ConnectionStatusIndicatorStatus.OnTrack) &&
-                nextSync && (
-                  <FormattedMessage
-                    id="connection.stream.status.nextTry"
-                    values={{ sync: dayjs(nextSync).fromNow() }}
-                  />
-                )}
-            </Text>
-          </Box>
-        </FlexContainer>
+          </Text>
+        </Box>
       </Box>
     </FlexContainer>
   );

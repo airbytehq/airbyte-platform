@@ -67,7 +67,7 @@ export const SelectSource: React.FC = () => {
         {!searchParams.get(SOURCE_DEFINITION_PARAM) && (
           <Box px="md">
             <PageContainer centered>
-              <Card>
+              <Card withPadding>
                 <Heading as="h2">
                   <FormattedMessage id="connectionForm.defineSource" />
                 </Heading>

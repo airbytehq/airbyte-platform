@@ -9,7 +9,6 @@ import { StreamStatusIndicator } from "components/connection/StreamStatusIndicat
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
-import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
@@ -106,15 +105,14 @@ export const StreamsList = () => {
   const showTable = connection.status !== ConnectionStatus.inactive;
 
   return (
-    <Card noPadding>
-      <Box p="xl" className={styles.cardHeader}>
+    <Card
+      title={
         <FlexContainer justifyContent="space-between" alignItems="center">
-          <Heading as="h5" size="sm">
-            <FormattedMessage id="connection.stream.status.title" />
-          </Heading>
+          <FormattedMessage id="connection.stream.status.title" />
           <StreamSearchFiltering className={styles.search} />
         </FlexContainer>
-      </Box>
+      }
+    >
       <FlexContainer direction="column" gap="sm">
         <div className={styles.tableContainer} data-survey="streamcentric">
           {showTable && (
@@ -122,6 +120,7 @@ export const StreamsList = () => {
               columns={columns}
               data={streamEntries}
               variant="inBlock"
+              className={styles.table}
               getRowClassName={(data) => classNames({ [styles.syncing]: data.state?.isRunning })}
               sorting={false}
             />

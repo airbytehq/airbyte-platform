@@ -46,7 +46,7 @@ export const NameSection: React.FC<NameSectionProps> = ({ updateName }) => {
   };
 
   return (
-    <Card>
+    <Card withPadding>
       <Form<NameFormValues>
         onSubmit={({ name }) => updateName(name)}
         onError={onError}

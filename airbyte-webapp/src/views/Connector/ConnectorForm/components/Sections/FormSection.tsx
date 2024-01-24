@@ -11,6 +11,7 @@ import { FormBlock, GroupDetails } from "core/form/types";
 
 import { AuthSection } from "./auth/AuthSection";
 import { ConditionSection } from "./ConditionSection";
+import styles from "./FormSection.module.scss";
 import { PropertySection } from "./PropertySection";
 import { SectionContainer } from "./SectionContainer";
 import { DisplayType, useGroupsAndSections } from "./useGroupsAndSections";
@@ -47,7 +48,7 @@ interface FormSectionProps {
   rootLevel?: boolean;
   headerBlock?: {
     elements: React.ReactNode;
-    title?: string;
+    title?: React.ReactNode;
     description?: React.ReactNode;
   };
   disabled?: boolean;
@@ -110,16 +111,18 @@ export const FormSection: React.FC<FormSectionProps> = ({
       // if a headerBlock is defined, the first card gets it assigned
       // TODO if the type dropdown gets removed from the form, this case can probably be removed
       return (
-        <Card key={index} title={headerBlock.title} description={headerBlock.description} titleWithBottomBorder>
-          {headerBlock.elements}
-          {sectionElements}
+        <Card key={index} title={headerBlock.title} description={headerBlock.description}>
+          <div className={styles.cardForm}>
+            {headerBlock.elements}
+            {sectionElements}
+          </div>
         </Card>
       );
     }
 
     return (
       <Card key={index}>
-        <FlexContainer direction="column" gap="xl">
+        <FlexContainer className={styles.cardForm} direction="column" gap="xl">
           {sectionGroup.title && !collapsedNamedGroup && (
             <Heading as="h2" size="sm">
               {sectionGroup.title}

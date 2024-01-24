@@ -84,7 +84,7 @@ export const WorkspacesCreateControl: React.FC<OrganizationWorkspacesCreateContr
   return (
     <>
       {isEditMode ? (
-        <Card className={styles.animate}>
+        <Card withPadding className={styles.animate}>
           <Form<CreateWorkspaceFormValues>
             defaultValues={{
               name: "",

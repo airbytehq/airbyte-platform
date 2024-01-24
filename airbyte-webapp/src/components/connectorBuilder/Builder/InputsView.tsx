@@ -152,7 +152,7 @@ const SortableInput: React.FC<SortableInputProps> = ({ input, isInferred, id, se
 
   return (
     <div ref={setNodeRef} style={style}>
-      <Card bodyClassName={styles.inputCard} {...(canEdit ? attributes : {})} {...(canEdit ? listeners : {})}>
+      <Card className={styles.inputCard} {...(canEdit ? attributes : {})} {...(canEdit ? listeners : {})}>
         {canEdit && <Icon type="drag" color="action" />}
         <Text size="lg" className={styles.itemLabel}>
           {input.definition.title || input.key}
