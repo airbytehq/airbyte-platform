@@ -52,7 +52,13 @@ airbyte:
   workload-launcher:
     geography: ${WORKLOAD_LAUNCHER_GEOGRAPHY:auto}
     workload-start-timeout: ${WORKLOAD_LAUNCHER_WORKLOAD_START_TIMEOUT:PT5H}
-    parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
+    temporal:
+      default-queue:
+        parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
+        workflow-parallelism: ${WORKLOAD_LAUNCHER_WORKFLOW_PARALLELISM:10}
+      high-priority-queue:
+        parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
+        workflow-parallelism: ${WORKLOAD_LAUNCHER_WORKFLOW_PARALLELISM:10}
   secret:
     persistence: ${SECRET_PERSISTENCE}
     store:

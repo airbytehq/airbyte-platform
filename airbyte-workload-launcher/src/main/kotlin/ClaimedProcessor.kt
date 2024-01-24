@@ -37,7 +37,7 @@ class ClaimedProcessor(
   private val pipe: LaunchPipeline,
   private val metricPublisher: CustomMetricPublisher,
   @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
-  @Value("\${airbyte.workload-launcher.parallelism}") parallelism: Int,
+  @Value("\${airbyte.workload-launcher.temporal.default-queue.parallelism}") parallelism: Int,
 ) {
   private val scheduler = Schedulers.newParallel("process-claimed-scheduler", parallelism)
 

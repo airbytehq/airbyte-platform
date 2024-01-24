@@ -18,6 +18,7 @@ import io.micronaut.context.annotation.Property
 import io.temporal.activity.ActivityOptions
 import io.temporal.client.WorkflowClient
 import io.temporal.opentracing.OpenTracingWorkerInterceptor
+import io.temporal.worker.Worker
 import io.temporal.worker.WorkerFactory
 import io.temporal.worker.WorkerFactoryOptions
 import io.temporal.worker.WorkerOptions
@@ -51,14 +52,11 @@ class TemporalBeanFactory {
     temporalProxyHelper: TemporalProxyHelper,
     @Named("workloadLauncherQueue") launcherQueue: String,
     @Named("starterActivities") workloadStarterActivities: QueueActivity<LauncherInputMessage>,
-    @Property(name = "airbyte.workload-launcher.parallelism") paralellism: Int,
+    @Property(name = "airbyte.workload-launcher.temporal.default-queue.parallelism") paralellism: Int,
+    @Property(name = "airbyte.workload-launcher.temporal.default-queue.workflow-parallelism") workflowParalellism: Int,
   ): WorkerFactory {
-    val workerFactoryOptions =
-      WorkerFactoryOptions.newBuilder()
-        .setWorkerInterceptors(OpenTracingWorkerInterceptor())
-        .build()
-    val workerFactory = WorkerFactory.newInstance(workflowClient, workerFactoryOptions)
-    val worker = workerFactory.newWorker(launcherQueue, WorkerOptions.newBuilder().setMaxConcurrentActivityExecutionSize(paralellism).build())
+    val workerFactory = baseWorkerFactory(workflowClient)
+    val worker = baseWorker(workerFactory, paralellism, workflowParalellism, launcherQueue)
     worker.registerActivitiesImplementations(workloadStarterActivities)
     worker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(LauncherWorkflowImpl::class.java))
     return workerFactory
@@ -71,14 +69,11 @@ class TemporalBeanFactory {
     temporalProxyHelper: TemporalProxyHelper,
     @Named("workloadLauncherHighPriorityQueue") launcherQueue: String,
     @Named("starterActivities") workloadStarterActivities: QueueActivity<LauncherInputMessage>,
-    @Property(name = "airbyte.workload-launcher.parallelism") paralellism: Int,
+    @Property(name = "airbyte.workload-launcher.temporal.high-priority-queue.parallelism") paralellism: Int,
+    @Property(name = "airbyte.workload-launcher.temporal.high-priority-queue.workflow-parallelism") workflowParalellism: Int,
   ): WorkerFactory {
-    val workerFactoryOptions =
-      WorkerFactoryOptions.newBuilder()
-        .setWorkerInterceptors(OpenTracingWorkerInterceptor())
-        .build()
-    val workerFactory = WorkerFactory.newInstance(workflowClient, workerFactoryOptions)
-    val worker = workerFactory.newWorker(launcherQueue, WorkerOptions.newBuilder().setMaxConcurrentActivityExecutionSize(paralellism).build())
+    val workerFactory = baseWorkerFactory(workflowClient)
+    val worker = baseWorker(workerFactory, paralellism, workflowParalellism, launcherQueue)
     worker.registerActivitiesImplementations(workloadStarterActivities)
     worker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(LauncherWorkflowImpl::class.java))
     return workerFactory
@@ -100,5 +95,27 @@ class TemporalBeanFactory {
     @Property(name = "airbyte.workload-launcher.geography") geography: String,
   ): String {
     return featureFlagClient.stringVariation(WorkloadApiRouting, Multi(listOf(Geography(geography), Priority(HIGH_PRIORITY))))
+  }
+
+  private fun baseWorkerFactory(workflowClient: WorkflowClient): WorkerFactory {
+    val workerFactoryOptions =
+      WorkerFactoryOptions.newBuilder()
+        .setWorkerInterceptors(OpenTracingWorkerInterceptor())
+        .build()
+    return WorkerFactory.newInstance(workflowClient, workerFactoryOptions)
+  }
+
+  private fun baseWorker(
+    workerFactory: WorkerFactory,
+    paralellism: Int,
+    workflowParalellism: Int,
+    queueName: String,
+  ): Worker {
+    val workerOptions =
+      WorkerOptions.newBuilder()
+        .setMaxConcurrentActivityExecutionSize(paralellism)
+        .setMaxConcurrentWorkflowTaskExecutionSize(workflowParalellism)
+        .build()
+    return workerFactory.newWorker(queueName, workerOptions)
   }
 }
