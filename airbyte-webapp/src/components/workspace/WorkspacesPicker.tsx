@@ -42,7 +42,7 @@ export const WorkspacesPicker: React.FC<{ useFetchWorkspaces: WorkspaceFetcher }
               <Text size="sm" className={styles.workspacesPicker__buttonText}>
                 {currentWorkspace.name}
               </Text>
-              <Icon type="chevronUpDown" size="sm" color="disabled" />
+              <Icon type="chevronUpDown" size="xs" color="disabled" />
             </span>
           </Popover.Button>
           <Popover.Panel

@@ -56,7 +56,7 @@ const ExpandableDataCell = ({ value, selectValue }: { value: unknown; selectValu
     <FlexContainer className={styles.cell}>
       <div className={styles.content}>{stringRepresentation}</div>
       <Button size="xs" variant="clear" className={styles.button} onClick={selectValue}>
-        <Icon type="expand" size="sm" />
+        <Icon type="expand" size="xs" />
       </Button>
     </FlexContainer>
   );

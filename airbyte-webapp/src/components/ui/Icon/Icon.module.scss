@@ -21,14 +21,10 @@ $colorMap: (
   "affordance": colors.$dark-blue,
 );
 
-$baseIconSize: 12px;
 $iconClassname: "icon";
 
 .#{$iconClassname} {
   display: inline-block;
-  height: $baseIconSize;
-  width: $baseIconSize;
-  vertical-align: -6%;
 
   &.#{$iconClassname}--spinning {
     animation: spinning 1.5s linear 0s infinite;
@@ -54,16 +50,16 @@ $iconClassname: "icon";
 }
 
 $sizes:
-  "xs" calc(1 / 1.618) 3% -13%,
-  "sm" 1 -6% -30%,
-  "md" 1.618 -27% -41%,
-  "lg" 2.618 -60% -73%,
-  "xl" 3.618 -90% -93%;
+  "xs" 12px -6% -30%,
+  "sm" 16px -18% -35%,
+  "md" 20px -28% -42%,
+  "lg" 24px -40% -58%,
+  "xl" 28px -50% -69%;
 
-@each $name, $sizeModifier, $verticalAlign, $verticalAlignWithBackground in $sizes {
+@each $name, $size, $verticalAlign, $verticalAlignWithBackground in $sizes {
   .#{$name} {
-    height: $baseIconSize * $sizeModifier;
-    width: $baseIconSize * $sizeModifier;
+    height: $size;
+    width: $size;
     vertical-align: #{$verticalAlign};
 
     &.#{$iconClassname}--withBackground {

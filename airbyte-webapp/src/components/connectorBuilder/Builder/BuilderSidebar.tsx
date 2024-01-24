@@ -188,7 +188,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
           control={
             <Text size="sm" className={styles.slackLink}>
               <a href="https://airbytehq.slack.com/archives/C027KKE4BCZ" target="_blank" rel="noreferrer">
-                <FlexContainer gap="sm" justifyContent="center" alignItems="flex-start" as="span">
+                <FlexContainer gap="sm" justifyContent="center" alignItems="center" as="span">
                   <SlackIcon className={styles.slackIcon} />
                   <FormattedMessage id="connectorBuilder.slackChannel" />
                 </FlexContainer>
@@ -200,7 +200,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
         </Tooltip>
         <Text size="sm" className={styles.slackLink}>
           <a href={links.connectorBuilderTutorial} target="_blank" rel="noreferrer">
-            <FlexContainer gap="sm" justifyContent="center" alignItems="flex-start" as="span">
+            <FlexContainer gap="sm" justifyContent="center" alignItems="center" as="span">
               <Icon type="docs" />
               <FormattedMessage id="connectorBuilder.createPage.tutorialPrompt" />
             </FlexContainer>

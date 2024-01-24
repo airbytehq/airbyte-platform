@@ -40,6 +40,9 @@ const _iconByStatus = {
   success: "statusSuccess",
   warning: "statusWarning",
   cancelled: "statusCancelled",
+  inactive: "statusInactive",
+  sleep: "statusSleep",
+  error: "statusError",
 } as const;
 
 export const StatusIcon: React.FC<StatusIconProps> = ({ title, status = "error", size = "md", value }) => {
@@ -58,16 +61,10 @@ export const StatusIcon: React.FC<StatusIconProps> = ({ title, status = "error",
           gap="none"
         >
           <FlexContainer className={classNames(styles.icon)} justifyContent="center" alignItems="center" gap="none">
-            {status === "inactive" ? (
-              <Icon type="statusInactive" title={title} className={classNames(styles.icon)} />
-            ) : status === "sleep" ? (
-              <Icon type="statusSleep" title={title} className={classNames(styles.icon)} />
-            ) : status === "error" ? (
-              <Icon type="statusError" title={title} className={classNames(styles.icon)} />
-            ) : status === "loading" ? (
+            {status === "loading" ? (
               <CircleLoader title={title} />
             ) : (
-              <Icon type={_iconByStatus[status]} title={title} className={classNames(styles.icon)} />
+              <Icon type={_iconByStatus[status]} title={title} />
             )}
           </FlexContainer>
           {value !== undefined && (

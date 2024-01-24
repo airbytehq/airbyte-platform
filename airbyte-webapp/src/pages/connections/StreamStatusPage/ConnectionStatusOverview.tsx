@@ -41,7 +41,7 @@ export const ConnectionStatusOverview: React.FC = () => {
         {status === ConnectionStatusIndicatorStatus.OnTrack && (
           <Tooltip
             containerClassName={styles.onTrackInfo}
-            control={<Icon type="infoOutline" color="action" size="sm" />}
+            control={<Icon type="infoOutline" color="action" size="xs" />}
             placement="top"
           >
             <FormattedMessage
