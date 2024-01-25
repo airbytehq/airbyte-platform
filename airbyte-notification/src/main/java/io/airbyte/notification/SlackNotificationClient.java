@@ -4,18 +4,21 @@
 
 package io.airbyte.notification;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 import io.airbyte.api.common.StreamDescriptorUtils;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.SlackNotificationConfiguration;
+import io.airbyte.notification.slack.Field;
+import io.airbyte.notification.slack.Notification;
+import io.airbyte.notification.slack.Section;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -157,29 +160,32 @@ public class SlackNotificationClient extends NotificationClient {
   @Override
   public boolean notifySchemaPropagated(final UUID workspaceId,
                                         final String workspaceName,
+                                        final String workspaceUrl,
                                         final UUID connectionId,
                                         final String connectionName,
                                         final String connectionUrl,
                                         final UUID sourceId,
                                         final String sourceName,
+                                        final String sourceUrl,
                                         final CatalogDiff diff,
                                         final String recipient,
                                         boolean isBreaking)
       throws IOException, InterruptedException {
     String summary = buildSummary(diff);
-    final String message =
-        isBreaking ? renderTemplate("slack/breaking_schema_change_slack_notification_template.txt", connectionId.toString(), connectionUrl)
-            : renderTemplate("slack/schema_propagation_slack_notification_template.txt", connectionName, summary, connectionUrl);
+
+    final String header = String.format("The schema of '%s' has changed.", Notification.createLink(connectionName, connectionUrl));
+    Notification slackNotification = buildNotification(workspaceName, sourceName, summary, header, workspaceUrl, sourceUrl);
+
     final String webhookUrl = config.getWebhook();
     if (!Strings.isEmpty(webhookUrl)) {
-      return notify(message);
+      return notifyJson(slackNotification.toJsonNode());
     }
     return false;
   }
 
   @NotNull
   @VisibleForTesting
-  protected static String buildSummary(CatalogDiff diff) {
+  protected static String buildSummary(final CatalogDiff diff) {
     final StringBuilder summaryBuilder = new StringBuilder();
 
     var newStreams =
@@ -245,15 +251,50 @@ public class SlackNotificationClient extends NotificationClient {
     return summaryBuilder.toString();
   }
 
+  @NotNull
+  static Notification buildNotification(final String workspaceName,
+                                        final String sourceName,
+                                        final String summary,
+                                        final String header,
+                                        final String workspaceUrl,
+                                        final String sourceUrl) {
+    Notification slackNotification = new Notification();
+    slackNotification.setText(header);
+    Section titleSection = slackNotification.addSection();
+    titleSection.setText(header);
+    Section section = slackNotification.addSection();
+    Field field = section.addField();
+    field.setType("mrkdwn");
+    field.setText("*Workspace*");
+    field = section.addField();
+    field.setType("mrkdwn");
+    field.setText("*Source*");
+    field = section.addField();
+    field.setType("mrkdwn");
+    field.setText(Notification.createLink(workspaceName, workspaceUrl));
+    field = section.addField();
+    field.setType("mrkdwn");
+    field.setText(Notification.createLink(sourceName, sourceUrl));
+    slackNotification.addDivider();
+    Section changeSection = slackNotification.addSection();
+    changeSection.setText(summary);
+    return slackNotification;
+  }
+
   private boolean notify(final String message) throws IOException, InterruptedException {
+    ObjectMapper mapper = new ObjectMapper();
+    ObjectNode node = mapper.createObjectNode();
+    node.put("text", message);
+    return notifyJson(node);
+  }
+
+  private boolean notifyJson(final JsonNode node) throws IOException, InterruptedException {
+    ObjectMapper mapper = new ObjectMapper();
     final HttpClient httpClient = HttpClient.newBuilder()
         .version(HttpClient.Version.HTTP_2)
         .build();
-    final ImmutableMap<String, String> body = new Builder<String, String>()
-        .put("text", message)
-        .build();
     final HttpRequest request = HttpRequest.newBuilder()
-        .POST(HttpRequest.BodyPublishers.ofString(Jsons.serialize(body)))
+        .POST(HttpRequest.BodyPublishers.ofByteArray(mapper.writeValueAsBytes(node)))
         .uri(URI.create(config.getWebhook()))
         .header("Content-Type", "application/json")
         .build();

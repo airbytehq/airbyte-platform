@@ -473,6 +473,8 @@ public class SchedulerHandler {
       throws IOException {
     final NotificationItem item;
     final String connectionUrl = webUrlHelper.getConnectionUrl(workspace.getWorkspaceId(), connection.getConnectionId());
+    final String workspaceUrl = webUrlHelper.getWorkspaceUrl(workspace.getWorkspaceId());
+    final String sourceUrl = webUrlHelper.getSourceUrl(workspace.getWorkspaceId(), source.getSourceId());
     final boolean isBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
     if (isBreakingChange) {
       item = notificationSettings.getSendOnConnectionUpdateActionRequired();
@@ -487,11 +489,13 @@ public class SchedulerHandler {
             slackNotificationClient.notifySchemaPropagated(
                 workspace.getWorkspaceId(),
                 workspace.getName(),
+                workspaceUrl,
                 connection.getConnectionId(),
                 connection.getName(),
                 connectionUrl,
                 source.getSourceId(),
                 source.getName(),
+                sourceUrl,
                 result.appliedDiff(),
                 email,
                 isBreakingChange);
@@ -501,11 +505,13 @@ public class SchedulerHandler {
             emailNotificationClient.notifySchemaPropagated(
                 workspace.getWorkspaceId(),
                 workspace.getName(),
+                workspaceUrl,
                 connection.getConnectionId(),
                 connection.getName(),
                 connectionUrl,
                 source.getSourceId(),
                 source.getName(),
+                sourceUrl,
                 result.appliedDiff(),
                 email,
                 isBreakingChange);

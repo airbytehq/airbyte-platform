@@ -73,11 +73,13 @@ public abstract class NotificationClient {
 
   public abstract boolean notifySchemaPropagated(final UUID workspaceId,
                                                  final String workspaceName,
+                                                 final String workspaceUrl,
                                                  final UUID connectionId,
                                                  final String connectionName,
                                                  final String connectionUrl,
                                                  final UUID sourceId,
                                                  final String sourceName,
+                                                 final String sourceUrl,
                                                  final CatalogDiff diff,
                                                  final String recipient,
                                                  boolean isBreaking)

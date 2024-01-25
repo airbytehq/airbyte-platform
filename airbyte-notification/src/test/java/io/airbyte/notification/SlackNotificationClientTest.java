@@ -167,24 +167,22 @@ class SlackNotificationClientTest {
     final UUID sourceId = UUID.randomUUID();
     final CatalogDiff diff = new CatalogDiff();
     String workspaceName = "";
+    String workspaceUrl = "http://airbyte.io/workspaces/123";
     String connectionName = "PSQL ->> BigQuery";
     String sourceName = "";
+    String sourceUrl = "http://airbyte.io/workspaces/123/source/456";
     boolean isBreaking = false;
     String connectionUrl = "http://airbyte.io/your_connection";
     String recipient = "";
 
-    final String expectedNotificationMessage =
-        """
-        Your source schema has changed for connection 'PSQL ->> BigQuery' and the following changes were automatically propagated:
-
-        Visit the connection page: http://airbyte.io/your_connection
-        """;
+    final String expectedNotificationMessage = "The schema of '<http://airbyte.io/your_connection|PSQL -&gt;&gt; BigQuery>' has changed.";
     server.createContext(TEST_PATH, new ServerHandler(expectedNotificationMessage));
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
 
     assertTrue(
-        client.notifySchemaPropagated(UUID.randomUUID(), workspaceName, connectionId, connectionName, connectionUrl, sourceId, sourceName, diff,
+        client.notifySchemaPropagated(UUID.randomUUID(), workspaceName, workspaceUrl, connectionId, connectionName, connectionUrl, sourceId,
+            sourceName, sourceUrl, diff,
             recipient,
             isBreaking));
 
