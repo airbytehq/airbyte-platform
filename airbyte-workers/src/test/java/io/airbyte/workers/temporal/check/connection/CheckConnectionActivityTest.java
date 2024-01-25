@@ -171,6 +171,7 @@ public class CheckConnectionActivityTest {
         status,
         null,
         null,
+        null,
         null);
   }
 

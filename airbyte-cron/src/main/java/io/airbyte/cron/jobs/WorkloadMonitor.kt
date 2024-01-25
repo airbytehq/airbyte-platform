@@ -1,6 +1,9 @@
 package io.airbyte.cron.jobs
 
 import datadog.trace.api.Trace
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.UseDeadlineColumnInMonitor
+import io.airbyte.featureflag.User
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
 import io.airbyte.metrics.lib.MetricAttribute
@@ -8,6 +11,7 @@ import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.workload.api.client.model.generated.ExpiredDeadlineWorkloadListRequest
 import io.airbyte.workload.api.client.model.generated.LongRunningWorkloadRequest
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest
@@ -23,6 +27,7 @@ import java.time.Duration
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
+import java.util.UUID
 
 private val logger = KotlinLogging.logger { }
 
@@ -42,6 +47,7 @@ open class WorkloadMonitor(
   @Property(name = "airbyte.workload.monitor.non-sync-workload-timeout") private val nonSyncWorkloadTimeout: Duration,
   @Property(name = "airbyte.workload.monitor.sync-workload-timeout") private val syncWorkloadTimeout: Duration,
   @Named("replicationNotStartedTimeout") private val nonStartedTimeout: Duration,
+  private val featureFlagClient: FeatureFlagClient,
   private val metricClient: MetricClient,
   private val timeProvider: (ZoneId) -> OffsetDateTime = OffsetDateTime::now,
 ) {
@@ -63,16 +69,27 @@ open class WorkloadMonitor(
   @Scheduled(fixedRate = "\${airbyte.workload.monitor.not-started-check-rate}")
   open fun cancelNotStartedWorkloads() {
     logger.info { "Checking for not started workloads." }
-    val oldestStartedTime = timeProvider(ZoneOffset.UTC).minusSeconds(nonStartedTimeout.seconds)
-    val notStartedWorkloads =
-      workloadApi.workloadList(
-        WorkloadListRequest(
-          status = listOf(WorkloadStatus.CLAIMED),
-          updatedBefore = oldestStartedTime,
-        ),
-      )
-
-    cancelWorkloads(notStartedWorkloads.workloads, "Not started within time limit", CHECK_START)
+    if (useDeadlineColumnForExpiredWorkloads()) {
+      val oldestStartedTime = timeProvider(ZoneOffset.UTC)
+      val notStartedWorkloads =
+        workloadApi.workloadListWithExpiredDeadline(
+          ExpiredDeadlineWorkloadListRequest(
+            oldestStartedTime,
+            status = listOf(WorkloadStatus.CLAIMED),
+          ),
+        )
+      cancelWorkloads(notStartedWorkloads.workloads, "Not started within time limit", CHECK_START)
+    } else {
+      val oldestStartedTime = timeProvider(ZoneOffset.UTC).minusSeconds(nonStartedTimeout.seconds)
+      val notStartedWorkloads =
+        workloadApi.workloadList(
+          WorkloadListRequest(
+            status = listOf(WorkloadStatus.CLAIMED),
+            updatedBefore = oldestStartedTime,
+          ),
+        )
+      cancelWorkloads(notStartedWorkloads.workloads, "Not started within time limit", CHECK_START)
+    }
   }
 
   @Trace
@@ -85,16 +102,29 @@ open class WorkloadMonitor(
   @Scheduled(fixedRate = "\${airbyte.workload.monitor.claim-check-rate}")
   open fun cancelNotClaimedWorkloads() {
     logger.info { "Checking for not claimed workloads." }
-    val oldestClaimTime = timeProvider(ZoneOffset.UTC).minusSeconds(claimTimeout.seconds)
-    val notClaimedWorkloads =
-      workloadApi.workloadList(
-        WorkloadListRequest(
-          status = listOf(WorkloadStatus.PENDING),
-          updatedBefore = oldestClaimTime,
-        ),
-      )
+    if (useDeadlineColumnForExpiredWorkloads()) {
+      val oldestClaimTime = timeProvider(ZoneOffset.UTC)
+      val notClaimedWorkloads =
+        workloadApi.workloadListWithExpiredDeadline(
+          ExpiredDeadlineWorkloadListRequest(
+            oldestClaimTime,
+            status = listOf(WorkloadStatus.PENDING),
+          ),
+        )
 
-    cancelWorkloads(notClaimedWorkloads.workloads, "Not claimed within time limit", CHECK_CLAIMS)
+      cancelWorkloads(notClaimedWorkloads.workloads, "Not claimed within time limit", CHECK_CLAIMS)
+    } else {
+      val oldestClaimTime = timeProvider(ZoneOffset.UTC).minusSeconds(claimTimeout.seconds)
+      val notClaimedWorkloads =
+        workloadApi.workloadList(
+          WorkloadListRequest(
+            status = listOf(WorkloadStatus.PENDING),
+            updatedBefore = oldestClaimTime,
+          ),
+        )
+
+      cancelWorkloads(notClaimedWorkloads.workloads, "Not claimed within time limit", CHECK_CLAIMS)
+    }
   }
 
   @Trace
@@ -107,16 +137,29 @@ open class WorkloadMonitor(
   @Scheduled(fixedRate = "\${airbyte.workload.monitor.heartbeat-check-rate}")
   open fun cancelNotHeartbeatingWorkloads() {
     logger.info { "Checking for non heartbeating workloads." }
-    val oldestHeartbeatTime = timeProvider(ZoneOffset.UTC).minusSeconds(heartbeatTimeout.seconds)
-    val nonHeartbeatingWorkloads =
-      workloadApi.workloadList(
-        WorkloadListRequest(
-          status = listOf(WorkloadStatus.RUNNING, WorkloadStatus.LAUNCHED),
-          updatedBefore = oldestHeartbeatTime,
-        ),
-      )
+    if (useDeadlineColumnForExpiredWorkloads()) {
+      val oldestHeartbeatTime = timeProvider(ZoneOffset.UTC)
+      val nonHeartbeatingWorkloads =
+        workloadApi.workloadListWithExpiredDeadline(
+          ExpiredDeadlineWorkloadListRequest(
+            oldestHeartbeatTime,
+            status = listOf(WorkloadStatus.RUNNING, WorkloadStatus.LAUNCHED),
+          ),
+        )
 
-    cancelWorkloads(nonHeartbeatingWorkloads.workloads, "No heartbeat within time limit", CHECK_HEARTBEAT)
+      cancelWorkloads(nonHeartbeatingWorkloads.workloads, "No heartbeat within time limit", CHECK_HEARTBEAT)
+    } else {
+      val oldestHeartbeatTime = timeProvider(ZoneOffset.UTC).minusSeconds(heartbeatTimeout.seconds)
+      val nonHeartbeatingWorkloads =
+        workloadApi.workloadList(
+          WorkloadListRequest(
+            status = listOf(WorkloadStatus.RUNNING, WorkloadStatus.LAUNCHED),
+            updatedBefore = oldestHeartbeatTime,
+          ),
+        )
+
+      cancelWorkloads(nonHeartbeatingWorkloads.workloads, "No heartbeat within time limit", CHECK_HEARTBEAT)
+    }
   }
 
   @Trace
@@ -182,5 +225,12 @@ open class WorkloadMonitor(
         )
       }
     }
+  }
+
+  private fun useDeadlineColumnForExpiredWorkloads(): Boolean {
+    // We use a dummy context cause the feature flag client won't allow an empty context, the UseDeadlineColumnInMonitor flag is more of a
+    // toggle that is either on for everyone or non-one
+    val dummyContext = User(UUID.randomUUID())
+    return featureFlagClient.boolVariation(UseDeadlineColumnInMonitor, dummyContext)
   }
 }

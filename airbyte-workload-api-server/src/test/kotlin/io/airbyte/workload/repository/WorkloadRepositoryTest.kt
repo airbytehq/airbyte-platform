@@ -28,6 +28,7 @@ import javax.sql.DataSource
 
 @MicronautTest
 internal class WorkloadRepositoryTest {
+  val defaultDeadline = OffsetDateTime.now()
   companion object {
     private lateinit var context: ApplicationContext
     lateinit var workloadRepo: WorkloadRepository
@@ -100,6 +101,16 @@ internal class WorkloadRepositoryTest {
     }
   }
 
+  private fun sortedSearchByExpiredDeadline(
+    dataplaneIds: List<String>?,
+    statuses: List<WorkloadStatus>?,
+    deadline: OffsetDateTime,
+  ): MutableList<Workload> {
+    val workloads = workloadRepo.searchForExpiredWorkloads(dataplaneIds, statuses, deadline).toMutableList()
+    workloads.sortWith(Comparator.comparing(Workload::id))
+    return workloads
+  }
+
   @AfterEach
   fun cleanDb() {
     workloadLabelRepo.deleteAll()
@@ -131,6 +142,7 @@ internal class WorkloadRepositoryTest {
         dataplaneId = null,
         status = WorkloadStatus.PENDING,
         workloadLabels = labels,
+        deadline = defaultDeadline,
       )
     workloadRepo.save(workload)
     val persistedWorkload = workloadRepo.findById(WORKLOAD_ID)
@@ -140,6 +152,8 @@ internal class WorkloadRepositoryTest {
     assertNotNull(persistedWorkload.get().createdAt)
     assertNotNull(persistedWorkload.get().updatedAt)
     assertNull(persistedWorkload.get().lastHeartbeatAt)
+    assertNotNull(persistedWorkload.get().deadline)
+    assertEquals(defaultDeadline.toEpochSecond(), persistedWorkload.get().deadline!!.toEpochSecond())
     assertEquals(2, persistedWorkload.get().workloadLabels!!.size)
 
     val workloadLabels = persistedWorkload.get().workloadLabels!!.toMutableList()
@@ -161,16 +175,20 @@ internal class WorkloadRepositoryTest {
         status = WorkloadStatus.PENDING,
         geography = "US",
       )
+    val newDeadline = OffsetDateTime.now().plusMinutes(10)
     workloadRepo.save(workload)
-    workloadRepo.update(WORKLOAD_ID, WorkloadStatus.RUNNING)
+    workloadRepo.update(WORKLOAD_ID, WorkloadStatus.RUNNING, newDeadline)
     var persistedWorkload = workloadRepo.findById(WORKLOAD_ID)
     assertTrue(persistedWorkload.isPresent)
     assertEquals(WorkloadStatus.RUNNING, persistedWorkload.get().status)
+    assertEquals(newDeadline.toEpochSecond(), persistedWorkload.get().deadline!!.toEpochSecond())
 
-    workloadRepo.update(WORKLOAD_ID, WorkloadStatus.FAILURE)
+    val newDeadline2 = OffsetDateTime.now().plusMinutes(20)
+    workloadRepo.update(WORKLOAD_ID, WorkloadStatus.FAILURE, newDeadline2)
     persistedWorkload = workloadRepo.findById(WORKLOAD_ID)
     assertTrue(persistedWorkload.isPresent)
     assertEquals(WorkloadStatus.FAILURE, persistedWorkload.get().status)
+    assertEquals(newDeadline2.toEpochSecond(), persistedWorkload.get().deadline!!.toEpochSecond())
   }
 
   @Test
@@ -184,18 +202,20 @@ internal class WorkloadRepositoryTest {
       )
     workloadRepo.save(workload)
     val now = OffsetDateTime.now()
-    workloadRepo.update(WORKLOAD_ID, WorkloadStatus.RUNNING, now)
+    workloadRepo.update(WORKLOAD_ID, WorkloadStatus.RUNNING, now, now)
     var persistedWorkload = workloadRepo.findById(WORKLOAD_ID)
     assertTrue(persistedWorkload.isPresent)
     // Using .toEpochSecond() here because of dagger, it is passing locally but there is nano second errors on dagger
     assertEquals(now.toEpochSecond(), persistedWorkload.get().lastHeartbeatAt?.toEpochSecond())
+    assertEquals(now.toEpochSecond(), persistedWorkload.get().deadline?.toEpochSecond())
     assertEquals(WorkloadStatus.RUNNING, persistedWorkload.get().status)
 
     val nowPlusOneMinute = now.plus(1, ChronoUnit.MINUTES)
-    workloadRepo.update(WORKLOAD_ID, WorkloadStatus.RUNNING, nowPlusOneMinute)
+    workloadRepo.update(WORKLOAD_ID, WorkloadStatus.RUNNING, nowPlusOneMinute, nowPlusOneMinute)
     persistedWorkload = workloadRepo.findById(WORKLOAD_ID)
     assertTrue(persistedWorkload.isPresent)
     assertEquals(nowPlusOneMinute.toEpochSecond(), persistedWorkload.get().lastHeartbeatAt?.toEpochSecond())
+    assertEquals(nowPlusOneMinute.toEpochSecond(), persistedWorkload.get().deadline?.toEpochSecond())
   }
 
   @Test
@@ -208,12 +228,12 @@ internal class WorkloadRepositoryTest {
         geography = "AUTO",
       )
     workloadRepo.save(workload)
-    workloadRepo.update(WORKLOAD_ID, "dataplaneId1", WorkloadStatus.RUNNING)
+    workloadRepo.update(WORKLOAD_ID, "dataplaneId1", WorkloadStatus.RUNNING, defaultDeadline)
     var persistedWorkload = workloadRepo.findById(WORKLOAD_ID)
     assertTrue(persistedWorkload.isPresent)
     assertEquals("dataplaneId1", persistedWorkload.get().dataplaneId)
 
-    workloadRepo.update(WORKLOAD_ID, "dataplaneId2", WorkloadStatus.RUNNING)
+    workloadRepo.update(WORKLOAD_ID, "dataplaneId2", WorkloadStatus.RUNNING, defaultDeadline)
     persistedWorkload = workloadRepo.findById(WORKLOAD_ID)
     assertTrue(persistedWorkload.isPresent)
     assertEquals("dataplaneId2", persistedWorkload.get().dataplaneId)
@@ -341,6 +361,80 @@ internal class WorkloadRepositoryTest {
     assertEquals(0, resultSearch.size)
   }
 
+  @Test
+  fun `test search by type expired deadline`() {
+    val deadline: OffsetDateTime = OffsetDateTime.now()
+    val workload1 =
+      Fixtures.workload(
+        id = "workload1",
+        dataplaneId = "dataplane1",
+        status = WorkloadStatus.RUNNING,
+        geography = "AUTO",
+        type = WorkloadType.CHECK,
+        deadline = deadline,
+      )
+    val workload2 =
+      Fixtures.workload(
+        id = "workload2",
+        dataplaneId = "dataplane2",
+        status = WorkloadStatus.CLAIMED,
+        geography = "US",
+        type = WorkloadType.SYNC,
+        deadline = deadline,
+      )
+    workloadRepo.save(workload1)
+    workloadRepo.save(workload2)
+    var resultSearch = sortedSearchByExpiredDeadline(null, null, deadline.minusDays(1))
+    assertEquals(0, resultSearch.size)
+
+    resultSearch = sortedSearchByExpiredDeadline(null, null, deadline)
+    assertEquals(0, resultSearch.size)
+
+    resultSearch = sortedSearchByExpiredDeadline(null, null, deadline.plusDays(1))
+    assertEquals(2, resultSearch.size)
+    assertEquals("workload1", resultSearch[0].id)
+    assertEquals("workload2", resultSearch[1].id)
+
+    resultSearch = sortedSearchByExpiredDeadline(null, listOf(WorkloadStatus.RUNNING), deadline.minusDays(1))
+    assertEquals(0, resultSearch.size)
+
+    resultSearch = sortedSearchByExpiredDeadline(null, listOf(WorkloadStatus.CANCELLED), deadline.minusDays(1))
+    assertEquals(0, resultSearch.size)
+
+    resultSearch = sortedSearchByExpiredDeadline(null, listOf(WorkloadStatus.RUNNING), deadline.plusDays(1))
+    assertEquals(1, resultSearch.size)
+    assertEquals("workload1", resultSearch[0].id)
+
+    resultSearch = sortedSearchByExpiredDeadline(null, listOf(WorkloadStatus.CANCELLED), deadline.plusDays(1))
+    assertEquals(0, resultSearch.size)
+
+    resultSearch = sortedSearchByExpiredDeadline(listOf("dataplane1", "dataplane2"), listOf(WorkloadStatus.RUNNING), deadline.minusDays(1))
+    assertEquals(0, resultSearch.size)
+
+    resultSearch = sortedSearchByExpiredDeadline(listOf("dataplane1", "dataplane2"), listOf(WorkloadStatus.RUNNING), deadline)
+    assertEquals(0, resultSearch.size)
+
+    resultSearch = sortedSearchByExpiredDeadline(listOf("dataplane1"), listOf(WorkloadStatus.RUNNING), deadline.plusDays(1))
+    assertEquals(1, resultSearch.size)
+    assertEquals("workload1", resultSearch[0].id)
+
+    resultSearch = sortedSearchByExpiredDeadline(listOf("dataplane2"), listOf(WorkloadStatus.RUNNING), deadline.plusDays(1))
+    assertEquals(0, resultSearch.size)
+
+    resultSearch = sortedSearchByExpiredDeadline(listOf("dataplane2"), listOf(WorkloadStatus.CLAIMED), deadline.plusDays(1))
+    assertEquals(1, resultSearch.size)
+    assertEquals("workload2", resultSearch[0].id)
+
+    resultSearch = sortedSearchByExpiredDeadline(listOf("dataplane1", "dataplane2"), listOf(WorkloadStatus.RUNNING), deadline.plusDays(1))
+    assertEquals(1, resultSearch.size)
+    assertEquals("workload1", resultSearch[0].id)
+
+    resultSearch = sortedSearchByExpiredDeadline(listOf("dataplane1", "dataplane2"), null, deadline.plusDays(1))
+    assertEquals(2, resultSearch.size)
+    assertEquals("workload1", resultSearch[0].id)
+    assertEquals("workload2", resultSearch[1].id)
+  }
+
   object Fixtures {
     const val WORKLOAD_ID = "test"
 
@@ -354,6 +448,7 @@ internal class WorkloadRepositoryTest {
       geography: String = "US",
       mutexKey: String = "",
       type: WorkloadType = WorkloadType.SYNC,
+      deadline: OffsetDateTime = OffsetDateTime.now(),
     ): Workload =
       Workload(
         id = id,
@@ -365,6 +460,7 @@ internal class WorkloadRepositoryTest {
         geography = geography,
         mutexKey = mutexKey,
         type = type,
+        deadline = deadline,
       )
   }
 }

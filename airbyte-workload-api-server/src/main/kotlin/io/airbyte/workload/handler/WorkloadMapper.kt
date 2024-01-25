@@ -84,6 +84,7 @@ fun ApiWorkload.toDomain(): DomainWorkload {
     terminationReason = terminationReason,
     terminationSource = terminationSource,
     autoId = this.autoId,
+    deadline = this.deadline,
   )
 }
 

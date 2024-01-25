@@ -21,6 +21,12 @@ interface WorkloadHandler {
     updatedBefore: OffsetDateTime?,
   ): List<Workload>
 
+  fun getWorkloadsWithExpiredDeadline(
+    dataplaneId: List<String>?,
+    workloadStatus: List<ApiWorkloadStatus>?,
+    deadline: OffsetDateTime,
+  ): List<Workload>
+
   fun workloadAlreadyExists(workloadId: String): Boolean
 
   fun createWorkload(

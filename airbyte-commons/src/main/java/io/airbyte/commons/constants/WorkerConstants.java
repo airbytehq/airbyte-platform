@@ -35,6 +35,10 @@ public class WorkerConstants {
     public static final Duration INIT_CONTAINER_STARTUP_TIMEOUT = Duration.ofMinutes(15);
     public static final Duration INIT_CONTAINER_TERMINATION_TIMEOUT = Duration.ofMinutes(2);
     public static final Duration POD_READY_TIMEOUT = Duration.ofMinutes(2);
+    /**
+     * If changing the value for this, make sure to update the deadline values in
+     * {@link io.airbyte.workload.handler.WorkloadHandlerImpl} as well.
+     */
     public static final Duration FULL_POD_TIMEOUT = INIT_CONTAINER_STARTUP_TIMEOUT.plus(INIT_CONTAINER_TERMINATION_TIMEOUT).plus(POD_READY_TIMEOUT);
 
   }

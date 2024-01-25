@@ -7,6 +7,7 @@ package io.airbyte.workload.api
 import io.airbyte.config.WorkloadType
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.workload.api.domain.ClaimResponse
+import io.airbyte.workload.api.domain.ExpiredDeadlineWorkloadListRequest
 import io.airbyte.workload.api.domain.KnownExceptionInfo
 import io.airbyte.workload.api.domain.LongRunningWorkloadRequest
 import io.airbyte.workload.api.domain.Workload
@@ -414,6 +415,34 @@ open class WorkloadApi(
         workloadListRequest.dataplane,
         workloadListRequest.status,
         workloadListRequest.updatedBefore,
+      ),
+    )
+  }
+
+  @POST
+  @Path("/expired_deadline_list")
+  @Consumes("application/json")
+  @Produces("application/json")
+  @Operation(summary = "Get workloads according to the filters.", tags = ["workload"])
+  @ApiResponses(
+    value = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Success",
+        content = [Content(schema = Schema(implementation = WorkloadListResponse::class))],
+      ),
+    ],
+  )
+  open fun workloadListWithExpiredDeadline(
+    @RequestBody(
+      content = [Content(schema = Schema(implementation = ExpiredDeadlineWorkloadListRequest::class))],
+    ) expiredDeadlineWorkloadListRequest: ExpiredDeadlineWorkloadListRequest,
+  ): WorkloadListResponse {
+    return WorkloadListResponse(
+      workloadHandler.getWorkloadsWithExpiredDeadline(
+        expiredDeadlineWorkloadListRequest.dataplane,
+        expiredDeadlineWorkloadListRequest.status,
+        expiredDeadlineWorkloadListRequest.deadline,
       ),
     )
   }

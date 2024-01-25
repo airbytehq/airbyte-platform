@@ -17,6 +17,7 @@ import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.spyk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -31,9 +32,12 @@ import java.util.Optional
 import java.util.UUID
 
 class WorkloadHandlerImplTest {
+  val now = OffsetDateTime.now()
+
   @BeforeEach
   fun reset() {
     clearAllMocks()
+    every { workloadHandler.offsetDateTime() }.returns(now)
   }
 
   @Test
@@ -98,7 +102,8 @@ class WorkloadHandlerImplTest {
             it.logPath == "/log/path" &&
             it.geography == "US" &&
             it.mutexKey == "mutex-this" &&
-            it.type == WorkloadType.SYNC
+            it.type == WorkloadType.SYNC &&
+            it.deadline!!.equals(now.plusHours(2))
         },
       )
     }
@@ -148,9 +153,9 @@ class WorkloadHandlerImplTest {
         ),
       ),
     )
-    every { workloadRepository.update(eq(WORKLOAD_ID), any(), ofType(OffsetDateTime::class)) }.returns(Unit)
+    every { workloadRepository.update(eq(WORKLOAD_ID), any(), ofType(OffsetDateTime::class), eq(now.plusMinutes(10))) }.returns(Unit)
     workloadHandler.heartbeat(WORKLOAD_ID)
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING), any()) }
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING), any(), eq(now.plusMinutes(10))) }
   }
 
   @ParameterizedTest
@@ -189,7 +194,7 @@ class WorkloadHandlerImplTest {
 
   @Test
   fun `test claiming pending workload has already been claimed by the same plane`() {
-    every { workloadRepository.update(WORKLOAD_ID, DATAPLANE_ID, WorkloadStatus.CLAIMED) }.returns(Unit)
+    every { workloadRepository.update(WORKLOAD_ID, DATAPLANE_ID, WorkloadStatus.CLAIMED, eq(now.plusMinutes(20))) }.returns(Unit)
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
         Fixtures.workload(
@@ -255,11 +260,11 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    every { workloadRepository.update(any(), any(), ofType(WorkloadStatus::class)) } just Runs
+    every { workloadRepository.update(any(), any(), ofType(WorkloadStatus::class), eq(now.plusMinutes(20))) } just Runs
 
     assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID))
 
-    verify { workloadRepository.update(WORKLOAD_ID, DATAPLANE_ID, WorkloadStatus.CLAIMED) }
+    verify { workloadRepository.update(WORKLOAD_ID, DATAPLANE_ID, WorkloadStatus.CLAIMED, eq(now.plusMinutes(20))) }
   }
 
   @Test
@@ -295,10 +300,10 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel")) } just Runs
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
 
     workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel")) }
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel"), null) }
   }
 
   @Test
@@ -313,7 +318,7 @@ class WorkloadHandlerImplTest {
     )
 
     workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel again")
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), "test", "test cancel again") }
+    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), "test", "test cancel again", null) }
   }
 
   @Test
@@ -349,10 +354,10 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("failing a workload")) } just Runs
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("failing a workload"), null) } just Runs
 
     workloadHandler.failWorkload(WORKLOAD_ID, "test", "failing a workload")
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.FAILURE), eq("test"), eq("failing a workload")) }
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.FAILURE), eq("test"), eq("failing a workload"), null) }
   }
 
   @Test
@@ -367,7 +372,7 @@ class WorkloadHandlerImplTest {
     )
 
     workloadHandler.failWorkload(WORKLOAD_ID, "test", "noop")
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.FAILURE), eq("test"), eq("noop")) }
+    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.FAILURE), eq("test"), eq("noop"), null) }
   }
 
   @Test
@@ -403,10 +408,10 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class)) } just Runs
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), null) } just Runs
 
     workloadHandler.succeedWorkload(WORKLOAD_ID)
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.SUCCESS)) }
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.SUCCESS), null) }
   }
 
   @Test
@@ -421,7 +426,7 @@ class WorkloadHandlerImplTest {
     )
 
     workloadHandler.succeedWorkload(WORKLOAD_ID)
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.SUCCESS)) }
+    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.SUCCESS), null) }
   }
 
   @Test
@@ -472,10 +477,10 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class)) } just Runs
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), any()) } just Runs
 
     workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID)
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING)) }
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING), eq(now.plusMinutes(10))) }
   }
 
   @Test
@@ -490,7 +495,7 @@ class WorkloadHandlerImplTest {
     )
 
     workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID)
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING)) }
+    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING), eq(now.plusMinutes(10))) }
   }
 
   @Test
@@ -525,10 +530,10 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class)) } just Runs
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), any()) } just Runs
 
     workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID)
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.LAUNCHED)) }
+    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.LAUNCHED), eq(now.plusMinutes(10))) }
   }
 
   @Test
@@ -543,7 +548,7 @@ class WorkloadHandlerImplTest {
     )
 
     workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID)
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.LAUNCHED)) }
+    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.LAUNCHED), eq(now.plusMinutes(10))) }
   }
 
   @Test
@@ -566,11 +571,20 @@ class WorkloadHandlerImplTest {
     }
   }
 
+  @Test
+  fun `offsetDateTime method should always return current time`() {
+    val workloadHandlerImpl = WorkloadHandlerImpl(mockk<WorkloadRepository>())
+    val offsetDateTime = workloadHandlerImpl.offsetDateTime()
+    Thread.sleep(10)
+    val offsetDateTimeAfter10Ms = workloadHandlerImpl.offsetDateTime()
+    assertTrue(offsetDateTimeAfter10Ms.isAfter(offsetDateTime))
+  }
+
   object Fixtures {
     val workloadRepository = mockk<WorkloadRepository>()
     const val WORKLOAD_ID = "test"
     const val DATAPLANE_ID = "dataplaneId"
-    val workloadHandler = WorkloadHandlerImpl(workloadRepository)
+    val workloadHandler = spyk(WorkloadHandlerImpl(workloadRepository))
 
     fun workload(
       id: String = WORKLOAD_ID,
