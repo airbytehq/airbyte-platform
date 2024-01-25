@@ -74,7 +74,9 @@ class KubePodClient(
 
     copyFileToOrchestrator(kubeInput, pod)
 
-    waitSourceReadyOrTerminalInit(kubeInput)
+    if (!replicationInput.isReset) {
+      waitSourceReadyOrTerminalInit(kubeInput)
+    }
 
     waitDestinationReadyOrTerminalInit(kubeInput)
   }

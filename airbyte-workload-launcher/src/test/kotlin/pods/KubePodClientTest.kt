@@ -49,6 +49,8 @@ class KubePodClientTest {
 
   private lateinit var replInput: ReplicationInput
 
+  private lateinit var resetInput: ReplicationInput
+
   private lateinit var checkInput: CheckConnectionInput
 
   @BeforeEach
@@ -66,13 +68,19 @@ class KubePodClientTest {
         .withSourceLauncherConfig(IntegrationLauncherConfig())
         .withDestinationLauncherConfig(IntegrationLauncherConfig())
 
+    resetInput =
+      ReplicationInput()
+        .withSourceLauncherConfig(IntegrationLauncherConfig())
+        .withDestinationLauncherConfig(IntegrationLauncherConfig())
+        .withIsReset(true)
+
     checkInput =
       CheckConnectionInput(null, IntegrationLauncherConfig(), null)
 
     every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
 
     every { mapper.toKubeInput(workloadId, replInput, sharedLabels) } returns replKubeInput
-
+    every { mapper.toKubeInput(workloadId, resetInput, sharedLabels) } returns replKubeInput
     every { mapper.toKubeInput(workloadId, checkInput, sharedLabels) } returns checkKubeInput
 
     every { launcher.create(any(), any(), any(), any(), any(), any()) } returns pod
@@ -103,6 +111,30 @@ class KubePodClientTest {
     verify { launcher.copyFilesToKubeConfigVolumeMain(pod, replKubeInput.fileMap) }
 
     verify { launcher.waitForPodReadyOrTerminal(replKubeInput.sourceLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) }
+
+    verify { launcher.waitForPodReadyOrTerminal(replKubeInput.destinationLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) }
+  }
+
+  @Test
+  fun `launchReplication starts an orchestrator and waits on all 2 pods for resets`() {
+    client.launchReplication(resetInput, launcherInput)
+
+    verify {
+      launcher.create(
+        replKubeInput.orchestratorLabels,
+        replKubeInput.resourceReqs,
+        replKubeInput.nodeSelectors,
+        replKubeInput.kubePodInfo,
+        replKubeInput.annotations,
+        mapOf(),
+      )
+    }
+
+    verify { launcher.waitForPodInit(pod, ORCHESTRATOR_INIT_TIMEOUT_VALUE) }
+
+    verify { launcher.copyFilesToKubeConfigVolumeMain(pod, replKubeInput.fileMap) }
+
+    verify(exactly = 0) { launcher.waitForPodReadyOrTerminal(replKubeInput.sourceLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) }
 
     verify { launcher.waitForPodReadyOrTerminal(replKubeInput.destinationLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) }
   }
