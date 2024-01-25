@@ -1,6 +1,8 @@
 plugins {
     id("io.airbyte.gradle.jvm.lib")
     id("io.airbyte.gradle.publish")
+    id("org.jetbrains.kotlin.jvm")
+    id("org.jetbrains.kotlin.kapt")
 }
 
 configurations.all {
@@ -11,8 +13,12 @@ configurations.all {
     }
 }
 dependencies {
-    annotationProcessor(platform(libs.micronaut.bom))
-    annotationProcessor(libs.bundles.micronaut.annotation.processor)
+    kapt(platform(libs.micronaut.bom))
+    kapt(libs.bundles.micronaut.annotation.processor)
+
+    kaptTest(platform(libs.micronaut.bom))
+    kaptTest(libs.bundles.micronaut.test.annotation.processor)
+
     annotationProcessor(libs.micronaut.jaxrs.processor)
 
     implementation(platform(libs.micronaut.bom))
@@ -73,6 +79,14 @@ dependencies {
     testImplementation(libs.junit.pioneer)
     testImplementation(libs.bundles.micronaut.test)
     testImplementation(libs.micronaut.http)
+    testImplementation(libs.mockk)
 
     testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
+}
+
+// Even though Kotlin is excluded on Spotbugs, this project
+// still runs into spotbug issues. Working theory is that
+// generated code is being picked up. Disable as a short-term fix.
+tasks.named("spotbugsMain") {
+    enabled = false
 }

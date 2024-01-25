@@ -9,6 +9,7 @@ import io.airbyte.data.services.shared.ScopedConfigurationKey
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigOriginType
 import io.mockk.clearAllMocks
 import io.mockk.every
+import io.mockk.justRun
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
@@ -471,5 +472,16 @@ internal class ScopedConfigurationServiceDataImplTest {
     verify {
       scopedConfigurationRepository.findAll()
     }
+  }
+
+  @Test
+  fun `test delete scoped configuration`() {
+    val configId = UUID.randomUUID()
+
+    justRun { scopedConfigurationRepository.deleteById(configId) }
+
+    scopedConfigurationService.deleteScopedConfiguration(configId)
+
+    verify { scopedConfigurationRepository.deleteById(configId) }
   }
 }

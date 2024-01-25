@@ -60,4 +60,9 @@ interface ScopedConfigurationService {
    * List all scoped configurations.
    */
   fun listScopedConfigurations(): List<ScopedConfiguration>
+
+  /**
+   * Delete a scoped configuration by id.
+   */
+  fun deleteScopedConfiguration(configId: UUID)
 }

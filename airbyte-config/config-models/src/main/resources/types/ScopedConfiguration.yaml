@@ -55,3 +55,9 @@ properties:
     description: Date at which the configuration entry is no longer valid
     type: string
     format: date
+  updatedAt:
+    type: integer
+    format: int64
+  createdAt:
+    type: integer
+    format: int64

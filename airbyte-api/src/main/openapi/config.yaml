@@ -85,6 +85,8 @@ tags:
     description: Metadata about the Airbyte deployment
   - name: applications
     description: Applications can be used to provide api access for Users
+  - name: scoped_configuration
+    description: Scoped configuration store specific configuration for a given entity. e.g. Overriding a workspaces connector version.
 
 paths:
   /v1/workspaces/create:
@@ -4444,6 +4446,118 @@ paths:
       summary: Grant an Access Token for an Application.
       description: Takes the client_id and client_secret for an application and returns an Access Token.
 
+  # Scoped Configuration
+  /v1/scoped_configuration/list:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScopedConfigurationListRequestBody"
+
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScopedConfigurationListResponse"
+          description: An array of scoped configurations
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      operationId: getAllScopedConfigurations
+      summary: Get all scoped configurations
+      tags:
+        - scoped_configuration
+
+  /v1/scoped_configuration/create:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScopedConfigurationCreateRequestBody"
+      responses:
+        "200":
+          description: Newly created scoped configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScopedConfigurationCreateResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+      operationId: createScopedConfiguration
+      summary: Create a new scoped configuration
+      tags:
+        - scoped_configuration
+
+  /v1/scoped_configuration/get:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScopedConfigurationReadRequestBody"
+
+      responses:
+        "200":
+          description: A Scoped configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScopedConfigurationReadResponse"
+
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Get a scoped configuration by ID
+      operationId: getScopedConfigurationById
+      tags:
+        - scoped_configuration
+
+  /v1/scoped_configuration/update:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScopedConfigurationUpdateRequestBody"
+      responses:
+        "200":
+          description: Updated scoped configuration object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScopedConfigurationUpdateResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+      summary: Update a scoped configuration by ID
+      operationId: updateScopedConfiguration
+      tags:
+        - scoped_configuration
+
+  /v1/scoped_configuration/delete:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScopedConfigurationDeleteRequestBody"
+      responses:
+        "200":
+          description: Deleted scoped configuration object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScopedConfigurationDeleteResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Delete a scoped configuration by ID
+      operationId: deleteScopedConfiguration
+      tags:
+        - scoped_configuration
+
 components:
   securitySchemes:
     bearerAuth:
@@ -4451,6 +4565,158 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    # Scoped Configuration
+    ScopedConfigurationRead:
+      type: object
+      properties:
+        id:
+          type: string
+        value:
+          type: string
+        value_name:
+          type: string
+        description:
+          type: string
+        reference_url:
+          type: string
+        config_key:
+          type: string
+        resource_id:
+          type: string
+        resource_name:
+          type: string
+        resource_type:
+          type: string
+        scope_id:
+          type: string
+        scope_type:
+          type: string
+        scope_name:
+          type: string
+        origin:
+          type: string
+        origin_type:
+          type: string
+        origin_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd")'
+
+    ScopedConfigurationListRequestBody:
+      type: object
+      properties:
+        config_key:
+          type: string
+          description: Key of the configuration to filter by
+
+    ScopedConfigurationListResponse:
+      type: object
+      properties:
+        scopedConfigurations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScopedConfigurationRead"
+
+    ScopedConfigurationCreateRequestBody:
+      type: object
+      required:
+        - value
+        - config_key
+        - resource_id
+        - resource_type
+        - scope_id
+        - scope_type
+        - origin
+        - origin_type
+      properties:
+        value:
+          type: string
+        description:
+          type: string
+        reference_url:
+          type: string
+        config_key:
+          type: string
+        resource_id:
+          type: string
+        resource_type:
+          type: string
+        scope_id:
+          type: string
+        scope_type:
+          type: string
+        origin:
+          type: string
+        origin_type:
+          type: string
+        expires_at:
+          type: string
+          format: date
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd")'
+
+    ScopedConfigurationCreateResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ScopedConfigurationRead"
+
+    ScopedConfigurationReadRequestBody:
+      type: object
+      properties:
+        scopedConfigurationId:
+          type: string
+          format: uuid
+      required:
+        - scopedConfigurationId
+
+    ScopedConfigurationReadResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ScopedConfigurationRead"
+
+    ScopedConfigurationUpdateRequestBody:
+      type: object
+      required:
+        - scopedConfigurationId
+        - data
+      properties:
+        scopedConfigurationId:
+          type: string
+          format: uuid
+        data:
+          $ref: "#/components/schemas/ScopedConfigurationCreateRequestBody"
+
+    ScopedConfigurationUpdateResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ScopedConfigurationRead"
+
+    ScopedConfigurationDeleteRequestBody:
+      type: object
+      properties:
+        scopedConfigurationId:
+          type: string
+          format: uuid
+      required:
+        - scopedConfigurationId
+
+    ScopedConfigurationDeleteResponse:
+      type: object
+      properties:
+        scopedConfigurationId:
+          type: string
+          format: uuid
+
     # WORKSPACE
     WorkspaceId:
       type: string
