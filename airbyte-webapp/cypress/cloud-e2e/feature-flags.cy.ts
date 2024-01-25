@@ -21,7 +21,7 @@ describe("AllowDBTCloudIntegration", () => {
   describe("when false, hide dbt-Cloud-specific UI", () => {
     before(() => cy.setFeatureFlags({ [FeatureItem.AllowDBTCloudIntegration]: { enabled: false } }));
     it("has no dbt Cloud Integration link in the settings page", () => {
-      cy.contains("User settings").should("exist");
+      cy.contains("Account").should("exist");
       cy.contains("Integrations").should("not.exist");
     });
   });
