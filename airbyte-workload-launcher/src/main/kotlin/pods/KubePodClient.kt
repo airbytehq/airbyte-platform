@@ -88,7 +88,7 @@ class KubePodClient(
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
-        "Orchestrator pod failed to start within allotted timeout.",
+        "Orchestrator pod failed to start within allotted timeout of ${ORCHESTRATOR_INIT_TIMEOUT_VALUE.seconds} seconds. (${e.message})",
         e,
       )
     }
@@ -104,7 +104,7 @@ class KubePodClient(
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
-        "Failed to copy files to orchestrator pod ${kubeInput.kubePodInfo.name}.",
+        "Failed to copy files to orchestrator pod ${kubeInput.kubePodInfo.name}. (${e.message})",
         e,
       )
     }
@@ -117,7 +117,7 @@ class KubePodClient(
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
-        "Source pod failed to start within allotted timeout.",
+        "Source pod failed to start within allotted timeout of ${CONNECTOR_STARTUP_TIMEOUT_VALUE.seconds} seconds. (${e.message})",
         e,
       )
     }
@@ -130,7 +130,7 @@ class KubePodClient(
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
-        "Destination pod failed to start within allotted timeout.",
+        "Destination pod failed to start within allotted timeout of ${CONNECTOR_STARTUP_TIMEOUT_VALUE.seconds} seconds. (${e.message})",
         e,
       )
     }
