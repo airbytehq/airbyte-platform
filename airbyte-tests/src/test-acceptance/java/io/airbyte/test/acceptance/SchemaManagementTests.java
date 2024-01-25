@@ -26,6 +26,7 @@ import io.airbyte.api.client.model.generated.DestinationSyncMode;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.client.model.generated.SchemaChange;
+import io.airbyte.api.client.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.api.client.model.generated.WebBackendConnectionRead;
@@ -207,8 +208,7 @@ class SchemaManagementTests {
     // data.
     testHarness.runSqlScriptInSource("postgres_add_column_and_table.sql");
     // Sync the connection, which will trigger a refresh. Wait for it to finish, because we don't have a
-    // better way to know when the catalog
-    // refresh step is complete.
+    // better way to know when the catalog refresh step is complete.
     final var jobRead = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
     testHarness.waitForSuccessfulSyncNoTimeout(jobRead);
 
@@ -230,11 +230,44 @@ class SchemaManagementTests {
   @Timeout(
            value = 10,
            unit = TimeUnit.MINUTES)
+  void testBackfillDisabled() throws Exception {
+    AirbyteApiClient.retryWithJitter(() -> apiClient.getConnectionApi().updateConnection(
+        new ConnectionUpdate()
+            .connectionId(createdConnection.getConnectionId())
+            .nonBreakingChangesPreference(NonBreakingChangesPreference.PROPAGATE_FULLY)
+            .backfillPreference(SchemaChangeBackfillPreference.DISABLED)),
+        "update connection non breaking change preference", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+    // Avoid a race with the connection manager.
+    Thread.sleep(1000 * 5);
+    // Run a sync with the initial data.
+    final var jobRead = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
+    testHarness.waitForSuccessfulSyncNoTimeout(jobRead);
+    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), createdConnection.getNamespaceFormat(),
+        getExpectedRecordsForIdAndName());
+
+    // Modify the source to add a new column and populate it with default values.
+    testHarness.runSqlScriptInSource("postgres_add_column_with_default_value.sql");
+
+    // Sync again. This should update the schema, but it shouldn't backfill, so only the new row should
+    // have the new column populated.
+    final JobRead jobReadWithBackfills = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
+    testHarness.waitForSuccessfulSyncNoTimeout(jobReadWithBackfills);
+    final var currentConnection = testHarness.getConnection(createdConnection.getConnectionId());
+    assertEquals(3, currentConnection.getSyncCatalog().getStreams().get(0).getStream().getJsonSchema().get("properties").size());
+    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), createdConnection.getNamespaceFormat(),
+        getExpectedRecordsForIdAndNameWithUpdatedCatalog());
+  }
+
+  @Test
+  @Timeout(
+           value = 10,
+           unit = TimeUnit.MINUTES)
   void testBackfillOnNewColumn() throws Exception {
     AirbyteApiClient.retryWithJitter(() -> apiClient.getConnectionApi().updateConnection(
         new ConnectionUpdate()
             .connectionId(createdConnection.getConnectionId())
-            .nonBreakingChangesPreference(NonBreakingChangesPreference.PROPAGATE_FULLY)),
+            .nonBreakingChangesPreference(NonBreakingChangesPreference.PROPAGATE_FULLY)
+            .backfillPreference(SchemaChangeBackfillPreference.ENABLED)),
         "update connection non breaking change preference", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
     // We sometimes get a race where the connection manager isn't ready, and this results in
     // `syncConnection` simply
@@ -272,12 +305,12 @@ class SchemaManagementTests {
   private List<JsonNode> getExpectedRecordsForIdAndNameWithUpdatedCatalog() {
     final var nodeFactory = JsonNodeFactory.withExactBigDecimals(false);
     return List.of(
-        new ObjectNode(nodeFactory).put("id", 1).put(FIELD_NAME, "sherif").put(A_NEW_COLUMN, (String) null),
-        new ObjectNode(nodeFactory).put("id", 2).put(FIELD_NAME, "charles").put(A_NEW_COLUMN, (String) null),
-        new ObjectNode(nodeFactory).put("id", 3).put(FIELD_NAME, "jared").put(A_NEW_COLUMN, (String) null),
-        new ObjectNode(nodeFactory).put("id", 4).put(FIELD_NAME, "michel").put(A_NEW_COLUMN, (String) null),
-        new ObjectNode(nodeFactory).put("id", 5).put(FIELD_NAME, "john").put(A_NEW_COLUMN, (String) null),
-        new ObjectNode(nodeFactory).put("id", 6).put(FIELD_NAME, "a-new-name").put(A_NEW_COLUMN, "contents-of-the-new-column"));
+        new ObjectNode(nodeFactory).put("id", 1).put(FIELD_NAME, "sherif").put(A_NEW_COLUMN, (Integer) null),
+        new ObjectNode(nodeFactory).put("id", 2).put(FIELD_NAME, "charles").put(A_NEW_COLUMN, (Integer) null),
+        new ObjectNode(nodeFactory).put("id", 3).put(FIELD_NAME, "jared").put(A_NEW_COLUMN, (Integer) null),
+        new ObjectNode(nodeFactory).put("id", 4).put(FIELD_NAME, "michel").put(A_NEW_COLUMN, (Integer) null),
+        new ObjectNode(nodeFactory).put("id", 5).put(FIELD_NAME, "john").put(A_NEW_COLUMN, (Integer) null),
+        new ObjectNode(nodeFactory).put("id", 6).put(FIELD_NAME, "a-new-name").put(A_NEW_COLUMN, 100));
   }
 
   private List<JsonNode> getExpectedRecordsForIdAndNameWithBackfilledColumn() {
@@ -296,12 +329,17 @@ class SchemaManagementTests {
     // We have an extra column and an extra stream.
     final var expectedCatalog = Jsons.clone(createdConnection.getSyncCatalog());
     expectedCatalog.getStreams().get(0).getStream().jsonSchema(Jsons
-        .deserialize("""
-                     {
-                             "type":"object",
-                             "properties":{"id":{"type":"number","airbyte_type":"integer"},"name":{"type":"string"},"a_new_column":{"type":"string"}}
-                     }
-                     """));
+        .deserialize(
+            """
+            {
+                    "type":"object",
+                    "properties": {
+                      "id":{"type":"number","airbyte_type":"integer"},
+                      "name":{"type":"string"},
+                      "a_new_column":{"type":"number","airbyte_type":"integer"}
+                    }
+            }
+            """));
     expectedCatalog.streams(List.of(new AirbyteStreamAndConfiguration()
         .stream(new AirbyteStream()
             .name("a_new_table")

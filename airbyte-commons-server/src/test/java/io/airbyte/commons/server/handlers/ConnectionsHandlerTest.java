@@ -59,6 +59,7 @@ import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.NamespaceDefinitionType;
 import io.airbyte.api.model.generated.ResourceRequirements;
+import io.airbyte.api.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.api.model.generated.SelectedFieldInfo;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
@@ -269,7 +270,8 @@ class ConnectionsHandlerTest {
         .withGeography(Geography.AUTO)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(true)
-        .withBreakingChange(false);
+        .withBreakingChange(false)
+        .withBackfillPreference(StandardSync.BackfillPreference.ENABLED);
     standardSync2 = new StandardSync()
         .withConnectionId(connection2Id)
         .withName(PRESTO_TO_HUDI)
@@ -479,7 +481,7 @@ class ConnectionsHandlerTest {
 
     @Test
     void testSearchConnections() throws JsonValidationException, ConfigNotFoundException, IOException {
-      final ConnectionRead connectionRead1 = ConnectionHelpers.connectionReadFromStandardSync(standardSync);
+      final ConnectionRead connectionRead1 = ConnectionHelpers.generateExpectedConnectionRead(standardSync);
       final StandardSync standardSync2 = new StandardSync()
           .withConnectionId(UUID.randomUUID())
           .withName("test connection")
@@ -904,7 +906,8 @@ class ConnectionsHandlerTest {
             .sourceCatalogId(standardSync.getSourceCatalogId())
             .geography(ApiPojoConverters.toApiGeography(standardSync.getGeography()))
             .notifySchemaChanges(standardSync.getNotifySchemaChanges())
-            .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail());
+            .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail())
+            .backfillPreference(Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class));
       }
 
       @Test
@@ -928,14 +931,20 @@ class ConnectionsHandlerTest {
 
         assertEquals(expectedConnectionRead, actualConnectionRead);
 
-        verify(configRepository).writeStandardSync(standardSync.withNotifySchemaChanges(null).withNotifySchemaChangesByEmail(null));
+        verify(configRepository).writeStandardSync(standardSync
+            .withNotifySchemaChanges(null)
+            .withNotifySchemaChangesByEmail(null)
+            .withBackfillPreference(StandardSync.BackfillPreference.ENABLED));
 
         // Use new schedule schema, verify that we get the same results.
         connectionCreate
             .schedule(null)
             .scheduleType(ConnectionScheduleType.BASIC)
             .scheduleData(ConnectionHelpers.generateBasicConnectionScheduleData());
-        assertEquals(expectedConnectionRead.notifySchemaChanges(null).notifySchemaChangesByEmail(null),
+        assertEquals(expectedConnectionRead
+            .notifySchemaChanges(null)
+            .notifySchemaChangesByEmail(null)
+            .backfillPreference(SchemaChangeBackfillPreference.ENABLED),
             connectionsHandler.createConnection(connectionCreate));
       }
 
@@ -974,7 +983,9 @@ class ConnectionsHandlerTest {
         final ConnectionRead actualConnectionRead = connectionsHandler.createConnection(connectionCreate);
 
         assertEquals(expectedConnectionRead, actualConnectionRead);
-        verify(configRepository).writeStandardSync(standardSync.withNotifySchemaChanges(null).withNotifySchemaChangesByEmail(null));
+        verify(configRepository).writeStandardSync(standardSync
+            .withNotifySchemaChanges(null)
+            .withNotifySchemaChangesByEmail(null));
       }
 
       @Test
@@ -1438,7 +1449,8 @@ class ConnectionsHandlerTest {
             ApiPojoConverters.toApiGeography(standardSync.getGeography()),
             false,
             standardSync.getNotifySchemaChanges(),
-            standardSync.getNotifySchemaChangesByEmail())
+            standardSync.getNotifySchemaChangesByEmail(),
+            Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class))
             .status(ConnectionStatus.INACTIVE)
             .scheduleType(ConnectionScheduleType.MANUAL)
             .scheduleData(null)

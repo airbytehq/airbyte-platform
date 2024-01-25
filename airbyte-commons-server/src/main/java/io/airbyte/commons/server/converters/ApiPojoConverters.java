@@ -22,6 +22,7 @@ import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.NormalizationDestinationDefinitionConfig;
 import io.airbyte.api.model.generated.ReleaseStage;
 import io.airbyte.api.model.generated.ResourceRequirements;
+import io.airbyte.api.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.api.model.generated.SupportLevel;
 import io.airbyte.api.model.generated.SupportState;
 import io.airbyte.commons.converters.StateConverter;
@@ -162,6 +163,7 @@ public class ApiPojoConverters {
         .breakingChange(standardSync.getBreakingChange())
         .geography(Enums.convertTo(standardSync.getGeography(), Geography.class))
         .nonBreakingChangesPreference(Enums.convertTo(standardSync.getNonBreakingChangesPreference(), NonBreakingChangesPreference.class))
+        .backfillPreference(Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class))
         .notifySchemaChanges(standardSync.getNotifySchemaChanges())
         .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail());
 
@@ -201,6 +203,10 @@ public class ApiPojoConverters {
 
   public static StandardSync.NonBreakingChangesPreference toPersistenceNonBreakingChangesPreference(final NonBreakingChangesPreference preference) {
     return Enums.convertTo(preference, StandardSync.NonBreakingChangesPreference.class);
+  }
+
+  public static StandardSync.BackfillPreference toPersistenceBackfillPreference(final SchemaChangeBackfillPreference preference) {
+    return Enums.convertTo(preference, StandardSync.BackfillPreference.class);
   }
 
   public static Geography toApiGeography(final io.airbyte.config.Geography geography) {

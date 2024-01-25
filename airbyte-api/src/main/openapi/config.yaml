@@ -6455,6 +6455,8 @@ components:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        backfillPreference:
+          $ref: "#/components/schemas/SchemaChangeBackfillPreference"
     WebBackendConnectionCreate:
       type: object
       required:
@@ -6506,6 +6508,8 @@ components:
           $ref: "#/components/schemas/Geography"
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        backfillPreference:
+          $ref: "#/components/schemas/SchemaChangeBackfillPreference"
     ConnectionStateCreateOrUpdate:
       type: object
       required:
@@ -6564,6 +6568,8 @@ components:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        backfillPreference:
+          $ref: "#/components/schemas/SchemaChangeBackfillPreference"
         breakingChange:
           type: boolean
     WebBackendConnectionUpdate:
@@ -6616,6 +6622,8 @@ components:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        backfillPreference:
+          $ref: "#/components/schemas/SchemaChangeBackfillPreference"
     ConnectionRead:
       type: object
       required:
@@ -6674,6 +6682,8 @@ components:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        backfillPreference:
+          $ref: "#/components/schemas/SchemaChangeBackfillPreference"
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
     ConnectionStatusesRequestBody:
@@ -8880,12 +8890,19 @@ components:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        backfillPreference:
+          $ref: "#/components/schemas/SchemaChangeBackfillPreference"
     NonBreakingChangesPreference:
       enum:
         - ignore # do nothing if we detect a schema change
         - disable # disable the connection, pausing the sync
         - propagate_columns # automatically propagate the changes on selected streams and continue syncing
         - propagate_fully # automatically propagate the changes including new streams and continue syncing
+      type: string
+    SchemaChangeBackfillPreference:
+      enum:
+        - enabled # when a column is added or changed via auto-propagation, the stream will be backfilled
+        - disabled # backfill will not run
       type: string
     WebBackendConnectionReadList:
       type: object

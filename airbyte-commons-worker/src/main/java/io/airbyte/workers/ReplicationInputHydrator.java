@@ -32,9 +32,9 @@ import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.featureflag.AutoBackfillOnNewColumns;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
-import io.airbyte.featureflag.ResetBackfillState;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -83,16 +83,24 @@ public class ReplicationInputHydrator {
    * @throws Exception from the Airbyte API
    */
   public ReplicationInput getHydratedReplicationInput(final ReplicationActivityInput replicationActivityInput) throws Exception {
-    final ConfiguredAirbyteCatalog catalog = retrieveCatalog(replicationActivityInput);
+    // Retrieve the connection, which we need in a few places.
+    final ConnectionRead connectionInfo =
+        AirbyteApiClient
+            .retryWithJitterThrows(
+                () -> connectionApi.getConnection(new ConnectionIdRequestBody().connectionId(replicationActivityInput.getConnectionId())),
+                "retrieve the connection");
+    final ConfiguredAirbyteCatalog catalog = retrieveCatalog(connectionInfo);
     if (replicationActivityInput.getIsReset()) {
       // If this is a reset, we need to set the streams being reset to Full Refresh | Overwrite.
       updateCatalogForReset(replicationActivityInput, catalog);
     }
     // Retrieve the state.
     State state = retrieveState(replicationActivityInput);
-    if (replicationActivityInput.getSchemaRefreshOutput() != null) {
-      state = getUpdatedStateForBackfill(state, replicationActivityInput.getSchemaRefreshOutput(),
-          replicationActivityInput.getWorkspaceId(), replicationActivityInput.getConnectionId(), catalog);
+    final boolean backfillEnabledForWorkspace =
+        featureFlagClient.boolVariation(AutoBackfillOnNewColumns.INSTANCE, new Workspace(replicationActivityInput.getWorkspaceId()));
+    if (backfillEnabledForWorkspace && BackfillHelper.syncShouldBackfill(replicationActivityInput, connectionInfo)) {
+      state =
+          getUpdatedStateForBackfill(state, replicationActivityInput.getSchemaRefreshOutput(), replicationActivityInput.getConnectionId(), catalog);
     }
 
     // Hydrate the secrets.
@@ -140,7 +148,6 @@ public class ReplicationInputHydrator {
 
   private State getUpdatedStateForBackfill(final State state,
                                            final RefreshSchemaActivityOutput schemaRefreshOutput,
-                                           final UUID workspaceId,
                                            final UUID connectionId,
                                            final ConfiguredAirbyteCatalog catalog)
       throws Exception {
@@ -148,9 +155,10 @@ public class ReplicationInputHydrator {
       final var streamsToBackfill = BackfillHelper.getStreamsToBackfill(schemaRefreshOutput.getAppliedDiff(), catalog);
       LOGGER.debug("Backfilling streams: {}", String.join(", ", streamsToBackfill.stream().map(StreamDescriptor::getName).toList()));
       final State resetState = BackfillHelper.clearStateForStreamsToBackfill(state, streamsToBackfill);
-      // persist the state
-      // this will be behind a separate feature flag since it's a destructive operation.
-      if (resetState != null && featureFlagClient.boolVariation(ResetBackfillState.INSTANCE, new Workspace(workspaceId))) {
+      if (resetState != null) {
+        // We persist the state here in case the attempt fails, the subsequent attempt will continue the
+        // backfill process.
+        // TODO(mfsiega-airbyte): move all of the state handling into a separate activity.
         LOGGER.debug("Resetting state for connection: {}", connectionId);
         persistState(resetState, connectionId);
       }
@@ -162,12 +170,7 @@ public class ReplicationInputHydrator {
   }
 
   @NotNull
-  private ConfiguredAirbyteCatalog retrieveCatalog(final ReplicationActivityInput replicationActivityInput) throws Exception {
-    final ConnectionRead connectionInfo =
-        AirbyteApiClient
-            .retryWithJitterThrows(
-                () -> connectionApi.getConnection(new ConnectionIdRequestBody().connectionId(replicationActivityInput.getConnectionId())),
-                "retrieve the connection");
+  private ConfiguredAirbyteCatalog retrieveCatalog(final ConnectionRead connectionInfo) throws Exception {
     if (connectionInfo.getSyncCatalog() == null) {
       throw new IllegalArgumentException("Connection is missing catalog, which is required");
     }

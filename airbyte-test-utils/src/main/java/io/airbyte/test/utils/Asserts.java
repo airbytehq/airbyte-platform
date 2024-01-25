@@ -135,11 +135,15 @@ public class Asserts {
       throws Exception {
     final String finalDestinationTable = String.format("%s.%s%s", outputSchema, OUTPUT_STREAM_PREFIX, streamName.replace(".", "_"));
     final List<JsonNode> destinationRecords = Databases.retrieveRecordsFromDatabase(dst, finalDestinationTable);
+    for (final var record : destinationRecords) {
+      LOGGER.info("destination record: {}", record.toPrettyString());
+    }
     dropAirbyteSystemColumns(destinationRecords);
 
     assertEquals(sourceRecords.size(), destinationRecords.size(),
         String.format("destination contains: %s record. source contains: %s", sourceRecords.size(), destinationRecords.size()));
     for (final JsonNode sourceStreamRecord : sourceRecords) {
+      LOGGER.info("sourceStreamRecord: {}", sourceStreamRecord.toPrettyString());
       assertTrue(recordIsContainedIn(sourceStreamRecord, destinationRecords));
       assertTrue(
           destinationRecords.stream()

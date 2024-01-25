@@ -767,7 +767,7 @@ class WebBackendConnectionsHandlerTest {
         Set.of("name", "namespaceDefinition", "namespaceFormat", "prefix", "sourceId", "destinationId", "operationIds",
             "addOperationIdsItem", "removeOperationIdsItem", "syncCatalog", "schedule", "scheduleType", "scheduleData",
             "status", "resourceRequirements", "sourceCatalogId", "geography", "nonBreakingChangesPreference", "notifySchemaChanges",
-            "notifySchemaChangesByEmail");
+            "notifySchemaChangesByEmail", "backfillPreference");
 
     final Set<String> methods = Arrays.stream(ConnectionCreate.class.getMethods())
         .filter(method -> method.getReturnType() == ConnectionCreate.class)
@@ -790,7 +790,7 @@ class WebBackendConnectionsHandlerTest {
         Set.of("schedule", "connectionId", "syncCatalog", "namespaceDefinition", "namespaceFormat", "prefix", "status",
             "operationIds", "addOperationIdsItem", "removeOperationIdsItem", "resourceRequirements", "name",
             "sourceCatalogId", "scheduleType", "scheduleData", "geography", "breakingChange", "notifySchemaChanges", "notifySchemaChangesByEmail",
-            "nonBreakingChangesPreference");
+            "nonBreakingChangesPreference", "backfillPreference");
 
     final Set<String> methods = Arrays.stream(ConnectionUpdate.class.getMethods())
         .filter(method -> method.getReturnType() == ConnectionUpdate.class)

@@ -50,6 +50,7 @@ public class ConnectionMatcher implements Matchable<ConnectionRead> {
     fromSearch.breakingChange(query.getBreakingChange());
     fromSearch.notifySchemaChanges(query.getNotifySchemaChanges());
     fromSearch.notifySchemaChangesByEmail(query.getNotifySchemaChangesByEmail());
+    fromSearch.backfillPreference(query.getBackfillPreference());
 
     return fromSearch;
   }

@@ -250,6 +250,10 @@ public class ConnectionsHandler {
     if (patch.getNonBreakingChangesPreference() != null) {
       sync.setNonBreakingChangesPreference(ApiPojoConverters.toPersistenceNonBreakingChangesPreference(patch.getNonBreakingChangesPreference()));
     }
+
+    if (patch.getBackfillPreference() != null) {
+      sync.setBackfillPreference(ApiPojoConverters.toPersistenceBackfillPreference(patch.getBackfillPreference()));
+    }
   }
 
   private static String getFrequencyStringFromScheduleType(final ScheduleType scheduleType, final ScheduleData scheduleData) {
@@ -462,7 +466,8 @@ public class ConnectionsHandler {
         .withGeography(getGeographyFromConnectionCreateOrWorkspace(connectionCreate))
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(
-            ApiPojoConverters.toPersistenceNonBreakingChangesPreference(connectionCreate.getNonBreakingChangesPreference()));
+            ApiPojoConverters.toPersistenceNonBreakingChangesPreference(connectionCreate.getNonBreakingChangesPreference()))
+        .withBackfillPreference(ApiPojoConverters.toPersistenceBackfillPreference(connectionCreate.getBackfillPreference()));
     if (connectionCreate.getResourceRequirements() != null) {
       standardSync.withResourceRequirements(ApiPojoConverters.resourceRequirementsToInternal(connectionCreate.getResourceRequirements()));
     }

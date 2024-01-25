@@ -28,6 +28,7 @@ import io.airbyte.api.client.model.generated.FieldTransform;
 import io.airbyte.api.client.model.generated.JobOptionalRead;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.ResetConfig;
+import io.airbyte.api.client.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamTransform;
 import io.airbyte.api.client.model.generated.SyncMode;
@@ -38,8 +39,11 @@ import io.airbyte.config.State;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.featureflag.AutoBackfillOnNewColumns;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Flag;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
@@ -199,14 +203,27 @@ class ReplicationInputHydratorTest {
 
   @Test
   void testGenerateReplicationInputHandlesBackfills() throws Exception {
-    // Verify that if we have input from the schema refresh activity, that we clear state accordingly to
-    // prepare for backfills.
+    // Verify that if backfill is enabled, and we have an appropriate diff, then we clear the state for
+    // the affected streams.
+    mockEnableFeatureFlagForWorkspace(AutoBackfillOnNewColumns.INSTANCE, WORKSPACE_ID);
+    mockEnableBackfillForConnection();
     final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
     final ReplicationActivityInput input = getDefaultReplicationActivityInputForTest();
     input.setSchemaRefreshOutput(new RefreshSchemaActivityOutput(CATALOG_DIFF));
     final var replicationInput = replicationInputHydrator.getHydratedReplicationInput(input);
     final var typedState = StateMessageHelper.getTypedState(replicationInput.getState().getState());
     assertEquals(JsonNodeFactory.instance.nullNode(), typedState.get().getStateMessages().get(0).getStream().getStreamState());
+  }
+
+  private void mockEnableFeatureFlagForWorkspace(final Flag<Boolean> flag, final UUID workspaceId) {
+    when(featureFlagClient.boolVariation(flag, new Workspace(workspaceId))).thenReturn(true);
+  }
+
+  private void mockEnableBackfillForConnection() throws ApiException {
+    when(connectionApi.getConnection(new ConnectionIdRequestBody().connectionId(CONNECTION_ID))).thenReturn(new ConnectionRead()
+        .connectionId(CONNECTION_ID)
+        .syncCatalog(SYNC_CATALOG)
+        .backfillPreference(SchemaChangeBackfillPreference.ENABLED));
   }
 
 }
