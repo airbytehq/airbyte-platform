@@ -15,7 +15,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./SavingIndicator.module.scss";
-import { VersionModal } from "../VersionModal";
+import { VersionModal } from "./VersionModal";
 
 function getMessage(
   savingState: SavingState,

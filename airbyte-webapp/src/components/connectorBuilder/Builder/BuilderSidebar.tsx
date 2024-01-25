@@ -5,23 +5,16 @@ import { FormattedMessage } from "react-intl";
 
 import Indicator from "components/Indicator";
 import { FlexContainer } from "components/ui/Flex";
-import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
-import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
+import { InfoTooltip } from "components/ui/Tooltip";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { links } from "core/utils/links";
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
 import styles from "./BuilderSidebar.module.scss";
-import { SavingIndicator } from "./SavingIndicator";
-import SlackIcon from "./slack-icon.svg?react";
-import { UiYamlToggleButton } from "./UiYamlToggleButton";
-import { ConnectorImage } from "../ConnectorImage";
-import { DownloadYamlButton } from "../DownloadYamlButton";
-import { PublishButton } from "../PublishButton";
+import { Sidebar } from "../Sidebar";
 import { useBuilderWatch } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 import { useInferredInputs } from "../useInferredInputs";
@@ -62,13 +55,12 @@ interface BuilderSidebarProps {
   className?: string;
 }
 
-export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ className }) => {
+export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
   const analyticsService = useAnalyticsService();
   const { hasErrors } = useBuilderErrors();
-  const { toggleUI, permission } = useConnectorBuilderFormState();
+  const { permission } = useConnectorBuilderFormState();
   const { setValue } = useFormContext();
   const formValues = useBuilderWatch("formValues");
-  const name = useBuilderWatch("name");
   const view = useBuilderWatch("view");
   const handleViewSelect = (selectedView: BuilderView) => {
     setValue("view", selectedView);
@@ -77,21 +69,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
   const inferredInputsLength = useInferredInputs().length;
 
   return (
-    <FlexContainer direction="column" alignItems="stretch" gap="xl" className={classnames(className, styles.container)}>
-      <UiYamlToggleButton yamlSelected={false} onClick={() => toggleUI("yaml")} />
-
-      <FlexContainer direction="column" alignItems="center">
-        <ConnectorImage />
-
-        <div className={styles.connectorName}>
-          <Heading as="h2" size="sm">
-            {name}
-          </Heading>
-        </div>
-
-        {formValues.streams.length > 0 && <SavingIndicator />}
-      </FlexContainer>
-
+    <Sidebar yamlSelected={false}>
       <FlexContainer direction="column" alignItems="stretch" gap="none">
         <ViewSelectButton
           data-testid="navbutton-global"
@@ -178,36 +156,6 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
           ))}
         </div>
       </FlexContainer>
-      <FlexContainer direction="column" alignItems="stretch" gap="md">
-        <DownloadYamlButton />
-        <PublishButton />
-      </FlexContainer>
-      <FlexContainer direction="column" gap="lg">
-        <Tooltip
-          placement="top"
-          control={
-            <Text size="sm" className={styles.slackLink}>
-              <a href="https://airbytehq.slack.com/archives/C027KKE4BCZ" target="_blank" rel="noreferrer">
-                <FlexContainer gap="sm" justifyContent="center" alignItems="center" as="span">
-                  <SlackIcon className={styles.slackIcon} />
-                  <FormattedMessage id="connectorBuilder.slackChannel" />
-                </FlexContainer>
-              </a>
-            </Text>
-          }
-        >
-          <FormattedMessage id="connectorBuilder.slackChannelTooltip" />
-        </Tooltip>
-        <Text size="sm" className={styles.slackLink}>
-          <a href={links.connectorBuilderTutorial} target="_blank" rel="noreferrer">
-            <FlexContainer gap="sm" justifyContent="center" alignItems="center" as="span">
-              <Icon type="docs" />
-              <FormattedMessage id="connectorBuilder.createPage.tutorialPrompt" />
-            </FlexContainer>
-          </a>
-        </Text>
-      </FlexContainer>
-    </FlexContainer>
+    </Sidebar>
   );
-});
-BuilderSidebar.displayName = "BuilderSidebar";
+};

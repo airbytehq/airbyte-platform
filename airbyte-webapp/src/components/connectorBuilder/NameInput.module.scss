@@ -1,10 +1,9 @@
 @use "scss/colors";
 @use "scss/variables";
-@use "../builderVariables.scss";
+@use "./builderVariables.scss";
 
 .label {
   flex-shrink: 1;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: text;
