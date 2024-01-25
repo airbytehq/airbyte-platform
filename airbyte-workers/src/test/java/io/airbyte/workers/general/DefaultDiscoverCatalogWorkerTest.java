@@ -8,6 +8,7 @@ package io.airbyte.workers.general;
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -292,26 +293,26 @@ class DefaultDiscoverCatalogWorkerTest {
 
   @Test
   void testDiscoverSchemaValidation() {
-    validCatalogStreamFactory = noop -> Lists.newArrayList(new AirbyteMessage().withType(Type.CATALOG).withCatalog(getAirbyteCatalogWithBadStreams()))
+    final var catalog = getAirbyteCatalogWithBadStreams();
+    validCatalogStreamFactory = noop -> Lists.newArrayList(new AirbyteMessage().withType(Type.CATALOG).withCatalog(catalog))
         .stream();
     final DefaultDiscoverCatalogWorker worker =
         new DefaultDiscoverCatalogWorker(mAirbyteApiClient, integrationLauncher, connectorConfigUpdater, validCatalogStreamFactory);
     final WorkerException workerException = assertThrows(WorkerException.class, () -> worker.run(INPUT, jobRoot));
-    assertEquals("Stream stream-1 has declared cursor field cursor-field-not-present-in-schema but it's not part of the schema {\n"
-        + "  \"id2\" : {\n"
-        + "    \"type\" : \"string\"\n"
-        + "  },\n"
-        + "  \"id\" : {\n"
-        + "    \"type\" : \"string\"\n"
-        + "  }\n"
-        + "},Stream stream-2 has declared primary key field primary-key-not-present-in-schema but it's not part of the schema {\n"
-        + "  \"id2\" : {\n"
-        + "    \"type\" : \"string\"\n"
-        + "  },\n"
-        + "  \"id\" : {\n"
-        + "    \"type\" : \"string\"\n"
-        + "  }\n"
-        + "}", workerException.getMessage());
+    final String exceptionMsg = workerException.getMessage();
+    assertTrue(exceptionMsg.contains("Source defined cursor validation failed for stream: stream-1."));
+    assertTrue(exceptionMsg.contains("Source defined primary key validation failed for stream: stream-2."));
+    assertFalse(exceptionMsg.contains("Source defined primary key validation failed for stream: stream-3."));
+  }
+
+  @Test
+  void discoverSchemaValidationHandlesNullOptionalKeys() {
+    final var catalog = getAirbyteCatalogWithNullKeyPaths();
+    validCatalogStreamFactory = noop -> Lists.newArrayList(new AirbyteMessage().withType(Type.CATALOG).withCatalog(catalog))
+        .stream();
+    final DefaultDiscoverCatalogWorker worker =
+        new DefaultDiscoverCatalogWorker(mAirbyteApiClient, integrationLauncher, connectorConfigUpdater, validCatalogStreamFactory);
+    assertDoesNotThrow(() -> worker.run(INPUT, jobRoot));
   }
 
   private static AirbyteCatalog getAirbyteCatalogWithBadStreams() {
@@ -343,6 +344,41 @@ class DefaultDiscoverCatalogWorkerTest {
             Field.of("id", JsonSchemaType.STRING),
             Field.of("id2", JsonSchemaType.STRING)))
         .withSourceDefinedPrimaryKey(Collections.singletonList(Collections.singletonList("id2")))
+        .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
+
+    return new AirbyteCatalog().withStreams(
+        List.of(cursorFieldNotPresentInSchema, primaryKeyNotPresentInSchema, goodStream));
+  }
+
+  private static AirbyteCatalog getAirbyteCatalogWithNullKeyPaths() {
+    final AirbyteStream cursorFieldNotPresentInSchema = new AirbyteStream()
+        .withNamespace("namespace-1")
+        .withName("stream-1")
+        .withDefaultCursorField(null)
+        .withJsonSchema(CatalogHelpers.fieldsToJsonSchema(
+            Field.of("id", JsonSchemaType.STRING),
+            Field.of("id2", JsonSchemaType.STRING)))
+        .withSourceDefinedPrimaryKey(Collections.singletonList(Collections.singletonList("id")))
+        .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
+
+    final AirbyteStream primaryKeyNotPresentInSchema = new AirbyteStream()
+        .withNamespace("namespace-2")
+        .withName("stream-2")
+        .withDefaultCursorField(Collections.singletonList("id"))
+        .withJsonSchema(CatalogHelpers.fieldsToJsonSchema(
+            Field.of("id", JsonSchemaType.STRING),
+            Field.of("id2", JsonSchemaType.STRING)))
+        .withSourceDefinedPrimaryKey(null)
+        .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
+
+    final AirbyteStream goodStream = new AirbyteStream()
+        .withNamespace("namespace-3")
+        .withName("stream-3")
+        .withDefaultCursorField(null)
+        .withJsonSchema(CatalogHelpers.fieldsToJsonSchema(
+            Field.of("id", JsonSchemaType.STRING),
+            Field.of("id2", JsonSchemaType.STRING)))
+        .withSourceDefinedPrimaryKey(null)
         .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
 
     return new AirbyteCatalog().withStreams(

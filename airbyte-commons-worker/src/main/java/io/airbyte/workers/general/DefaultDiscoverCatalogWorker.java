@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.UUID;
@@ -130,26 +131,44 @@ public class DefaultDiscoverCatalogWorker implements DiscoverCatalogWorker {
     }
   }
 
+  // NOTE: This logic is getting moved as part of a bug fix, but appears to be missing functionality.
+  // TODO: This logic should validate the path is traversable and not just that the keys exist in the
+  // schema.
+  private String validatePath(final JsonNode jsonSchema, final List<String> path) {
+    for (final String key : path) {
+      if (!jsonSchema.has(key)) {
+        return String.format("key: '%s' of path: '%s' not found in schema: %s", key, path, jsonSchema);
+      }
+    }
+
+    return "";
+  }
+
   private String validateCatalog(final AirbyteCatalog persistenceCatalog) {
     final StringJoiner streamsWithFaultySchema = new StringJoiner(",");
     for (final AirbyteStream s : persistenceCatalog.getStreams()) {
       if (s.getJsonSchema() != null && s.getJsonSchema().has("properties") && s.getJsonSchema().get("properties") != null) {
         final JsonNode jsonSchema = s.getJsonSchema().get("properties");
-        for (final String cursor : s.getDefaultCursorField()) {
-          if (!jsonSchema.has(cursor)) {
-            streamsWithFaultySchema.add(
-                String.format("Stream %s has declared cursor field %s but it's not part of the schema %s", s.getName(), cursor,
-                    jsonSchema.toPrettyString()));
-          }
+
+        final List<String> defaultCursorPath = Objects.requireNonNullElse(s.getDefaultCursorField(), List.of());
+        final var maybePathError = validatePath(jsonSchema, defaultCursorPath);
+        if (!maybePathError.isEmpty()) {
+          streamsWithFaultySchema.add(String.format(
+              "Source defined cursor validation failed for stream: %s. Error: %s",
+              s.getName(),
+              maybePathError));
         }
 
-        for (final List<String> pkey : s.getSourceDefinedPrimaryKey()) {
-          for (final String k : pkey) {
-            if (!jsonSchema.has(k)) {
-              streamsWithFaultySchema.add(
-                  String.format("Stream %s has declared primary key field %s but it's not part of the schema %s", s.getName(), k,
-                      jsonSchema.toPrettyString()));
-            }
+        final List<List<String>> sourceDefinedPrimaryKeyPaths = Objects.requireNonNullElse(s.getSourceDefinedPrimaryKey(), List.of());
+        for (final var path : sourceDefinedPrimaryKeyPaths) {
+          final List<String> nonNullPath = Objects.requireNonNullElse(path, List.of());
+          final var maybeErrorMsg = validatePath(jsonSchema, nonNullPath);
+          if (!maybeErrorMsg.isEmpty()) {
+            streamsWithFaultySchema.add(
+                String.format(
+                    "Source defined primary key validation failed for stream: %s. Error: %s",
+                    s.getName(),
+                    jsonSchema.toPrettyString()));
           }
         }
       }
