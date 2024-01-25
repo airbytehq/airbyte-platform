@@ -12,6 +12,7 @@ import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
 import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationUserRead;
 import io.airbyte.api.model.generated.OrganizationUserReadList;
+import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.api.model.generated.PermissionType;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
@@ -26,6 +27,8 @@ import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
+import io.airbyte.api.model.generated.WorkspaceUserAccessInfoRead;
+import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.config.InitialUserConfiguration;
@@ -37,6 +40,7 @@ import io.airbyte.config.Permission;
 import io.airbyte.config.User;
 import io.airbyte.config.User.Status;
 import io.airbyte.config.UserPermission;
+import io.airbyte.config.WorkspaceUserAccessInfo;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
@@ -296,6 +300,12 @@ public class UserHandler {
     return buildWorkspaceUserReadList(userPermissions, workspaceId);
   }
 
+  public WorkspaceUserAccessInfoReadList listAccessInfoByWorkspaceId(final WorkspaceIdRequestBody workspaceIdRequestBody) throws IOException {
+    final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
+    final List<WorkspaceUserAccessInfo> userAccessInfo = userPersistence.listWorkspaceUserAccessInfo(workspaceId);
+    return buildWorkspaceUserAccessInfoReadList(userAccessInfo);
+  }
+
   public UserWithPermissionInfoReadList listInstanceAdminUsers() throws IOException {
     final List<UserPermission> userPermissions = permissionPersistence.listInstanceAdminUsers();
     return new UserWithPermissionInfoReadList().users(userPermissions.stream()
@@ -509,6 +519,37 @@ public class UserHandler {
             .permissionType(
                 Enums.toEnum(userPermission.getPermission().getPermissionType().value(), io.airbyte.api.model.generated.PermissionType.class).get()))
         .collect(Collectors.toList()));
+  }
+
+  private WorkspaceUserAccessInfoReadList buildWorkspaceUserAccessInfoReadList(final List<WorkspaceUserAccessInfo> accessInfos) {
+    return new WorkspaceUserAccessInfoReadList()
+        .usersWithAccess(accessInfos.stream().map(this::buildWorkspaceUserAccessInfoRead).collect(Collectors.toList()));
+  }
+
+  private WorkspaceUserAccessInfoRead buildWorkspaceUserAccessInfoRead(final WorkspaceUserAccessInfo accessInfo) {
+    final PermissionRead workspacePermissionRead = Optional.ofNullable(accessInfo.getWorkspacePermission())
+        .map(wp -> new PermissionRead()
+            .permissionId(wp.getPermissionId())
+            .permissionType(Enums.convertTo(wp.getPermissionType(), PermissionType.class))
+            .userId(wp.getUserId())
+            .workspaceId(wp.getWorkspaceId()))
+        .orElse(null);
+
+    final PermissionRead organizationPermissionRead = Optional.ofNullable(accessInfo.getOrganizationPermission())
+        .map(op -> new PermissionRead()
+            .permissionId(op.getPermissionId())
+            .permissionType(Enums.convertTo(op.getPermissionType(), PermissionType.class))
+            .userId(op.getUserId())
+            .organizationId(op.getOrganizationId()))
+        .orElse(null);
+
+    return new WorkspaceUserAccessInfoRead()
+        .userId(accessInfo.getUserId())
+        .userEmail(accessInfo.getUserEmail())
+        .userName(accessInfo.getUserName())
+        .workspaceId(accessInfo.getWorkspaceId())
+        .workspacePermission(workspacePermissionRead)
+        .organizationPermission(organizationPermissionRead);
   }
 
 }

@@ -235,6 +235,10 @@ public class PermissionPersistence {
     return this.database.query(ctx -> listPermissionsForWorkspace(ctx, workspaceId));
   }
 
+  public List<UserPermission> listUserPermissionsGrantingWorkspaceAccess(final UUID workspaceId) throws IOException {
+    return this.database.query(ctx -> listPermissionsForWorkspace(ctx, workspaceId));
+  }
+
   public List<UserPermission> listInstanceAdminUsers() throws IOException {
     return this.database.query(ctx -> listInstanceAdminPermissions(ctx));
   }

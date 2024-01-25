@@ -23,6 +23,7 @@ import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationUserRead;
 import io.airbyte.api.model.generated.OrganizationUserReadList;
 import io.airbyte.api.model.generated.PermissionCreate;
+import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
 import io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse;
@@ -32,6 +33,7 @@ import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
+import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.config.InitialUserConfiguration;
@@ -44,6 +46,7 @@ import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.User;
 import io.airbyte.config.User.Status;
 import io.airbyte.config.UserPermission;
+import io.airbyte.config.WorkspaceUserAccessInfo;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
@@ -212,6 +215,38 @@ class UserHandlerTest {
             .permissionId(PERMISSION1_ID)));
     assertEquals(expectedResult, result);
 
+  }
+
+  @Test
+  void testListAccessInfoByWorkspaceId() throws Exception {
+    final UUID workspaceId = UUID.randomUUID();
+    when(userPersistence.listWorkspaceUserAccessInfo(workspaceId)).thenReturn(List.of(
+        new WorkspaceUserAccessInfo()
+            .withUserId(USER_ID)
+            .withUserName(USER_NAME)
+            .withUserEmail(USER_EMAIL)
+            .withWorkspaceId(workspaceId)
+            .withWorkspacePermission(new Permission()
+                .withPermissionId(PERMISSION1_ID)
+                .withPermissionType(PermissionType.WORKSPACE_ADMIN)
+                .withUserId(USER_ID)
+                .withWorkspaceId(workspaceId))));
+
+    final var result = userHandler.listAccessInfoByWorkspaceId(new WorkspaceIdRequestBody().workspaceId(workspaceId));
+
+    final var expected = new WorkspaceUserAccessInfoReadList().usersWithAccess(List.of(
+        new io.airbyte.api.model.generated.WorkspaceUserAccessInfoRead()
+            .userId(USER_ID)
+            .userName(USER_NAME)
+            .userEmail(USER_EMAIL)
+            .workspaceId(workspaceId)
+            .workspacePermission(new PermissionRead()
+                .permissionId(PERMISSION1_ID)
+                .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_ADMIN)
+                .userId(USER_ID)
+                .workspaceId(workspaceId))));
+
+    assertEquals(expected, result);
   }
 
   @Nested

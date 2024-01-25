@@ -3571,6 +3571,30 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/users/list_access_info_by_workspace_id:
+    post:
+      tags:
+        - user
+      summary: List user access info for a particular workspace.
+      operationId: listAccessInfoByWorkspaceId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceUserAccessInfoReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   /v1/users/list_by_organization_id:
     post:
       summary: List all users with permissions of the given org
@@ -9118,6 +9142,40 @@ components:
         permissionId:
           type: string
           format: uuid
+    WorkspaceUserAccessInfoRead:
+      description: |
+        Information summarizing a user's access to a workspace. Includes the workspace-level and/or organization-level permission
+        object that grants the user access to the workspace in question, as well as basic user information to facilitate access
+        management of users in the workspace.
+      type: object
+      required:
+        - userId
+        - userEmail
+        - userName
+        - workspaceId
+      properties:
+        userId:
+          $ref: "#/components/schemas/UserId"
+        userEmail:
+          type: string
+          format: email
+        userName:
+          type: string
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        workspacePermission:
+          $ref: "#/components/schemas/PermissionRead"
+        organizationPermission:
+          $ref: "#/components/schemas/PermissionRead"
+    WorkspaceUserAccessInfoReadList:
+      type: object
+      required:
+        - usersWithAccess
+      properties:
+        usersWithAccess:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceUserAccessInfoRead"
     InvalidInputProperty:
       type: object
       required:

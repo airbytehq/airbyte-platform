@@ -15,6 +15,7 @@ import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserUpdate;
 import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -129,6 +130,16 @@ class UserApiControllerTest extends BaseControllerTest {
     final String path = "/api/v1/users/get_or_create_by_auth_id";
     testEndpointStatus(
         HttpRequest.POST(path, Jsons.serialize(new UserAuthIdRequestBody())),
+        HttpStatus.OK);
+  }
+
+  @Test
+  void testListAccessInfoByWorkspaceId() throws Exception {
+    Mockito.when(userHandler.listAccessInfoByWorkspaceId(Mockito.any()))
+        .thenReturn(new WorkspaceUserAccessInfoReadList());
+    final String path = "/api/v1/users/list_access_info_by_workspace_id";
+    testEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
         HttpStatus.OK);
   }
 
