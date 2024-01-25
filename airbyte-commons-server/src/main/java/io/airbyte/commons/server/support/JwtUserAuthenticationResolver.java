@@ -55,14 +55,15 @@ public class JwtUserAuthenticationResolver implements UserAuthenticationResolver
    * Resolves JWT token to SsoRealm. If Sso realm does not exist, it will return null.
    */
   @Override
-  public String resolveSsoRealm() {
+  public Optional<String> resolveSsoRealm() {
     if (securityService.isEmpty()) {
-      log.warn("Security service is not available. Returning empty user.");
-      return null;
+      log.warn("Security service is not available. Returning empty realm.");
+      return Optional.empty();
     }
 
     final var jwtMap = securityService.get().getAuthentication().get().getAttributes();
-    return (String) jwtMap.getOrDefault(JWT_SSO_REALM, null);
+    final String realm = (String) jwtMap.getOrDefault(JWT_SSO_REALM, null);
+    return Optional.ofNullable(realm);
   }
 
 }

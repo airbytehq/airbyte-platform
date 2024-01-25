@@ -5,9 +5,10 @@
 package io.airbyte.commons.server.support;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.config.User;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,8 +32,8 @@ class LocalAuthenticationResolverTest {
 
   @Test
   void testResolveSsoRealmAlwaysNull() {
-    final String ssoRealm = localAuthenticationResolver.resolveSsoRealm();
-    assertNull(ssoRealm);
+    final Optional<String> ssoRealm = localAuthenticationResolver.resolveSsoRealm();
+    assertTrue(ssoRealm.isEmpty());
   }
 
 }

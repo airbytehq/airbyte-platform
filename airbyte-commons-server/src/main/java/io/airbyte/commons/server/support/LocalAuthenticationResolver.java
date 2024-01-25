@@ -9,6 +9,7 @@ import io.airbyte.config.User;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -45,8 +46,8 @@ public class LocalAuthenticationResolver implements UserAuthenticationResolver {
   }
 
   @Override
-  public String resolveSsoRealm() {
-    return null;
+  public Optional<String> resolveSsoRealm() {
+    return Optional.empty();
   }
 
 }

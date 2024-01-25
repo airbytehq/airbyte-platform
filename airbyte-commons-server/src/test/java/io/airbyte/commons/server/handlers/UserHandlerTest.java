@@ -6,7 +6,6 @@ package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.config.persistence.UserPersistence.DEFAULT_USER_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -113,7 +112,7 @@ class UserHandlerTest {
     initialUserConfiguration = mock(InitialUserConfiguration.class);
 
     userHandler = new UserHandler(userPersistence, permissionPersistence, organizationPersistence, permissionHandler, workspacesHandler,
-        uuidSupplier, Optional.of(jwtUserAuthenticationResolver), Optional.of(initialUserConfiguration));
+        uuidSupplier, jwtUserAuthenticationResolver, Optional.of(initialUserConfiguration));
   }
 
   @Test
@@ -338,7 +337,7 @@ class UserHandlerTest {
 
         newUser.setAuthProvider(authProvider);
 
-        when(jwtUserAuthenticationResolver.resolveSsoRealm()).thenReturn(ssoRealm);
+        when(jwtUserAuthenticationResolver.resolveSsoRealm()).thenReturn(Optional.ofNullable(ssoRealm));
         if (ssoRealm != null) {
           when(organizationPersistence.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(Optional.of(ORGANIZATION));
         }
@@ -351,7 +350,7 @@ class UserHandlerTest {
           // replace default user handler with one that doesn't use initial user config (ie to test what
           // happens in Cloud)
           userHandler = new UserHandler(userPersistence, permissionPersistence, organizationPersistence, permissionHandler, workspacesHandler,
-              uuidSupplier, Optional.of(jwtUserAuthenticationResolver), Optional.empty());
+              uuidSupplier, jwtUserAuthenticationResolver, Optional.empty());
         }
 
         if (isFirstOrgUser) {
@@ -390,14 +389,6 @@ class UserHandlerTest {
         verifyInstanceAdminPermissionCreation(initialUserEmail, initialUserPresent);
         verifyOrganizationPermissionCreation(ssoRealm, isFirstOrgUser);
         verifyDefaultWorkspaceCreation(ssoRealm, isDefaultWorkspaceForOrgPresent, userPersistenceInOrder);
-      }
-
-      @Test
-      void testNewSsoUserWithoutOrgThrows() throws IOException {
-        when(jwtUserAuthenticationResolver.resolveSsoRealm()).thenReturn("realm");
-        when(organizationPersistence.getOrganizationBySsoConfigRealm("realm")).thenReturn(Optional.empty());
-        assertThrows(ConfigNotFoundException.class, () -> userHandler.getOrCreateUserByAuthId(
-            new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID)));
       }
 
       private void verifyCreatedUser(final AuthProvider expectedAuthProvider, final InOrder inOrder) throws IOException {

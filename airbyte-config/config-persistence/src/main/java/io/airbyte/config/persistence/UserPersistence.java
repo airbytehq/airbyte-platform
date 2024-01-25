@@ -100,6 +100,13 @@ public class UserPersistence {
       } else {
         // TODO: authUserId and authProvider will be removed from user table once we migrate to auth_user
         // table https://github.com/airbytehq/airbyte-platform-internal/issues/10641
+        final boolean authIdAlreadyExists = ctx.fetchExists(select()
+            .from(AUTH_USER)
+            .where(AUTH_USER.AUTH_USER_ID.eq(user.getAuthUserId())));
+        if (authIdAlreadyExists) {
+          throw new SQLOperationNotAllowedException("Auth user id is already in use: " + user.getAuthUserId());
+        }
+
         ctx.insertInto(USER)
             .set(USER.ID, user.getUserId())
             .set(USER.NAME, user.getName())

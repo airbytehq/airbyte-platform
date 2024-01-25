@@ -33,6 +33,7 @@ import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.config.InitialUserConfiguration;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.commons.server.support.UserAuthenticationResolver;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Organization;
@@ -44,6 +45,7 @@ import io.airbyte.config.WorkspaceUserAccessInfo;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
+import io.airbyte.config.persistence.SQLOperationNotAllowedException;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
@@ -54,6 +56,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import org.jooq.exception.DataAccessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,7 +76,7 @@ public class UserHandler {
   private final WorkspacesHandler workspacesHandler;
   private final OrganizationPersistence organizationPersistence;
 
-  private final Optional<UserAuthenticationResolver> userAuthenticationResolver;
+  private final UserAuthenticationResolver userAuthenticationResolver;
   private final Optional<InitialUserConfiguration> initialUserConfiguration;
 
   @VisibleForTesting
@@ -84,7 +87,7 @@ public class UserHandler {
                      final PermissionHandler permissionHandler,
                      final WorkspacesHandler workspacesHandler,
                      @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
-                     final Optional<UserAuthenticationResolver> userAuthenticationResolver,
+                     final UserAuthenticationResolver userAuthenticationResolver,
                      final Optional<InitialUserConfiguration> initialUserConfiguration) {
     this.uuidGenerator = uuidGenerator;
     this.userPersistence = userPersistence;
@@ -117,7 +120,15 @@ public class UserHandler {
         .withCompanyName(userCreate.getCompanyName())
         .withEmail(userCreate.getEmail())
         .withNews(userCreate.getNews());
-    userPersistence.writeUser(user);
+    try {
+      userPersistence.writeUser(user);
+    } catch (final DataAccessException e) {
+      if (e.getCause() instanceof SQLOperationNotAllowedException) {
+        throw new OperationNotAllowedException(e.getCause().getMessage());
+      } else {
+        throw new IOException(e);
+      }
+    }
     return buildUserRead(userId);
   }
 
@@ -343,12 +354,9 @@ public class UserHandler {
         .newUserCreated(true);
   }
 
-  private User resolveIncomingJwtUser(final UserAuthIdRequestBody userAuthIdRequestBody) throws ConfigNotFoundException {
+  private User resolveIncomingJwtUser(final UserAuthIdRequestBody userAuthIdRequestBody) {
     final String authUserId = userAuthIdRequestBody.getAuthUserId();
-    if (userAuthenticationResolver.isEmpty()) {
-      throw new ConfigNotFoundException(ConfigSchema.USER, authUserId);
-    }
-    final User incomingJwtUser = userAuthenticationResolver.get().resolveUser(authUserId);
+    final User incomingJwtUser = userAuthenticationResolver.resolveUser(authUserId);
     if (!incomingJwtUser.getAuthUserId().equals(userAuthIdRequestBody.getAuthUserId())) {
       throw new IllegalArgumentException("JWT token doesn't match the auth id from the request body.");
     }
@@ -370,8 +378,7 @@ public class UserHandler {
 
   private void handleUserPermissionsAndWorkspace(final UserRead createdUser) throws IOException, JsonValidationException, ConfigNotFoundException {
     createInstanceAdminPermissionIfInitialUser(createdUser);
-    final Optional<Organization> ssoOrg = getSsoOrganizationIfExists(createdUser.getUserId());
-
+    final Optional<Organization> ssoOrg = getSsoOrganizationIfExists();
     if (ssoOrg.isPresent()) {
       handleSsoUser(createdUser, ssoOrg.get());
     } else {
@@ -427,18 +434,9 @@ public class UserHandler {
     return defaultWorkspace;
   }
 
-  private Optional<Organization> getSsoOrganizationIfExists(final UUID userId) throws IOException, ConfigNotFoundException {
-    final String ssoRealm = userAuthenticationResolver.orElseThrow().resolveSsoRealm();
-    if (ssoRealm != null) {
-      final Optional<Organization> attachedOrganization = organizationPersistence.getOrganizationBySsoConfigRealm(ssoRealm);
-      if (attachedOrganization.isPresent()) {
-        return attachedOrganization;
-      } else {
-        LOGGER.error("New user with ID {} has an SSO realm {} but no Organization was found for it.", userId, ssoRealm);
-        throw new ConfigNotFoundException(ConfigSchema.ORGANIZATION, ssoRealm);
-      }
-    }
-    return Optional.empty();
+  private Optional<Organization> getSsoOrganizationIfExists() throws IOException {
+    final Optional<String> ssoRealm = userAuthenticationResolver.resolveSsoRealm();
+    return ssoRealm.isPresent() ? organizationPersistence.getOrganizationBySsoConfigRealm(ssoRealm.get()) : Optional.empty();
   }
 
   private void createPermissionForUserAndOrg(final UUID userId, final UUID orgId, final PermissionType permissionType)
