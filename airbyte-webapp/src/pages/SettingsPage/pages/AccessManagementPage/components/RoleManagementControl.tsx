@@ -62,7 +62,10 @@ export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
     ? { organizationId: permission.organizationId }
     : { workspaceId: permission.workspaceId };
 
-  const canUpdateUserPermissions = useIntent(intentKey, intentMeta);
+  const canUpdateUserPermissions = useIntent(
+    intentKey,
+    intentMeta as { organizationId: string | undefined } | { workspaceId: string }
+  );
 
   if (!permissionType) {
     return null;

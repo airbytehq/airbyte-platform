@@ -1,9 +1,15 @@
 import { renderHook } from "@testing-library/react";
 
+import { mocked } from "test-utils";
 import { mockUser } from "test-utils/mock-data/mockUser";
 
 import { useRbac } from "./rbac";
 import { useRbacPermissionsQuery } from "./rbacPermissionsQuery";
+import { isCloudApp } from "../app";
+
+jest.mock("../app", () => ({
+  isCloudApp: jest.fn(() => false),
+}));
 
 jest.mock("core/services/auth", () => ({
   useCurrentUser: () => mockUser,
@@ -31,6 +37,7 @@ describe("useRbac", () => {
       expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({
         resourceType: "INSTANCE",
         role: "ADMIN",
+        resourceId: expect.anything(),
       });
     });
 
@@ -38,7 +45,11 @@ describe("useRbac", () => {
       mockUseRbacPermissionsQuery.mockClear();
       renderHook(() => useRbac({ resourceType: "INSTANCE", role: "ADMIN" }));
       expect(mockUseRbacPermissionsQuery).toHaveBeenCalledTimes(1);
-      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({ resourceType: "INSTANCE", role: "ADMIN" });
+      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({
+        resourceType: "INSTANCE",
+        role: "ADMIN",
+        resourceId: expect.anything(),
+      });
     });
 
     it("organizationId can be provided directly", () => {
@@ -78,7 +89,6 @@ describe("useRbac", () => {
         renderHook(() => useRbac({ resourceType: "INSTANCE", role: "ADMIN", resourceId: "some-workspace" }))
       ).toThrow("Invalid RBAC query: resource INSTANCE with resourceId some-workspace");
     });
-    // TODO: Update test to throw once cloud workspaces are migrated to organizations + rbac.ts invariant is adjusted to require organization id
 
     it("throws an error when an workspaceId is missing", () => {
       mockUseRbacPermissionsQuery.mockClear();
@@ -87,16 +97,26 @@ describe("useRbac", () => {
       );
     });
 
-    it("does not throw an error when an organizationId is missing", () => {
+    // TODO: Update test to throw once cloud workspaces are migrated to organizations + rbac.ts invariant is adjusted to require organization id
+    it("does not throw an error when an organizationId is missing in Cloud", () => {
+      mocked(isCloudApp).mockReturnValue(true);
       mockUseRbacPermissionsQuery.mockClear();
-      renderHook(() => useRbac({ resourceType: "ORGANIZATION", role: "ADMIN" }));
+      renderHook(() => useRbac({ resourceType: "ORGANIZATION", role: "ADMIN", resourceId: undefined }));
 
       expect(mockUseRbacPermissionsQuery).toHaveBeenCalledTimes(1);
       expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({
         resourceType: "ORGANIZATION",
         role: "ADMIN",
-        resourceId: undefined,
+        resourceId: "",
       });
+    });
+
+    it("does throw an error when an organizationId is missing in OSS", () => {
+      mocked(isCloudApp).mockReturnValue(false);
+      mockUseRbacPermissionsQuery.mockClear();
+      expect(() =>
+        renderHook(() => useRbac({ resourceType: "ORGANIZATION", role: "ADMIN", resourceId: undefined }))
+      ).toThrow("Invalid RBAC query: resource ORGANIZATION with resourceId undefined");
     });
   });
 });

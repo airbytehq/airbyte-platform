@@ -53,7 +53,12 @@ describe("useRbacPermissionsQuery", () => {
         [],
         false,
       ],
-      ["no permission grants no access to instance", { resourceType: "INSTANCE", role: "ADMIN" }, [], false],
+      [
+        "no permission grants no access to instance",
+        { resourceType: "INSTANCE", role: "ADMIN", resourceId: "" },
+        [],
+        false,
+      ],
 
       /* BASIC WORKSPACE PERMISSIONS */
       [
@@ -151,7 +156,7 @@ describe("useRbacPermissionsQuery", () => {
       /* BASIC INSTANCE PERMISSIONS */
       [
         "instance_admin permission grants access to the instance",
-        { resourceType: "INSTANCE", role: "ADMIN" },
+        { resourceType: "INSTANCE", role: "ADMIN", resourceId: "" },
         [{ permissionType: "instance_admin" }],
         true,
       ],
@@ -178,6 +183,7 @@ describe("useRbacPermissionsQuery", () => {
         useRbacPermissionsQuery([{ permissionType: "organization_reader" }], {
           resourceType: "INSTANCE",
           role: "ADMIN",
+          resourceId: "",
         })
       ).toBe(false);
 
@@ -185,6 +191,7 @@ describe("useRbacPermissionsQuery", () => {
         useRbacPermissionsQuery([{ permissionType: "workspace_reader" }], {
           resourceType: "INSTANCE",
           role: "ADMIN",
+          resourceId: "",
         })
       ).toBe(false);
 

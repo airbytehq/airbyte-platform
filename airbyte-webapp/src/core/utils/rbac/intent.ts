@@ -8,10 +8,10 @@ export interface AllIntents extends IntentToRbacQuery {}
 export type Intent = keyof AllIntents;
 
 interface OrganizationIntentMeta {
-  organizationId?: string;
+  organizationId: string | undefined;
 }
 interface WorkspaceIntentMeta {
-  workspaceId?: string;
+  workspaceId: string;
 }
 
 // Utility types to enforce shape of any meta object; i.e. organization-focused intents shouldn't receive workspaceIds
@@ -30,12 +30,12 @@ type IntentMetaForResource<R extends RbacResource> = R extends "INSTANCE"
 Given the React context + overrides provided in optional `details`,
 determine if the user has the required permissions to perform the given `intent`.
 */
-export const useIntent = <I extends Intent>(intent: I, meta?: IntentMetaForResource<MapIntentToResource<I>>) => {
+export const useIntent = <I extends Intent>(intent: I, meta: IntentMetaForResource<MapIntentToResource<I>>) => {
   let query: RbacQuery | RbacQueryWithoutResourceId = intentToRbacQuery[intent as keyof IntentToRbacQuery];
-  if (isOrganizationIntentMeta(query.resourceType, meta) && meta?.organizationId) {
-    query = { ...query, resourceId: meta?.organizationId };
-  } else if (isWorkspaceIntentMeta(query.resourceType, meta) && meta?.workspaceId) {
-    query = { ...query, resourceId: meta?.workspaceId };
+  if (isOrganizationIntentMeta(query.resourceType, meta)) {
+    query = { ...query, resourceId: meta.organizationId };
+  } else if (isWorkspaceIntentMeta(query.resourceType, meta)) {
+    query = { ...query, resourceId: meta.workspaceId };
   }
 
   return useRbac(query);
@@ -43,14 +43,14 @@ export const useIntent = <I extends Intent>(intent: I, meta?: IntentMetaForResou
 
 function isOrganizationIntentMeta(
   resource: RbacResource,
-  _meta: OrganizationIntentMeta | WorkspaceIntentMeta | undefined
-): _meta is OrganizationIntentMeta | undefined {
+  _meta: OrganizationIntentMeta | WorkspaceIntentMeta
+): _meta is OrganizationIntentMeta {
   return resource === "ORGANIZATION";
 }
 
 function isWorkspaceIntentMeta(
   resource: RbacResource,
-  _meta: OrganizationIntentMeta | WorkspaceIntentMeta | undefined
-): _meta is WorkspaceIntentMeta | undefined {
+  _meta: OrganizationIntentMeta | WorkspaceIntentMeta
+): _meta is WorkspaceIntentMeta {
   return resource === "WORKSPACE";
 }

@@ -9,7 +9,7 @@ import { Heading } from "components/ui/Heading";
 import { Table } from "components/ui/Table";
 import { InfoTooltip } from "components/ui/Tooltip";
 
-import { BuilderProject } from "core/api";
+import { BuilderProject, useCurrentOrganizationInfo } from "core/api";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector, ConnectorDefinition } from "core/domain/connector";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -66,7 +66,10 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   connectorBuilderProjects,
 }) => {
   const [updatingAllConnectors, setUpdatingAllConnectors] = useState(false);
-  const hasUpdateConnectorsPermissions = useIntent("UpdateConnectorVersions");
+  const organization = useCurrentOrganizationInfo();
+  const hasUpdateConnectorsPermissions = useIntent("UpdateConnectorVersions", {
+    organizationId: organization?.organizationId,
+  });
   const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors) && hasUpdateConnectorsPermissions;
   const allowUploadCustomImage = useFeature(FeatureItem.AllowUploadCustomImage);
 
