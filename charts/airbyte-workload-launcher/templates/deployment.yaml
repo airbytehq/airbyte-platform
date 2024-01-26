@@ -244,6 +244,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_MAIN_CONTAINER_MEMORY_LIMIT
+        - name: KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS
         - name: WORKLOAD_API_BEARER_TOKEN
           valueFrom:
             secretKeyRef:
