@@ -98,9 +98,13 @@ public class OrchestratorConstants {
   public static final String INIT_FILE_INPUT = "input.json";
   public static final String INIT_FILE_JOB_RUN_CONFIG = "jobRunConfig.json";
   public static final String INIT_FILE_APPLICATION = "application.txt";
+  public static final String OUTPUT_FILE = "output.txt";
   public static final String WORKLOAD_ID_FILE = "workload.txt";
-
+  public static final String CHECK_JOB_OUTPUT_FILENAME = "checkJobOutput.json";
+  public static final String EXIT_CODE_FILE = "exitCode.txt";
   public static final String CHECK_APPLICATION_NAME = "check-orchestrator";
+  public static final String CONNECTION_CONFIGURATION = "connectionConfiguration.json";
+  public static final String CONNECTION_INPUT = "connectionInput.json";
 
   // define two ports for stdout/stderr usage on the container orchestrator pod
   public static final int PORT1 = 9877;

@@ -273,6 +273,27 @@ class OrchestratorPodLauncher(
     )
   }
 
+  fun waitForPodReadyOrTerminalByPod(
+    pod: Pod,
+    waitDuration: Duration,
+  ) {
+    runKubeCommand(
+      {
+        kubernetesClient
+          .resource(pod)
+          .waitUntilCondition(
+            { p: Pod? ->
+              Objects.nonNull(p) &&
+                (Readiness.getInstance().isReady(p) || KubePodResourceHelper.isTerminal(p))
+            },
+            waitDuration.toMinutes(),
+            TimeUnit.MINUTES,
+          )
+      },
+      "wait",
+    )
+  }
+
   fun copyFilesToKubeConfigVolumeMain(
     podDefinition: Pod,
     files: Map<String, String>,

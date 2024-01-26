@@ -177,7 +177,11 @@ public class CheckJobOrchestrator implements JobOrchestrator<CheckConnectionInpu
     final var protocolVersion =
         launcherConfig.getProtocolVersion() != null ? launcherConfig.getProtocolVersion() : AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION;
     final AirbyteStreamFactory streamFactory =
-        new VersionedAirbyteStreamFactory<>(data.serDeProvider(), data.migratorFactory(), protocolVersion, Optional.empty(), Optional.empty(),
+        new VersionedAirbyteStreamFactory<>(data.serDeProvider(),
+            data.migratorFactory(),
+            protocolVersion,
+            Optional.empty(),
+            Optional.empty(),
             Optional.empty(),
             new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
             data.gsonPksExtractor());

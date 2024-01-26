@@ -121,6 +121,7 @@ public class KubePodProcess implements KubePod {
   private static final Logger LOGGER = LoggerFactory.getLogger(KubePodProcess.class);
 
   public static final String MAIN_CONTAINER_NAME = "main";
+  public static final String SIDECAR_CONTAINER_NAME = "connector-sidecar";
   public static final String INIT_CONTAINER_NAME = "init";
 
   private static final String PIPES_DIR = "/pipes";

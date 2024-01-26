@@ -145,9 +145,11 @@ class PayloadKubeInputMapper(
   ): Map<String, String> {
     return sharedFileMap(jobRunConfig, kubePodInfo) +
       mapOf(
-        OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
+        OrchestratorConstants.CONNECTION_CONFIGURATION to serializer.serialize(input.connectionConfiguration.connectionConfiguration),
+//        OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
         OrchestratorConstants.INIT_FILE_APPLICATION to CHECK_APPLICATION_NAME,
         OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
+        OrchestratorConstants.CONNECTION_INPUT to serializer.serialize(input.connectionConfiguration),
       )
   }
 

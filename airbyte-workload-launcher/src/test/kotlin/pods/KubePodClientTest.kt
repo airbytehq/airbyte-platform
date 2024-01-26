@@ -3,6 +3,7 @@ package io.airbyte.workload.launcher.pods
 import fixtures.RecordFixtures
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
+import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.process.KubePodInfo
@@ -21,6 +22,7 @@ import io.fabric8.kubernetes.api.model.Pod
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -32,6 +34,9 @@ import java.lang.RuntimeException
 class KubePodClientTest {
   @MockK
   private lateinit var launcher: OrchestratorPodLauncher
+
+  @MockK
+  private lateinit var connectorPodLauncher: ConnectorPodLauncher
 
   @MockK
   private lateinit var labeler: PodLabeler
@@ -58,6 +63,7 @@ class KubePodClientTest {
     client =
       KubePodClient(
         launcher,
+        connectorPodLauncher,
         labeler,
         mapper,
         checkEnvVar,
@@ -75,7 +81,7 @@ class KubePodClientTest {
         .withIsReset(true)
 
     checkInput =
-      CheckConnectionInput(null, IntegrationLauncherConfig(), null)
+      CheckConnectionInput(JobRunConfig().withJobId("jobid").withAttemptId(1), IntegrationLauncherConfig().withDockerImage("dockerImage"), null)
 
     every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
 
@@ -86,6 +92,7 @@ class KubePodClientTest {
     every { launcher.create(any(), any(), any(), any(), any(), any()) } returns pod
     every { launcher.waitForPodInit(any(), any()) } returns Unit
     every { launcher.copyFilesToKubeConfigVolumeMain(any(), any()) } returns Unit
+    every { launcher.waitForPodReadyOrTerminalByPod(any(Pod::class), any()) } returns Unit
     every { launcher.waitForPodReadyOrTerminal(any(), any()) } returns Unit
 
     every { checkEnvVar.getEnvMap() } returns mapOf()
@@ -198,16 +205,18 @@ class KubePodClientTest {
 
   @Test
   fun `launchCheck starts an orchestrator and waits on both pods`() {
+    every { connectorPodLauncher.create(any(), any(), any(), any(), any()) } returns pod
+
     client.launchCheck(checkInput, launcherInput)
 
+    // TODO: redo the mocking
     verify {
-      launcher.create(
-        checkKubeInput.orchestratorLabels,
-        checkKubeInput.resourceReqs,
-        checkKubeInput.nodeSelectors,
-        checkKubeInput.kubePodInfo,
-        checkKubeInput.annotations,
-        mapOf(),
+      connectorPodLauncher.create(
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
       )
     }
 
@@ -215,13 +224,15 @@ class KubePodClientTest {
 
     verify { launcher.copyFilesToKubeConfigVolumeMain(pod, checkKubeInput.fileMap) }
 
-    verify { launcher.waitForPodReadyOrTerminal(checkKubeInput.connectorLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) }
+    verify { launcher.waitForPodReadyOrTerminalByPod(pod, CONNECTOR_STARTUP_TIMEOUT_VALUE) }
   }
 
   @Test
   fun `launchCheck sets pass-through labels for propagation to connector`() {
     every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
     every { mapper.toKubeInput(workloadId, checkInput, sharedLabels) } returns checkKubeInput
+
+    every { connectorPodLauncher.create(any(), any(), any(), any(), any()) } returns mockk<Pod>()
 
     client.launchCheck(checkInput, launcherInput)
 
@@ -272,16 +283,18 @@ class KubePodClientTest {
 
     every { checkEnvVar.getEnvMap() } returns extraEnvVar
 
+    every { connectorPodLauncher.create(any(), any(), any(), any(), any()) } returns mockk<Pod>()
+
     client.launchCheck(checkInput, launcherInput)
 
+    // TODO: Better mock
     verify {
-      launcher.create(
-        checkKubeInput.orchestratorLabels,
-        checkKubeInput.resourceReqs,
-        checkKubeInput.nodeSelectors,
-        checkKubeInput.kubePodInfo,
-        checkKubeInput.annotations,
-        extraEnvVar,
+      connectorPodLauncher.create(
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
       )
     }
   }

@@ -1,8 +1,10 @@
 package io.airbyte.workload.launcher.pods
 
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.ActorType
 import io.airbyte.config.ResourceRequirements
+import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -147,12 +149,16 @@ class PayloadKubeInputMapperTest {
     val jobId = "415"
     val attemptId = 7654L
 
+    val checkConnectionInput = mockk<StandardCheckConnectionInput>()
+    every { checkConnectionInput.connectionConfiguration } returns mockk<JsonNode>()
+
     every { input.getJobId() } returns jobId
     every { input.getAttemptId() } returns attemptId
     every { input.getActorType() } returns ActorType.SOURCE
     every { input.usesCustomConnector() } returns customConnector
     every { input.jobRunConfig } returns mockk<JobRunConfig>()
     every { input.launcherConfig } returns mockk<IntegrationLauncherConfig>()
+    every { input.connectionConfiguration } returns checkConnectionInput
 
     val mockSerializedOutput = "Serialized Obj."
     every { serializer.serialize<Any>(any()) } returns mockSerializedOutput
@@ -173,11 +179,12 @@ class PayloadKubeInputMapperTest {
       result.fileMap ==
         mapOf(
           OrchestratorConstants.INIT_FILE_ENV_MAP to mockSerializedOutput,
-          OrchestratorConstants.INIT_FILE_APPLICATION to CHECK_APPLICATION_NAME,
           OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to mockSerializedOutput,
-          OrchestratorConstants.INIT_FILE_INPUT to mockSerializedOutput,
           KUBE_POD_INFO to mockSerializedOutput,
+          OrchestratorConstants.CONNECTION_CONFIGURATION to mockSerializedOutput,
+          OrchestratorConstants.INIT_FILE_APPLICATION to CHECK_APPLICATION_NAME,
           OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
+          OrchestratorConstants.CONNECTION_INPUT to mockSerializedOutput,
         ),
     )
     assert(result.resourceReqs == checkResourceReqs)

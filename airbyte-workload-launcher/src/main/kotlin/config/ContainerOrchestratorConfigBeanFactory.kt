@@ -58,6 +58,19 @@ class ContainerOrchestratorConfigBeanFactory {
   }
 
   @Singleton
+  @Named("containerOrchestratorSidecarImage")
+  fun containerOrchestratorSidecarImage(
+    @Value("\${airbyte.version}") airbyteVersion: String,
+    @Value("\${airbyte.container.orchestrator.sidecar.image}") injectedImage: String?,
+  ): String {
+    if (injectedImage != null && StringUtils.isNotEmpty(injectedImage)) {
+      return injectedImage
+    }
+
+    return "airbyte/connector-sidecar:$airbyteVersion"
+  }
+
+  @Singleton
   @Named("orchestratorKubeContainerInfo")
   fun orchestratorKubeContainerInfo(
     @Named("containerOrchestratorImage") containerOrchestratorImage: String,
@@ -84,6 +97,25 @@ class ContainerOrchestratorConfigBeanFactory {
   }
 
   @Singleton
+  @Named("checkContainerPorts")
+  fun checkContainerPorts(
+    @Value("\${micronaut.server.port}") serverPort: Int,
+  ): List<ContainerPort> {
+    return listOf(
+      ContainerPortBuilder().withContainerPort(serverPort).build(),
+    )
+  }
+
+  @Singleton
+  @Named("sidecarKubeContainerInfo")
+  fun sidecarKubeContainerInfo(
+    @Named("containerOrchestratorSidecarImage") containerOrchestratorImage: String,
+    @Value("\${airbyte.worker.job.kube.main.container.image-pull-policy}") containerOrchestratorImagePullPolicy: String,
+  ): KubeContainerInfo {
+    return KubeContainerInfo(containerOrchestratorImage, containerOrchestratorImagePullPolicy)
+  }
+
+  @Singleton
   @Named("replicationWorkerConfigs")
   fun replicationWorkerConfigs(workerConfigsProvider: WorkerConfigsProvider): WorkerConfigs {
     return workerConfigsProvider.getConfig(WorkerConfigsProvider.ResourceType.REPLICATION)
@@ -93,6 +125,12 @@ class ContainerOrchestratorConfigBeanFactory {
   @Named("checkWorkerConfigs")
   fun checkWorkerConfigs(workerConfigsProvider: WorkerConfigsProvider): WorkerConfigs {
     return workerConfigsProvider.getConfig(WorkerConfigsProvider.ResourceType.CHECK)
+  }
+
+  @Singleton
+  @Named("checkSidecarWorkerConfigs")
+  fun checkSidecarWorkerConfigs(workerConfigsProvider: WorkerConfigsProvider): WorkerConfigs {
+    return workerConfigsProvider.getConfig(WorkerConfigsProvider.ResourceType.ORCHESTRATOR)
   }
 
   @Singleton
@@ -258,6 +296,16 @@ class ContainerOrchestratorConfigBeanFactory {
         .toList()
 
     return envVars + secretEnvVars
+  }
+
+  @Singleton
+  @Named("checkEnvVars")
+  fun orchestratorEnvVars(
+    @Named("checkWorkerConfigs") checkWorkerConfigs: WorkerConfigs,
+  ): List<EnvVar> {
+    return checkWorkerConfigs.envMap
+      .map { EnvVar(it.key, it.value, null) }
+      .toList()
   }
 
   @Singleton
