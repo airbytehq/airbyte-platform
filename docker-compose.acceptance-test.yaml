@@ -8,10 +8,6 @@ x-logging: &default-logging
     max-file: "5"
   driver: json-file
 services:
-  airbyte-proxy:
-    environment:
-      - BASIC_AUTH_USERNAME=
-      - BASIC_AUTH_PASSWORD=
   airbyte-temporal:
     ports:
       - 7233:7233

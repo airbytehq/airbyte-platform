@@ -36,6 +36,7 @@ airbyte:
     pending-time-limit-sec: ${WORKLOAD_LAUNCHER_POD_PENDING_TIME_LIMIT:600}
     resource-check-rate: ${WORKLOAD_LAUNCHER_POD_PENDING_RESOURCE_CHECK_RATE:PT30S}
   docker:
+    docker-socket: ${DOCKER_SOCKET:/var/run/docker.sock}
     network: ${DOCKER_NETWORK:host}
     workspace-mount-name: ${WORKSPACE_DOCKER_MOUNT:}
     workspace-mount-path: ${WORKSPACE_ROOT}
