@@ -27,6 +27,7 @@ export const CloudSettingsPage: React.FC = () => {
   const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
   const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
   const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
+  const updatedOrganizationsUi = useExperiment("settings.organizationsUpdates", false);
   const organization = useCurrentOrganizationInfo();
   const isSsoEnabled = organization?.sso;
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: organization?.organizationId });
@@ -97,11 +98,13 @@ export const CloudSettingsPage: React.FC = () => {
                 to={CloudSettingsRoutePaths.DbtCloud}
               />
             )}
-            <SettingsLink
-              iconType="community"
-              name={formatMessage({ id: "settings.accessManagement" })}
-              to={CloudSettingsRoutePaths.AccessManagement}
-            />
+            {(!isSsoEnabled || !updatedOrganizationsUi) && (
+              <SettingsLink
+                iconType="community"
+                name={formatMessage({ id: "settings.accessManagement" })}
+                to={CloudSettingsRoutePaths.AccessManagement}
+              />
+            )}
             <SettingsLink
               iconType="bell"
               name={formatMessage({ id: "settings.notifications" })}
@@ -115,7 +118,7 @@ export const CloudSettingsPage: React.FC = () => {
                 name={formatMessage({ id: "settings.generalSettings" })}
                 to={CloudSettingsRoutePaths.Organization}
               />
-              {isSsoEnabled && (
+              {!updatedOrganizationsUi && isSsoEnabled && (
                 <SettingsLink
                   iconType="community"
                   name={formatMessage({ id: "settings.accessManagement" })}

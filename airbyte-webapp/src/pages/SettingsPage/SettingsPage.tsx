@@ -12,6 +12,7 @@ import { PageHeader } from "components/ui/PageHeader";
 import { useCurrentWorkspace } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
+import { useExperiment } from "hooks/services/Experiment";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 import { SettingsRoutePaths } from "pages/routePaths";
 
@@ -22,6 +23,7 @@ export const SettingsPage: React.FC = () => {
   const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
   const apiTokenManagement = false;
   // const apiTokenManagement = useFeature(FeatureItem.APITokenManagement);
+  const isUpdatedOrganizationsUi = useExperiment("settings.organizationsUpdates", false);
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
   const { formatMessage } = useIntl();
@@ -91,7 +93,7 @@ export const SettingsPage: React.FC = () => {
                 name={formatMessage({ id: "settings.metrics" })}
                 to={SettingsRoutePaths.Metrics}
               />
-              {multiWorkspaceUI && isAccessManagementEnabled && (
+              {multiWorkspaceUI && isAccessManagementEnabled && !isUpdatedOrganizationsUi && (
                 <SettingsLink
                   iconType="community"
                   name={formatMessage({ id: "settings.accessManagement" })}
@@ -107,7 +109,7 @@ export const SettingsPage: React.FC = () => {
                 name={formatMessage({ id: "settings.generalSettings" })}
                 to={SettingsRoutePaths.Organization}
               />
-              {isAccessManagementEnabled && (
+              {isAccessManagementEnabled && !isUpdatedOrganizationsUi && (
                 <SettingsLink
                   iconType="community"
                   name={formatMessage({ id: "settings.accessManagement" })}

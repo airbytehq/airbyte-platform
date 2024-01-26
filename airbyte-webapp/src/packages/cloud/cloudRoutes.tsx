@@ -68,17 +68,11 @@ const SourceConnectionsPage = React.lazy(() => import("pages/source/SourceConnec
 const SourceSettingsPage = React.lazy(() => import("pages/source/SourceSettingsPage"));
 const CloudDefaultView = React.lazy(() => import("./views/CloudDefaultView"));
 const CloudSettingsPage = React.lazy(() => import("./views/settings/CloudSettingsPage"));
-const NextOrganizationAccessManagementPage = React.lazy(
-  () => import("pages/SettingsPage/pages/AccessManagementPage/NextOrganizationAccessManagementPage")
-);
-const NextWorkspaceAccessManagementPage = React.lazy(
-  () => import("pages/SettingsPage/pages/AccessManagementPage/NextWorkspaceAccessManagementPage")
-);
 
 const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
   const organization = useCurrentOrganizationInfo();
-  const isSsoEnabled = organization?.sso;
+  const isSsoEnabled = organization?.sso ?? false;
   const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
   const isUpdatedOrganizationsUi = useExperiment("settings.organizationsUpdates", false);
 
@@ -127,20 +121,12 @@ const MainRoutes: React.FC = () => {
           )}
           <Route path={CloudSettingsRoutePaths.Source} element={<SettingsSourcesPage />} />
           <Route path={CloudSettingsRoutePaths.Destination} element={<SettingsDestinationsPage />} />
-          <Route
-            path={CloudSettingsRoutePaths.AccessManagement}
-            element={
-              isSsoEnabled ? (
-                isUpdatedOrganizationsUi ? (
-                  <NextWorkspaceAccessManagementPage />
-                ) : (
-                  <WorkspaceAccessManagementPage />
-                )
-              ) : (
-                <UsersSettingsView />
-              )
-            }
-          />
+          {(!isSsoEnabled || (isSsoEnabled && !isUpdatedOrganizationsUi)) && (
+            <Route
+              path={CloudSettingsRoutePaths.AccessManagement}
+              element={isSsoEnabled ? <WorkspaceAccessManagementPage /> : <UsersSettingsView />}
+            />
+          )}
           <Route path={CloudSettingsRoutePaths.Notifications} element={<NotificationPage />} />
           {supportsCloudDbtIntegration && (
             <Route path={CloudSettingsRoutePaths.DbtCloud} element={<DbtCloudSettingsView />} />
@@ -151,13 +137,7 @@ const MainRoutes: React.FC = () => {
               {isSsoEnabled && (
                 <Route
                   path={`${CloudSettingsRoutePaths.Organization}/${CloudSettingsRoutePaths.AccessManagement}`}
-                  element={
-                    isUpdatedOrganizationsUi ? (
-                      <NextOrganizationAccessManagementPage />
-                    ) : (
-                      <OrganizationAccessManagementPage />
-                    )
-                  }
+                  element={<OrganizationAccessManagementPage />}
                 />
               )}
             </>

@@ -50,12 +50,6 @@ const SelectSourcePage = React.lazy(() => import("./source/SelectSourcePage"));
 const SourceItemPage = React.lazy(() => import("./source/SourceItemPage"));
 const SourceSettingsPage = React.lazy(() => import("./source/SourceSettingsPage"));
 const SourceConnectionsPage = React.lazy(() => import("./source/SourceConnectionsPage"));
-const NextOrganizationAccessManagementPage = React.lazy(
-  () => import("./SettingsPage/pages/AccessManagementPage/NextOrganizationAccessManagementPage")
-);
-const NextWorkspaceAccessManagementPage = React.lazy(
-  () => import("./SettingsPage/pages/AccessManagementPage/NextWorkspaceAccessManagementPage")
-);
 
 const WorkspacesPage = React.lazy(() => import("./workspaces/WorkspacesPage"));
 
@@ -119,27 +113,19 @@ const MainViewRoutes: React.FC = () => {
             )}
             <Route path={SettingsRoutePaths.Notifications} element={<NotificationPage />} />
             <Route path={SettingsRoutePaths.Metrics} element={<MetricsPage />} />
-            {multiWorkspaceUI && isAccessManagementEnabled && (
+            {multiWorkspaceUI && isAccessManagementEnabled && !isUpdatedOrganizationsUi && (
               <Route
                 path={`${SettingsRoutePaths.Workspace}/${SettingsRoutePaths.AccessManagement}`}
-                element={
-                  isUpdatedOrganizationsUi ? <NextWorkspaceAccessManagementPage /> : <WorkspaceAccessManagementPage />
-                }
+                element={<WorkspaceAccessManagementPage />}
               />
             )}
             {multiWorkspaceUI && organizationId && canViewOrganizationSettings && (
               <>
                 <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
-                {isAccessManagementEnabled && (
+                {isAccessManagementEnabled && !isUpdatedOrganizationsUi && (
                   <Route
                     path={`${SettingsRoutePaths.Organization}/${SettingsRoutePaths.AccessManagement}`}
-                    element={
-                      isUpdatedOrganizationsUi ? (
-                        <NextOrganizationAccessManagementPage />
-                      ) : (
-                        <OrganizationAccessManagementPage />
-                      )
-                    }
+                    element={<OrganizationAccessManagementPage />}
                   />
                 )}
               </>
