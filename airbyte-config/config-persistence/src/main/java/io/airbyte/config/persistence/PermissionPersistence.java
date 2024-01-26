@@ -34,7 +34,9 @@ import org.jooq.impl.DSL;
  *
  * Handle persisting Permission to the Config Database and perform all SQL queries.
  *
+ * @deprecated to be replaced by {@link io.airbyte.data.repositories.PermissionRepository}
  */
+@Deprecated
 public class PermissionPersistence {
 
   private final ExceptionWrappingDatabase database;

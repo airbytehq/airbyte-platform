@@ -4558,6 +4558,106 @@ paths:
       tags:
         - scoped_configuration
 
+  # User Invitations
+  /v1/user_invitations/create:
+    post:
+      summary: Create a user invitation
+      tags:
+        - user_invitation
+      operationId: createUserInvitation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInvitationCreateRequestBody"
+      responses:
+        "201":
+          description: Successfully created user invitation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInvitationRead"
+
+  /v1/user_invitations/{inviteCode}:
+    get:
+      summary: Get a user invitation by its unique code (not primary key ID)
+      tags:
+        - user_invitation
+      operationId: getUserInvitation
+      parameters:
+        - name: inviteCode
+          in: path
+          description: The invite code of the user invitation to get.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successfully retrieved user invitation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInvitationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+
+  /v1/user_invitations/accept:
+    post:
+      summary: Accept a user invitation
+      tags:
+        - user_invitation
+      operationId: acceptUserInvitation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteCodeRequestBody"
+      responses:
+        "201":
+          description: Successfully accepted user invitation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInvitationRead"
+
+  /v1/user_invitations/decline:
+    post:
+      summary: Decline a user invitation
+      tags:
+        - user_invitation
+      operationId: declineUserInvitation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteCodeRequestBody"
+      responses:
+        "201":
+          description: Successfully declined user invitation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInvitationRead"
+
+  /v1/user_invitations/cancel:
+    post:
+      summary: Cancel a user invitation
+      tags:
+        - user_invitation
+      operationId: cancelUserInvitation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteCodeRequestBody"
+      responses:
+        "201":
+          description: Successfully cancelled user invitation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInvitationRead"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -9750,6 +9850,78 @@ components:
       type: object
       properties:
         access_token:
+          type: string
+    UserInvitationCreateRequestBody:
+      type: object
+      required:
+        - invitedEmail
+        - permissionType
+        - scopeType
+        - scopeId
+      properties:
+        invitedEmail:
+          type: string
+          format: email
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          type: string
+          format: uuid
+    UserInvitationRead:
+      type: object
+      required:
+        - id
+        - inviteCode
+        - inviterUserId
+        - invitedEmail
+        - scopeId
+        - scopeType
+        - permissionType
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        inviteCode:
+          type: string
+        inviterUserId:
+          type: string
+          format: uuid
+        invitedEmail:
+          type: string
+          format: email
+        scopeId:
+          type: string
+          format: uuid
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        status:
+          $ref: "#/components/schemas/UserInvitationStatus"
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
+    UserInvitationStatus:
+      type: string
+      enum:
+        - pending
+        - accepted
+        - cancelled
+        - declined
+    InviteCodeRequestBody:
+      type: object
+      required:
+        - inviteCode
+      properties:
+        inviteCode:
           type: string
 
   responses:

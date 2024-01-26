@@ -24,8 +24,8 @@ abstract class AbstractConfigRepositoryTest<T : CrudRepository<*, *>>(
   repositoryClass: KClass<T>,
 ) {
   companion object {
-    private lateinit var context: ApplicationContext
-    private lateinit var jooqDslContext: DSLContext
+    lateinit var context: ApplicationContext
+    lateinit var jooqDslContext: DSLContext
 
     // we run against an actual database to ensure micronaut data and jooq properly integrate
     private val container: PostgreSQLContainer<*> =
