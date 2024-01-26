@@ -21,9 +21,11 @@ import io.airbyte.config.BreakingChangeScope;
 import io.airbyte.config.BreakingChangeScope.ScopeType;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
+import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
@@ -42,18 +44,28 @@ import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.protocol.models.CatalogHelpers;
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.Field;
+import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
@@ -466,6 +478,86 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(initialSourceDefaultVersionId, sourceDefaultVersionIdAfterUpgrade);
   }
 
+  private static Stream<Arguments> scopedImpactTestArgumentProvider() {
+    // Currently there is no logic to determine whether an actor is affected or not by a breaking change
+    // - all actors are affected.
+    return Stream.of(
+        Arguments.of(Map.of(), true),
+        Arguments.of(Map.of("Connection 1", List.of("stream_a")), true),
+        Arguments.of(Map.of("Connection 1", List.of("stream_b")), true),
+        Arguments.of(Map.of("Connection 1", List.of("stream_a"), "Connection 2", List.of("stream_b")), true));
+  }
+
+  @ParameterizedTest
+  @MethodSource("scopedImpactTestArgumentProvider")
+  void testScopedImpactDoesNotAffectBreakingChangeImpact(final Map<String, List<String>> configuredConnectionStreams,
+                                                         final boolean sourceIsAffectedByBreakingChange)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
+    // Set up actor definitions
+    final StandardSourceDefinition sourceDefinition = createBaseSourceDef();
+    final ActorDefinitionVersion actorDefinitionVersion1 = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId());
+    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion1);
+
+    final StandardDestinationDefinition destinationDefinition = createBaseDestDef();
+    final ActorDefinitionVersion destinationADV = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId());
+    configRepository.writeConnectorMetadata(destinationDefinition, destinationADV);
+
+    // Create destination (dummy)
+    final UUID destinationDefId = destinationDefinition.getDestinationDefinitionId();
+    final DestinationConnection destination = createBaseDestinationActor(destinationDefId);
+    configRepository.writeDestinationConnectionNoSecrets(destination);
+
+    // Create source (under test)
+    final UUID sourceDefId = sourceDefinition.getSourceDefinitionId();
+    final SourceConnection source = createBaseSourceActor(sourceDefId);
+    configRepository.writeSourceConnectionNoSecrets(source);
+
+    // Create connection(s) from source to destination
+    for (final Entry<String, List<String>> entry : configuredConnectionStreams.entrySet()) {
+      final List<String> streamNames = entry.getValue();
+      final List<ConfiguredAirbyteStream> configuredStreams = streamNames.stream()
+          .map(streamName -> CatalogHelpers.createConfiguredAirbyteStream(streamName, "namespace", Field.of("field_name", JsonSchemaType.STRING)))
+          .collect(Collectors.toList());
+      final StandardSync sync = createStandardSync(source, destination, configuredStreams);
+      configRepository.writeStandardSync(sync);
+    }
+
+    // Verify initial source versions
+    final UUID initialSourceDefinitionDefaultVersionId =
+        configRepository.getStandardSourceDefinition(sourceDefId).getDefaultVersionId();
+    final UUID initialSourceDefaultVersionId =
+        configRepository.getSourceConnection(source.getSourceId()).getDefaultVersionId();
+    assertNotNull(initialSourceDefinitionDefaultVersionId);
+    assertEquals(initialSourceDefinitionDefaultVersionId, initialSourceDefaultVersionId);
+
+    // Write a new version of the connector, with a stream-scoped breaking change
+    final List<ActorDefinitionBreakingChange> breakingChangesForDef =
+        List.of(MockData.actorDefinitionBreakingChange(UPGRADE_IMAGE_TAG).withActorDefinitionId(sourceDefId).withScopedImpact(
+            List.of(new BreakingChangeScope().withScopeType(ScopeType.STREAM).withImpactedScopes(List.of("stream_a")))));
+    final UUID newVersionId = UUID.randomUUID();
+    final ActorDefinitionVersion newVersion = MockData.actorDefinitionVersion()
+        .withActorDefinitionId(sourceDefId)
+        .withVersionId(newVersionId)
+        .withDockerImageTag(UPGRADE_IMAGE_TAG);
+    configRepository.writeConnectorMetadata(sourceDefinition, newVersion, breakingChangesForDef);
+
+    // Get the actor definition and actor versions after the upgrade
+    final UUID sourceDefinitionDefaultVersionIdAfterUpgrade =
+        configRepository.getStandardSourceDefinition(sourceDefId).getDefaultVersionId();
+    final UUID sourceDefaultVersionIdAfterUpgrade =
+        configRepository.getSourceConnection(source.getSourceId()).getDefaultVersionId();
+
+    // The actor definition should always get the new version
+    assertEquals(newVersionId, sourceDefinitionDefaultVersionIdAfterUpgrade);
+
+    // Only affected actors should be held back; unaffected actors get the new version
+    if (sourceIsAffectedByBreakingChange) {
+      assertEquals(initialSourceDefaultVersionId, sourceDefaultVersionIdAfterUpgrade);
+    } else {
+      assertEquals(newVersionId, sourceDefaultVersionIdAfterUpgrade);
+    }
+  }
+
   @Test
   void testTransactionRollbackOnFailure() throws IOException, JsonValidationException, ConfigNotFoundException {
     final UUID initialADVId = UUID.randomUUID();
@@ -580,6 +672,23 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
         .withDestinationDefinitionId(actorDefinitionId)
         .withWorkspaceId(WORKSPACE_ID)
         .withName("destination-" + id);
+  }
+
+  private StandardSync createStandardSync(final SourceConnection source,
+                                          final DestinationConnection destination,
+                                          final List<ConfiguredAirbyteStream> streams) {
+    final UUID connectionId = UUID.randomUUID();
+    return new StandardSync()
+        .withConnectionId(connectionId)
+        .withSourceId(source.getSourceId())
+        .withDestinationId(destination.getDestinationId())
+        .withName("standard-sync-" + connectionId)
+        .withCatalog(new ConfiguredAirbyteCatalog().withStreams(streams))
+        .withManual(true)
+        .withNamespaceDefinition(NamespaceDefinitionType.SOURCE)
+        .withGeography(Geography.AUTO)
+        .withBreakingChange(false)
+        .withStatus(StandardSync.Status.ACTIVE);
   }
 
 }
