@@ -4486,8 +4486,8 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
-      operationId: getAllScopedConfigurations
-      summary: Get all scoped configurations
+      operationId: getScopedConfigurationsList
+      summary: Get all scoped configurations with a given key
       tags:
         - scoped_configuration
 

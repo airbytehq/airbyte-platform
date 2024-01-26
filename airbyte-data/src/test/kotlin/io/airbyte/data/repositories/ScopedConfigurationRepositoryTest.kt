@@ -193,4 +193,77 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
       )
     assert(persistedConfig == null)
   }
+
+  @Test
+  fun `test db find by key`() {
+    val configId = UUID.randomUUID()
+    val config =
+      ScopedConfiguration(
+        id = configId,
+        key = CONFIG_KEY,
+        value = "config_value",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = UUID.randomUUID(),
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+        description = "my_description",
+        expiresAt = Date.valueOf(LocalDate.now()),
+      )
+
+    repository.save(config)
+
+    val config2 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value2",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = UUID.randomUUID(),
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+        description = "my_description",
+        expiresAt = Date.valueOf(LocalDate.now()),
+      )
+
+    repository.save(config2)
+
+    val otherConfig =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = "other key",
+        value = "config_value2",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = UUID.randomUUID(),
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+        description = "my_description",
+        expiresAt = Date.valueOf(LocalDate.now()),
+      )
+
+    repository.save(otherConfig)
+    assert(repository.count() == 3L)
+
+    val persistedConfigs = repository.findByKey(config.key)
+    assert(persistedConfigs.size == 2)
+
+    val persistedIds = persistedConfigs.map { it.id }
+
+    assert(persistedIds.containsAll(listOf(configId, config2.id)))
+    assert(persistedIds.contains(otherConfig.id).not())
+
+    val persistedConfigs2 = repository.findByKey(otherConfig.key)
+    assert(persistedConfigs2.size == 1)
+
+    val persistedIds2 = persistedConfigs2.map { it.id }
+
+    assert(persistedIds2.containsAll(listOf(otherConfig.id)))
+    assert(persistedIds2.contains(configId).not())
+    assert(persistedIds2.contains(config2.id).not())
+  }
 }

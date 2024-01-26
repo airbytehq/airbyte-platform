@@ -167,8 +167,8 @@ class ScopedConfigurationHandler
         .withExpiresAt(scopedConfigurationCreate.expiresAt?.toString())
     }
 
-    fun listScopedConfigurations(): List<ScopedConfigurationRead> {
-      val scopedConfigurations: List<ScopedConfiguration> = scopedConfigurationService.listScopedConfigurations()
+    fun listScopedConfigurations(configKey: String): List<ScopedConfigurationRead> {
+      val scopedConfigurations: List<ScopedConfiguration> = scopedConfigurationService.listScopedConfigurations(configKey)
       return scopedConfigurations.stream().map {
           scopedConfiguration: ScopedConfiguration ->
         buildScopedConfigurationRead(scopedConfiguration)

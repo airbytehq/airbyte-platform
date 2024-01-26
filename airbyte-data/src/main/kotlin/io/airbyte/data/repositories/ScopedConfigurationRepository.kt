@@ -17,4 +17,6 @@ interface ScopedConfigurationRepository : PageableRepository<ScopedConfiguration
     scopeType: ConfigScopeType,
     scopeId: UUID,
   ): ScopedConfiguration?
+
+  fun findByKey(key: String): List<ScopedConfiguration>
 }

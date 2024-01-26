@@ -79,10 +79,9 @@ public class ScopedConfigurationApiController implements ScopedConfigurationApi 
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public ScopedConfigurationListResponse getAllScopedConfigurations(@Body final ScopedConfigurationListRequestBody scopedConfigurationListRequestBody) {
+  public ScopedConfigurationListResponse getScopedConfigurationsList(@Body final ScopedConfigurationListRequestBody scopedConfigurationListRequestBody) {
     return ApiHelper.execute(() -> {
-      // TODO use config key from request body
-      final var scopedConfigurations = scopedConfigurationHandler.listScopedConfigurations();
+      final var scopedConfigurations = scopedConfigurationHandler.listScopedConfigurations(scopedConfigurationListRequestBody.getConfigKey());
       return new ScopedConfigurationListResponse().scopedConfigurations(scopedConfigurations);
     });
   }

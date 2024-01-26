@@ -130,7 +130,7 @@ internal class ScopedConfigurationHandlerTest {
           .withOriginType(ConfigOriginType.USER),
         ScopedConfiguration().withId(UUID.randomUUID())
           .withValue("value2")
-          .withKey("key2")
+          .withKey("key1")
           .withDescription("description2")
           .withReferenceUrl("url2")
           .withResourceId(UUID.randomUUID())
@@ -142,7 +142,7 @@ internal class ScopedConfigurationHandlerTest {
           .withExpiresAt("2023-01-01"),
       )
 
-    every { scopedConfigurationService.listScopedConfigurations() } returns scopedConfigurations
+    every { scopedConfigurationService.listScopedConfigurations("key1") } returns scopedConfigurations
     every { organizationService.getOrganization(scopedConfigurations[0].scopeId) } returns Optional.of(Organization().withName("org name"))
     every { sourceService.getSourceConnection(scopedConfigurations[1].scopeId) } returns SourceConnection().withName("source actor name")
     every { sourceService.getStandardSourceDefinition(any()) } returns StandardSourceDefinition().withName("source def name")
@@ -168,7 +168,7 @@ internal class ScopedConfigurationHandlerTest {
           .expiresAt(scopedConfiguration.expiresAt?.let { LocalDate.parse(scopedConfiguration.expiresAt) })
       }
 
-    val actualScopedConfigurationReads = scopedConfigurationHandler.listScopedConfigurations()
+    val actualScopedConfigurationReads = scopedConfigurationHandler.listScopedConfigurations("key1")
 
     assertEquals(expectedScopedConfigurationReads, actualScopedConfigurationReads)
   }

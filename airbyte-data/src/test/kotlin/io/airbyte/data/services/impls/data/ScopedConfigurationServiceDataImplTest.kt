@@ -475,6 +475,50 @@ internal class ScopedConfigurationServiceDataImplTest {
   }
 
   @Test
+  fun `test list configurations by key`() {
+    val resourceId = UUID.randomUUID()
+
+    val config =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = "key",
+        value = "value",
+        scopeType = EntityConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+        description = "my_description",
+      )
+
+    val config2 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = "key",
+        value = "value2",
+        scopeType = EntityConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = "my_user_id2",
+        description = "my_description2",
+        referenceUrl = "https://github.com/",
+        expiresAt = Date.valueOf(LocalDate.now()),
+      )
+
+    every { scopedConfigurationRepository.findByKey("key") } returns listOf(config, config2)
+
+    val res = scopedConfigurationService.listScopedConfigurations("key")
+    assert(res == listOf(config.toConfigModel(), config2.toConfigModel()))
+
+    verify {
+      scopedConfigurationRepository.findByKey("key")
+    }
+  }
+
+  @Test
   fun `test delete scoped configuration`() {
     val configId = UUID.randomUUID()
 
