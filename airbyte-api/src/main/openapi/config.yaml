@@ -772,6 +772,27 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_definition_versions/resolve:
+    post:
+      tags:
+        - actor_definition_version
+      summary: Resolve an actor definition version by version tag.
+      operationId: resolveActorDefinitionVersionByTag
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveActorDefinitionVersionRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResolveActorDefinitionVersionResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/declarative_source_definitions/create_manifest:
     post:
       tags:
@@ -5699,6 +5720,19 @@ components:
           $ref: "#/components/schemas/ScopeId"
         scopeType:
           $ref: "#/components/schemas/ScopeType"
+    ResolveActorDefinitionVersionRequestBody:
+      type: object
+      required:
+        - actorDefinitionId
+        - actorType
+        - dockerImageTag
+      properties:
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        actorType:
+          $ref: "#/components/schemas/ActorType"
+        dockerImageTag:
+          type: string
     ListDeclarativeManifestsRequestBody:
       type: object
       required:
@@ -6349,6 +6383,9 @@ components:
         destinationName:
           type: string
     # ACTOR DEFINITION VERSION
+    ActorDefinitionVersionId:
+      type: string
+      format: uuid
     ActorDefinitionVersionRead:
       type: object
       required:
@@ -6375,6 +6412,19 @@ components:
           $ref: "#/components/schemas/SupportState"
         breakingChanges:
           $ref: "#/components/schemas/ActorDefinitionVersionBreakingChanges"
+    ResolveActorDefinitionVersionResponse:
+      type: object
+      required:
+        - versionId
+        - dockerRepository
+        - dockerImageTag
+      properties:
+        versionId:
+          $ref: "#/components/schemas/ActorDefinitionVersionId"
+        dockerRepository:
+          type: string
+        dockerImageTag:
+          type: string
     ActorDefinitionBreakingChange:
       type: object
       required:

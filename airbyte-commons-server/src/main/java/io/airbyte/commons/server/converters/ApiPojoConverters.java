@@ -6,6 +6,7 @@ package io.airbyte.commons.server.converters;
 
 import io.airbyte.api.model.generated.ActorDefinitionBreakingChange;
 import io.airbyte.api.model.generated.ActorDefinitionResourceRequirements;
+import io.airbyte.api.model.generated.ActorType;
 import io.airbyte.api.model.generated.AttemptSyncConfig;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionSchedule;
@@ -182,6 +183,10 @@ public class ApiPojoConverters {
 
   public static io.airbyte.config.JobTypeResourceLimit.JobType toInternalJobType(final JobType jobType) {
     return Enums.convertTo(jobType, io.airbyte.config.JobTypeResourceLimit.JobType.class);
+  }
+
+  public static io.airbyte.config.ActorType toInternalActorType(final ActorType actorType) {
+    return Enums.convertTo(actorType, io.airbyte.config.ActorType.class);
   }
 
   // TODO(https://github.com/airbytehq/airbyte/issues/11432): remove these helpers.
