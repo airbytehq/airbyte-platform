@@ -10,12 +10,14 @@ export const UserCell: React.FC<{ name?: string; email: string; isCurrentUser: b
   userId,
   isCurrentUser,
 }) => {
+  const nameToDisplay = name || email;
+
   return (
     <FlexContainer direction="row" alignItems="center">
-      <InitialBadge inputString={name ?? email} hashingString={userId} />
+      <InitialBadge inputString={nameToDisplay} hashingString={userId} />
       <FlexContainer direction="column" gap="xs">
         <FlexContainer direction="row">
-          <Text size="sm">{name ?? email}</Text>
+          <Text size="sm">{nameToDisplay}</Text>
           {isCurrentUser && (
             <Badge variant="grey">
               <FormattedMessage id="settings.accessManagement.youHint" />

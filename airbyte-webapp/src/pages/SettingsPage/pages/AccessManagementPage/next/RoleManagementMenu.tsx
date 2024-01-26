@@ -7,18 +7,19 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 
 import { useCurrentOrganizationInfo, useCurrentWorkspace } from "core/api";
+import { WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
 import { useIntent } from "core/utils/rbac";
 
 import styles from "./RoleManagementMenu.module.scss";
 import { RoleManagementMenuBody } from "./RoleManagementMenuBody";
 import { RoleIndicator } from "../components/RoleIndicator";
-import { NextAccessUserRead, getWorkspaceAccessLevel } from "../components/useGetAccessManagementData";
+import { getWorkspaceAccessLevel } from "../components/useGetAccessManagementData";
 import { UserRoleText } from "../components/UserRoleText";
 
 type ResourceType = "workspace" | "organization" | "instance";
 
 export interface RoleManagementMenuProps {
-  user: NextAccessUserRead;
+  user: WorkspaceUserAccessInfoRead;
   resourceType: ResourceType;
 }
 

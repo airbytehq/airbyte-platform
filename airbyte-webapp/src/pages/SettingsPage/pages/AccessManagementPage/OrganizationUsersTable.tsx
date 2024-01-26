@@ -4,6 +4,7 @@ import { FormattedMessage } from "react-intl";
 
 import { Table } from "components/ui/Table";
 
+import { useCurrentWorkspace } from "core/api";
 import { OrganizationUserRead } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 import { RbacRoleHierarchy, partitionPermissionType } from "core/utils/rbac/rbacPermissionsQuery";
@@ -15,6 +16,8 @@ export const OrganizationUsersTable: React.FC<{
   users: OrganizationUserRead[];
 }> = ({ users }) => {
   const { userId: currentUserId } = useCurrentUser();
+  const { workspaceId } = useCurrentWorkspace();
+
   const columnHelper = createColumnHelper<OrganizationUserRead>();
 
   const columns = useMemo(
@@ -45,9 +48,10 @@ export const OrganizationUsersTable: React.FC<{
         meta: { responsive: true },
         cell: (props) => {
           const user = {
-            name: props.row.original.name ?? "",
+            userName: props.row.original.name ?? "",
             userId: props.row.original.userId,
-            email: props.row.original.email,
+            userEmail: props.row.original.email,
+            workspaceId,
             organizationPermission: {
               permissionType: props.row.original.permissionType,
               organizationId: props.row.original.organizationId,
@@ -72,7 +76,7 @@ export const OrganizationUsersTable: React.FC<{
         },
       }),
     ],
-    [columnHelper, currentUserId]
+    [columnHelper, currentUserId, workspaceId]
   );
 
   return <Table data={users} columns={columns} initialSortBy={[{ id: "name", desc: false }]} />;

@@ -8,6 +8,7 @@ import {
   createWorkspace,
   deleteWorkspace,
   getWorkspace,
+  listAccessInfoByWorkspaceId,
   listUsersInWorkspace,
   listWorkspaces,
   listWorkspacesByUser,
@@ -226,4 +227,11 @@ export const useInvalidateAllWorkspaceScopeOnChange = (workspaceId: string) => {
   useLayoutEffect(() => {
     invalidateWorkspaceScope();
   }, [invalidateWorkspaceScope, workspaceId]);
+};
+
+export const useListWorkspaceAccessUsers = (workspaceId: string) => {
+  const requestOptions = useRequestOptions();
+  const queryKey = workspaceKeys.listUsers(workspaceId);
+
+  return useSuspenseQuery(queryKey, () => listAccessInfoByWorkspaceId({ workspaceId }, requestOptions));
 };

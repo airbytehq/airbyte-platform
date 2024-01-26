@@ -7,7 +7,7 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { useCreatePermission, useCurrentOrganizationInfo, useCurrentWorkspace, useUpdatePermissions } from "core/api";
-import { PermissionType } from "core/api/types/AirbyteClient";
+import { PermissionType, WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 
 import styles from "./ChangeRoleMenuItem.module.scss";
@@ -15,11 +15,10 @@ import {
   ResourceType,
   permissionStringDictionary,
   permissionDescriptionDictionary,
-  NextAccessUserRead,
 } from "../components/useGetAccessManagementData";
 
 const useCreateOrUpdateRole = (
-  user: NextAccessUserRead,
+  user: WorkspaceUserAccessInfoRead,
   resourceType: ResourceType,
   permissionType: PermissionType
 ) => {
@@ -55,7 +54,7 @@ const useCreateOrUpdateRole = (
 };
 
 export const disallowedRoles = (
-  user: NextAccessUserRead,
+  user: WorkspaceUserAccessInfoRead,
   targetResourceType: ResourceType,
   isCurrentUser: boolean
 ): PermissionType[] => {
@@ -88,7 +87,7 @@ export const disallowedRoles = (
 };
 
 interface RoleMenuItemProps {
-  user: NextAccessUserRead;
+  user: WorkspaceUserAccessInfoRead;
   permissionType: PermissionType;
   resourceType: ResourceType;
   onClose: () => void;

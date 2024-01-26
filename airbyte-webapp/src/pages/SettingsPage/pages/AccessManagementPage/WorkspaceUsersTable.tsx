@@ -4,28 +4,29 @@ import { FormattedMessage } from "react-intl";
 
 import { Table } from "components/ui/Table";
 
+import { WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 import { RbacRoleHierarchy } from "core/utils/rbac/rbacPermissionsQuery";
 
-import { NextAccessUserRead, getWorkspaceAccessLevel } from "./components/useGetAccessManagementData";
+import { getWorkspaceAccessLevel } from "./components/useGetAccessManagementData";
 import { UserCell } from "./components/UserCell";
 import { RoleManagementMenu } from "./next/RoleManagementMenu";
 
 export const WorkspaceUsersTable: React.FC<{
-  users: NextAccessUserRead[];
+  users: WorkspaceUserAccessInfoRead[];
 }> = ({ users }) => {
   const { userId: currentUserId } = useCurrentUser();
-  const columnHelper = createColumnHelper<NextAccessUserRead>();
+  const columnHelper = createColumnHelper<WorkspaceUserAccessInfoRead>();
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor("name", {
+      columnHelper.accessor("userName", {
         header: () => <FormattedMessage id="settings.accessManagement.table.column.member" />,
         cell: (props) => {
           return (
             <UserCell
-              name={props.row.original.name}
-              email={props.row.original.email}
+              name={props.row.original.userName}
+              email={props.row.original.userEmail}
               isCurrentUser={props.row.original.userId === currentUserId}
               userId={props.row.original.userId}
             />
@@ -68,5 +69,5 @@ export const WorkspaceUsersTable: React.FC<{
     [columnHelper, currentUserId]
   );
 
-  return <Table data={users} columns={columns} initialSortBy={[{ id: "name", desc: false }]} />;
+  return <Table data={users} columns={columns} initialSortBy={[{ id: "userName", desc: false }]} />;
 };

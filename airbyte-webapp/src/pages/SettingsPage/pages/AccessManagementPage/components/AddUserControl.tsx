@@ -11,7 +11,7 @@ import { ListBoxControlButtonProps } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useCreatePermission } from "core/api";
+import { useCreatePermission, useCurrentOrganizationInfo, useListUsersInOrganization } from "core/api";
 import { OrganizationUserRead, PermissionCreate, PermissionType } from "core/api/types/AirbyteClient";
 import { useIntent } from "core/utils/rbac";
 
@@ -44,11 +44,17 @@ const AddUserForm: React.FC<{
 
   const AddUserListBoxControl = <T,>({ selectedOption }: ListBoxControlButtonProps<T>) => {
     const value = selectedOption?.value;
-    const userName = usersToAdd.find((user) => user.userId === value)?.name;
+    const userToAdd = usersToAdd.find((user) => user.userId === value);
+    const nameToDisplay = userToAdd?.name ? userToAdd.name : userToAdd?.email;
+
+    if (!userToAdd) {
+      return null;
+    }
+
     return (
       <>
         <Text as="span" className={styles.addUserControl__buttonName}>
-          {userName}
+          {nameToDisplay}
         </Text>
         <Icon type="caretDown" color="action" />
       </>
@@ -78,7 +84,7 @@ const AddUserForm: React.FC<{
               label: (
                 <FlexContainer as="span" direction="column" gap="xs">
                   <Text as="span" size="sm" bold>
-                    {user.name}
+                    {user.name ? user.name : user.email}
                   </Text>
                   <Text as="span" size="sm" color="grey">
                     {user.email}
@@ -97,13 +103,18 @@ const AddUserForm: React.FC<{
     </Form>
   );
 };
-export const AddUserControl: React.FC<{ usersToAdd: OrganizationUserRead[] }> = ({ usersToAdd }) => {
+export const AddUserControl: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const workspaceId = useCurrentWorkspaceId();
-  const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId });
+  const organizationInfo = useCurrentOrganizationInfo();
+
+  const usersToAdd = useListUsersInOrganization(organizationInfo?.organizationId ?? "").users ?? [];
+  if (!usersToAdd || usersToAdd.length === 0) {
+    return null;
+  }
 
   return !isEditMode ? (
-    <Button onClick={() => setIsEditMode(true)} icon={<Icon type="plus" />} disabled={!canUpdateWorkspacePermissions}>
+    <Button onClick={() => setIsEditMode(true)} icon={<Icon type="plus" />}>
       <FormattedMessage id="role.addUser" />
     </Button>
   ) : (

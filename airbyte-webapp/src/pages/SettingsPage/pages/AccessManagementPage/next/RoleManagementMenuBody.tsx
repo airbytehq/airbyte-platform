@@ -3,17 +3,18 @@ import { FormattedMessage } from "react-intl";
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
+import { WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
+
 import { ChangeRoleMenuItem } from "./ChangeRoleMenuItem";
 import { RemoveRoleMenuItem } from "./RemoveRoleMenuItem";
 import styles from "./RoleManagementMenuBody.module.scss";
 import {
-  NextAccessUserRead,
   ResourceType,
   permissionStringDictionary,
   permissionsByResourceType,
 } from "../components/useGetAccessManagementData";
 interface RoleManagementMenuBodyProps {
-  user: NextAccessUserRead;
+  user: WorkspaceUserAccessInfoRead;
   resourceType: ResourceType;
   close: () => void;
 }
@@ -35,7 +36,7 @@ export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ 
                 <FormattedMessage
                   id="role.organization.userDescription"
                   values={{
-                    name: user.name,
+                    name: user.userName || user.userEmail,
                     role: (
                       <FormattedMessage
                         id={permissionStringDictionary[user.organizationPermission.permissionType].role}

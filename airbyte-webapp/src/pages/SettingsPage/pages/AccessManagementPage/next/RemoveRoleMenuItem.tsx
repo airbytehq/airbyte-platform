@@ -4,14 +4,15 @@ import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationInfo, useCurrentWorkspace, useDeletePermissions } from "core/api";
+import { WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
 import styles from "./RemoveRoleMenuItem.module.scss";
-import { NextAccessUserRead, ResourceType } from "../components/useGetAccessManagementData";
+import { ResourceType } from "../components/useGetAccessManagementData";
 
 interface RemoveRoleMenuItemProps {
-  user: NextAccessUserRead;
+  user: WorkspaceUserAccessInfoRead;
   resourceType: ResourceType;
 }
 
@@ -31,14 +32,14 @@ export const RemoveRoleMenuItem: React.FC<RemoveRoleMenuItemProps> = ({ user, re
   const { formatMessage } = useIntl();
   const { userId: currentUserId } = useCurrentUser();
   const resourceName = resourceType === "organization" ? organizationName : workspaceName;
-
+  const nameToDisplay = user.userName || user.userEmail;
   const { mutateAsync: removePermission } = useDeletePermissions();
 
   const onClick = () =>
     openConfirmationModal({
       text: formatMessage(
         { id: "settings.accessManagement.removePermissions" },
-        { user: user.name ?? user.email, resource: resourceName }
+        { user: nameToDisplay, resource: resourceName }
       ),
       title: formatMessage({ id: "settings.accessManagement.removeUser" }),
       submitButtonText: formatMessage({ id: "settings.accessManagement.removeUser" }),

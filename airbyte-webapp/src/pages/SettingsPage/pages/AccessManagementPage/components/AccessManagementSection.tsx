@@ -5,7 +5,9 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Text } from "components/ui/Text";
 
+import { useCurrentOrganizationInfo, useCurrentWorkspace } from "core/api";
 import { OrganizationUserRead, WorkspaceUserRead } from "core/api/types/AirbyteClient";
+import { useIntent } from "core/utils/rbac";
 
 import { AccessManagementTable } from "./AccessManagementTable";
 import { AddUserControl } from "./AddUserControl";
@@ -24,12 +26,16 @@ interface AccessManagementSectionProps {
  */
 export const AccessManagementSection: React.FC<AccessManagementSectionProps> = ({
   users,
-  usersToAdd,
   tableResourceType,
   pageResourceType,
   pageResourceName,
 }) => {
-  const showAddUsersButton = usersToAdd && usersToAdd.length > 0;
+  const { workspaceId } = useCurrentWorkspace();
+  const organizationInfo = useCurrentOrganizationInfo();
+  const canAddUsers = useIntent("UpdateWorkspacePermissions", { workspaceId });
+  const canListOrganizationMembers = useIntent("ListOrganizationMembers", {
+    organizationId: organizationInfo?.organizationId,
+  });
 
   return (
     <FlexContainer direction="column" gap="xl">
@@ -39,10 +45,7 @@ export const AccessManagementSection: React.FC<AccessManagementSectionProps> = (
             <FormattedMessage id={tableTitleDictionary[tableResourceType]} />
           </Heading>
         </Box>
-        {showAddUsersButton && (
-          // the empty array is not a possible state, but is required to prevent a type error... will be cleaner when types are moved over in full
-          <AddUserControl usersToAdd={usersToAdd} />
-        )}
+        {canAddUsers && canListOrganizationMembers && tableResourceType === "workspace" && <AddUserControl />}
       </FlexContainer>
       {users && users.length > 0 ? (
         <AccessManagementTable

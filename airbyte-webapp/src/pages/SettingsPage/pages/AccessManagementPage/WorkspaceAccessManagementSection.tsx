@@ -7,10 +7,11 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
+import { useCurrentWorkspace, useListWorkspaceAccessUsers } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useIntent } from "core/utils/rbac";
 
 import { AddUserControl } from "./components/AddUserControl";
-import { useNextGetWorkspaceAccessUsers } from "./components/useGetAccessManagementData";
 import styles from "./WorkspaceAccessManagementSection.module.scss";
 import { WorkspaceUsersTable } from "./WorkspaceUsersTable";
 
@@ -18,9 +19,12 @@ const SEARCH_PARAM = "search";
 
 const WorkspaceAccessManagementSection: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_WORKSPACE_ACCESS_MANAGEMENT);
-  const accessData = useNextGetWorkspaceAccessUsers();
-  const usersWithAccess = accessData.workspace?.users ?? [];
-  const usersToAdd = accessData.workspace?.usersToAdd ?? [];
+  const workspace = useCurrentWorkspace();
+  const canViewOrgMembers = useIntent("ListOrganizationMembers", { organizationId: workspace.organizationId });
+  const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId: workspace.workspaceId });
+
+  const { usersWithAccess } = useListWorkspaceAccessUsers(workspace.workspaceId);
+
   const [searchParams, setSearchParams] = useSearchParams();
   const filterParam = searchParams.get("search");
   const [userFilter, setUserFilter] = React.useState(filterParam ?? "");
@@ -37,12 +41,11 @@ const WorkspaceAccessManagementSection: React.FC = () => {
 
   const filteredUsersWithAccess = usersWithAccess.filter((user) => {
     return (
-      user.name?.toLowerCase().includes(filterParam?.toLowerCase() ?? "") ||
-      user.email?.toLowerCase().includes(filterParam?.toLowerCase() ?? "")
+      user.userName?.toLowerCase().includes(filterParam?.toLowerCase() ?? "") ||
+      user.userEmail?.toLowerCase().includes(filterParam?.toLowerCase() ?? "")
     );
   });
 
-  const showAddUsersButton = usersToAdd && usersToAdd.length > 0;
   return (
     <FlexContainer direction="column" gap="md">
       <FlexContainer justifyContent="space-between" alignItems="baseline">
@@ -54,7 +57,7 @@ const WorkspaceAccessManagementSection: React.FC = () => {
         <FlexItem className={styles.searchInputWrapper}>
           <SearchInput value={userFilter} onChange={(e) => setUserFilter(e.target.value)} />
         </FlexItem>
-        {showAddUsersButton && <AddUserControl usersToAdd={usersToAdd} />}
+        {canViewOrgMembers && canUpdateWorkspacePermissions && <AddUserControl />}
       </FlexContainer>
       {filteredUsersWithAccess && filteredUsersWithAccess.length > 0 ? (
         <WorkspaceUsersTable users={filteredUsersWithAccess} />
