@@ -879,7 +879,8 @@ public class DefaultJobPersistence implements JobPersistence {
       throws IOException {
     return jobDatabase.query(ctx -> ctx.selectCount().from(JOBS)
         .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
-        .and(JOBS.SCOPE.eq(connectionId))
+        .and(connectionId == null ? DSL.noCondition()
+            : JOBS.SCOPE.eq(connectionId))
         .and(status == null ? DSL.noCondition()
             : JOBS.STATUS.eq(io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(status.toString().toLowerCase())))
         .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
@@ -894,7 +895,8 @@ public class DefaultJobPersistence implements JobPersistence {
     return jobDatabase.query(ctx -> {
       final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
           .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
-          .and(JOBS.SCOPE.eq(configId))
+          .and(configId == null ? DSL.noCondition()
+              : JOBS.SCOPE.eq(configId))
           .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
           .limit(pagesize)
           .getSQL(ParamType.INLINED) + ") AS jobs";
@@ -919,7 +921,8 @@ public class DefaultJobPersistence implements JobPersistence {
     return jobDatabase.query(ctx -> {
       final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
           .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
-          .and(JOBS.SCOPE.eq(configId))
+          .and(configId == null ? DSL.noCondition()
+              : JOBS.SCOPE.eq(configId))
           .and(status == null ? DSL.noCondition()
               : JOBS.STATUS.eq(io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(status.toString().toLowerCase())))
           .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
@@ -990,7 +993,8 @@ public class DefaultJobPersistence implements JobPersistence {
       throws IOException {
     final Optional<OffsetDateTime> includingJobCreatedAt = jobDatabase.query(ctx -> ctx.select(JOBS.CREATED_AT).from(JOBS)
         .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
-        .and(JOBS.SCOPE.eq(connectionId))
+        .and(connectionId == null ? DSL.noCondition()
+            : JOBS.SCOPE.eq(connectionId))
         .and(JOBS.ID.eq(includingJobId))
         .fetch()
         .stream()
@@ -1003,7 +1007,8 @@ public class DefaultJobPersistence implements JobPersistence {
 
     final int countIncludingJob = jobDatabase.query(ctx -> ctx.selectCount().from(JOBS)
         .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
-        .and(JOBS.SCOPE.eq(connectionId))
+        .and(connectionId == null ? DSL.noCondition()
+            : JOBS.SCOPE.eq(connectionId))
         .and(JOBS.CREATED_AT.greaterOrEqual(includingJobCreatedAt.get()))
         .fetchOne().into(int.class));
 

@@ -239,7 +239,7 @@ public interface JobPersistence {
   List<Job> listJobs(Set<ConfigType> configTypes, String configId, int limit) throws IOException;
 
   /**
-   * List jobs of a connection with filters. Pageable.
+   * List jobs with filters. Pageable.
    *
    * @param configTypes - type of config, e.g. sync
    * @param configId - id of that config

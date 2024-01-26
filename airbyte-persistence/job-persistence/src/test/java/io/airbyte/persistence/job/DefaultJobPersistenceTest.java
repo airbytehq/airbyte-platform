@@ -67,6 +67,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -1694,8 +1695,26 @@ class DefaultJobPersistenceTest {
   class GetJobCount {
 
     @Test
-    @DisplayName("Should return the total job count for the connection")
+    @DisplayName("Should return the total job count for all connections")
     void testGetJobCount() throws IOException {
+      final int numJobsToCreate = 10;
+      for (int i = 0; i < numJobsToCreate / 2; i++) {
+        jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG);
+      }
+
+      for (int i = 0; i < numJobsToCreate / 2; i++) {
+        jobPersistence.enqueueJob(CONNECTION_ID2.toString(), SPEC_JOB_CONFIG);
+      }
+
+      final Long actualJobCount =
+          jobPersistence.getJobCount(Set.of(SPEC_JOB_CONFIG.getConfigType()), null, null, null, null, null, null);
+
+      assertEquals(numJobsToCreate, actualJobCount);
+    }
+
+    @Test
+    @DisplayName("Should return the total job count for the connection")
+    void testGetJobCountWithConnectionFilter() throws IOException {
       final int numJobsToCreate = 10;
       for (int i = 0; i < numJobsToCreate; i++) {
         jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG);
@@ -1953,8 +1972,96 @@ class DefaultJobPersistenceTest {
     }
 
     @Test
-    @DisplayName("Should list jobs including the specified job")
+    @DisplayName("Should list jobs across all connections")
+    void testListJobsWithNoFilters() throws IOException {
+      final int numJobsToCreate = 10;
+      final Set<Long> ids = new HashSet<>();
+      for (int i = 0; i < numJobsToCreate / 2; i++) {
+        Long connection1JobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG).orElseThrow();
+        ids.add(connection1JobId);
+      }
+
+      for (int i = 0; i < numJobsToCreate / 2; i++) {
+        Long connection2JobId = jobPersistence.enqueueJob(CONNECTION_ID2.toString(), SPEC_JOB_CONFIG).orElseThrow();
+        ids.add(connection2JobId);
+      }
+
+      String connectionId = null;
+      List<Job> jobs = jobPersistence.listJobs(
+          Set.of(SPEC_JOB_CONFIG.getConfigType()),
+          connectionId,
+          9999,
+          0,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null);
+
+      assertEquals(ids, jobs.stream().map(Job::getId).collect(Collectors.toSet()));
+    }
+
+    @Test
+    @DisplayName("Should list jobs for one connection only")
+    void testListJobsWithConnectionFilters() throws IOException {
+      final int numJobsToCreate = 10;
+      final Set<Long> idsConnection1 = new HashSet<>();
+      for (int i = 0; i < numJobsToCreate / 2; i++) {
+        Long connection1JobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG).orElseThrow();
+        idsConnection1.add(connection1JobId);
+      }
+
+      for (int i = 0; i < numJobsToCreate / 2; i++) {
+        jobPersistence.enqueueJob(CONNECTION_ID2.toString(), SPEC_JOB_CONFIG).orElseThrow();
+      }
+
+      List<Job> jobs = jobPersistence.listJobs(
+          Set.of(SPEC_JOB_CONFIG.getConfigType()),
+          CONNECTION_ID.toString(),
+          9999,
+          0,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null);
+
+      assertEquals(idsConnection1, jobs.stream().map(Job::getId).collect(Collectors.toSet()));
+    }
+
+    @Test
+    @DisplayName("Should list jobs including the specified job across all connections")
     void testListJobsIncludingId() throws IOException {
+      final List<Long> ids = new ArrayList<>();
+      for (int i = 0; i < 100; i++) {
+        // This makes each enqueued job have an increasingly higher createdAt time
+        when(timeSupplier.get()).thenReturn(Instant.ofEpochSecond(i));
+        // Alternate between spec and check job config types to verify that both config types are fetched
+        // properly
+        final JobConfig jobConfig = i % 2 == 0 ? SPEC_JOB_CONFIG : CHECK_JOB_CONFIG;
+        // spread across different connections
+        final String connectionId = i % 4 == 0 ? CONNECTION_ID.toString() : CONNECTION_ID2.toString();
+        final long jobId = jobPersistence.enqueueJob(connectionId, jobConfig).orElseThrow();
+        ids.add(jobId);
+        // also create an attempt for each job to verify that joining with attempts does not cause failures
+        jobPersistence.createAttempt(jobId, LOG_PATH);
+      }
+
+      final int includingIdIndex = 90;
+      final int pageSize = 25;
+      final List<Job> actualList = jobPersistence.listJobsIncludingId(Set.of(SPEC_JOB_CONFIG.getConfigType(), CHECK_JOB_CONFIG.getConfigType()),
+          null, ids.get(includingIdIndex), pageSize);
+      final List<Long> expectedJobIds = Lists.reverse(ids.subList(ids.size() - pageSize, ids.size()));
+      assertEquals(expectedJobIds, actualList.stream().map(Job::getId).toList());
+    }
+
+    @Test
+    @DisplayName("Should list jobs including the specified job")
+    void testListJobsIncludingIdWithConnectionFilter() throws IOException {
       final List<Long> ids = new ArrayList<>();
       for (int i = 0; i < 100; i++) {
         // This makes each enqueued job have an increasingly higher createdAt time

@@ -7844,6 +7844,61 @@ components:
           $ref: "#/components/schemas/JobStatus"
         resetConfig:
           $ref: "#/components/schemas/ResetConfig"
+        aggregatedStats:
+          $ref: "#/components/schemas/JobAggregatedStats"
+        streamAggregatedStats:
+          $ref: "#/components/schemas/StreamAggregatedStats"
+    JobAggregatedStats:
+      type: object
+      required:
+        - recordsEmitted
+        - bytesEmitted
+        - recordsCommitted
+        - bytesCommitted
+      properties:
+        recordsEmitted:
+          type: integer
+          format: int64
+        bytesEmitted:
+          type: integer
+          format: int64
+        recordsCommitted:
+          type: integer
+          format: int64
+        bytesCommitted:
+          type: integer
+          format: int64
+    StreamAggregatedStats:
+      type: array
+      items:
+        $ref: "#/components/schemas/StreamStats"
+    StreamStats:
+      type: object
+      required:
+        - streamName
+        - recordsEmitted
+        - bytesEmitted
+        - recordsCommitted
+        - bytesCommitted
+      properties:
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        recordsEmitted:
+          type: integer
+          format: int64
+        bytesEmitted:
+          type: integer
+          format: int64
+        recordsCommitted:
+          type: integer
+          format: int64
+        bytesCommitted:
+          type: integer
+          format: int64
+        wasBackfilled:
+          type: boolean
     SyncInput:
       type: object
       required:
