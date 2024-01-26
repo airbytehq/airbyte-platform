@@ -45,7 +45,6 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -65,7 +64,6 @@ import org.jooq.Field;
 import org.jooq.InsertSetMoreStep;
 import org.jooq.JSONB;
 import org.jooq.JoinType;
-import org.jooq.Query;
 import org.jooq.Record;
 import org.jooq.Record1;
 import org.jooq.Result;
@@ -467,24 +465,8 @@ public class DestinationServiceJooqImpl implements DestinationService {
                                       final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
                                       final DSLContext ctx) {
     writeStandardDestinationDefinition(Collections.singletonList(destinationDefinition), ctx);
-    writeActorDefinitionBreakingChanges(breakingChangesForDefinition, ctx);
-    ActorDefinitionVersionJooqHelper.setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
-  }
-
-  /**
-   * Writes a list of actor definition breaking changes in one transaction. Updates entries if they
-   * already exist.
-   *
-   * @param breakingChanges - actor definition breaking changes to write
-   * @param ctx database context
-   * @throws IOException - you never know when you io
-   */
-  private void writeActorDefinitionBreakingChanges(final List<ActorDefinitionBreakingChange> breakingChanges, final DSLContext ctx) {
-    final OffsetDateTime timestamp = OffsetDateTime.now();
-    final List<Query> upsertQueries = breakingChanges.stream()
-        .map(breakingChange -> upsertBreakingChangeQuery(ctx, breakingChange, timestamp))
-        .collect(Collectors.toList());
-    ctx.batch(upsertQueries).execute();
+    ConnectorMetadataJooqHelper.writeActorDefinitionBreakingChanges(breakingChangesForDefinition, ctx);
+    ConnectorMetadataJooqHelper.setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
   }
 
   private Stream<StandardDestinationDefinition> destDefQuery(final Optional<UUID> destDefId, final boolean includeTombstone) throws IOException {
@@ -496,24 +478,6 @@ public class DestinationServiceJooqImpl implements DestinationService {
         .fetch())
         .stream()
         .map(DbConverter::buildStandardDestinationDefinition);
-  }
-
-  private Query upsertBreakingChangeQuery(final DSLContext ctx, final ActorDefinitionBreakingChange breakingChange, final OffsetDateTime timestamp) {
-    return ctx.insertInto(Tables.ACTOR_DEFINITION_BREAKING_CHANGE)
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID, breakingChange.getActorDefinitionId())
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.VERSION, breakingChange.getVersion().serialize())
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPGRADE_DEADLINE, LocalDate.parse(breakingChange.getUpgradeDeadline()))
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MESSAGE, breakingChange.getMessage())
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL, breakingChange.getMigrationDocumentationUrl())
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.SCOPED_IMPACT, JSONB.valueOf(Jsons.serialize(breakingChange.getScopedImpact())))
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.CREATED_AT, timestamp)
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPDATED_AT, timestamp)
-        .onConflict(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID, Tables.ACTOR_DEFINITION_BREAKING_CHANGE.VERSION).doUpdate()
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPGRADE_DEADLINE, LocalDate.parse(breakingChange.getUpgradeDeadline()))
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MESSAGE, breakingChange.getMessage())
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL, breakingChange.getMigrationDocumentationUrl())
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.SCOPED_IMPACT, JSONB.valueOf(Jsons.serialize(breakingChange.getScopedImpact())))
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPDATED_AT, timestamp);
   }
 
   private <T> List<T> listStandardActorDefinitions(final ActorType actorType,

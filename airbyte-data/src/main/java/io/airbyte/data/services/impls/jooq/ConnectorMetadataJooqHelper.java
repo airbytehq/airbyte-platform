@@ -23,15 +23,16 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
+import org.jooq.Query;
 
 /**
- * Helper class to keep shared jooq logic used in actors (source, destination). This should be
- * removed in favor of a combined Actor service that deals with both sources and destinations
- * uniformly.
+ * Helper class for logic related to connector metadata (breaking changes, actor definition
+ * versions) that is the same regardless of whether we are working with a source or destination.
  */
-public class ActorDefinitionVersionJooqHelper {
+public class ConnectorMetadataJooqHelper {
 
   /**
    * Write an actor definition version.
@@ -210,7 +211,7 @@ public class ActorDefinitionVersionJooqHelper {
   /**
    * Get an optional ADV for an actor definition's default version. The optional will be empty if the
    * defaultVersionId of the actor definition is set to null in the DB. The only time this should be
-   * the case is if we are in the process of inserting and have already written the source definition,
+   * the case is if we are in the process of inserting and have already written the actor definition,
    * but not yet set its default version.
    */
   public static Optional<ActorDefinitionVersion> getDefaultVersionForActorDefinitionIdOptional(final UUID actorDefinitionId, final DSLContext ctx) {
@@ -274,6 +275,42 @@ public class ActorDefinitionVersionJooqHelper {
         .set(ACTOR_DEFINITION.DEFAULT_VERSION_ID, versionId)
         .where(ACTOR_DEFINITION.ID.eq(actorDefinitionId))
         .execute();
+  }
+
+  /**
+   * Writes a list of actor definition breaking changes in one transaction. Updates entries if they
+   * already exist.
+   *
+   * @param breakingChanges - actor definition breaking changes to write
+   * @param ctx database context
+   * @throws IOException - you never know when you io
+   */
+  public static void writeActorDefinitionBreakingChanges(final List<ActorDefinitionBreakingChange> breakingChanges, final DSLContext ctx) {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+    final List<Query> upsertQueries = breakingChanges.stream()
+        .map(breakingChange -> upsertBreakingChangeQuery(ctx, breakingChange, timestamp))
+        .collect(Collectors.toList());
+    ctx.batch(upsertQueries).execute();
+  }
+
+  private static Query upsertBreakingChangeQuery(final DSLContext ctx,
+                                                 final ActorDefinitionBreakingChange breakingChange,
+                                                 final OffsetDateTime timestamp) {
+    return ctx.insertInto(Tables.ACTOR_DEFINITION_BREAKING_CHANGE)
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID, breakingChange.getActorDefinitionId())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.VERSION, breakingChange.getVersion().serialize())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPGRADE_DEADLINE, LocalDate.parse(breakingChange.getUpgradeDeadline()))
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MESSAGE, breakingChange.getMessage())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL, breakingChange.getMigrationDocumentationUrl())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.SCOPED_IMPACT, JSONB.valueOf(Jsons.serialize(breakingChange.getScopedImpact())))
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.CREATED_AT, timestamp)
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPDATED_AT, timestamp)
+        .onConflict(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID, Tables.ACTOR_DEFINITION_BREAKING_CHANGE.VERSION).doUpdate()
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPGRADE_DEADLINE, LocalDate.parse(breakingChange.getUpgradeDeadline()))
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MESSAGE, breakingChange.getMessage())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL, breakingChange.getMigrationDocumentationUrl())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.SCOPED_IMPACT, JSONB.valueOf(Jsons.serialize(breakingChange.getScopedImpact())))
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPDATED_AT, timestamp);
   }
 
 }

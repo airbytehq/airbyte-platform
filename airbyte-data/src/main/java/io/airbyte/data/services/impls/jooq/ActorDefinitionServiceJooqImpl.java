@@ -507,7 +507,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    *          field from the DB.
    */
   private ActorDefinitionVersion writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion, final DSLContext ctx) {
-    return ActorDefinitionVersionJooqHelper.writeActorDefinitionVersion(actorDefinitionVersion, ctx);
+    return ConnectorMetadataJooqHelper.writeActorDefinitionVersion(actorDefinitionVersion, ctx);
   }
 
   /**
