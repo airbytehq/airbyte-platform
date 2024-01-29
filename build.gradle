@@ -31,6 +31,12 @@ plugins {
     id "io.airbyte.gradle.docker" version "0.23.2" apply false
     id "io.airbyte.gradle.publish" version "0.23.2" apply false
     id "jacoco-report-aggregation"
+    // uncomment for testing plugin locally
+    // id "io.airbyte.gradle.jvm" version "local-test" apply false
+    // id "io.airbyte.gradle.jvm.app" version "local-test" apply false
+    // id "io.airbyte.gradle.jvm.lib" version "local-test" apply false
+    // id "io.airbyte.gradle.docker" version "local-test" apply false
+    // id "io.airbyte.gradle.publish" version "local-test" apply false
 }
 
 repositories {
