@@ -265,7 +265,7 @@ public class SourceDefinitionsHandler {
   }
 
   public SourceDefinitionRead updateSourceDefinition(final SourceDefinitionUpdate sourceDefinitionUpdate)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardSourceDefinition currentSourceDefinition =
         configRepository.getStandardSourceDefinition(sourceDefinitionUpdate.getSourceDefinitionId());
     final ActorDefinitionVersion currentVersion = configRepository.getActorDefinitionVersion(currentSourceDefinition.getDefaultVersionId());

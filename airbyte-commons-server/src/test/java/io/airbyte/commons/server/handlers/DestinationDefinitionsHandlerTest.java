@@ -739,7 +739,7 @@ class DestinationDefinitionsHandlerTest {
   @ValueSource(booleans = {true, false})
   @DisplayName("updateDestinationDefinition should correctly update a destinationDefinition")
   void testUpdateDestination(final boolean useIconUrlInApiResponseFlagValue)
-      throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(useIconUrlInApiResponseFlagValue);
 
     final String newDockerImageTag = "averydifferenttag";

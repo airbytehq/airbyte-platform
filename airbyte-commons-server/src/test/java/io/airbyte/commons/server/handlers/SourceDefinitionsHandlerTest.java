@@ -673,7 +673,7 @@ class SourceDefinitionsHandlerTest {
   @ValueSource(booleans = {true, false})
   @DisplayName("updateSourceDefinition should correctly update a sourceDefinition")
   void testUpdateSource(final boolean useIconUrlInApiResponseFlagValue)
-      throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(useIconUrlInApiResponseFlagValue);
 
     final String newDockerImageTag = "averydifferenttag";

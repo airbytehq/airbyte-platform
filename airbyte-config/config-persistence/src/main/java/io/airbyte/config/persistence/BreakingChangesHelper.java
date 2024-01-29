@@ -7,6 +7,8 @@ package io.airbyte.config.persistence;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ActorDefinitionService;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
@@ -72,16 +74,16 @@ public class BreakingChangesHelper {
    * Given a list of breaking changes for a definition, find the last applicable breaking change. In
    * this context, "Last" is defined as the breaking change with the highest version number.
    *
-   * @param configRepository - config repository
+   * @param actorDefinitionService - actor definition service
    * @param defaultActorDefinitionVersionId - default version id for the definition
    * @param breakingChangesForDefinition - all breaking changes for the definition
    * @return last applicable breaking change
    */
-  public static ActorDefinitionBreakingChange getLastApplicableBreakingChange(final ConfigRepository configRepository,
+  public static ActorDefinitionBreakingChange getLastApplicableBreakingChange(final ActorDefinitionService actorDefinitionService,
                                                                               final UUID defaultActorDefinitionVersionId,
                                                                               final List<ActorDefinitionBreakingChange> breakingChangesForDefinition)
       throws IOException, ConfigNotFoundException {
-    final ActorDefinitionVersion defaultVersion = configRepository.getActorDefinitionVersion(defaultActorDefinitionVersionId);
+    final ActorDefinitionVersion defaultVersion = actorDefinitionService.getActorDefinitionVersion(defaultActorDefinitionVersionId);
     final Version currentDefaultVersion = new Version(defaultVersion.getDockerImageTag());
 
     return BreakingChangesHelper.filterApplicableBreakingChanges(breakingChangesForDefinition, currentDefaultVersion).stream()

@@ -190,9 +190,6 @@ class BootloaderTest {
     val actorDefinitionVersionHelper =
         new ActorDefinitionVersionHelper(configRepository, new NoOpDefinitionVersionOverrideProvider(), new NoOpDefinitionVersionOverrideProvider(),
             featureFlagClient);
-    val supportStateUpdater =
-        new SupportStateUpdater(configRepository, DeploymentMode.OSS, actorDefinitionVersionHelper, breakingChangeNotificationHelper,
-            featureFlagClient);
     val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
     val sourceService = new SourceServiceJooqImpl(configDatabase,
         featureFlagClient,
@@ -204,6 +201,10 @@ class BootloaderTest {
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService);
+    val supportStateUpdater =
+        new SupportStateUpdater(actorDefinitionService, sourceService, destinationService, DeploymentMode.OSS,
+            actorDefinitionVersionHelper, breakingChangeNotificationHelper,
+            featureFlagClient);
     val metricClient = new NotImplementedMetricClient();
     val applyDefinitionsHelper =
         new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
@@ -294,10 +295,6 @@ class BootloaderTest {
     val actorDefinitionVersionHelper =
         new ActorDefinitionVersionHelper(configRepository, new NoOpDefinitionVersionOverrideProvider(), new NoOpDefinitionVersionOverrideProvider(),
             featureFlagClient);
-    val supportStateUpdater =
-        new SupportStateUpdater(configRepository, DeploymentMode.OSS, actorDefinitionVersionHelper, breakingChangeNotificationHelper,
-            featureFlagClient);
-    val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
     val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
     val sourceService = new SourceServiceJooqImpl(configDatabase,
         featureFlagClient,
@@ -309,6 +306,10 @@ class BootloaderTest {
         mock(SecretsRepositoryReader.class),
         mock(SecretsRepositoryWriter.class),
         mock(SecretPersistenceConfigService.class));
+    val supportStateUpdater =
+        new SupportStateUpdater(actorDefinitionService, sourceService, destinationService, DeploymentMode.OSS, actorDefinitionVersionHelper,
+            breakingChangeNotificationHelper, featureFlagClient);
+    val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
     val metricClient = new NotImplementedMetricClient();
     val applyDefinitionsHelper =
         new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,

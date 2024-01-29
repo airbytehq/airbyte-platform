@@ -14,6 +14,8 @@ import static org.mockito.Mockito.when;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ActorDefinitionService;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
@@ -102,16 +104,16 @@ class BreakingChangesHelperTest {
         .withVersion(new Version("3.0.0"));
     final List<ActorDefinitionBreakingChange> breakingChanges = List.of(firstBreakingChange, lastBreakingChange, inapplicableBreakingChange);
 
-    final ConfigRepository mConfigRepository = mock(ConfigRepository.class);
-    when(mConfigRepository.getActorDefinitionVersion(defaultVersion.getVersionId()))
+    final ActorDefinitionService mActorDefinitionService = mock(ActorDefinitionService.class);
+    when(mActorDefinitionService.getActorDefinitionVersion(defaultVersion.getVersionId()))
         .thenReturn(defaultVersion);
 
     final ActorDefinitionBreakingChange result =
-        BreakingChangesHelper.getLastApplicableBreakingChange(mConfigRepository, defaultVersion.getVersionId(), breakingChanges);
+        BreakingChangesHelper.getLastApplicableBreakingChange(mActorDefinitionService, defaultVersion.getVersionId(), breakingChanges);
     assertEquals(lastBreakingChange, result);
 
-    verify(mConfigRepository).getActorDefinitionVersion(defaultVersion.getVersionId());
-    verifyNoMoreInteractions(mConfigRepository);
+    verify(mActorDefinitionService).getActorDefinitionVersion(defaultVersion.getVersionId());
+    verifyNoMoreInteractions(mActorDefinitionService);
   }
 
 }

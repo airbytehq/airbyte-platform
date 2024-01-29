@@ -162,7 +162,8 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testUpdateDestinationDefinition() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testUpdateDestinationDefinition()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(destinationDefinitionsHandler.updateDestinationDefinition(Mockito.any()))
         .thenReturn(new DestinationDefinitionRead())
         .thenThrow(new ConfigNotFoundException("", ""));

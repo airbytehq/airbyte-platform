@@ -263,7 +263,7 @@ public class DestinationDefinitionsHandler {
   }
 
   public DestinationDefinitionRead updateDestinationDefinition(final DestinationDefinitionUpdate destinationDefinitionUpdate)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardDestinationDefinition currentDestination = configRepository
         .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());
     final ActorDefinitionVersion currentVersion = configRepository.getActorDefinitionVersion(currentDestination.getDefaultVersionId());
