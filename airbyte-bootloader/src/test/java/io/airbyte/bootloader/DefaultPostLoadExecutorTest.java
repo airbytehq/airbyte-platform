@@ -38,7 +38,8 @@ class DefaultPostLoadExecutorTest {
   }
 
   @Test
-  void testPostLoadExecutionWithException() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testPostLoadExecutionWithException()
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ApplyDefinitionsHelper applyDefinitionsHelper = mock(ApplyDefinitionsHelper.class);
     final DeclarativeSourceUpdater declarativeSourceUpdater = mock(DeclarativeSourceUpdater.class);
 

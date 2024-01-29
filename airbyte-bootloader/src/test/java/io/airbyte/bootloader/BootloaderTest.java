@@ -193,9 +193,21 @@ class BootloaderTest {
     val supportStateUpdater =
         new SupportStateUpdater(configRepository, DeploymentMode.OSS, actorDefinitionVersionHelper, breakingChangeNotificationHelper,
             featureFlagClient);
+    val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
+    val sourceService = new SourceServiceJooqImpl(configDatabase,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService);
+    val destinationService = new DestinationServiceJooqImpl(configDatabase,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService);
     val metricClient = new NotImplementedMetricClient();
     val applyDefinitionsHelper =
-        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, metricClient, supportStateUpdater);
+        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
+            metricClient, supportStateUpdater);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
@@ -286,9 +298,21 @@ class BootloaderTest {
         new SupportStateUpdater(configRepository, DeploymentMode.OSS, actorDefinitionVersionHelper, breakingChangeNotificationHelper,
             featureFlagClient);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
+    val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
+    val sourceService = new SourceServiceJooqImpl(configDatabase,
+        featureFlagClient,
+        mock(SecretsRepositoryReader.class),
+        mock(SecretsRepositoryWriter.class),
+        mock(SecretPersistenceConfigService.class));
+    val destinationService = new DestinationServiceJooqImpl(configDatabase,
+        featureFlagClient,
+        mock(SecretsRepositoryReader.class),
+        mock(SecretsRepositoryWriter.class),
+        mock(SecretPersistenceConfigService.class));
     val metricClient = new NotImplementedMetricClient();
     val applyDefinitionsHelper =
-        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, metricClient, supportStateUpdater);
+        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, actorDefinitionService, sourceService, destinationService,
+            metricClient, supportStateUpdater);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
