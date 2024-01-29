@@ -195,7 +195,7 @@ class BootloaderTest {
             featureFlagClient);
     val metricClient = new NotImplementedMetricClient();
     val applyDefinitionsHelper =
-        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, featureFlagClient, metricClient, supportStateUpdater);
+        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, metricClient, supportStateUpdater);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
@@ -288,7 +288,7 @@ class BootloaderTest {
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
     val metricClient = new NotImplementedMetricClient();
     val applyDefinitionsHelper =
-        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, featureFlagClient, metricClient, supportStateUpdater);
+        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, metricClient, supportStateUpdater);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);

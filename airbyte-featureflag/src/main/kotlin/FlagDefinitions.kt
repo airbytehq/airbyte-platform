@@ -61,8 +61,6 @@ object DestinationTimeoutSeconds : Permanent<Int>(key = "destination-timeout.sec
 
 object UseActorScopedDefaultVersions : Temporary<Boolean>(key = "connectors.useActorScopedDefaultVersions", default = true)
 
-object RunSupportStateUpdater : Temporary<Boolean>(key = "connectors.runSupportStateUpdater", default = true)
-
 object EnableConfigurationOverrideProvider : Temporary<Boolean>(key = "connectors.enableConfigurationOverrideProvider", default = false)
 
 object NotifyOnConnectorBreakingChanges : Temporary<Boolean>(key = "connectors.notifyOnConnectorBreakingChanges", default = true)

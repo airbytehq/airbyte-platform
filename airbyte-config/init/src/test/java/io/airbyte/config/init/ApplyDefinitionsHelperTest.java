@@ -4,7 +4,6 @@
 
 package io.airbyte.config.init;
 
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.CONNECTOR_REGISTRY_DEFINITION_PROCESSED;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -29,10 +28,6 @@ import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingS
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.DefinitionsProvider;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.RunSupportStateUpdater;
-import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.JobPersistence;
@@ -60,7 +55,6 @@ class ApplyDefinitionsHelperTest {
   private DefinitionsProvider definitionsProvider;
   private JobPersistence jobPersistence;
   private SupportStateUpdater supportStateUpdater;
-  private FeatureFlagClient featureFlagClient;
 
   private MetricClient metricClient;
   private ApplyDefinitionsHelper applyDefinitionsHelper;
@@ -110,13 +104,9 @@ class ApplyDefinitionsHelperTest {
     definitionsProvider = mock(DefinitionsProvider.class);
     jobPersistence = mock(JobPersistence.class);
     supportStateUpdater = mock(SupportStateUpdater.class);
-    featureFlagClient = mock(TestClient.class);
     metricClient = mock(MetricClient.class);
 
-    applyDefinitionsHelper =
-        new ApplyDefinitionsHelper(definitionsProvider, jobPersistence, configRepository, featureFlagClient, metricClient, supportStateUpdater);
-
-    when(featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
+    applyDefinitionsHelper = new ApplyDefinitionsHelper(definitionsProvider, jobPersistence, configRepository, metricClient, supportStateUpdater);
 
     // Default calls to empty.
     when(definitionsProvider.getDestinationDefinitions()).thenReturn(Collections.emptyList());
@@ -270,31 +260,6 @@ class ApplyDefinitionsHelperTest {
     verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
         new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()));
 
-    verifyNoMoreInteractions(configRepository, supportStateUpdater, metricClient);
-  }
-
-  @Test
-  void testTurnOffRunSupportStateUpdaterFeatureFlag() throws JsonValidationException, ConfigNotFoundException, IOException {
-    when(featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(false);
-
-    when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(SOURCE_POSTGRES_2));
-    when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(DESTINATION_S3_2));
-
-    applyDefinitionsHelper.apply(true);
-    verifyConfigRepositoryGetInteractions();
-
-    verify(configRepository).writeConnectorMetadata(
-        ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
-        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2),
-        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2));
-    verify(configRepository).writeConnectorMetadata(
-        ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
-        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
-        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
-    verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
-        new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()));
-
-    verify(supportStateUpdater, never()).updateSupportStates();
     verifyNoMoreInteractions(configRepository, supportStateUpdater, metricClient);
   }
 

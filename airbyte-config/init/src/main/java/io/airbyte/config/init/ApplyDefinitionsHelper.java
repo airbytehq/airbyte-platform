@@ -4,7 +4,6 @@
 
 package io.airbyte.config.init;
 
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.CONNECTOR_REGISTRY_DEFINITION_PROCESSED;
 
 import io.airbyte.commons.version.AirbyteProtocolVersion;
@@ -21,9 +20,6 @@ import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingS
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.DefinitionsProvider;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.RunSupportStateUpdater;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.JobPersistence;
@@ -55,7 +51,6 @@ public class ApplyDefinitionsHelper {
   private final DefinitionsProvider definitionsProvider;
   private final JobPersistence jobPersistence;
   private final ConfigRepository configRepository;
-  private final FeatureFlagClient featureFlagClient;
   private final SupportStateUpdater supportStateUpdater;
   private final MetricClient metricClient;
   private int newConnectorCount;
@@ -65,7 +60,6 @@ public class ApplyDefinitionsHelper {
   public ApplyDefinitionsHelper(@Named("seedDefinitionsProvider") final DefinitionsProvider definitionsProvider,
                                 final JobPersistence jobPersistence,
                                 final ConfigRepository configRepository,
-                                final FeatureFlagClient featureFlagClient,
                                 final MetricClient metricClient,
                                 final SupportStateUpdater supportStateUpdater) {
     this.definitionsProvider = definitionsProvider;
@@ -73,7 +67,6 @@ public class ApplyDefinitionsHelper {
     this.configRepository = configRepository;
     this.metricClient = metricClient;
     this.supportStateUpdater = supportStateUpdater;
-    this.featureFlagClient = featureFlagClient;
   }
 
   public void apply() throws JsonValidationException, IOException, ConfigNotFoundException {
@@ -109,9 +102,7 @@ public class ApplyDefinitionsHelper {
     for (final ConnectorRegistryDestinationDefinition def : protocolCompatibleDestinationDefinitions) {
       applyDestinationDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll);
     }
-    if (featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))) {
-      supportStateUpdater.updateSupportStates();
-    }
+    supportStateUpdater.updateSupportStates();
 
     LOGGER.info("New connectors added: {}", newConnectorCount);
     LOGGER.info("Version changes applied: {}", changedConnectorCount);
