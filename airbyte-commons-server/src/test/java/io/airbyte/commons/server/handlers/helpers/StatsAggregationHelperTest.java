@@ -21,26 +21,33 @@ class StatsAggregationHelperTest {
 
   private static final StreamSyncStats STREAM_SYNC_STATS_1 = new StreamSyncStats()
       .withStats(new SyncStats()
-          .withRecordsEmitted(10L)
-          .withBytesEmitted(50L)
-          .withRecordsCommitted(10L)
-          .withBytesCommitted(50L))
+          .withRecordsEmitted(40L)
+          .withBytesEmitted(30L)
+          .withRecordsCommitted(20L)
+          .withBytesCommitted(10L))
       .withWasBackfilled(true);
 
   private static final StreamSyncStats STREAM_SYNC_STATS_2 = new StreamSyncStats()
       .withStats(new SyncStats()
-          .withRecordsEmitted(100L)
-          .withBytesEmitted(500L)
-          .withRecordsCommitted(100L)
-          .withBytesCommitted(500L))
+          .withRecordsEmitted(400L)
+          .withBytesEmitted(300L)
+          .withRecordsCommitted(200L)
+          .withBytesCommitted(100L))
       .withWasBackfilled(false);
 
   private static final StreamSyncStats STREAM_SYNC_STATS_3 = new StreamSyncStats()
       .withStats(new SyncStats()
-          .withRecordsEmitted(1000L)
-          .withBytesEmitted(5000L)
-          .withRecordsCommitted(1000L)
-          .withBytesCommitted(5000L));
+          .withRecordsEmitted(4000L)
+          .withBytesEmitted(3000L)
+          .withRecordsCommitted(2000L)
+          .withBytesCommitted(1000L));
+
+  private static final StreamSyncStats STREAM_SYNC_STATS_WITH_NULL_FIELDS = new StreamSyncStats()
+      .withStats(new SyncStats()
+          .withRecordsEmitted(null)
+          .withBytesEmitted(30000L)
+          .withRecordsCommitted(null)
+          .withBytesCommitted(10000L));
 
   @Test
   void testAggregatedStatsFullRefresh() {
@@ -50,10 +57,10 @@ class StatsAggregationHelperTest {
             STREAM_SYNC_STATS_1,
             STREAM_SYNC_STATS_2));
 
-    assertEquals(100L, aggregatedStats.recordsEmitted());
-    assertEquals(500L, aggregatedStats.bytesEmitted());
-    assertEquals(100L, aggregatedStats.recordsCommitted());
-    assertEquals(500L, aggregatedStats.bytesCommitted());
+    assertEquals(400L, aggregatedStats.recordsEmitted());
+    assertEquals(300L, aggregatedStats.bytesEmitted());
+    assertEquals(200L, aggregatedStats.recordsCommitted());
+    assertEquals(100L, aggregatedStats.bytesCommitted());
   }
 
   @Test
@@ -64,10 +71,40 @@ class StatsAggregationHelperTest {
             STREAM_SYNC_STATS_1,
             STREAM_SYNC_STATS_2));
 
-    assertEquals(110L, aggregatedStats.recordsEmitted());
-    assertEquals(550L, aggregatedStats.bytesEmitted());
-    assertEquals(110L, aggregatedStats.recordsCommitted());
-    assertEquals(550L, aggregatedStats.bytesCommitted());
+    assertEquals(440L, aggregatedStats.recordsEmitted());
+    assertEquals(330L, aggregatedStats.bytesEmitted());
+    assertEquals(220L, aggregatedStats.recordsCommitted());
+    assertEquals(110L, aggregatedStats.bytesCommitted());
+  }
+
+  @Test
+  void testIncrementalWithNullStats() {
+    StreamStatsRecord aggregatedStats = StatsAggregationHelper.getAggregatedStats(
+        SyncMode.INCREMENTAL,
+        List.of(
+            STREAM_SYNC_STATS_1,
+            STREAM_SYNC_STATS_WITH_NULL_FIELDS,
+            STREAM_SYNC_STATS_2));
+
+    assertEquals(440L, aggregatedStats.recordsEmitted());
+    assertEquals(30330L, aggregatedStats.bytesEmitted());
+    assertEquals(220L, aggregatedStats.recordsCommitted());
+    assertEquals(10110L, aggregatedStats.bytesCommitted());
+  }
+
+  @Test
+  void testFullRefreshWithNullStats() {
+    StreamStatsRecord aggregatedStats = StatsAggregationHelper.getAggregatedStats(
+        SyncMode.FULL_REFRESH,
+        List.of(
+            STREAM_SYNC_STATS_1,
+            STREAM_SYNC_STATS_2,
+            STREAM_SYNC_STATS_WITH_NULL_FIELDS));
+
+    assertEquals(0, aggregatedStats.recordsEmitted());
+    assertEquals(30000L, aggregatedStats.bytesEmitted());
+    assertEquals(0, aggregatedStats.recordsCommitted());
+    assertEquals(10000L, aggregatedStats.bytesCommitted());
   }
 
   @Test

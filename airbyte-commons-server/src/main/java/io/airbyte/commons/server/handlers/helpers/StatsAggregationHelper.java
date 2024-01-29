@@ -5,10 +5,11 @@
 package io.airbyte.commons.server.handlers.helpers;
 
 import io.airbyte.config.StreamSyncStats;
+import io.airbyte.config.SyncStats;
 import io.airbyte.protocol.models.SyncMode;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * Helper class to aggregate stream stats. The class is meant to be used to aggregate stats for a
@@ -38,39 +39,40 @@ public class StatsAggregationHelper {
   public static StreamStatsRecord getAggregatedStats(SyncMode syncMode, List<StreamSyncStats> streamStats) {
     switch (syncMode) {
       case FULL_REFRESH:
-        return getAggregatedStatsForFullRefresh(streamStats);
+        StreamSyncStats lastStreamSyncStats = streamStats.getLast();
+        return getAggregatedStats(Collections.singletonList(lastStreamSyncStats));
       case INCREMENTAL:
-        return getAggregatedStatsForIncremental(streamStats);
+        return getAggregatedStats(streamStats);
       default:
         throw new IllegalArgumentException("Unknown sync mode: " + syncMode);
     }
   }
 
-  private static StreamStatsRecord getAggregatedStatsForFullRefresh(List<StreamSyncStats> streamStats) {
-    StreamSyncStats mostRecentStats = streamStats.getLast();
-    return new StreamStatsRecord(
-        mostRecentStats.getStreamName(),
-        mostRecentStats.getStreamNamespace(),
-        mostRecentStats.getStats().getRecordsEmitted(),
-        mostRecentStats.getStats().getBytesEmitted(),
-        mostRecentStats.getStats().getRecordsCommitted(),
-        mostRecentStats.getStats().getBytesCommitted(),
-        wasBackfilled(streamStats));
-  }
+  private static StreamStatsRecord getAggregatedStats(List<StreamSyncStats> streamStats) {
+    long recordsEmitted = 0;
+    long bytesEmitted = 0;
+    long recordsCommitted = 0;
+    long bytesCommitted = 0;
 
-  private static StreamStatsRecord getAggregatedStatsForIncremental(List<StreamSyncStats> streamStats) {
+    for (StreamSyncStats streamStat : streamStats) {
+      SyncStats syncStats = streamStat.getStats();
+      recordsEmitted += syncStats.getRecordsEmitted() == null ? 0 : syncStats.getRecordsEmitted();
+      bytesEmitted += syncStats.getBytesEmitted() == null ? 0 : syncStats.getBytesEmitted();
+      recordsCommitted += syncStats.getRecordsCommitted() == null ? 0 : syncStats.getRecordsCommitted();
+      bytesCommitted += syncStats.getBytesCommitted() == null ? 0 : syncStats.getBytesCommitted();
+    }
+
     return new StreamStatsRecord(
         streamStats.getFirst().getStreamName(),
         streamStats.getFirst().getStreamNamespace(),
-        streamStats.stream().mapToLong(s -> s.getStats().getRecordsEmitted()).sum(),
-        streamStats.stream().mapToLong(s -> s.getStats().getBytesEmitted()).sum(),
-        streamStats.stream().mapToLong(s -> s.getStats().getRecordsCommitted()).sum(),
-        streamStats.stream().mapToLong(s -> s.getStats().getBytesCommitted()).sum(),
+        recordsEmitted,
+        bytesEmitted,
+        recordsCommitted,
+        bytesCommitted,
         wasBackfilled(streamStats));
   }
 
   static Optional<Boolean> wasBackfilled(List<StreamSyncStats> streamStats) {
-    streamStats.stream().filter(x -> x.getWasBackfilled() != null).collect(Collectors.toList());
     // if a stream is a backfill, at least one attempt will be marked as backfill
     if (streamStats.stream().anyMatch(syncStats -> syncStats.getWasBackfilled() != null && syncStats.getWasBackfilled())) {
       return Optional.of(true);
