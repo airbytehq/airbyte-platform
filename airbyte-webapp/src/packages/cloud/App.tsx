@@ -63,16 +63,16 @@ const App: React.FC = () => {
               <BlockerService>
                 <Suspense fallback={<LoadingPage />}>
                   <ConfigServiceProvider config={config}>
-                    <AnalyticsProvider>
-                      <AppMonitoringServiceProvider>
-                        <ApiErrorBoundary>
+                    <ApiErrorBoundary>
+                      <AnalyticsProvider>
+                        <AppMonitoringServiceProvider>
                           <Services>
                             <DeployPreviewMessage />
                             <Routing />
                           </Services>
-                        </ApiErrorBoundary>
-                      </AppMonitoringServiceProvider>
-                    </AnalyticsProvider>
+                        </AppMonitoringServiceProvider>
+                      </AnalyticsProvider>
+                    </ApiErrorBoundary>
                   </ConfigServiceProvider>
                 </Suspense>
               </BlockerService>

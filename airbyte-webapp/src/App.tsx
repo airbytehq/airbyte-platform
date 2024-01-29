@@ -7,6 +7,7 @@ import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import { DevToolsToggle } from "components/DevToolsToggle";
 
 import { QueryProvider, useGetInstanceConfiguration } from "core/api";
+import { InstanceConfigurationResponseTrackingStrategy } from "core/api/types/AirbyteClient";
 import { config, ConfigServiceProvider } from "core/config";
 import { AnalyticsProvider } from "core/services/analytics";
 import { OSSAuthService } from "core/services/auth";
@@ -31,23 +32,33 @@ const StyleProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children })
   <ThemeProvider theme={theme}>{children}</ThemeProvider>
 );
 
-const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
-  <FeatureService features={defaultOssFeatures} instanceConfig={useGetInstanceConfiguration()}>
-    <NotificationService>
-      <OSSAuthService>
-        <ConfirmationModalService>
-          <ModalServiceProvider>
-            <FormChangeTrackerService>
-              <ConnectorBuilderTestInputProvider>
-                <HelmetProvider>{children}</HelmetProvider>
-              </ConnectorBuilderTestInputProvider>
-            </FormChangeTrackerService>
-          </ModalServiceProvider>
-        </ConfirmationModalService>
-      </OSSAuthService>
-    </NotificationService>
-  </FeatureService>
-);
+const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
+  const instanceConfig = useGetInstanceConfiguration();
+
+  return (
+    <AnalyticsProvider
+      disableSegment={instanceConfig.trackingStrategy !== InstanceConfigurationResponseTrackingStrategy.segment}
+    >
+      <AppMonitoringServiceProvider>
+        <FeatureService features={defaultOssFeatures} instanceConfig={instanceConfig}>
+          <NotificationService>
+            <OSSAuthService>
+              <ConfirmationModalService>
+                <ModalServiceProvider>
+                  <FormChangeTrackerService>
+                    <ConnectorBuilderTestInputProvider>
+                      <HelmetProvider>{children}</HelmetProvider>
+                    </ConnectorBuilderTestInputProvider>
+                  </FormChangeTrackerService>
+                </ModalServiceProvider>
+              </ConfirmationModalService>
+            </OSSAuthService>
+          </NotificationService>
+        </FeatureService>
+      </AppMonitoringServiceProvider>
+    </AnalyticsProvider>
+  );
+};
 
 const App: React.FC = () => {
   return (
@@ -59,15 +70,11 @@ const App: React.FC = () => {
               <BlockerService>
                 <Suspense fallback={<LoadingPage />}>
                   <ConfigServiceProvider config={config}>
-                    <AnalyticsProvider>
-                      <AppMonitoringServiceProvider>
-                        <ApiErrorBoundary>
-                          <Services>
-                            <Routing />
-                          </Services>
-                        </ApiErrorBoundary>
-                      </AppMonitoringServiceProvider>
-                    </AnalyticsProvider>
+                    <ApiErrorBoundary>
+                      <Services>
+                        <Routing />
+                      </Services>
+                    </ApiErrorBoundary>
                   </ConfigServiceProvider>
                 </Suspense>
               </BlockerService>

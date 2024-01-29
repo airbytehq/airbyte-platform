@@ -13,7 +13,6 @@ import {
   WebBackendConnectionRead,
 } from "core/api/types/AirbyteClient";
 import { ConfigContext, config } from "core/config";
-import { AnalyticsProvider } from "core/services/analytics";
 import { defaultOssFeatures, FeatureItem, FeatureService } from "core/services/features";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { ModalServiceProvider } from "hooks/services/Modal";
@@ -59,19 +58,17 @@ export const TestWrapper: React.FC<React.PropsWithChildren<TestWrapperOptions>> 
   <ThemeProvider theme={{}}>
     <IntlProvider locale="en" messages={en} onError={() => null}>
       <ConfigContext.Provider value={{ config }}>
-        <AnalyticsProvider>
-          <NotificationService>
-            <FeatureService features={features}>
-              <ModalServiceProvider>
-                <ConfirmationModalService>
-                  <QueryClientProvider client={new QueryClient()}>
-                    <MemoryRouter>{children}</MemoryRouter>
-                  </QueryClientProvider>
-                </ConfirmationModalService>
-              </ModalServiceProvider>
-            </FeatureService>
-          </NotificationService>
-        </AnalyticsProvider>
+        <NotificationService>
+          <FeatureService features={features}>
+            <ModalServiceProvider>
+              <ConfirmationModalService>
+                <QueryClientProvider client={new QueryClient()}>
+                  <MemoryRouter>{children}</MemoryRouter>
+                </QueryClientProvider>
+              </ConfirmationModalService>
+            </ModalServiceProvider>
+          </FeatureService>
+        </NotificationService>
       </ConfigContext.Provider>
     </IntlProvider>
   </ThemeProvider>

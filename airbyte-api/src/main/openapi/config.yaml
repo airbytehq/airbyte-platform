@@ -9394,6 +9394,7 @@ components:
         - defaultUserId
         - defaultOrganizationId
         - defaultWorkspaceId
+        - trackingStrategy
       properties:
         edition:
           type: string
@@ -9421,6 +9422,11 @@ components:
         defaultWorkspaceId:
           type: string
           format: uuid
+        trackingStrategy:
+          type: string
+          enum:
+            - logging
+            - segment
     InstanceConfigurationSetupRequestBody:
       type: object
       required:

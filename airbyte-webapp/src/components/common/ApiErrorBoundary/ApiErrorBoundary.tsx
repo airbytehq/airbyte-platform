@@ -7,7 +7,8 @@ import { LocationSensorState } from "react-use/lib/useLocation";
 
 import { CommonRequestError, isVersionError } from "core/api";
 import { isFormBuildError } from "core/form/FormBuildError";
-import { TrackErrorFn, useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { trackError } from "core/utils/datadog";
+import { TrackErrorFn } from "hooks/services/AppMonitoringService";
 import { ErrorOccurredView } from "views/common/ErrorOccurredView";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
@@ -145,7 +146,6 @@ export const ApiErrorBoundary: React.FC<React.PropsWithChildren<ApiErrorBoundary
   const { reset } = useQueryErrorResetBoundary();
   const location = useLocation();
   const navigate = useNavigate();
-  const { trackError } = useAppMonitoringService();
 
   return (
     <ApiErrorBoundaryComponent

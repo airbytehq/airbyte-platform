@@ -12,4 +12,5 @@ export const mockProInstanceConfig: InstanceConfigurationResponse = {
   defaultUserId: "00000000-0000-0000-0000-000000000000",
   defaultOrganizationId: "00000000-0000-0000-0000-000000000000",
   defaultWorkspaceId: "00000000-0000-0000-0000-000000000000",
+  trackingStrategy: "logging",
 };

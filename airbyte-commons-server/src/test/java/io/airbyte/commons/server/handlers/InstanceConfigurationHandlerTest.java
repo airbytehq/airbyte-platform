@@ -14,6 +14,7 @@ import io.airbyte.api.model.generated.AuthConfiguration;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.EditionEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.LicenseTypeEnum;
+import io.airbyte.api.model.generated.InstanceConfigurationResponse.TrackingStrategyEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
@@ -103,11 +104,46 @@ class InstanceConfigurationHandlerTest {
         .initialSetupComplete(isInitialSetupComplete)
         .defaultUserId(USER_ID)
         .defaultOrganizationId(ORGANIZATION_ID)
-        .defaultWorkspaceId(WORKSPACE_ID);
+        .defaultWorkspaceId(WORKSPACE_ID)
+        .trackingStrategy(TrackingStrategyEnum.LOGGING);
 
     final InstanceConfigurationResponse actual = instanceConfigurationHandler.getInstanceConfiguration();
 
     assertEquals(expected, actual);
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "logging, LOGGING", // lower case env works
+    "LOGGING, LOGGING", // upper case env works
+    "segment, SEGMENT", // lower case segment env works
+    "SEGMENT, SEGMENT", // upper case segment env works
+    "'' ,LOGGING", // empty env variable will become logging
+    "unknownValue, LOGGING" // Unknown value will be treated as logging (since servers won't send segment events either)
+  })
+  void testGetInstanceConfigurationTrackingStrategy(final String envValue, final TrackingStrategyEnum expectedResult) throws IOException {
+    stubGetDefaultUser();
+    stubGetDefaultOrganization();
+
+    when(mWorkspacePersistence.getDefaultWorkspaceForOrganization(ORGANIZATION_ID)).thenReturn(
+        new StandardWorkspace()
+            .withWorkspaceId(WORKSPACE_ID)
+            .withInitialSetupComplete(true));
+
+    final var handler = new InstanceConfigurationHandler(
+        WEBAPP_URL,
+        envValue,
+        AirbyteEdition.COMMUNITY,
+        Optional.empty(),
+        Optional.empty(),
+        mWorkspacePersistence,
+        mWorkspacesHandler,
+        mUserPersistence,
+        mOrganizationPersistence);
+
+    final var result = handler.getInstanceConfiguration();
+
+    assertEquals(expectedResult, result.getTrackingStrategy());
   }
 
   @Test
@@ -164,7 +200,8 @@ class InstanceConfigurationHandlerTest {
         .initialSetupComplete(true)
         .defaultUserId(USER_ID)
         .defaultOrganizationId(ORGANIZATION_ID)
-        .defaultWorkspaceId(WORKSPACE_ID);
+        .defaultWorkspaceId(WORKSPACE_ID)
+        .trackingStrategy(TrackingStrategyEnum.LOGGING);
 
     final InstanceConfigurationSetupRequestBody requestBody = new InstanceConfigurationSetupRequestBody()
         .email(email)
@@ -227,6 +264,7 @@ class InstanceConfigurationHandlerTest {
   private InstanceConfigurationHandler getInstanceConfigurationHandler(final boolean isPro) {
     return new InstanceConfigurationHandler(
         WEBAPP_URL,
+        "logging",
         isPro ? AirbyteEdition.PRO : AirbyteEdition.COMMUNITY,
         isPro ? Optional.of(keycloakConfiguration) : Optional.empty(),
         isPro ? Optional.of(activeAirbyteLicense) : Optional.empty(),

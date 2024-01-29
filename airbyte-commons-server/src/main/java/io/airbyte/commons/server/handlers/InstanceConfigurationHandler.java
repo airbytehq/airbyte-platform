@@ -8,6 +8,7 @@ import io.airbyte.api.model.generated.AuthConfiguration;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.EditionEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.LicenseTypeEnum;
+import io.airbyte.api.model.generated.InstanceConfigurationResponse.TrackingStrategyEnum;
 import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
@@ -46,10 +47,13 @@ public class InstanceConfigurationHandler {
   private final UserPersistence userPersistence;
   private final OrganizationPersistence organizationPersistence;
 
+  private final String trackingStrategy;
+
   // the injected webapp-url value defaults to `null` to preserve backwards compatibility.
   // TODO remove the default value once configurations are standardized to always include a
   // webapp-url.
   public InstanceConfigurationHandler(@Value("${airbyte.webapp-url:null}") final String webappUrl,
+                                      @Value("${airbyte.tracking.strategy:}") final String trackingStrategy,
                                       final AirbyteEdition airbyteEdition,
                                       final Optional<AirbyteKeycloakConfiguration> airbyteKeycloakConfiguration,
                                       final Optional<ActiveAirbyteLicense> activeAirbyteLicense,
@@ -58,6 +62,7 @@ public class InstanceConfigurationHandler {
                                       final UserPersistence userPersistence,
                                       final OrganizationPersistence organizationPersistence) {
     this.webappUrl = webappUrl;
+    this.trackingStrategy = trackingStrategy;
     this.airbyteEdition = airbyteEdition;
     this.airbyteKeycloakConfiguration = airbyteKeycloakConfiguration;
     this.activeAirbyteLicense = activeAirbyteLicense;
@@ -79,7 +84,8 @@ public class InstanceConfigurationHandler {
         .initialSetupComplete(defaultWorkspace.getInitialSetupComplete())
         .defaultUserId(getDefaultUserId())
         .defaultOrganizationId(defaultOrganizationId)
-        .defaultWorkspaceId(defaultWorkspace.getWorkspaceId());
+        .defaultWorkspaceId(defaultWorkspace.getWorkspaceId())
+        .trackingStrategy(trackingStrategy.equalsIgnoreCase("segment") ? TrackingStrategyEnum.SEGMENT : TrackingStrategyEnum.LOGGING);
   }
 
   public InstanceConfigurationResponse setupInstanceConfiguration(final InstanceConfigurationSetupRequestBody requestBody)
