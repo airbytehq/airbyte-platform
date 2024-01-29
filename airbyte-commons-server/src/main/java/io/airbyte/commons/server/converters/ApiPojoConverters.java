@@ -166,7 +166,6 @@ public class ApiPojoConverters {
         .nonBreakingChangesPreference(Enums.convertTo(standardSync.getNonBreakingChangesPreference(), NonBreakingChangesPreference.class))
         .backfillPreference(Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class))
         .notifySchemaChanges(standardSync.getNotifySchemaChanges())
-        .createdAt(standardSync.getCreatedAt())
         .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail());
 
     if (standardSync.getResourceRequirements() != null) {

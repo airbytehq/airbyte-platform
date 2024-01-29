@@ -694,8 +694,6 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
       // now, clear operationIds so the rest of the sync can be compared
       expected.setOperationIds(null);
       actual.setOperationIds(null);
-      expected.setCreatedAt(null);
-      actual.setCreatedAt(null);
       assertEquals(expected, actual);
     }
   }
