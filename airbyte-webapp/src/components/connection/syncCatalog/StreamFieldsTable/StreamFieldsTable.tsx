@@ -34,7 +34,7 @@ export interface TableStream {
 }
 
 export interface StreamFieldsTableProps {
-  config?: AirbyteStreamConfiguration;
+  config: AirbyteStreamConfiguration;
   handleFieldToggle: (fieldPath: string[], isSelected: boolean) => void;
   onCursorSelect: (cursorPath: string[]) => void;
   onPkSelect: (pkPath: string[]) => void;
