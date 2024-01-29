@@ -4,10 +4,6 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.DISABLE_TEMPORAL_TESTS_IN_GKE;
-import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.IS_GKE;
-import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.TRUE;
-
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
 import io.airbyte.api.client.model.generated.CheckConnectionRead.StatusEnum;
@@ -23,7 +19,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,9 +58,7 @@ public class WorkloadBasicAcceptanceTests {
   }
 
   @Test
-  @DisabledIfEnvironmentVariable(named = IS_GKE,
-                                 matches = TRUE,
-                                 disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
+  @Disabled
   void testIncrementalSyncWithWorkload() throws Exception {
     // Create workspace with static ID for test which is used in the flags.yaml to perform an override
     // in order to exercise the workload path.
