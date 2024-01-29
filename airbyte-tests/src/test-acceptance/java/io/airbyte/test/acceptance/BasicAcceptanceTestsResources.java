@@ -23,6 +23,7 @@ import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
 import io.airbyte.api.client.model.generated.JobConfigType;
+import io.airbyte.api.client.model.generated.JobIdRequestBody;
 import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobListRequestBody;
 import io.airbyte.api.client.model.generated.JobRead;
@@ -204,6 +205,8 @@ public class BasicAcceptanceTestsResources {
     final var connectionId = conn.getConnectionId();
     final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
     AcceptanceTestHarness.waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
+    final var successfulJob1 = apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(connectionSyncRead1.getJob().getId()));
+
     LOGGER.info(STATE_AFTER_SYNC_ONE,
         apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
@@ -211,7 +214,7 @@ public class BasicAcceptanceTestsResources {
     final var dst = testHarness.getDestinationDatabase();
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(src, dst, conn.getNamespaceFormat(), AcceptanceTestHarness.PUBLIC_SCHEMA_NAME, false,
         WITHOUT_SCD_TABLE);
-    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead1, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, successfulJob1, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
 
     // add new records and run again.
     final Database source = testHarness.getSourceDatabase();
@@ -229,11 +232,13 @@ public class BasicAcceptanceTestsResources {
     LOGGER.info("Starting testIncrementalSync() sync 2");
     final JobInfoRead connectionSyncRead2 = testHarness.syncConnection(connectionId);
     AcceptanceTestHarness.waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
+    final var successfulJob2 = apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(connectionSyncRead2.getJob().getId()));
+
     LOGGER.info(STATE_AFTER_SYNC_TWO,
         apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     Asserts.assertRawDestinationContains(dst, expectedRecords, conn.getNamespaceFormat(), AcceptanceTestHarness.STREAM_NAME);
-    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead2, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, successfulJob2, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
 
     // reset back to no data.
 
@@ -264,12 +269,14 @@ public class BasicAcceptanceTestsResources {
     LOGGER.info("Starting testIncrementalSync() sync 3");
     final JobInfoRead connectionSyncRead3 = testHarness.syncConnection(connectionId);
     AcceptanceTestHarness.waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead3.getJob());
+    final var successfulJob3 = apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(connectionSyncRead3.getJob().getId()));
+
     LOGGER.info("state after sync 3: {}",
         apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(src, dst, conn.getNamespaceFormat(), AcceptanceTestHarness.PUBLIC_SCHEMA_NAME, false,
         WITHOUT_SCD_TABLE);
-    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead3, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, successfulJob3, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   void runSmallSyncForAWorkspaceId(final UUID workspaceId) throws Exception {
@@ -305,6 +312,8 @@ public class BasicAcceptanceTestsResources {
     final var connectionId = conn.getConnectionId();
     final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
     AcceptanceTestHarness.waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
+    final var successfulJob = apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(connectionSyncRead1.getJob().getId()));
+
     LOGGER.info(STATE_AFTER_SYNC_ONE,
         apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
@@ -312,7 +321,7 @@ public class BasicAcceptanceTestsResources {
     final var dst = testHarness.getDestinationDatabase();
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(src, dst, conn.getNamespaceFormat(), AcceptanceTestHarness.PUBLIC_SCHEMA_NAME, false,
         WITHOUT_SCD_TABLE);
-    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead1, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, successfulJob, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   void init() throws URISyntaxException, IOException, InterruptedException, ApiException {
