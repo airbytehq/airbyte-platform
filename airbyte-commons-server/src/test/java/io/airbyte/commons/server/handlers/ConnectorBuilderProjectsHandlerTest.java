@@ -614,28 +614,27 @@ class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  void testReadStreamWithNoExistingTestingValues() throws IOException, io.airbyte.data.exceptions.ConfigNotFoundException, ConfigNotFoundException {
+  void testReadStreamWithNoExistingTestingValues() throws Exception {
     final ConnectorBuilderProject project = generateBuilderProject();
 
     testStreamReadForProject(project, Jsons.emptyObject());
   }
 
   @Test
-  void testReadStreamWithExistingTestingValues() throws IOException, io.airbyte.data.exceptions.ConfigNotFoundException, ConfigNotFoundException {
+  void testReadStreamWithExistingTestingValues() throws Exception {
     final ConnectorBuilderProject project = generateBuilderProject().withTestingValues(testingValuesWithSecretCoordinates);
     when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(testingValuesWithSecretCoordinates)).thenReturn(testingValues);
 
     testStreamReadForProject(project, testingValues);
   }
 
-  private void testStreamReadForProject(ConnectorBuilderProject project, JsonNode testingValues)
-      throws io.airbyte.data.exceptions.ConfigNotFoundException, IOException, ConfigNotFoundException {
+  private void testStreamReadForProject(ConnectorBuilderProject project, JsonNode testingValues) throws Exception {
     final String streamName = "stream1";
     final ConnectorBuilderProjectStreamReadRequestBody projectStreamReadRequestBody = new ConnectorBuilderProjectStreamReadRequestBody()
         .builderProjectId(project.getBuilderProjectId())
         .manifest(project.getManifestDraft())
         .streamName(streamName)
-        .workspaceId(project.getWorkspaceId().toString())
+        .workspaceId(project.getWorkspaceId())
         .formGeneratedManifest(false);
 
     final StreamReadRequestBody streamReadRequestBody = new StreamReadRequestBody(testingValues, project.getManifestDraft(), streamName, false,
@@ -682,6 +681,58 @@ class ConnectorBuilderProjectsHandlerTest {
     final ConnectorBuilderProjectStreamRead actualProjectStreamRead =
         connectorBuilderProjectsHandler.readConnectorBuilderProjectStream(projectStreamReadRequestBody);
     assertEquals(expectedProjectStreamRead, actualProjectStreamRead);
+  }
+
+  @Test
+  void testReadStreamUpdatesPersistedTestingValues() throws Exception {
+    final JsonNode spec = Jsons.deserialize(specString);
+    final ConnectorBuilderProject project = generateBuilderProject().withTestingValues(testingValuesWithSecretCoordinates);
+    when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(testingValuesWithSecretCoordinates)).thenReturn(testingValues);
+
+    final String streamName = "stream1";
+    final ConnectorBuilderProjectStreamReadRequestBody projectStreamReadRequestBody = new ConnectorBuilderProjectStreamReadRequestBody()
+        .builderProjectId(project.getBuilderProjectId())
+        .manifest(project.getManifestDraft())
+        .streamName(streamName)
+        .workspaceId(project.getWorkspaceId())
+        .formGeneratedManifest(false);
+
+    final StreamReadRequestBody streamReadRequestBody = new StreamReadRequestBody(testingValues, project.getManifestDraft(), streamName, false,
+        project.getBuilderProjectId().toString(), null, null, project.getWorkspaceId().toString());
+
+    final JsonNode newTestingValues = Jsons.deserialize(
+        """
+        {
+          "username": "alice",
+          "password": "hunter3"
+        }""");
+    final JsonNode newTestingValuesWithSecretCoordinates = Jsons.deserialize(
+        """
+        {
+          "username": "alice",
+          "password": {
+            "_secret": "airbyte_workspace_123_secret_456_v2"
+          }
+        }""");
+    final JsonNode newTestingValuesWithObfuscatedSecrets = Jsons.deserialize(
+        """
+        {
+          "username": "alice",
+          "password": "**********"
+        }""");
+    final StreamRead streamRead = new StreamRead(Collections.emptyList(), Collections.emptyList(), false, null, null, null, newTestingValues);
+
+    when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
+    when(connectorBuilderServerApiClient.readStream(streamReadRequestBody)).thenReturn(streamRead);
+    when(secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(workspaceId, Optional.of(testingValuesWithSecretCoordinates),
+        newTestingValues, spec, true)).thenReturn(newTestingValuesWithSecretCoordinates);
+    when(secretsProcessor.prepareSecretsForOutput(newTestingValuesWithSecretCoordinates, spec)).thenReturn(newTestingValuesWithObfuscatedSecrets);
+
+    final ConnectorBuilderProjectStreamRead projectStreamRead =
+        connectorBuilderProjectsHandler.readConnectorBuilderProjectStream(projectStreamReadRequestBody);
+
+    assertEquals(newTestingValuesWithObfuscatedSecrets, projectStreamRead.getLatestConfigUpdate());
+    verify(connectorBuilderService, times(1)).updateBuilderProjectTestingValues(project.getBuilderProjectId(), newTestingValuesWithSecretCoordinates);
   }
 
   private static ConnectorBuilderPublishRequestBody anyConnectorBuilderProjectRequest() {

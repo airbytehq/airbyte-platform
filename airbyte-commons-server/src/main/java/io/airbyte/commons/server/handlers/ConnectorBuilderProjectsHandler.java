@@ -315,20 +315,8 @@ public class ConnectorBuilderProjectsHandler {
               testingValuesUpdate.getSpec())
           : testingValuesUpdate.getTestingValues();
 
-      final JsonNode updatedTestingValuesWithSecretCoordinates = secretPersistenceConfig.isPresent()
-          ? secretsRepositoryWriter.statefulUpdateSecretsToRuntimeSecretPersistence(
-              project.getWorkspaceId(),
-              existingTestingValues,
-              updatedTestingValues,
-              testingValuesUpdate.getSpec(),
-              true,
-              new RuntimeSecretPersistence(secretPersistenceConfig.get()))
-          : secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(
-              project.getWorkspaceId(),
-              existingTestingValues,
-              updatedTestingValues,
-              testingValuesUpdate.getSpec(),
-              true);
+      final JsonNode updatedTestingValuesWithSecretCoordinates = writeSecretsToSecretPersistence(existingTestingValues, updatedTestingValues,
+          testingValuesUpdate.getSpec(), project.getWorkspaceId(), secretPersistenceConfig);
 
       connectorBuilderService.updateBuilderProjectTestingValues(testingValuesUpdate.getBuilderProjectId(), updatedTestingValuesWithSecretCoordinates);
       return secretsProcessor.prepareSecretsForOutput(updatedTestingValuesWithSecretCoordinates, testingValuesUpdate.getSpec());
@@ -338,7 +326,7 @@ public class ConnectorBuilderProjectsHandler {
   }
 
   public ConnectorBuilderProjectStreamRead readConnectorBuilderProjectStream(ConnectorBuilderProjectStreamReadRequestBody requestBody)
-      throws ConfigNotFoundException, IOException {
+      throws ConfigNotFoundException, IOException, JsonValidationException {
     try {
       final ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(requestBody.getBuilderProjectId(), false);
       final Optional<SecretPersistenceConfig> secretPersistenceConfig = getSecretPersistenceConfig(project.getWorkspaceId());
@@ -348,10 +336,22 @@ public class ConnectorBuilderProjectsHandler {
       final StreamReadRequestBody streamReadRequestBody =
           new StreamReadRequestBody(existingHydratedTestingValues, requestBody.getManifest(), requestBody.getStreamName(),
               requestBody.getFormGeneratedManifest(), requestBody.getBuilderProjectId().toString(), requestBody.getRecordLimit(),
-              requestBody.getState(), requestBody.getWorkspaceId());
+              requestBody.getState(), requestBody.getWorkspaceId().toString());
       final StreamRead streamRead = connectorBuilderServerApiClient.readStream(streamReadRequestBody);
 
-      return convertStreamRead(streamRead);
+      final ConnectorBuilderProjectStreamRead builderProjectStreamRead = convertStreamRead(streamRead);
+
+      if (streamRead.getLatestConfigUpdate() != null) {
+        final JsonNode spec = requestBody.getManifest().get(SPEC_FIELD).get(CONNECTION_SPECIFICATION_FIELD);
+        final JsonNode updatedTestingValuesWithSecretCoordinates = writeSecretsToSecretPersistence(Optional.ofNullable(project.getTestingValues()),
+            Jsons.convertValue(streamRead.getLatestConfigUpdate(), JsonNode.class), spec, project.getWorkspaceId(), secretPersistenceConfig);
+        connectorBuilderService.updateBuilderProjectTestingValues(project.getBuilderProjectId(), updatedTestingValuesWithSecretCoordinates);
+        final JsonNode updatedTestingValuesWithObfuscatedSecrets =
+            secretsProcessor.prepareSecretsForOutput(updatedTestingValuesWithSecretCoordinates, spec);
+        builderProjectStreamRead.setLatestConfigUpdate(updatedTestingValuesWithObfuscatedSecrets);
+      }
+
+      return builderProjectStreamRead;
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
@@ -377,8 +377,7 @@ public class ConnectorBuilderProjectsHandler {
                 .title(auxRequest.getTitle())).toList()
             : null)
         .inferredSchema(streamRead.getInferredSchema())
-        .inferredDatetimeFormats(streamRead.getInferredDatetimeFormats())
-        .latestConfigUpdate(streamRead.getLatestConfigUpdate());
+        .inferredDatetimeFormats(streamRead.getInferredDatetimeFormats());
   }
 
   private ConnectorBuilderHttpRequest convertHttpRequest(@Nullable HttpRequest request) {
@@ -399,6 +398,28 @@ public class ConnectorBuilderProjectsHandler {
             .body(response.getBody())
             .headers(response.getHeaders())
         : null;
+  }
+
+  private JsonNode writeSecretsToSecretPersistence(final Optional<JsonNode> existingTestingValues,
+                                                   final JsonNode updatedTestingValues,
+                                                   final JsonNode spec,
+                                                   final UUID workspaceId,
+                                                   final Optional<SecretPersistenceConfig> secretPersistenceConfig)
+      throws JsonValidationException {
+    return secretPersistenceConfig.isPresent()
+        ? secretsRepositoryWriter.statefulUpdateSecretsToRuntimeSecretPersistence(
+            workspaceId,
+            existingTestingValues,
+            updatedTestingValues,
+            spec,
+            true,
+            new RuntimeSecretPersistence(secretPersistenceConfig.get()))
+        : secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(
+            workspaceId,
+            existingTestingValues,
+            updatedTestingValues,
+            spec,
+            true);
   }
 
   private Optional<SecretPersistenceConfig> getSecretPersistenceConfig(final UUID workspaceId) throws IOException, ConfigNotFoundException {

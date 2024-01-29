@@ -5341,7 +5341,10 @@ components:
         declarativeManifest:
           $ref: "#/components/schemas/DeclarativeManifestRead"
         testingValues:
-          $ref: "#/components/schemas/SourceConfiguration"
+          $ref: "#/components/schemas/ConnectorBuilderProjectTestingValues"
+    ConnectorBuilderProjectTestingValues:
+      type: object
+      description: The config blob containing the user inputs for testing
     ConnectorBuilderProjectReadList:
       type: object
       required:
@@ -5382,16 +5385,19 @@ components:
         spec:
           $ref: "#/components/schemas/SourceDefinitionSpecification"
         testingValues:
-          $ref: "#/components/schemas/SourceConfiguration"
+          $ref: "#/components/schemas/ConnectorBuilderProjectTestingValues"
     ConnectorBuilderProjectTestingValuesRead:
       $ref: "#/components/schemas/SourceConfiguration"
     ConnectorBuilderProjectStreamReadRequestBody:
       type: object
       required:
+        - workspaceId
         - builderProjectId
         - manifest
         - streamName
       properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
         builderProjectId:
           $ref: "#/components/schemas/ConnectorBuilderProjectId"
         manifest:
@@ -5411,9 +5417,6 @@ components:
         state:
           type: object
           description: The AirbyteStateMessage object to use as the starting state for this read
-        workspaceId:
-          type: string
-          description: ID of the workspace where the request is coming from
     ConnectorBuilderProjectStreamRead:
       type: object
       required:
@@ -5485,8 +5488,8 @@ components:
           type: object
           description: Fields that match the given datetime format in every encountered record. The property names are the fields, the property values are the datetime formats.
         latest_config_update:
-          type: object
           description: The latest configuration emitted by the platform. The connector builder uses this to update its state when a new configuration is generated, to ensure that the user always work with the latest configuration.
+          $ref: "#/components/schemas/ConnectorBuilderProjectTestingValues"
     ConnectorBuilderHttpRequest:
       type: object
       required:
