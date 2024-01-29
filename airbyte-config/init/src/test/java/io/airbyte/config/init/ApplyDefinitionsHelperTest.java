@@ -273,9 +273,15 @@ class ApplyDefinitionsHelperTest {
         Jsons.clone(DESTINATION_S3).withDockerImageTag("a-non-semantic-version-for-example");
     assertThrows(RuntimeException.class, () -> ConnectorRegistryConverters.toActorDefinitionVersion(malformedRegistryDestinationDefinition));
 
-    when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(SOURCE_POSTGRES, malformedRegistrySourceDefinition, SOURCE_POSTGRES_2));
+    final ConnectorRegistrySourceDefinition anotherNewSourceDefinition =
+        Jsons.clone(SOURCE_POSTGRES).withName("new").withDockerRepository("airbyte/source-new").withSourceDefinitionId(UUID.randomUUID());
+    final ConnectorRegistryDestinationDefinition anotherNewDestinationDefinition =
+        Jsons.clone(DESTINATION_S3).withName("new").withDockerRepository("airbyte/destination-new").withDestinationDefinitionId(UUID.randomUUID());
+
+    when(definitionsProvider.getSourceDefinitions())
+        .thenReturn(List.of(SOURCE_POSTGRES, malformedRegistrySourceDefinition, anotherNewSourceDefinition));
     when(definitionsProvider.getDestinationDefinitions())
-        .thenReturn(List.of(DESTINATION_S3, malformedRegistryDestinationDefinition, DESTINATION_S3_2));
+        .thenReturn(List.of(DESTINATION_S3, malformedRegistryDestinationDefinition, anotherNewDestinationDefinition));
 
     applyDefinitionsHelper.apply(true);
     verifyConfigRepositoryGetInteractions();
@@ -296,13 +302,13 @@ class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3));
     verify(configRepository).writeConnectorMetadata(
-        ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
-        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2),
-        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2));
+        ConnectorRegistryConverters.toStandardSourceDefinition(anotherNewSourceDefinition),
+        ConnectorRegistryConverters.toActorDefinitionVersion(anotherNewSourceDefinition),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(anotherNewSourceDefinition));
     verify(configRepository).writeConnectorMetadata(
-        ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
-        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
-        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
+        ConnectorRegistryConverters.toStandardDestinationDefinition(anotherNewDestinationDefinition),
+        ConnectorRegistryConverters.toActorDefinitionVersion(anotherNewDestinationDefinition),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(anotherNewDestinationDefinition));
     verify(supportStateUpdater).updateSupportStates();
     verify(metricClient, times(4)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
         new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()));
