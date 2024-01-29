@@ -10,7 +10,6 @@ export interface Experiments {
   "authPage.rightSideUrl": string | undefined;
   "authPage.signup.hideCompanyName": boolean;
   "authPage.signup.hideName": boolean;
-  "autopropagation.enabled": boolean;
   "billing.early-sync-enabled": boolean;
   "billing.newTrialPolicy": boolean;
   "billing.autoRecharge": boolean;

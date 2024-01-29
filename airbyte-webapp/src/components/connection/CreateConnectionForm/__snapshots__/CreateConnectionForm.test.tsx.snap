@@ -446,7 +446,7 @@ exports[`CreateConnectionForm should render 1`] = `
                         <span
                           class="<removed-for-snapshot-test>"
                         >
-                          Detect changes and manually approve
+                          Propagate field changes only
                         </span>
                       </span>
                       <div

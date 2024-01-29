@@ -111,14 +111,11 @@ export const useInitialFormValues = (
   destDefinitionSpecification: DestinationDefinitionSpecificationRead,
   isEditMode?: boolean
 ): FormConnectionFormValues => {
-  const autoPropagationEnabled = useExperiment("autopropagation.enabled", false);
   const skipInitialCalculation = useExperiment("catalog.skipInitialCalculation", false);
   const workspace = useCurrentWorkspace();
   const { catalogDiff, syncCatalog, schemaChange } = connection;
 
-  const defaultNonBreakingChangesPreference = autoPropagationEnabled
-    ? NonBreakingChangesPreference.propagate_columns
-    : NonBreakingChangesPreference.ignore;
+  const defaultNonBreakingChangesPreference = NonBreakingChangesPreference.propagate_columns;
 
   // used to determine if we should calculate optimal sync mode
   const newStreamDescriptors = catalogDiff?.transforms
