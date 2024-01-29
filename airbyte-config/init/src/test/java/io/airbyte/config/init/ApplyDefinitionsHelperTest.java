@@ -151,8 +151,13 @@ class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3),
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3));
-    verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
-        new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()));
+    List.of("airbyte/source-postgres", "airbyte/destination-s3").forEach(
+        dockerRepo -> verify(metricClient, times(1)).count(
+            CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
+            1,
+            new MetricAttribute("status", "ok"),
+            new MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()),
+            new MetricAttribute("docker_repository", dockerRepo)));
     verify(supportStateUpdater).updateSupportStates();
 
     verifyNoMoreInteractions(actorDefinitionService, sourceService, destinationService, supportStateUpdater, metricClient);
@@ -180,8 +185,13 @@ class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
-    verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
-        new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED.toString()));
+    List.of("airbyte/source-postgres", "airbyte/destination-s3").forEach(
+        dockerRepo -> verify(metricClient, times(1)).count(
+            CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
+            1,
+            new MetricAttribute("status", "ok"),
+            new MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED.toString()),
+            new MetricAttribute("docker_repository", dockerRepo)));
     verify(supportStateUpdater).updateSupportStates();
 
     verifyNoMoreInteractions(actorDefinitionService, sourceService, destinationService, supportStateUpdater, metricClient);
@@ -209,13 +219,18 @@ class ApplyDefinitionsHelperTest {
           ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
           ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
           ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
-      verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
-          new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED.toString()));
+      List.of("airbyte/source-postgres", "airbyte/destination-s3").forEach(
+          dockerRepo -> verify(metricClient, times(1)).count(
+              CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
+              1,
+              new MetricAttribute("status", "ok"),
+              new MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED.toString()),
+              new MetricAttribute("docker_repository", dockerRepo)));
     } else {
       verify(sourceService).updateStandardSourceDefinition(ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2));
       verify(destinationService).updateStandardDestinationDefinition(ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2));
       verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
-          new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED.toString()));
+          new MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED.toString()));
     }
     verify(supportStateUpdater).updateSupportStates();
 
@@ -244,7 +259,7 @@ class ApplyDefinitionsHelperTest {
             CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
             1,
             new MetricAttribute("status", "failed"),
-            new MetricAttribute("failure_reason", DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION.toString()),
+            new MetricAttribute("outcome", DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION.toString()),
             new MetricAttribute("docker_repository", dockerRepo)));
 
     verify(sourceService, never()).writeConnectorMetadata(
@@ -265,9 +280,13 @@ class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
     verify(supportStateUpdater).updateSupportStates();
-    verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
-        new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()));
-
+    List.of("airbyte/source-postgres", "airbyte/destination-s3").forEach(
+        dockerRepo -> verify(metricClient, times(1)).count(
+            CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
+            1,
+            new MetricAttribute("status", "ok"),
+            new MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()),
+            new MetricAttribute("docker_repository", dockerRepo)));
     verifyNoMoreInteractions(actorDefinitionService, sourceService, destinationService, supportStateUpdater, metricClient);
   }
 
@@ -299,7 +318,7 @@ class ApplyDefinitionsHelperTest {
             CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
             1,
             new MetricAttribute("status", "failed"),
-            new MetricAttribute("failure_reason", DefinitionProcessingFailureReason.DEFINITION_CONVERSION_FAILED.toString()),
+            new MetricAttribute("outcome", DefinitionProcessingFailureReason.DEFINITION_CONVERSION_FAILED.toString()),
             new MetricAttribute("docker_repository", dockerRepo)));
 
     verify(sourceService).writeConnectorMetadata(
@@ -319,8 +338,13 @@ class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toActorDefinitionVersion(anotherNewDestinationDefinition),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(anotherNewDestinationDefinition));
     verify(supportStateUpdater).updateSupportStates();
-    verify(metricClient, times(4)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
-        new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()));
+    List.of("airbyte/source-postgres", "airbyte/destination-s3", "airbyte/source-new", "airbyte/destination-new").forEach(
+        dockerRepo -> verify(metricClient, times(1)).count(
+            CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
+            1,
+            new MetricAttribute("status", "ok"),
+            new MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()),
+            new MetricAttribute("docker_repository", dockerRepo)));
 
     // The malformed definitions should not have been written.
     verifyNoMoreInteractions(actorDefinitionService, sourceService, destinationService, supportStateUpdater, metricClient);

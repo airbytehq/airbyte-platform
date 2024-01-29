@@ -16,6 +16,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingFailureReason;
+import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingOutcome;
 import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingSuccessOutcome;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
@@ -141,7 +142,7 @@ public class ApplyDefinitionsHelper {
       LOGGER.info("Adding new connector {}:{}", newDef.getDockerRepository(), newDef.getDockerImageTag());
       sourceService.writeConnectorMetadata(newSourceDef, newADV, breakingChangesForDef);
       newConnectorCount++;
-      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED);
       return;
     }
 
@@ -155,10 +156,10 @@ public class ApplyDefinitionsHelper {
           newADV.getDockerImageTag());
       sourceService.writeConnectorMetadata(newSourceDef, newADV, breakingChangesForDef);
       changedConnectorCount++;
-      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED);
     } else {
       sourceService.updateStandardSourceDefinition(newSourceDef);
-      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED);
     }
   }
 
@@ -186,7 +187,7 @@ public class ApplyDefinitionsHelper {
       LOGGER.info("Adding new connector {}:{}", newDef.getDockerRepository(), newDef.getDockerImageTag());
       destinationService.writeConnectorMetadata(newDestinationDef, newADV, breakingChangesForDef);
       newConnectorCount++;
-      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED);
       return;
     }
 
@@ -200,10 +201,10 @@ public class ApplyDefinitionsHelper {
           newADV.getDockerImageTag());
       destinationService.writeConnectorMetadata(newDestinationDef, newADV, breakingChangesForDef);
       changedConnectorCount++;
-      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED);
     } else {
       destinationService.updateStandardDestinationDefinition(newDestinationDef);
-      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED);
     }
 
   }
@@ -257,13 +258,8 @@ public class ApplyDefinitionsHelper {
     return protocolVersionRange.isSupported(AirbyteProtocolVersion.getWithDefault(protocolVersion));
   }
 
-  private void trackDefinitionProcessed(final DefinitionProcessingSuccessOutcome successOutcome) {
-    final MetricAttribute[] attributes = ApplyDefinitionMetricsHelper.getSuccessAttributes(successOutcome);
-    metricClient.count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, attributes);
-  }
-
-  private void trackDefinitionProcessed(final String dockerRepository, final DefinitionProcessingFailureReason failureReason) {
-    final MetricAttribute[] attributes = ApplyDefinitionMetricsHelper.getFailureAttributes(dockerRepository, failureReason);
+  private void trackDefinitionProcessed(final String dockerRepository, final DefinitionProcessingOutcome outcome) {
+    final MetricAttribute[] attributes = ApplyDefinitionMetricsHelper.getMetricAttributes(dockerRepository, outcome);
     metricClient.count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, attributes);
   }
 
