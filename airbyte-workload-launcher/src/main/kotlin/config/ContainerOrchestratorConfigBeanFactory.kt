@@ -67,7 +67,11 @@ class ContainerOrchestratorConfigBeanFactory {
       return injectedImage
     }
 
-    return "airbyte/connector-sidecar:$airbyteVersion"
+    if (airbyteVersion.endsWith("-cloud")) {
+      return "airbyte/connector-sidecar:${airbyteVersion.dropLast(6)}"
+    } else {
+      return "airbyte/connector-sidecar:$airbyteVersion"
+    }
   }
 
   @Singleton
