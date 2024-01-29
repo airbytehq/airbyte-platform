@@ -341,6 +341,7 @@ public class WebBackendConnectionsHandler {
         .geography(connectionRead.getGeography())
         .notifySchemaChanges(connectionRead.getNotifySchemaChanges())
         .notifySchemaChangesByEmail(connectionRead.getNotifySchemaChangesByEmail())
+        .createdAt(connectionRead.getCreatedAt())
         .nonBreakingChangesPreference(connectionRead.getNonBreakingChangesPreference())
         .backfillPreference(connectionRead.getBackfillPreference());
   }
