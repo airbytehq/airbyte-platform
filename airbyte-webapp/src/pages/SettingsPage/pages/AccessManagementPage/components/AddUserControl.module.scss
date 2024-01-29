@@ -5,6 +5,12 @@
   width: variables.$width-wide-menu;
 }
 
+.addUserControl__dropdownMenu {
+  display: block; // default is `flex` which shrinks the options to fit the box, instead overflowing into scroll
+  overflow: auto;
+  max-height: variables.$height-long-listbox-options-list;
+}
+
 .addUserControl__buttonName {
   overflow: hidden;
   text-overflow: ellipsis;

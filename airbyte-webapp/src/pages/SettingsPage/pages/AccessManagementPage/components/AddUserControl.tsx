@@ -75,6 +75,7 @@ const AddUserForm: React.FC<{
       <FlexContainer alignItems="baseline">
         <FormControl<PermissionCreate>
           containerControlClassName={styles.addUserControl__dropdown}
+          optionsMenuClassName={styles.addUserControl__dropdownMenu}
           controlButton={AddUserListBoxControl}
           name="userId"
           fieldType="dropdown"
