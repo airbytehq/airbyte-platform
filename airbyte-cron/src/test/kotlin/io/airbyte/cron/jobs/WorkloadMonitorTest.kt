@@ -26,9 +26,6 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
 class WorkloadMonitorTest {
-  val claimTimeout = Duration.of(5, ChronoUnit.SECONDS)
-  val heartbeatTimeout = Duration.of(6, ChronoUnit.SECONDS)
-  val nonStartedTimeout = Duration.of(7, ChronoUnit.SECONDS)
   val nonSyncTimeout = Duration.of(9, ChronoUnit.MINUTES)
   val syncTimeout = Duration.of(30, ChronoUnit.DAYS)
 
@@ -44,14 +41,11 @@ class WorkloadMonitorTest {
       mockk<MetricClient>().also {
         every { it.count(any(), any(), *anyVararg()) } returns Unit
       }
-    featureFlagClient = TestClient(mapOf("workload.use-deadline-column" to true))
+    featureFlagClient = TestClient(emptyMap())
     workloadApi = mockk()
     workloadMonitor =
       WorkloadMonitor(
         workloadApi = workloadApi,
-        claimTimeout = claimTimeout,
-        heartbeatTimeout = heartbeatTimeout,
-        nonStartedTimeout = nonStartedTimeout,
         nonSyncWorkloadTimeout = nonSyncTimeout,
         syncWorkloadTimeout = syncTimeout,
         featureFlagClient = featureFlagClient,
