@@ -46,11 +46,13 @@
 .streamListContainer {
   flex-grow: 1;
   width: 100%;
+  min-height: 0;
 }
 
 .streamList {
   flex-grow: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .viewLabel {
