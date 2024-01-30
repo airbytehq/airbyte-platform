@@ -871,7 +871,7 @@ public class DefaultJobPersistence implements JobPersistence {
   @Override
   public Long getJobCount(final Set<ConfigType> configTypes,
                           final String connectionId,
-                          final JobStatus status,
+                          final List<JobStatus> statuses,
                           final OffsetDateTime createdAtStart,
                           final OffsetDateTime createdAtEnd,
                           final OffsetDateTime updatedAtStart,
@@ -881,8 +881,10 @@ public class DefaultJobPersistence implements JobPersistence {
         .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
         .and(connectionId == null ? DSL.noCondition()
             : JOBS.SCOPE.eq(connectionId))
-        .and(status == null ? DSL.noCondition()
-            : JOBS.STATUS.eq(io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(status.toString().toLowerCase())))
+        .and(statuses == null ? DSL.noCondition()
+            : JOBS.STATUS.in(statuses.stream()
+                .map(status -> io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(toSqlName(status)))
+                .collect(Collectors.toList())))
         .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
         .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.le(createdAtEnd))
         .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))
@@ -910,7 +912,7 @@ public class DefaultJobPersistence implements JobPersistence {
                             final String configId,
                             final int limit,
                             final int offset,
-                            final JobStatus status,
+                            final List<JobStatus> statuses,
                             final OffsetDateTime createdAtStart,
                             final OffsetDateTime createdAtEnd,
                             final OffsetDateTime updatedAtStart,
@@ -923,8 +925,10 @@ public class DefaultJobPersistence implements JobPersistence {
           .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
           .and(configId == null ? DSL.noCondition()
               : JOBS.SCOPE.eq(configId))
-          .and(status == null ? DSL.noCondition()
-              : JOBS.STATUS.eq(io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(status.toString().toLowerCase())))
+          .and(statuses == null ? DSL.noCondition()
+              : JOBS.STATUS.in(statuses.stream()
+                  .map(status -> io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(toSqlName(status)))
+                  .collect(Collectors.toList())))
           .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
           .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.le(createdAtEnd))
           .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))
@@ -944,7 +948,7 @@ public class DefaultJobPersistence implements JobPersistence {
                             final List<UUID> workspaceIds,
                             final int limit,
                             final int offset,
-                            final JobStatus status,
+                            final List<JobStatus> statuses,
                             final OffsetDateTime createdAtStart,
                             final OffsetDateTime createdAtEnd,
                             final OffsetDateTime updatedAtStart,
@@ -961,8 +965,10 @@ public class DefaultJobPersistence implements JobPersistence {
           .on(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
           .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
           .and(Tables.ACTOR.WORKSPACE_ID.in(workspaceIds))
-          .and(status == null ? DSL.noCondition()
-              : JOBS.STATUS.eq(io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(toSqlName(status))))
+          .and(statuses == null ? DSL.noCondition()
+              : JOBS.STATUS.in(statuses.stream()
+                  .map(status -> io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(toSqlName(status)))
+                  .collect(Collectors.toList())))
           .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
           .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.le(createdAtEnd))
           .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))

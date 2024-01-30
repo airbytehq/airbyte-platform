@@ -15,9 +15,11 @@ import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const jobsKeys = {
-  all: (connectionId: string) => [SCOPE_WORKSPACE, connectionId] as const,
-  list: (connectionId: string, filters: string | Record<string, string | number | undefined> = {}) =>
-    [...jobsKeys.all(connectionId), { filters }] as const,
+  all: (connectionId: string | undefined) => [SCOPE_WORKSPACE, connectionId] as const,
+  list: (
+    connectionId: string | undefined,
+    filters: string | Record<string, string | number | string[] | undefined> = {}
+  ) => [...jobsKeys.all(connectionId), { filters }] as const,
   useListJobsForConnectionStatus: (connectionId: string) =>
     [...jobsKeys.all(connectionId), "connectionStatus"] as const,
 };
@@ -26,7 +28,7 @@ export const useListJobs = (requestParams: Omit<JobListRequestBody, "pagination"
   const requestOptions = useRequestOptions();
   const queryKey = jobsKeys.list(requestParams.configId, {
     includingJobId: requestParams.includingJobId,
-    status: requestParams.status,
+    statuses: requestParams.statuses,
     updatedAtStart: requestParams.updatedAtStart,
     updatedAtEnd: requestParams.updatedAtEnd,
     pageSize,

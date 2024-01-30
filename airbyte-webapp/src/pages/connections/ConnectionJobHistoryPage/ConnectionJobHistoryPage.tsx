@@ -58,7 +58,7 @@ export const ConnectionJobHistoryPage: React.FC = () => {
       configId: connection.connectionId,
       configTypes: ["sync", "reset_connection"],
       includingJobId: linkedJobId ? Number(linkedJobId) : undefined,
-      status: jobStatusFilter === "all" ? undefined : jobStatusFilter,
+      statuses: jobStatusFilter === "all" ? undefined : [jobStatusFilter],
       updatedAtStart: startDateFilter !== "" ? startOfDay(startDateFilter) : undefined,
       updatedAtEnd: endDateFilter !== "" ? endOfDay(endDateFilter) : undefined,
     },

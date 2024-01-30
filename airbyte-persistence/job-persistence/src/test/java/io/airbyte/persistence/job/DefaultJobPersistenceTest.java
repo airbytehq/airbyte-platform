@@ -10,6 +10,7 @@ import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
 import static io.airbyte.persistence.job.DefaultJobPersistence.toSqlName;
+import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -1695,15 +1696,25 @@ class DefaultJobPersistenceTest {
   class GetJobCount {
 
     @Test
-    @DisplayName("Should return the total job count for all connections")
+    @DisplayName("Should return the total job count for all connections in any status")
     void testGetJobCount() throws IOException {
       final int numJobsToCreate = 10;
+      final List<Long> ids = new ArrayList<>();
+      // create jobs for connection 1
       for (int i = 0; i < numJobsToCreate / 2; i++) {
-        jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG);
+        Long jobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG).orElseThrow();
+        ids.add(jobId);
       }
 
+      // create jobs for connection 2
       for (int i = 0; i < numJobsToCreate / 2; i++) {
-        jobPersistence.enqueueJob(CONNECTION_ID2.toString(), SPEC_JOB_CONFIG);
+        Long jobId = jobPersistence.enqueueJob(CONNECTION_ID2.toString(), SPEC_JOB_CONFIG).orElseThrow();
+        ids.add(jobId);
+      }
+
+      // fail some jobs
+      for (int i = 0; i < 3; i++) {
+        jobPersistence.failJob(ids.get(i));
       }
 
       final Long actualJobCount =
@@ -1741,9 +1752,27 @@ class DefaultJobPersistenceTest {
       }
 
       final Long actualJobCount =
-          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, JobStatus.FAILED, null, null, null, null);
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, List.of(JobStatus.FAILED), null, null, null, null);
 
       assertEquals(numFailedJobsToCreate, actualJobCount);
+    }
+
+    @Test
+    @DisplayName("Should return the total job count for the connection when filtering by failed and cancelled jobs only")
+    void testGetJobCountWithFailedAndCancelledJobFilter() throws IOException {
+      Long jobId1 = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
+      jobPersistence.failJob(jobId1);
+
+      Long jobId2 = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
+      jobPersistence.cancelJob(jobId2);
+
+      jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
+
+      final Long actualJobCount =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, List.of(JobStatus.FAILED, JobStatus.CANCELLED), null, null,
+              null, null);
+
+      assertEquals(2, actualJobCount);
     }
 
     @Test
@@ -1972,10 +2001,10 @@ class DefaultJobPersistenceTest {
     }
 
     @Test
-    @DisplayName("Should list jobs across all connections")
+    @DisplayName("Should list jobs across all connections in any status")
     void testListJobsWithNoFilters() throws IOException {
       final int numJobsToCreate = 10;
-      final Set<Long> ids = new HashSet<>();
+      final List<Long> ids = new ArrayList<>();
       for (int i = 0; i < numJobsToCreate / 2; i++) {
         Long connection1JobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG).orElseThrow();
         ids.add(connection1JobId);
@@ -1984,6 +2013,11 @@ class DefaultJobPersistenceTest {
       for (int i = 0; i < numJobsToCreate / 2; i++) {
         Long connection2JobId = jobPersistence.enqueueJob(CONNECTION_ID2.toString(), SPEC_JOB_CONFIG).orElseThrow();
         ids.add(connection2JobId);
+      }
+
+      // fail some jobs
+      for (int i = 0; i < 3; i++) {
+        jobPersistence.failJob(ids.get(i));
       }
 
       String connectionId = null;
@@ -2000,7 +2034,7 @@ class DefaultJobPersistenceTest {
           null,
           null);
 
-      assertEquals(ids, jobs.stream().map(Job::getId).collect(Collectors.toSet()));
+      assertEquals(new HashSet<>(ids), jobs.stream().map(Job::getId).collect(Collectors.toSet()));
     }
 
     @Test
@@ -2031,6 +2065,37 @@ class DefaultJobPersistenceTest {
           null);
 
       assertEquals(idsConnection1, jobs.stream().map(Job::getId).collect(Collectors.toSet()));
+    }
+
+    @Test
+    @DisplayName("Should list jobs filtering by failed and cancelled jobs")
+    void testListJobWithFailedAndCancelledJobFilter() throws IOException {
+      Long jobId1 = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG).orElseThrow();
+      jobPersistence.failJob(jobId1);
+
+      Long jobId2 = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG).orElseThrow();
+      jobPersistence.cancelJob(jobId2);
+
+      Long jobId3 = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG).orElseThrow();
+
+      List<Job> jobs = jobPersistence.listJobs(
+          Set.of(SPEC_JOB_CONFIG.getConfigType()),
+          CONNECTION_ID.toString(),
+          9999,
+          0,
+          List.of(JobStatus.FAILED, JobStatus.CANCELLED),
+          null,
+          null,
+          null,
+          null,
+          null,
+          null);
+
+      Set<Long> actualIds = jobs.stream().map(Job::getId).collect(Collectors.toSet());
+      assertEquals(2, actualIds.size());
+      assertFalse(actualIds.contains(jobId3));
+      assertTrue(actualIds.contains(jobId1));
+      assertTrue(actualIds.contains(jobId2));
     }
 
     @Test

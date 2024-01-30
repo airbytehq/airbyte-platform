@@ -212,7 +212,7 @@ public interface JobPersistence {
    *
    * @param configTypes - the type of config, e.g. sync
    * @param connectionId - ID of the connection for which the job count should be retrieved
-   * @param status - status to filter by
+   * @param statuses - statuses to filter by
    * @param createdAtStart - minimum created at date to filter by
    * @param createdAtEnd - maximum created at date to filter by
    * @param updatedAtStart - minimum updated at date to filter by
@@ -221,7 +221,7 @@ public interface JobPersistence {
    */
   Long getJobCount(final Set<ConfigType> configTypes,
                    final String connectionId,
-                   final JobStatus status,
+                   final List<JobStatus> statuses,
                    final OffsetDateTime createdAtStart,
                    final OffsetDateTime createdAtEnd,
                    final OffsetDateTime updatedAtStart,
@@ -251,7 +251,7 @@ public interface JobPersistence {
                      String configId,
                      int limit,
                      int offset,
-                     JobStatus status,
+                     final List<JobStatus> statuses,
                      OffsetDateTime createdAtStart,
                      OffsetDateTime createdAtEnd,
                      OffsetDateTime updatedAtStart,
@@ -273,7 +273,7 @@ public interface JobPersistence {
                      List<UUID> workspaceIds,
                      int limit,
                      int offset,
-                     JobStatus status,
+                     final List<JobStatus> statuses,
                      OffsetDateTime createdAtStart,
                      OffsetDateTime createdAtEnd,
                      OffsetDateTime updatedAtStart,

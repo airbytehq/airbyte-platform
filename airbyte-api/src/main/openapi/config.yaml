@@ -7865,7 +7865,6 @@ components:
       type: object
       required:
         - configTypes
-        - configId
       properties:
         configTypes:
           type: array
@@ -7878,9 +7877,11 @@ components:
           $ref: "#/components/schemas/JobId"
         pagination:
           $ref: "#/components/schemas/Pagination"
-        status:
-          description: The Job status you want to filter by
-          $ref: "#/components/schemas/JobStatus"
+        statuses:
+          type: array
+          description: The Job statuses you want to filter by
+          items:
+            $ref: "#/components/schemas/JobStatus"
         createdAtStart:
           description: The start datetime to filter by
           type: string
@@ -7926,9 +7927,11 @@ components:
             $ref: "#/components/schemas/WorkspaceId"
         pagination:
           $ref: "#/components/schemas/Pagination"
-        status:
-          description: The Job status you want to filter by
-          $ref: "#/components/schemas/JobStatus"
+        statuses:
+          type: array
+          description: The Job statuses you want to filter by
+          items:
+            $ref: "#/components/schemas/JobStatus"
         createdAtStart:
           description: The start datetime to filter by
           type: string

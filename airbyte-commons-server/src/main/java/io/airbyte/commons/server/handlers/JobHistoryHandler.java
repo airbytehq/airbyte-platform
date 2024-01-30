@@ -155,7 +155,7 @@ public class JobHistoryHandler {
     } else {
       jobs = jobPersistence.listJobs(configTypes, configId, pageSize,
           (request.getPagination() != null && request.getPagination().getRowOffset() != null) ? request.getPagination().getRowOffset() : 0,
-          request.getStatus() == null ? null : mapToDomainJobStatus(request.getStatus()),
+          request.getStatuses() == null ? null : mapToDomainJobStatus(request.getStatuses()),
           request.getCreatedAtStart(),
           request.getCreatedAtEnd(),
           request.getUpdatedAtStart(),
@@ -169,7 +169,7 @@ public class JobHistoryHandler {
     hydrateWithStats(jobReads, jobs, featureFlagClient.boolVariation(HydrateAggregatedStats.INSTANCE, new Workspace(ANONYMOUS)));
 
     final Long totalJobCount = jobPersistence.getJobCount(configTypes, configId,
-        request.getStatus() == null ? null : mapToDomainJobStatus(request.getStatus()),
+        request.getStatuses() == null ? null : mapToDomainJobStatus(request.getStatuses()),
         request.getCreatedAtStart(),
         request.getCreatedAtEnd(),
         request.getUpdatedAtStart(),
@@ -199,7 +199,7 @@ public class JobHistoryHandler {
         request.getWorkspaceIds(),
         pageSize,
         offset,
-        request.getStatus() == null ? null : mapToDomainJobStatus(request.getStatus()),
+        request.getStatuses() == null ? null : mapToDomainJobStatus(request.getStatuses()),
         request.getCreatedAtStart(),
         request.getCreatedAtEnd(),
         request.getUpdatedAtStart(),
@@ -465,8 +465,10 @@ public class JobHistoryHandler {
         .job(jobDebugRead);
   }
 
-  private static JobStatus mapToDomainJobStatus(io.airbyte.api.model.generated.JobStatus apiJobStatus) {
-    return JobStatus.valueOf(apiJobStatus.toString().toUpperCase());
+  public List<JobStatus> mapToDomainJobStatus(List<io.airbyte.api.model.generated.JobStatus> apiJobStatuses) {
+    return apiJobStatuses.stream()
+        .map(apiJobStatus -> JobStatus.valueOf(apiJobStatus.toString().toUpperCase()))
+        .collect(Collectors.toList());
   }
 
   private record StreamNameAndNamespace(String name, String namespace) {}
