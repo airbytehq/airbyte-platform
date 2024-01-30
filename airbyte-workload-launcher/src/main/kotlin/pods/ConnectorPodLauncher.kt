@@ -14,6 +14,7 @@ import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
+import io.fabric8.kubernetes.api.model.SecretVolumeSourceBuilder
 import io.fabric8.kubernetes.api.model.Toleration
 import io.fabric8.kubernetes.api.model.TolerationBuilder
 import io.fabric8.kubernetes.api.model.Volume
@@ -22,6 +23,7 @@ import io.fabric8.kubernetes.api.model.VolumeMount
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.micronaut.context.annotation.Value
+import io.micronaut.core.util.StringUtils
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 
@@ -37,6 +39,11 @@ class ConnectorPodLauncher(
   @Named("checkContainerPorts") private val containerPorts: List<ContainerPort>,
   @Named("sidecarKubeContainerInfo") private val sidecarContainerInfo: KubeContainerInfo,
   @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
+  @Value("\${google.application.credentials}") private val googleApplicationCredentials: String?,
+  @Value("\${airbyte.container.orchestrator.secret-name}") private val secretName: String?,
+  @Value("\${airbyte.container.orchestrator.secret-mount-path}") private val secretMountPath: String?,
+  @Value("\${airbyte.container.orchestrator.data-plane-creds.secret-name}") private val dataPlaneCredsSecretName: String?,
+  @Value("\${airbyte.container.orchestrator.data-plane-creds.secret-mount-path}") private val dataPlaneCredsSecretMountPath: String?,
 ) {
   fun create(
     allLabels: Map<String, String>,
@@ -47,6 +54,7 @@ class ConnectorPodLauncher(
   ): Pod {
     val volumes: MutableList<Volume> = ArrayList()
     val volumeMounts: MutableList<VolumeMount> = ArrayList()
+    val sidecarVolumeMounts: MutableList<VolumeMount> = ArrayList()
 
     volumes.add(
       VolumeBuilder()
@@ -64,6 +72,46 @@ class ConnectorPodLauncher(
         .build(),
     )
 
+    if (StringUtils.isNotEmpty(secretName) && StringUtils.isNotEmpty(secretMountPath) && StringUtils.isNotEmpty(googleApplicationCredentials)) {
+      volumes.add(
+        VolumeBuilder()
+          .withName("airbyte-secret")
+          .withSecret(
+            SecretVolumeSourceBuilder()
+              .withSecretName(secretName)
+              .withDefaultMode(420)
+              .build(),
+          )
+          .build(),
+      )
+      sidecarVolumeMounts.add(
+        VolumeMountBuilder()
+          .withName("airbyte-secret")
+          .withMountPath(secretMountPath)
+          .build(),
+      )
+    }
+
+    if (StringUtils.isNotEmpty(dataPlaneCredsSecretName) && StringUtils.isNotEmpty(dataPlaneCredsSecretMountPath)) {
+      volumes.add(
+        VolumeBuilder()
+          .withName("airbyte-dataplane-creds")
+          .withSecret(
+            SecretVolumeSourceBuilder()
+              .withSecretName(dataPlaneCredsSecretName)
+              .withDefaultMode(420)
+              .build(),
+          )
+          .build(),
+      )
+      sidecarVolumeMounts.add(
+        VolumeMountBuilder()
+          .withName("airbyte-dataplane-creds")
+          .withMountPath(dataPlaneCredsSecretMountPath)
+          .build(),
+      )
+    }
+
     val pullSecrets: List<LocalObjectReference> =
       checkWorkerConfigs.jobImagePullSecrets
         .map { imagePullSecret -> LocalObjectReference(imagePullSecret) }
@@ -71,7 +119,7 @@ class ConnectorPodLauncher(
 
     val init: Container = buildInitContainer(volumeMounts)
     val main: Container = buildMainContainer(volumeMounts, kubePodInfo.mainContainerInfo)
-    val sidecar: Container = buildSidecarContainer(volumeMounts, extraEnv)
+    val sidecar: Container = buildSidecarContainer(volumeMounts + sidecarVolumeMounts, extraEnv)
 
     val podToCreate =
       PodBuilder()
