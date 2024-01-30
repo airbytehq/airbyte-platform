@@ -126,8 +126,8 @@ class PayloadKubeInputMapperTest {
     val checkConfigs: WorkerConfigs = mockk()
     every { checkConfigs.workerKubeAnnotations } returns mapOf("annotation" to "value1")
     val replConfigs: WorkerConfigs = mockk()
-    every { replConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(checkCustomSelectors)
-    every { replConfigs.getworkerKubeNodeSelectors() } returns checkSelectors
+    every { checkConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(checkCustomSelectors)
+    every { checkConfigs.getworkerKubeNodeSelectors() } returns checkSelectors
 
     val checkResourceReqs = ResourceRequirements().withCpuRequest("1").withMemoryLimit("100MiB")
 
