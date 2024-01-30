@@ -76,6 +76,7 @@ import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -144,6 +145,7 @@ public class DbConverter {
                 .getLiteral(), NonBreakingChangesPreference.class).orElseThrow())
         .withNotifySchemaChanges(isWebhookNotificationEnabled)
         .withNotifySchemaChangesByEmail(isEmailNotificationEnabled)
+        .withCreatedAt(record.get(CONNECTION.CREATED_AT, OffsetDateTime.class).toEpochSecond())
         .withBackfillPreference(
             Enums.toEnum(Optional.ofNullable(record.get(SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).orElse(BackfillPreference.disabled).getLiteral(),
                 StandardSync.BackfillPreference.class).orElseThrow());

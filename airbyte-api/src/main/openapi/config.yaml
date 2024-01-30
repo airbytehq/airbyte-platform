@@ -6835,6 +6835,9 @@ components:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        created_at:
+          type: integer
+          format: int64
         backfillPreference:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
         workspaceId:
@@ -9101,6 +9104,9 @@ components:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        createdAt:
+          type: integer
+          format: int64
         backfillPreference:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
     NonBreakingChangesPreference:

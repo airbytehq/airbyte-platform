@@ -145,3 +145,6 @@ properties:
     enum:
       - enabled
       - disabled
+  createdAt:
+    type: integer
+    format: int64

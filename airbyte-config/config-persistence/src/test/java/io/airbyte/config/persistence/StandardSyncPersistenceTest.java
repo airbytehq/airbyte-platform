@@ -63,6 +63,7 @@ import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -151,8 +152,6 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     createBaseObjects();
     final StandardSync sync1 = createStandardSync(source1, destination1);
     final StandardSync sync2 = createStandardSync(source1, destination2);
-    standardSyncPersistence.writeStandardSync(sync1);
-    standardSyncPersistence.writeStandardSync(sync2);
 
     final List<StandardSync> expected = List.of(
         Jsons.clone(sync1)
@@ -537,6 +536,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withStatus(Status.ACTIVE)
         .withGeography(Geography.AUTO)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+        .withCreatedAt(OffsetDateTime.now().toEpochSecond())
         .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(false)
