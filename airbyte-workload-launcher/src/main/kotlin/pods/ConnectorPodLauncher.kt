@@ -34,6 +34,7 @@ class ConnectorPodLauncher(
   private val kubernetesClient: KubernetesClient,
   @Named("checkWorkerConfigs") private val checkWorkerConfigs: WorkerConfigs,
   @Named("checkOrchestratorReqs") private val checkReqs: ResourceRequirements,
+  @Named("sidecarReqs") private val sidecarReqs: ResourceRequirements,
   @Named("checkEnvVars") private val envVars: List<EnvVar>,
   @Named("orchestratorEnvVars") private val sidecarEnvVars: List<EnvVar>,
   @Named("checkContainerPorts") private val containerPorts: List<ContainerPort>,
@@ -254,7 +255,7 @@ class ConnectorPodLauncher(
       .withWorkingDir(KubePodProcess.CONFIG_DIR)
       .withEnv(sidecarEnvVars + extraKubeEnv)
       .withVolumeMounts(volumeMounts)
-      .withResources(KubePodProcess.getResourceRequirementsBuilder(checkReqs).build())
+      .withResources(KubePodProcess.getResourceRequirementsBuilder(sidecarReqs).build())
       .build()
   }
 }

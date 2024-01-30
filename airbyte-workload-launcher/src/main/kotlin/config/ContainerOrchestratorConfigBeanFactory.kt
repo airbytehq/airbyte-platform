@@ -323,6 +323,17 @@ class ContainerOrchestratorConfigBeanFactory {
       .withCpuLimit("2")
   }
 
+  @Singleton
+  @Named("sidecarReqs")
+  fun sidecar(): ResourceRequirements {
+    // TODO: Make these env-driven
+    return ResourceRequirements()
+      .withMemoryRequest("2000Mi")
+      .withMemoryLimit("2000Mi")
+      .withCpuRequest("2")
+      .withCpuLimit("2")
+  }
+
   companion object {
     private const val METRIC_CLIENT_ENV_VAR = "METRIC_CLIENT"
     private const val DD_AGENT_HOST_ENV_VAR = "DD_AGENT_HOST"
