@@ -74,12 +74,7 @@ const useConnectionForm = ({
     connection.destinationId
   );
 
-  const initialValues = useInitialFormValues(
-    connection,
-    destDefinitionVersion,
-    destDefinitionSpecification,
-    mode !== "create"
-  );
+  const initialValues = useInitialFormValues(connection, destDefinitionVersion, mode !== "create");
   const { formatMessage } = useIntl();
   const [submitError, setSubmitError] = useState<FormError | null>(null);
 
