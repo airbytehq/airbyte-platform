@@ -436,7 +436,7 @@ export const authTypeToKeyToInferredInput = (
         if ("refresh_token_updater" in authenticator && authenticator.refresh_token_updater) {
           baseInputs.oauth_access_token = {
             key: "oauth_access_token",
-            required: true,
+            required: false,
             definition: {
               type: "string",
               title: "Access token",
@@ -448,7 +448,7 @@ export const authTypeToKeyToInferredInput = (
           };
           baseInputs.oauth_token_expiry_date = {
             key: "oauth_token_expiry_date",
-            required: true,
+            required: false,
             definition: {
               type: "string",
               title: "Token expiry date",
