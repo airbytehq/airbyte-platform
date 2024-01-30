@@ -4,6 +4,7 @@
 
 package io.airbyte.test.acceptance;
 
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -290,6 +291,29 @@ class SchemaManagementTests {
     assertEquals(3, currentConnection.getSyncCatalog().getStreams().get(0).getStream().getJsonSchema().get("properties").size());
     Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), createdConnection.getNamespaceFormat(),
         getExpectedRecordsForIdAndNameWithBackfilledColumn());
+  }
+
+  @Test
+  @Timeout(
+           value = 10,
+           unit = TimeUnit.MINUTES)
+  void testApplyEmptySchemaChange() throws Exception {
+    // Modify the source to add another stream.
+    testHarness.runSqlScriptInSource("postgres_add_column_and_table.sql");
+    // Run discover.
+    final SourceDiscoverSchemaRead result = testHarness.discoverSourceSchemaWithId(createdConnection.getSourceId());
+    // Update the catalog, but don't enable the new stream.
+    final ConnectionRead firstUpdate = testHarness.updateConnectionSourceCatalogId(createdConnection.getConnectionId(), result.getCatalogId());
+    LOGGER.info("updatedConnection: {}", firstUpdate);
+    // Modify the source to add a field to the disabled stream.
+    testHarness.runSqlScriptInSource("postgres_add_column_to_new_table.sql");
+    // Run a sync.
+    final JobRead jobReadWithBackfills = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
+    testHarness.waitForSuccessfulSyncNoTimeout(jobReadWithBackfills);
+    // Verify that the catalog is the same, but the source catalog id has been updated.
+    final ConnectionRead secondUpdate = testHarness.getConnection(createdConnection.getConnectionId());
+    assertEquals(firstUpdate.getSyncCatalog(), secondUpdate.getSyncCatalog());
+    assertNotEquals(firstUpdate.getSourceCatalogId(), secondUpdate.getSourceCatalogId());
   }
 
   private List<JsonNode> getExpectedRecordsForIdAndName() {

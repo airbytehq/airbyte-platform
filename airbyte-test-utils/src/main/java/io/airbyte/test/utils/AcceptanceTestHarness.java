@@ -452,7 +452,8 @@ public class AcceptanceTestHarness {
   public SourceDiscoverSchemaRead discoverSourceSchemaWithId(final UUID sourceId) {
     return AirbyteApiClient.retryWithJitter(
         () -> {
-          final var result = apiClient.getSourceApi().discoverSchemaForSource(new SourceDiscoverSchemaRequestBody().sourceId(sourceId));
+          final var result =
+              apiClient.getSourceApi().discoverSchemaForSource(new SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(true));
           if (result.getCatalog() == null) {
             throw new RuntimeException("no catalog returned, retrying...");
           }
@@ -551,21 +552,20 @@ public class AcceptanceTestHarness {
     final String name = "accp-test-connection-" + slug + (create.getNameSuffix() != null ? "-" + create.getNameSuffix() : "");
     final String namespace = "accp_test_" + slug;
 
-    return createConnectionFromRequest(
-        new ConnectionCreate()
-            .status(ConnectionStatus.ACTIVE)
-            .sourceId(create.getSrcId())
-            .destinationId(create.getDstId())
-            .syncCatalog(create.getConfiguredCatalog())
-            .sourceCatalogId(create.getCatalogId())
-            .scheduleType(create.getScheduleType())
-            .scheduleData(create.getScheduleData())
-            .operationIds(create.getOperationIds())
-            .name(name)
-            .namespaceDefinition(NamespaceDefinitionType.CUSTOMFORMAT)
-            .namespaceFormat(namespace)
-            .prefix(OUTPUT_STREAM_PREFIX)
-            .geography(create.getGeography()));
+    return createConnectionFromRequest(new ConnectionCreate()
+        .status(ConnectionStatus.ACTIVE)
+        .sourceId(create.getSrcId())
+        .destinationId(create.getDstId())
+        .syncCatalog(create.getConfiguredCatalog())
+        .sourceCatalogId(create.getCatalogId())
+        .scheduleType(create.getScheduleType())
+        .scheduleData(create.getScheduleData())
+        .operationIds(create.getOperationIds())
+        .name(name)
+        .namespaceDefinition(NamespaceDefinitionType.CUSTOMFORMAT)
+        .namespaceFormat(namespace)
+        .prefix(OUTPUT_STREAM_PREFIX)
+        .geography(create.getGeography()));
   }
 
   public ConnectionRead createConnectionSourceNamespace(final TestConnectionCreate create)
@@ -628,6 +628,14 @@ public class AcceptanceTestHarness {
             .connectionId(connectionId)
             .syncCatalog(catalog)),
         "update connection catalog", 10, 60, 3);
+  }
+
+  public ConnectionRead updateConnectionSourceCatalogId(final UUID connectionId, UUID sourceCatalogId) {
+    return AirbyteApiClient.retryWithJitter(() -> apiClient.getConnectionApi().updateConnection(
+        new ConnectionUpdate()
+            .connectionId(connectionId)
+            .sourceCatalogId(sourceCatalogId)),
+        "update connection source catalog id", 10, 60, 3);
   }
 
   public JobInfoRead syncConnection(final UUID connectionId) {

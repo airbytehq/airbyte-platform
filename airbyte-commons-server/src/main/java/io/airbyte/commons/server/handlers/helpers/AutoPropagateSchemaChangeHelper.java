@@ -15,11 +15,9 @@ import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.featureflag.FeatureFlagClient;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.ws.rs.NotSupportedException;
 import lombok.extern.slf4j.Slf4j;
@@ -114,9 +112,7 @@ public class AutoPropagateSchemaChangeHelper {
                                                     final AirbyteCatalog newCatalog,
                                                     final List<StreamTransform> transformations,
                                                     final NonBreakingChangesPreference nonBreakingChangesPreference,
-                                                    final List<DestinationSyncMode> supportedDestinationSyncModes,
-                                                    final FeatureFlagClient featureFlagClient,
-                                                    final UUID workspaceId) {
+                                                    final List<DestinationSyncMode> supportedDestinationSyncModes) {
     final AirbyteCatalog copiedOldCatalog = Jsons.clone(oldCatalog);
     final Map<StreamDescriptor, AirbyteStreamAndConfiguration> oldCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(copiedOldCatalog);
     final Map<StreamDescriptor, AirbyteStreamAndConfiguration> newCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(newCatalog);
@@ -184,13 +180,19 @@ public class AutoPropagateSchemaChangeHelper {
    */
   public static boolean shouldAutoPropagate(final CatalogDiff diff,
                                             final ConnectionRead connectionRead) {
-    final boolean hasDiff = !diff.getTransforms().isEmpty();
+    if (diff.getTransforms().isEmpty()) {
+      // If there's no diff we always propagate because it means there's a diff in a disabled stream, or
+      // some other bit of metadata.
+      // We want to acknowledge it and update to the latest source catalog id, but not bother the user
+      // about it.
+      return true;
+    }
     final boolean nonBreakingChange = !AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
     final boolean autoPropagationIsEnabledForConnection =
         connectionRead.getNonBreakingChangesPreference() != null
             && (connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_COLUMNS)
                 || connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_FULLY));
-    return hasDiff && nonBreakingChange && autoPropagationIsEnabledForConnection;
+    return nonBreakingChange && autoPropagationIsEnabledForConnection;
   }
 
   /**

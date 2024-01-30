@@ -1889,6 +1889,44 @@ class SchedulerHandlerTest {
     verify(spySchedulerHandler, never()).notifySchemaPropagated(any(), any(), any(), any(), any(), any(), any());
   }
 
+  @Test
+  void testEmptyDiffIsAlwaysPropagated() throws JsonValidationException, ConfigNotFoundException, IOException {
+    // Verify that if auto propagation is fully enabled, a new stream can be added.
+    final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(source.getSourceDefinitionId());
+    final ActorDefinitionVersion sourceVersion = new ActorDefinitionVersion()
+        .withProtocolVersion(SOURCE_PROTOCOL_VERSION);
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId()))
+        .thenReturn(sourceVersion);
+
+    final var discoveredSourceId = mockSuccessfulDiscoverJob(source, sourceVersion);
+    final var connection = mockConnectionForDiscoverJobWithAutopropagation(source, sourceVersion, NonBreakingChangesPreference.IGNORE);
+    mockEmptyDiff();
+    mockSourceForDiscoverJob(source, sourceDefinition);
+
+    // NOTE: this is just a clone of the original catalog.
+    final io.airbyte.api.model.generated.AirbyteCatalog discoveredCatalog =
+        CatalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceVersion);
+
+    final UUID workspaceId = source.getWorkspaceId();
+    final StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
+    when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
+
+    final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
+        .sourceId(source.getSourceId())
+        .workspaceId(workspaceId)
+        .catalogId(discoveredSourceId)
+        .catalog(discoveredCatalog);
+
+    schedulerHandler.applySchemaChangeForSource(request);
+
+    verify(connectionsHandler).updateConnection(
+        new ConnectionUpdate().connectionId(connection.getConnectionId())
+            .syncCatalog(discoveredCatalog)
+            .sourceCatalogId(discoveredSourceId));
+  }
+
   private SourceAutoPropagateChange getMockedSourceAutoPropagateChange() {
     return new SourceAutoPropagateChange()
         .sourceId(UUID.randomUUID())
@@ -1982,6 +2020,11 @@ class SchedulerHandlerTest {
         new StreamTransform().transformType(TransformTypeEnum.ADD_STREAM).streamDescriptor(
             new io.airbyte.api.model.generated.StreamDescriptor().name(A_DIFFERENT_STREAM))));
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+  }
+
+  private void mockEmptyDiff() throws JsonValidationException {
+    final CatalogDiff emptyDiff = new CatalogDiff().transforms(List.of());
+    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(emptyDiff);
   }
 
 }

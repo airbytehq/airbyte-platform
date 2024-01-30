@@ -434,7 +434,6 @@ public class SchedulerHandler {
 
       if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diff, connectionRead)) {
         final UpdateSchemaResult result = applySchemaChange(updateObject.getConnectionId(),
-            sourceAutoPropagateChange.getWorkspaceId(),
             updateObject,
             syncCatalog,
             sourceAutoPropagateChange.getCatalog(),
@@ -712,7 +711,6 @@ public class SchedulerHandler {
   }
 
   private UpdateSchemaResult applySchemaChange(final UUID connectionId,
-                                               final UUID workspaceId,
                                                final ConnectionUpdate updateObject,
                                                final io.airbyte.api.model.generated.AirbyteCatalog currentSyncCatalog,
                                                final io.airbyte.api.model.generated.AirbyteCatalog newCatalog,
@@ -727,8 +725,7 @@ public class SchedulerHandler {
         newCatalog,
         transformations,
         nonBreakingChangesPreference,
-        supportedDestinationSyncModes,
-        featureFlagClient, workspaceId);
+        supportedDestinationSyncModes);
     updateObject.setSyncCatalog(updateSchemaResult.catalog());
     updateObject.setSourceCatalogId(sourceCatalogId);
     return updateSchemaResult;

@@ -16,6 +16,7 @@ import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.State;
 import io.airbyte.config.StateType;
+import io.airbyte.config.StateWrapper;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.protocol.models.AirbyteStateMessage;
@@ -66,11 +67,12 @@ public class BackfillHelper {
     if (!stateOptional.isPresent()) {
       return null; // No state, no backfill.
     }
-    final var state = stateOptional.get();
+    final StateWrapper state = stateOptional.get();
     final StateType type = state.getStateType();
     if (!StateType.STREAM.equals(type)) {
       return null; // Only backfill for per-stream state.
     }
+    boolean stateWasModified = false;
     for (final var stateMessage : state.getStateMessages()) {
       if (!AirbyteStateMessage.AirbyteStateType.STREAM.equals(stateMessage.getType())) {
         continue;
@@ -81,8 +83,9 @@ public class BackfillHelper {
       }
       // It's listed in the streams to backfill, so we write the state to null.
       stateMessage.getStream().setStreamState(JsonNodeFactory.instance.nullNode());
+      stateWasModified = true;
     }
-    return StateMessageHelper.getState(state);
+    return stateWasModified ? StateMessageHelper.getState(state) : null;
   }
 
   /**

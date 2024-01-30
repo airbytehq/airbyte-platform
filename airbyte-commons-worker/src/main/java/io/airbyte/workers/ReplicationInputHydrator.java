@@ -165,7 +165,6 @@ public class ReplicationInputHydrator {
 
       return resetState;
     }
-    // No schema refresh output, so we just return the original state.
     return state;
   }
 

@@ -1098,8 +1098,7 @@ public class ConnectionsHandler {
         newCatalog,
         transformations,
         nonBreakingChangesPreference,
-        supportedDestinationSyncModes,
-        featureFlagClient, workspaceId);
+        supportedDestinationSyncModes);
     updateObject.setSyncCatalog(propagateResult.catalog());
     updateObject.setSourceCatalogId(sourceCatalogId);
     trackSchemaChange(workspaceId, connectionId, propagateResult);

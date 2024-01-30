@@ -159,6 +159,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         cancellationCallback,
         () -> {
           final ReplicationInput hydratedReplicationInput = replicationInputHydrator.getHydratedReplicationInput(replicationActivityInput);
+          LOGGER.info("connection {}, hydrated input: {}", replicationActivityInput.getConnectionId(), hydratedReplicationInput);
           final Worker<ReplicationInput, ReplicationOutput> worker;
 
           // TODO: remove this once migration to workloads complete
