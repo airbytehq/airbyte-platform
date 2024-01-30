@@ -1,6 +1,7 @@
 import { Dialog } from "@headlessui/react";
 import cloneDeep from "lodash/cloneDeep";
 import React, { useCallback, useMemo, useState } from "react";
+import { useToggle } from "react-use";
 
 import { Overlay } from "components/ui/Overlay";
 
@@ -40,6 +41,7 @@ export const StreamDetailsPanel: React.FC<StreamDetailsPanelProps> = ({
   updateStreamWithConfig,
 }) => {
   const [clonedConfig, setClonedConfig] = useState<AirbyteStreamConfiguration>(cloneDeep(config));
+  const [isConfigModified, setIsConfigModified] = useToggle(false);
 
   const numberOfFieldsInStream = Object.keys(stream?.jsonSchema?.properties ?? {}).length ?? 0;
 
@@ -50,31 +52,42 @@ export const StreamDetailsPanel: React.FC<StreamDetailsPanelProps> = ({
     stream
   );
 
+  // setClonedConfig proxy function to track cloned config changes
+  const setClonedConfigProxy = useCallback(
+    (value: React.SetStateAction<AirbyteStreamConfiguration>) => {
+      if (!isConfigModified) {
+        setIsConfigModified();
+      }
+      setClonedConfig(value);
+    },
+    [isConfigModified, setIsConfigModified]
+  );
+
   // Header handlers
   const onToggleAllFieldsSelected = useCallback(() => {
     const updatedConfig = toggleAllFieldsSelected(clonedConfig);
 
-    setClonedConfig((prevState) => ({
+    setClonedConfigProxy((prevState) => ({
       ...prevState,
       ...updatedConfig,
     }));
-  }, [clonedConfig]);
+  }, [clonedConfig, setClonedConfigProxy]);
 
   const onSelectStream = useCallback(
     () =>
-      setClonedConfig((prevState) => ({
+      setClonedConfigProxy((prevState) => ({
         ...prevState,
         selected: !(clonedConfig && clonedConfig.selected),
       })),
-    [clonedConfig]
+    [clonedConfig, setClonedConfigProxy]
   );
 
   const onSelectSyncMode = useCallback(
     (syncMode: SyncModeValue) => {
       const updatedConfig = updateStreamSyncMode(stream, clonedConfig, syncMode);
-      setClonedConfig(updatedConfig);
+      setClonedConfigProxy(updatedConfig);
     },
-    [clonedConfig, stream]
+    [clonedConfig, setClonedConfigProxy, stream]
   );
 
   // Table handlers
@@ -87,41 +100,43 @@ export const StreamDetailsPanel: React.FC<StreamDetailsPanelProps> = ({
         isSelected,
         numberOfFieldsInStream,
       });
-      setClonedConfig((prevState) => ({
+      setClonedConfigProxy((prevState) => ({
         ...prevState,
         ...updatedConfig,
       }));
     },
-    [clonedConfig, fields, numberOfFieldsInStream]
+    [clonedConfig, fields, numberOfFieldsInStream, setClonedConfigProxy]
   );
 
   const onCursorSelect = useCallback(
     (cursorField: string[]) => {
       const updatedConfig = updateCursorField(clonedConfig, cursorField, numberOfFieldsInStream);
-      setClonedConfig((prevState) => ({
+      setClonedConfigProxy((prevState) => ({
         ...prevState,
         ...updatedConfig,
       }));
     },
-    [clonedConfig, numberOfFieldsInStream]
+    [clonedConfig, numberOfFieldsInStream, setClonedConfigProxy]
   );
 
   const onPkSelect = useCallback(
     (pkPath: string[]) => {
       const updatedConfig = toggleFieldInPrimaryKey(clonedConfig, pkPath, numberOfFieldsInStream);
-      setClonedConfig((prevState) => ({
+      setClonedConfigProxy((prevState) => ({
         ...prevState,
         ...updatedConfig,
       }));
     },
-    [clonedConfig, numberOfFieldsInStream]
+    [clonedConfig, numberOfFieldsInStream, setClonedConfigProxy]
   );
 
   // onCLose
   const onCloseStreamDetailsPanel = useCallback(() => {
-    updateStreamWithConfig(clonedConfig);
+    if (isConfigModified) {
+      updateStreamWithConfig(clonedConfig);
+    }
     onClose();
-  }, [clonedConfig, onClose, updateStreamWithConfig]);
+  }, [clonedConfig, isConfigModified, onClose, updateStreamWithConfig]);
 
   return (
     <Dialog open onClose={onCloseStreamDetailsPanel}>

@@ -40,9 +40,9 @@ export interface LocationWithState extends Location {
 export const SyncCatalogCard: React.FC = () => {
   const listRef = useRef<HTMLElement | Window | null>(null);
   const { mode } = useConnectionFormService();
-  const { control, trigger, setValue } = useFormContext<FormConnectionFormValues>();
+  const { control, trigger } = useFormContext<FormConnectionFormValues>();
   const { isSubmitting, isDirty, errors } = useFormState<FormConnectionFormValues>();
-  const { fields, replace } = useFieldArray({
+  const { fields, replace, update } = useFieldArray({
     name: "syncCatalog.streams",
     control,
   });
@@ -63,15 +63,12 @@ export const SyncCatalogCard: React.FC = () => {
   const onUpdateStream = useCallback(
     ({ config, id }: SyncStreamFieldWithId) => {
       const streamNodeIndex = fields.findIndex((streamNode) => streamNode.id === id);
+      update(streamNodeIndex, { ...fields[streamNodeIndex], config });
 
-      // TODO: Replace "setValue()" with "update()" when we fix the issue https://github.com/airbytehq/airbyte/issues/31820
-      setValue(`syncCatalog.streams.${streamNodeIndex}.config`, config, {
-        shouldDirty: true,
-      });
       // force validation of the form
       trigger(`syncCatalog.streams`);
     },
-    [fields, setValue, trigger]
+    [fields, trigger, update]
   );
 
   // Scroll to the stream that was redirected from the Status tab
