@@ -320,6 +320,12 @@ class ReplicationWorkerHelper(
       logger.info { "sync summary: ${mapper.writerWithDefaultPrettyPrinter().writeValueAsString(summary)}" }
       logger.info { "failures: ${mapper.writerWithDefaultPrettyPrinter().writeValueAsString(failures)}" }
     }
+
+    // Metric to help investigating https://github.com/airbytehq/airbyte/issues/34567
+    if (failures.any { f -> f.failureOrigin.equals("destination") && f.internalMessage.contains("Unable to deserialize PartialAirbyteMessage") }) {
+      metricClient.count(OssMetricsRegistry.DESTINATION_DESERIALIZATION_ERROR, 1, *metricAttrs.toTypedArray())
+    }
+
     LineGobbler.endSection("REPLICATION")
     return output
   }

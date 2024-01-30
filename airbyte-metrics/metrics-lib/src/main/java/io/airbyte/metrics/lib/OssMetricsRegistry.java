@@ -396,7 +396,11 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "Read a job output from the output folder"),
   SYNC_STATE_RECORD_COUNT(MetricEmittingApps.ORCHESTRATOR,
       "sync_state_record_count",
-      "The record count emitted between state messages.");
+      "The record count emitted between state messages."),
+
+  DESTINATION_DESERIALIZATION_ERROR(MetricEmittingApps.ORCHESTRATOR,
+      "destination_deserialization_error",
+      "When a sync failed with a deserialization error from the destination");
 
   private final MetricEmittingApp application;
   private final String metricName;
