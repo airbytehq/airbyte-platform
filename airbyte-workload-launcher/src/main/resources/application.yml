@@ -33,6 +33,9 @@ airbyte:
       connection-pool:
         keep-alive-sec: ${KUBERNETES_CLIENT_CONNECTION_KEEP_ALIVE_SECONDS:600}
         max-idle-connections: ${KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS:25}
+      retries:
+        delay-seconds: ${KUBERNETES_CLIENT_RETRY_DELAY_SECONDS:2}
+        max: ${KUBERNETES_CLIENT_MAX_RETRIES:5}
     pending-time-limit-sec: ${WORKLOAD_LAUNCHER_POD_PENDING_TIME_LIMIT:600}
     resource-check-rate: ${WORKLOAD_LAUNCHER_POD_PENDING_RESOURCE_CHECK_RATE:PT30S}
   docker:

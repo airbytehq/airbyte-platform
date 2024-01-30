@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.launcher.config
 
+import dev.failsafe.RetryPolicy
 import io.airbyte.api.client.generated.ConnectionApi
 import io.airbyte.api.client.generated.JobsApi
 import io.airbyte.api.client.generated.SecretsPersistenceConfigApi
@@ -17,8 +18,14 @@ import io.airbyte.metrics.lib.MetricClientFactory
 import io.airbyte.metrics.lib.MetricEmittingApps
 import io.airbyte.workers.CheckConnectionInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
+import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Value
+import jakarta.inject.Named
 import jakarta.inject.Singleton
+import java.net.SocketTimeoutException
+import java.time.Duration
+import java.util.Optional
 
 /**
  * Micronaut bean factory for general application beans.
@@ -59,5 +66,57 @@ class ApplicationBeanFactory {
       secretsPersistenceConfigApi,
       featureFlagClient,
     )
+  }
+
+  @Singleton
+  @Named("kubernetesClientRetryPolicy")
+  fun kubernetesClientRetryPolicy(
+    @Value("\${airbyte.kubernetes.client.retries.delay-seconds}") retryDelaySeconds: Long,
+    @Value("\${airbyte.kubernetes.client.retries.max}") maxRetries: Int,
+    meterRegistry: Optional<MeterRegistry>,
+  ): RetryPolicy<Any> {
+    val metricTags = arrayOf("max-retries", maxRetries.toString())
+
+    return RetryPolicy.builder<Any>()
+      .handleIf { e -> e.cause is SocketTimeoutException }
+      .onRetry { l ->
+        meterRegistry.ifPresent { r ->
+          r.counter(
+            "kube_api_client.retry",
+            *metricTags,
+            *arrayOf("retry-attempt", l.attemptCount.toString()),
+          ).increment()
+        }
+      }
+      .onAbort { l ->
+        meterRegistry.ifPresent { r ->
+          r.counter(
+            "kube_api_client.abort",
+            *metricTags,
+            *arrayOf("retry-attempt", l.attemptCount.toString()),
+          ).increment()
+        }
+      }
+      .onFailedAttempt { l ->
+        meterRegistry.ifPresent { r ->
+          r.counter(
+            "kube_api_client.failed",
+            *metricTags,
+            *arrayOf("retry-attempt", l.attemptCount.toString()),
+          ).increment()
+        }
+      }
+      .onSuccess { l ->
+        meterRegistry.ifPresent { r ->
+          r.counter(
+            "kube_api_client.success",
+            *metricTags,
+            *arrayOf("retry-attempt", l.attemptCount.toString()),
+          ).increment()
+        }
+      }
+      .withDelay(Duration.ofSeconds(retryDelaySeconds))
+      .withMaxRetries(maxRetries)
+      .build()
   }
 }

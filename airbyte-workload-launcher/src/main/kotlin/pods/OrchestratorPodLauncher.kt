@@ -1,5 +1,7 @@
 package io.airbyte.workload.launcher.pods
 
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
 import io.airbyte.commons.io.IOs
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.featureflag.ANONYMOUS
@@ -63,6 +65,7 @@ class OrchestratorPodLauncher(
   @Named("orchestratorEnvVars") private val sharedEnvVars: List<EnvVar>,
   @Named("orchestratorContainerPorts") private val containerPorts: List<ContainerPort>,
   private val metricClient: MetricClient,
+  @Named("kubernetesClientRetryPolicy") private val kubernetesClientRetryPolicy: RetryPolicy<Any>,
 ) {
   fun create(
     allLabels: Map<String, String>,
@@ -411,7 +414,7 @@ class OrchestratorPodLauncher(
     commandName: String,
   ): T {
     try {
-      return kubeCommand()
+      return Failsafe.with(kubernetesClientRetryPolicy).get { -> kubeCommand() }
     } catch (e: Exception) {
       val attributes: List<MetricAttribute> = listOf(MetricAttribute("operation", commandName))
       val attributesArray = attributes.toTypedArray<MetricAttribute>()
