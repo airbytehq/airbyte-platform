@@ -2,7 +2,6 @@ package io.airbyte.workload.launcher.pods
 
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
-import io.airbyte.commons.io.IOs
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.Connection
@@ -39,8 +38,6 @@ import io.micronaut.context.annotation.Value
 import io.micronaut.core.util.StringUtils
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import java.io.IOException
-import java.nio.file.Path
 import java.time.Duration
 import java.util.Objects
 import java.util.concurrent.TimeUnit
@@ -66,6 +63,7 @@ class OrchestratorPodLauncher(
   @Named("orchestratorContainerPorts") private val containerPorts: List<ContainerPort>,
   private val metricClient: MetricClient,
   @Named("kubernetesClientRetryPolicy") private val kubernetesClientRetryPolicy: RetryPolicy<Any>,
+  private val kubeCopyClient: KubeCopyClient,
 ) {
   fun create(
     allLabels: Map<String, String>,
@@ -297,55 +295,6 @@ class OrchestratorPodLauncher(
     )
   }
 
-  fun copyFilesToKubeConfigVolumeMain(
-    podDefinition: Pod,
-    files: Map<String, String>,
-  ) {
-    val fileEntries: MutableList<Map.Entry<String, String>> = ArrayList(files.entries)
-
-    // copy this file last to indicate that the copy has completed
-    fileEntries.add(java.util.AbstractMap.SimpleEntry(KubePodProcess.SUCCESS_FILE_NAME, ""))
-    var tmpFile: Path? = null
-    var proc: Process? = null
-    for ((key, value) in fileEntries) {
-      try {
-        tmpFile = Path.of(IOs.writeFileToRandomTmpDir(key, value))
-        val containerPath = Path.of(KubePodProcess.CONFIG_DIR + "/" + key)
-
-        // using kubectl cp directly here, because both fabric and the official kube client APIs have
-        // several issues with copying files. See https://github.com/airbytehq/airbyte/issues/8643 for
-        // details.
-        val command =
-          String.format(
-            "kubectl cp %s %s/%s:%s -c %s",
-            tmpFile,
-            podDefinition.metadata.namespace,
-            podDefinition.metadata.name,
-            containerPath,
-            KubePodProcess.INIT_CONTAINER_NAME,
-          )
-        proc =
-          runKubeCommand(
-            {
-              Runtime.getRuntime().exec(command)
-            },
-            "kubectl_cp",
-          )
-        val exitCode = proc.waitFor()
-        if (exitCode != 0) {
-          throw IOException("kubectl cp failed with exit code $exitCode")
-        }
-      } catch (e: IOException) {
-        throw RuntimeException(e)
-      } catch (e: InterruptedException) {
-        throw RuntimeException(e)
-      } finally {
-        tmpFile?.toFile()?.delete()
-        proc?.destroy()
-      }
-    }
-  }
-
   fun podsExist(labels: Map<String, String>): Boolean {
     try {
       return runKubeCommand(
@@ -399,6 +348,18 @@ class OrchestratorPodLauncher(
         statuses
       },
       "delete",
+    )
+  }
+
+  fun copyFilesToKubeConfigVolumeMain(
+    pod: Pod,
+    files: Map<String, String>,
+  ) {
+    runKubeCommand(
+      {
+        kubeCopyClient.copyFilesToKubeConfigVolumeMain(pod, files)
+      },
+      "kubectl_cp",
     )
   }
 

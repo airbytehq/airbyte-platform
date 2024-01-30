@@ -80,6 +80,8 @@ class KubePodClient(
 
     copyFileToOrchestrator(kubeInput, pod)
 
+    waitForOrchestratorStart(pod)
+
     if (!replicationInput.isReset) {
       waitSourceReadyOrTerminalInit(kubeInput)
     }
@@ -94,7 +96,8 @@ class KubePodClient(
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
-        "Orchestrator pod failed to start within allotted timeout of ${ORCHESTRATOR_INIT_TIMEOUT_VALUE.seconds} seconds. (${e.message})",
+        "Init container of orchestrator pod failed to start within allotted timeout of ${ORCHESTRATOR_INIT_TIMEOUT_VALUE.seconds} seconds. " +
+          "(${e.message})",
         e,
       )
     }
@@ -111,6 +114,20 @@ class KubePodClient(
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
         "Failed to copy files to orchestrator pod ${kubeInput.kubePodInfo.name}. (${e.message})",
+        e,
+      )
+    }
+  }
+
+  @Trace(operationName = WAIT_ORCHESTRATOR_OPERATION_NAME)
+  fun waitForOrchestratorStart(pod: Pod) {
+    try {
+      orchestratorLauncher.waitForPodReadyOrTerminalByPod(pod, ORCHESTRATOR_STARTUP_TIMEOUT_VALUE)
+    } catch (e: RuntimeException) {
+      ApmTraceUtils.addExceptionToTrace(e)
+      throw KubePodInitException(
+        "Main container of orchestrator pod failed to start within allotted timeout of ${ORCHESTRATOR_STARTUP_TIMEOUT_VALUE.seconds} seconds. " +
+          "(${e.message})",
         e,
       )
     }
@@ -319,5 +336,6 @@ class KubePodClient(
     private val TIMEOUT_SLACK: Duration = Duration.ofSeconds(5)
     val CONNECTOR_STARTUP_TIMEOUT_VALUE: Duration = FULL_POD_TIMEOUT.plus(TIMEOUT_SLACK)
     val ORCHESTRATOR_INIT_TIMEOUT_VALUE: Duration = Duration.ofMinutes(15)
+    val ORCHESTRATOR_STARTUP_TIMEOUT_VALUE: Duration = Duration.ofMinutes(1)
   }
 }

@@ -8,6 +8,7 @@ import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
+import io.airbyte.workload.launcher.pods.KubeCopyClient
 import io.airbyte.workload.launcher.pods.OrchestratorPodLauncher
 import io.fabric8.kubernetes.api.model.HasMetadata
 import io.fabric8.kubernetes.api.model.ObjectMeta
@@ -47,6 +48,9 @@ class OrchestratorPodLauncherTest {
   @MockK
   private lateinit var metricClient: MetricClient
 
+  @MockK
+  private lateinit var kubeCopyClient: KubeCopyClient
+
   private lateinit var orchestratorPodLauncher: OrchestratorPodLauncher
 
   private lateinit var kubernetesClientRetryPolicy: RetryPolicy<Any>
@@ -69,6 +73,7 @@ class OrchestratorPodLauncherTest {
         listOf(),
         metricClient,
         kubernetesClientRetryPolicy,
+        kubeCopyClient,
       )
 
     every { featureFlagClient.stringVariation(any(), any()) } returns ""
@@ -173,6 +178,7 @@ class OrchestratorPodLauncherTest {
         listOf(),
         metricClient,
         kubernetesClientRetryPolicy,
+        kubeCopyClient,
       )
 
     assertThrows<KubernetesClientException> {
@@ -220,6 +226,7 @@ class OrchestratorPodLauncherTest {
         listOf(),
         metricClient,
         kubernetesClientRetryPolicy,
+        kubeCopyClient,
       )
 
     assertThrows<KubernetesClientException> {

@@ -13,6 +13,7 @@ import io.airbyte.workload.launcher.model.setDestinationLabels
 import io.airbyte.workload.launcher.model.setSourceLabels
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.CONNECTOR_STARTUP_TIMEOUT_VALUE
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.ORCHESTRATOR_INIT_TIMEOUT_VALUE
+import io.airbyte.workload.launcher.pods.KubePodClient.Companion.ORCHESTRATOR_STARTUP_TIMEOUT_VALUE
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.checkKubeInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.launcherInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.replKubeInput
@@ -118,6 +119,8 @@ class KubePodClientTest {
     verify { launcher.copyFilesToKubeConfigVolumeMain(pod, replKubeInput.fileMap) }
 
     verify { launcher.waitForPodReadyOrTerminal(replKubeInput.sourceLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) }
+
+    verify { launcher.waitForPodReadyOrTerminalByPod(pod, ORCHESTRATOR_STARTUP_TIMEOUT_VALUE) }
 
     verify { launcher.waitForPodReadyOrTerminal(replKubeInput.destinationLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) }
   }
