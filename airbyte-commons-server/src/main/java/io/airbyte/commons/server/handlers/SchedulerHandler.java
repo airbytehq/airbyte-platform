@@ -96,6 +96,10 @@ import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.notification.CustomerioNotificationClient;
 import io.airbyte.notification.SlackNotificationClient;
+import io.airbyte.notification.messages.ConnectionInfo;
+import io.airbyte.notification.messages.SchemaUpdateNotification;
+import io.airbyte.notification.messages.SourceInfo;
+import io.airbyte.notification.messages.WorkspaceInfo;
 import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -471,10 +475,19 @@ public class SchedulerHandler {
                                      final UpdateSchemaResult result)
       throws IOException {
     final NotificationItem item;
+
     final String connectionUrl = webUrlHelper.getConnectionUrl(workspace.getWorkspaceId(), connection.getConnectionId());
     final String workspaceUrl = webUrlHelper.getWorkspaceUrl(workspace.getWorkspaceId());
     final String sourceUrl = webUrlHelper.getSourceUrl(workspace.getWorkspaceId(), source.getSourceId());
     final boolean isBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
+
+    SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
+        .sourceInfo(SourceInfo.builder().name(source.getName()).id(source.getSourceId()).url(sourceUrl).build())
+        .connectionInfo(ConnectionInfo.builder().name(connection.getName()).id(connection.getConnectionId()).url(connectionUrl).build())
+        .workspace(WorkspaceInfo.builder().name(workspace.getName()).id(workspace.getWorkspaceId()).url(workspaceUrl).build())
+        .catalogDiff(diff)
+        .isBreakingChange(isBreakingChange)
+        .build();
     if (isBreakingChange) {
       item = notificationSettings.getSendOnConnectionUpdateActionRequired();
     } else {
@@ -485,35 +498,11 @@ public class SchedulerHandler {
         switch (type) {
           case SLACK -> {
             final SlackNotificationClient slackNotificationClient = new SlackNotificationClient(item.getSlackConfiguration());
-            slackNotificationClient.notifySchemaPropagated(
-                workspace.getWorkspaceId(),
-                workspace.getName(),
-                workspaceUrl,
-                connection.getConnectionId(),
-                connection.getName(),
-                connectionUrl,
-                source.getSourceId(),
-                source.getName(),
-                sourceUrl,
-                result.appliedDiff(),
-                email,
-                isBreakingChange);
+            slackNotificationClient.notifySchemaPropagated(notification, email);
           }
           case CUSTOMERIO -> {
             final CustomerioNotificationClient emailNotificationClient = new CustomerioNotificationClient();
-            emailNotificationClient.notifySchemaPropagated(
-                workspace.getWorkspaceId(),
-                workspace.getName(),
-                workspaceUrl,
-                connection.getConnectionId(),
-                connection.getName(),
-                connectionUrl,
-                source.getSourceId(),
-                source.getName(),
-                sourceUrl,
-                result.appliedDiff(),
-                email,
-                isBreakingChange);
+            emailNotificationClient.notifySchemaPropagated(notification, email);
           }
           default -> {
             LOGGER.warn("Notification type {} not supported", type);

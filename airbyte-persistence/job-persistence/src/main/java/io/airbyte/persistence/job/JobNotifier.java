@@ -13,9 +13,11 @@ import com.google.common.collect.ImmutableMap.Builder;
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Notification.NotificationType;
 import io.airbyte.config.NotificationItem;
 import io.airbyte.config.NotificationSettings;
+import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
@@ -28,7 +30,13 @@ import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.notification.CustomerioNotificationClient;
 import io.airbyte.notification.NotificationClient;
 import io.airbyte.notification.SlackNotificationClient;
+import io.airbyte.notification.messages.ConnectionInfo;
+import io.airbyte.notification.messages.DestinationInfo;
+import io.airbyte.notification.messages.SourceInfo;
+import io.airbyte.notification.messages.SyncSummary;
+import io.airbyte.notification.messages.WorkspaceInfo;
 import io.airbyte.persistence.job.models.Job;
+import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.tracker.TrackingMetadata;
 import io.micronaut.core.util.functional.ThrowingFunction;
 import java.time.Duration;
@@ -94,6 +102,10 @@ public class JobNotifier {
       final StandardSync standardSync = configRepository.getStandardSync(connectionId);
       final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
       final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
+
+      final SourceConnection source = configRepository.getSourceConnection(standardSync.getSourceId());
+      final DestinationConnection destination = configRepository.getDestinationConnection(standardSync.getDestinationId());
+
       final ActorDefinitionVersion sourceVersion =
           actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspace.getWorkspaceId(), standardSync.getSourceId());
       final ActorDefinitionVersion destinationVersion =
@@ -104,7 +116,7 @@ public class JobNotifier {
           TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
 
       final NotificationItem notificationItem = createAndSend(notificationSettings, action, connectionId,
-          destinationDefinition, job, reason, sourceDefinition, standardSync, workspace);
+          destinationDefinition, job, reason, sourceDefinition, standardSync, workspace, source, destination);
 
       if (notificationItem != null) {
         final Map<String, Object> notificationMetadata = buildNotificationMetadata(connectionId, notificationItem);
@@ -241,25 +253,44 @@ public class JobNotifier {
                                          final String reason,
                                          final StandardSourceDefinition sourceDefinition,
                                          final StandardSync standardSync,
-                                         final StandardWorkspace workspace) {
+                                         final StandardWorkspace workspace,
+                                         final SourceConnection source,
+                                         final DestinationConnection destination) {
     NotificationItem notificationItem = null;
     final String sourceConnector = sourceDefinition.getName();
     final String destinationConnector = destinationDefinition.getName();
     final String failReason = Strings.isNullOrEmpty(reason) ? "" : String.format(", as the %s", reason);
     final String jobDescription = getJobDescription(job, failReason);
-    final String logUrl = webUrlHelper.getConnectionUrl(workspace.getWorkspaceId(), connectionId);
+    final UUID workspaceId = workspace.getWorkspaceId();
+
+    SyncSummary.SyncSummaryBuilder summaryBuilder = SyncSummary.builder()
+        .workspace(WorkspaceInfo.builder()
+            .name(workspace.getName()).id(workspaceId).url(webUrlHelper.getWorkspaceUrl(workspaceId)).build())
+        .connectionInfo(ConnectionInfo.builder().name(standardSync.getName()).id(standardSync.getConnectionId())
+            .url(webUrlHelper.getConnectionUrl(workspaceId, standardSync.getConnectionId())).build())
+        .sourceInfo(
+            SourceInfo.builder()
+                .name(source.getName()).id(source.getSourceId()).url(webUrlHelper.getSourceUrl(workspaceId, source.getSourceId())).build())
+        .destinationInfo(DestinationInfo.builder()
+            .name(destination.getName()).id(destination.getDestinationId())
+            .url(webUrlHelper.getDestinationUrl(workspaceId, destination.getDestinationId())).build())
+        .startedAt(Instant.ofEpochSecond(job.getCreatedAtInSecond()))
+        .finishedAt(Instant.ofEpochSecond(job.getUpdatedAtInSecond()))
+        .isSuccess(job.getStatus() == JobStatus.SUCCEEDED)
+        .jobId(job.getId())
+        .errorMessage(jobDescription);
+
+    SyncSummary summary = summaryBuilder.build();
 
     if (notificationSettings != null) {
       if (FAILURE_NOTIFICATION.equalsIgnoreCase(action)) {
         notificationItem = notificationSettings.getSendOnFailure();
         sendNotification(notificationItem, FAILURE_NOTIFICATION,
-            (notificationClient) -> notificationClient.notifyJobFailure(workspace.getEmail(), sourceConnector,
-                destinationConnector, standardSync.getName(), jobDescription, logUrl, job.getId()));
+            (notificationClient) -> notificationClient.notifyJobFailure(summary, workspace.getEmail()));
       } else if (SUCCESS_NOTIFICATION.equalsIgnoreCase(action)) {
         notificationItem = notificationSettings.getSendOnSuccess();
         sendNotification(notificationItem, SUCCESS_NOTIFICATION,
-            (notificationClient) -> notificationClient.notifyJobSuccess(workspace.getEmail(), sourceConnector,
-                destinationConnector, standardSync.getName(), jobDescription, logUrl, job.getId()));
+            (notificationClient) -> notificationClient.notifyJobSuccess(summary, workspace.getEmail()));
       } else if (CONNECTION_DISABLED_NOTIFICATION.equalsIgnoreCase(action)) {
         notificationItem = notificationSettings.getSendOnSyncDisabled();
         sendNotification(notificationItem, CONNECTION_DISABLED_NOTIFICATION,

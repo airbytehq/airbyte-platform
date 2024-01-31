@@ -9,7 +9,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.common.StreamDescriptorUtils;
-import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
@@ -17,6 +16,8 @@ import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.EnvConfigs;
+import io.airbyte.notification.messages.SchemaUpdateNotification;
+import io.airbyte.notification.messages.SyncSummary;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -127,32 +128,22 @@ public class CustomerioNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifyJobFailure(
-                                  final String receiverEmail,
-                                  final String sourceConnector,
-                                  final String destinationConnector,
-                                  final String connectionName,
-                                  final String jobDescription,
-                                  final String logUrl,
-                                  final Long jobId)
+  public boolean notifyJobFailure(final SyncSummary summary,
+                                  final String receiverEmail)
       throws IOException {
     final String requestBody = renderTemplate(SYNC_FAILURE_TEMPLATE_PATH, SYNC_FAILURE_MESSAGE_ID, receiverEmail,
-        receiverEmail, sourceConnector, destinationConnector, connectionName, jobDescription, logUrl, jobId.toString());
+        receiverEmail, summary.getSourceInfo().getName(), summary.getDestinationInfo().getName(),
+        summary.getConnectionInfo().getName(), summary.getErrorMessage(), summary.getConnectionInfo().getUrl(), summary.getJobId().toString());
     return notifyByEmail(requestBody);
   }
 
   @Override
-  public boolean notifyJobSuccess(
-                                  final String receiverEmail,
-                                  final String sourceConnector,
-                                  final String destinationConnector,
-                                  final String connectionName,
-                                  final String jobDescription,
-                                  final String logUrl,
-                                  final Long jobId)
+  public boolean notifyJobSuccess(final SyncSummary summary,
+                                  final String receiverEmail)
       throws IOException {
     final String requestBody = renderTemplate(SYNC_SUCCEED_TEMPLATE_PATH, SYNC_SUCCEED_MESSAGE_ID, receiverEmail,
-        receiverEmail, sourceConnector, destinationConnector, connectionName, jobDescription, logUrl, jobId.toString());
+        receiverEmail, summary.getSourceInfo().getName(), summary.getDestinationInfo().getName(),
+        summary.getConnectionInfo().getName(), summary.getErrorMessage(), summary.getConnectionInfo().getUrl(), summary.getJobId().toString());
     return notifyByEmail(requestBody);
   }
 
@@ -225,24 +216,13 @@ public class CustomerioNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifySchemaPropagated(final UUID workspaceId,
-                                        final String workspaceName,
-                                        final String workspaceUrl,
-                                        final UUID connectionId,
-                                        final String connectionName,
-                                        final String connectionUrl,
-                                        final UUID sourceId,
-                                        final String sourceName,
-                                        final String sourceUrl,
-                                        final CatalogDiff diff,
-                                        final String recipient,
-                                        final boolean isBreaking)
+  public boolean notifySchemaPropagated(final SchemaUpdateNotification notification,
+                                        final String recipient)
       throws IOException {
-    String transactionalMessageId = isBreaking ? SCHEMA_BREAKING_CHANGE_TRANSACTION_ID : SCHEMA_CHANGE_TRANSACTION_ID;
+    String transactionalMessageId = notification.isBreakingChange() ? SCHEMA_BREAKING_CHANGE_TRANSACTION_ID : SCHEMA_CHANGE_TRANSACTION_ID;
 
     ObjectNode node =
-        buildSchemaPropagationJson(workspaceId, workspaceName, connectionId, connectionName, sourceId, sourceName, diff, recipient,
-            transactionalMessageId);
+        buildSchemaPropagationJson(notification, recipient, transactionalMessageId);
 
     String payload = Jsons.serialize(node);
     return notifyByEmail(payload);
@@ -250,15 +230,9 @@ public class CustomerioNotificationClient extends NotificationClient {
 
   @NotNull
   @VisibleForTesting
-  static ObjectNode buildSchemaPropagationJson(UUID workspaceId,
-                                               String workspaceName,
-                                               UUID connectionId,
-                                               String connectionName,
-                                               UUID sourceId,
-                                               String sourceName,
-                                               CatalogDiff diff,
-                                               String recipient,
-                                               String transactionalMessageId) {
+  static ObjectNode buildSchemaPropagationJson(final SchemaUpdateNotification notification,
+                                               final String recipient,
+                                               final String transactionalMessageId) {
     ObjectMapper mapper = new ObjectMapper();
     ObjectNode node = mapper.createObjectNode();
     node.put("transactional_message_id", transactionalMessageId);
@@ -269,14 +243,15 @@ public class CustomerioNotificationClient extends NotificationClient {
     node.set("identifiers", identifiersNode);
 
     ObjectNode messageDataNode = mapper.createObjectNode();
-    messageDataNode.put("connection_name", connectionName);
-    messageDataNode.put("connection_id", connectionId.toString());
-    messageDataNode.put("workspace_id", workspaceId.toString());
-    messageDataNode.put("workspace_name", workspaceName);
+    messageDataNode.put("connection_name", notification.getConnectionInfo().getName());
+    messageDataNode.put("connection_id", notification.getConnectionInfo().getId().toString());
+    messageDataNode.put("workspace_id", notification.getWorkspace().getId().toString());
+    messageDataNode.put("workspace_name", notification.getWorkspace().getName());
 
     ObjectNode changesNode = mapper.createObjectNode();
     messageDataNode.set("changes", changesNode);
 
+    var diff = notification.getCatalogDiff();
     var newStreams = diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.ADD_STREAM).toList();
     ArrayNode newStreamsNodes = mapper.createArrayNode();
     changesNode.set("new_streams", newStreamsNodes);
@@ -318,10 +293,9 @@ public class CustomerioNotificationClient extends NotificationClient {
         }
       }
     }
-
-    messageDataNode.put("source", sourceName);
-    messageDataNode.put("source_name", sourceName);
-    messageDataNode.put("source_id", sourceId.toString());
+    messageDataNode.put("source", notification.getSourceInfo().getName());
+    messageDataNode.put("source_name", notification.getSourceInfo().getName());
+    messageDataNode.put("source_id", notification.getSourceInfo().getId().toString());
 
     node.set("message_data", messageDataNode);
 

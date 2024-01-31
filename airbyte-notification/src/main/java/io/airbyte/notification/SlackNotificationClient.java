@@ -16,6 +16,8 @@ import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.SlackNotificationConfiguration;
+import io.airbyte.notification.messages.SchemaUpdateNotification;
+import io.airbyte.notification.messages.SyncSummary;
 import io.airbyte.notification.slack.Field;
 import io.airbyte.notification.slack.Notification;
 import io.airbyte.notification.slack.Section;
@@ -54,41 +56,31 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifyJobFailure(final String receiverEmail,
-                                  final String sourceConnector,
-                                  final String destinationConnector,
-                                  final String connectionName,
-                                  final String jobDescription,
-                                  final String logUrl,
-                                  final Long jobId)
+  public boolean notifyJobFailure(final SyncSummary summary,
+                                  final String receiverEmail)
       throws IOException, InterruptedException {
     return notifyFailure(renderTemplate(
         "slack/failure_slack_notification_template.txt",
-        connectionName,
-        sourceConnector,
-        destinationConnector,
-        jobDescription,
-        logUrl,
-        String.valueOf(jobId)));
+        summary.getConnectionInfo().getName(),
+        summary.getSourceInfo().getName(),
+        summary.getDestinationInfo().getName(),
+        summary.getErrorMessage(),
+        summary.getConnectionInfo().getUrl(),
+        String.valueOf(summary.getJobId())));
   }
 
   @Override
-  public boolean notifyJobSuccess(final String receiverEmail,
-                                  final String sourceConnector,
-                                  final String destinationConnector,
-                                  final String connectionName,
-                                  final String jobDescription,
-                                  final String logUrl,
-                                  final Long jobId)
+  public boolean notifyJobSuccess(final SyncSummary summary,
+                                  final String receiverEmail)
       throws IOException, InterruptedException {
     return notifySuccess(renderTemplate(
         "slack/success_slack_notification_template.txt",
-        connectionName,
-        sourceConnector,
-        destinationConnector,
-        jobDescription,
-        logUrl,
-        String.valueOf(jobId)));
+        summary.getConnectionInfo().getName(),
+        summary.getSourceInfo().getName(),
+        summary.getDestinationInfo().getName(),
+        summary.getErrorMessage(),
+        summary.getConnectionInfo().getUrl(),
+        String.valueOf(summary.getJobId())));
   }
 
   @Override
@@ -158,23 +150,16 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifySchemaPropagated(final UUID workspaceId,
-                                        final String workspaceName,
-                                        final String workspaceUrl,
-                                        final UUID connectionId,
-                                        final String connectionName,
-                                        final String connectionUrl,
-                                        final UUID sourceId,
-                                        final String sourceName,
-                                        final String sourceUrl,
-                                        final CatalogDiff diff,
-                                        final String recipient,
-                                        boolean isBreaking)
+  public boolean notifySchemaPropagated(final SchemaUpdateNotification notification,
+                                        final String recipient)
       throws IOException, InterruptedException {
-    String summary = buildSummary(diff);
+    String summary = buildSummary(notification.getCatalogDiff());
 
-    final String header = String.format("The schema of '%s' has changed.", Notification.createLink(connectionName, connectionUrl));
-    Notification slackNotification = buildNotification(workspaceName, sourceName, summary, header, workspaceUrl, sourceUrl);
+    final String header = String.format("The schema of '%s' has changed.",
+        Notification.createLink(notification.getConnectionInfo().getName(), notification.getConnectionInfo().getUrl()));
+    Notification slackNotification =
+        buildSchemaPropagationNotification(notification.getWorkspace().getName(), notification.getSourceInfo().getName(), summary, header,
+            notification.getWorkspace().getUrl(), notification.getSourceInfo().getUrl());
 
     final String webhookUrl = config.getWebhook();
     if (!Strings.isEmpty(webhookUrl)) {
@@ -252,12 +237,12 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   @NotNull
-  static Notification buildNotification(final String workspaceName,
-                                        final String sourceName,
-                                        final String summary,
-                                        final String header,
-                                        final String workspaceUrl,
-                                        final String sourceUrl) {
+  static Notification buildSchemaPropagationNotification(final String workspaceName,
+                                                         final String sourceName,
+                                                         final String summary,
+                                                         final String header,
+                                                         final String workspaceUrl,
+                                                         final String sourceUrl) {
     Notification slackNotification = new Notification();
     slackNotification.setText(header);
     Section titleSection = slackNotification.addSection();
