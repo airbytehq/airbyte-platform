@@ -1,5 +1,4 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.1.0
-FROM ${JDK_IMAGE} AS connector-sidecar
+FROM amazoncorretto:21 AS connector-sidecar
 
 ARG DOCKER_BUILD_ARCH=amd64
 
