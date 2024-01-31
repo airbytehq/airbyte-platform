@@ -13,7 +13,7 @@ import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
-import { useExperiment } from "hooks/services/Experiment";
+import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
@@ -75,6 +75,7 @@ const MainRoutes: React.FC = () => {
   const isSsoEnabled = organization?.sso ?? false;
   const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
   const isUpdatedOrganizationsUi = useExperiment("settings.organizationsUpdates", false);
+  useExperimentContext("organization", organization?.organizationId);
 
   const analyticsContext = useMemo(
     () => ({
