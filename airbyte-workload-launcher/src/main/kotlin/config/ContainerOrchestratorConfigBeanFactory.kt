@@ -338,8 +338,8 @@ class ContainerOrchestratorConfigBeanFactory {
   fun sidecar(): ResourceRequirements {
     // TODO: Make these env-driven
     return ResourceRequirements()
-      .withMemoryRequest("2000Mi")
-      .withMemoryLimit("2000Mi")
+      .withMemoryRequest("500Mi")
+      .withMemoryLimit("500Mi")
       .withCpuRequest("2")
       .withCpuLimit("2")
   }
