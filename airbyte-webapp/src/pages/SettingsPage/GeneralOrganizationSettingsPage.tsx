@@ -1,7 +1,6 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
-import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
@@ -22,15 +21,11 @@ export const GeneralOrganizationSettingsPage: React.FC = () => {
         <FormattedMessage id="settings.generalSettings" />
       </Heading>
       <Card>
-        <Box p="xl">
-          <UpdateOrganizationSettingsForm />
-        </Box>
+        <UpdateOrganizationSettingsForm />
       </Card>
       {isAccessManagementEnabled && updatedOrganizationsUI && (
         <Card>
-          <Box p="xl">
-            <OrganizationAccessManagementSection />
-          </Box>
+          <OrganizationAccessManagementSection />
         </Card>
       )}
     </FlexContainer>

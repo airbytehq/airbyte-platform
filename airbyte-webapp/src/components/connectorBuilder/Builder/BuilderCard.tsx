@@ -45,7 +45,7 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
   const { formatMessage } = useIntl();
 
   return (
-    <Card className={classNames(className, styles.card)}>
+    <Card className={className} bodyClassName={classNames(styles.card)}>
       {(toggleConfig || label) && (
         <FlexContainer alignItems="center">
           <FlexItem grow>

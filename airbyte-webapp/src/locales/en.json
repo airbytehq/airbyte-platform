@@ -131,7 +131,7 @@
   "form.disable_collection": "Disable Collection",
   "form.replication_method": "Replication Method",
   "form.validationError": "Could not connect with provided credentials",
-  "form.someError": "Sorry. Something went wrong... ",
+  "form.someError": "Sorry. Something went wrong...",
   "form.changesSaved": "Your changes were saved!",
   "form.savedChange": "Change saved!",
   "form.imageCannotFound": "The docker image cannot be found. Please ensure that the input tag points to a valid Airbyte docker image",

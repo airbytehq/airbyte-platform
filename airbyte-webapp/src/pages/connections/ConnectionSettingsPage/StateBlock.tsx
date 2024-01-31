@@ -113,7 +113,7 @@ export const StateBlock: React.FC<StateBlockProps> = ({ connectionId, syncCatalo
   );
 
   return (
-    <Card withPadding>
+    <Card>
       <FlexContainer direction="column">
         {!hasIncrementalStream ? (
           <>

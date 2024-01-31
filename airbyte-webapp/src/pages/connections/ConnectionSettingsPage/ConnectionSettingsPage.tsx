@@ -105,7 +105,7 @@ export const ConnectionSettingsPage: React.FC = () => {
   return (
     <div className={styles.container}>
       <FlexContainer direction="column" justifyContent="flex-start">
-        <Card withPadding>
+        <Card>
           <Heading as="h2" size="sm" className={styles.heading}>
             <FormattedMessage id="connectionForm.connectionSettings" />
           </Heading>

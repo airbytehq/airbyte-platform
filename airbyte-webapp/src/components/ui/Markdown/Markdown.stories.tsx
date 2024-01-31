@@ -11,7 +11,7 @@ export default {
 
 const Template: ComponentStory<typeof Markdown> = (args) => (
   <div>
-    <Card withPadding>
+    <Card>
       <Markdown {...args} />
     </Card>
   </div>

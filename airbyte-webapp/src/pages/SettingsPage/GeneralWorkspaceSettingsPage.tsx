@@ -28,32 +28,26 @@ export const GeneralWorkspaceSettingsPage = () => {
         </Heading>
       </Box>
       <Card>
-        <Box p="xl">
-          <UpdateWorkspaceNameForm />
-        </Box>
+        <UpdateWorkspaceNameForm />
       </Card>
 
       {isAccessManagementEnabled && updatedOrganizationsUI && (
         <Card>
-          <Box p="xl">
-            <FlexContainer direction="column" gap="xl">
-              <WorkspaceAccessManagementSection />
-            </FlexContainer>
-          </Box>
+          <FlexContainer direction="column" gap="xl">
+            <WorkspaceAccessManagementSection />
+          </FlexContainer>
         </Card>
       )}
       {canDeleteWorkspace && (
         <Card>
-          <Box p="xl">
-            <FlexContainer direction="column">
-              <Heading as="h3" size="sm">
-                <FormattedMessage id="settings.general.danger" />
-              </Heading>
-              <FlexContainer>
-                <DeleteWorkspace />
-              </FlexContainer>
+          <FlexContainer direction="column">
+            <Heading as="h3" size="sm">
+              <FormattedMessage id="settings.general.danger" />
+            </Heading>
+            <FlexContainer>
+              <DeleteWorkspace />
             </FlexContainer>
-          </Box>
+          </FlexContainer>
         </Card>
       )}
     </FlexContainer>

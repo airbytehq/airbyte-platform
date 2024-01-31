@@ -70,7 +70,7 @@ export const SelectDestination: React.FC = () => {
         {!searchParams.get(DESTINATION_DEFINITION_PARAM) && (
           <Box px="md">
             <PageContainer centered>
-              <Card withPadding>
+              <Card>
                 <Heading as="h2">
                   <FormattedMessage id="connectionForm.defineDestination" />
                 </Heading>

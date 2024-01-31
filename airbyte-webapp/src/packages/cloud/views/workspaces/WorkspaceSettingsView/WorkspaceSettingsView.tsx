@@ -30,31 +30,25 @@ export const WorkspaceSettingsView: React.FC = () => {
         </Heading>
       </Box>
       <Card>
-        <Box p="xl">
-          <UpdateCloudWorkspaceName />
-        </Box>
+        <UpdateCloudWorkspaceName />
       </Card>
       {hasSSORealm && updatedOrganizationsUI && (
         <Card>
-          <Box p="xl">
-            <FlexContainer direction="column" gap="xl">
-              <WorkspaceAccessManagementSection />
-            </FlexContainer>
-          </Box>
+          <FlexContainer direction="column" gap="xl">
+            <WorkspaceAccessManagementSection />
+          </FlexContainer>
         </Card>
       )}
       {canDeleteWorkspace && (
         <Card>
-          <Box p="xl">
-            <FlexContainer direction="column">
-              <Heading as="h3" size="sm">
-                <FormattedMessage id="settings.general.danger" />
-              </Heading>
-              <FlexContainer>
-                <DeleteCloudWorkspace />
-              </FlexContainer>
+          <FlexContainer direction="column">
+            <Heading as="h3" size="sm">
+              <FormattedMessage id="settings.general.danger" />
+            </Heading>
+            <FlexContainer>
+              <DeleteCloudWorkspace />
             </FlexContainer>
-          </Box>
+          </FlexContainer>
         </Card>
       )}
     </FlexContainer>
