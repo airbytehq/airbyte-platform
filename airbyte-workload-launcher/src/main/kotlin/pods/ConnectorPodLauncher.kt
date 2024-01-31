@@ -36,7 +36,7 @@ class ConnectorPodLauncher(
   @Named("checkOrchestratorReqs") private val checkReqs: ResourceRequirements,
   @Named("sidecarReqs") private val sidecarReqs: ResourceRequirements,
   @Named("checkEnvVars") private val envVars: List<EnvVar>,
-  @Named("orchestratorEnvVars") private val sidecarEnvVars: List<EnvVar>,
+  @Named("checkSideCarEnvVars") private val checkSideCarEnvVars: List<EnvVar>,
   @Named("checkContainerPorts") private val containerPorts: List<ContainerPort>,
   @Named("sidecarKubeContainerInfo") private val sidecarContainerInfo: KubeContainerInfo,
   @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
@@ -253,7 +253,7 @@ class ConnectorPodLauncher(
       .withImagePullPolicy(sidecarContainerInfo.pullPolicy)
 //      .withCommand("sh", "-c", "docker run")
       .withWorkingDir(KubePodProcess.CONFIG_DIR)
-      .withEnv(sidecarEnvVars + extraKubeEnv)
+      .withEnv(checkSideCarEnvVars + extraKubeEnv)
       .withVolumeMounts(volumeMounts)
       .withResources(KubePodProcess.getResourceRequirementsBuilder(sidecarReqs).build())
       .build()

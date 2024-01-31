@@ -304,11 +304,21 @@ class ContainerOrchestratorConfigBeanFactory {
 
   @Singleton
   @Named("checkEnvVars")
-  fun orchestratorEnvVars(
+  fun checkEnvVars(
     @Named("checkWorkerConfigs") checkWorkerConfigs: WorkerConfigs,
   ): List<EnvVar> {
     return checkWorkerConfigs.envMap
       .map { EnvVar(it.key, it.value, null) }
+      .toList()
+  }
+
+  @Singleton
+  @Named("checkSideCarEnvVars")
+  fun checkSideCarEnvVars(
+    @Named("orchestratorEnvVars") envList: List<EnvVar>,
+  ): List<EnvVar> {
+    return envList
+      .filter { it.name != JAVA_OPTS_ENV_VAR }
       .toList()
   }
 
