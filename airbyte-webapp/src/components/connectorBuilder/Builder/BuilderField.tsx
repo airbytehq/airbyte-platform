@@ -37,6 +37,7 @@ interface ArrayFieldProps {
   error: boolean;
   itemType?: string;
   directionalStyle?: boolean;
+  uniqueValues?: boolean;
 }
 
 interface BaseFieldProps {
@@ -63,7 +64,13 @@ export type BuilderFieldProps = BaseFieldProps &
       }
     | { type: "date" | "date-time"; onChange?: (newValue: string) => void }
     | { type: "boolean"; onChange?: (newValue: boolean) => void; disabled?: boolean; disabledTooltip?: string }
-    | { type: "array"; onChange?: (newValue: string[]) => void; itemType?: string; directionalStyle?: boolean }
+    | {
+        type: "array";
+        onChange?: (newValue: string[]) => void;
+        itemType?: string;
+        directionalStyle?: boolean;
+        uniqueValues?: boolean;
+      }
     | { type: "textarea"; onChange?: (newValue: string[]) => void }
     | { type: "jsoneditor"; onChange?: (newValue: string[]) => void }
     | {
@@ -93,7 +100,15 @@ const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, 
   );
 };
 
-const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, itemType, directionalStyle }) => {
+const ArrayField: React.FC<ArrayFieldProps> = ({
+  name,
+  value,
+  setValue,
+  error,
+  itemType,
+  directionalStyle,
+  uniqueValues,
+}) => {
   return (
     <TagInput
       name={name}
@@ -102,6 +117,7 @@ const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, i
       itemType={itemType}
       error={error}
       directionalStyle={directionalStyle}
+      uniqueValues={uniqueValues}
     />
   );
 };
@@ -292,6 +308,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
             setValue={setValue}
             error={hasError}
             directionalStyle={props.directionalStyle ?? true}
+            uniqueValues={props.uniqueValues}
           />
         </div>
       )}

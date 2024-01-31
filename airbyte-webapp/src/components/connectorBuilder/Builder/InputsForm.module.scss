@@ -1,6 +1,10 @@
 @use "scss/variables";
 @use "scss/colors";
 
+.inputForm {
+  overflow-y: scroll;
+}
+
 .inputFormBody {
   gap: variables.$spacing-lg;
   display: flex;

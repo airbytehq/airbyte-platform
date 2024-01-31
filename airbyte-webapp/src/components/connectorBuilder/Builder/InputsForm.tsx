@@ -217,6 +217,7 @@ const InputModal = ({
       onClose={onClose}
     >
       <form
+        className={styles.inputForm}
         onSubmit={(e) => {
           // stop propagation to avoid submitting the outer form as this form is nested
           e.stopPropagation();
@@ -273,6 +274,7 @@ const InputModal = ({
                   path="definition.enum"
                   type="array"
                   optional
+                  uniqueValues
                   label={formatMessage({ id: "connectorBuilder.inputModal.enum" })}
                   tooltip={formatMessage({ id: "connectorBuilder.inputModal.enumTooltip" })}
                 />
