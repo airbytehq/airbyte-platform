@@ -47,29 +47,21 @@ configurations.all {
 
 dependencies {
     kapt(platform(libs.micronaut.bom))
-    kapt(libs.micronaut.inject.java)
 
     implementation(libs.bundles.log4j)
     implementation(libs.bundles.micronaut.light)
-    implementation(libs.bundles.micronaut.metrics)
     implementation(libs.google.cloud.storage)
     implementation(libs.kotlin.logging)
-    implementation(libs.micronaut.jackson.databind)
-    // implementation(libs.micronaut.kotlin.extensions)
     implementation(libs.slf4j.api)
-    implementation(libs.bundles.datadog)
     implementation(platform(libs.micronaut.bom))
 
-    implementation(project(":airbyte-api")) {
-
-    }
+    implementation(project(":airbyte-api"))
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-converters"))
     implementation(project(":airbyte-commons-protocol"))
     implementation(project(":airbyte-commons-worker"))
-    implementation(project(":airbyte-config:init")) // mysteriously necessary
     implementation(project(":airbyte-config:config-models"))
-    implementation(project(":airbyte-metrics:metrics-lib"))
+    implementation(project(":airbyte-metrics:metrics-lib")) // necessary for doc store
     implementation(libs.airbyte.protocol)
 
     runtimeOnly(libs.kotlin.reflect)

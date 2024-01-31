@@ -3,13 +3,6 @@ micronaut:
     name: airbyte-connector-sidecar
   server:
     enable: false
-  #  executors:
-  #    control-message:
-  #      type: fixed
-  #      n-threads: ${CONTROL_MESSAGE_EXECUTOR_THREADS:1}
-  #    stream-status:
-  #      type: fixed
-  #      n-threads: ${STREAM_STATUS_EXECUTOR_THREADS:1}
   metrics:
     enabled: false
     export:
@@ -17,7 +10,6 @@ micronaut:
         enabled: false
   security:
     enabled: false
-#
 airbyte:
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   role: ${AIRBYTE_ROLE:dev}
@@ -76,9 +68,6 @@ airbyte:
         name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
         value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
       host: ${INTERNAL_API_HOST}
-  tracking:
-    strategy: ${TRACKING_STRATEGY:LOGGING}
-    write-key: ${SEGMENT_WRITE_KEY:}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
@@ -89,29 +78,3 @@ airbyte:
       max: ${WORKLOAD_API_MAX_RETRIES:5}
   workload:
     enabled: false
-#
-endpoints:
-  beans:
-    enabled: false
-    sensitive: false
-  env:
-    enabled: false
-    sensitive: false
-  health:
-    enabled: false
-    sensitive: false
-  info:
-    enabled: false
-    sensitive: true
-  loggers:
-    enabled: false
-    sensitive: true
-  refresh:
-    enabled: false
-    sensitive: true
-  routes:
-    enabled: false
-    sensitive: false
-  threaddump:
-    enabled: false
-    sensitive: true
