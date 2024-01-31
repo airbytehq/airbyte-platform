@@ -35,17 +35,17 @@ gradleEnterprise {
     }
 }
 
+val isCiServer = System.getenv().containsKey("CI")
+
 gradleEnterprise {
     buildScan {
+        isUploadInBackground = !isCiServer // Disable async upload so that the containers doesn't terminate the upload
         buildScanPublished {
             file("scan-journal.log").writeText("${java.util.Date()} - $buildScanId - ${buildScanUri}\n")
         }
     }
 }
 
-
-val isCiServer = System.getenv().containsKey("CI")
-//
 buildCache {
     // we use a different caching mechanism for Dagger builds
     if (System.getenv("DAGGER") == null) {
