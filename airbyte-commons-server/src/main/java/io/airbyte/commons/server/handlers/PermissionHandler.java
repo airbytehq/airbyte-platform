@@ -309,10 +309,9 @@ public class PermissionHandler {
       } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
-      // If the userPermission is an organization permission and the workspace we're checking doesn't have
-      // an organization, just skip this check.
+      // If the workspace is not in any organization, return true
       if (requestedWorkspaceOrganizationId == null) {
-        return false;
+        return true;
       }
       return !requestedWorkspaceOrganizationId.equals(userPermission.getOrganizationId());
     }
