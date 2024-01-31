@@ -47,6 +47,7 @@ configurations.all {
 
 dependencies {
     kapt(platform(libs.micronaut.bom))
+    kapt(libs.bundles.micronaut.annotation.processor)
 
     implementation(libs.bundles.log4j)
     implementation(libs.bundles.micronaut.light)
