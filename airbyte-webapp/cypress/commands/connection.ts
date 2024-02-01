@@ -62,10 +62,6 @@ export const createTestConnection = (sourceName: string, destinationName: string
       createLocalJsonDestination(destinationName);
   }
 
-  // TODO is this actually needed?
-  // eslint-disable-next-line cypress/no-unnecessary-waiting
-  cy.wait(5000);
-
   cy.get("a[data-testid='connections-step']").click();
   openCreateConnection();
 

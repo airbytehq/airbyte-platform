@@ -34,25 +34,25 @@ export const editProjectBuilder = (name: string) => {
 };
 
 export const startFromScratch = () => {
-  cy.get(startFromScratchButton).click({ force: true });
+  cy.get(startFromScratchButton).click();
 };
 
 export const enterName = (name: string) => {
   cy.get(nameInput).clear();
-  cy.get(nameInput).type(name, { force: true });
+  cy.get(nameInput).type(name);
 };
 
 export const enterUrlBase = (urlBase: string) => {
-  cy.get(urlBaseInput).type(urlBase, { force: true });
+  cy.get(urlBaseInput).type(urlBase);
 };
 
 export const enterRecordSelector = (recordSelector: string) => {
-  cy.get(recordSelectorInput).first().type(recordSelector, { force: true });
-  cy.get(recordSelectorInput).first().type("{enter}", { force: true });
+  cy.get(recordSelectorInput).first().type(recordSelector);
+  cy.get(recordSelectorInput).first().type("{enter}");
 };
 
-const selectFromDropdown = (selector: string, value: string) => {
-  cy.get(`${selector} .react-select__dropdown-indicator`).last().click({ force: true });
+export const selectFromDropdown = (selector: string, value: string) => {
+  cy.get(`${selector} .react-select__dropdown-indicator`).last().click();
 
   cy.get(`.react-select__option`).contains(value).click();
 };
@@ -75,7 +75,7 @@ export const openTestInputs = () => {
 };
 
 export const enterTestInputs = ({ apiKey }: { apiKey: string }) => {
-  cy.get(apiKeyInput).type(apiKey, { force: true });
+  cy.get(apiKeyInput).type(apiKey);
 };
 
 export const goToTestPage = (page: number) => {
@@ -83,11 +83,8 @@ export const goToTestPage = (page: number) => {
 };
 
 export const enablePagination = () => {
+  // force: true is needed because the input has display: none, as we don't want to show default checkboxes
   cy.get(togglePaginationInput).check({ force: true });
-};
-
-export const disablePagination = () => {
-  cy.get(togglePaginationInput).uncheck({ force: true });
 };
 
 export const configureLimitOffsetPagination = (
@@ -97,29 +94,23 @@ export const configureLimitOffsetPagination = (
   offsetInto: string,
   offsetFieldName: string
 ) => {
-  cy.get(limitInput).type(limit, { force: true });
+  cy.get(limitInput).type(limit);
   selectFromDropdown(injectLimitInto, limitInto);
   cy.get(injectLimitFieldName).type(limitFieldName);
   selectFromDropdown(injectOffsetInto, offsetInto);
-  cy.get(injectOffsetFieldName).type(offsetFieldName, { force: true });
+  cy.get(injectOffsetFieldName).type(offsetFieldName);
 };
 
 export const enableParameterizedRequests = () => {
+  // force: true is needed because the input has display: none, as we don't want to show default checkboxes
   cy.get(toggleParameterizedRequestsInput).check({ force: true });
-};
-
-export const disableStreamSlicer = () => {
-  cy.get(toggleParameterizedRequestsInput).uncheck({ force: true });
 };
 
 export const configureParameters = (values: string, cursor_field: string) => {
   cy.get('[data-testid="tag-input-formValues.streams.0.parameterizedRequests.0.values.value"] input[type="text"]').type(
-    values,
-    {
-      force: true,
-    }
+    values
   );
-  cy.get("[name='formValues.streams.0.parameterizedRequests.0.cursor_field']").type(cursor_field, { force: true });
+  cy.get("[name='formValues.streams.0.parameterizedRequests.0.cursor_field']").type(cursor_field);
 };
 
 export const getSlicesFromDropdown = () => {
@@ -143,22 +134,16 @@ export const getDetectedSchemaElement = () => {
   return cy.get('pre[class*="SchemaDiffView"]');
 };
 
-export const disableAutoImportSchema = () => {
-  openStreamSchemaTab();
-  cy.get("label").contains("Automatically import detected schema").click();
-  openStreamConfigurationTab();
-};
-
 export const addStream = () => {
   cy.get(addStreamButton).click();
 };
 
 export const enterStreamName = (streamName: string) => {
-  cy.get(streamNameInput).type(streamName, { force: true });
+  cy.get(streamNameInput).type(streamName);
 };
 
 export const enterUrlPathFromForm = (urlPath: string) => {
-  cy.get(streamUrlPathFromModal).type(urlPath, { force: true });
+  cy.get(streamUrlPathFromModal).type(urlPath);
 };
 
 export const getUrlPathInput = () => {
@@ -168,7 +153,7 @@ export const getUrlPathInput = () => {
 export const enterUrlPath = (urlPath: string) => {
   cy.get('[name="formValues.streams.0.urlPath"]').focus();
   cy.get('[name="formValues.streams.0.urlPath"]').clear();
-  cy.get('[name="formValues.streams.0.urlPath"]').type(urlPath, { force: true });
+  cy.get('[name="formValues.streams.0.urlPath"]').type(urlPath);
 };
 
 export const submitForm = () => {
