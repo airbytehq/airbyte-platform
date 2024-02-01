@@ -6,6 +6,7 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 
 import { HistoricalOverview } from "area/connection/components";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperiment } from "hooks/services/Experiment";
 
@@ -20,7 +21,9 @@ export const ConnectionStatusCard: React.FC = () => {
   } = connection;
   const streamCount = streams.reduce((count, stream) => count + (stream.config?.selected ? 1 : 0), 0);
 
-  const showHistoricalOverview = useExperiment("connection.streamCentricUI.historicalOverview", false);
+  const showHistoricalOverviewFeature = useFeature(FeatureItem.ConnectionHistoryGraphs);
+  const showHistoricalOverviewExperiment = useExperiment("connection.streamCentricUI.historicalOverview", false);
+  const showHistoricalOverview = showHistoricalOverviewFeature && showHistoricalOverviewExperiment;
 
   return (
     <Card noPadding>

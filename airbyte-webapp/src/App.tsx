@@ -7,11 +7,14 @@ import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import { DevToolsToggle } from "components/DevToolsToggle";
 
 import { QueryProvider, useGetInstanceConfiguration } from "core/api";
-import { InstanceConfigurationResponseTrackingStrategy } from "core/api/types/AirbyteClient";
+import {
+  InstanceConfigurationResponseEdition,
+  InstanceConfigurationResponseTrackingStrategy,
+} from "core/api/types/AirbyteClient";
 import { config, ConfigServiceProvider } from "core/config";
 import { AnalyticsProvider } from "core/services/analytics";
 import { OSSAuthService } from "core/services/auth";
-import { defaultOssFeatures, FeatureService } from "core/services/features";
+import { defaultOssFeatures, defaultEnterpriseFeatures, FeatureService } from "core/services/features";
 import { I18nProvider } from "core/services/i18n";
 import { BlockerService } from "core/services/navigation";
 import { isDevelopment } from "core/utils/isDevelopment";
@@ -34,13 +37,17 @@ const StyleProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children })
 
 const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const instanceConfig = useGetInstanceConfiguration();
+  const instanceFeatures =
+    instanceConfig.edition === InstanceConfigurationResponseEdition.community
+      ? defaultOssFeatures
+      : defaultEnterpriseFeatures;
 
   return (
     <AnalyticsProvider
       disableSegment={instanceConfig.trackingStrategy !== InstanceConfigurationResponseTrackingStrategy.segment}
     >
       <AppMonitoringServiceProvider>
-        <FeatureService features={defaultOssFeatures} instanceConfig={instanceConfig}>
+        <FeatureService features={instanceFeatures} instanceConfig={instanceConfig}>
           <NotificationService>
             <OSSAuthService>
               <ConfirmationModalService>

@@ -14,6 +14,7 @@ export enum FeatureItem {
   AllowSyncSubOneHourCronExpressions = "ALLOW_SYNC_SUB_ONE_HOUR_CRON_EXPRESSIONS",
   APITokenManagement = "API_TOKEN_MANAGEMENT",
   Billing = "BILLING",
+  ConnectionHistoryGraphs = "CONNECTION_HISTORY_GRAPHS",
   ShowAdminWarningInWorkspace = "SHOW_ADMIN_WARNING_IN_WORKSPACE",
   KeycloakAuthentication = "KEYCLOAK_AUTHENTICATION",
   EmailNotifications = "EMAIL_NOTIFICATIONS",
