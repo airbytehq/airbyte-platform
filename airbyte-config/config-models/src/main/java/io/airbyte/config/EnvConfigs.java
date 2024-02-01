@@ -51,6 +51,7 @@ public class EnvConfigs implements Configs {
   public static final String WORKSPACE_DOCKER_MOUNT = "WORKSPACE_DOCKER_MOUNT";
   public static final String LOCAL_ROOT = "LOCAL_ROOT";
   public static final String LOCAL_DOCKER_MOUNT = "LOCAL_DOCKER_MOUNT";
+  public static final String LOG4J_CONFIGURATION_FILE = "LOG4J_CONFIGURATION_FILE";
   public static final String CONFIG_ROOT = "CONFIG_ROOT";
   public static final String DOCKER_NETWORK = "DOCKER_NETWORK";
   public static final String JOB_ERROR_REPORTING_STRATEGY = "JOB_ERROR_REPORTING_STRATEGY";

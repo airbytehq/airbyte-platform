@@ -43,6 +43,7 @@ public class OrchestratorConstants {
           EnvConfigs.JOB_ISOLATED_KUBE_NODE_SELECTORS,
           EnvConfigs.USE_CUSTOM_NODE_SELECTOR,
           EnvConfigs.LOCAL_DOCKER_MOUNT,
+          EnvConfigs.LOG4J_CONFIGURATION_FILE,
           EnvConfigs.WORKSPACE_DOCKER_MOUNT,
           EnvConfigs.WORKSPACE_ROOT,
           EnvConfigs.JOB_KUBE_LABELS,
