@@ -20,16 +20,16 @@ fun main(args: Array<String>) {
   logger.info { "Context started" }
   logger.info { stopwatch }
 
-  var sidecar: Sidecar?
+  var connectorWatcher: ConnectorWatcher?
   stopwatch.start().use {
-    sidecar = applicationContext?.getBean(Sidecar::class.java)
+    connectorWatcher = applicationContext?.getBean(ConnectorWatcher::class.java)
   }
 
   logger.info { "Sidecar created" }
   logger.info { stopwatch }
 
   stopwatch.start().use {
-    sidecar?.run()
+    connectorWatcher?.run()
   }
   logger.info { "Sidecar done" }
   logger.info { stopwatch }

@@ -1,6 +1,7 @@
 package io.airbyte.connectorSidecar
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.converters.ConnectorConfigUpdater
 import io.airbyte.commons.enums.Enums
 import io.airbyte.commons.io.IOs
@@ -17,23 +18,24 @@ import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.helper.FailureHelper.ConnectorCommand
 import io.airbyte.workers.internal.AirbyteStreamFactory
-import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.io.IOException
 import java.io.InputStream
 import java.util.Optional
 import java.util.stream.Collectors
 
-private val logger = KotlinLogging.logger {}
-
 @Singleton
-class Worker(val connectorConfigUpdater: ConnectorConfigUpdater) {
+class ConnectorMessageProcessor(val connectorConfigUpdater: ConnectorConfigUpdater) {
   fun runCheck(
     inputStream: InputStream,
     streamFactory: AirbyteStreamFactory,
     input: StandardCheckConnectionInput,
     exitCode: Int,
   ): ConnectorJobOutput {
+    if (exitCode != 0) {
+      throw WorkerException("Check operation returned a non zero exit code, the exit code is: $exitCode")
+    }
+
     try {
       val jobOutput: ConnectorJobOutput =
         ConnectorJobOutput()
@@ -47,10 +49,6 @@ class Worker(val connectorConfigUpdater: ConnectorConfigUpdater) {
 
       val failureReason = getJobFailureReasonFromMessages(ConnectorJobOutput.OutputType.CHECK_CONNECTION, messagesByType)
       failureReason.ifPresent { failureReason: FailureReason? -> jobOutput.failureReason = failureReason }
-
-      if (exitCode != 0) {
-        throw WorkerException("Check operation returned a non zero exit code, the exit code is: $exitCode")
-      }
 
       if (connectionStatus.isPresent) {
         val output =
@@ -71,7 +69,8 @@ class Worker(val connectorConfigUpdater: ConnectorConfigUpdater) {
     }
   }
 
-  private fun updateConfigFromControlMessage(
+  @VisibleForTesting
+  fun updateConfigFromControlMessage(
     input: StandardCheckConnectionInput,
     messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>>,
     inputConfig: JsonNode,
@@ -119,7 +118,7 @@ class Worker(val connectorConfigUpdater: ConnectorConfigUpdater) {
       }
     }
 
-    private fun getTraceMessageFromMessagesByType(messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>>): Optional<AirbyteTraceMessage> {
+    fun getTraceMessageFromMessagesByType(messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>>): Optional<AirbyteTraceMessage> {
       return messagesByType.getOrDefault(AirbyteMessage.Type.TRACE, java.util.ArrayList()).stream()
         .map { obj: AirbyteMessage -> obj.trace }
         .filter { trace: AirbyteTraceMessage -> trace.type == AirbyteTraceMessage.Type.ERROR }

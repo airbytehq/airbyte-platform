@@ -34,6 +34,6 @@ class ConfigFactory {
   @Singleton
   @Named("output")
   fun output(): Path {
-    return Path.of(OrchestratorConstants.OUTPUT_FILE)
+    return Path.of(OrchestratorConstants.CHECK_JOB_OUTPUT_FILENAME)
   }
 }
