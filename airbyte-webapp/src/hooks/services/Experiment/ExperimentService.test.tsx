@@ -5,14 +5,14 @@ import { EMPTY, Subject } from "rxjs";
 import { Experiments } from "./experiments";
 import { ExperimentProvider, ExperimentService, useExperiment } from "./ExperimentService";
 
-type TestExperimentValueType = Experiments["connector.orderOverwrite"];
+type TestExperimentValueType = Experiments["connector.airbyteCloudIpAddresses"];
 
-const TEST_EXPERIMENT_KEY = "connector.orderOverwrite";
+const TEST_EXPERIMENT_KEY = "connector.airbyteCloudIpAddresses";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getExperiment: ExperimentService["getExperiment"] = (key): any => {
   if (key === TEST_EXPERIMENT_KEY) {
-    return { test: 13 };
+    return "10.0.0.0,10.1.0.0";
   }
   throw new Error(`${key} not mocked for testing`);
 };
@@ -35,8 +35,8 @@ describe("ExperimentService", () => {
           {children}
         </ExperimentProvider>
       );
-      const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY, { test: 10 }), { wrapper });
-      expect(result.current).toEqual({ test: 13 });
+      const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY, "10.42.0.0"), { wrapper });
+      expect(result.current).toEqual("10.0.0.0,10.1.0.0");
     });
 
     it("should return the defaultValue if ExperimentService provides undefined", () => {
@@ -53,13 +53,13 @@ describe("ExperimentService", () => {
           {children}
         </ExperimentProvider>
       );
-      const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY, { test: 10 }), { wrapper });
-      expect(result.current).toEqual({ test: 10 });
+      const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY, "10.42.0.0"), { wrapper });
+      expect(result.current).toEqual("10.42.0.0");
     });
 
     it("should return the default value if no ExperimentService is provided", () => {
-      const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY, { test: 42 }));
-      expect(result.current).toEqual({ test: 42 });
+      const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY, "10.42.0.0"));
+      expect(result.current).toEqual("10.42.0.0");
     });
 
     it("should rerender whenever the ExperimentService emits a new value", () => {
@@ -77,14 +77,14 @@ describe("ExperimentService", () => {
           {children}
         </ExperimentProvider>
       );
-      const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY, { test: 10 }), {
+      const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY, "10.42.0.0"), {
         wrapper,
       });
-      expect(result.current).toEqual({ test: 13 });
+      expect(result.current).toEqual("10.0.0.0,10.1.0.0");
       act(() => {
-        subject.next({ test: 9000 });
+        subject.next("10.10.10.10");
       });
-      expect(result.current).toEqual({ test: 9000 });
+      expect(result.current).toEqual("10.10.10.10");
     });
   });
 });
