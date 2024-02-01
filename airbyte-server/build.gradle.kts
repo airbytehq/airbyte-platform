@@ -47,6 +47,7 @@ dependencies {
     implementation(project(":airbyte-commons-converters"))
     implementation(project(":airbyte-commons-license"))
     implementation(project(":airbyte-commons-micronaut"))
+    implementation(project(":airbyte-commons-micronaut-security"))
     implementation(project(":airbyte-commons-temporal"))
     implementation(project(":airbyte-commons-temporal-core"))
     implementation(project(":airbyte-commons-server"))

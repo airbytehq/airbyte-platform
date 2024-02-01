@@ -21,8 +21,7 @@ export const SettingsPage: React.FC = () => {
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
-  const apiTokenManagement = false;
-  // const apiTokenManagement = useFeature(FeatureItem.APITokenManagement);
+  const apiTokenManagement = useFeature(FeatureItem.APITokenManagement);
   const isUpdatedOrganizationsUi = useExperiment("settings.organizationsUpdates", false);
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
@@ -49,14 +48,14 @@ export const SettingsPage: React.FC = () => {
               name={formatMessage({ id: "settings.account" })}
               to={SettingsRoutePaths.Account}
             />
+            {apiTokenManagement && (
+              <SettingsLink
+                iconType="grid"
+                name={formatMessage({ id: "settings.applications" })}
+                to={SettingsRoutePaths.Applications}
+              />
+            )}
           </SettingsNavigationBlock>
-          {apiTokenManagement && (
-            <SettingsLink
-              iconType="grid"
-              name={formatMessage({ id: "settings.applications" })}
-              to={SettingsRoutePaths.Applications}
-            />
-          )}
           {canViewWorkspaceSettings && (
             <SettingsNavigationBlock title={formatMessage({ id: "settings.workspaceSettings" })}>
               {multiWorkspaceUI && (

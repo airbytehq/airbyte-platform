@@ -9,11 +9,11 @@ dependencies {
 
     implementation(platform(libs.micronaut.bom))
     implementation(libs.bundles.micronaut)
+    implementation(libs.micronaut.security)
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
 
     implementation(project(":airbyte-commons"))
-    implementation(project(":airbyte-config:config-models"))
 
     testAnnotationProcessor(platform(libs.micronaut.bom))
     testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)

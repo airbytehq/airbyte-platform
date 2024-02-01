@@ -7,7 +7,6 @@ import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { ExternalLink } from "components/ui/Link";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 import { MaskedText } from "components/ui/Text/MaskedText";
@@ -94,19 +93,13 @@ export const ApplicationSettingsView = () => {
           </Heading>
           <InfoTooltip>
             <Text inverseColor align="center">
-              <FormattedMessage
-                id="settings.applications.tooltip"
-                values={{
-                  // todo: add link to docs once available
-                  learnMoreLink: (children) => <ExternalLink href="">{children}</ExternalLink>,
-                }}
-              />
+              <FormattedMessage id="settings.applications.tooltip" />
             </Text>
           </InfoTooltip>
         </FlexContainer>
         <CreateApplicationControl />
       </FlexContainer>
-      <Box py="lg" px="xl">
+      <Box py="lg">
         {applications.length ? (
           <Table columns={columns} data={applications} variant="light" />
         ) : (

@@ -67,7 +67,7 @@ export const useDeleteApplication = () => {
 
   return useMutation(
     async (applicationId: string) => {
-      return deleteApplication(applicationId, requestOptions);
+      return deleteApplication({ applicationId }, requestOptions);
     },
     {
       onSuccess: (_data, applicationId) => {

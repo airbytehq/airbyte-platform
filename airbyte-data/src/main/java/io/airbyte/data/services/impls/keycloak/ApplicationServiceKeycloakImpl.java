@@ -5,6 +5,7 @@
 package io.airbyte.data.services.impls.keycloak;
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
+import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
 import io.airbyte.config.Application;
 import io.airbyte.config.User;
 import io.airbyte.data.services.ApplicationService;
@@ -33,10 +34,13 @@ import org.keycloak.representations.idm.ClientRepresentation;
  *
  */
 @Singleton
+@RequiresAirbyteProEnabled
 public class ApplicationServiceKeycloakImpl implements ApplicationService {
 
   // This number should be kept low or this code will start to do a lot of work.
   public static final int MAX_CREDENTIALS = 2;
+  public static final String USER_ID = "user_id";
+  public static final String CLIENT_ID = "client_id";
   private final AirbyteKeycloakConfiguration keycloakConfiguration;
   private final Keycloak keycloakAdminClient;
 
@@ -91,8 +95,8 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
 
       serviceAccountUser.setAttributes(
           Map.of(
-              "user_id", List.of(String.valueOf(user.getUserId())),
-              "client_id", List.of(client.getClientId())));
+              USER_ID, List.of(String.valueOf(user.getAuthUserId())),
+              CLIENT_ID, List.of(client.getClientId())));
       keycloakAdminClient
           .realm(keycloakConfiguration.getClientRealm())
           .users()
@@ -116,14 +120,14 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
     final var users = keycloakAdminClient
         .realm(keycloakConfiguration.getClientRealm())
         .users()
-        .searchByAttributes("user_id:" + userId.getUserId());
+        .searchByAttributes(USER_ID + ":" + userId.getAuthUserId());
 
     final var existingClient = new ArrayList<ClientRepresentation>();
     for (final var user : users) {
       final var client = keycloakAdminClient
           .realm(keycloakConfiguration.getClientRealm())
           .clients()
-          .findByClientId(user.getAttributes().get("client_id").getFirst())
+          .findByClientId(user.getAttributes().get(CLIENT_ID).getFirst())
           .stream()
           .findFirst();
 
@@ -156,13 +160,13 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
     }
 
     // Get the user_id attribute from the client
-    final var userId = client.get().getAttributes().getOrDefault("user_id", null);
+    final var userId = client.get().getAttributes().getOrDefault(USER_ID, null);
     if (userId == null) {
       throw new BadRequestException("Client does not have a user_id attribute");
     }
 
-    if (!userId.equals(String.valueOf(user.getUserId()))) {
-      throw new BadRequestException("");
+    if (!userId.equals(String.valueOf(user.getAuthUserId()))) {
+      throw new BadRequestException("You do not have permission to delete this Application");
     }
 
     keycloakAdminClient
@@ -185,7 +189,7 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
   public String getToken(String clientId, String clientSecret) {
     final var keycloakClient = KeycloakBuilder
         .builder()
-        .serverUrl(keycloakConfiguration.getProtocol() + "://" + keycloakConfiguration.getHost())
+        .serverUrl(keycloakConfiguration.getServerUrl())
         .realm(keycloakConfiguration.getClientRealm())
         .grantType("client_credentials")
         .clientId(clientId)
@@ -227,7 +231,7 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
     client.setName(name);
 
     var attributes = new HashMap<String, String>();
-    attributes.put("user_id", String.valueOf(user.getUserId()));
+    attributes.put(USER_ID, String.valueOf(user.getAuthUserId()));
     attributes.put("access.token.signed.response.alg", "RS256");
     attributes.put("access.token.lifespan", "31536000");
     attributes.put("use.refresh.tokens", "false");

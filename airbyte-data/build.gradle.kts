@@ -21,6 +21,7 @@ dependencies {
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-auth"))
     implementation(project(":airbyte-commons-protocol"))
+    implementation(project(":airbyte-commons-license"))
     implementation(project(":airbyte-config:config-models"))
     implementation(project(":airbyte-config:config-secrets"))
     implementation(project(":airbyte-db:db-lib"))

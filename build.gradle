@@ -108,6 +108,7 @@ dependencies {
     jacocoAggregation project(":airbyte-commons-auth")
     jacocoAggregation project(":airbyte-commons-license")
     jacocoAggregation project(":airbyte-commons-micronaut")
+    jacocoAggregation project(":airbyte-commons-micronaut-security")
     jacocoAggregation project(":airbyte-commons-server")
     jacocoAggregation project(":airbyte-commons-with-dependencies")
     jacocoAggregation project(":airbyte-connector-builder-server")

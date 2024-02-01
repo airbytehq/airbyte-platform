@@ -69,7 +69,7 @@ const MainViewRoutes: React.FC = () => {
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
-  const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
+  const isTokenManagementEnabled = useFeature(FeatureItem.APITokenManagement);
   const isUpdatedOrganizationsUi = useExperiment("settings.organizationsUpdates", false);
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });

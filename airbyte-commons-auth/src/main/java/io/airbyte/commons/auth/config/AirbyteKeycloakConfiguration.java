@@ -44,4 +44,11 @@ public class AirbyteKeycloakConfiguration {
     return protocol + "://" + hostWithoutTrailingSlash + basePathWithLeadingSlash + "/realms/" + airbyteRealm + keycloakUserInfoURI;
   }
 
+  public String getServerUrl() {
+    return getProtocol()
+        + "://"
+        + getHost()
+        + getBasePath();
+  }
+
 }

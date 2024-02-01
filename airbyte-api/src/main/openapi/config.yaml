@@ -4412,7 +4412,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ApplicationId"
+              $ref: "#/components/schemas/ApplicationIdRequestBody"
         required: true
       tags:
         - applications
@@ -4428,6 +4428,8 @@ paths:
       description: Deletes an Application.
   /v1/applications/create:
     post:
+      tags:
+        - applications
       requestBody:
         content:
           application/json:
@@ -4448,6 +4450,8 @@ paths:
       description: Creates a new Application.
   /v1/applications/token:
     post:
+      tags:
+        - applications
       requestBody:
         content:
           application/json:
@@ -9873,6 +9877,16 @@ components:
           type: string
     ApplicationId:
       type: string
+      format: uuid
+    ApplicationIdRequestBody:
+      type: object
+      required:
+        - applicationId
+      properties:
+        applicationId:
+          $ref: "#/components/schemas/ApplicationId"
+        includeTombstone:
+          type: boolean
     ApplicationReadList:
       required:
         - applications

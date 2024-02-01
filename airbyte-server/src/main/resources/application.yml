@@ -272,6 +272,11 @@ airbyte:
     base-path: ${KEYCLOAK_BASE_PATH:`/auth`}
     airbyte-realm: ${KEYCLOAK_AIRBYTE_REALM:airbyte}
     web-client-id: ${KEYCLOAK_WEB_CLIENT_ID:airbyte-webapp}
+    client-realm: ${KEYCLOAK_CLIENT_REALM:airbyte}
+    client-id: ${KEYCLOAK_CLIENT_ID:admin-cli}
+    realm: ${KEYCLOAK_REALM:master}
+    username: ${KEYCLOAK_ADMIN_USER:airbyteAdmin}
+    password: ${KEYCLOAK_ADMIN_PASSWORD:keycloak123}
 
   connector-builder-server-api:
     base-path: ${CONNECTOR_BUILDER_SERVER_API_HOST:}

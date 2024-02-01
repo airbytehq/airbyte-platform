@@ -22,7 +22,7 @@ public class KeycloakBeanFactory {
   @Singleton
   public Keycloak createKeycloakAdminClient() {
     return KeycloakBuilder.builder()
-        .serverUrl(keycloakConfiguration.getProtocol() + "://" + keycloakConfiguration.getHost())
+        .serverUrl(keycloakConfiguration.getServerUrl())
         .realm(keycloakConfiguration.getRealm())
         .clientId(keycloakConfiguration.getClientId())
         .username(keycloakConfiguration.getUsername())

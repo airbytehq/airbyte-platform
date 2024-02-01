@@ -19,6 +19,7 @@ dependencies {
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-auth"))
     implementation(project(":airbyte-commons-micronaut"))
+    implementation(project(":airbyte-commons-micronaut-security"))
 
     testAnnotationProcessor(platform(libs.micronaut.bom))
     testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
