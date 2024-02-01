@@ -6,6 +6,7 @@ import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
+import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.helper.GsonPksExtractor
@@ -81,9 +82,12 @@ class ConnectorWatchTest {
 
     every { connectorWatcher.readFile(OrchestratorConstants.EXIT_CODE_FILE) } returns "0"
 
+    every { connectorWatcher.readFile(OrchestratorConstants.INTEGRATION_LAUNCHER_CONFIG) } returns
+      Jsons.serialize(IntegrationLauncherConfig())
+
     every { connectorWatcher.areNeededFilesPresent() } returns true
 
-    every { connectorWatcher.getStreamFactory() } returns streamFactory
+    every { connectorWatcher.getStreamFactory(any()) } returns streamFactory
 
     every { connectorWatcher.exitProperly() } returns Unit
 

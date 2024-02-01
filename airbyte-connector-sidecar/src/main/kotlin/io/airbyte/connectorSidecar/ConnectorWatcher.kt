@@ -10,6 +10,7 @@ import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
+import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.internal.AirbyteStreamFactory
@@ -18,6 +19,7 @@ import io.airbyte.workers.internal.VersionedAirbyteStreamFactory.InvalidLineFail
 import io.airbyte.workers.sync.OrchestratorConstants.CHECK_JOB_OUTPUT_FILENAME
 import io.airbyte.workers.sync.OrchestratorConstants.CONNECTION_INPUT
 import io.airbyte.workers.sync.OrchestratorConstants.EXIT_CODE_FILE
+import io.airbyte.workers.sync.OrchestratorConstants.INTEGRATION_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.OrchestratorConstants.WORKLOAD_ID_FILE
 import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workload.api.client.generated.WorkloadApi
@@ -50,6 +52,7 @@ class ConnectorWatcher(
   fun run() {
     val connectionConfiguration = Jsons.deserialize(readFile(CONNECTION_INPUT), StandardCheckConnectionInput::class.java)
     val workloadId = readFile(WORKLOAD_ID_FILE)
+    val integrationLauncherConfig = Jsons.deserialize(readFile(INTEGRATION_LAUNCHER_CONFIG), IntegrationLauncherConfig::class.java)
 
     try {
       workloadApi.workloadHeartbeat(WorkloadHeartbeatRequest(workloadId))
@@ -67,7 +70,7 @@ class ConnectorWatcher(
 
       val exitCode = readFile(EXIT_CODE_FILE).trim().toInt()
 
-      val streamFactory: AirbyteStreamFactory = getStreamFactory()
+      val streamFactory: AirbyteStreamFactory = getStreamFactory(integrationLauncherConfig)
 
       val connectorOutput: ConnectorJobOutput = connectorMessageProcessor.runCheck(outputIS, streamFactory, connectionConfiguration, exitCode)
 
@@ -101,12 +104,15 @@ class ConnectorWatcher(
   }
 
   @VisibleForTesting
-  fun getStreamFactory(): AirbyteStreamFactory {
+  fun getStreamFactory(integrationLauncherConfig: IntegrationLauncherConfig): AirbyteStreamFactory {
     return VersionedAirbyteStreamFactory<Any>(
       serDeProvider,
       airbyteProtocolVersionedMigratorFactory,
-      // TODO: Protocol version from launcher
-      AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION,
+      if (integrationLauncherConfig.getProtocolVersion() != null) {
+        integrationLauncherConfig.getProtocolVersion()
+      } else {
+        AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION
+      },
       Optional.empty<UUID>(),
       Optional.empty<ConfiguredAirbyteCatalog>(),
       Optional.empty<Class<out RuntimeException?>>(),

@@ -185,6 +185,7 @@ class PayloadKubeInputMapperTest {
           OrchestratorConstants.INIT_FILE_APPLICATION to CHECK_APPLICATION_NAME,
           OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
           OrchestratorConstants.CONNECTION_INPUT to mockSerializedOutput,
+          OrchestratorConstants.INTEGRATION_LAUNCHER_CONFIG to mockSerializedOutput,
         ),
     )
     assert(result.resourceReqs == checkResourceReqs)

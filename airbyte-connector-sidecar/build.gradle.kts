@@ -63,6 +63,7 @@ dependencies {
     implementation(project(":airbyte-commons-worker"))
     implementation(project(":airbyte-config:config-models"))
     implementation(project(":airbyte-metrics:metrics-lib")) // necessary for doc store
+    implementation(project(":airbyte-worker-models"))
     implementation(libs.airbyte.protocol)
 
     runtimeOnly(libs.kotlin.reflect)
