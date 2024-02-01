@@ -8,6 +8,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
@@ -245,9 +246,10 @@ public class ConnectorMetadataJooqHelper {
    * @param breakingChangesForDef a list of breaking changes to check
    * @return whether actors' default versions should be updated during upgrade
    */
-  private static boolean shouldUpdateActorsDefaultVersionsDuringUpgrade(final String currentDockerImageTag,
-                                                                        final String dockerImageTagForUpgrade,
-                                                                        final List<ActorDefinitionBreakingChange> breakingChangesForDef) {
+  @VisibleForTesting
+  public static boolean shouldUpdateActorsDefaultVersionsDuringUpgrade(final String currentDockerImageTag,
+                                                                       final String dockerImageTagForUpgrade,
+                                                                       final List<ActorDefinitionBreakingChange> breakingChangesForDef) {
     if (breakingChangesForDef.isEmpty()) {
       // If there aren't breaking changes, early exit in order to avoid trying to parse versions.
       // This is helpful for custom connectors or local dev images for connectors that don't have
