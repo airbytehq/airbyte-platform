@@ -3,6 +3,10 @@ package io.airbyte.workload.launcher.pods
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.TolerationPOJO
+import io.airbyte.featureflag.ANONYMOUS
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.UseCustomK8sScheduler
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.KubePodProcess
@@ -32,6 +36,7 @@ import jakarta.inject.Singleton
 @Singleton
 class ConnectorPodLauncher(
   private val kubernetesClient: KubernetesClient,
+  private val featureFlagClient: FeatureFlagClient,
   @Named("checkWorkerConfigs") private val checkWorkerConfigs: WorkerConfigs,
   @Named("checkOrchestratorReqs") private val checkReqs: ResourceRequirements,
   @Named("sidecarReqs") private val sidecarReqs: ResourceRequirements,
@@ -122,6 +127,9 @@ class ConnectorPodLauncher(
     val main: Container = buildMainContainer(volumeMounts, kubePodInfo.mainContainerInfo)
     val sidecar: Container = buildSidecarContainer(volumeMounts + sidecarVolumeMounts, extraEnv)
 
+    // TODO: We should inject the scheduler from the ENV and use this just for overrides
+    val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
+
     val podToCreate =
       PodBuilder()
         .withApiVersion("v1")
@@ -131,7 +139,7 @@ class ConnectorPodLauncher(
         .withAnnotations<String, String>(annotations)
         .endMetadata()
         .withNewSpec()
-//      .withSchedulerName("binpacking-scheduler") // TODO (after spike): inject this or use FF
+        .withSchedulerName(schedulerName)
         .withServiceAccount(serviceAccount)
         .withAutomountServiceAccountToken(true)
         .withRestartPolicy("Never")
