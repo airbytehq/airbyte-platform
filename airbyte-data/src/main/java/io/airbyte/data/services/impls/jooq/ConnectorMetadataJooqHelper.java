@@ -196,17 +196,48 @@ public class ConnectorMetadataJooqHelper {
 
     final Optional<ActorDefinitionVersion> currentDefaultVersion =
         getDefaultVersionForActorDefinitionIdOptional(actorDefinitionVersion.getActorDefinitionId(), ctx);
-
     currentDefaultVersion
         .ifPresent(currentDefault -> {
-          final boolean shouldUpdateActorDefaultVersions = shouldUpdateActorsDefaultVersionsDuringUpgrade(
-              currentDefault.getDockerImageTag(), actorDefinitionVersion.getDockerImageTag(), breakingChangesForDefinition);
-          if (shouldUpdateActorDefaultVersions) {
-            updateDefaultVersionIdForActorsOnVersion(currentDefault.getVersionId(), actorDefinitionVersion.getVersionId(), ctx);
-          }
+          final List<UUID> actorsToUpgrade = getActorsToUpgrade(currentDefault, actorDefinitionVersion, breakingChangesForDefinition, ctx);
+          updateActorsDefaultVersion(actorsToUpgrade, actorDefinitionVersion.getVersionId(), ctx);
         });
 
     updateActorDefinitionDefaultVersionId(actorDefinitionVersion.getActorDefinitionId(), actorDefinitionVersion.getVersionId(), ctx);
+  }
+
+  private static List<UUID> getActorsToUpgrade(final ActorDefinitionVersion currentDefaultVersion,
+                                               final ActorDefinitionVersion newVersion,
+                                               final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
+                                               final DSLContext ctx) {
+    final List<ActorDefinitionBreakingChange> breakingChangesForUpgrade = getBreakingChangesForUpgrade(
+        currentDefaultVersion.getDockerImageTag(), newVersion.getDockerImageTag(), breakingChangesForDefinition);
+
+    final List<UUID> upgradeCandidates = getActorsOnDefaultVersion(currentDefaultVersion.getVersionId(), ctx);
+
+    breakingChangesForUpgrade.forEach(breakingChange -> {
+      final List<UUID> actorsImpactedByBreakingChange = getActorsAffectedByBreakingChange(upgradeCandidates, breakingChange, ctx);
+      upgradeCandidates.removeAll(actorsImpactedByBreakingChange);
+    });
+
+    return upgradeCandidates;
+  }
+
+  private static List<UUID> getActorsAffectedByBreakingChange(final List<UUID> actorIds,
+                                                              final ActorDefinitionBreakingChange breakingChange,
+                                                              final DSLContext ctx) {
+    // Right now, we don't have a way to know which actors are impacted by a breaking change.
+    // We assume that all actors will be impacted.
+    return actorIds;
+  }
+
+  private static List<UUID> getActorsOnDefaultVersion(final UUID defaultVersionId, final DSLContext ctx) {
+    return ctx.select(ACTOR.ID)
+        .from(ACTOR)
+        .where(ACTOR.DEFAULT_VERSION_ID.eq(defaultVersionId))
+        .fetch()
+        .stream()
+        .map(record -> record.get(ACTOR.ID))
+        .collect(Collectors.toList());
   }
 
   /**
@@ -226,49 +257,47 @@ public class ConnectorMetadataJooqHelper {
         .map(DbConverter::buildActorDefinitionVersion);
   }
 
-  private static void updateDefaultVersionIdForActorsOnVersion(final UUID previousDefaultVersionId,
-                                                               final UUID newDefaultVersionId,
-                                                               final DSLContext ctx) {
+  private static void updateActorsDefaultVersion(final List<UUID> actorIds,
+                                                 final UUID newDefaultVersionId,
+                                                 final DSLContext ctx) {
     ctx.update(ACTOR)
         .set(ACTOR.UPDATED_AT, OffsetDateTime.now())
         .set(ACTOR.DEFAULT_VERSION_ID, newDefaultVersionId)
-        .where(ACTOR.DEFAULT_VERSION_ID.eq(previousDefaultVersionId))
+        .where(ACTOR.ID.in(actorIds))
         .execute();
   }
 
   /**
    * Given a current version and a version to upgrade to, and a list of breaking changes, determine
-   * whether actors' default versions should be updated during upgrade. This logic is used to avoid
-   * applying a breaking change to a user's actor.
+   * which breaking changes, if any, apply to upgrading from the current version to the version to
+   * upgrade to.
    *
    * @param currentDockerImageTag version to upgrade from
    * @param dockerImageTagForUpgrade version to upgrade to
    * @param breakingChangesForDef a list of breaking changes to check
-   * @return whether actors' default versions should be updated during upgrade
+   * @return list of applicable breaking changes
    */
   @VisibleForTesting
-  public static boolean shouldUpdateActorsDefaultVersionsDuringUpgrade(final String currentDockerImageTag,
-                                                                       final String dockerImageTagForUpgrade,
-                                                                       final List<ActorDefinitionBreakingChange> breakingChangesForDef) {
+  public static List<ActorDefinitionBreakingChange> getBreakingChangesForUpgrade(final String currentDockerImageTag,
+                                                                                 final String dockerImageTagForUpgrade,
+                                                                                 final List<ActorDefinitionBreakingChange> breakingChangesForDef) {
     if (breakingChangesForDef.isEmpty()) {
       // If there aren't breaking changes, early exit in order to avoid trying to parse versions.
       // This is helpful for custom connectors or local dev images for connectors that don't have
       // breaking changes.
-      return true;
+      return List.of();
     }
 
     final Version currentVersion = new Version(currentDockerImageTag);
     final Version versionToUpgradeTo = new Version(dockerImageTagForUpgrade);
 
     if (versionToUpgradeTo.lessThanOrEqualTo(currentVersion)) {
-      // When downgrading, we don't take into account breaking changes/hold actors back.
-      return true;
+      // When downgrading, we don't take into account breaking changes.
+      return List.of();
     }
 
-    final boolean upgradingOverABreakingChange = breakingChangesForDef.stream().anyMatch(
-        breakingChange -> currentVersion.lessThan(breakingChange.getVersion()) && versionToUpgradeTo.greaterThanOrEqualTo(
-            breakingChange.getVersion()));
-    return !upgradingOverABreakingChange;
+    return breakingChangesForDef.stream().filter(breakingChange -> currentVersion.lessThan(breakingChange.getVersion())
+        && versionToUpgradeTo.greaterThanOrEqualTo(breakingChange.getVersion())).collect(Collectors.toList());
   }
 
   private static void updateActorDefinitionDefaultVersionId(final UUID actorDefinitionId, final UUID versionId, final DSLContext ctx) {
