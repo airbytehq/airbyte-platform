@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.config.persistence;
+package io.airbyte.test.utils;
 
 import io.airbyte.db.Database;
 import io.airbyte.db.factory.DSLContextFactory;
@@ -12,7 +12,6 @@ import io.airbyte.db.init.DatabaseInitializationException;
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator;
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider;
 import io.airbyte.db.instance.test.TestDatabaseProviders;
-import io.airbyte.test.utils.Databases;
 import java.io.IOException;
 import java.sql.SQLException;
 import javax.sql.DataSource;
@@ -27,6 +26,11 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * This class exists to abstract away the lifecycle of the test container database and the config
  * database schema. This is ALL it intends to do. Any additional functionality belongs somewhere
  * else. It is useful for test suites that need to interact directly with the database.
+ *
+ * It currently lives in the test-utils module during the process of porting the persistence tests
+ * from io.airbyte.config.persistence to their io.airbyte.data jooq implementation counterparts.
+ * Once the porting is complete, this class should be moved to airbyte-data, and its access set back
+ * to package-private.
  *
  * This class sets up a test container database and runs the config database migrations against it
  * to provide the most up-to-date schema.
@@ -61,9 +65,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * will need to add it to that method for it work as expected.
  */
 @SuppressWarnings({"PMD.MutableStaticState", "PMD.SignatureDeclareThrowsException"})
-class BaseConfigDatabaseTest {
+public class BaseConfigDatabaseTest {
 
-  static Database database;
+  protected static Database database;
 
   // keep these private, do not expose outside this class!
   private static PostgreSQLContainer<?> container;
@@ -103,7 +107,7 @@ class BaseConfigDatabaseTest {
    *
    * @throws SQLException - failure in truncate query.
    */
-  static void truncateAllTables() throws SQLException {
+  protected static void truncateAllTables() throws SQLException {
     database.query(ctx -> ctx
         .execute(
             """
@@ -158,7 +162,7 @@ class BaseConfigDatabaseTest {
   private static void migrateDb() throws IOException, DatabaseInitializationException {
     final Flyway flyway = FlywayFactory.create(
         dataSource,
-        StreamResetPersistenceTest.class.getName(),
+        "BaseConfigDatabaseTest",
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION);
     new ConfigsDatabaseTestProvider(dslContext, flyway).create(true);

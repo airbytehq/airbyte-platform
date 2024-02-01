@@ -32,6 +32,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionTy
 import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;

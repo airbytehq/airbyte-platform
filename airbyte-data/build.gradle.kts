@@ -35,6 +35,7 @@ dependencies {
     testImplementation(libs.postgresql)
     testImplementation(libs.platform.testcontainers.postgresql)
     testImplementation(libs.mockk)
+    testImplementation(project(":airbyte-test-utils"))
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
