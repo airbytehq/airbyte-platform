@@ -266,4 +266,82 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
     assert(persistedIds2.contains(configId).not())
     assert(persistedIds2.contains(config2.id).not())
   }
+
+  @Test
+  fun `test db find by scope id list`() {
+    val resourceId = UUID.randomUUID()
+    val config =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = UUID.randomUUID().toString(),
+      )
+
+    repository.save(config)
+
+    val config2 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value2",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = UUID.randomUUID().toString(),
+      )
+
+    repository.save(config2)
+
+    val otherConfig =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value2",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = UUID.randomUUID().toString(),
+      )
+
+    repository.save(otherConfig)
+
+    val otherConfig2 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value2",
+        scopeType = ConfigScopeType.organization,
+        scopeId = config.scopeId,
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = UUID.randomUUID().toString(),
+      )
+
+    repository.save(otherConfig2)
+    assert(repository.count() == 4L)
+
+    val findConfigsResult =
+      repository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeIdInList(
+        CONFIG_KEY,
+        ConfigResourceType.actor_definition,
+        resourceId,
+        ConfigScopeType.workspace,
+        listOf(config.scopeId, config2.scopeId),
+      )
+    assert(findConfigsResult.size == 2)
+
+    val persistedIds = findConfigsResult.map { it.id }
+    assert(persistedIds.containsAll(listOf(config.id, config2.id)))
+  }
 }

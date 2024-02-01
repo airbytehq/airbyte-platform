@@ -4,9 +4,12 @@
 package io.airbyte.commons.server.handlers
 
 import com.google.common.annotations.VisibleForTesting
+import io.airbyte.api.model.generated.ScopedConfigurationContextRequestBody
+import io.airbyte.api.model.generated.ScopedConfigurationContextResponse
 import io.airbyte.api.model.generated.ScopedConfigurationCreateRequestBody
 import io.airbyte.api.model.generated.ScopedConfigurationRead
 import io.airbyte.commons.server.errors.BadRequestException
+import io.airbyte.commons.server.handlers.helpers.ScopedConfigurationRelationshipResolver
 import io.airbyte.config.ConfigOriginType
 import io.airbyte.config.ConfigResourceType
 import io.airbyte.config.ConfigScopeType
@@ -20,6 +23,8 @@ import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.ConnectorVersionKey
+import io.airbyte.data.services.shared.ScopedConfigurationKeys
+import io.micronaut.cache.annotation.Cacheable
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.time.Instant
@@ -39,7 +44,7 @@ fun unixTimestampToOffsetDateTime(unixTimestamp: Long): OffsetDateTime {
  * OperationsHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
 @Singleton
-class ScopedConfigurationHandler
+open class ScopedConfigurationHandler
   @Inject
   constructor(
     private val scopedConfigurationService: ScopedConfigurationService,
@@ -50,8 +55,10 @@ class ScopedConfigurationHandler
     private val workspaceService: WorkspaceService,
     private val userPersistence: UserPersistence,
     private val uuidGenerator: Supplier<UUID>,
+    private val scopeRelationshipResolver: ScopedConfigurationRelationshipResolver,
   ) {
-    private fun getValueName(
+    @Cacheable("config-value-name")
+    open fun getValueName(
       configKey: String,
       value: String,
     ): String? {
@@ -79,7 +86,8 @@ class ScopedConfigurationHandler
       }
     }
 
-    private fun getResourceName(
+    @Cacheable("config-resource-name")
+    open fun getResourceName(
       resourceType: ConfigResourceType,
       resourceId: UUID,
     ): String {
@@ -88,7 +96,8 @@ class ScopedConfigurationHandler
       }
     }
 
-    private fun getOriginName(
+    @Cacheable("config-origin-name")
+    open fun getOriginName(
       originType: ConfigOriginType,
       origin: String,
     ): String? {
@@ -98,7 +107,8 @@ class ScopedConfigurationHandler
       }
     }
 
-    private fun getScopeName(
+    @Cacheable("config-scope-name")
+    open fun getScopeName(
       scopeType: ConfigScopeType,
       scopeId: UUID,
     ): String {
@@ -122,6 +132,7 @@ class ScopedConfigurationHandler
           is io.airbyte.config.persistence.ConfigNotFoundException,
           is NoSuchElementException,
           -> throw BadRequestException(e.message)
+
           else -> throw e
         }
       }
@@ -201,5 +212,37 @@ class ScopedConfigurationHandler
 
     fun deleteScopedConfiguration(id: UUID) {
       scopedConfigurationService.deleteScopedConfiguration(id)
+    }
+
+    fun getScopedConfigurationContext(contextRequestBody: ScopedConfigurationContextRequestBody): ScopedConfigurationContextResponse {
+      val key = contextRequestBody.configKey
+      val resourceType = ConfigResourceType.fromValue(contextRequestBody.resourceType)
+      val resourceId = contextRequestBody.resourceId
+      val scopeType = ConfigScopeType.fromValue(contextRequestBody.scopeType)
+      val scopeId = contextRequestBody.scopeId
+
+      val configKey =
+        ScopedConfigurationKeys[key]
+          ?: throw BadRequestException("Config key $key is not supported")
+
+      val ancestorScopes = scopeRelationshipResolver.getAllAncestorScopes(configKey.supportedScopes, scopeType, scopeId)
+      val descendantScopes = scopeRelationshipResolver.getAllDescendantScopes(configKey.supportedScopes, scopeType, scopeId)
+
+      val currentScopeMap = mapOf(scopeType to scopeId) + ancestorScopes
+      val currentActiveConfig = scopedConfigurationService.getScopedConfiguration(configKey, resourceType, resourceId, currentScopeMap)
+
+      val ancestorConfigs =
+        ancestorScopes.flatMap {
+          scopedConfigurationService.listScopedConfigurationsWithScopes(key, resourceType, resourceId, it.key, listOf(it.value))
+        }
+      val descendantConfigs =
+        descendantScopes.flatMap {
+          scopedConfigurationService.listScopedConfigurationsWithScopes(key, resourceType, resourceId, it.key, it.value)
+        }
+
+      return ScopedConfigurationContextResponse()
+        .activeConfiguration(currentActiveConfig.map { buildScopedConfigurationRead(it) }.orElse(null))
+        .ancestorConfigurations(ancestorConfigs.map { buildScopedConfigurationRead(it) })
+        .descendantConfigurations(descendantConfigs.map { buildScopedConfigurationRead(it) })
     }
   }

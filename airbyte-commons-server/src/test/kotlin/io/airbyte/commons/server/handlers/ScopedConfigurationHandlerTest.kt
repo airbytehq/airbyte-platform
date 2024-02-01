@@ -1,8 +1,11 @@
 package io.airbyte.commons.server.handlers
 
+import io.airbyte.api.model.generated.ScopedConfigurationContextRequestBody
+import io.airbyte.api.model.generated.ScopedConfigurationContextResponse
 import io.airbyte.api.model.generated.ScopedConfigurationCreateRequestBody
 import io.airbyte.api.model.generated.ScopedConfigurationRead
 import io.airbyte.commons.server.errors.BadRequestException
+import io.airbyte.commons.server.handlers.helpers.ScopedConfigurationRelationshipResolver
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConfigOriginType
 import io.airbyte.config.ConfigResourceType
@@ -22,6 +25,7 @@ import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.data.services.shared.ConnectorVersionKey
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.justRun
@@ -46,6 +50,7 @@ internal class ScopedConfigurationHandlerTest {
   private val workspaceService = mockk<WorkspaceService>()
   private val userPersistence = mockk<UserPersistence>()
   private val uuidGenerator = mockk<Supplier<UUID>>()
+  private val scopedConfigurationRelationshipResolver = mockk<ScopedConfigurationRelationshipResolver>()
   private val scopedConfigurationHandler =
     ScopedConfigurationHandler(
       scopedConfigurationService,
@@ -56,6 +61,7 @@ internal class ScopedConfigurationHandlerTest {
       workspaceService,
       userPersistence,
       uuidGenerator,
+      scopedConfigurationRelationshipResolver,
     )
 
   @BeforeEach
@@ -522,6 +528,255 @@ internal class ScopedConfigurationHandlerTest {
       organizationService.getOrganization(any())
       userPersistence.getUser(any())
       actorDefinitionService.getActorDefinitionVersion(any())
+    }
+  }
+
+  @Test
+  fun `test get scoped configuration context for non-existent key throws`() {
+    val contextReq =
+      ScopedConfigurationContextRequestBody()
+        .scopeType(ConfigScopeType.WORKSPACE.toString())
+        .scopeId(UUID.randomUUID())
+        .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
+        .resourceId(UUID.randomUUID())
+        .configKey("non_existent_key")
+
+    assertThrows<BadRequestException> {
+      scopedConfigurationHandler.getScopedConfigurationContext(contextReq)
+    }
+  }
+
+  @Test
+  fun `test get scoped configuration context`() {
+    val actorDefId = UUID.randomUUID()
+    val actorDefName = "source-faker"
+
+    val workspaceId = UUID.randomUUID()
+    val orgId = UUID.randomUUID()
+    val sourceId = UUID.randomUUID()
+    val sourceId2 = UUID.randomUUID()
+
+    val orgVersionId = UUID.randomUUID()
+    val orgVersion = "2.0.0"
+    val workspaceVersionId = UUID.randomUUID()
+    val workspaceVersion = "1.0.0"
+    val sourceVersionId = UUID.randomUUID()
+    val sourceVersion = "0.1.0"
+
+    val origin = UUID.randomUUID().toString()
+    val originName = "some-user@airbyte.io"
+
+    every { sourceService.getSourceConnection(sourceId) } returns SourceConnection().withName("source actor")
+    every { sourceService.getSourceConnection(sourceId2) } returns SourceConnection().withName("source actor 2")
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns
+      StandardWorkspace().withName("workspace name")
+    every { organizationService.getOrganization(orgId) } returns Optional.of(Organization().withName("org name"))
+    every { sourceService.getStandardSourceDefinition(actorDefId) } returns StandardSourceDefinition().withName(actorDefName)
+    every { actorDefinitionService.getActorDefinitionVersion(orgVersionId) } returns ActorDefinitionVersion().withDockerImageTag(orgVersion)
+    every { actorDefinitionService.getActorDefinitionVersion(workspaceVersionId) } returns
+      ActorDefinitionVersion().withDockerImageTag(workspaceVersion)
+    every { actorDefinitionService.getActorDefinitionVersion(sourceVersionId) } returns ActorDefinitionVersion().withDockerImageTag(sourceVersion)
+    every { userPersistence.getUser(UUID.fromString(origin)) } returns Optional.of(User().withEmail(originName))
+
+    every {
+      scopedConfigurationRelationshipResolver.getAllAncestorScopes(ConnectorVersionKey.supportedScopes, ConfigScopeType.WORKSPACE, workspaceId)
+    } returns
+      mapOf(
+        ConfigScopeType.ORGANIZATION to orgId,
+      )
+    every {
+      scopedConfigurationRelationshipResolver.getAllDescendantScopes(ConnectorVersionKey.supportedScopes, ConfigScopeType.WORKSPACE, workspaceId)
+    } returns
+      mapOf(
+        ConfigScopeType.ACTOR to listOf(sourceId, sourceId2),
+      )
+
+    every {
+      scopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey, ConfigResourceType.ACTOR_DEFINITION, actorDefId,
+        mapOf(
+          ConfigScopeType.WORKSPACE to workspaceId,
+          ConfigScopeType.ORGANIZATION to orgId,
+        ),
+      )
+    } returns
+      Optional.of(
+        ScopedConfiguration()
+          .withId(workspaceId)
+          .withKey(ConnectorVersionKey.key)
+          .withValue(workspaceVersionId.toString())
+          .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
+          .withResourceId(actorDefId)
+          .withScopeType(ConfigScopeType.WORKSPACE)
+          .withScopeId(workspaceId)
+          .withOriginType(ConfigOriginType.USER)
+          .withOrigin(origin),
+      )
+
+    every {
+      scopedConfigurationService.listScopedConfigurationsWithScopes(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION, actorDefId,
+        ConfigScopeType.ORGANIZATION, listOf(orgId),
+      )
+    } returns
+      listOf(
+        ScopedConfiguration()
+          .withId(orgId)
+          .withKey(ConnectorVersionKey.key)
+          .withScopeId(orgId)
+          .withScopeType(ConfigScopeType.ORGANIZATION)
+          .withValue(orgVersionId.toString())
+          .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
+          .withResourceId(actorDefId)
+          .withOriginType(ConfigOriginType.USER)
+          .withOrigin(origin),
+      )
+    every {
+      scopedConfigurationService.listScopedConfigurationsWithScopes(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION, actorDefId,
+        ConfigScopeType.ACTOR, listOf(sourceId, sourceId2),
+      )
+    } returns
+      listOf(
+        ScopedConfiguration()
+          .withId(sourceId)
+          .withKey(ConnectorVersionKey.key)
+          .withScopeId(sourceId)
+          .withScopeType(ConfigScopeType.ACTOR)
+          .withValue(sourceVersionId.toString())
+          .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
+          .withResourceId(actorDefId)
+          .withOriginType(ConfigOriginType.USER)
+          .withOrigin(origin),
+        ScopedConfiguration()
+          .withId(sourceId2)
+          .withKey(ConnectorVersionKey.key)
+          .withScopeId(sourceId2)
+          .withScopeType(ConfigScopeType.ACTOR)
+          .withValue(sourceVersionId.toString())
+          .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
+          .withResourceId(actorDefId)
+          .withOriginType(ConfigOriginType.USER)
+          .withOrigin(origin),
+      )
+
+    val contextReq =
+      ScopedConfigurationContextRequestBody()
+        .scopeType(ConfigScopeType.WORKSPACE.toString())
+        .scopeId(workspaceId)
+        .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
+        .resourceId(actorDefId)
+        .configKey("connector_version")
+    val scopedConfigurationContext = scopedConfigurationHandler.getScopedConfigurationContext(contextReq)
+
+    val expectedRes =
+      ScopedConfigurationContextResponse()
+        .activeConfiguration(
+          ScopedConfigurationRead()
+            .id(workspaceId.toString())
+            .value(workspaceVersionId.toString())
+            .valueName(workspaceVersion)
+            .configKey(ConnectorVersionKey.key)
+            .resourceId(actorDefId.toString())
+            .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
+            .resourceName(actorDefName)
+            .scopeId(workspaceId.toString())
+            .scopeType(ConfigScopeType.WORKSPACE.toString())
+            .scopeName("workspace name")
+            .origin(origin)
+            .originType(ConfigOriginType.USER.toString())
+            .originName(originName),
+        )
+        .ancestorConfigurations(
+          listOf(
+            ScopedConfigurationRead()
+              .id(orgId.toString())
+              .value(orgVersionId.toString())
+              .valueName(orgVersion)
+              .scopeId(orgId.toString())
+              .scopeType(ConfigScopeType.ORGANIZATION.toString())
+              .scopeName("org name")
+              .configKey(ConnectorVersionKey.key)
+              .resourceId(actorDefId.toString())
+              .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
+              .resourceName(actorDefName)
+              .origin(origin)
+              .originType(ConfigOriginType.USER.toString())
+              .originName(originName),
+          ),
+        )
+        .descendantConfigurations(
+          listOf(
+            ScopedConfigurationRead()
+              .id(sourceId.toString())
+              .value(sourceVersionId.toString())
+              .valueName(sourceVersion)
+              .scopeType(ConfigScopeType.ACTOR.toString())
+              .scopeId(sourceId.toString())
+              .scopeName("source actor")
+              .configKey(ConnectorVersionKey.key)
+              .resourceId(actorDefId.toString())
+              .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
+              .resourceName(actorDefName)
+              .origin(origin)
+              .originType(ConfigOriginType.USER.toString())
+              .originName(originName),
+            ScopedConfigurationRead()
+              .id(sourceId2.toString())
+              .value(sourceVersionId.toString())
+              .valueName(sourceVersion)
+              .configKey(ConnectorVersionKey.key)
+              .scopeType(ConfigScopeType.ACTOR.toString())
+              .scopeId(sourceId2.toString())
+              .scopeName("source actor 2")
+              .resourceId(actorDefId.toString())
+              .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
+              .resourceName(actorDefName)
+              .origin(origin)
+              .originType(ConfigOriginType.USER.toString())
+              .originName(originName),
+          ),
+        )
+
+    assertEquals(expectedRes, scopedConfigurationContext)
+
+    verifyAll {
+      sourceService.getSourceConnection(sourceId)
+      sourceService.getSourceConnection(sourceId2)
+      workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)
+      organizationService.getOrganization(orgId)
+      sourceService.getStandardSourceDefinition(actorDefId)
+      actorDefinitionService.getActorDefinitionVersion(orgVersionId)
+      actorDefinitionService.getActorDefinitionVersion(workspaceVersionId)
+      actorDefinitionService.getActorDefinitionVersion(sourceVersionId)
+      userPersistence.getUser(UUID.fromString(origin))
+      scopedConfigurationRelationshipResolver.getAllAncestorScopes(ConnectorVersionKey.supportedScopes, ConfigScopeType.WORKSPACE, workspaceId)
+      scopedConfigurationRelationshipResolver.getAllDescendantScopes(ConnectorVersionKey.supportedScopes, ConfigScopeType.WORKSPACE, workspaceId)
+      scopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefId,
+        mapOf(
+          ConfigScopeType.WORKSPACE to workspaceId,
+          ConfigScopeType.ORGANIZATION to orgId,
+        ),
+      )
+      scopedConfigurationService.listScopedConfigurationsWithScopes(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefId,
+        ConfigScopeType.ORGANIZATION,
+        listOf(orgId),
+      )
+      scopedConfigurationService.listScopedConfigurationsWithScopes(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefId,
+        ConfigScopeType.ACTOR,
+        listOf(sourceId, sourceId2),
+      )
     }
   }
 }

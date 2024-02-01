@@ -18,3 +18,8 @@ data object ConnectorVersionKey : ScopedConfigurationKey(
   key = "connector_version",
   supportedScopes = listOf(ConfigScopeType.ACTOR, ConfigScopeType.WORKSPACE, ConfigScopeType.ORGANIZATION),
 )
+
+val ScopedConfigurationKeys: Map<String, ScopedConfigurationKey> =
+  mapOf(
+    ConnectorVersionKey.key to ConnectorVersionKey,
+  )

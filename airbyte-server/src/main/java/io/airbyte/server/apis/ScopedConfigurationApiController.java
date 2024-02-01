@@ -7,6 +7,8 @@ package io.airbyte.server.apis;
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 
 import io.airbyte.api.generated.ScopedConfigurationApi;
+import io.airbyte.api.model.generated.ScopedConfigurationContextRequestBody;
+import io.airbyte.api.model.generated.ScopedConfigurationContextResponse;
 import io.airbyte.api.model.generated.ScopedConfigurationCreateRequestBody;
 import io.airbyte.api.model.generated.ScopedConfigurationCreateResponse;
 import io.airbyte.api.model.generated.ScopedConfigurationDeleteRequestBody;
@@ -99,6 +101,16 @@ public class ScopedConfigurationApiController implements ScopedConfigurationApi 
 
       return new ScopedConfigurationReadResponse().data(scopedConfiguration);
     });
+  }
+
+  @SuppressWarnings("LineLength")
+  @Post("/get_context")
+  @SecuredUser
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public ScopedConfigurationContextResponse getScopedConfigurationContext(@Body final ScopedConfigurationContextRequestBody scopedConfigurationContextRequestBody) {
+    return ApiHelper.execute(() -> scopedConfigurationHandler.getScopedConfigurationContext(scopedConfigurationContextRequestBody));
   }
 
   @SuppressWarnings("LineLength")

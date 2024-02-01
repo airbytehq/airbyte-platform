@@ -4495,6 +4495,28 @@ paths:
       tags:
         - scoped_configuration
 
+  /v1/scoped_configuration/get_context:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScopedConfigurationContextRequestBody"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScopedConfigurationContextResponse"
+          description: An array of scoped configurations
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      operationId: getScopedConfigurationContext
+      summary: Get related configurations for a given scope
+      tags:
+        - scoped_configuration
+
   /v1/scoped_configuration/create:
     post:
       requestBody:
@@ -4792,6 +4814,45 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/ScopedConfigurationRead"
+
+    ScopedConfigurationContextRequestBody:
+      type: object
+      required:
+        - config_key
+        - resource_id
+        - resource_type
+        - scope_id
+        - scope_type
+      properties:
+        config_key:
+          type: string
+        resource_id:
+          type: string
+          format: UUID
+        resource_type:
+          type: string
+        scope_id:
+          type: string
+          format: UUID
+        scope_type:
+          type: string
+
+    ScopedConfigurationContextResponse:
+      type: object
+      properties:
+        # The configuration that is currently active for the scope being configured.
+        activeConfiguration:
+          $ref: "#/components/schemas/ScopedConfigurationRead"
+        ancestorConfigurations:
+          description: List of configurations that have been created that will get overridden by the scope currently being configured.
+          type: array
+          items:
+            $ref: "#/components/schemas/ScopedConfigurationRead"
+        descendantConfigurations:
+          description: List of configurations that have been created that will override the scope currently being configured.
+          type: array
+          items:
+            $ref: "#/components/schemas/ScopedConfigurationRead"
 
     ScopedConfigurationReadRequestBody:
       type: object

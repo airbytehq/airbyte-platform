@@ -23,6 +23,7 @@ dependencies {
 
     implementation(platform(libs.micronaut.bom))
     implementation(libs.bundles.micronaut)
+    implementation(libs.micronaut.cache.caffeine)
     implementation(libs.micronaut.inject)
     implementation(libs.micronaut.jaxrs.server)
     implementation(libs.micronaut.security)
