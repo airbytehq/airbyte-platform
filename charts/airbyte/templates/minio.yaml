@@ -18,6 +18,7 @@ spec:
       - metadata:
           name: airbyte-minio-pv-claim
         spec:
+          storageClassName: cdk-cinder
           accessModes: [ "ReadWriteOnce" ]
           resources:
             requests:

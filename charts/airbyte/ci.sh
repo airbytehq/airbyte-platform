@@ -3,8 +3,8 @@
 set -e
 
 export RELEASE_NAME="${RELEASE_NAME:-airbyte}"
-export NAMESPACE="${NAMESPACE:-airbyte}"
-export INSTALL_TIMEOUT="${INSTALL_TIMEOUT:-600s}"
+export NAMESPACE="${NAMESPACE:stg-airbyte}"
+export INSTALL_TIMEOUT="${INSTALL_TIMEOUT:-1200s}"
 
 usage() {
   echo "Airbyte Helm Chart CI Script"
