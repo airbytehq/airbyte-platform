@@ -9,7 +9,6 @@ import io.airbyte.analytics.TrackingClientConstants;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.workers.process.Metadata;
 import java.util.Set;
 
 /**
@@ -93,8 +92,7 @@ public class OrchestratorConstants {
           TrackingClientConstants.AIRBYTE_VERSION_ENV_VAR,
           TrackingClientConstants.DEPLOYMENT_MODE_ENV_VAR,
           TrackingClientConstants.SEGMENT_WRITE_KEY_ENV_VAR,
-          TrackingClientConstants.TRACKING_STRATEGY_ENV_VAR,
-          Metadata.AWS_ASSUME_ROLE_SECRET_NAME))
+          TrackingClientConstants.TRACKING_STRATEGY_ENV_VAR))
       .build();
 
   public static final String INIT_FILE_ENV_MAP = "envMap.json";
