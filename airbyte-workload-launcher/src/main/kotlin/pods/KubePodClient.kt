@@ -13,7 +13,6 @@ import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_DESTINATION_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_ORCHESTRATOR_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_SOURCE_OPERATION_NAME
-import io.airbyte.workload.launcher.model.CheckEnvVar
 import io.airbyte.workload.launcher.model.setConnectorLabels
 import io.airbyte.workload.launcher.model.setDestinationLabels
 import io.airbyte.workload.launcher.model.setSourceLabels
@@ -37,7 +36,6 @@ class KubePodClient(
   private val connectorLauncher: ConnectorPodLauncher,
   private val labeler: PodLabeler,
   private val mapper: PayloadKubeInputMapper,
-  private val checkEnvVar: CheckEnvVar,
 ) : PodClient {
   override fun podsExistForAutoId(autoId: UUID): Boolean {
     return orchestratorLauncher.podsExist(labeler.getAutoIdLabels(autoId))
@@ -181,8 +179,6 @@ class KubePodClient(
 
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, inputWithLabels, sharedLabels)
 
-    val extraEnv = checkEnvVar.getEnvMap()
-
     val start = TimeSource.Monotonic.markNow()
 
     val pod: Pod
@@ -194,7 +190,7 @@ class KubePodClient(
           kubeInput.nodeSelectors,
           kubeInput.kubePodInfo,
           kubeInput.annotations,
-          extraEnv,
+          mapOf(),
         )
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
@@ -270,8 +266,6 @@ class KubePodClient(
         ),
       )
 
-    val extraEnv = checkEnvVar.getEnvMap()
-
     val start = TimeSource.Monotonic.markNow()
 
     val pod: Pod
@@ -282,7 +276,6 @@ class KubePodClient(
           kubeInput.nodeSelectors,
           connectorKubePodInfo,
           kubeInput.annotations,
-          extraEnv,
         )
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)

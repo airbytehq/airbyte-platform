@@ -13,7 +13,6 @@ import io.airbyte.workers.process.KubePodProcess
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.ContainerBuilder
-import io.fabric8.kubernetes.api.model.ContainerPort
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.Pod
@@ -38,11 +37,10 @@ class ConnectorPodLauncher(
   private val kubernetesClient: KubernetesClient,
   private val featureFlagClient: FeatureFlagClient,
   @Named("checkWorkerConfigs") private val checkWorkerConfigs: WorkerConfigs,
-  @Named("checkOrchestratorReqs") private val checkReqs: ResourceRequirements,
-  @Named("sidecarReqs") private val sidecarReqs: ResourceRequirements,
+  @Named("checkConnectorReqs") private val checkReqs: ResourceRequirements,
+  @Named("checkSidecarReqs") private val sidecarReqs: ResourceRequirements,
   @Named("checkEnvVars") private val envVars: List<EnvVar>,
   @Named("checkSideCarEnvVars") private val checkSideCarEnvVars: List<EnvVar>,
-  @Named("checkContainerPorts") private val containerPorts: List<ContainerPort>,
   @Named("sidecarKubeContainerInfo") private val sidecarContainerInfo: KubeContainerInfo,
   @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
   @Value("\${google.application.credentials}") private val googleApplicationCredentials: String?,
@@ -56,7 +54,6 @@ class ConnectorPodLauncher(
     nodeSelectors: Map<String, String>,
     kubePodInfo: KubePodInfo,
     annotations: Map<String, String>,
-    extraEnv: Map<String, String>,
   ): Pod {
     val volumes: MutableList<Volume> = ArrayList()
     val volumeMounts: MutableList<VolumeMount> = ArrayList()
@@ -125,7 +122,7 @@ class ConnectorPodLauncher(
 
     val init: Container = buildInitContainer(volumeMounts)
     val main: Container = buildMainContainer(volumeMounts, kubePodInfo.mainContainerInfo)
-    val sidecar: Container = buildSidecarContainer(volumeMounts + sidecarVolumeMounts, extraEnv)
+    val sidecar: Container = buildSidecarContainer(volumeMounts + sidecarVolumeMounts)
 
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
@@ -236,7 +233,6 @@ class ConnectorPodLauncher(
 
     return ContainerBuilder()
       .withName(KubePodProcess.MAIN_CONTAINER_NAME)
-//      .withPorts(containerPorts)
       .withImage(containerInfo.image)
       .withImagePullPolicy(checkWorkerConfigs.jobImagePullPolicy) // TODO: this should be properly set on the kubePodInfo
       .withCommand("sh", "-c", mainCommand)
@@ -247,21 +243,13 @@ class ConnectorPodLauncher(
       .build()
   }
 
-  fun buildSidecarContainer(
-    volumeMounts: List<VolumeMount>,
-    extraEnv: Map<String, String>,
-  ): Container {
-    val extraKubeEnv = extraEnv.map { (k, v) -> EnvVar(k, v, null) }
-
+  private fun buildSidecarContainer(volumeMounts: List<VolumeMount>): Container {
     return ContainerBuilder()
       .withName(KubePodProcess.SIDECAR_CONTAINER_NAME)
-      // Do we need ports?
-      .withPorts(containerPorts)
       .withImage(sidecarContainerInfo.image)
       .withImagePullPolicy(sidecarContainerInfo.pullPolicy)
-//      .withCommand("sh", "-c", "docker run")
       .withWorkingDir(KubePodProcess.CONFIG_DIR)
-      .withEnv(checkSideCarEnvVars + extraKubeEnv)
+      .withEnv(checkSideCarEnvVars)
       .withVolumeMounts(volumeMounts)
       .withResources(KubePodProcess.getResourceRequirementsBuilder(sidecarReqs).build())
       .build()

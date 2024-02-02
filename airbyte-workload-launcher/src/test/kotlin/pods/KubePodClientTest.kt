@@ -7,7 +7,7 @@ import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.process.KubePodInfo
-import io.airbyte.workload.launcher.model.CheckEnvVar
+import io.airbyte.workload.launcher.config.CheckPodConfig
 import io.airbyte.workload.launcher.model.setConnectorLabels
 import io.airbyte.workload.launcher.model.setDestinationLabels
 import io.airbyte.workload.launcher.model.setSourceLabels
@@ -49,7 +49,7 @@ class KubePodClientTest {
   private lateinit var pod: Pod
 
   @MockK
-  private lateinit var checkEnvVar: CheckEnvVar
+  private lateinit var checkEnvVar: CheckPodConfig
 
   private lateinit var client: KubePodClient
 
@@ -67,7 +67,6 @@ class KubePodClientTest {
         connectorPodLauncher,
         labeler,
         mapper,
-        checkEnvVar,
       )
 
     replInput =
@@ -95,8 +94,6 @@ class KubePodClientTest {
     every { launcher.copyFilesToKubeConfigVolumeMain(any(), any()) } returns Unit
     every { launcher.waitForPodReadyOrTerminalByPod(any(Pod::class), any()) } returns Unit
     every { launcher.waitForPodReadyOrTerminal(any(), any()) } returns Unit
-
-    every { checkEnvVar.getEnvMap() } returns mapOf()
   }
 
   @Test
@@ -208,14 +205,13 @@ class KubePodClientTest {
 
   @Test
   fun `launchCheck starts an orchestrator and waits on both pods`() {
-    every { connectorPodLauncher.create(any(), any(), any(), any(), any()) } returns pod
+    every { connectorPodLauncher.create(any(), any(), any(), any()) } returns pod
 
     client.launchCheck(checkInput, launcherInput)
 
     // TODO: redo the mocking
     verify {
       connectorPodLauncher.create(
-        any(),
         any(),
         any(),
         any(),
@@ -235,7 +231,7 @@ class KubePodClientTest {
     every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
     every { mapper.toKubeInput(workloadId, checkInput, sharedLabels) } returns checkKubeInput
 
-    every { connectorPodLauncher.create(any(), any(), any(), any(), any()) } returns mockk<Pod>()
+    every { connectorPodLauncher.create(any(), any(), any(), any()) } returns mockk<Pod>()
 
     client.launchCheck(checkInput, launcherInput)
 
@@ -284,16 +280,13 @@ class KubePodClientTest {
   fun `launchCheck starts an orchestrator with extra env var`() {
     val extraEnvVar = mapOf("extra" to "env")
 
-    every { checkEnvVar.getEnvMap() } returns extraEnvVar
-
-    every { connectorPodLauncher.create(any(), any(), any(), any(), any()) } returns mockk<Pod>()
+    every { connectorPodLauncher.create(any(), any(), any(), any()) } returns mockk<Pod>()
 
     client.launchCheck(checkInput, launcherInput)
 
     // TODO: Better mock
     verify {
       connectorPodLauncher.create(
-        any(),
         any(),
         any(),
         any(),

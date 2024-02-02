@@ -37,7 +37,7 @@ class PayloadKubeInputMapper(
   @Named("orchestratorEnvMap") private val envMap: Map<String, String>,
   @Named("replicationWorkerConfigs") private val replicationWorkerConfigs: WorkerConfigs,
   @Named("checkWorkerConfigs") private val checkWorkerConfigs: WorkerConfigs,
-  @Named("checkOrchestratorReqs") private val checkOrchestratorReqs: ResourceRequirements,
+  @Named("checkConnectorReqs") private val checkOrchestratorReqs: ResourceRequirements,
 ) {
   fun toKubeInput(
     workloadId: String,

@@ -1,13 +1,13 @@
 package config
 
-import io.airbyte.workload.launcher.config.ContainerOrchestratorConfigBeanFactory
+import io.airbyte.workload.launcher.config.EnvVarConfigBeanFactory
 import io.fabric8.kubernetes.api.model.EnvVarSource
 import io.fabric8.kubernetes.api.model.SecretKeySelector
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 
-class ContainerOrchestratorConfigBeanFactoryTest {
+class ContainerConfigBeanFactoryTest {
   companion object {
     val SECRET_NAME = "secretName"
     val SECRET_KEY = "secretKey"
@@ -21,7 +21,7 @@ class ContainerOrchestratorConfigBeanFactoryTest {
 
   @Test
   fun `test secrets env var map creation`() {
-    val factory = ContainerOrchestratorConfigBeanFactory()
+    val factory = EnvVarConfigBeanFactory()
     val orchestratorSecretsEnvMap = factory.orchestratorSecretsEnvMap(SECRET_NAME, SECRET_KEY)
     assertEquals(1, orchestratorSecretsEnvMap.size)
     val envVarSource = orchestratorSecretsEnvMap["WORKLOAD_API_BEARER_TOKEN"]
@@ -32,7 +32,7 @@ class ContainerOrchestratorConfigBeanFactoryTest {
 
   @Test
   fun `test final env vars contain secret env vars an non-secret env vars`() {
-    val factory = ContainerOrchestratorConfigBeanFactory()
+    val factory = EnvVarConfigBeanFactory()
     val orchestratorEnvVars =
       factory.orchestratorEnvVars(
         mapOf(Pair(ENV_VAR_NAME1, ENV_VAR_VALUE1), Pair(ENV_VAR_NAME2, ENV_VAR_VALUE2)),
