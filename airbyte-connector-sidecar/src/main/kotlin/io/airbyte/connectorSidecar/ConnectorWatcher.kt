@@ -45,7 +45,7 @@ private val logger = KotlinLogging.logger {}
 class ConnectorWatcher(
   @Named("output") val outputPath: Path,
   @Named("configDir") val configDir: String,
-  @Value("\${airbyte.sidecar.file-timeout-seconds}") val fileTimeoutMinutes: Int,
+  @Value("\${airbyte.sidecar.file-timeout-minutes}") val fileTimeoutMinutes: Int,
   val connectorMessageProcessor: ConnectorMessageProcessor,
   val serDeProvider: AirbyteMessageSerDeProvider,
   val airbyteProtocolVersionedMigratorFactory: AirbyteProtocolVersionedMigratorFactory,
