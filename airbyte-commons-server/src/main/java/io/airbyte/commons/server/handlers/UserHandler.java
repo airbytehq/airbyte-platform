@@ -6,6 +6,7 @@ package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.config.persistence.UserPersistence.DEFAULT_USER_ID;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.AuthProvider;
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
@@ -33,6 +34,7 @@ import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.config.InitialUserConfiguration;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.commons.server.support.UserAuthenticationResolver;
 import io.airbyte.config.ConfigSchema;
@@ -251,7 +253,10 @@ public class UserHandler {
       hasUpdate = true;
     }
 
-    // TODO: allow to update UI metadata
+    if (userUpdate.getMetadata() != null) {
+      user.setUiMetadata(Jsons.convertValue(userUpdate.getMetadata(), JsonNode.class));
+      hasUpdate = true;
+    }
 
     if (hasUpdate) {
       userPersistence.writeUser(user);

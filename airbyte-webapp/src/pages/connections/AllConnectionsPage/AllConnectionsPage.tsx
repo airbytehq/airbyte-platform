@@ -18,7 +18,7 @@ import { PageHeader } from "components/ui/PageHeader";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import { useConnectionList, useCurrentWorkspace } from "core/api";
+import { useConnectionList, useCurrentWorkspace, useFilters } from "core/api";
 import { JobStatus, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { naturalComparatorBy } from "core/utils/objects";
@@ -178,21 +178,21 @@ export const AllConnectionsPage: React.FC = () => {
   const availableSourceOptions = useMemo(() => getAvailableSourceOptions(connections), [connections]);
   const availableDestinationOptions = useMemo(() => getAvailableDestinationOptions(connections), [connections]);
 
-  const [statusFilterSelection, setStatusFilterSelection] = useState<FilterOption>(statusFilterOptions[0]);
-  const [sourceFilterSelection, setSourceFilterSelection] = useState<SortableFilterOption>(availableSourceOptions[0]);
-  const [destinationFilterSelection, setDestinationFilterSelection] = useState<SortableFilterOption>(
-    availableDestinationOptions[0]
-  );
+  const [filterValues, setFilterValue, setFilters] = useFilters({
+    status: statusFilterOptions[0].value,
+    source: availableSourceOptions[0].value,
+    destination: availableDestinationOptions[0].value,
+  });
+
   const [searchFilter, setSearchFilter] = useState<string>("");
   const debouncedSearchFilter = useDeferredValue(searchFilter);
   const hasAnyFilterSelected =
-    [statusFilterSelection, sourceFilterSelection, destinationFilterSelection].some((selection) => !!selection.value) ||
-    debouncedSearchFilter;
+    !!filterValues.status || !!filterValues.source || !!filterValues.destination || debouncedSearchFilter;
 
   const filteredConnections = useMemo(() => {
-    const statusFilter = statusFilterSelection?.value;
-    const sourceFilter = sourceFilterSelection?.value;
-    const destinationFilter = destinationFilterSelection?.value;
+    const statusFilter = filterValues.status;
+    const sourceFilter = filterValues.source;
+    const destinationFilter = filterValues.destination;
 
     return connections.filter((connection) => {
       if (statusFilter) {
@@ -239,13 +239,7 @@ export const AllConnectionsPage: React.FC = () => {
 
       return true;
     });
-  }, [
-    connections,
-    debouncedSearchFilter,
-    destinationFilterSelection?.value,
-    sourceFilterSelection?.value,
-    statusFilterSelection?.value,
-  ]);
+  }, [connections, debouncedSearchFilter, filterValues]);
 
   const connectionsSummary = connections.reduce<Record<SummaryKey, number>>(
     (acc, connection) => {
@@ -326,10 +320,8 @@ export const AllConnectionsPage: React.FC = () => {
                         optionClassName={styles.filterOption}
                         optionTextAs="span"
                         options={statusFilterOptions}
-                        selectedValue={statusFilterSelection.value}
-                        onSelect={(value) =>
-                          setStatusFilterSelection(statusFilterOptions.find((option) => option.value === value)!)
-                        }
+                        selectedValue={filterValues.status}
+                        onSelect={(value) => setFilterValue("status", value)}
                       />
                     </FlexItem>
                     <FlexItem>
@@ -339,10 +331,8 @@ export const AllConnectionsPage: React.FC = () => {
                         optionClassName={styles.filterOption}
                         optionTextAs="span"
                         options={availableSourceOptions}
-                        selectedValue={sourceFilterSelection.value}
-                        onSelect={(value) =>
-                          setSourceFilterSelection(availableSourceOptions.find((option) => option.value === value)!)
-                        }
+                        selectedValue={filterValues.source}
+                        onSelect={(value) => setFilterValue("source", value)}
                       />
                     </FlexItem>
                     <FlexItem>
@@ -351,12 +341,8 @@ export const AllConnectionsPage: React.FC = () => {
                         optionClassName={styles.filterOption}
                         optionTextAs="span"
                         options={availableDestinationOptions}
-                        selectedValue={destinationFilterSelection.value}
-                        onSelect={(value) =>
-                          setDestinationFilterSelection(
-                            availableDestinationOptions.find((option) => option.value === value)!
-                          )
-                        }
+                        selectedValue={filterValues.destination}
+                        onSelect={(value) => setFilterValue("destination", value)}
                       />
                     </FlexItem>
                     <FlexItem>
@@ -366,9 +352,11 @@ export const AllConnectionsPage: React.FC = () => {
                       <FlexItem>
                         <ClearFiltersButton
                           onClick={() => {
-                            setStatusFilterSelection(statusFilterOptions[0]);
-                            setSourceFilterSelection(availableSourceOptions[0]);
-                            setDestinationFilterSelection(availableDestinationOptions[0]);
+                            setFilters({
+                              status: null,
+                              source: null,
+                              destination: null,
+                            });
                             setSearchFilter("");
                           }}
                         />

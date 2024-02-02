@@ -16,8 +16,10 @@ import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.field;
 import static org.jooq.impl.DSL.select;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.User;
@@ -33,6 +35,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.jooq.JSONB;
 import org.jooq.Record;
 import org.jooq.Result;
 import org.jooq.impl.DSL;
@@ -87,6 +90,7 @@ public class UserPersistence {
             .set(USER.COMPANY_NAME, user.getCompanyName())
             .set(USER.EMAIL, user.getEmail())
             .set(USER.NEWS, user.getNews())
+            .set(USER.UI_METADATA, JSONB.valueOf(Jsons.serialize(user.getUiMetadata())))
             .set(USER.UPDATED_AT, timestamp)
             .where(USER.ID.eq(user.getUserId()))
             .execute();
@@ -119,6 +123,7 @@ public class UserPersistence {
             .set(USER.COMPANY_NAME, user.getCompanyName())
             .set(USER.EMAIL, user.getEmail())
             .set(USER.NEWS, user.getNews())
+            .set(USER.UI_METADATA, JSONB.valueOf(Jsons.serialize(user.getUiMetadata())))
             .set(USER.CREATED_AT, timestamp)
             .set(USER.UPDATED_AT, timestamp)
             .execute();
@@ -177,7 +182,11 @@ public class UserPersistence {
         .withStatus(record.get(USER.STATUS) == null ? null : Enums.toEnum(record.get(USER.STATUS, String.class), User.Status.class).orElseThrow())
         .withCompanyName(record.get(USER.COMPANY_NAME))
         .withEmail(record.get(USER.EMAIL))
-        .withNews(record.get(USER.NEWS));
+        .withNews(record.get(USER.NEWS))
+        // special handling of "null" string so User hashes predictably with Java `<null>` instead of
+        // JsonNode `null`
+        .withUiMetadata(record.get(USER.UI_METADATA) == null || record.get(USER.UI_METADATA).data().equals("null") ? null
+            : Jsons.deserialize(record.get(USER.UI_METADATA).data(), JsonNode.class));
   }
 
   /**
@@ -211,7 +220,8 @@ public class UserPersistence {
             USER.STATUS,
             USER.COMPANY_NAME,
             USER.EMAIL,
-            USER.NEWS)
+            USER.NEWS,
+            USER.UI_METADATA)
         .from(AUTH_USER)
         .innerJoin(USER).on(AUTH_USER.USER_ID.eq(USER.ID))
         .where(AUTH_USER.AUTH_USER_ID.eq(userAuthId)).fetch());

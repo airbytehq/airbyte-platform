@@ -243,7 +243,8 @@ public class MockData {
         .withStatus(User.Status.DISABLED)
         .withCompanyName("company-1")
         .withEmail("user-1@whatever.com")
-        .withNews(true);
+        .withNews(true)
+        .withUiMetadata(null);
 
     final User user2 = new User()
         .withUserId(CREATOR_USER_ID_2)
@@ -254,7 +255,8 @@ public class MockData {
         .withStatus(User.Status.INVITED)
         .withCompanyName("company-2")
         .withEmail("user-2@whatever.com")
-        .withNews(false);
+        .withNews(false)
+        .withUiMetadata(null);
 
     final User user3 = new User()
         .withUserId(CREATOR_USER_ID_3)
@@ -265,7 +267,8 @@ public class MockData {
         .withStatus(User.Status.REGISTERED)
         .withCompanyName("company-3")
         .withEmail("user-3@whatever.com")
-        .withNews(true);
+        .withNews(true)
+        .withUiMetadata(null);
 
     final User user4 = new User()
         .withUserId(CREATOR_USER_ID_4)
@@ -276,7 +279,8 @@ public class MockData {
         .withStatus(User.Status.REGISTERED)
         .withCompanyName("company-4")
         .withEmail("user-4@whatever.com")
-        .withNews(true);
+        .withNews(true)
+        .withUiMetadata(null);
 
     final User user5 = new User()
         .withUserId(CREATOR_USER_ID_5)
@@ -287,7 +291,8 @@ public class MockData {
         .withStatus(User.Status.REGISTERED)
         .withCompanyName("company-5")
         .withEmail("user-5@whatever.com")
-        .withNews(true);
+        .withNews(true)
+        .withUiMetadata(null);
 
     return Arrays.asList(user1, user2, user3, user4, user5);
   }
