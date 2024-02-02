@@ -20,6 +20,7 @@ import io.airbyte.api.client.model.generated.DestinationUpdate
 import io.airbyte.api.client.model.generated.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.client.model.generated.Pagination
 import io.airbyte.api.client.model.generated.PartialDestinationUpdate
+import io.airbyte.api.server.constants.AIRBYTE_API_AUTH_HEADER_VALUE
 import io.airbyte.api.server.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.api.server.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.api.server.forwardingClient.ConfigApiClient
@@ -238,7 +239,10 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
     userInfo: String?,
   ): DestinationsResponse {
     val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(userInfo) }
+    val workspaceIdsToQuery =
+      workspaceIds.ifEmpty {
+        userService.getAllWorkspaceIdsForUser(authorization ?: System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE), userInfo)
+      }
     val listResourcesForWorkspacesRequestBody = ListResourcesForWorkspacesRequestBody()
     listResourcesForWorkspacesRequestBody.includeDeleted = includeDeleted
     listResourcesForWorkspacesRequestBody.pagination = pagination

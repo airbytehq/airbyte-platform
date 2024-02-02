@@ -18,6 +18,7 @@ import io.airbyte.api.client.model.generated.ConnectionReadList
 import io.airbyte.api.client.model.generated.ConnectionUpdate
 import io.airbyte.api.client.model.generated.ListConnectionsForWorkspacesRequestBody
 import io.airbyte.api.client.model.generated.Pagination
+import io.airbyte.api.server.constants.AIRBYTE_API_AUTH_HEADER_VALUE
 import io.airbyte.api.server.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.api.server.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.api.server.forwardingClient.ConfigApiClient
@@ -245,7 +246,10 @@ class ConnectionServiceImpl(
     userInfo: String?,
   ): ConnectionsResponse {
     val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(userInfo) }
+    val workspaceIdsToQuery =
+      workspaceIds.ifEmpty {
+        userService.getAllWorkspaceIdsForUser(authorization ?: System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE), userInfo)
+      }
 
     val listConnectionsForWorkspacesRequestBody =
       ListConnectionsForWorkspacesRequestBody()

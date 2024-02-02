@@ -16,6 +16,7 @@ import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.airbyte.api.client.model.generated.WorkspaceReadList
 import io.airbyte.api.server.apiTracking.TrackingHelper
+import io.airbyte.api.server.constants.AIRBYTE_API_AUTH_HEADER_VALUE
 import io.airbyte.api.server.constants.DELETE
 import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
@@ -314,7 +315,10 @@ open class WorkspaceServiceImpl(
   ): WorkspacesResponse {
     val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
 
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(userInfo) }
+    val workspaceIdsToQuery =
+      workspaceIds.ifEmpty {
+        userService.getAllWorkspaceIdsForUser(authorization ?: System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE), userInfo)
+      }
     log.debug("Workspaces to query: $workspaceIdsToQuery")
     val listResourcesForWorkspacesRequestBody = ListResourcesForWorkspacesRequestBody()
     listResourcesForWorkspacesRequestBody.includeDeleted = includeDeleted

@@ -17,6 +17,7 @@ import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.Ord
 import io.airbyte.api.client.model.generated.JobListRequestBody
 import io.airbyte.api.client.model.generated.JobReadList
 import io.airbyte.api.client.model.generated.Pagination
+import io.airbyte.api.server.constants.AIRBYTE_API_AUTH_HEADER_VALUE
 import io.airbyte.api.server.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.api.server.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.api.server.filters.JobsFilter
@@ -250,7 +251,10 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
     val configTypes = getJobConfigTypes(jobsFilter.jobType)
 
     // Get relevant workspace Ids
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(userInfo) }
+    val workspaceIdsToQuery =
+      workspaceIds.ifEmpty {
+        userService.getAllWorkspaceIdsForUser(authorization ?: System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE), userInfo)
+      }
 
     val requestBody =
       JobListForWorkspacesRequestBody()
