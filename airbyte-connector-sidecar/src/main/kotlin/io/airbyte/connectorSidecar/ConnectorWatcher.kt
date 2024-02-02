@@ -1,6 +1,7 @@
 package io.airbyte.connectorSidecar
 
 import com.google.common.annotations.VisibleForTesting
+import com.google.common.base.Stopwatch
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
@@ -27,11 +28,13 @@ import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Duration
 import java.util.Optional
 import java.util.UUID
 import kotlin.system.exitProcess
@@ -42,6 +45,7 @@ private val logger = KotlinLogging.logger {}
 class ConnectorWatcher(
   @Named("output") val outputPath: Path,
   @Named("configDir") val configDir: String,
+  @Value("\${airbyte.sidecar.file-timeout-seconds}") val fileTimeoutMinutes: Int,
   val connectorMessageProcessor: ConnectorMessageProcessor,
   val serDeProvider: AirbyteMessageSerDeProvider,
   val airbyteProtocolVersionedMigratorFactory: AirbyteProtocolVersionedMigratorFactory,
@@ -57,8 +61,15 @@ class ConnectorWatcher(
     try {
       workloadApi.workloadHeartbeat(WorkloadHeartbeatRequest(workloadId))
 
+      val stopwatch: Stopwatch = Stopwatch.createStarted()
       while (!areNeededFilesPresent()) {
         Thread.sleep(100)
+        if (fileTimeoutReach(stopwatch)) {
+          failWorkload(workloadId, null)
+          exitFileNotFound()
+          // The return is needed for the test
+          return
+        }
       }
 
       val outputIS =
@@ -129,6 +140,15 @@ class ConnectorWatcher(
   @VisibleForTesting
   fun exitInternalError() {
     exitProcess(1)
+  }
+
+  @VisibleForTesting
+  fun exitFileNotFound() {
+    exitProcess(2)
+  }
+
+  fun fileTimeoutReach(stopwatch: Stopwatch): Boolean {
+    return stopwatch.elapsed() > Duration.ofMinutes(fileTimeoutMinutes.toLong())
   }
 
   @VisibleForTesting

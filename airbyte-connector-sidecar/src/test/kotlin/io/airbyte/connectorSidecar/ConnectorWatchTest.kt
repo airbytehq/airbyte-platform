@@ -66,6 +66,7 @@ class ConnectorWatchTest {
         ConnectorWatcher(
           outputPath,
           configDir,
+          fileTimeoutMinutes = 42,
           connectorMessageProcessor,
           serDeProvider,
           airbyteProtocolVersionedMigratorFactory,
@@ -166,6 +167,25 @@ class ConnectorWatchTest {
         WorkloadFailureRequest(workloadId, output.failureReason.failureOrigin.value(), output.failureReason.externalMessage),
       )
       connectorWatcher.exitInternalError()
+    }
+  }
+
+  @Test
+  fun `run for failed with file timeout`() {
+    every { connectorWatcher.areNeededFilesPresent() } returns false
+
+    every { connectorWatcher.fileTimeoutReach(any()) } returns true
+
+    every { connectorWatcher.exitFileNotFound() } returns Unit
+
+    every { workloadApi.workloadFailure(WorkloadFailureRequest(workloadId)) } returns Unit
+
+    connectorWatcher.run()
+
+    verifyOrder {
+      workloadApi.workloadHeartbeat(WorkloadHeartbeatRequest(workloadId))
+      workloadApi.workloadFailure(WorkloadFailureRequest(workloadId))
+      connectorWatcher.exitFileNotFound()
     }
   }
 }

@@ -60,6 +60,8 @@ airbyte:
         name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
         value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
       host: ${INTERNAL_API_HOST}
+  sidecar:
+    file-timeout-minutes: ${SIDECAR_FILE_TIMEOUT_MINUTES:9}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
