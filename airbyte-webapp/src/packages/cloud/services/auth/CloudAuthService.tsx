@@ -155,7 +155,7 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
           await updateAirbyteUser({
             userUpdate: { userId: airbyteUser.userId, name },
             getAccessToken: () => firebaseUser.getIdToken(),
-          });
+          }).then(() => setAirbyteUser({ ...airbyteUser, name }));
         },
         updatePassword: async (email: string, currentPassword: string, newPassword: string) => {
           // re-authentication may be needed before updating password
