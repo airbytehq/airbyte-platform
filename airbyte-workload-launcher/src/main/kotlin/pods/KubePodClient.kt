@@ -80,11 +80,12 @@ class KubePodClient(
 
     waitForOrchestratorStart(pod)
 
+    // We wait for the destination first because orchestrator starts destinations first.
+    waitDestinationReadyOrTerminalInit(kubeInput)
+
     if (!replicationInput.isReset) {
       waitSourceReadyOrTerminalInit(kubeInput)
     }
-
-    waitDestinationReadyOrTerminalInit(kubeInput)
   }
 
   @Trace(operationName = WAIT_ORCHESTRATOR_OPERATION_NAME)
