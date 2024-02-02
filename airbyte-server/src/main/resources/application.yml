@@ -164,7 +164,7 @@ airbyte:
         memory-request: 25Mi
       orchestrator:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
-        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.5}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       source:
@@ -190,7 +190,7 @@ airbyte:
         memory-request: 25Mi
       orchestrator-api:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
-        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.3}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       destination-api:
@@ -216,7 +216,7 @@ airbyte:
         memory-request: 25Mi
       orchestrator-database:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:2}
-        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:2}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       destination-database:
