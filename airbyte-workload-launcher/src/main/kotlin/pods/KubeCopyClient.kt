@@ -77,6 +77,10 @@ class KubeCopyClient(private val metricClient: MetricClient) {
       proc = copyToPodProc(pod, fileName, tmpFilePath)
 
       val exitCode = proc.waitFor()
+      if (exitCode != 0) {
+        logger.info { "Fail to copy file $fileName to ${pod.metadata.name}." }
+        logger.info { proc.inputReader().readLines().joinToString("\n") }
+      }
       return exitCode
     } catch (e: IOException) {
       throw RuntimeException(e)
