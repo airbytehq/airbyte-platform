@@ -24,7 +24,6 @@ import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ModalServiceProvider } from "hooks/services/Modal";
 import { NotificationService } from "hooks/services/Notification";
 import { AirbyteThemeProvider } from "hooks/theme/useAirbyteTheme";
-import { ConnectorBuilderTestInputProvider } from "services/connectorBuilder/ConnectorBuilderTestInputService";
 
 import LoadingPage from "./components/LoadingPage";
 import en from "./locales/en.json";
@@ -53,9 +52,7 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
               <ConfirmationModalService>
                 <ModalServiceProvider>
                   <FormChangeTrackerService>
-                    <ConnectorBuilderTestInputProvider>
-                      <HelmetProvider>{children}</HelmetProvider>
-                    </ConnectorBuilderTestInputProvider>
+                    <HelmetProvider>{children}</HelmetProvider>
                   </FormChangeTrackerService>
                 </ModalServiceProvider>
               </ConfirmationModalService>

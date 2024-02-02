@@ -978,7 +978,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectorBuilderProjectTestingValuesRead"
+                $ref: "#/components/schemas/ConnectorBuilderProjectTestingValues"
   /v1/connector_builder_projects/read_stream:
     post:
       tags:
@@ -5451,8 +5451,6 @@ components:
           $ref: "#/components/schemas/SourceDefinitionSpecification"
         testingValues:
           $ref: "#/components/schemas/ConnectorBuilderProjectTestingValues"
-    ConnectorBuilderProjectTestingValuesRead:
-      $ref: "#/components/schemas/SourceConfiguration"
     ConnectorBuilderProjectStreamReadRequestBody:
       type: object
       required:

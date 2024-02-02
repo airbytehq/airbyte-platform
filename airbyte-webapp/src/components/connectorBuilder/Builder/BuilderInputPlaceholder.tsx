@@ -18,7 +18,7 @@ export interface BuilderFieldProps {
 }
 
 export const BuilderInputPlaceholder = (props: BuilderFieldProps) => {
-  const { setTestInputOpen } = useConnectorBuilderFormManagementState();
+  const { setTestingValuesInputOpen } = useConnectorBuilderFormManagementState();
   const { label, tooltip } = getLabelAndTooltip(props.label, props.tooltip, props.manifestPath, "", true, true);
   return (
     <FlexContainer alignItems="center">
@@ -35,7 +35,7 @@ export const BuilderInputPlaceholder = (props: BuilderFieldProps) => {
           variant="link"
           type="button"
           onClick={() => {
-            setTestInputOpen(true);
+            setTestingValuesInputOpen(true);
           }}
         >
           <FormattedMessage id="connectorBuilder.placeholder.button" />

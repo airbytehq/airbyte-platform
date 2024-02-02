@@ -28,9 +28,9 @@ import { useAutoImportSchema } from "../useAutoImportSchema";
 import { formatJson } from "../utils";
 
 export const StreamTester: React.FC<{
-  hasTestInputJsonErrors: boolean;
-  setTestInputOpen: (open: boolean) => void;
-}> = ({ hasTestInputJsonErrors, setTestInputOpen }) => {
+  hasTestingValuesErrors: boolean;
+  setTestingValuesInputOpen: (open: boolean) => void;
+}> = ({ hasTestingValuesErrors, setTestingValuesInputOpen }) => {
   const { formatMessage } = useIntl();
   const {
     resolvedManifest,
@@ -135,8 +135,8 @@ export const StreamTester: React.FC<{
             stream_name: streamName,
           });
         }}
-        hasTestInputJsonErrors={hasTestInputJsonErrors}
-        setTestInputOpen={setTestInputOpen}
+        hasTestingValuesErrors={hasTestingValuesErrors}
+        setTestingValuesInputOpen={setTestingValuesInputOpen}
         isResolving={isResolving}
         hasResolveErrors={Boolean(resolveErrorMessage)}
       />

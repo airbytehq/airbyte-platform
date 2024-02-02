@@ -5,6 +5,7 @@ import semver from "semver";
 import * as yup from "yup";
 import { MixedSchema } from "yup/lib/mixed";
 
+import { ConnectorBuilderProjectTestingValues } from "core/api/types/AirbyteClient";
 import {
   ConnectorManifest,
   Spec,
@@ -62,6 +63,7 @@ export interface BuilderState {
   yaml: string;
   view: "global" | "inputs" | number;
   testStreamIndex: number;
+  testingValues: ConnectorBuilderProjectTestingValues | undefined;
 }
 
 export interface BuilderFormInput {

@@ -82,6 +82,7 @@ function inputInEditingToFormInput({
       default: showDefaultValueField ? values.definition.default : undefined,
       format: type === "date" ? "date" : type === "date-time" ? "date-time" : values.definition.format,
       pattern: type === "date" ? DATE_PATTERN : type === "date-time" ? DATE_TIME_PATTERN : values.definition.pattern,
+      airbyte_secret: values.definition.airbyte_secret ? true : undefined,
     },
   };
 }

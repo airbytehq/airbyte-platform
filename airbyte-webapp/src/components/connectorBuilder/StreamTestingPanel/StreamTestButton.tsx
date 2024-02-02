@@ -13,16 +13,16 @@ import { useBuilderErrors } from "../useBuilderErrors";
 
 interface StreamTestButtonProps {
   readStream: () => void;
-  hasTestInputJsonErrors: boolean;
-  setTestInputOpen: (open: boolean) => void;
+  hasTestingValuesErrors: boolean;
+  setTestingValuesInputOpen: (open: boolean) => void;
   isResolving: boolean;
   hasResolveErrors: boolean;
 }
 
 export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   readStream,
-  hasTestInputJsonErrors,
-  setTestInputOpen,
+  hasTestingValuesErrors,
+  setTestingValuesInputOpen,
   isResolving,
   hasResolveErrors,
 }) => {
@@ -33,8 +33,8 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   const relevantViews: BuilderView[] = ["global", "inputs", testStreamIndex];
 
   const handleClick = () => {
-    if (hasTestInputJsonErrors) {
-      setTestInputOpen(true);
+    if (hasTestingValuesErrors) {
+      setTestingValuesInputOpen(true);
       return;
     }
     if (mode === "yaml") {
@@ -60,7 +60,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
     tooltipContent = <FormattedMessage id="connectorBuilder.invalidYamlTest" />;
   }
 
-  if ((mode === "ui" && hasErrors(relevantViews)) || hasTestInputJsonErrors) {
+  if ((mode === "ui" && hasErrors(relevantViews)) || hasTestingValuesErrors) {
     showWarningIcon = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.configErrorsTest" />;
   } else if (hasResolveErrors) {

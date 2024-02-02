@@ -18,7 +18,7 @@ interface ApiErrorBoundaryProps {
   trackError: TrackErrorFn;
 }
 
-export class ConfigMenuErrorBoundaryComponent extends React.Component<
+export class TestingValuesMenuErrorBoundaryComponent extends React.Component<
   React.PropsWithChildren<ApiErrorBoundaryProps>,
   ApiErrorBoundaryState
 > {

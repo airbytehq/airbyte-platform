@@ -24,7 +24,6 @@ import { AirbyteThemeProvider } from "hooks/theme/useAirbyteTheme";
 import en from "locales/en.json";
 import { Routing } from "packages/cloud/cloudRoutes";
 import { theme } from "packages/cloud/theme";
-import { ConnectorBuilderTestInputProvider } from "services/connectorBuilder/ConnectorBuilderTestInputService";
 
 import { AppServicesProvider } from "./services/AppServicesProvider";
 import { ZendeskProvider } from "./services/thirdParty/zendesk";
@@ -40,11 +39,9 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
         <FeatureService features={defaultCloudFeatures}>
           <AppServicesProvider>
             <ModalServiceProvider>
-              <ConnectorBuilderTestInputProvider>
-                <HelmetProvider>
-                  <ZendeskProvider>{children}</ZendeskProvider>
-                </HelmetProvider>
-              </ConnectorBuilderTestInputProvider>
+              <HelmetProvider>
+                <ZendeskProvider>{children}</ZendeskProvider>
+              </HelmetProvider>
             </ModalServiceProvider>
           </AppServicesProvider>
         </FeatureService>
