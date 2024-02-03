@@ -14,7 +14,6 @@ import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.sync.OrchestratorConstants
-import io.airbyte.workers.sync.OrchestratorConstants.CHECK_APPLICATION_NAME
 import io.airbyte.workers.sync.ReplicationLauncherWorker
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
@@ -180,12 +179,8 @@ class PayloadKubeInputMapperTest {
         mapOf(
           OrchestratorConstants.INIT_FILE_ENV_MAP to mockSerializedOutput,
           OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to mockSerializedOutput,
-          KUBE_POD_INFO to mockSerializedOutput,
           OrchestratorConstants.CONNECTION_CONFIGURATION to mockSerializedOutput,
-          OrchestratorConstants.INIT_FILE_APPLICATION to CHECK_APPLICATION_NAME,
-          OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
-          OrchestratorConstants.CONNECTION_INPUT to mockSerializedOutput,
-          OrchestratorConstants.INTEGRATION_LAUNCHER_CONFIG to mockSerializedOutput,
+          OrchestratorConstants.SIDECAR_INPUT to mockSerializedOutput,
         ),
     )
     assert(result.resourceReqs == checkResourceReqs)

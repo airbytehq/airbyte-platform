@@ -104,8 +104,7 @@ public class OrchestratorConstants {
   public static final String EXIT_CODE_FILE = "exitCode.txt";
   public static final String CHECK_APPLICATION_NAME = "check-orchestrator";
   public static final String CONNECTION_CONFIGURATION = "connectionConfiguration.json";
-  public static final String CONNECTION_INPUT = "connectionInput.json";
-  public static final String INTEGRATION_LAUNCHER_CONFIG = "integrationLauncherConfig.json";
+  public static final String SIDECAR_INPUT = "sidecarInput.json";
 
   // define two ports for stdout/stderr usage on the container orchestrator pod
   public static final int PORT1 = 9877;

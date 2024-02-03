@@ -5,12 +5,12 @@ import io.airbyte.config.ResourceRequirements
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
+import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.orchestrator.OrchestratorNameGenerator
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.sync.OrchestratorConstants
-import io.airbyte.workers.sync.OrchestratorConstants.CHECK_APPLICATION_NAME
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.REPLICATION
@@ -93,7 +93,7 @@ class PayloadKubeInputMapper(
 
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), checkWorkerConfigs)
 
-    val fileMap = buildFileMap(workloadId, input, input.jobRunConfig, orchestratorPodInfo)
+    val fileMap = buildFileMap(workloadId, input, input.jobRunConfig)
 
     return CheckOrchestratorKubeInput(
       labeler.getCheckOrchestratorLabels() + sharedLabels,
@@ -125,13 +125,14 @@ class PayloadKubeInputMapper(
     jobRunConfig: JobRunConfig,
     kubePodInfo: KubePodInfo,
   ): Map<String, String> {
-    return sharedFileMap(jobRunConfig, kubePodInfo) +
+    return sharedFileMap(jobRunConfig) +
       mapOf(
         OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
         OrchestratorConstants.INIT_FILE_APPLICATION to REPLICATION,
         OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
         INIT_FILE_SOURCE_LAUNCHER_CONFIG to serializer.serialize(input.sourceLauncherConfig),
         INIT_FILE_DESTINATION_LAUNCHER_CONFIG to serializer.serialize(input.destinationLauncherConfig),
+        KUBE_POD_INFO to serializer.serialize(kubePodInfo),
       )
   }
 
@@ -139,26 +140,18 @@ class PayloadKubeInputMapper(
     workloadId: String,
     input: CheckConnectionInput,
     jobRunConfig: JobRunConfig,
-    kubePodInfo: KubePodInfo,
   ): Map<String, String> {
-    return sharedFileMap(jobRunConfig, kubePodInfo) +
+    return sharedFileMap(jobRunConfig) +
       mapOf(
         OrchestratorConstants.CONNECTION_CONFIGURATION to serializer.serialize(input.connectionConfiguration.connectionConfiguration),
-        OrchestratorConstants.INIT_FILE_APPLICATION to CHECK_APPLICATION_NAME,
-        OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
-        OrchestratorConstants.CONNECTION_INPUT to serializer.serialize(input.connectionConfiguration),
-        OrchestratorConstants.INTEGRATION_LAUNCHER_CONFIG to serializer.serialize(input.launcherConfig),
+        OrchestratorConstants.SIDECAR_INPUT to serializer.serialize(SidecarInput(input.connectionConfiguration, workloadId, input.launcherConfig)),
       )
   }
 
-  private fun sharedFileMap(
-    jobRunConfig: JobRunConfig,
-    kubePodInfo: KubePodInfo,
-  ): Map<String, String> {
+  private fun sharedFileMap(jobRunConfig: JobRunConfig): Map<String, String> {
     return mapOf(
       OrchestratorConstants.INIT_FILE_ENV_MAP to serializer.serialize(envMap),
       OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to serializer.serialize(jobRunConfig),
-      KUBE_POD_INFO to serializer.serialize(kubePodInfo),
     )
   }
 }

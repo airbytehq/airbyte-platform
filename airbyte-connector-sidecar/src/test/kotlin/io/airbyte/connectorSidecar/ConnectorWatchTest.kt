@@ -11,6 +11,7 @@ import io.airbyte.protocol.models.Jsons
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.internal.AirbyteStreamFactory
+import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workload.api.client.generated.WorkloadApi
@@ -76,15 +77,10 @@ class ConnectorWatchTest {
         ),
       )
 
-    every { connectorWatcher.readFile(OrchestratorConstants.CONNECTION_INPUT) } returns
-      Jsons.serialize(input)
-
-    every { connectorWatcher.readFile(OrchestratorConstants.WORKLOAD_ID_FILE) } returns workloadId
+    every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
+      Jsons.serialize(SidecarInput(input, workloadId, IntegrationLauncherConfig()))
 
     every { connectorWatcher.readFile(OrchestratorConstants.EXIT_CODE_FILE) } returns "0"
-
-    every { connectorWatcher.readFile(OrchestratorConstants.INTEGRATION_LAUNCHER_CONFIG) } returns
-      Jsons.serialize(IntegrationLauncherConfig())
 
     every { connectorWatcher.areNeededFilesPresent() } returns true
 

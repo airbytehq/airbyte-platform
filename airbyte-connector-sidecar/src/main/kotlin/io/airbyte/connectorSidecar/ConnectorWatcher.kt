@@ -17,11 +17,10 @@ import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration
+import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.sync.OrchestratorConstants.CHECK_JOB_OUTPUT_FILENAME
-import io.airbyte.workers.sync.OrchestratorConstants.CONNECTION_INPUT
 import io.airbyte.workers.sync.OrchestratorConstants.EXIT_CODE_FILE
-import io.airbyte.workers.sync.OrchestratorConstants.INTEGRATION_LAUNCHER_CONFIG
-import io.airbyte.workers.sync.OrchestratorConstants.WORKLOAD_ID_FILE
+import io.airbyte.workers.sync.OrchestratorConstants.SIDECAR_INPUT
 import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
@@ -54,9 +53,10 @@ class ConnectorWatcher(
   val jobOutputDocStore: JobOutputDocStore,
 ) {
   fun run() {
-    val connectionConfiguration = Jsons.deserialize(readFile(CONNECTION_INPUT), StandardCheckConnectionInput::class.java)
-    val workloadId = readFile(WORKLOAD_ID_FILE)
-    val integrationLauncherConfig = Jsons.deserialize(readFile(INTEGRATION_LAUNCHER_CONFIG), IntegrationLauncherConfig::class.java)
+    val input = Jsons.deserialize(readFile(SIDECAR_INPUT), SidecarInput::class.java)
+    val connectionConfiguration = input.checkConnectionInput
+    val workloadId = input.workloadId
+    val integrationLauncherConfig = input.integrationLauncherConfig
 
     try {
       workloadApi.workloadHeartbeat(WorkloadHeartbeatRequest(workloadId))
