@@ -193,6 +193,25 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/users/delete:
+    post:
+      tags:
+        - user
+      summary: Deletes a user (this is the low-level route that does not handle workspaces, see the web_backend routes instead as this may result in orphaned workspaces)
+      operationId: deleteUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: The resource was deleted successfully.
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   # CLOUD_WORKSPACE
   /v1/cloud_workspaces/create:
     post:
