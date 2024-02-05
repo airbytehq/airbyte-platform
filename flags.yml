@@ -26,7 +26,7 @@ flags:
   - name: connectors.useIconUrlInApiResponse
     serve: true
   - name: platform.use-new-schema-update-notification
-    serve: false
+    serve: true
   # whether the platform will track destination timeouts. If set to 'true', then the platform will monitor if there has been
   # a call to a destination that has taken more than the threshold defined in 'destination-timeout.maxSeconds', and if so,
   # the platform will consider the destination to have timed out.

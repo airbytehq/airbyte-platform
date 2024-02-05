@@ -137,7 +137,7 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
 
   object AddSchedulingJitter : Temporary<Boolean>(key = "platform.add-scheduling-jitter", default = false)
 
-  object UseNewSchemaUpdateNotification : Temporary<Boolean>(key = "platform.use-new-schema-update-notification", default = false)
+  object UseNewSchemaUpdateNotification : Temporary<Boolean>(key = "platform.use-new-schema-update-notification", default = true)
 }
 
 object RunSocatInConnectorContainer : Temporary<Boolean>(key = "platform.run-socat-in-connector-container", default = false)
