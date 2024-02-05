@@ -179,8 +179,19 @@ class EnvVarConfigBeanFactory {
   fun orchestratorSecretsEnvMap(
     @Value("\${airbyte.workload-api.bearer-token-secret-name}") bearerTokenSecretName: String,
     @Value("\${airbyte.workload-api.bearer-token-secret-key}") bearerTokenSecretKey: String,
+    @Value("\${airbyte.connector.source.credentials.aws.assumed-role.access-key}") awsAssumedRoleAccessKey: String,
+    @Value("\${airbyte.connector.source.credentials.aws.assumed-role.secret-key}") awsAssumedRoleSecretKey: String,
+    @Value("\${airbyte.connector.source.credentials.aws.assumed-role.secret-name}") awsAssumedRoleSecretName: String,
   ): Map<String, EnvVarSource> {
-    return mapOf(WORKLOAD_API_BEARER_TOKEN_ENV_VAR to createEnvVarSource(bearerTokenSecretName, bearerTokenSecretKey))
+    return buildMap {
+      if (bearerTokenSecretName.isNotBlank()) {
+        put(WORKLOAD_API_BEARER_TOKEN_ENV_VAR, createEnvVarSource(bearerTokenSecretName, bearerTokenSecretKey))
+      }
+      if (awsAssumedRoleSecretName.isNotBlank()) {
+        put(AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR, createEnvVarSource(awsAssumedRoleSecretName, awsAssumedRoleAccessKey))
+        put(AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR, createEnvVarSource(awsAssumedRoleSecretName, awsAssumedRoleSecretKey))
+      }
+    }
   }
 
   private fun createEnvVarSource(
@@ -330,6 +341,8 @@ class EnvVarConfigBeanFactory {
     private const val WORKLOAD_API_MAX_RETRIES_ENV_VAR = "WORKLOAD_API_MAX_RETRIES"
 
     // secrets
-    private const val WORKLOAD_API_BEARER_TOKEN_ENV_VAR = "WORKLOAD_API_BEARER_TOKEN"
+    const val AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR = "AWS_ASSUME_ROLE_ACCESS_KEY_ID"
+    const val AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR = "AWS_ASSUME_ROLE_SECRET_ACCESS_KEY"
+    const val WORKLOAD_API_BEARER_TOKEN_ENV_VAR = "WORKLOAD_API_BEARER_TOKEN"
   }
 }

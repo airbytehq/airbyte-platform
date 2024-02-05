@@ -18,6 +18,16 @@ micronaut:
         port: ${STATSD_PORT:8125}
 
 airbyte:
+  connector:
+    source:
+      credentials:
+        aws:
+          assumed-role:
+            # These properties represent the AWS assume role credentials used to connect to an AWS source
+            #  using Airbyte's IAM role
+            access-key: AWS_ACCESS_KEY_ID
+            secret-key: AWS_SECRET_ACCESS_KEY
+            secret-name: ${AWS_ASSUME_ROLE_SECRET_NAME:}
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
   data-plane-id: ${DATA_PLANE_ID}
   feature-flag:
