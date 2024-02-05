@@ -10,7 +10,6 @@ import { CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus } from "
 import { useAuthService } from "core/services/auth";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useExperimentSpeedyConnection } from "packages/cloud/components/experiments/SpeedyConnection/hooks/useExperimentSpeedyConnection";
 import { SpeedyConnectionBanner } from "packages/cloud/components/experiments/SpeedyConnection/SpeedyConnectionBanner";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
@@ -26,7 +25,6 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const workspace = useCurrentWorkspace();
   const cloudWorkspace = useGetCloudWorkspaceAsync(workspace.workspaceId);
 
-  const isNewTrialPolicy = useExperiment("billing.newTrialPolicy", false);
   const { trackError } = useAppMonitoringService();
 
   // exp-speedy-connection
@@ -34,10 +32,9 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
 
   const { user } = useAuthService();
 
-  const isTrial = isNewTrialPolicy
-    ? cloudWorkspace?.workspaceTrialStatus === WorkspaceTrialStatus.in_trial ||
-      cloudWorkspace?.workspaceTrialStatus === WorkspaceTrialStatus.pre_trial
-    : Boolean(cloudWorkspace?.trialExpiryTimestamp);
+  const isTrial =
+    cloudWorkspace?.workspaceTrialStatus === WorkspaceTrialStatus.in_trial ||
+    cloudWorkspace?.workspaceTrialStatus === WorkspaceTrialStatus.pre_trial;
 
   const showExperimentBanner = isExperimentVariant && isTrial && user && isCorporateEmail(user.email);
 

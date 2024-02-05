@@ -11,7 +11,6 @@ export interface Experiments {
   "authPage.signup.hideCompanyName": boolean;
   "authPage.signup.hideName": boolean;
   "billing.early-sync-enabled": boolean;
-  "billing.newTrialPolicy": boolean;
   "billing.autoRecharge": boolean;
   "connections.summaryView": boolean;
   "connection.columnSelection": boolean;
