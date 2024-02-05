@@ -2,6 +2,9 @@ package io.airbyte.workload.launcher.pods
 
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.ResourceRequirements
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.ContainerOrchestratorDevImage
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
@@ -38,6 +41,7 @@ class PayloadKubeInputMapper(
   @Named("replicationWorkerConfigs") private val replicationWorkerConfigs: WorkerConfigs,
   @Named("checkWorkerConfigs") private val checkWorkerConfigs: WorkerConfigs,
   @Named("checkConnectorReqs") private val checkOrchestratorReqs: ResourceRequirements,
+  private val featureFlagClient: FeatureFlagClient,
 ) {
   fun toKubeInput(
     workloadId: String,
@@ -48,12 +52,17 @@ class PayloadKubeInputMapper(
     val attemptId = input.getAttemptId()
 
     val orchestratorPodName = orchestratorNameGenerator.getReplicationOrchestratorPodName(jobId, attemptId)
-
+    val injectedOrchestratorImage: String =
+      featureFlagClient.stringVariation(ContainerOrchestratorDevImage, Connection(input.connectionId))
+    var orchestratorImage: String = kubeContainerInfo.image
+    if (injectedOrchestratorImage.isNotEmpty()) {
+      orchestratorImage = injectedOrchestratorImage
+    }
     val orchestratorPodInfo =
       KubePodInfo(
         namespace,
         orchestratorPodName,
-        kubeContainerInfo,
+        KubeContainerInfo(orchestratorImage, kubeContainerInfo.pullPolicy),
       )
 
     val orchestratorReqs = input.getOrchestratorResourceReqs()

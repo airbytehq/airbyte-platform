@@ -2,6 +2,9 @@ package io.airbyte.workload.launcher.pods
 
 import datadog.trace.api.Trace
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.ContainerOrchestratorJavaOpts
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
@@ -36,6 +39,7 @@ class KubePodClient(
   private val connectorLauncher: ConnectorPodLauncher,
   private val labeler: PodLabeler,
   private val mapper: PayloadKubeInputMapper,
+  private val featureFlagClient: FeatureFlagClient,
 ) : PodClient {
   override fun podsExistForAutoId(autoId: UUID): Boolean {
     return orchestratorLauncher.podsExist(labeler.getAutoIdLabels(autoId))
@@ -55,6 +59,8 @@ class KubePodClient(
 
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, inputWithLabels, sharedLabels)
 
+    val injectedJavaOpts: String = featureFlagClient.stringVariation(ContainerOrchestratorJavaOpts, Connection(replicationInput.connectionId))
+    val additionalEnvVars = if (injectedJavaOpts.isNotEmpty()) mapOf("JAVA_OPTS" to injectedJavaOpts) else mapOf()
     val pod: Pod
     try {
       pod =
@@ -64,7 +70,7 @@ class KubePodClient(
           kubeInput.nodeSelectors,
           kubeInput.kubePodInfo,
           kubeInput.annotations,
-          mapOf(),
+          additionalEnvVars,
         )
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)

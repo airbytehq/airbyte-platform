@@ -2,12 +2,12 @@ package io.airbyte.workload.launcher.pods
 
 import fixtures.RecordFixtures
 import io.airbyte.config.ResourceRequirements
+import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.process.KubePodInfo
-import io.airbyte.workload.launcher.config.CheckPodConfig
 import io.airbyte.workload.launcher.model.setConnectorLabels
 import io.airbyte.workload.launcher.model.setDestinationLabels
 import io.airbyte.workload.launcher.model.setSourceLabels
@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import java.lang.RuntimeException
+import java.util.UUID
 
 @ExtendWith(MockKExtension::class)
 class KubePodClientTest {
@@ -48,9 +49,6 @@ class KubePodClientTest {
   @MockK
   private lateinit var pod: Pod
 
-  @MockK
-  private lateinit var checkEnvVar: CheckPodConfig
-
   private lateinit var client: KubePodClient
 
   private lateinit var replInput: ReplicationInput
@@ -67,18 +65,21 @@ class KubePodClientTest {
         connectorPodLauncher,
         labeler,
         mapper,
+        TestClient(emptyMap()),
       )
 
     replInput =
       ReplicationInput()
         .withSourceLauncherConfig(IntegrationLauncherConfig())
         .withDestinationLauncherConfig(IntegrationLauncherConfig())
+        .withConnectionId(UUID.randomUUID())
 
     resetInput =
       ReplicationInput()
         .withSourceLauncherConfig(IntegrationLauncherConfig())
         .withDestinationLauncherConfig(IntegrationLauncherConfig())
         .withIsReset(true)
+        .withConnectionId(UUID.randomUUID())
 
     checkInput =
       CheckConnectionInput(JobRunConfig().withJobId("jobid").withAttemptId(1), IntegrationLauncherConfig().withDockerImage("dockerImage"), null)

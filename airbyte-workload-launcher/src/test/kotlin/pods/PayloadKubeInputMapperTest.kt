@@ -5,6 +5,7 @@ import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.ActorType
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.StandardCheckConnectionInput
+import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -61,6 +62,7 @@ class PayloadKubeInputMapperTest {
         replConfigs,
         checkConfigs,
         checkResourceReqs,
+        TestClient(emptyMap()),
       )
     val input: ReplicationInput = mockk()
 
@@ -76,6 +78,7 @@ class PayloadKubeInputMapperTest {
     every { input.jobRunConfig } returns mockk<JobRunConfig>()
     every { input.sourceLauncherConfig } returns mockk<IntegrationLauncherConfig>()
     every { input.destinationLauncherConfig } returns mockk<IntegrationLauncherConfig>()
+    every { input.connectionId } returns mockk<UUID>()
 
     val mockSerializedOutput = "Serialized Obj."
     every { serializer.serialize<Any>(any()) } returns mockSerializedOutput
@@ -141,6 +144,7 @@ class PayloadKubeInputMapperTest {
         replConfigs,
         checkConfigs,
         checkResourceReqs,
+        TestClient(emptyMap()),
       )
     val input: CheckConnectionInput = mockk()
 
