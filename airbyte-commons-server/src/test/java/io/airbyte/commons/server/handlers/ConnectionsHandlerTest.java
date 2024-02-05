@@ -124,6 +124,7 @@ import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
+import io.airbyte.persistence.job.models.JobsRecordsCommitted;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
@@ -1594,9 +1595,15 @@ class ConnectionsHandlerTest {
         final AttemptWithJobInfo attemptWithJobInfo3 = new AttemptWithJobInfo(attempt3, generateMockJob(connectionId, attempt3));
 
         final List<AttemptWithJobInfo> attempts = Arrays.asList(attemptWithJobInfo1, attemptWithJobInfo2, attemptWithJobInfo3);
+        final List<JobsRecordsCommitted> jobsAndRecords = attempts.stream().map(attempt -> new JobsRecordsCommitted(
+            attempt.getAttempt().getAttemptNumber(),
+            attempt.getJobInfo().getId(),
+            attempt.getAttempt().getOutput().map(output -> output.getSync().getStandardSyncSummary().getTotalStats().getRecordsCommitted())
+                .orElse(0L),
+            attempt.getAttempt().getEndedAtInSecond().map(endedAt -> endedAt).orElse(0L))).toList();
 
-        when(jobPersistence.listAttemptsForConnectionAfterTimestamp(eq(connectionId), eq(ConfigType.SYNC), any(Instant.class)))
-            .thenReturn(attempts);
+        when(jobPersistence.listRecordsCommittedForConnectionAfterTimestamp(eq(connectionId), any(Instant.class)))
+            .thenReturn(jobsAndRecords);
 
         final ConnectionDataHistoryRequestBody requestBody = new ConnectionDataHistoryRequestBody()
             .connectionId(connectionId)
@@ -1610,7 +1617,7 @@ class ConnectionsHandlerTest {
         expected.get(1).setRecordsCommitted(attempt1Records + attempt2Records);
         expected.get(2).setRecordsCommitted(attempt3Records);
 
-        assertEquals(actual, expected);
+        assertEquals(expected, actual);
       }
 
     }

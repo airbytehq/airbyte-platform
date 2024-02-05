@@ -94,6 +94,7 @@ import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
+import io.airbyte.persistence.job.models.JobsRecordsCommitted;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
@@ -918,9 +919,8 @@ public class ConnectionsHandler {
     // Convert start time to UTC (since that's what the database uses)
     final Instant startTimeInUTC = startTimeInUserTimeZone.toInstant();
 
-    final List<AttemptWithJobInfo> attempts = jobPersistence.listAttemptsForConnectionAfterTimestamp(
+    final List<JobsRecordsCommitted> attempts = jobPersistence.listRecordsCommittedForConnectionAfterTimestamp(
         connectionDataHistoryRequestBody.getConnectionId(),
-        ConfigType.SYNC,
         startTimeInUTC);
 
     // we want an entry per day - even if it's empty
@@ -933,8 +933,8 @@ public class ConnectionsHandler {
           .recordsCommitted(0L));
     }
 
-    for (final AttemptWithJobInfo attempt : attempts) {
-      final Optional<Long> endedAtOptional = attempt.getAttempt().getEndedAtInSecond();
+    for (final JobsRecordsCommitted attempt : attempts) {
+      final Optional<Long> endedAtOptional = attempt.getEndedAtInSecond();
 
       if (endedAtOptional.isPresent()) {
         // Convert the endedAt timestamp from the database to the designated timezone
@@ -943,8 +943,7 @@ public class ConnectionsHandler {
             .toLocalDate();
 
         // Merge it with the bytes synced from the attempt
-        final long recordsCommitted = attempt.getAttempt().getOutput()
-            .map(output -> output.getSync().getStandardSyncSummary().getTotalStats().getRecordsCommitted()).orElse(0L);
+        final long recordsCommitted = attempt.getRecordsCommitted().orElse(0L);
 
         // Update the bytes synced for the corresponding day
         final ConnectionDataHistoryReadItem existingItem = connectionDataHistoryReadItemsByDate.get(attemptDateInUserTimeZone);

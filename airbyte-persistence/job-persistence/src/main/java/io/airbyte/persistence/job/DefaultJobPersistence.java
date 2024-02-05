@@ -46,6 +46,7 @@ import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobStatusSummary;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
+import io.airbyte.persistence.job.models.JobsRecordsCommitted;
 import io.airbyte.protocol.models.v0.StreamDescriptor;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -1071,6 +1072,45 @@ public class DefaultJobPersistence implements JobPersistence {
         connectionId.toString(),
         toSqlName(JobStatus.SUCCEEDED),
         timeConvertedIntoLocalDateTime)));
+  }
+
+  @Override
+  public List<JobsRecordsCommitted> listRecordsCommittedForConnectionAfterTimestamp(final UUID connectionId,
+                                                                                    final Instant attemptEndedAtTimestamp)
+      throws IOException {
+    // TODO: stop using LocalDateTime
+    // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
+    final LocalDateTime timeConvertedIntoLocalDateTime = LocalDateTime.ofInstant(attemptEndedAtTimestamp, SYSTEM_OFFSET);
+
+    return jobDatabase.query(ctx -> ctx.fetch(
+        "SELECT "
+            + "jobs.id AS job_id,"
+            + "attempts.attempt_number AS attempt_number,"
+            + "attempts.output -> 'sync' -> 'standardSyncSummary' -> 'totalStats' -> 'recordsCommitted' as records_committed, "
+            + "attempts.ended_at AS attempt_ended_at "
+            + "FROM jobs "
+            + "JOIN attempts ON jobs.id = attempts.job_id "
+            + WHERE
+            + "CAST(config_type AS VARCHAR) = ? AND "
+            + SCOPE_CLAUSE
+            + "CAST(jobs.status AS VARCHAR) = ? AND "
+            + "attempts.ended_at > ? "
+            + "ORDER BY attempts.ended_at ASC",
+        toSqlName(ConfigType.SYNC),
+        connectionId.toString(),
+        toSqlName(JobStatus.SUCCEEDED),
+        timeConvertedIntoLocalDateTime))
+        .stream()
+        .map(r -> new JobsRecordsCommitted(
+            r.get("attempt_number", int.class),
+            r.get("job_id", long.class),
+            Optional.ofNullable(r.get("records_committed"))
+                .map(value -> r.get("records_committed", Long.class))
+                .orElse(null),
+            Optional.ofNullable(r.get("attempt_ended_at"))
+                .map(value -> getEpoch(r, "attempt_ended_at"))
+                .orElse(null)))
+        .toList();
   }
 
   @Override
