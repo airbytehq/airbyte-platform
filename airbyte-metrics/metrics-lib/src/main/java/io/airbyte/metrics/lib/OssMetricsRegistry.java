@@ -403,7 +403,11 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   DESTINATION_DESERIALIZATION_ERROR(MetricEmittingApps.ORCHESTRATOR,
       "destination_deserialization_error",
-      "When a sync failed with a deserialization error from the destination");
+      "When a sync failed with a deserialization error from the destination"),
+
+  SIDECAR_EXIT(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
+      "sidecar_exit",
+      "Exit of the connetor sidecar");
 
   private final MetricEmittingApp application;
   private final String metricName;

@@ -6,6 +6,7 @@ import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
+import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.workers.exception.WorkerException
@@ -54,6 +55,9 @@ class ConnectorWatchTest {
   @MockK
   private lateinit var streamFactory: AirbyteStreamFactory
 
+  @MockK
+  private lateinit var metricClient: MetricClient
+
   private lateinit var connectorWatcher: ConnectorWatcher
 
   val workloadId = "workloadId"
@@ -74,6 +78,7 @@ class ConnectorWatchTest {
           gsonPksExtractor,
           workloadApi,
           jobOutputDocStore,
+          metricClient,
         ),
       )
 
