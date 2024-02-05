@@ -42,7 +42,10 @@ import io.airbyte.featureflag.UseWorkloadApiForCheck;
 import io.airbyte.featureflag.WorkloadCheckFrequencyInSeconds;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.workers.CheckConnectionInputHydrator;
@@ -107,6 +110,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
   private final WorkloadIdGenerator workloadIdGenerator;
   private final JobOutputDocStore jobOutputDocStore;
   private final FeatureFlagClient featureFlagClient;
+  private final MetricClient metricClient;
 
   public CheckConnectionActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                                      final ProcessFactory processFactory,
@@ -123,7 +127,8 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                                      final GsonPksExtractor gsonPksExtractor,
                                      final WorkloadApi workloadApi,
                                      final WorkloadIdGenerator workloadIdGenerator,
-                                     final JobOutputDocStore jobOutputDocStore) {
+                                     final JobOutputDocStore jobOutputDocStore,
+                                     final MetricClient metricClient) {
     this(workerConfigsProvider,
         processFactory,
         secretsRepositoryReader,
@@ -143,7 +148,8 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         new CheckConnectionInputHydrator(
             secretsRepositoryReader,
             airbyteApiClient.getSecretPersistenceConfigApi(),
-            featureFlagClient));
+            featureFlagClient),
+        metricClient);
   }
 
   @VisibleForTesting
@@ -163,7 +169,8 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                               final WorkloadApi workloadApi,
                               final WorkloadIdGenerator workloadIdGenerator,
                               final JobOutputDocStore jobOutputDocStore,
-                              final CheckConnectionInputHydrator checkConnectionInputHydrator) {
+                              final CheckConnectionInputHydrator checkConnectionInputHydrator,
+                              final MetricClient metricClient) {
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.workspaceRoot = workspaceRoot;
@@ -180,6 +187,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
     this.jobOutputDocStore = jobOutputDocStore;
     this.featureFlagClient = featureFlagClient;
     this.inputHydrator = checkConnectionInputHydrator;
+    this.metricClient = metricClient;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -258,6 +266,12 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
 
     try {
       final Optional<ConnectorJobOutput> connectorJobOutput = jobOutputDocStore.read(workloadId);
+
+      if (connectorJobOutput.isEmpty() || connectorJobOutput.get().getCheckConnection().getStatus() == StandardCheckConnectionOutput.Status.FAILED) {
+        metricClient.count(OssMetricsRegistry.SIDECAR_CHECK, 1, new MetricAttribute(MetricTags.STATUS, "failed"));
+      } else {
+        metricClient.count(OssMetricsRegistry.SIDECAR_CHECK, 1, new MetricAttribute(MetricTags.STATUS, "success"));
+      }
 
       return connectorJobOutput.orElse(new ConnectorJobOutput()
           .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)

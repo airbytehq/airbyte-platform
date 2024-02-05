@@ -27,6 +27,7 @@ import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.featureflag.ConfigFileClient;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.CheckConnectionInputHydrator;
@@ -102,7 +103,8 @@ public class CheckConnectionActivityTest {
         workloadApi,
         workloadIdGenerator,
         jobOutputDocStore,
-        mock(CheckConnectionInputHydrator.class)));
+        mock(CheckConnectionInputHydrator.class),
+        mock(MetricClient.class)));
 
     when(workloadIdGenerator.generateCheckWorkloadId(ACTOR_DEFINITION_ID, JOB_ID, ATTEMPT_NUMBER_AS_INT))
         .thenReturn(WORKLOAD_ID);

@@ -1,8 +1,7 @@
 package io.airbyte.connectorSidecar.config
 
 import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.MetricClientFactory
-import io.airbyte.metrics.lib.MetricEmittingApps
+import io.airbyte.metrics.lib.NotImplementedMetricClient
 import io.airbyte.workers.config.DocumentStoreFactory
 import io.airbyte.workers.config.DocumentType
 import io.airbyte.workers.storage.DocumentStoreClient
@@ -20,7 +19,6 @@ class ApplicationFactory {
 
   @Singleton
   fun metricClient(): MetricClient {
-    MetricClientFactory.initialize(MetricEmittingApps.SIDECAR_ORCHESTRATOR)
-    return MetricClientFactory.getMetricClient()
+    return NotImplementedMetricClient()
   }
 }

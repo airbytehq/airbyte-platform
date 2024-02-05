@@ -11,10 +11,6 @@ import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.airbyte.workers.helper.GsonPksExtractor
@@ -55,7 +51,6 @@ class ConnectorWatcher(
   val gsonPksExtractor: GsonPksExtractor,
   val workloadApi: WorkloadApi,
   val jobOutputDocStore: JobOutputDocStore,
-  val metricClient: MetricClient,
 ) {
   fun run() {
     val input = Jsons.deserialize(readFile(SIDECAR_INPUT), SidecarInput::class.java)
@@ -139,19 +134,16 @@ class ConnectorWatcher(
 
   @VisibleForTesting
   fun exitProperly() {
-    metricClient.count(OssMetricsRegistry.SIDECAR_EXIT, 1, MetricAttribute(MetricTags.STATUS, "success"))
     exitProcess(0)
   }
 
   @VisibleForTesting
   fun exitInternalError() {
-    metricClient.count(OssMetricsRegistry.SIDECAR_EXIT, 1, MetricAttribute(MetricTags.STATUS, "internal_failure"))
     exitProcess(1)
   }
 
   @VisibleForTesting
   fun exitFileNotFound() {
-    metricClient.count(OssMetricsRegistry.SIDECAR_EXIT, 1, MetricAttribute(MetricTags.STATUS, "file_not_found"))
     exitProcess(2)
   }
 
