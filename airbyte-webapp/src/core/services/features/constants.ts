@@ -29,4 +29,5 @@ export const defaultCloudFeatures = [
   FeatureItem.RestrictAdminInForeignWorkspace,
   FeatureItem.ConnectorBreakingChangeDeadlines,
   FeatureItem.RBAC,
+  FeatureItem.ConnectionHistoryGraphs,
 ];
