@@ -132,11 +132,14 @@ class OrchestratorPodLauncher(
       )
     }
 
+    val containerResources = KubePodProcess.getResourceRequirementsBuilder(resourceRequirements).build()
+
     val initContainer =
       ContainerBuilder()
         .withName(KubePodProcess.INIT_CONTAINER_NAME)
         .withImage("busybox:1.35")
         .withVolumeMounts(volumeMounts)
+        .withResources(containerResources)
         .withCommand(
           listOf(
             "sh",
@@ -173,7 +176,7 @@ class OrchestratorPodLauncher(
         .withName(KubePodProcess.MAIN_CONTAINER_NAME)
         .withImage(kubePodInfo.mainContainerInfo.image)
         .withImagePullPolicy(kubePodInfo.mainContainerInfo.pullPolicy)
-        .withResources(KubePodProcess.getResourceRequirementsBuilder(resourceRequirements).build())
+        .withResources(containerResources)
         .withEnv(sharedEnvVars + extraKubeEnv)
         .withPorts(containerPorts)
         .withVolumeMounts(volumeMounts)
