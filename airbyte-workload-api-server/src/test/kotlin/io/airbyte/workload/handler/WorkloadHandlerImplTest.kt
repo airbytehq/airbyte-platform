@@ -86,6 +86,7 @@ class WorkloadHandlerImplTest {
       "mutex-this",
       io.airbyte.config.WorkloadType.SYNC,
       UUID.randomUUID(),
+      now.plusHours(2),
     )
     verify {
       workloadRepository.save(
@@ -113,7 +114,7 @@ class WorkloadHandlerImplTest {
   fun `test create workload id conflict`() {
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(true)
     assertThrows<ConflictException> {
-      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID())
+      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now)
     }
   }
 
@@ -154,7 +155,7 @@ class WorkloadHandlerImplTest {
       ),
     )
     every { workloadRepository.update(eq(WORKLOAD_ID), any(), ofType(OffsetDateTime::class), eq(now.plusMinutes(10))) }.returns(Unit)
-    workloadHandler.heartbeat(WORKLOAD_ID)
+    workloadHandler.heartbeat(WORKLOAD_ID, now.plusMinutes(10))
     verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING), any(), eq(now.plusMinutes(10))) }
   }
 
@@ -169,13 +170,13 @@ class WorkloadHandlerImplTest {
         ),
       ),
     )
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.heartbeat(WORKLOAD_ID) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.heartbeat(WORKLOAD_ID, now) }
   }
 
   @Test
   fun `test workload not found when claiming workload`() {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
-    assertThrows<NotFoundException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID) }
+    assertThrows<NotFoundException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
   }
 
   @Test
@@ -189,7 +190,7 @@ class WorkloadHandlerImplTest {
         ),
       ),
     )
-    assertFalse(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID))
+    assertFalse(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
   }
 
   @Test
@@ -204,7 +205,7 @@ class WorkloadHandlerImplTest {
         ),
       ),
     )
-    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID))
+    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now.plusMinutes(20)))
   }
 
   @Test
@@ -218,7 +219,7 @@ class WorkloadHandlerImplTest {
         ),
       ),
     )
-    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID))
+    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
   }
 
   @Test
@@ -232,7 +233,7 @@ class WorkloadHandlerImplTest {
         ),
       ),
     )
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
   }
 
   @ParameterizedTest
@@ -246,7 +247,7 @@ class WorkloadHandlerImplTest {
         ),
       ),
     )
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
   }
 
   @Test
@@ -262,7 +263,7 @@ class WorkloadHandlerImplTest {
 
     every { workloadRepository.update(any(), any(), ofType(WorkloadStatus::class), eq(now.plusMinutes(20))) } just Runs
 
-    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID))
+    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now.plusMinutes(20)))
 
     verify { workloadRepository.update(WORKLOAD_ID, DATAPLANE_ID, WorkloadStatus.CLAIMED, eq(now.plusMinutes(20))) }
   }
@@ -432,7 +433,7 @@ class WorkloadHandlerImplTest {
   @Test
   fun `test workload not found when setting status to running`() {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
-    assertThrows<NotFoundException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID) }
+    assertThrows<NotFoundException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID, now) }
   }
 
   @ParameterizedTest
@@ -447,7 +448,7 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID, now) }
   }
 
   @Test
@@ -462,7 +463,7 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID, now) }
   }
 
   @ParameterizedTest
@@ -479,7 +480,7 @@ class WorkloadHandlerImplTest {
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), any()) } just Runs
 
-    workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID)
+    workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID, now.plusMinutes(10))
     verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING), eq(now.plusMinutes(10))) }
   }
 
@@ -494,14 +495,14 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID)
+    workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID, now.plusMinutes(10))
     verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING), eq(now.plusMinutes(10))) }
   }
 
   @Test
   fun `test workload not found when setting status to launched`() {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
-    assertThrows<NotFoundException> { workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID) }
+    assertThrows<NotFoundException> { workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now) }
   }
 
   @ParameterizedTest
@@ -516,7 +517,7 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now) }
   }
 
   @Test
@@ -532,7 +533,7 @@ class WorkloadHandlerImplTest {
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), any()) } just Runs
 
-    workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID)
+    workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now.plusMinutes(10))
     verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.LAUNCHED), eq(now.plusMinutes(10))) }
   }
 
@@ -547,7 +548,7 @@ class WorkloadHandlerImplTest {
       ),
     )
 
-    workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID)
+    workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now.plusMinutes(10))
     verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.LAUNCHED), eq(now.plusMinutes(10))) }
   }
 

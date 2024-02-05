@@ -428,6 +428,10 @@ components:
           type: string
         dataplaneId:
           type: string
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
     WorkloadCreateRequest:
       required:
       - geography
@@ -455,6 +459,10 @@ components:
           nullable: true
         type:
           $ref: '#/components/schemas/WorkloadType'
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
     WorkloadFailureRequest:
       required:
       - workloadId
@@ -475,6 +483,10 @@ components:
       properties:
         workloadId:
           type: string
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
     WorkloadLabel:
       required:
       - key
@@ -492,6 +504,10 @@ components:
       properties:
         workloadId:
           type: string
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
     WorkloadListRequest:
       type: object
       properties:
@@ -525,6 +541,10 @@ components:
       properties:
         workloadId:
           type: string
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
     WorkloadStatus:
       type: string
       enum:

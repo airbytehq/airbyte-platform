@@ -239,6 +239,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         fullLogPath(Path.of(workloadId)),
         geo.getValue(),
         WorkloadType.CHECK,
+        null,
         null);
 
     createWorkload(workloadCreateRequest);

@@ -126,7 +126,7 @@ public class CheckJobOrchestrator implements JobOrchestrator<CheckConnectionInpu
       do {
         try {
           Thread.sleep(heartbeatInterval.toMillis());
-          data.workloadApi().workloadHeartbeat(new WorkloadHeartbeatRequest(workloadId));
+          data.workloadApi().workloadHeartbeat(new WorkloadHeartbeatRequest(workloadId, null));
           lastSuccessfulHeartbeat = Instant.now();
         } catch (final Exception e) {
           if (e instanceof ClientException && ((ClientException) e).getStatusCode() == HttpStatus.GONE.getCode()) {

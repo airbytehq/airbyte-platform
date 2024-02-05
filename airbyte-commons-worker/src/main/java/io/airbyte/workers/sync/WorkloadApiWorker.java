@@ -123,7 +123,8 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
           fullLogPath(jobRoot),
           geo.getValue(),
           WorkloadType.SYNC,
-          replicationInput.getConnectionId().toString()));
+          replicationInput.getConnectionId().toString(),
+          null));
     } catch (final ServerException e) {
       if (e.getStatusCode() != HTTP_CONFLICT_CODE) {
         throw e;

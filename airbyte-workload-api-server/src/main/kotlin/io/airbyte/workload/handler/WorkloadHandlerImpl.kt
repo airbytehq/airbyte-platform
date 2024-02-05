@@ -22,11 +22,6 @@ private val logger = KotlinLogging.logger {}
 class WorkloadHandlerImpl(
   private val workloadRepository: WorkloadRepository,
 ) : WorkloadHandler {
-  companion object {
-    private const val MINUTE_TIMEOUT: Long = 10
-    private const val HOUR_TIMEOUT: Long = 2
-  }
-
   override fun getWorkload(workloadId: String): ApiWorkload {
     return getDomainWorkload(workloadId).toApi()
   }
@@ -64,6 +59,7 @@ class WorkloadHandlerImpl(
     mutexKey: String?,
     type: WorkloadType,
     autoId: UUID,
+    deadline: OffsetDateTime,
   ) {
     val workloadAlreadyExists = workloadRepository.existsById(workloadId)
     if (workloadAlreadyExists) {
@@ -81,7 +77,7 @@ class WorkloadHandlerImpl(
         mutexKey = mutexKey,
         type = type.toDomain(),
         autoId = autoId,
-        deadline = offsetDateTime().plusHours(HOUR_TIMEOUT),
+        deadline = deadline,
       )
 
     workloadRepository.save(domainWorkload).toApi()
@@ -90,6 +86,7 @@ class WorkloadHandlerImpl(
   override fun claimWorkload(
     workloadId: String,
     dataplaneId: String,
+    deadline: OffsetDateTime,
   ): Boolean {
     val workload = getDomainWorkload(workloadId)
 
@@ -103,7 +100,7 @@ class WorkloadHandlerImpl(
           workloadId,
           dataplaneId,
           WorkloadStatus.CLAIMED,
-          offsetDateTime().plusMinutes(MINUTE_TIMEOUT * 2),
+          deadline,
         )
       WorkloadStatus.CLAIMED -> {}
       else -> throw InvalidStatusTransitionException(
@@ -178,16 +175,20 @@ class WorkloadHandlerImpl(
     }
   }
 
-  override fun setWorkloadStatusToRunning(workloadId: String) {
+  override fun setWorkloadStatusToRunning(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  ) {
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED ->
+      WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED -> {
         workloadRepository.update(
           workloadId,
           WorkloadStatus.RUNNING,
-          offsetDateTime().plusMinutes(MINUTE_TIMEOUT),
+          deadline,
         )
+      }
       WorkloadStatus.RUNNING -> logger.info { "Workload $workloadId is already marked as running. Skipping..." }
       WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
         "Heartbeat a workload in a terminal state",
@@ -198,16 +199,20 @@ class WorkloadHandlerImpl(
     }
   }
 
-  override fun setWorkloadStatusToLaunched(workloadId: String) {
+  override fun setWorkloadStatusToLaunched(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  ) {
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.CLAIMED ->
+      WorkloadStatus.CLAIMED -> {
         workloadRepository.update(
           workloadId,
           WorkloadStatus.LAUNCHED,
-          offsetDateTime().plusMinutes(MINUTE_TIMEOUT),
+          deadline,
         )
+      }
       WorkloadStatus.LAUNCHED -> logger.info { "Workload $workloadId is already marked as launched. Skipping..." }
       WorkloadStatus.RUNNING -> throw InvalidStatusTransitionException("Workload $workloadId is already marked as running. Skipping...")
       WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
@@ -219,17 +224,21 @@ class WorkloadHandlerImpl(
     }
   }
 
-  override fun heartbeat(workloadId: String) {
+  override fun heartbeat(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  ) {
     val workload: DomainWorkload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING ->
+      WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING -> {
         workloadRepository.update(
           workloadId,
           WorkloadStatus.RUNNING,
           offsetDateTime(),
-          offsetDateTime().plusMinutes(MINUTE_TIMEOUT),
+          deadline,
         )
+      }
       WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
         "Heartbeat a workload in a terminal state",
       )
