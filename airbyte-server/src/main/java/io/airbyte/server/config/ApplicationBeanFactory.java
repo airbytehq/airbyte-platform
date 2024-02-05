@@ -64,8 +64,9 @@ public class ApplicationBeanFactory {
                                final ConfigRepository configRepository,
                                final JobPersistence jobPersistence,
                                final TrackingClient trackingClient,
-                               final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
-    return new JobTracker(configRepository, jobPersistence, trackingClient, actorDefinitionVersionHelper);
+                               final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                               final FeatureFlagClient featureFlagClient) {
+    return new JobTracker(configRepository, jobPersistence, trackingClient, actorDefinitionVersionHelper, featureFlagClient);
   }
 
   @Singleton
