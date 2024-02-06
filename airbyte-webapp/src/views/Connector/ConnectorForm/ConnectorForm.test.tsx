@@ -745,7 +745,7 @@ describe("Connector form", () => {
 
     it("should change password", async () => {
       const container = await renderForm({ formValuesOverride: { ...filledForm, password: "*****" } });
-      await waitFor(() => userEvent.click(screen.getByTestId("edit-secret")!));
+      await waitFor(() => userEvent.click(screen.getByTestId("edit-secret")));
       const password = getInputByName(container, "connectionConfiguration.password");
       await userEvent.type(password!, "testword");
 

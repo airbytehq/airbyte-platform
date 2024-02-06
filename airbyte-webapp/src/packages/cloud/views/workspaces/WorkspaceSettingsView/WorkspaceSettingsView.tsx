@@ -24,7 +24,7 @@ export const WorkspaceSettingsView: React.FC = () => {
 
   return (
     <FlexContainer direction="column" gap="xl">
-      <Box p="xl">
+      <Box>
         <Heading as="h2" size="md">
           <FormattedMessage id="settings.generalSettings" />
         </Heading>
