@@ -156,7 +156,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
         if (replicationWorkerHelper.isWorkerV2TestEnabled()) {
           CompletableFuture.runAsync(
-              replicationWorkerHelper.getWorkloadStatusHeartbeat(),
+              replicationWorkerHelper.getWorkloadStatusHeartbeat(mdc),
               executors);
         }
 

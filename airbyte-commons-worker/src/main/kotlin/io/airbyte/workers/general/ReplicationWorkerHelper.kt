@@ -58,6 +58,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpStatus
 import org.apache.commons.io.FileUtils
 import org.openapitools.client.infrastructure.ClientException
+import org.slf4j.MDC
 import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
@@ -111,15 +112,17 @@ class ReplicationWorkerHelper(
     onReplicationRunning.call()
   }
 
-  fun getWorkloadStatusHeartbeat(): Runnable {
-    return getWorkloadStatusHeartbeat(Duration.ofSeconds(replicationFeatureFlags.workloadHeartbeatRate.toLong()), workloadId)
+  fun getWorkloadStatusHeartbeat(mdc: Map<String, String>): Runnable {
+    return getWorkloadStatusHeartbeat(Duration.ofSeconds(replicationFeatureFlags.workloadHeartbeatRate.toLong()), workloadId, mdc)
   }
 
   private fun getWorkloadStatusHeartbeat(
     heartbeatInterval: Duration,
     workloadId: Optional<String>,
+    mdc: Map<String, String>,
   ): Runnable {
     return Runnable {
+      MDC.setContextMap(mdc)
       logger.info { "Starting workload heartbeat" }
       var lastSuccessfulHeartbeat: Instant = Instant.now()
       val heartbeatTimeoutDuration: Duration = Duration.ofMinutes(replicationFeatureFlags.workloadHeartbeatTimeoutInMinutes)
@@ -130,6 +133,7 @@ class ReplicationWorkerHelper(
             if (workloadId.isEmpty) {
               throw RuntimeException("workloadId should always be present")
             }
+            logger.info { "Sending workload heartbeat" }
             workloadApi.workloadHeartbeat(
               WorkloadHeartbeatRequest(workloadId.get()),
             )

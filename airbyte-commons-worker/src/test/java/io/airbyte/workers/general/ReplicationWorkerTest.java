@@ -1150,7 +1150,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(replicationWorkerHelper, times(0)).getWorkloadStatusHeartbeat();
+    verify(replicationWorkerHelper, times(0)).getWorkloadStatusHeartbeat(any());
   }
 
   @Test
@@ -1162,7 +1162,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(replicationWorkerHelper).getWorkloadStatusHeartbeat();
+    verify(replicationWorkerHelper).getWorkloadStatusHeartbeat(any());
   }
 
   private ReplicationContext simpleContext(final boolean isReset) {
