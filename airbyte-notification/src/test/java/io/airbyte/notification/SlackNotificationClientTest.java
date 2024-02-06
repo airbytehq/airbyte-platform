@@ -28,6 +28,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.apache.commons.io.IOUtils;
@@ -99,6 +100,9 @@ class SlackNotificationClientTest {
             .name(DESTINATION_TEST).id(UUID.randomUUID()).url("http://destination").build())
         .errorMessage("")
         .jobId(JOB_ID)
+        .isSuccess(true)
+        .startedAt(Instant.MIN)
+        .finishedAt(Instant.MAX)
         .build();
     assertThrows(IOException.class,
         () -> client.notifyJobFailure(summary, null));

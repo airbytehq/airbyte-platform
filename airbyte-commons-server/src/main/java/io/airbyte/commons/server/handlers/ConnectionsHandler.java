@@ -324,7 +324,10 @@ public class ConnectionsHandler {
 
     final boolean warningPreviouslySentForMaxDays =
         warningPreviouslySentForMaxDays(numFailures, successTimestamp, maxDaysOfOnlyFailedJobsBeforeWarning, optionalFirstJob.get(), jobs);
-
+    List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+    for (Attempt attempt : optionalLastJob.get().getAttempts()) {
+      attemptStats.add(jobPersistence.getAttemptStats(optionalLastJob.get().getId(), attempt.getAttemptNumber()));
+    }
     if (numFailures == 0) {
       return new InternalOperationResult().succeeded(false);
     } else if (numFailures >= maxFailedJobsInARowBeforeConnectionDisable) {
@@ -333,10 +336,10 @@ public class ConnectionsHandler {
       return new InternalOperationResult().succeeded(true);
     } else if (numFailures == maxFailedJobsInARowBeforeConnectionDisableWarning && !warningPreviouslySentForMaxDays) {
       // warn if number of consecutive failures hits 50% of MaxFailedJobsInARow
-      jobNotifier.autoDisableConnectionWarning(optionalLastJob.get());
+      jobNotifier.autoDisableConnectionWarning(optionalLastJob.get(), attemptStats);
       // explicitly send to email if customer.io api key is set, since email notification cannot be set by
       // configs through UI yet
-      jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, optionalLastJob.get());
+      jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, optionalLastJob.get(), attemptStats);
       return new InternalOperationResult().succeeded(false);
     }
 
@@ -366,10 +369,11 @@ public class ConnectionsHandler {
     // send warning if there are only failed jobs in the past maxDaysOfOnlyFailedJobsBeforeWarning days
     // _unless_ a warning should have already been sent in the previous failure
     if (firstReplicationOlderThanMaxDisableWarningDays && successOlderThanPrevFailureByMaxWarningDays) {
-      jobNotifier.autoDisableConnectionWarning(optionalLastJob.get());
+
+      jobNotifier.autoDisableConnectionWarning(optionalLastJob.get(), attemptStats);
       // explicitly send to email if customer.io api key is set, since email notification cannot be set by
       // configs through UI yet
-      jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, optionalLastJob.get());
+      jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, optionalLastJob.get(), attemptStats);
     }
     return new InternalOperationResult().succeeded(false);
   }
@@ -378,10 +382,14 @@ public class ConnectionsHandler {
     standardSync.setStatus(Status.INACTIVE);
     configRepository.writeStandardSync(standardSync);
 
-    jobNotifier.autoDisableConnection(lastJob);
+    List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+    for (Attempt attempt : lastJob.getAttempts()) {
+      attemptStats.add(jobPersistence.getAttemptStats(lastJob.getId(), attempt.getAttemptNumber()));
+    }
+    jobNotifier.autoDisableConnection(lastJob, attemptStats);
     // explicitly send to email if customer.io api key is set, since email notification cannot be set by
     // configs through UI yet
-    jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_NOTIFICATION, lastJob);
+    jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_NOTIFICATION, lastJob, attemptStats);
   }
 
   private int getDaysSinceTimestamp(final long currentTimestampInSeconds, final long timestampInSeconds) {

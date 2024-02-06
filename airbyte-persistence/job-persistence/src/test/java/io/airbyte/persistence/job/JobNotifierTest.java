@@ -39,6 +39,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -121,7 +122,8 @@ class JobNotifierTest {
 
   @Test
   void testFailJob() throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
-    jobNotifier.failJob("JobNotifierTest was running", job);
+    List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+    jobNotifier.failJob("JobNotifierTest was running", job, attemptStats);
     final DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL).withZone(ZoneId.systemDefault());
     SyncSummary summary = SyncSummary.builder().build();
     verify(notificationClient).notifyJobFailure(ArgumentMatchers.any(), ArgumentMatchers.eq(null));
@@ -143,14 +145,16 @@ class JobNotifierTest {
   @Test
   void testSuccessfulJobDoNotSendNotificationPerSettings()
       throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
-    jobNotifier.successJob(job);
+    List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+    jobNotifier.successJob(job, attemptStats);
     verify(notificationClient, never()).notifySuccess(ArgumentMatchers.any());
   }
 
   @Test
   void testSendOnSyncDisabledWarning()
       throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
-    jobNotifier.autoDisableConnectionWarning(job);
+    List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+    jobNotifier.autoDisableConnectionWarning(job, attemptStats);
     verify(notificationClient, never()).notifyConnectionDisableWarning(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
         ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
     verify(customerIoNotificationClient).notifyConnectionDisableWarning(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
@@ -160,7 +164,8 @@ class JobNotifierTest {
   @Test
   void testSendOnSyncDisabled()
       throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
-    jobNotifier.autoDisableConnection(job);
+    List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+    jobNotifier.autoDisableConnection(job, attemptStats);
     verify(notificationClient).notifyConnectionDisabled(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
         ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
     verify(customerIoNotificationClient).notifyConnectionDisabled(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),

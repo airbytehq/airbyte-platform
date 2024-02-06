@@ -30,6 +30,14 @@ public class SyncSummary {
 
   private Instant finishedAt;
 
+  private long bytesEmitted;
+
+  private long bytesCommitted;
+
+  private long rowsEmitted;
+
+  private long rowsCommitted;
+
   private String errorMessage;
 
 }

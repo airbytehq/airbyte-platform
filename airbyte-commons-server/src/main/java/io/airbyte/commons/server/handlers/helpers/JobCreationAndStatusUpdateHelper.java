@@ -35,6 +35,7 @@ import io.airbyte.persistence.job.tracker.JobTracker.JobState;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -148,8 +149,12 @@ public class JobCreationAndStatusUpdateHelper {
       log.info("Failing non-terminal job {}", jobId);
       jobPersistence.failJob(jobId);
 
+      List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+      for (Attempt attempt : job.getAttempts()) {
+        attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
+      }
       final Job failedJob = jobPersistence.getJob(jobId);
-      jobNotifier.failJob("Failing job in order to start from clean job state for new temporal workflow run.", failedJob);
+      jobNotifier.failJob("Failing job in order to start from clean job state for new temporal workflow run.", failedJob, attemptStats);
       trackCompletion(failedJob, JobStatus.FAILED);
     }
   }

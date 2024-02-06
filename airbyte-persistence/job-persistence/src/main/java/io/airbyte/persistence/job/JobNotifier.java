@@ -22,6 +22,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.SyncStats;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -82,11 +83,11 @@ public class JobNotifier {
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
   }
 
-  private void notifyJob(final String reason, final String action, final Job job) {
+  private void notifyJob(final String reason, final String action, final Job job, List<JobPersistence.AttemptStats> attemptStats) {
     try {
       final UUID workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.getId());
       final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);
-      notifyJob(reason, action, job, workspace);
+      notifyJob(reason, action, job, attemptStats, workspace);
     } catch (final Exception e) {
       LOGGER.error("Unable to read configuration:", e);
     }
@@ -95,6 +96,7 @@ public class JobNotifier {
   private void notifyJob(final String reason,
                          final String action,
                          final Job job,
+                         final List<JobPersistence.AttemptStats> attempts,
                          final StandardWorkspace workspace) {
     final UUID connectionId = UUID.fromString(job.getScope());
     final NotificationSettings notificationSettings = workspace.getNotificationSettings();
@@ -115,8 +117,21 @@ public class JobNotifier {
       final Map<String, Object> destinationMetadata =
           TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
 
+      final SyncStats syncStats = new SyncStats()
+          .withBytesCommitted(0L).withBytesEmitted(0L)
+          .withRecordsCommitted(0L).withRecordsEmitted(0L);
+      for (var attemptStat : attempts) {
+        SyncStats combinedStats = attemptStat.combinedStats();
+        if (combinedStats != null) {
+          syncStats.setBytesEmitted(syncStats.getBytesEmitted() + combinedStats.getBytesEmitted());
+          syncStats.setBytesCommitted(syncStats.getBytesCommitted() + combinedStats.getBytesCommitted());
+          syncStats.setRecordsEmitted(syncStats.getRecordsEmitted() + combinedStats.getRecordsEmitted());
+          syncStats.setRecordsCommitted(syncStats.getRecordsCommitted() + combinedStats.getRecordsCommitted());
+        }
+      }
       final NotificationItem notificationItem = createAndSend(notificationSettings, action, connectionId,
-          destinationDefinition, job, reason, sourceDefinition, standardSync, workspace, source, destination);
+          destinationDefinition, job, reason, sourceDefinition, standardSync, workspace, source, destination,
+          syncStats);
 
       if (notificationItem != null) {
         final Map<String, Object> notificationMetadata = buildNotificationMetadata(connectionId, notificationItem);
@@ -171,22 +186,23 @@ public class JobNotifier {
   /**
    * This method allows for the alert to be sent without the customerio configuration set in the
    * database.
-   *
+   * <p>
    * This is only needed because there is no UI element to allow for users to create that
    * configuration.
-   *
+   * <p>
    * Once that exists, this can be removed and we should be using `notifyJobByEmail`. The alert is
    * sent to the email associated with the workspace.
    *
    * @param reason for notification
    * @param action tracking action for telemetry
    * @param job job notification is for
+   * @param attemptStats sync stats for each attempts
    */
-  public void notifyJobByEmail(final String reason, final String action, final Job job) {
+  public void notifyJobByEmail(final String reason, final String action, final Job job, List<JobPersistence.AttemptStats> attemptStats) {
     try {
       final UUID workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.getId());
       final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);
-      notifyJob(reason, action, job, workspace);
+      notifyJob(reason, action, job, attemptStats, workspace);
     } catch (final Exception e) {
       LOGGER.error("Unable to read configuration:", e);
     }
@@ -206,20 +222,20 @@ public class JobNotifier {
         formatter.format(jobStartedDate), durationString, reason);
   }
 
-  public void failJob(final String reason, final Job job) {
-    notifyJob(reason, FAILURE_NOTIFICATION, job);
+  public void failJob(final String reason, final Job job, List<JobPersistence.AttemptStats> attemptStats) {
+    notifyJob(reason, FAILURE_NOTIFICATION, job, attemptStats);
   }
 
-  public void successJob(final Job job) {
-    notifyJob(null, SUCCESS_NOTIFICATION, job);
+  public void successJob(final Job job, List<JobPersistence.AttemptStats> attemptStats) {
+    notifyJob(null, SUCCESS_NOTIFICATION, job, attemptStats);
   }
 
-  public void autoDisableConnection(final Job job) {
-    notifyJob(null, CONNECTION_DISABLED_NOTIFICATION, job);
+  public void autoDisableConnection(final Job job, List<JobPersistence.AttemptStats> attemptStats) {
+    notifyJob(null, CONNECTION_DISABLED_NOTIFICATION, job, attemptStats);
   }
 
-  public void autoDisableConnectionWarning(final Job job) {
-    notifyJob(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, job);
+  public void autoDisableConnectionWarning(final Job job, List<JobPersistence.AttemptStats> attemptStats) {
+    notifyJob(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, job, attemptStats);
   }
 
   private void sendNotification(final NotificationItem notificationItem,
@@ -255,7 +271,8 @@ public class JobNotifier {
                                          final StandardSync standardSync,
                                          final StandardWorkspace workspace,
                                          final SourceConnection source,
-                                         final DestinationConnection destination) {
+                                         final DestinationConnection destination,
+                                         final SyncStats syncStats) {
     NotificationItem notificationItem = null;
     final String sourceConnector = sourceDefinition.getName();
     final String destinationConnector = destinationDefinition.getName();
@@ -278,7 +295,14 @@ public class JobNotifier {
         .finishedAt(Instant.ofEpochSecond(job.getUpdatedAtInSecond()))
         .isSuccess(job.getStatus() == JobStatus.SUCCEEDED)
         .jobId(job.getId())
-        .errorMessage(jobDescription);
+        .errorMessage(reason);
+
+    if (syncStats != null) {
+      summaryBuilder.bytesEmitted(syncStats.getBytesEmitted())
+          .bytesCommitted(syncStats.getBytesEmitted())
+          .rowsEmitted(syncStats.getRecordsEmitted())
+          .rowsCommitted(syncStats.getRecordsCommitted());
+    }
 
     SyncSummary summary = summaryBuilder.build();
 
