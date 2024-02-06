@@ -59,7 +59,7 @@ class KubeCopyClient(private val metricClient: MetricClient) {
     // details.
     val command =
       """
-      kubectl cp $localPath ${pod.metadata.namespace}/${pod.metadata.name}:$containerPath -c ${KubePodProcess.INIT_CONTAINER_NAME}
+      kubectl cp $localPath ${pod.metadata.namespace}/${pod.metadata.name}:$containerPath -c ${KubePodProcess.INIT_CONTAINER_NAME} --retries=3
       """.trimMargin()
 
     return Runtime.getRuntime().exec(command)
