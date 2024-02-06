@@ -24,7 +24,6 @@ import io.airbyte.workers.sync.OrchestratorConstants.SIDECAR_INPUT
 import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
@@ -59,8 +58,6 @@ class ConnectorWatcher(
     val integrationLauncherConfig = input.integrationLauncherConfig
 
     try {
-      workloadApi.workloadHeartbeat(WorkloadHeartbeatRequest(workloadId))
-
       val stopwatch: Stopwatch = Stopwatch.createStarted()
       while (!areNeededFilesPresent()) {
         Thread.sleep(100)

@@ -16,7 +16,6 @@ import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
@@ -91,8 +90,6 @@ class ConnectorWatchTest {
     every { connectorWatcher.exitInternalError() } returns Unit
 
     every { jobOutputDocStore.write(any(), any()) } returns Unit
-
-    every { workloadApi.workloadHeartbeat(WorkloadHeartbeatRequest(workloadId)) } returns Unit
   }
 
   @Test
@@ -107,7 +104,6 @@ class ConnectorWatchTest {
     connectorWatcher.run()
 
     verifyOrder {
-      workloadApi.workloadHeartbeat(WorkloadHeartbeatRequest(workloadId))
       connectorMessageProcessor.runCheck(any(), any(), any(), any())
       jobOutputDocStore.write(workloadId, output)
       workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
@@ -128,7 +124,6 @@ class ConnectorWatchTest {
     connectorWatcher.run()
 
     verifyOrder {
-      workloadApi.workloadHeartbeat(WorkloadHeartbeatRequest(workloadId))
       connectorMessageProcessor.runCheck(any(), any(), any(), any())
       jobOutputDocStore.write(workloadId, output)
       workloadApi.workloadFailure(WorkloadFailureRequest(workloadId))
@@ -156,7 +151,6 @@ class ConnectorWatchTest {
     connectorWatcher.run()
 
     verifyOrder {
-      workloadApi.workloadHeartbeat(WorkloadHeartbeatRequest(workloadId))
       connectorMessageProcessor.runCheck(any(), any(), any(), any())
       jobOutputDocStore.write(workloadId, output)
       workloadApi.workloadFailure(
@@ -179,7 +173,6 @@ class ConnectorWatchTest {
     connectorWatcher.run()
 
     verifyOrder {
-      workloadApi.workloadHeartbeat(WorkloadHeartbeatRequest(workloadId))
       workloadApi.workloadFailure(WorkloadFailureRequest(workloadId))
       connectorWatcher.exitFileNotFound()
     }
