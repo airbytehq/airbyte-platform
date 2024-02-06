@@ -37,7 +37,7 @@ idna==3.6
     # via requests
 isodate==0.6.1
     # via airbyte-cdk
-jinja2==3.1.2
+jinja2==3.1.3
     # via airbyte-cdk
 jsonref==0.3.0
     # via airbyte-cdk
