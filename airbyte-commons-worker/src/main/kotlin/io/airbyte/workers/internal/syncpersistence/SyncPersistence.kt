@@ -74,7 +74,7 @@ class SyncPersistenceImpl
     @Named("syncPersistenceExecutorService") private val stateFlushExecutorService: ScheduledExecutorService,
     @Value("\${airbyte.worker.replication.persistence-flush-period-sec}") private val stateFlushPeriodInSeconds: Long,
     private val metricClient: MetricClient,
-    @Named("parallelStreamStatsTracker") private val syncStatsTracker: SyncStatsTracker,
+    @param:Parameter private val syncStatsTracker: SyncStatsTracker,
     @param:Parameter private val connectionId: UUID,
     @param:Parameter private val jobId: Long,
     @param:Parameter private val attemptNumber: Int,

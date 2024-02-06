@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.mockito.Mockito
+import java.util.UUID
 
 private val logger = KotlinLogging.logger { }
 
@@ -36,6 +37,10 @@ class ParallelStreamStatsTrackerTest {
 
     // This is based of the current size of a record from createRecord
     const val MESSAGE_SIZE = 16L
+
+    val CONNECTION_ID: UUID = UUID.randomUUID()
+    const val JOB_ID: Long = 123L
+    const val ATTEMPT_NUMBER: Int = 0
   }
 
   private val stream1 = AirbyteStreamNameNamespacePair(STREAM1_NAME, null)
@@ -54,7 +59,7 @@ class ParallelStreamStatsTrackerTest {
   @BeforeEach
   fun beforeEach() {
     metricClient = Mockito.mock(MetricClient::class.java)
-    statsTracker = ParallelStreamStatsTracker(metricClient)
+    statsTracker = ParallelStreamStatsTracker(metricClient, CONNECTION_ID, JOB_ID, ATTEMPT_NUMBER)
   }
 
   @Test

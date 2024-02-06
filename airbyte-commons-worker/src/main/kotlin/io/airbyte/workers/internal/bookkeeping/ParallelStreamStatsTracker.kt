@@ -2,7 +2,10 @@ package io.airbyte.workers.internal.bookkeeping
 
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
+import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage.Type
 import io.airbyte.protocol.models.AirbyteRecordMessage
@@ -13,8 +16,10 @@ import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.context.ReplicationFeatureFlags
 import io.airbyte.workers.exception.InvalidChecksumException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Parameter
 import io.micronaut.context.annotation.Prototype
 import jakarta.inject.Named
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
@@ -27,7 +32,12 @@ private data class SyncStatsCounters(
 
 @Prototype
 @Named("parallelStreamStatsTracker")
-class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncStatsTracker {
+class ParallelStreamStatsTracker(
+  private val metricClient: MetricClient,
+  @param:Parameter private val connectionId: UUID,
+  @param:Parameter private val jobId: Long,
+  @param:Parameter private val attemptNumber: Int,
+) : SyncStatsTracker {
   private val streamTrackers: MutableMap<AirbyteStreamNameNamespacePair, StreamStatsTracker> = ConcurrentHashMap()
   private val syncStatsCounters = SyncStatsCounters()
   private var expectedEstimateType: Type? = null
@@ -38,6 +48,12 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
 
   @Volatile
   private var checksumValidationEnabled = true
+
+  companion object {
+    const val CHECKSUM_OK = "ok"
+    const val CHECKSUM_PLATFORM_DESTINATION_MISMATCH = "platform-destination-mismatch"
+    const val CHECKSUM_SOURCE_PLATFORM_MISMATCH = "source-platform-mismatch"
+  }
 
   override fun updateStats(recordMessage: AirbyteRecordMessage) {
     getOrCreateStreamStatsTracker(getNameNamespacePair(recordMessage))
@@ -185,6 +201,7 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
               "record count $stateRecordCount does not equal tracked record count $expectedRecordCount" +
               if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
           logger.error { errorMessage }
+          emitChecksumMetrics(CHECKSUM_SOURCE_PLATFORM_MISMATCH)
           if (failOnInvalidChecksum) {
             throw InvalidChecksumException(errorMessage)
           }
@@ -199,6 +216,7 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
                   "state source record count $sourceRecordCount does not equal state destination record count $destinationRecordCount" +
                   if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
               logger.error { errorMessage }
+              emitChecksumMetrics(CHECKSUM_PLATFORM_DESTINATION_MISMATCH)
               if (failOnInvalidChecksum) {
                 throw InvalidChecksumException(errorMessage)
               }
@@ -218,9 +236,21 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
             } state message checksum is valid" +
               if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
           }
+          emitChecksumMetrics(CHECKSUM_OK)
         }
       }
     }
+  }
+
+  private fun emitChecksumMetrics(status: String) {
+    metricClient.count(
+      OssMetricsRegistry.SYNC_RECORD_CHECKSUM,
+      1,
+      MetricAttribute(MetricTags.STATUS, status),
+      MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+      MetricAttribute(MetricTags.JOB_ID, jobId.toString()),
+      MetricAttribute(MetricTags.ATTEMPT_NUMBER, attemptNumber.toString()),
+    )
   }
 
   /**
