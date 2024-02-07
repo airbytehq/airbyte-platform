@@ -9,7 +9,7 @@ import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.SidecarInput
-import io.airbyte.workers.orchestrator.OrchestratorNameGenerator
+import io.airbyte.workers.orchestrator.PodNameGenerator
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
@@ -17,7 +17,6 @@ import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.REPLICATION
-import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
@@ -26,6 +25,7 @@ import io.airbyte.workload.launcher.serde.ObjectSerializer
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import java.util.UUID
 
 /**
  * Maps domain layer objects into Kube layer inputs.
@@ -34,13 +34,12 @@ import jakarta.inject.Singleton
 class PayloadKubeInputMapper(
   private val serializer: ObjectSerializer,
   private val labeler: PodLabeler,
-  private val orchestratorNameGenerator: OrchestratorNameGenerator,
+  private val podNameGenerator: PodNameGenerator,
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String?,
-  @Named("orchestratorKubeContainerInfo") private val kubeContainerInfo: KubeContainerInfo,
+  @Named("orchestratorKubeContainerInfo") private val orchestratorKubeContainerInfo: KubeContainerInfo,
   @Named("orchestratorEnvMap") private val envMap: Map<String, String>,
   @Named("replicationWorkerConfigs") private val replicationWorkerConfigs: WorkerConfigs,
   @Named("checkWorkerConfigs") private val checkWorkerConfigs: WorkerConfigs,
-  @Named("checkConnectorReqs") private val checkOrchestratorReqs: ResourceRequirements,
   private val featureFlagClient: FeatureFlagClient,
 ) {
   fun toKubeInput(
@@ -51,18 +50,13 @@ class PayloadKubeInputMapper(
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
 
-    val orchestratorPodName = orchestratorNameGenerator.getReplicationOrchestratorPodName(jobId, attemptId)
-    val injectedOrchestratorImage: String =
-      featureFlagClient.stringVariation(ContainerOrchestratorDevImage, Connection(input.connectionId))
-    var orchestratorImage: String = kubeContainerInfo.image
-    if (injectedOrchestratorImage.isNotEmpty()) {
-      orchestratorImage = injectedOrchestratorImage
-    }
+    val orchestratorPodName = podNameGenerator.getReplicationOrchestratorPodName(jobId, attemptId)
+    val orchestratorImage: String = resolveOrchestratorImageFFOverride(input.connectionId, orchestratorKubeContainerInfo.image)
     val orchestratorPodInfo =
       KubePodInfo(
         namespace,
         orchestratorPodName,
-        KubeContainerInfo(orchestratorImage, kubeContainerInfo.pullPolicy),
+        KubeContainerInfo(orchestratorImage, orchestratorKubeContainerInfo.pullPolicy),
       )
 
     val orchestratorReqs = input.getOrchestratorResourceReqs()
@@ -82,35 +76,45 @@ class PayloadKubeInputMapper(
     )
   }
 
+  private fun resolveOrchestratorImageFFOverride(
+    connectionId: UUID,
+    image: String,
+  ): String {
+    val override = featureFlagClient.stringVariation(ContainerOrchestratorDevImage, Connection(connectionId))
+    return override.ifEmpty {
+      image
+    }
+  }
+
   fun toKubeInput(
     workloadId: String,
     input: CheckConnectionInput,
     sharedLabels: Map<String, String>,
-  ): CheckOrchestratorKubeInput {
+  ): CheckConnectorKubeInput {
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
-    val actorType = input.getActorType()
 
-    val orchestratorPodName = orchestratorNameGenerator.getCheckOrchestratorPodName(jobId, attemptId, actorType)
+    val podName = podNameGenerator.getCheckPodName(input.launcherConfig.dockerImage, jobId, attemptId)
 
-    val orchestratorPodInfo =
+    val connectorPodInfo =
       KubePodInfo(
         namespace,
-        orchestratorPodName,
-        kubeContainerInfo,
+        podName,
+        KubeContainerInfo(
+          input.launcherConfig.dockerImage,
+          checkWorkerConfigs.jobImagePullPolicy,
+        ),
       )
 
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), checkWorkerConfigs)
 
     val fileMap = buildFileMap(workloadId, input, input.jobRunConfig)
 
-    return CheckOrchestratorKubeInput(
-      labeler.getCheckOrchestratorLabels() + sharedLabels,
+    return CheckConnectorKubeInput(
       labeler.getCheckConnectorLabels() + sharedLabels,
       nodeSelectors,
-      orchestratorPodInfo,
+      connectorPodInfo,
       fileMap,
-      checkOrchestratorReqs,
       checkWorkerConfigs.workerKubeAnnotations,
     )
   }
@@ -138,6 +142,7 @@ class PayloadKubeInputMapper(
       mapOf(
         OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
         OrchestratorConstants.INIT_FILE_APPLICATION to REPLICATION,
+        OrchestratorConstants.INIT_FILE_ENV_MAP to serializer.serialize(envMap),
         OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
         INIT_FILE_SOURCE_LAUNCHER_CONFIG to serializer.serialize(input.sourceLauncherConfig),
         INIT_FILE_DESTINATION_LAUNCHER_CONFIG to serializer.serialize(input.destinationLauncherConfig),
@@ -159,7 +164,6 @@ class PayloadKubeInputMapper(
 
   private fun sharedFileMap(jobRunConfig: JobRunConfig): Map<String, String> {
     return mapOf(
-      OrchestratorConstants.INIT_FILE_ENV_MAP to serializer.serialize(envMap),
       OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to serializer.serialize(jobRunConfig),
     )
   }
@@ -176,12 +180,10 @@ data class ReplicationOrchestratorKubeInput(
   val annotations: Map<String, String>,
 )
 
-data class CheckOrchestratorKubeInput(
-  val orchestratorLabels: Map<String, String>,
+data class CheckConnectorKubeInput(
   val connectorLabels: Map<String, String>,
   val nodeSelectors: Map<String, String>,
   val kubePodInfo: KubePodInfo,
   val fileMap: Map<String, String>,
-  val resourceReqs: ResourceRequirements?,
   val annotations: Map<String, String>,
 )

@@ -8,18 +8,15 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
-import io.airbyte.workers.process.KubeContainerInfo
-import io.airbyte.workers.process.KubePodInfo
-import io.airbyte.workers.process.KubeProcessFactory.KUBE_NAME_LEN_LIMIT
-import io.airbyte.workers.process.ProcessFactory
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_REPLICATION_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_DESTINATION_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_ORCHESTRATOR_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_SOURCE_OPERATION_NAME
-import io.airbyte.workload.launcher.model.setConnectorLabels
 import io.airbyte.workload.launcher.model.setDestinationLabels
 import io.airbyte.workload.launcher.model.setSourceLabels
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
+import io.airbyte.workload.launcher.pods.factories.CheckPodFactory
+import io.airbyte.workload.launcher.pods.factories.OrchestratorPodFactory
 import io.fabric8.kubernetes.api.model.Pod
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.env.Environment
@@ -35,14 +32,15 @@ import kotlin.time.TimeSource
 @Singleton
 @Requires(env = [Environment.KUBERNETES])
 class KubePodClient(
-  private val orchestratorLauncher: OrchestratorPodLauncher,
-  private val connectorLauncher: ConnectorPodLauncher,
+  private val kubePodLauncher: KubePodLauncher,
   private val labeler: PodLabeler,
   private val mapper: PayloadKubeInputMapper,
   private val featureFlagClient: FeatureFlagClient,
+  private val orchestratorPodFactory: OrchestratorPodFactory,
+  private val checkPodFactory: CheckPodFactory,
 ) : PodClient {
   override fun podsExistForAutoId(autoId: UUID): Boolean {
-    return orchestratorLauncher.podsExist(labeler.getAutoIdLabels(autoId))
+    return kubePodLauncher.podsExist(labeler.getAutoIdLabels(autoId))
   }
 
   @Trace(operationName = LAUNCH_REPLICATION_OPERATION_NAME)
@@ -61,17 +59,18 @@ class KubePodClient(
 
     val injectedJavaOpts: String = featureFlagClient.stringVariation(ContainerOrchestratorJavaOpts, Connection(replicationInput.connectionId))
     val additionalEnvVars = if (injectedJavaOpts.isNotEmpty()) mapOf("JAVA_OPTS" to injectedJavaOpts) else mapOf()
-    val pod: Pod
+    var pod =
+      orchestratorPodFactory.create(
+        kubeInput.orchestratorLabels,
+        kubeInput.resourceReqs,
+        kubeInput.nodeSelectors,
+        kubeInput.kubePodInfo,
+        kubeInput.annotations,
+        additionalEnvVars,
+      )
     try {
       pod =
-        orchestratorLauncher.create(
-          kubeInput.orchestratorLabels,
-          kubeInput.resourceReqs,
-          kubeInput.nodeSelectors,
-          kubeInput.kubePodInfo,
-          kubeInput.annotations,
-          additionalEnvVars,
-        )
+        kubePodLauncher.create(pod)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
@@ -97,7 +96,7 @@ class KubePodClient(
   @Trace(operationName = WAIT_ORCHESTRATOR_OPERATION_NAME)
   fun waitOrchestratorPodInit(orchestratorPod: Pod) {
     try {
-      orchestratorLauncher.waitForPodInit(orchestratorPod, ORCHESTRATOR_INIT_TIMEOUT_VALUE)
+      kubePodLauncher.waitForPodInit(orchestratorPod, ORCHESTRATOR_INIT_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
@@ -114,7 +113,7 @@ class KubePodClient(
     pod: Pod,
   ) {
     try {
-      orchestratorLauncher.copyFilesToKubeConfigVolumeMain(pod, kubeInput.fileMap)
+      kubePodLauncher.copyFilesToKubeConfigVolumeMain(pod, kubeInput.fileMap)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
@@ -127,7 +126,7 @@ class KubePodClient(
   @Trace(operationName = WAIT_ORCHESTRATOR_OPERATION_NAME)
   fun waitForOrchestratorStart(pod: Pod) {
     try {
-      orchestratorLauncher.waitForPodReadyOrTerminalByPod(pod, ORCHESTRATOR_STARTUP_TIMEOUT_VALUE)
+      kubePodLauncher.waitForPodReadyOrTerminalByPod(pod, ORCHESTRATOR_STARTUP_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
@@ -141,7 +140,7 @@ class KubePodClient(
   @Trace(operationName = WAIT_SOURCE_OPERATION_NAME)
   fun waitSourceReadyOrTerminalInit(kubeInput: ReplicationOrchestratorKubeInput) {
     try {
-      orchestratorLauncher.waitForPodReadyOrTerminal(kubeInput.sourceLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE)
+      kubePodLauncher.waitForPodReadyOrTerminal(kubeInput.sourceLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
@@ -154,7 +153,7 @@ class KubePodClient(
   @Trace(operationName = WAIT_DESTINATION_OPERATION_NAME)
   fun waitDestinationReadyOrTerminalInit(kubeInput: ReplicationOrchestratorKubeInput) {
     try {
-      orchestratorLauncher.waitForPodReadyOrTerminal(kubeInput.destinationLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE)
+      kubePodLauncher.waitForPodReadyOrTerminal(kubeInput.destinationLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
@@ -165,81 +164,6 @@ class KubePodClient(
   }
 
   override fun launchCheck(
-    checkInput: CheckConnectionInput,
-    launcherInput: LauncherInput,
-  ) {
-    // TODO: feature flag?
-    if (true) {
-      return launchCheckWithSidecar(checkInput, launcherInput)
-    }
-
-    // For check the workload id is too long to be store as a kube label thus it is not added
-    val sharedLabels =
-      labeler.getSharedLabels(
-        workloadId = null,
-        mutexKey = launcherInput.mutexKey,
-        passThroughLabels = launcherInput.labels,
-        autoId = launcherInput.autoId,
-      )
-
-    val inputWithLabels = checkInput.setConnectorLabels(sharedLabels)
-
-    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, inputWithLabels, sharedLabels)
-
-    val start = TimeSource.Monotonic.markNow()
-
-    val pod: Pod
-    try {
-      pod =
-        orchestratorLauncher.create(
-          kubeInput.orchestratorLabels,
-          kubeInput.resourceReqs,
-          kubeInput.nodeSelectors,
-          kubeInput.kubePodInfo,
-          kubeInput.annotations,
-          mapOf(),
-        )
-    } catch (e: RuntimeException) {
-      ApmTraceUtils.addExceptionToTrace(e)
-      throw KubePodInitException(
-        "Failed to create pod ${kubeInput.kubePodInfo.name}.",
-        e,
-      )
-    }
-
-    try {
-      orchestratorLauncher.waitForPodInit(pod, ORCHESTRATOR_INIT_TIMEOUT_VALUE)
-    } catch (e: RuntimeException) {
-      ApmTraceUtils.addExceptionToTrace(e)
-      throw KubePodInitException(
-        "Orchestrator pod failed to start within allotted timeout.",
-        e,
-      )
-    }
-
-    try {
-      orchestratorLauncher.copyFilesToKubeConfigVolumeMain(pod, kubeInput.fileMap)
-    } catch (e: RuntimeException) {
-      ApmTraceUtils.addExceptionToTrace(e)
-      throw KubePodInitException(
-        "Failed to copy files to orchestrator pod ${kubeInput.kubePodInfo.name}.",
-        e,
-      )
-    }
-
-    try {
-      orchestratorLauncher.waitForPodReadyOrTerminal(kubeInput.connectorLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE)
-    } catch (e: RuntimeException) {
-      ApmTraceUtils.addExceptionToTrace(e)
-      throw KubePodInitException(
-        "Connector pod failed to start within allotted timeout.",
-        e,
-      )
-    }
-    println("ELAPSED TIME (ORCHESTRATOR): ${start.elapsedNow()}")
-  }
-
-  fun launchCheckWithSidecar(
     checkInput: CheckConnectionInput,
     launcherInput: LauncherInput,
   ) {
@@ -254,46 +178,27 @@ class KubePodClient(
 
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, checkInput, sharedLabels)
 
-    val podName =
-      ProcessFactory.createProcessName(
-        checkInput.launcherConfig.dockerImage,
-        "check",
-        checkInput.jobRunConfig.jobId,
-        checkInput.jobRunConfig.attemptId.toInt(),
-        KUBE_NAME_LEN_LIMIT,
-      )
-
-    val connectorKubePodInfo =
-      KubePodInfo(
-        kubeInput.kubePodInfo.namespace,
-        podName,
-        KubeContainerInfo(
-          checkInput.launcherConfig.dockerImage,
-          "",
-        ),
-      )
-
     val start = TimeSource.Monotonic.markNow()
 
-    val pod: Pod
+    var pod =
+      checkPodFactory.create(
+        kubeInput.connectorLabels,
+        kubeInput.nodeSelectors,
+        kubeInput.kubePodInfo,
+        kubeInput.annotations,
+      )
     try {
-      pod =
-        connectorLauncher.create(
-          kubeInput.connectorLabels,
-          kubeInput.nodeSelectors,
-          connectorKubePodInfo,
-          kubeInput.annotations,
-        )
+      pod = kubePodLauncher.create(pod)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
-        "Failed to create pod ${connectorKubePodInfo.name}.",
+        "Failed to create pod ${kubeInput.kubePodInfo.name}.",
         e,
       )
     }
 
     try {
-      orchestratorLauncher.waitForPodInit(pod, ORCHESTRATOR_INIT_TIMEOUT_VALUE)
+      kubePodLauncher.waitForPodInit(pod, ORCHESTRATOR_INIT_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
@@ -303,7 +208,7 @@ class KubePodClient(
     }
 
     try {
-      orchestratorLauncher.copyFilesToKubeConfigVolumeMain(pod, kubeInput.fileMap)
+      kubePodLauncher.copyFilesToKubeConfigVolumeMain(pod, kubeInput.fileMap)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
@@ -313,7 +218,7 @@ class KubePodClient(
     }
 
     try {
-      orchestratorLauncher.waitForPodReadyOrTerminalByPod(pod, CONNECTOR_STARTUP_TIMEOUT_VALUE)
+      kubePodLauncher.waitForPodReadyOrTerminalByPod(pod, CONNECTOR_STARTUP_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
@@ -327,7 +232,7 @@ class KubePodClient(
 
   override fun deleteMutexPods(mutexKey: String): Boolean {
     val labels = labeler.getMutexLabels(mutexKey)
-    val deleted = orchestratorLauncher.deleteActivePods(labels)
+    val deleted = kubePodLauncher.deleteActivePods(labels)
 
     return deleted.isNotEmpty()
   }

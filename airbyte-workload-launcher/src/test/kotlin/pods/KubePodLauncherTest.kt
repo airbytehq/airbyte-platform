@@ -1,15 +1,11 @@
 package pods
 
 import dev.failsafe.RetryPolicy
-import io.airbyte.config.ResourceRequirements
-import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.OssMetricsRegistry
-import io.airbyte.workers.process.KubeContainerInfo
-import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workload.launcher.pods.KubeCopyClient
-import io.airbyte.workload.launcher.pods.OrchestratorPodLauncher
+import io.airbyte.workload.launcher.pods.KubePodLauncher
 import io.fabric8.kubernetes.api.model.HasMetadata
 import io.fabric8.kubernetes.api.model.ObjectMeta
 import io.fabric8.kubernetes.api.model.Pod
@@ -38,12 +34,9 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 @ExtendWith(MockKExtension::class)
-class OrchestratorPodLauncherTest {
+class KubePodLauncherTest {
   @MockK
   private lateinit var kubernetesClient: KubernetesClient
-
-  @MockK
-  private lateinit var featureFlagClient: FeatureFlagClient
 
   @MockK
   private lateinit var metricClient: MetricClient
@@ -51,32 +44,22 @@ class OrchestratorPodLauncherTest {
   @MockK
   private lateinit var kubeCopyClient: KubeCopyClient
 
-  private lateinit var orchestratorPodLauncher: OrchestratorPodLauncher
+  private lateinit var kubePodLauncher: KubePodLauncher
 
   private lateinit var kubernetesClientRetryPolicy: RetryPolicy<Any>
 
   @BeforeEach
   fun setup() {
     kubernetesClientRetryPolicy = RetryPolicy.ofDefaults()
-    orchestratorPodLauncher =
-      OrchestratorPodLauncher(
+    kubePodLauncher =
+      KubePodLauncher(
         kubernetesClient,
-        featureFlagClient,
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        listOf(),
-        listOf(),
         metricClient,
-        kubernetesClientRetryPolicy,
         kubeCopyClient,
+        "namespace",
+        kubernetesClientRetryPolicy,
       )
 
-    every { featureFlagClient.stringVariation(any(), any()) } returns ""
     every { kubernetesClient.pods() } throws IllegalStateException()
     every { kubernetesClient.resource(any<Pod>()) } throws IllegalStateException()
     every { metricClient.count(any(), any(), any()) } returns Unit
@@ -85,14 +68,8 @@ class OrchestratorPodLauncherTest {
   @Test
   fun `test fail to create pod`() {
     assertThrows<IllegalStateException> {
-      orchestratorPodLauncher.create(
-        mapOf(),
-        ResourceRequirements(),
-        mapOf(),
-        KubePodInfo("", "", KubeContainerInfo("", "")),
-        mapOf(),
-        mapOf(),
-      )
+      val pod: Pod = mockk()
+      kubePodLauncher.create(pod)
     }
 
     checkMetricSend("pod_create")
@@ -103,7 +80,7 @@ class OrchestratorPodLauncherTest {
     val pod: Pod = mockk()
 
     assertThrows<IllegalStateException> {
-      orchestratorPodLauncher.waitForPodInit(
+      kubePodLauncher.waitForPodInit(
         pod,
         Duration.ZERO,
       )
@@ -115,7 +92,7 @@ class OrchestratorPodLauncherTest {
   @Test
   fun `test fail to wait for pod ready or terminal`() {
     assertThrows<IllegalStateException> {
-      orchestratorPodLauncher.waitForPodReadyOrTerminal(
+      kubePodLauncher.waitForPodReadyOrTerminal(
         mapOf(),
         Duration.ZERO,
       )
@@ -126,7 +103,7 @@ class OrchestratorPodLauncherTest {
 
   @Test
   fun `test fail to check if pod exist`() {
-    assertFalse(orchestratorPodLauncher.podsExist(mapOf()))
+    assertFalse(kubePodLauncher.podsExist(mapOf()))
 
     checkMetricSend("list")
   }
@@ -134,7 +111,7 @@ class OrchestratorPodLauncherTest {
   @Test
   fun `test fail to delete pod`() {
     assertThrows<IllegalStateException> {
-      orchestratorPodLauncher.deleteActivePods(
+      kubePodLauncher.deleteActivePods(
         mapOf(),
       )
     }
@@ -163,26 +140,17 @@ class OrchestratorPodLauncherTest {
       KubernetesClientException("An error has occurred", SocketTimeoutException("timeout"))
     every { kubernetesClient.pods() } returns pods
 
-    val orchestratorPodLauncher =
-      OrchestratorPodLauncher(
+    val kubePodLauncher =
+      KubePodLauncher(
         kubernetesClient,
-        featureFlagClient,
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        listOf(),
-        listOf(),
         metricClient,
-        kubernetesClientRetryPolicy,
         kubeCopyClient,
+        "namespace",
+        kubernetesClientRetryPolicy,
       )
 
     assertThrows<KubernetesClientException> {
-      orchestratorPodLauncher.waitForPodReadyOrTerminal(mapOf("label" to "value"), Duration.ofSeconds(30))
+      kubePodLauncher.waitForPodReadyOrTerminal(mapOf("label" to "value"), Duration.ofSeconds(30))
     }
     assertEquals(maxRetries, counter.get())
   }
@@ -211,26 +179,17 @@ class OrchestratorPodLauncherTest {
       KubernetesClientTimeoutException(hasMetadata, 2L, TimeUnit.SECONDS)
     every { kubernetesClient.pods() } returns pods
 
-    val orchestratorPodLauncher =
-      OrchestratorPodLauncher(
+    val kubePodLauncher =
+      KubePodLauncher(
         kubernetesClient,
-        featureFlagClient,
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        listOf(),
-        listOf(),
         metricClient,
-        kubernetesClientRetryPolicy,
         kubeCopyClient,
+        "namespace",
+        kubernetesClientRetryPolicy,
       )
 
     assertThrows<KubernetesClientException> {
-      orchestratorPodLauncher.waitForPodReadyOrTerminal(mapOf("label" to "value"), Duration.ofSeconds(30))
+      kubePodLauncher.waitForPodReadyOrTerminal(mapOf("label" to "value"), Duration.ofSeconds(30))
     }
     assertEquals(0, counter.get())
   }

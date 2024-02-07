@@ -11,6 +11,9 @@ import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.fabric8.kubernetes.api.model.ContainerPort
 import io.fabric8.kubernetes.api.model.ContainerPortBuilder
+import io.fabric8.kubernetes.api.model.LocalObjectReference
+import io.fabric8.kubernetes.api.model.Toleration
+import io.fabric8.kubernetes.api.model.TolerationBuilder
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.fabric8.kubernetes.client.KubernetesClientBuilder
 import io.micronaut.context.annotation.Factory
@@ -126,5 +129,33 @@ class ContainerConfigBeanFactory {
       .withMemoryLimit(checkPodConfig.memoryLimit)
       .withCpuRequest(checkPodConfig.cpuRequest)
       .withCpuLimit(checkPodConfig.cpuLimit)
+  }
+
+  @Singleton
+  @Named("checkPodTolerations")
+  fun checkPodTolerations(
+    @Named("checkWorkerConfigs") checkWorkerConfigs: WorkerConfigs,
+  ): List<Toleration> {
+    if (checkWorkerConfigs.workerKubeTolerations.isNullOrEmpty()) {
+      return listOf()
+    }
+    return checkWorkerConfigs.workerKubeTolerations
+      .map { t ->
+        TolerationBuilder()
+          .withKey(t.key)
+          .withEffect(t.effect)
+          .withOperator(t.operator)
+          .withValue(t.value)
+          .build()
+      }
+  }
+
+  @Singleton
+  @Named("checkImagePullSecrets")
+  fun checkImagePullSecrets(
+    @Named("checkWorkerConfigs") checkWorkerConfigs: WorkerConfigs,
+  ): List<LocalObjectReference> {
+    return checkWorkerConfigs.jobImagePullSecrets
+      .map { imagePullSecret -> LocalObjectReference(imagePullSecret) }
   }
 }

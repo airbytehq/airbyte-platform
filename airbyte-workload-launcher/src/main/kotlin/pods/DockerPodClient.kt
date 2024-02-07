@@ -3,7 +3,7 @@ package io.airbyte.workload.launcher.pods
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
-import io.airbyte.workers.orchestrator.OrchestratorNameGenerator
+import io.airbyte.workers.orchestrator.PodNameGenerator
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
@@ -31,7 +31,7 @@ class DockerPodClient(
   @Named("orchestratorEnvMap") private val orchestratorEnvMap: Map<String, String>,
   private val podLauncher: DockerPodLauncher,
   @Named("orchestratorKubeContainerInfo") private val orchestratorInfo: KubeContainerInfo,
-  private val orchestratorNameGenerator: OrchestratorNameGenerator,
+  private val podNameGenerator: PodNameGenerator,
 ) : PodClient {
   override fun podsExistForAutoId(autoId: UUID): Boolean = podLauncher.exists(autoId.toString())
 
@@ -77,8 +77,8 @@ class DockerPodClient(
       AsyncOrchestratorPodProcess.KUBE_POD_INFO to
         serializer.serialize(
           KubePodInfo(
-            orchestratorNameGenerator.namespace,
-            orchestratorNameGenerator.getReplicationOrchestratorPodName(jobRunConfig.jobId, jobRunConfig.attemptId),
+            podNameGenerator.namespace,
+            podNameGenerator.getReplicationOrchestratorPodName(jobRunConfig.jobId, jobRunConfig.attemptId),
             orchestratorInfo,
           ),
         ),
