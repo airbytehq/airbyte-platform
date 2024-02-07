@@ -209,13 +209,19 @@ class StreamStatsTracker(
     }
 
     val stateHash: Int = stateMessage.getStateHashCode(hashFunction)
-    if (!stateHashes.contains(stateHash) || stagedStatsList.isEmpty()) {
-      // Unexpected state from destination
-      logger.info {
-        "Unexpected state from destination for stream ${nameNamespacePair.namespace}:${nameNamespacePair.name}"
-      }
-
+    if (!stateHashes.contains(stateHash)) {
       metricClient.count(OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, 1)
+      logger.warn {
+        "Unexpected state from destination for stream ${nameNamespacePair.namespace}:${nameNamespacePair.name}, " +
+          "$stateHash not found in the stored stateHashes"
+      }
+      return
+    } else if (stagedStatsList.isEmpty()) {
+      metricClient.count(OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, 1)
+      logger.warn {
+        "Unexpected state from destination for stream ${nameNamespacePair.namespace}:${nameNamespacePair.name}, " +
+          "stagedStatsList is empty"
+      }
       return
     }
 
@@ -223,6 +229,12 @@ class StreamStatsTracker(
     // un-stage stats until the stateMessage
     while (!stagedStatsList.isEmpty()) {
       stagedStats = stagedStatsList.poll()
+      logger.info {
+        "removing ${stagedStats.stateHash} from the stored stateHashes for the stream " +
+          "${nameNamespacePair.namespace}:${nameNamespacePair.name}, " +
+          "stagedStatsList size after poll: ${stagedStatsList.size}, " +
+          "stateHashes size before removal ${stateHashes.size}"
+      }
       // Cleaning up stateHashes as we go to avoid un-staging on duplicate or our of order state messages
       stateHashes.remove(stagedStats.stateHash)
 
@@ -262,7 +274,11 @@ class StreamStatsTracker(
   }
 
   fun getTrackedCommittedRecordsSinceLastStateMessage(stateMessage: AirbyteStateMessage): Long {
-    val stagedStats: StagedStats? = stagedStatsList.find { it.stateHash == stateMessage.getStateHashCode(hashFunction) }
+    val stateHashCode = stateMessage.getStateHashCode(hashFunction)
+    val stagedStats: StagedStats? = stagedStatsList.find { it.stateHash == stateHashCode }
+    if (stagedStats == null) {
+      logger.warn { "Could not find the state message with hash $stateHashCode in the stagedStatsList" }
+    }
     return stagedStats?.emittedStatsCounters?.remittedRecordsCount?.get() ?: 0
   }
 
