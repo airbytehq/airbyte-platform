@@ -224,6 +224,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         context);
   }
 
+  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public ConnectorJobOutput runWithWorkload(final CheckConnectionInput input) throws WorkerException {
     final String jobId = input.getJobRunConfig().getJobId();
