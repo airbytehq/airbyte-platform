@@ -6,6 +6,7 @@ package io.airbyte.workers.general.performance;
 
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.general.BufferedReplicationWorker;
+import io.airbyte.workers.general.BufferedReplicationWorkerType;
 import io.airbyte.workers.general.ReplicationFeatureFlagReader;
 import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.general.ReplicationWorkerHelper;
@@ -43,7 +44,8 @@ class BufferedReplicationWorkerPerformanceTest extends ReplicationWorkerPerforma
                                                 final ReplicationWorkerHelper replicationWorkerHelper,
                                                 final DestinationTimeoutMonitor destinationTimeoutMonitor) {
     return new BufferedReplicationWorker(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator,
-        srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, replicationWorkerHelper, destinationTimeoutMonitor);
+        srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, replicationWorkerHelper, destinationTimeoutMonitor,
+        BufferedReplicationWorkerType.BUFFERED_WITH_LINKED_BLOCKING_QUEUE);
   }
 
   public static void main(final String[] args) throws IOException, InterruptedException {
