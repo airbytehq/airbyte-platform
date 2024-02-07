@@ -82,7 +82,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             <BuilderField
               type="enum"
               path={streamFieldPath("httpMethod")}
-              options={getOptionsByManifest("HttpRequester.properties.http_method.anyOf.1")}
+              options={getOptionsByManifest("HttpRequester.properties.http_method")}
               manifestPath="HttpRequester.properties.http_method"
             />
             <BuilderField
