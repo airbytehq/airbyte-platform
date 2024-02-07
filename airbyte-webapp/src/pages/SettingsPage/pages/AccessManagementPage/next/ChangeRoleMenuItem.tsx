@@ -128,7 +128,11 @@ export const ChangeRoleMenuItem: React.FC<RoleMenuItemProps> = ({ user, permissi
               />
             </Text>
           </FlexItem>
-          {roleIsActive && <Icon type="check" color="primary" />}
+          {roleIsActive && (
+            <FlexItem>
+              <Icon type="check" color="primary" size="md" />
+            </FlexItem>
+          )}
         </FlexContainer>
       </Box>
     </button>

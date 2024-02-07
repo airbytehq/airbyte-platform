@@ -50,8 +50,8 @@ export const permissionsByResourceType: Record<ResourceType, PermissionType[]> =
   ],
   organization: [
     PermissionType.organization_admin,
-    // PermissionType.organization_editor, -- role not supported in MVP
-    // PermissionType.organization_reader, -- role not supported in MVP
+    // PermissionType.organization_editor,
+    // PermissionType.organization_reader,
     PermissionType.organization_member,
   ],
   instance: [PermissionType.instance_admin],
@@ -90,7 +90,7 @@ export const useGetWorkspaceAccessUsers = (): AccessUsers => {
       usersToAdd: organizationUsers.filter(
         (user) =>
           user.permissionType === "organization_member" &&
-          !workspaceUsers.find((workspaceUser) => workspaceUser.userId === user.userId)
+          !(workspaceUsers ?? []).find((workspaceUser) => workspaceUser.userId === user.userId)
       ),
     },
     organization: {

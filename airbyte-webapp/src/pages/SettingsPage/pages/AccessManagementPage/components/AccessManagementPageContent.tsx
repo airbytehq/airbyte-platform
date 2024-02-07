@@ -2,13 +2,13 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { HeadTitle } from "components/common/HeadTitle";
 import { Box } from "components/ui/Box";
+import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationInfo, useCurrentWorkspace } from "core/api";
 import { useIntent } from "core/utils/rbac";
-import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./AccessManagementPageContent.module.scss";
 import { AccessManagementSection } from "./AccessManagementSection";
@@ -33,7 +33,6 @@ export const AccessManagementPageContent: React.FC<AccessManagementContentProps>
   const workspace = useCurrentWorkspace();
   const canListOrganizationUsers = useIntent("ListOrganizationMembers", { organizationId: workspace.organizationId });
   const organizationInfo = useCurrentOrganizationInfo();
-  const updatedOrganizationsUI = useExperiment("settings.organizationsUpdates", false);
 
   return (
     <>
@@ -44,31 +43,25 @@ export const AccessManagementPageContent: React.FC<AccessManagementContentProps>
         </Text>
       </Box>
       <FlexContainer direction="column" gap="xl" className={styles.pageContent}>
-        {updatedOrganizationsUI && pageResourceType === "workspace" ? (
-          <AccessManagementSection
-            tableResourceType="workspace"
-            pageResourceType={pageResourceType}
-            pageResourceName={workspace.name}
-          />
-        ) : (
-          Object.keys(accessUsers).map((key) => {
-            const resourceType = key as keyof typeof accessUsers;
-            const data = accessUsers[resourceType];
-            const users = data?.users ?? [];
-            const usersToAdd = data?.usersToAdd ?? [];
+        {Object.keys(accessUsers).map((key) => {
+          const resourceType = key as keyof typeof accessUsers;
+          const data = accessUsers[resourceType];
+          const users = data?.users ?? [];
+          const usersToAdd = data?.usersToAdd ?? [];
 
-            if (resourceType === "organization" && !canListOrganizationUsers) {
-              return (
-                <Message
-                  text={formatMessage(
-                    { id: "settings.accessManagement.invisibleOrgUsers" },
-                    { organization: organizationInfo?.organizationName }
-                  )}
-                />
-              );
-            }
-
+          if (resourceType === "organization" && !canListOrganizationUsers) {
             return (
+              <Message
+                text={formatMessage(
+                  { id: "settings.accessManagement.invisibleOrgUsers" },
+                  { organization: organizationInfo?.organizationName }
+                )}
+              />
+            );
+          }
+
+          return (
+            <Card>
               <AccessManagementSection
                 users={users}
                 usersToAdd={usersToAdd}
@@ -77,9 +70,9 @@ export const AccessManagementPageContent: React.FC<AccessManagementContentProps>
                 pageResourceType={pageResourceType}
                 pageResourceName={resourceName}
               />
-            );
-          })
-        )}
+            </Card>
+          );
+        })}
       </FlexContainer>
     </>
   );

@@ -33,6 +33,7 @@ export const workspaceKeys = {
   list: (filters: string | Record<string, string>) => [...workspaceKeys.lists(), { filters }] as const,
   allListUsers: [SCOPE_WORKSPACE, "users", "list"] as const,
   listUsers: (workspaceId: string) => [SCOPE_WORKSPACE, "users", "list", workspaceId] as const,
+  listAccessUsers: (workspaceId: string) => [SCOPE_WORKSPACE, "users", "listAccessUsers", workspaceId] as const,
   detail: (workspaceId: string) => [...workspaceKeys.all, "details", workspaceId] as const,
   state: (workspaceId: string) => [...workspaceKeys.all, "state", workspaceId] as const,
 };
@@ -231,7 +232,7 @@ export const useInvalidateAllWorkspaceScopeOnChange = (workspaceId: string) => {
 
 export const useListWorkspaceAccessUsers = (workspaceId: string) => {
   const requestOptions = useRequestOptions();
-  const queryKey = workspaceKeys.listUsers(workspaceId);
+  const queryKey = workspaceKeys.listAccessUsers(workspaceId);
 
   return useSuspenseQuery(queryKey, () => listAccessInfoByWorkspaceId({ workspaceId }, requestOptions));
 };

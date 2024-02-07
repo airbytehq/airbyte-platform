@@ -6,7 +6,7 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
-import { useCurrentOrganizationInfo, useCurrentWorkspace } from "core/api";
+import { useCurrentWorkspace } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
@@ -17,11 +17,8 @@ import { DeleteCloudWorkspace, UpdateCloudWorkspaceName } from "./components";
 export const WorkspaceSettingsView: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_WORKSPACE);
   const updatedOrganizationsUI = useExperiment("settings.organizationsUpdates", false);
-  const organizationInfo = useCurrentOrganizationInfo();
-  const hasSSORealm = organizationInfo?.sso;
   const { workspaceId } = useCurrentWorkspace();
   const canDeleteWorkspace = useIntent("DeleteWorkspace", { workspaceId });
-
   return (
     <FlexContainer direction="column" gap="xl">
       <Box>
@@ -32,7 +29,7 @@ export const WorkspaceSettingsView: React.FC = () => {
       <Card>
         <UpdateCloudWorkspaceName />
       </Card>
-      {hasSSORealm && updatedOrganizationsUI && (
+      {updatedOrganizationsUI && (
         <Card>
           <FlexContainer direction="column" gap="xl">
             <WorkspaceAccessManagementSection />
@@ -52,23 +49,5 @@ export const WorkspaceSettingsView: React.FC = () => {
         </Card>
       )}
     </FlexContainer>
-
-    /* {hasSSORealm && updatedOrganizationsUI &&  ( <Card>
-          <Box p="xl">
-            <FlexContainer direction="column" gap="xl">
-           <WorkspaceAccessManagementSection />
-             </FlexContainer>
-</Box></Card>)}
-
-<Card><Box>
-               <Heading as="h3" size="sm">
-                <FormattedMessage id="settings.general.danger" />
-              </Heading><FlexContainer>{canDeleteWorkspace && <DeleteCloudWorkspace />}</FlexContainer>
-            </FlexContainer>
-          </Box>
-        </Card>
-      )}
-    </FlexContainer>
-  ); */
   );
 };

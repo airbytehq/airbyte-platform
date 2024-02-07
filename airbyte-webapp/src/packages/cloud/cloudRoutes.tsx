@@ -122,7 +122,7 @@ const MainRoutes: React.FC = () => {
           )}
           <Route path={CloudSettingsRoutePaths.Source} element={<SettingsSourcesPage />} />
           <Route path={CloudSettingsRoutePaths.Destination} element={<SettingsDestinationsPage />} />
-          {(!isSsoEnabled || (isSsoEnabled && !isUpdatedOrganizationsUi)) && (
+          {!isUpdatedOrganizationsUi && (
             <Route
               path={CloudSettingsRoutePaths.AccessManagement}
               element={isSsoEnabled ? <WorkspaceAccessManagementPage /> : <UsersSettingsView />}

@@ -12,6 +12,7 @@ export const defaultEnterpriseFeatures = [
   ...defaultOssFeatures,
   FeatureItem.MultiWorkspaceUI,
   FeatureItem.RBAC,
+  FeatureItem.AllowAllRBACRoles,
   FeatureItem.EnterpriseBranding,
   FeatureItem.APITokenManagement,
   FeatureItem.ConnectionHistoryGraphs,

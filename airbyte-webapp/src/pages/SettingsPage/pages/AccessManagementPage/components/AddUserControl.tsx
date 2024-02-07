@@ -11,11 +11,12 @@ import { ListBoxControlButtonProps } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useCreatePermission, useCurrentOrganizationInfo, useListUsersInOrganization } from "core/api";
+import { useCreatePermission } from "core/api";
 import { OrganizationUserRead, PermissionCreate, PermissionType } from "core/api/types/AirbyteClient";
 import { useIntent } from "core/utils/rbac";
 
 import styles from "./AddUserControl.module.scss";
+import { useGetWorkspaceAccessUsers } from "./useGetAccessManagementData";
 
 /**
  * The name of this component is based on what a user sees... not so much what it does.
@@ -107,9 +108,10 @@ const AddUserForm: React.FC<{
 export const AddUserControl: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const workspaceId = useCurrentWorkspaceId();
-  const organizationInfo = useCurrentOrganizationInfo();
 
-  const usersToAdd = useListUsersInOrganization(organizationInfo?.organizationId ?? "").users ?? [];
+  const workspaceAccessUsers = useGetWorkspaceAccessUsers();
+  const usersToAdd = workspaceAccessUsers?.workspace?.usersToAdd;
+
   if (!usersToAdd || usersToAdd.length === 0) {
     return null;
   }

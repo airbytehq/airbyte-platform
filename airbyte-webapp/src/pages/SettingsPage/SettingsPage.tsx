@@ -60,8 +60,10 @@ export const SettingsPage: React.FC = () => {
             <SettingsNavigationBlock title={formatMessage({ id: "settings.workspaceSettings" })}>
               {multiWorkspaceUI && (
                 <SettingsLink
-                  iconType="gear"
-                  name={formatMessage({ id: "settings.generalSettings" })}
+                  iconType={isUpdatedOrganizationsUi ? "community" : "gear"}
+                  name={formatMessage({
+                    id: isUpdatedOrganizationsUi ? "settings.members" : "settings.generalSettings",
+                  })}
                   to={SettingsRoutePaths.Workspace}
                 />
               )}
@@ -104,8 +106,8 @@ export const SettingsPage: React.FC = () => {
           {multiWorkspaceUI && organizationId && canViewOrganizationSettings && (
             <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
               <SettingsLink
-                iconType="gear"
-                name={formatMessage({ id: "settings.generalSettings" })}
+                iconType={isUpdatedOrganizationsUi ? "community" : "gear"}
+                name={formatMessage({ id: isUpdatedOrganizationsUi ? "settings.members" : "settings.generalSettings" })}
                 to={SettingsRoutePaths.Organization}
               />
               {isAccessManagementEnabled && !isUpdatedOrganizationsUi && (
