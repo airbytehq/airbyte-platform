@@ -22,6 +22,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.ConnectorJobOutput.OutputType;
 import io.airbyte.config.FailureReason;
+import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.protocol.models.AirbyteCatalog;
@@ -100,8 +101,15 @@ public class DefaultDiscoverCatalogWorker implements DiscoverCatalogWorker {
         jobOutput.setConnectorConfigurationUpdated(true);
       }
 
-      final Optional<FailureReason> failureReason = WorkerUtils.getJobFailureReasonFromMessages(OutputType.DISCOVER_CATALOG_ID, messagesByType);
-      failureReason.ifPresent(jobOutput::setFailureReason);
+      final Optional<FailureReason> failureReasonOptional =
+          WorkerUtils.getJobFailureReasonFromMessages(OutputType.DISCOVER_CATALOG_ID, messagesByType);
+      if (failureReasonOptional.isPresent()) {
+        final FailureReason failureReason = failureReasonOptional.get();
+        // any failure from a discover job's connector message is guaranteed to be a source failure,
+        // so mark it as such.
+        failureReason.setFailureOrigin(FailureOrigin.SOURCE);
+        jobOutput.setFailureReason(failureReasonOptional.get());
+      }
 
       final int exitCode = process.exitValue();
       if (exitCode != 0) {
@@ -118,7 +126,7 @@ public class DefaultDiscoverCatalogWorker implements DiscoverCatalogWorker {
                 .writeDiscoverCatalogResult(buildSourceDiscoverSchemaWriteRequestBody(discoverSchemaInput, catalog.get())),
                 WRITE_DISCOVER_CATALOG_LOGS_TAG);
         jobOutput.setDiscoverCatalogId(result.getCatalogId());
-      } else if (failureReason.isEmpty()) {
+      } else if (failureReasonOptional.isEmpty()) {
         WorkerUtils.throwWorkerException("Integration failed to output a catalog struct and did not output a failure reason", process);
       }
       return jobOutput;
