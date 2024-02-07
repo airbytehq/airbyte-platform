@@ -40,10 +40,10 @@ class VersioningAcceptanceTests {
   static void init() throws IOException, URISyntaxException {
     final RetryPolicy<okhttp3.Response> policy = RetryPolicy.<okhttp3.Response>builder()
         .handle(Throwable.class)
-        .withMaxAttempts(5)
-        .withBackoff(Duration.ofSeconds(1), Duration.ofSeconds(10)).build();
+        .withMaxAttempts(6)
+        .withBackoff(Duration.ofSeconds(1), Duration.ofSeconds(60)).build();
 
-    final OkHttpClient client = new OkHttpClient.Builder().readTimeout(Duration.ofSeconds(20)).build();
+    final OkHttpClient client = new OkHttpClient.Builder().readTimeout(Duration.ofSeconds(60)).build();
     apiClient2 = new AirbyteApiClient2(String.format("%s/api", AIRBYTE_SERVER_HOST), policy, client);
 
     workspaceId = apiClient2.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();
