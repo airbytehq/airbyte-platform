@@ -4,15 +4,11 @@
 
 package io.airbyte.container_orchestrator.config;
 
-import static io.airbyte.workers.sync.OrchestratorConstants.CHECK_APPLICATION_NAME;
-
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.container_orchestrator.AsyncStateManager;
-import io.airbyte.container_orchestrator.orchestrator.CheckJobOrchestrator;
-import io.airbyte.container_orchestrator.orchestrator.CheckJobOrchestratorDataClass;
 import io.airbyte.container_orchestrator.orchestrator.DbtJobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.JobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.NoOpOrchestrator;
@@ -123,14 +119,12 @@ class ContainerOrchestratorFactory {
                                      final WorkloadApi workloadApi,
                                      final WorkloadIdGenerator workloadIdGenerator,
                                      @Value("${airbyte.workload.enabled}") final boolean workloadEnabled,
-                                     final JobOutputDocStore jobOutputDocStore,
-                                     final CheckJobOrchestratorDataClass dataClass) {
+                                     final JobOutputDocStore jobOutputDocStore) {
     return switch (application) {
       case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(configDir, envConfigs, jobRunConfig,
           replicationWorkerFactory, asyncStateManager, workloadApi, workloadIdGenerator, workloadEnabled, jobOutputDocStore);
       case NormalizationLauncherWorker.NORMALIZATION -> new NormalizationJobOrchestrator(envConfigs, processFactory, jobRunConfig, asyncStateManager);
       case DbtLauncherWorker.DBT -> new DbtJobOrchestrator(envConfigs, workerConfigsProvider, processFactory, jobRunConfig, asyncStateManager);
-      case CHECK_APPLICATION_NAME -> new CheckJobOrchestrator(configDir, dataClass);
       case AsyncOrchestratorPodProcess.NO_OP -> new NoOpOrchestrator();
       default -> throw new IllegalStateException("Could not find job orchestrator for application: " + application);
     };
