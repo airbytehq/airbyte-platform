@@ -63,11 +63,11 @@ public class SlackNotificationClient extends NotificationClient {
       throws IOException, InterruptedException {
     String legacyMessage = renderTemplate(
         "slack/failure_slack_notification_template.txt",
-        summary.getConnectionInfo().getName(),
-        summary.getSourceInfo().getName(),
-        summary.getDestinationInfo().getName(),
+        summary.getConnection().getName(),
+        summary.getSource().getName(),
+        summary.getDestination().getName(),
         summary.getErrorMessage(),
-        summary.getConnectionInfo().getUrl(),
+        summary.getConnection().getUrl(),
         String.valueOf(summary.getJobId()));
     return notifyJson(buildJobCompletedNotification(summary, legacyMessage).toJsonNode());
   }
@@ -78,11 +78,11 @@ public class SlackNotificationClient extends NotificationClient {
       throws IOException, InterruptedException {
     String legacyMessage = renderTemplate(
         "slack/success_slack_notification_template.txt",
-        summary.getConnectionInfo().getName(),
-        summary.getSourceInfo().getName(),
-        summary.getDestinationInfo().getName(),
+        summary.getConnection().getName(),
+        summary.getSource().getName(),
+        summary.getDestination().getName(),
         summary.getErrorMessage(),
-        summary.getConnectionInfo().getUrl(),
+        summary.getConnection().getUrl(),
         String.valueOf(summary.getJobId()));
     return notifyJson(buildJobCompletedNotification(summary, legacyMessage).toJsonNode());
   }
@@ -117,7 +117,7 @@ public class SlackNotificationClient extends NotificationClient {
     Notification notification = new Notification();
     notification.setText(text);
     Section title = notification.addSection();
-    String connectionLink = Notification.createLink(summary.getConnectionInfo().getName(), summary.getConnectionInfo().getUrl());
+    String connectionLink = Notification.createLink(summary.getConnection().getName(), summary.getConnection().getUrl());
     String titleText = summary.isSuccess() ? "Sync completed" : "Sync failure occurred";
     title.setText(String.format("%s: %s", titleText, connectionLink));
     Section description = notification.addSection();
@@ -133,7 +133,7 @@ public class SlackNotificationClient extends NotificationClient {
 
     field = description.addField();
     field.setType("mrkdwn");
-    field.setText(Notification.createLink(summary.getSourceInfo().getName(), summary.getSourceInfo().getUrl()));
+    field.setText(Notification.createLink(summary.getSource().getName(), summary.getSource().getUrl()));
 
     if (summary.getStartedAt() != null && summary.getFinishedAt() != null) {
       field = description.addField();
@@ -150,7 +150,7 @@ public class SlackNotificationClient extends NotificationClient {
 
     field = description.addField();
     field.setType("mrkdwn");
-    field.setText(Notification.createLink(summary.getDestinationInfo().getName(), summary.getDestinationInfo().getUrl()));
+    field.setText(Notification.createLink(summary.getDestination().getName(), summary.getDestination().getUrl()));
 
     if (!summary.isSuccess() && summary.getErrorMessage() != null) {
       Section failureSection = notification.addSection();
@@ -168,7 +168,7 @@ public class SlackNotificationClient extends NotificationClient {
                                          %d record(s) loaded / %d record(s) extracted
                                          %s loaded / %s extracted
                                          """,
-        summary.getRowsCommitted(), summary.getRowsEmitted(),
+        summary.getRecordsCommitted(), summary.getRecordsEmitted(),
         formatVolume(summary.getBytesCommitted()), formatVolume(summary.getBytesEmitted())));
 
     return notification;

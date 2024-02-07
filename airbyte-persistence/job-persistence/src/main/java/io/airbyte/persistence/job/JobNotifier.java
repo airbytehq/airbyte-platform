@@ -283,12 +283,12 @@ public class JobNotifier {
     SyncSummary.SyncSummaryBuilder summaryBuilder = SyncSummary.builder()
         .workspace(WorkspaceInfo.builder()
             .name(workspace.getName()).id(workspaceId).url(webUrlHelper.getWorkspaceUrl(workspaceId)).build())
-        .connectionInfo(ConnectionInfo.builder().name(standardSync.getName()).id(standardSync.getConnectionId())
+        .connection(ConnectionInfo.builder().name(standardSync.getName()).id(standardSync.getConnectionId())
             .url(webUrlHelper.getConnectionUrl(workspaceId, standardSync.getConnectionId())).build())
-        .sourceInfo(
+        .source(
             SourceInfo.builder()
                 .name(source.getName()).id(source.getSourceId()).url(webUrlHelper.getSourceUrl(workspaceId, source.getSourceId())).build())
-        .destinationInfo(DestinationInfo.builder()
+        .destination(DestinationInfo.builder()
             .name(destination.getName()).id(destination.getDestinationId())
             .url(webUrlHelper.getDestinationUrl(workspaceId, destination.getDestinationId())).build())
         .startedAt(Instant.ofEpochSecond(job.getCreatedAtInSecond()))
@@ -300,8 +300,8 @@ public class JobNotifier {
     if (syncStats != null) {
       summaryBuilder.bytesEmitted(syncStats.getBytesEmitted())
           .bytesCommitted(syncStats.getBytesEmitted())
-          .rowsEmitted(syncStats.getRecordsEmitted())
-          .rowsCommitted(syncStats.getRecordsCommitted());
+          .recordsEmitted(syncStats.getRecordsEmitted())
+          .recordsCommitted(syncStats.getRecordsCommitted());
     }
 
     SyncSummary summary = summaryBuilder.build();

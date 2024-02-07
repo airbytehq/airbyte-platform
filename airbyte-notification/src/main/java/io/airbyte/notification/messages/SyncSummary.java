@@ -16,11 +16,11 @@ public class SyncSummary {
 
   private WorkspaceInfo workspace;
 
-  private ConnectionInfo connectionInfo;
+  private ConnectionInfo connection;
 
-  private SourceInfo sourceInfo;
+  private SourceInfo source;
 
-  private DestinationInfo destinationInfo;
+  private DestinationInfo destination;
 
   private Long jobId;
 
@@ -34,9 +34,9 @@ public class SyncSummary {
 
   private long bytesCommitted;
 
-  private long rowsEmitted;
+  private long recordsEmitted;
 
-  private long rowsCommitted;
+  private long recordsCommitted;
 
   private String errorMessage;
 

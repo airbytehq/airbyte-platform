@@ -132,8 +132,8 @@ public class CustomerioNotificationClient extends NotificationClient {
                                   final String receiverEmail)
       throws IOException {
     final String requestBody = renderTemplate(SYNC_FAILURE_TEMPLATE_PATH, SYNC_FAILURE_MESSAGE_ID, receiverEmail,
-        receiverEmail, summary.getSourceInfo().getName(), summary.getDestinationInfo().getName(),
-        summary.getConnectionInfo().getName(), summary.getErrorMessage(), summary.getConnectionInfo().getUrl(), summary.getJobId().toString());
+        receiverEmail, summary.getSource().getName(), summary.getDestination().getName(),
+        summary.getConnection().getName(), summary.getErrorMessage(), summary.getConnection().getUrl(), summary.getJobId().toString());
     return notifyByEmail(requestBody);
   }
 
@@ -142,8 +142,8 @@ public class CustomerioNotificationClient extends NotificationClient {
                                   final String receiverEmail)
       throws IOException {
     final String requestBody = renderTemplate(SYNC_SUCCEED_TEMPLATE_PATH, SYNC_SUCCEED_MESSAGE_ID, receiverEmail,
-        receiverEmail, summary.getSourceInfo().getName(), summary.getDestinationInfo().getName(),
-        summary.getConnectionInfo().getName(), summary.getErrorMessage(), summary.getConnectionInfo().getUrl(), summary.getJobId().toString());
+        receiverEmail, summary.getSource().getName(), summary.getDestination().getName(),
+        summary.getConnection().getName(), summary.getErrorMessage(), summary.getConnection().getUrl(), summary.getJobId().toString());
     return notifyByEmail(requestBody);
   }
 
