@@ -171,10 +171,8 @@ class PayloadKubeInputMapperTest {
     val mockSerializedOutput = "Serialized Obj."
     every { serializer.serialize<Any>(any()) } returns mockSerializedOutput
 
-    val orchestratorLabels = mapOf("orchestrator" to "labels")
     val connectorLabels = mapOf("connector" to "labels")
     val sharedLabels = mapOf("pass through" to "labels")
-    every { labeler.getCheckOrchestratorLabels() } returns orchestratorLabels
     every { labeler.getCheckConnectorLabels() } returns connectorLabels
     val workloadId = UUID.randomUUID().toString()
     val result = mapper.toKubeInput(workloadId, input, sharedLabels)

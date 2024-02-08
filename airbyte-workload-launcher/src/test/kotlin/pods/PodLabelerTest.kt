@@ -6,7 +6,6 @@ import io.airbyte.workers.process.Metadata.CONNECTOR_STEP
 import io.airbyte.workers.process.Metadata.IMAGE_NAME
 import io.airbyte.workers.process.Metadata.IMAGE_VERSION
 import io.airbyte.workers.process.Metadata.JOB_TYPE_KEY
-import io.airbyte.workers.process.Metadata.ORCHESTRATOR_CHECK_STEP
 import io.airbyte.workers.process.Metadata.ORCHESTRATOR_REPLICATION_STEP
 import io.airbyte.workers.process.Metadata.READ_STEP
 import io.airbyte.workers.process.Metadata.SYNC_JOB
@@ -78,24 +77,6 @@ class PodLabelerTest {
         mapOf(
           JOB_TYPE_KEY to CHECK_JOB,
           CHECK_STEP_KEY to CONNECTOR_STEP,
-        ),
-    )
-  }
-
-  @Test
-  fun getCheckOrchestratorLabels() {
-    val labeler = PodLabeler(ORCHESTRATOR_IMAGE_NAME)
-    val result = labeler.getCheckOrchestratorLabels()
-    val shortImageName = ProcessFactory.getShortImageName(ORCHESTRATOR_IMAGE_NAME)
-    val imageVersion = ProcessFactory.getImageVersion(ORCHESTRATOR_IMAGE_NAME)
-
-    assert(
-      result ==
-        mapOf(
-          IMAGE_NAME to shortImageName,
-          IMAGE_VERSION to imageVersion,
-          JOB_TYPE_KEY to CHECK_JOB,
-          CHECK_STEP_KEY to ORCHESTRATOR_CHECK_STEP,
         ),
     )
   }
