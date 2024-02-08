@@ -14,6 +14,7 @@ export interface Experiments {
   "billing.autoRecharge": boolean;
   "connections.summaryView": boolean;
   "connection.columnSelection": boolean;
+  "connection.simplifiedCreation": boolean;
   "connection.onboarding.destinations": string;
   "connection.onboarding.sources": string;
   "connection.streamCentricUI.errorMultiplier": number;
