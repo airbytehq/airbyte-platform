@@ -32,6 +32,7 @@ export const workspaceKeys = {
   lists: () => [...workspaceKeys.all, "list"] as const,
   list: (filters: string | Record<string, string>) => [...workspaceKeys.lists(), { filters }] as const,
   allListUsers: [SCOPE_WORKSPACE, "users", "list"] as const,
+  allListAccessUsers: [SCOPE_WORKSPACE, "users", "listAccessUsers"] as const,
   listUsers: (workspaceId: string) => [SCOPE_WORKSPACE, "users", "list", workspaceId] as const,
   listAccessUsers: (workspaceId: string) => [SCOPE_WORKSPACE, "users", "listAccessUsers", workspaceId] as const,
   detail: (workspaceId: string) => [...workspaceKeys.all, "details", workspaceId] as const,

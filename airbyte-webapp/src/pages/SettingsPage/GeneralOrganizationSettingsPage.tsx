@@ -16,7 +16,7 @@ export const GeneralOrganizationSettingsPage: React.FC = () => {
   return (
     <FlexContainer direction="column" gap="xl">
       <Heading as="h2" size="md">
-        <FormattedMessage id="settings.generalSettings" />
+        <FormattedMessage id={updatedOrganizationsUI ? "settings.members" : "settings.generalSettings"} />
       </Heading>
       <Card>
         <UpdateOrganizationSettingsForm />

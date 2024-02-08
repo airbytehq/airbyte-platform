@@ -122,6 +122,7 @@ export const useDeletePermissions = () => {
       });
       queryClient.invalidateQueries(organizationKeys.allListUsers);
       queryClient.invalidateQueries(workspaceKeys.allListUsers);
+      queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
     },
     onError: () => {
       registerNotification({
