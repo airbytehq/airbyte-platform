@@ -1608,7 +1608,7 @@
   "credits.lowBalance": "Your credit balance is low. You need to add more credits to prevent your syncs from being stopped.",
   "credits.zeroBalance": "All your syncs have been stopped because your credit balance is 0. Add more credits to allow enabling your syncs again.",
 
-  "billing.pbaBillingActive": "This workspace is part of the <b>{organizationName}</b> organization and is billed as a Powered by Airbyte workspace. For further billing questions, please <lnk>contact us</lnk>.",
+  "billing.pbaBillingActive": "This workspace is part of the <b>{organizationName}</b> organization and is billed on the organization level. For further billing questions, please <lnk>contact us</lnk>.",
 
   "firebase.auth.error.invalidPassword": "Incorrect password",
   "firebase.auth.error.networkRequestFailed": "There appears to be a network issue. Please try again later.",
