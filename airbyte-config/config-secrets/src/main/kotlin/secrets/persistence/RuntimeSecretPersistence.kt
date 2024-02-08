@@ -96,6 +96,8 @@ class RuntimeSecretPersistence(private val secretPersistenceConfig: SecretPersis
         serializedConfig.awsAccessKey,
         serializedConfig.awsSecretAccessKey,
         serializedConfig.awsRegion,
+        null,
+        null,
       )
     val cache = AwsCache(client)
     return AwsSecretManagerPersistence(client, cache)

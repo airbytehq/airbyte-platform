@@ -96,11 +96,17 @@ class AwsSecretManagerPersistence(private val awsClient: AwsClient, private val 
           .withSecretString(payload)
           .withDescription("Airbyte secret.")
 
-      if (awsClient.serializedConfig?.kmsKeyArn != null) {
+      if (!awsClient.kmsKeyArn.isNullOrEmpty()) {
+        secretRequest.withKmsKeyId(awsClient.kmsKeyArn)
+      } else if (awsClient.serializedConfig?.kmsKeyArn != null) {
         secretRequest.withKmsKeyId(awsClient.serializedConfig?.kmsKeyArn)
       }
 
-      if (awsClient.serializedConfig?.tagKey != null) {
+      if (awsClient.tags.isNotEmpty()) {
+        for (tag in awsClient.tags) {
+          secretRequest.withTags(Tag().withKey(tag.key).withValue(tag.value))
+        }
+      } else if (awsClient.serializedConfig?.tagKey != null) {
         secretRequest.withTags(Tag().withKey(awsClient.serializedConfig?.tagKey).withValue("true"))
       }
 
@@ -127,16 +133,42 @@ class AwsClient(
   @Value("\${airbyte.secret.store.aws.access-key}") private val awsAccessKey: String,
   @Value("\${airbyte.secret.store.aws.secret-key}") private val awsSecretKey: String,
   @Value("\${airbyte.secret.store.aws.region}") private val awsRegion: String,
+  @Value("\${airbyte.secret.store.aws.kmsKeyArn}") val kmsKeyArn: String?,
+  @Value("\${airbyte.secret.store.aws.tags}") val unparsedTags: String?,
 ) {
   // values coming from a passed in SecretPersistenceConfig
   var serializedConfig: AwsRoleSecretPersistenceConfig? = null
+
+  val tags: Map<String, String> = parseTags(unparsedTags)
+
+  private fun parseTags(tags: String?): Map<String, String> {
+    // Define the regex pattern for the whole string validation
+    val pattern = "^\\w+=\\w+(,\\s*\\w+=\\w+)*$".toRegex()
+
+    // Check if unparsedTags is not null, not blank, and matches the pattern
+    return if (!tags.isNullOrBlank() && pattern.matches(tags)) {
+      tags.split(",").associate { part ->
+        val (key, value) = part.trim().split("=")
+        key to value
+      }
+    } else if (tags.isNullOrBlank()) {
+      emptyMap() // Return an empty map if unparsedTags is null or blank
+    } else {
+      // If the string doesn't match the pattern, throw an error
+      throw IllegalArgumentException(
+        "AWS_SECRET_MANAGER_SECRET_TAGS does not match the expected format \"key1=value2,key2=value2\": $tags." +
+          " Please update the AWS_SECRET_MANAGER_SECRET_TAGS env var configurations.",
+      )
+    }
+  }
+
   private lateinit var roleArn: String
   private lateinit var externalId: String
   private lateinit var region: String
 
   // Sets data for usage with Assume Role
   constructor(serializedConfig: AwsRoleSecretPersistenceConfig, airbyteAccessKey: String, airbyteSecretKey: String) :
-    this(airbyteAccessKey, airbyteSecretKey, serializedConfig.awsRegion) {
+    this(airbyteAccessKey, airbyteSecretKey, serializedConfig.awsRegion, null, null) {
     this.serializedConfig = serializedConfig
     this.roleArn = serializedConfig.roleArn
     this.externalId = serializedConfig.externalId

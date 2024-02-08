@@ -109,6 +109,8 @@ airbyte:
         access-key: ${AWS_ACCESS_KEY:}
         secret-key: ${AWS_SECRET_ACCESS_KEY:}
         region: ${AWS_REGION:}
+        kmsKeyArn: ${AWS_KMS_KEY_ARN:}
+        tags: ${AWS_SECRET_MANAGER_SECRET_TAGS:}
       gcp:
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
