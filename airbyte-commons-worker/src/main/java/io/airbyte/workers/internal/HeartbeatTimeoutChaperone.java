@@ -156,7 +156,8 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
 
       heartbeatMonitor.getTimeSinceLastBeat()
           .ifPresent(duration -> metricClient.distribution(OssMetricsRegistry.SOURCE_TIME_SINCE_LAST_HEARTBEAT_MILLIS, duration.toMillis(),
-              new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString())));
+              new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+              new MetricAttribute(MetricTags.SOURCE_IMAGE, sourceDockerImage)));
 
       // if not beating, return. otherwise, if it is beating or heartbeat hasn't started, continue.
       if (!heartbeatMonitor.isBeating().orElse(true)) {
