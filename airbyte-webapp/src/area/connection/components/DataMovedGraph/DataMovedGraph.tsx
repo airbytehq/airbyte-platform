@@ -37,7 +37,7 @@ export const DataMovedGraph: React.FC = () => {
       <BarChart data={formattedData}>
         <XAxis dataKey="date" {...xAxisConfig} />
 
-        <Bar dataKey="recordsCommitted" fill={xAxisConfig.stroke} isAnimationActive={false} />
+        <Bar dataKey="recordsCommitted" fill={styles.recordsColor} isAnimationActive={false} />
 
         <Tooltip
           cursor={{ fill: styles.chartHoverFill, opacity: 0.65 }}
