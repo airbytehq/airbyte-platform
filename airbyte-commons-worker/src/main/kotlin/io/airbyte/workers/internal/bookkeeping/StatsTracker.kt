@@ -225,6 +225,8 @@ class StreamStatsTracker(
       return
     }
 
+    logger.info { "Hash of the state message received from the destination $stateHash" }
+
     var stagedStats: StagedStats? = null
     // un-stage stats until the stateMessage
     while (!stagedStatsList.isEmpty()) {
@@ -232,6 +234,7 @@ class StreamStatsTracker(
       logger.info {
         "removing ${stagedStats.stateHash} from the stored stateHashes for the stream " +
           "${nameNamespacePair.namespace}:${nameNamespacePair.name}, " +
+          "state received time ${stagedStats.receivedTime}" +
           "stagedStatsList size after poll: ${stagedStatsList.size}, " +
           "stateHashes size before removal ${stateHashes.size}"
       }
