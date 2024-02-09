@@ -186,6 +186,7 @@ class KubePodClient(
         kubeInput.nodeSelectors,
         kubeInput.kubePodInfo,
         kubeInput.annotations,
+        kubeInput.extraEnv,
       )
     try {
       pod = kubePodLauncher.create(pod)

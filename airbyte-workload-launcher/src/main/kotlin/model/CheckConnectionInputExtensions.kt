@@ -15,10 +15,6 @@ fun CheckConnectionInput.getActorType(): ActorType {
   return this.connectionConfiguration.actorType
 }
 
-fun CheckConnectionInput.usesCustomConnector(): Boolean {
-  return this.launcherConfig.isCustomConnector
-}
-
 fun CheckConnectionInput.setConnectorLabels(labels: Map<String, String>): CheckConnectionInput {
   return this.apply {
     launcherConfig =

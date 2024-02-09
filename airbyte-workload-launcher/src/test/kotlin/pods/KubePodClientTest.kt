@@ -20,6 +20,7 @@ import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.sharedLabels
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.workloadId
 import io.airbyte.workload.launcher.pods.factories.CheckPodFactory
 import io.airbyte.workload.launcher.pods.factories.OrchestratorPodFactory
+import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
 import io.mockk.every
@@ -113,6 +114,7 @@ class KubePodClientTest {
         checkKubeInput.nodeSelectors,
         checkKubeInput.kubePodInfo,
         checkKubeInput.annotations,
+        checkKubeInput.extraEnv,
       )
     } returns pod
 
@@ -262,6 +264,7 @@ class KubePodClientTest {
         checkKubeInput.nodeSelectors,
         checkKubeInput.kubePodInfo,
         checkKubeInput.annotations,
+        checkKubeInput.extraEnv,
       )
     } returns connector
 
@@ -330,6 +333,7 @@ class KubePodClientTest {
         KubePodInfo("test-namespace", "test-name", null),
         mapOf("test-file" to "val4"),
         mapOf("test-annotation" to "val5"),
+        listOf(EnvVar("extra-env", "val6", null)),
       )
 
     val workloadId = "workload-id"

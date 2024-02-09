@@ -5,6 +5,9 @@ import io.airbyte.config.ResourceRequirements
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
+import io.airbyte.featureflag.Workspace
+import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
@@ -14,6 +17,7 @@ import io.airbyte.workers.orchestrator.PodNameGenerator
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
+import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
@@ -23,6 +27,7 @@ import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
 import io.airbyte.workload.launcher.model.usesCustomConnector
 import io.airbyte.workload.launcher.serde.ObjectSerializer
+import io.fabric8.kubernetes.api.model.EnvVar
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -39,6 +44,7 @@ class PayloadKubeInputMapper(
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String?,
   @Named("orchestratorKubeContainerInfo") private val orchestratorKubeContainerInfo: KubeContainerInfo,
   @Named("orchestratorEnvMap") private val envMap: Map<String, String>,
+  @Named("connectorAwsAssumedRoleSecretEnv") private val connectorAwsAssumedRoleSecretEnvList: List<EnvVar>,
   @Named("replicationWorkerConfigs") private val replicationWorkerConfigs: WorkerConfigs,
   @Named("checkWorkerConfigs") private val checkWorkerConfigs: WorkerConfigs,
   private val featureFlagClient: FeatureFlagClient,
@@ -107,9 +113,11 @@ class PayloadKubeInputMapper(
         ),
       )
 
-    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), checkWorkerConfigs)
+    val nodeSelectors = getNodeSelectors(input.launcherConfig.isCustomConnector, checkWorkerConfigs)
 
     val fileMap = buildCheckFileMap(workloadId, input, input.jobRunConfig)
+
+    val extraEnv = resolveAwsAssumedRoleEnvVars(input.launcherConfig)
 
     return CheckConnectorKubeInput(
       labeler.getCheckConnectorLabels() + sharedLabels,
@@ -117,7 +125,26 @@ class PayloadKubeInputMapper(
       connectorPodInfo,
       fileMap,
       checkWorkerConfigs.workerKubeAnnotations,
+      extraEnv,
     )
+  }
+
+  private fun resolveAwsAssumedRoleEnvVars(launcherConfig: IntegrationLauncherConfig): List<EnvVar> {
+    // Only inject into connectors we own.
+    if (launcherConfig.isCustomConnector) {
+      return listOf()
+    }
+    // Only inject into enabled workspaces.
+    val workspaceEnabled =
+      launcherConfig.workspaceId != null &&
+        this.featureFlagClient.boolVariation(InjectAwsSecretsToConnectorPods, Workspace(launcherConfig.workspaceId))
+    if (!workspaceEnabled) {
+      return listOf()
+    }
+
+    val externalIdVar = EnvVar(AWS_ASSUME_ROLE_EXTERNAL_ID, launcherConfig.workspaceId.toString(), null)
+
+    return connectorAwsAssumedRoleSecretEnvList + externalIdVar
   }
 
   private fun getNodeSelectors(
@@ -196,4 +223,5 @@ data class CheckConnectorKubeInput(
   val kubePodInfo: KubePodInfo,
   val fileMap: Map<String, String>,
   val annotations: Map<String, String>,
+  val extraEnv: List<EnvVar>,
 )

@@ -4,6 +4,8 @@
 
 package config
 
+import io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID
+import io.airbyte.workers.process.Metadata.AWS_SECRET_ACCESS_KEY
 import io.airbyte.workload.launcher.config.EnvVarConfigBeanFactory
 import io.airbyte.workload.launcher.config.EnvVarConfigBeanFactory.Companion.AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR
 import io.airbyte.workload.launcher.config.EnvVarConfigBeanFactory.Companion.AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR
@@ -30,45 +32,84 @@ class EnvVarConfigBeanFactoryTest {
   }
 
   @Test
-  fun `test secrets env var map creation`() {
+  fun `workload api secret env creation`() {
     val factory = EnvVarConfigBeanFactory()
-    val orchestratorSecretsEnvMap =
-      factory.orchestratorSecretsEnvMap(
+    val envMap =
+      factory.workloadApiSecretEnv(
         BEARER_TOKEN_SECRET_NAME,
         BEARER_TOKEN_SECRET_KEY,
+      )
+    assertEquals(1, envMap.size)
+    val envVarSource = envMap[WORKLOAD_API_BEARER_TOKEN_ENV_VAR]
+    val secretKeyRef = envVarSource!!.secretKeyRef
+    assertEquals(BEARER_TOKEN_SECRET_NAME, secretKeyRef.name)
+    assertEquals(BEARER_TOKEN_SECRET_KEY, secretKeyRef.key)
+  }
+
+  @Test
+  fun `orchestrator aws assumed role secret creation`() {
+    val factory = EnvVarConfigBeanFactory()
+    val envMap =
+      factory.orchestratorAwsAssumedRoleSecretEnv(
         AWS_ASSUMED_ROLE_ACCESS_KEY,
         AWS_ASSUMED_ROLE_SECRET_KEY,
         AWS_ASSUMED_ROLE_SECRET_NAME,
       )
-    assertEquals(3, orchestratorSecretsEnvMap.size)
-    val envVarSource = orchestratorSecretsEnvMap[WORKLOAD_API_BEARER_TOKEN_ENV_VAR]
-    val secretKeyRef = envVarSource!!.secretKeyRef
-    assertEquals(BEARER_TOKEN_SECRET_NAME, secretKeyRef.name)
-    assertEquals(BEARER_TOKEN_SECRET_KEY, secretKeyRef.key)
 
-    val awsAccessKey = orchestratorSecretsEnvMap[AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR]
+    assertEquals(2, envMap.size)
+    val awsAccessKey = envMap[AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR]
     val awsAccessKeySecretRef = awsAccessKey!!.secretKeyRef
     assertEquals(AWS_ASSUMED_ROLE_SECRET_NAME, awsAccessKeySecretRef.name)
     assertEquals(AWS_ASSUMED_ROLE_ACCESS_KEY, awsAccessKeySecretRef.key)
 
-    val awsSecretKey = orchestratorSecretsEnvMap[AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR]
+    val awsSecretKey = envMap[AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR]
     val awsSecretKeyRef = awsSecretKey!!.secretKeyRef
     assertEquals(AWS_ASSUMED_ROLE_SECRET_NAME, awsSecretKeyRef.name)
     assertEquals(AWS_ASSUMED_ROLE_SECRET_KEY, awsSecretKeyRef.key)
   }
 
   @Test
-  fun `test secrets env var map creation with blank names`() {
+  fun `workload api secret env creation with blank names`() {
     val factory = EnvVarConfigBeanFactory()
-    val orchestratorSecretsEnvMap =
-      factory.orchestratorSecretsEnvMap(
+    val envMap =
+      factory.workloadApiSecretEnv(
         "",
         BEARER_TOKEN_SECRET_KEY,
+      )
+    assertEquals(0, envMap.size)
+  }
+
+  @Test
+  fun `orchestrator aws assumed role secret creation with blank names`() {
+    val factory = EnvVarConfigBeanFactory()
+    val envMap =
+      factory.orchestratorAwsAssumedRoleSecretEnv(
         AWS_ASSUMED_ROLE_ACCESS_KEY,
         AWS_ASSUMED_ROLE_SECRET_KEY,
         "",
       )
-    assertEquals(0, orchestratorSecretsEnvMap.size)
+    assertEquals(0, envMap.size)
+  }
+
+  @Test
+  fun `connector aws assumed role secret creation`() {
+    val factory = EnvVarConfigBeanFactory()
+    val envList =
+      factory.connectorAwsAssumedRoleSecretEnv(
+        AWS_ASSUMED_ROLE_ACCESS_KEY,
+        AWS_ASSUMED_ROLE_SECRET_KEY,
+        AWS_ASSUMED_ROLE_SECRET_NAME,
+      )
+
+    val awsAccessKey = envList.find { it.name == AWS_ACCESS_KEY_ID }
+    val awsAccessKeySecretRef = awsAccessKey!!.valueFrom.secretKeyRef
+    assertEquals(AWS_ASSUMED_ROLE_SECRET_NAME, awsAccessKeySecretRef.name)
+    assertEquals(AWS_ASSUMED_ROLE_ACCESS_KEY, awsAccessKeySecretRef.key)
+
+    val awsSecretKey = envList.find { it.name == AWS_SECRET_ACCESS_KEY }
+    val awsSecretKeyRef = awsSecretKey!!.valueFrom.secretKeyRef
+    assertEquals(AWS_ASSUMED_ROLE_SECRET_NAME, awsSecretKeyRef.name)
+    assertEquals(AWS_ASSUMED_ROLE_SECRET_KEY, awsSecretKeyRef.key)
   }
 
   @Test

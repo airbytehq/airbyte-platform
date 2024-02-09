@@ -40,6 +40,7 @@ class CheckPodFactory(
     nodeSelectors: Map<String, String>,
     kubePodInfo: KubePodInfo,
     annotations: Map<String, String>,
+    extraEnvVars: List<EnvVar>,
   ): Pod {
     val volumes: MutableList<Volume> = ArrayList()
     val volumeMounts: MutableList<VolumeMount> = ArrayList()
@@ -62,7 +63,7 @@ class CheckPodFactory(
     }
 
     val init: Container = buildInitContainer(volumeMounts)
-    val main: Container = buildMainContainer(volumeMounts, kubePodInfo.mainContainerInfo)
+    val main: Container = buildMainContainer(volumeMounts, kubePodInfo.mainContainerInfo, extraEnvVars)
     val sidecar: Container = buildSidecarContainer(volumeMounts + secretVolumeMounts)
 
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
@@ -129,6 +130,7 @@ class CheckPodFactory(
   private fun buildMainContainer(
     volumeMounts: List<VolumeMount>,
     containerInfo: KubeContainerInfo,
+    extraEnvVars: List<EnvVar>,
   ): Container {
     val mainCommand =
       """
@@ -146,7 +148,7 @@ class CheckPodFactory(
       .withImage(containerInfo.image)
       .withImagePullPolicy(containerInfo.pullPolicy)
       .withCommand("sh", "-c", mainCommand)
-      .withEnv(envVars)
+      .withEnv(envVars + extraEnvVars)
       .withWorkingDir(KubePodProcess.CONFIG_DIR)
       .withVolumeMounts(volumeMounts)
       .withResources(KubePodProcess.getResourceRequirementsBuilder(checkReqs).build())

@@ -5,6 +5,7 @@ import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.ActorType
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.StandardCheckConnectionInput
+import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -14,6 +15,7 @@ import io.airbyte.workers.orchestrator.PodNameGenerator
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
+import io.airbyte.workers.process.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.sync.ReplicationLauncherWorker
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
@@ -24,15 +26,18 @@ import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
 import io.airbyte.workload.launcher.model.usesCustomConnector
 import io.airbyte.workload.launcher.serde.ObjectSerializer
+import io.fabric8.kubernetes.api.model.EnvVar
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
-import org.junit.Assert.assertEquals
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.util.Optional
 import java.util.UUID
+import java.util.stream.Stream
 
 class PayloadKubeInputMapperTest {
   @ParameterizedTest
@@ -44,6 +49,7 @@ class PayloadKubeInputMapperTest {
     val podNameGenerator = PodNameGenerator(namespace = namespace)
     val containerInfo = KubeContainerInfo("img-name", "pull-policy")
     val envMap: Map<String, String> = mapOf()
+    val awsAssumedRoleEnv: List<EnvVar> = listOf()
     val replSelectors = mapOf("test-selector" to "normal-repl")
     val replCustomSelectors = mapOf("test-selector" to "custom-repl")
     val checkConfigs: WorkerConfigs = mockk()
@@ -60,6 +66,7 @@ class PayloadKubeInputMapperTest {
         namespace,
         containerInfo,
         envMap,
+        awsAssumedRoleEnv,
         replConfigs,
         checkConfigs,
         TestClient(emptyMap()),
@@ -115,8 +122,18 @@ class PayloadKubeInputMapperTest {
   }
 
   @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  fun `builds a kube input from a check input`(customConnector: Boolean) {
+  @MethodSource("checkInputMatrix")
+  fun `builds a kube input from a check input`(
+    customConnector: Boolean,
+    assumedRoleEnabled: Boolean,
+  ) {
+    val ffClient =
+      TestClient(
+        mapOf(
+          InjectAwsSecretsToConnectorPods.key to assumedRoleEnabled,
+        ),
+      )
+
     val serializer: ObjectSerializer = mockk()
     val labeler: PodLabeler = mockk()
     val namespace = "test-namespace"
@@ -125,6 +142,7 @@ class PayloadKubeInputMapperTest {
     every { podNameGenerator.getCheckPodName(any(), any(), any()) } returns podName
     val orchestratorContainerInfo = KubeContainerInfo("img-name", "pull-policy")
     val orchestratorEnvMap: Map<String, String> = mapOf()
+    val awsAssumedRoleEnv: List<EnvVar> = listOf(EnvVar("aws-assumed-role", "value", null))
     val checkSelectors = mapOf("test-selector" to "normal-check")
     val pullPolicy = "pull-policy"
     val checkCustomSelectors = mapOf("test-selector" to "custom-check")
@@ -143,9 +161,10 @@ class PayloadKubeInputMapperTest {
         namespace,
         orchestratorContainerInfo,
         orchestratorEnvMap,
+        awsAssumedRoleEnv,
         replConfigs,
         checkConfigs,
-        TestClient(emptyMap()),
+        ffClient,
       )
     val input: CheckConnectionInput = mockk()
 
@@ -153,6 +172,7 @@ class PayloadKubeInputMapperTest {
     val jobId = "415"
     val attemptId = 7654L
     val imageName = "image-name"
+    val workspaceId1 = UUID.randomUUID()
 
     val checkConnectionInput = mockk<StandardCheckConnectionInput>()
     every { checkConnectionInput.connectionConfiguration } returns mockk<JsonNode>()
@@ -160,11 +180,12 @@ class PayloadKubeInputMapperTest {
     every { input.getJobId() } returns jobId
     every { input.getAttemptId() } returns attemptId
     every { input.getActorType() } returns ActorType.SOURCE
-    every { input.usesCustomConnector() } returns customConnector
     every { input.jobRunConfig } returns mockk<JobRunConfig>()
     every { input.launcherConfig } returns
       mockk<IntegrationLauncherConfig> {
         every { dockerImage } returns imageName
+        every { isCustomConnector } returns customConnector
+        every { workspaceId } returns workspaceId1
       }
     every { input.connectionConfiguration } returns checkConnectionInput
 
@@ -191,5 +212,25 @@ class PayloadKubeInputMapperTest {
       ),
       result.fileMap,
     )
+
+    if (!customConnector && assumedRoleEnabled) {
+      val externalIdVar = EnvVar(AWS_ASSUME_ROLE_EXTERNAL_ID, workspaceId1.toString(), null)
+      val expectedEnvList = awsAssumedRoleEnv + externalIdVar
+      Assertions.assertEquals(expectedEnvList, result.extraEnv)
+    } else {
+      awsAssumedRoleEnv.forEach { assert(!result.extraEnv.contains(it)) }
+    }
+  }
+
+  companion object {
+    @JvmStatic
+    private fun checkInputMatrix(): Stream<Arguments> {
+      return Stream.of(
+        Arguments.of(true, true),
+        Arguments.of(false, true),
+        Arguments.of(true, false),
+        Arguments.of(false, false),
+      )
+    }
   }
 }
