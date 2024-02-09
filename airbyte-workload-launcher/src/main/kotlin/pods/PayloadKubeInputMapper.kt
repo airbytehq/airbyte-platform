@@ -9,6 +9,7 @@ import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.SidecarInput
+import io.airbyte.workers.models.SidecarInput.OperationType
 import io.airbyte.workers.orchestrator.PodNameGenerator
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
@@ -62,7 +63,7 @@ class PayloadKubeInputMapper(
     val orchestratorReqs = input.getOrchestratorResourceReqs()
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs)
 
-    val fileMap = buildFileMap(workloadId, input, input.jobRunConfig, orchestratorPodInfo)
+    val fileMap = buildSyncFileMap(workloadId, input, input.jobRunConfig, orchestratorPodInfo)
 
     return ReplicationOrchestratorKubeInput(
       labeler.getReplicationOrchestratorLabels() + sharedLabels,
@@ -108,7 +109,7 @@ class PayloadKubeInputMapper(
 
     val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), checkWorkerConfigs)
 
-    val fileMap = buildFileMap(workloadId, input, input.jobRunConfig)
+    val fileMap = buildCheckFileMap(workloadId, input, input.jobRunConfig)
 
     return CheckConnectorKubeInput(
       labeler.getCheckConnectorLabels() + sharedLabels,
@@ -132,7 +133,7 @@ class PayloadKubeInputMapper(
 
   // TODO: This is the way we pass data into the pods we launch. This should be extracted to
   //  some shared interface between parent / child to make it less brittle.
-  private fun buildFileMap(
+  private fun buildSyncFileMap(
     workloadId: String,
     input: ReplicationInput,
     jobRunConfig: JobRunConfig,
@@ -150,7 +151,7 @@ class PayloadKubeInputMapper(
       )
   }
 
-  private fun buildFileMap(
+  private fun buildCheckFileMap(
     workloadId: String,
     input: CheckConnectionInput,
     jobRunConfig: JobRunConfig,
@@ -158,7 +159,16 @@ class PayloadKubeInputMapper(
     return sharedFileMap(jobRunConfig) +
       mapOf(
         OrchestratorConstants.CONNECTION_CONFIGURATION to serializer.serialize(input.connectionConfiguration.connectionConfiguration),
-        OrchestratorConstants.SIDECAR_INPUT to serializer.serialize(SidecarInput(input.connectionConfiguration, workloadId, input.launcherConfig)),
+        OrchestratorConstants.SIDECAR_INPUT to
+          serializer.serialize(
+            SidecarInput(
+              input.connectionConfiguration,
+              null,
+              workloadId,
+              input.launcherConfig,
+              OperationType.CHECK,
+            ),
+          ),
       )
   }
 

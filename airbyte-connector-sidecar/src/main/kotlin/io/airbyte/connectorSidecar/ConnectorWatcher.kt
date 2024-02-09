@@ -53,7 +53,8 @@ class ConnectorWatcher(
 ) {
   fun run() {
     val input = Jsons.deserialize(readFile(SIDECAR_INPUT), SidecarInput::class.java)
-    val connectionConfiguration = input.checkConnectionInput
+    val checkConnectionConfiguration = input.checkConnectionInput
+    val discoverCatalogInput = input.discoverCatalogInput
     val workloadId = input.workloadId
     val integrationLauncherConfig = input.integrationLauncherConfig
 
@@ -80,7 +81,30 @@ class ConnectorWatcher(
 
       val streamFactory: AirbyteStreamFactory = getStreamFactory(integrationLauncherConfig)
 
-      val connectorOutput: ConnectorJobOutput = connectorMessageProcessor.runCheck(outputIS, streamFactory, connectionConfiguration, exitCode)
+      val connectorOutput: ConnectorJobOutput =
+        when (input.operationType) {
+          SidecarInput.OperationType.CHECK ->
+            connectorMessageProcessor.run(
+              outputIS,
+              streamFactory,
+              ConnectorMessageProcessor.OperationInput(
+                checkConnectionConfiguration,
+              ),
+              exitCode,
+              SidecarInput.OperationType.CHECK,
+            )
+
+          SidecarInput.OperationType.DISCOVER ->
+            connectorMessageProcessor.run(
+              outputIS,
+              streamFactory,
+              ConnectorMessageProcessor.OperationInput(
+                discoveryInput = discoverCatalogInput,
+              ),
+              exitCode,
+              SidecarInput.OperationType.DISCOVER,
+            )
+        }
 
       jobOutputDocStore.write(workloadId, connectorOutput)
 
@@ -91,7 +115,7 @@ class ConnectorWatcher(
       }
     } catch (e: Exception) {
       logger.error { e }
-      val output = getFailedOutput(connectionConfiguration, e)
+      val output = getFailedOutput(checkConnectionConfiguration, e)
 
       jobOutputDocStore.write(workloadId, output)
       failWorkload(workloadId, output.failureReason)

@@ -6,12 +6,14 @@ import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
+import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.models.SidecarInput
+import io.airbyte.workers.models.SidecarInput.OperationType
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workload.api.client.generated.WorkloadApi
@@ -23,8 +25,9 @@ import io.mockk.junit5.MockKExtension
 import io.mockk.spyk
 import io.mockk.verifyOrder
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import java.nio.file.Path
 
 @ExtendWith(MockKExtension::class)
@@ -57,7 +60,9 @@ class ConnectorWatchTest {
 
   val workloadId = "workloadId"
 
-  val input = StandardCheckConnectionInput().withActorType(ActorType.SOURCE)
+  val checkInput = StandardCheckConnectionInput().withActorType(ActorType.SOURCE)
+
+  val discoveryInput = StandardDiscoverCatalogInput()
 
   @BeforeEach
   fun init() {
@@ -76,9 +81,6 @@ class ConnectorWatchTest {
         ),
       )
 
-    every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
-      Jsons.serialize(SidecarInput(input, workloadId, IntegrationLauncherConfig()))
-
     every { connectorWatcher.readFile(OrchestratorConstants.EXIT_CODE_FILE) } returns "0"
 
     every { connectorWatcher.areNeededFilesPresent() } returns true
@@ -92,51 +94,64 @@ class ConnectorWatchTest {
     every { jobOutputDocStore.write(any(), any()) } returns Unit
   }
 
-  @Test
-  fun `run for successful check`() {
+  @ParameterizedTest
+  @EnumSource(OperationType::class)
+  fun `run for successful check`(operationType: OperationType) {
     val output =
       ConnectorJobOutput()
         .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED))
-    every { connectorMessageProcessor.runCheck(any(), any(), any(), any()) } returns output
+
+    every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType))
+
+    every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
 
     every { workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Unit
 
     connectorWatcher.run()
 
     verifyOrder {
-      connectorMessageProcessor.runCheck(any(), any(), any(), any())
+      connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType))
       jobOutputDocStore.write(workloadId, output)
       workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
       connectorWatcher.exitProperly()
     }
   }
 
-  @Test
-  fun `run for failed check`() {
+  @ParameterizedTest
+  @EnumSource(OperationType::class)
+  fun `run for failed check`(operationType: OperationType) {
     val output =
       ConnectorJobOutput()
         .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.FAILED))
 
-    every { connectorMessageProcessor.runCheck(any(), any(), any(), any()) } returns output
+    every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType))
+
+    every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
 
     every { workloadApi.workloadFailure(WorkloadFailureRequest(workloadId)) } returns Unit
 
     connectorWatcher.run()
 
     verifyOrder {
-      connectorMessageProcessor.runCheck(any(), any(), any(), any())
+      connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType))
       jobOutputDocStore.write(workloadId, output)
       workloadApi.workloadFailure(WorkloadFailureRequest(workloadId))
       connectorWatcher.exitProperly()
     }
   }
 
-  @Test
-  fun `run for failed with exception check`() {
+  @ParameterizedTest
+  @EnumSource(OperationType::class)
+  fun `run for failed with exception check`(operationType: OperationType) {
     val exception = WorkerException("Broken check")
-    val output = connectorWatcher.getFailedOutput(input, exception)
+    val output = connectorWatcher.getFailedOutput(checkInput, exception)
 
-    every { connectorMessageProcessor.runCheck(any(), any(), any(), any()) } throws exception
+    every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType))
+
+    every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } throws exception
 
     every {
       workloadApi.workloadFailure(
@@ -151,7 +166,7 @@ class ConnectorWatchTest {
     connectorWatcher.run()
 
     verifyOrder {
-      connectorMessageProcessor.runCheck(any(), any(), any(), any())
+      connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType))
       jobOutputDocStore.write(workloadId, output)
       workloadApi.workloadFailure(
         WorkloadFailureRequest(workloadId, output.failureReason.failureOrigin.value(), output.failureReason.externalMessage),
@@ -160,8 +175,12 @@ class ConnectorWatchTest {
     }
   }
 
-  @Test
-  fun `run for failed with file timeout`() {
+  @ParameterizedTest
+  @EnumSource(OperationType::class)
+  fun `run for failed with file timeout`(operationType: OperationType) {
+    every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType))
+
     every { connectorWatcher.areNeededFilesPresent() } returns false
 
     every { connectorWatcher.fileTimeoutReach(any()) } returns true

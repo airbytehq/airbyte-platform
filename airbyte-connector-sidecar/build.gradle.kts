@@ -52,6 +52,7 @@ dependencies {
     implementation(libs.bundles.log4j)
     implementation(libs.bundles.micronaut.light)
     implementation(libs.google.cloud.storage)
+    implementation(libs.java.jwt)
     implementation(libs.kotlin.logging)
     implementation(libs.slf4j.api)
     implementation(platform(libs.micronaut.bom))
@@ -60,6 +61,7 @@ dependencies {
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-converters"))
     implementation(project(":airbyte-commons-protocol"))
+    implementation(project(":airbyte-commons-temporal"))
     implementation(project(":airbyte-commons-worker"))
     implementation(project(":airbyte-config:config-models"))
     implementation(project(":airbyte-metrics:metrics-lib")) // necessary for doc store

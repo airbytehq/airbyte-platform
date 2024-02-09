@@ -1,20 +1,26 @@
 package io.airbyte.connectorSidecar
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.api.client.generated.SourceApi
+import io.airbyte.api.client.model.generated.DiscoverCatalogResult
 import io.airbyte.commons.converters.ConnectorConfigUpdater
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
+import io.airbyte.config.StandardDiscoverCatalogInput
+import io.airbyte.protocol.models.AirbyteCatalog
 import io.airbyte.protocol.models.AirbyteConnectionStatus
 import io.airbyte.protocol.models.AirbyteControlConnectorConfigMessage
 import io.airbyte.protocol.models.AirbyteControlMessage
 import io.airbyte.protocol.models.AirbyteMessage
+import io.airbyte.protocol.models.AirbyteStream
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.protocol.models.Config
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteStreamFactory
+import io.airbyte.workers.models.SidecarInput
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
@@ -39,11 +45,14 @@ class ConnectorMessageProcessorTest {
   @MockK
   private lateinit var connectorConfigUpdater: ConnectorConfigUpdater
 
+  @MockK
+  private lateinit var sourceApi: SourceApi
+
   private lateinit var connectorMessageProcessor: ConnectorMessageProcessor
 
   @BeforeEach
   fun init() {
-    connectorMessageProcessor = ConnectorMessageProcessor(connectorConfigUpdater)
+    connectorMessageProcessor = ConnectorMessageProcessor(connectorConfigUpdater, sourceApi)
   }
 
   @Test
@@ -110,8 +119,8 @@ class ConnectorMessageProcessorTest {
 
     val successFullConnection = ConnectorMessageProcessor.getConnectionStatus(messageByTypeSuccessfullConnection)
 
-    assert(successFullConnection.isPresent)
-    assertEquals(AirbyteConnectionStatus.Status.SUCCEEDED, successFullConnection.get().status)
+    assert(successFullConnection.connectionStatus != null)
+    assertEquals(AirbyteConnectionStatus.Status.SUCCEEDED, successFullConnection.connectionStatus!!.status)
 
     val messageByTypeFailedConnection =
       mapOf(
@@ -128,8 +137,8 @@ class ConnectorMessageProcessorTest {
 
     val failedConnection = ConnectorMessageProcessor.getConnectionStatus(messageByTypeFailedConnection)
 
-    assert(failedConnection.isPresent)
-    assertEquals(AirbyteConnectionStatus.Status.FAILED, failedConnection.get().status)
+    assert(failedConnection.connectionStatus != null)
+    assertEquals(AirbyteConnectionStatus.Status.FAILED, failedConnection.connectionStatus!!.status)
 
     val messageByTypeMissingConnectionStatus =
       mapOf(
@@ -138,11 +147,46 @@ class ConnectorMessageProcessorTest {
 
     val missingConnection = ConnectorMessageProcessor.getConnectionStatus(messageByTypeMissingConnectionStatus)
 
-    assert(missingConnection.isEmpty)
+    assert(missingConnection.connectionStatus == null)
+  }
+
+  @Test
+  fun `test find catalog discovery`() {
+    val catalog =
+      AirbyteMessage().withType(AirbyteMessage.Type.CATALOG)
+        .withCatalog(
+          AirbyteCatalog()
+            .withStreams(
+              listOf(
+                AirbyteStream().withName("name"),
+              ),
+            ),
+        )
+    val messageByTypeSuccessfullConnection =
+      mapOf(
+        AirbyteMessage.Type.CATALOG to
+          listOf(catalog),
+        AirbyteMessage.Type.RECORD to listOf(AirbyteMessage().withType(AirbyteMessage.Type.RECORD).withAdditionalProperty("record", "two")),
+      )
+
+    val successFullConnection = ConnectorMessageProcessor.getDiscoveryResult(messageByTypeSuccessfullConnection)
+
+    assert(successFullConnection.catalog != null)
+    assertEquals(catalog.catalog, successFullConnection.catalog)
+
+    val messageByTypeMissingConnectionStatus =
+      mapOf(
+        AirbyteMessage.Type.RECORD to listOf(AirbyteMessage().withType(AirbyteMessage.Type.RECORD).withAdditionalProperty("record", "two")),
+      )
+
+    val missingConnection = ConnectorMessageProcessor.getConnectionStatus(messageByTypeMissingConnectionStatus)
+
+    assert(missingConnection.catalog == null)
   }
 
   data class ConnectorUpdateInput(
-    val input: StandardCheckConnectionInput,
+    val actorId: UUID,
+    val actorType: ActorType,
     val messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>>,
     val inputConfig: JsonNode,
     val jobOutput: ConnectorJobOutput,
@@ -175,15 +219,11 @@ class ConnectorMessageProcessorTest {
 
     val actorId = UUID.randomUUID()
 
-    val input =
-      StandardCheckConnectionInput()
-        .withActorId(actorId)
-        .withActorType(actorType)
-
     val jobOutput = ConnectorJobOutput()
 
     return ConnectorUpdateInput(
-      input,
+      actorId,
+      actorType,
       messageByType,
       inputConfig,
       jobOutput,
@@ -194,20 +234,24 @@ class ConnectorMessageProcessorTest {
   fun `properly update source`() {
     val controlMessageConfig = AirbyteControlConnectorConfigMessage().withConfig(Config().withAdditionalProperty("config", "config"))
 
-    val (input, messageByType, inputConfig, jobOutput) = getConnectorUpdateInputWithRandomInputConfig(ActorType.SOURCE, controlMessageConfig)
+    val (actorId, actorType, messageByType, inputConfig, jobOutput) =
+      getConnectorUpdateInputWithRandomInputConfig(
+        ActorType.SOURCE,
+        controlMessageConfig,
+      )
 
     every {
       connectorConfigUpdater.updateSource(
-        input.actorId,
+        actorId,
         controlMessageConfig.config,
       )
     } returns Unit
 
-    connectorMessageProcessor.updateConfigFromControlMessage(input, messageByType, inputConfig, jobOutput)
+    connectorMessageProcessor.updateConfigFromControlMessage(actorId, actorType, messageByType, inputConfig, jobOutput)
 
     verify {
       connectorConfigUpdater.updateSource(
-        input.actorId,
+        actorId,
         controlMessageConfig.config,
       )
     }
@@ -219,20 +263,24 @@ class ConnectorMessageProcessorTest {
   fun `properly update destination`() {
     val controlMessageConfig = AirbyteControlConnectorConfigMessage().withConfig(Config().withAdditionalProperty("config", "config"))
 
-    val (input, messageByType, inputConfig, jobOutput) = getConnectorUpdateInputWithRandomInputConfig(ActorType.DESTINATION, controlMessageConfig)
+    val (actorId, actorType, messageByType, inputConfig, jobOutput) =
+      getConnectorUpdateInputWithRandomInputConfig(
+        ActorType.DESTINATION,
+        controlMessageConfig,
+      )
 
     every {
       connectorConfigUpdater.updateDestination(
-        input.actorId,
+        actorId,
         controlMessageConfig.config,
       )
     } returns Unit
 
-    connectorMessageProcessor.updateConfigFromControlMessage(input, messageByType, inputConfig, jobOutput)
+    connectorMessageProcessor.updateConfigFromControlMessage(actorId, actorType, messageByType, inputConfig, jobOutput)
 
     verify {
       connectorConfigUpdater.updateDestination(
-        input.actorId,
+        actorId,
         controlMessageConfig.config,
       )
     }
@@ -244,14 +292,14 @@ class ConnectorMessageProcessorTest {
   fun `don't update connector if there is no change`() {
     val controlMessageConfig = AirbyteControlConnectorConfigMessage().withConfig(Config().withAdditionalProperty("config", "config"))
 
-    val (input, messageByType, inputConfig, jobOutput) =
+    val (actorId, actorType, messageByType, inputConfig, jobOutput) =
       getConnectorUpdateInput(
         ActorType.SOURCE,
         controlMessageConfig,
         Jsons.jsonNode(controlMessageConfig.config),
       )
 
-    connectorMessageProcessor.updateConfigFromControlMessage(input, messageByType, inputConfig, jobOutput)
+    connectorMessageProcessor.updateConfigFromControlMessage(actorId, actorType, messageByType, inputConfig, jobOutput)
 
     assertFalse(jobOutput.connectorConfigurationUpdated)
   }
@@ -275,11 +323,12 @@ class ConnectorMessageProcessorTest {
   @Test
   fun `fail if non 0 exit code`() {
     assertThrows<WorkerException> {
-      connectorMessageProcessor.runCheck(
+      connectorMessageProcessor.run(
         InputStream.nullInputStream(),
         streamFactory,
-        StandardCheckConnectionInput(),
+        ConnectorMessageProcessor.OperationInput(StandardCheckConnectionInput()),
         1,
+        SidecarInput.OperationType.CHECK,
       )
     }
   }
@@ -297,12 +346,17 @@ class ConnectorMessageProcessorTest {
       )
 
     val output =
-      connectorMessageProcessor.runCheck(
+      connectorMessageProcessor.run(
         InputStream.nullInputStream(),
         streamFactory,
-        StandardCheckConnectionInput()
-          .withConnectionConfiguration(Jsons.emptyObject()),
+        ConnectorMessageProcessor.OperationInput(
+          StandardCheckConnectionInput()
+            .withConnectionConfiguration(Jsons.emptyObject())
+            .withActorId(UUID.randomUUID())
+            .withActorType(ActorType.SOURCE),
+        ),
         0,
+        SidecarInput.OperationType.CHECK,
       )
 
     assertEquals(StandardCheckConnectionOutput.Status.SUCCEEDED, output.checkConnection.status)
@@ -322,15 +376,58 @@ class ConnectorMessageProcessorTest {
       )
 
     val output =
-      connectorMessageProcessor.runCheck(
+      connectorMessageProcessor.run(
         InputStream.nullInputStream(),
         streamFactory,
-        StandardCheckConnectionInput()
-          .withConnectionConfiguration(Jsons.emptyObject()),
+        ConnectorMessageProcessor.OperationInput(
+          StandardCheckConnectionInput()
+            .withActorId(UUID.randomUUID())
+            .withActorType(ActorType.SOURCE)
+            .withConnectionConfiguration(Jsons.emptyObject()),
+        ),
         0,
+        SidecarInput.OperationType.CHECK,
       )
 
     assertEquals(StandardCheckConnectionOutput.Status.FAILED, output.checkConnection.status)
     assertEquals("broken", output.checkConnection.message)
+  }
+
+  @Test
+  fun `properly discover schema`() {
+    val catalog =
+      AirbyteMessage().withType(AirbyteMessage.Type.CATALOG)
+        .withCatalog(
+          AirbyteCatalog()
+            .withStreams(
+              listOf(
+                AirbyteStream().withName("name"),
+              ),
+            ),
+        )
+
+    every { streamFactory.create(any()) } returns
+      Stream.of(
+        catalog,
+      )
+
+    val discoveredCatalogId = UUID.randomUUID()
+    every { sourceApi.writeDiscoverCatalogResult(any()) } returns DiscoverCatalogResult().catalogId(discoveredCatalogId)
+
+    val output =
+      connectorMessageProcessor.run(
+        InputStream.nullInputStream(),
+        streamFactory,
+        ConnectorMessageProcessor.OperationInput(
+          discoveryInput =
+            StandardDiscoverCatalogInput()
+              .withConnectionConfiguration(Jsons.emptyObject())
+              .withSourceId(UUID.randomUUID().toString()),
+        ),
+        0,
+        SidecarInput.OperationType.DISCOVER,
+      )
+
+    assertEquals(discoveredCatalogId, output.discoverCatalogId)
   }
 }
