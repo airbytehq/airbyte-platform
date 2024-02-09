@@ -12,7 +12,7 @@ import { Tooltip } from "../Tooltip";
 export type StatusIconStatus = "sleep" | "inactive" | "success" | "warning" | "loading" | "error" | "cancelled";
 type Size = "sm" | "md" | "lg";
 
-interface StatusIconProps {
+export interface StatusIconProps {
   className?: string;
   status?: StatusIconStatus;
   title?: string;
