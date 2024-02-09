@@ -66,6 +66,8 @@ fun DomainWorkload.toApi(): ApiWorkload {
     geography = this.geography,
     mutexKey = this.mutexKey,
     type = this.type.toApi(),
+    terminationReason = this.terminationReason,
+    terminationSource = this.terminationSource,
     autoId = if (this.autoId == null) UUID(0, 0) else this.autoId!!,
   )
 }
@@ -91,7 +93,7 @@ fun ApiWorkload.toDomain(): DomainWorkload {
 fun DomainWorkloadLabel.toApi(): ApiWorkloadLabel {
   return ApiWorkloadLabel(
     key = this.key,
-    value = this.key,
+    value = this.value,
   )
 }
 
