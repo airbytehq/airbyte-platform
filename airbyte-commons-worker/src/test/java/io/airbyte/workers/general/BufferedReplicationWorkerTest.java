@@ -39,12 +39,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
         heartbeatTimeoutChaperone,
         replicationFeatureFlagReader,
         replicationWorkerHelper,
-        destinationTimeoutMonitor,
-        getQueueType());
-  }
-
-  public BufferedReplicationWorkerType getQueueType() {
-    return BufferedReplicationWorkerType.BUFFERED_WITH_LINKED_BLOCKING_QUEUE;
+        destinationTimeoutMonitor);
   }
 
   // BufferedReplicationWorkerTests.

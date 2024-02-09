@@ -8,8 +8,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
 import datadog.trace.api.Trace;
 import io.airbyte.commons.concurrency.BoundedConcurrentLinkedQueue;
-import io.airbyte.commons.concurrency.ClosableLinkedBlockingQueue;
-import io.airbyte.commons.concurrency.ClosableQueue;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.timer.Stopwatch;
 import io.airbyte.config.PerformanceMetrics;
@@ -68,8 +66,8 @@ public class BufferedReplicationWorker implements ReplicationWorker {
   private final RecordSchemaValidator recordSchemaValidator;
   private final SyncPersistence syncPersistence;
   private final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone;
-  private final ClosableQueue<AirbyteMessage> messagesFromSourceQueue;
-  private final ClosableQueue<AirbyteMessage> messagesForDestinationQueue;
+  private final BoundedConcurrentLinkedQueue<AirbyteMessage> messagesFromSourceQueue;
+  private final BoundedConcurrentLinkedQueue<AirbyteMessage> messagesForDestinationQueue;
   private final ExecutorService executors;
   private final ScheduledExecutorService scheduledExecutors;
   private final DestinationTimeoutMonitor destinationTimeoutMonitor;
@@ -101,8 +99,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
                                    final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
                                    final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                    final ReplicationWorkerHelper replicationWorkerHelper,
-                                   final DestinationTimeoutMonitor destinationTimeoutMonitor,
-                                   final BufferedReplicationWorkerType bufferedReplicationWorkerType) {
+                                   final DestinationTimeoutMonitor destinationTimeoutMonitor) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.source = source;
@@ -113,12 +110,8 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     this.recordSchemaValidator = recordSchemaValidator;
     this.syncPersistence = syncPersistence;
     this.srcHeartbeatTimeoutChaperone = srcHeartbeatTimeoutChaperone;
-    this.messagesFromSourceQueue =
-        bufferedReplicationWorkerType == BufferedReplicationWorkerType.BUFFERED ? new BoundedConcurrentLinkedQueue<>(sourceMaxBufferSize)
-            : new ClosableLinkedBlockingQueue<>(sourceMaxBufferSize);
-    this.messagesForDestinationQueue =
-        bufferedReplicationWorkerType == BufferedReplicationWorkerType.BUFFERED ? new BoundedConcurrentLinkedQueue<>(destinationMaxBufferSize)
-            : new ClosableLinkedBlockingQueue<>(destinationMaxBufferSize);
+    this.messagesFromSourceQueue = new BoundedConcurrentLinkedQueue<>(sourceMaxBufferSize);
+    this.messagesForDestinationQueue = new BoundedConcurrentLinkedQueue<>(destinationMaxBufferSize);
     // readFromSource + processMessage + writeToDestination + readFromDestination +
     // source heartbeat + dest timeout monitor + workload heartbeat = 7 threads
     this.executors = Executors.newFixedThreadPool(7);
