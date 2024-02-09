@@ -44,7 +44,7 @@ const customStyles = (directional?: boolean, disabled?: boolean): StylesConfig<T
   }),
   control: (provided, state) => {
     const isInvalid = state.selectProps["aria-invalid"];
-    const regularBorderColor = isInvalid ? styles.errorBorderColor : "transparent";
+    const regularBorderColor = isInvalid ? styles.errorBorderColor : styles.regularBorderColor;
     const hoveredBorderColor = isInvalid ? styles.errorHoveredBorderColor : styles.hoveredBorderColor;
     return {
       ...provided,

@@ -77,6 +77,7 @@ function DropDownInner<T = unknown>(
     <CustomSelect
       ref={ref}
       data-testid={props.name}
+      $withBorder
       $error={props.error}
       menuPlacement="auto"
       menuPosition="fixed"

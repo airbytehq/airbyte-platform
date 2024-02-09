@@ -14,8 +14,7 @@ export const CustomSelect = styled(Select)<
     border: 1px solid
       ${({ theme, $withBorder, $error }) =>
         $error ? theme.red100 : $withBorder ? theme.greyColor30 : theme.greyColor0};
-    background: ${({ theme }) => theme.greyColor0};
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 14px;
     line-height: 20px;
     min-height: 36px;
@@ -26,7 +25,7 @@ export const CustomSelect = styled(Select)<
     }
 
     &:hover {
-      border-color: ${({ theme }) => theme.greyColor10};
+      border-color: ${({ theme }) => theme.greyColor40};
     }
 
     &.react-select__control--menu-is-open,
