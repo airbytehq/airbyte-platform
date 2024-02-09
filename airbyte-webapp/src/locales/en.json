@@ -1612,6 +1612,7 @@
   "credits.stripePortalLink": "Invoice history",
   "credits.deleted": "This connection has been deleted",
   "credits.timePeriod": "Time period",
+  "credits.l24HourCredits": "Credit usage shown in the last 24 hours may be incomplete",
 
   "credits.loadingCreditsUsage": "Loading credits usage …",
   "credits.totalCreditsUsage": "Total credits usage",
