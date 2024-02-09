@@ -189,8 +189,8 @@ public class KubeProcessFactory implements ProcessFactory {
           workerConfigs.getJobBusyboxImage(),
           workerConfigs.getJobCurlImage(),
           runSocatInMainContainer,
-          MoreMaps.merge(jobMetadata, workerConfigs.getEnvMap(), additionalEnvironmentVariables, buildAwsEnvVars(workspaceId)),
-          buildSecretMetadataMap(workspaceId),
+          MoreMaps.merge(jobMetadata, workerConfigs.getEnvMap(), additionalEnvironmentVariables, buildAwsEnvVars(isCustomConnector, workspaceId)),
+          buildSecretMetadataMap(isCustomConnector, workspaceId),
           internalToExternalPorts,
           args).toProcess();
     } catch (final Exception e) {
@@ -198,8 +198,9 @@ public class KubeProcessFactory implements ProcessFactory {
     }
   }
 
-  private Map<String, String> buildAwsEnvVars(final UUID workspaceId) {
-    if (workspaceId == null) {
+  private Map<String, String> buildAwsEnvVars(final Boolean isCustomConnector, final UUID workspaceId) {
+    // We don't want to expose any AWS info to custom connectors.
+    if (isCustomConnector || workspaceId == null) {
       return Map.of();
     }
 
@@ -283,8 +284,8 @@ public class KubeProcessFactory implements ProcessFactory {
             new Workspace(workspaceContext))));
   }
 
-  private Map<String, SecretMetadata> buildSecretMetadataMap(final UUID workspaceId) {
-    if (shouldInjectAwsSecretsToConnectorPods(workspaceId)) {
+  private Map<String, SecretMetadata> buildSecretMetadataMap(final Boolean isCustomConnector, final UUID workspaceId) {
+    if (shouldInjectAwsSecretsToConnectorPods(isCustomConnector, workspaceId)) {
       final String secretName = System.getenv(AWS_ASSUME_ROLE_SECRET_NAME);
       if (secretName != null) {
         return Map.of(
@@ -298,8 +299,9 @@ public class KubeProcessFactory implements ProcessFactory {
     }
   }
 
-  private boolean shouldInjectAwsSecretsToConnectorPods(final UUID workspaceId) {
-    if (workspaceId == null) {
+  private boolean shouldInjectAwsSecretsToConnectorPods(final Boolean isCustomConnector, final UUID workspaceId) {
+    // We don't want to expose any AWS info to custom connectors.
+    if (isCustomConnector || workspaceId == null) {
       return false;
     }
 
