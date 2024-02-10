@@ -4,10 +4,10 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.DISABLE_TEMPORAL_TESTS_IN_GKE;
-import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.IS_GKE;
-import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.KUBE;
-import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.TRUE;
+import static io.airbyte.test.acceptance.AcceptanceTestsResources.DISABLE_TEMPORAL_TESTS_IN_GKE;
+import static io.airbyte.test.acceptance.AcceptanceTestsResources.IS_GKE;
+import static io.airbyte.test.acceptance.AcceptanceTestsResources.KUBE;
+import static io.airbyte.test.acceptance.AcceptanceTestsResources.TRUE;
 
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
@@ -37,7 +37,7 @@ public class WorkloadBasicAcceptanceTests {
 
   static final Logger LOGGER = LoggerFactory.getLogger(WorkloadBasicAcceptanceTests.class);
 
-  static final BasicAcceptanceTestsResources testResources = new BasicAcceptanceTestsResources();
+  static final AcceptanceTestsResources testResources = new AcceptanceTestsResources();
 
   static final UUID RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID = UUID.fromString("3d2985a0-a412-45f4-9124-e15800b739be");
   static final UUID RUN_CHECK_WITH_WORKLOAD_WORKSPACE_ID = UUID.fromString("1bdcfb61-219b-4290-be4f-12f9ac5461be");
