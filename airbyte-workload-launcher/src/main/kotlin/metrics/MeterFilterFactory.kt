@@ -30,6 +30,8 @@ class MeterFilterFactory(
     const val WORKLOAD_ID_TAG = "workload_id"
     const val WORKLOAD_TYPE_TAG = "workload_type"
     const val MUTEX_KEY_TAG = "mutex_key"
+    const val KUBE_COMMAND_TYPE_TAG = "kube_command_type"
+    const val KUBE_POD_TYPE_TAG = "kube_pod_type"
 
     const val LAUNCH_PIPELINE_OPERATION_NAME = "launch-pipeline"
     const val LAUNCH_PIPELINE_STAGE_OPERATION_NAME = "launch-pipeline-stage"
@@ -39,8 +41,6 @@ class MeterFilterFactory(
     const val WAIT_DESTINATION_OPERATION_NAME = "wait-destination"
     const val WAIT_ORCHESTRATOR_OPERATION_NAME = "wait-orchestrator"
     const val WAIT_SOURCE_OPERATION_NAME = "wait-source"
-    const val KUBE_COMMAND_TYPE = "kube-command-type"
-    const val KUBE_POD_TYPE = "kube-pod-type"
     const val SUCCESS_STATUS = "ok"
     const val FAILURE_STATUS = "error"
     const val RUNNING_STATUS = "running"

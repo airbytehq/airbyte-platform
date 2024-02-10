@@ -46,9 +46,9 @@ class FailureHandler(
         buildList {
           if (e.cause is KubeClientException) {
             val clientEx = (e.cause as KubeClientException)
-            add(MetricAttribute(MeterFilterFactory.KUBE_COMMAND_TYPE, clientEx.commandType.toString()))
+            add(MetricAttribute(MeterFilterFactory.KUBE_COMMAND_TYPE_TAG, clientEx.commandType.toString()))
             if (clientEx.podType != null) {
-              add(MetricAttribute(MeterFilterFactory.KUBE_POD_TYPE, clientEx.podType.toString()))
+              add(MetricAttribute(MeterFilterFactory.KUBE_POD_TYPE_TAG, clientEx.podType.toString()))
             }
           }
           add(MetricAttribute(MeterFilterFactory.WORKLOAD_ID_TAG, io.msg.workloadId))
