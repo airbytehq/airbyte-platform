@@ -39,6 +39,8 @@ class MeterFilterFactory(
     const val WAIT_DESTINATION_OPERATION_NAME = "wait-destination"
     const val WAIT_ORCHESTRATOR_OPERATION_NAME = "wait-orchestrator"
     const val WAIT_SOURCE_OPERATION_NAME = "wait-source"
+    const val KUBE_COMMAND_TYPE = "kube-command-type"
+    const val KUBE_POD_TYPE = "kube-pod-type"
     const val SUCCESS_STATUS = "ok"
     const val FAILURE_STATUS = "error"
     const val RUNNING_STATUS = "running"

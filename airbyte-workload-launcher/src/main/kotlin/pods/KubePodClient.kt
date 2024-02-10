@@ -73,9 +73,11 @@ class KubePodClient(
         kubePodLauncher.create(pod)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
-      throw KubePodInitException(
+      throw KubeClientException(
         "Failed to create pod ${kubeInput.kubePodInfo.name}.",
         e,
+        KubeCommandType.CREATE,
+        PodType.ORCHESTRATOR,
       )
     }
 
@@ -99,10 +101,12 @@ class KubePodClient(
       kubePodLauncher.waitForPodInit(orchestratorPod, ORCHESTRATOR_INIT_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
-      throw KubePodInitException(
+      throw KubeClientException(
         "Init container of orchestrator pod failed to start within allotted timeout of ${ORCHESTRATOR_INIT_TIMEOUT_VALUE.seconds} seconds. " +
           "(${e.message})",
         e,
+        KubeCommandType.WAIT_INIT,
+        PodType.ORCHESTRATOR,
       )
     }
   }
@@ -116,9 +120,11 @@ class KubePodClient(
       kubePodLauncher.copyFilesToKubeConfigVolumeMain(pod, kubeInput.fileMap)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
-      throw KubePodInitException(
+      throw KubeClientException(
         "Failed to copy files to orchestrator pod ${kubeInput.kubePodInfo.name}. (${e.message})",
         e,
+        KubeCommandType.COPY,
+        PodType.ORCHESTRATOR,
       )
     }
   }
@@ -129,10 +135,12 @@ class KubePodClient(
       kubePodLauncher.waitForPodReadyOrTerminalByPod(pod, ORCHESTRATOR_STARTUP_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
-      throw KubePodInitException(
+      throw KubeClientException(
         "Main container of orchestrator pod failed to start within allotted timeout of ${ORCHESTRATOR_STARTUP_TIMEOUT_VALUE.seconds} seconds. " +
           "(${e.message})",
         e,
+        KubeCommandType.WAIT_MAIN,
+        PodType.ORCHESTRATOR,
       )
     }
   }
@@ -143,9 +151,11 @@ class KubePodClient(
       kubePodLauncher.waitForPodReadyOrTerminal(kubeInput.sourceLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
-      throw KubePodInitException(
+      throw KubeClientException(
         "Source pod failed to start within allotted timeout of ${CONNECTOR_STARTUP_TIMEOUT_VALUE.seconds} seconds. (${e.message})",
         e,
+        KubeCommandType.WAIT_MAIN,
+        PodType.SOURCE,
       )
     }
   }
@@ -156,9 +166,11 @@ class KubePodClient(
       kubePodLauncher.waitForPodReadyOrTerminal(kubeInput.destinationLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
-      throw KubePodInitException(
+      throw KubeClientException(
         "Destination pod failed to start within allotted timeout of ${CONNECTOR_STARTUP_TIMEOUT_VALUE.seconds} seconds. (${e.message})",
         e,
+        KubeCommandType.WAIT_MAIN,
+        PodType.DESTINATION,
       )
     }
   }
@@ -192,9 +204,10 @@ class KubePodClient(
       pod = kubePodLauncher.create(pod)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
-      throw KubePodInitException(
+      throw KubeClientException(
         "Failed to create pod ${kubeInput.kubePodInfo.name}.",
         e,
+        KubeCommandType.CREATE,
       )
     }
 
@@ -202,9 +215,10 @@ class KubePodClient(
       kubePodLauncher.waitForPodInit(pod, ORCHESTRATOR_INIT_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
-      throw KubePodInitException(
+      throw KubeClientException(
         "Check pod failed to init within allotted timeout.",
         e,
+        KubeCommandType.WAIT_INIT,
       )
     }
 
@@ -212,9 +226,10 @@ class KubePodClient(
       kubePodLauncher.copyFilesToKubeConfigVolumeMain(pod, kubeInput.fileMap)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
-      throw KubePodInitException(
+      throw KubeClientException(
         "Failed to copy files to check pod ${kubeInput.kubePodInfo.name}.",
         e,
+        KubeCommandType.COPY,
       )
     }
 
@@ -222,9 +237,10 @@ class KubePodClient(
       kubePodLauncher.waitForPodReadyOrTerminalByPod(pod, CONNECTOR_STARTUP_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
-      throw KubePodInitException(
+      throw KubeClientException(
         "Check pod failed to start within allotted timeout.",
         e,
+        KubeCommandType.WAIT_MAIN,
       )
     }
 
@@ -233,9 +249,18 @@ class KubePodClient(
 
   override fun deleteMutexPods(mutexKey: String): Boolean {
     val labels = labeler.getMutexLabels(mutexKey)
-    val deleted = kubePodLauncher.deleteActivePods(labels)
 
-    return deleted.isNotEmpty()
+    try {
+      val deleted = kubePodLauncher.deleteActivePods(labels)
+
+      return deleted.isNotEmpty()
+    } catch (e: RuntimeException) {
+      throw KubeClientException(
+        "Failed to delete pods for mutex key: $mutexKey.",
+        e,
+        KubeCommandType.DELETE,
+      )
+    }
   }
 
   companion object {

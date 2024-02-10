@@ -208,7 +208,7 @@ class KubePodClientTest {
   fun `launchReplication propagates orchestrator creation error`() {
     every { launcher.create(any()) } throws RuntimeException("bang")
 
-    assertThrows<KubePodInitException> {
+    assertThrows<KubeClientException> {
       client.launchReplication(replInput, launcherInput)
     }
   }
@@ -217,7 +217,7 @@ class KubePodClientTest {
   fun `launchReplication propagates orchestrator wait for init error`() {
     every { launcher.waitForPodInit(pod, ORCHESTRATOR_INIT_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
-    assertThrows<KubePodInitException> {
+    assertThrows<KubeClientException> {
       client.launchReplication(replInput, launcherInput)
     }
   }
@@ -226,7 +226,7 @@ class KubePodClientTest {
   fun `launchReplication propagates orchestrator copy file map error`() {
     every { launcher.copyFilesToKubeConfigVolumeMain(any(), replKubeInput.fileMap) } throws RuntimeException("bang")
 
-    assertThrows<KubePodInitException> {
+    assertThrows<KubeClientException> {
       client.launchReplication(replInput, launcherInput)
     }
   }
@@ -235,7 +235,7 @@ class KubePodClientTest {
   fun `launchReplication propagates source wait for init error`() {
     every { launcher.waitForPodReadyOrTerminal(replKubeInput.sourceLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
-    assertThrows<KubePodInitException> {
+    assertThrows<KubeClientException> {
       client.launchReplication(replInput, launcherInput)
     }
   }
@@ -244,7 +244,7 @@ class KubePodClientTest {
   fun `launchReplication propagates destination wait for init error`() {
     every { launcher.waitForPodReadyOrTerminal(replKubeInput.destinationLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
-    assertThrows<KubePodInitException> {
+    assertThrows<KubeClientException> {
       client.launchReplication(replInput, launcherInput)
     }
   }
@@ -281,7 +281,7 @@ class KubePodClientTest {
   fun `launchCheck propagates pod creation error`() {
     every { launcher.create(any()) } throws RuntimeException("bang")
 
-    assertThrows<KubePodInitException> {
+    assertThrows<KubeClientException> {
       client.launchCheck(checkInput, launcherInput)
     }
   }
@@ -290,7 +290,7 @@ class KubePodClientTest {
   fun `launchCheck propagates pod wait for init error`() {
     every { launcher.waitForPodInit(pod, ORCHESTRATOR_INIT_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
-    assertThrows<KubePodInitException> {
+    assertThrows<KubeClientException> {
       client.launchCheck(checkInput, launcherInput)
     }
   }
@@ -299,7 +299,7 @@ class KubePodClientTest {
   fun `launchCheck propagates orchestrator copy file map error`() {
     every { launcher.copyFilesToKubeConfigVolumeMain(any(), checkKubeInput.fileMap) } throws RuntimeException("bang")
 
-    assertThrows<KubePodInitException> {
+    assertThrows<KubeClientException> {
       client.launchCheck(checkInput, launcherInput)
     }
   }
@@ -308,7 +308,7 @@ class KubePodClientTest {
   fun `launchCheck propagates source wait for init error`() {
     every { launcher.waitForPodReadyOrTerminalByPod(pod, CONNECTOR_STARTUP_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
-    assertThrows<KubePodInitException> {
+    assertThrows<KubeClientException> {
       client.launchCheck(checkInput, launcherInput)
     }
   }

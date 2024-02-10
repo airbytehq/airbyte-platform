@@ -12,6 +12,7 @@ import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.StageError
+import io.airbyte.workload.launcher.pods.KubeClientException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.oshai.kotlinlogging.withLoggingContext
 import jakarta.inject.Named
@@ -41,11 +42,23 @@ class FailureHandler(
         apiClient.reportFailure(e)
       }
 
+      val attrs =
+        buildList {
+          if (e.cause is KubeClientException) {
+            val clientEx = (e.cause as KubeClientException)
+            add(MetricAttribute(MeterFilterFactory.KUBE_COMMAND_TYPE, clientEx.commandType.toString()))
+            if (clientEx.podType != null) {
+              add(MetricAttribute(MeterFilterFactory.KUBE_POD_TYPE, clientEx.podType.toString()))
+            }
+          }
+          add(MetricAttribute(MeterFilterFactory.WORKLOAD_ID_TAG, io.msg.workloadId))
+          add(MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()))
+          add(MetricAttribute(MeterFilterFactory.STATUS_TAG, MeterFilterFactory.FAILURE_STATUS))
+        }
+
       metricPublisher.count(
         WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED,
-        MetricAttribute(MeterFilterFactory.WORKLOAD_ID_TAG, io.msg.workloadId),
-        MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()),
-        MetricAttribute(MeterFilterFactory.STATUS_TAG, MeterFilterFactory.FAILURE_STATUS),
+        *attrs.toTypedArray(),
       )
       logger.info { logMsgTemplate.orElse { id -> "Pipeline aborted after error for workload: $id." }.apply(io.msg.workloadId) }
     }
