@@ -298,10 +298,14 @@ public class JobNotifier {
         .errorMessage(reason);
 
     if (syncStats != null) {
-      summaryBuilder.bytesEmitted(syncStats.getBytesEmitted())
-          .bytesCommitted(syncStats.getBytesEmitted())
-          .recordsEmitted(syncStats.getRecordsEmitted())
-          .recordsCommitted(syncStats.getRecordsCommitted());
+      long bytesEmitted = syncStats.getBytesEmitted() != null ? syncStats.getBytesEmitted() : 0;
+      long bytesCommitted = syncStats.getBytesCommitted() != null ? syncStats.getBytesCommitted() : 0;
+      long recordsEmitted = syncStats.getRecordsEmitted() != null ? syncStats.getRecordsEmitted() : 0;
+      long recordsCommitted = syncStats.getRecordsCommitted() != null ? syncStats.getRecordsCommitted() : 0;
+      summaryBuilder.bytesEmitted(bytesEmitted)
+          .bytesCommitted(bytesCommitted)
+          .recordsEmitted(recordsEmitted)
+          .recordsCommitted(recordsCommitted);
     }
 
     SyncSummary summary = summaryBuilder.build();
