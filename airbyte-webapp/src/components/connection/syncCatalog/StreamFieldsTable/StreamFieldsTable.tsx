@@ -191,6 +191,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
             isCursor={checkIsCursor}
             isCursorDefinitionSupported={isCursorDefinitionSupported}
             onCursorSelect={onCursorSelect}
+            disabled={mode === "readonly"}
             {...props}
           />
         ),
@@ -207,6 +208,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
             isPKDefinitionSupported={isPKDefinitionSupported}
             isPrimaryKey={checkIsPrimaryKey}
             onPkSelect={onPkSelect}
+            disabled={mode === "readonly"}
             {...props}
           />
         ),
