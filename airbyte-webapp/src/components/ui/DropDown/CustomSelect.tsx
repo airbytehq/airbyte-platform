@@ -14,6 +14,7 @@ export const CustomSelect = styled(Select)<
     border: 1px solid
       ${({ theme, $withBorder, $error }) =>
         $error ? theme.red100 : $withBorder ? theme.greyColor30 : theme.greyColor0};
+    background-color: initial;
     border-radius: 6px;
     font-size: 14px;
     line-height: 20px;
