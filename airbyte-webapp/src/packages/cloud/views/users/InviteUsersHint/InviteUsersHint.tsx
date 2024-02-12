@@ -5,7 +5,9 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
+import { useCurrentWorkspace } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
+import { useIntent } from "core/utils/rbac";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./InviteUsersHint.module.scss";
@@ -18,9 +20,11 @@ export interface InviteUsersHintProps {
 export const InviteUsersHint: React.FC<InviteUsersHintProps> = ({ connectorType }) => {
   const { formatMessage } = useIntl();
   const inviteUsersHintVisible = useFeature(FeatureItem.ShowInviteUsersHint);
+  const { workspaceId } = useCurrentWorkspace();
+  const canInviteUsers = useIntent("UpdateWorkspacePermissions", { workspaceId });
   const { openModal } = useModalService();
 
-  if (!inviteUsersHintVisible) {
+  if (!inviteUsersHintVisible || !canInviteUsers) {
     return null;
   }
 
