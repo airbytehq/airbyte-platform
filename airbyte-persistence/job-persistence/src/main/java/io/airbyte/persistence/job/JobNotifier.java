@@ -123,10 +123,18 @@ public class JobNotifier {
       for (var attemptStat : attempts) {
         SyncStats combinedStats = attemptStat.combinedStats();
         if (combinedStats != null) {
-          syncStats.setBytesEmitted(syncStats.getBytesEmitted() + combinedStats.getBytesEmitted());
-          syncStats.setBytesCommitted(syncStats.getBytesCommitted() + combinedStats.getBytesCommitted());
-          syncStats.setRecordsEmitted(syncStats.getRecordsEmitted() + combinedStats.getRecordsEmitted());
-          syncStats.setRecordsCommitted(syncStats.getRecordsCommitted() + combinedStats.getRecordsCommitted());
+          if (combinedStats.getBytesEmitted() != null) {
+            syncStats.setBytesEmitted(syncStats.getBytesEmitted() + combinedStats.getBytesEmitted());
+          }
+          if (combinedStats.getBytesCommitted() != null) {
+            syncStats.setBytesCommitted(syncStats.getBytesCommitted() + combinedStats.getBytesCommitted());
+          }
+          if (combinedStats.getRecordsEmitted() != null) {
+            syncStats.setRecordsEmitted(syncStats.getRecordsEmitted() + combinedStats.getRecordsEmitted());
+          }
+          if (combinedStats.getRecordsCommitted() != null) {
+            syncStats.setRecordsCommitted(syncStats.getRecordsCommitted() + combinedStats.getRecordsCommitted());
+          }
         }
       }
       final NotificationItem notificationItem = createAndSend(notificationSettings, action, connectionId,
