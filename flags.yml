@@ -2,7 +2,7 @@ flags:
   - name: performance.backgroundJsonSchemaValidation
     serve: false
   - name: heartbeat.failSync
-    serve: true
+    serve: false
   - name: connectors.versionOverridesEnabled
     serve: true
   - name: heartbeat-max-seconds-between-messages
