@@ -44,20 +44,29 @@ public class KeycloakServer {
 
   public void createAirbyteRealm() {
     if (doesRealmExist()) {
-      log.info("Realm {} already exists.", keycloakConfiguration.getAirbyteRealm());
-
-      if (keycloakConfiguration.getResetRealm()) {
-        final RealmResource airbyteRealm = keycloakAdminClient.realm(keycloakConfiguration.getAirbyteRealm());
-        userCreator.resetUser(airbyteRealm);
-        identityProvidersCreator.resetIdentityProviders(airbyteRealm);
-        log.info("Reset user and identity providers for realm {}.", keycloakConfiguration.getAirbyteRealm());
-      }
-
+      log.info("Realm {} already exists, nothing to be done.", keycloakConfiguration.getAirbyteRealm());
       return;
     }
+    log.info("Creating realm {}...", keycloakConfiguration.getAirbyteRealm());
     createRealm();
     configureRealm();
-    log.info("Configuration for realm {} created successfully.", keycloakConfiguration.getAirbyteRealm());
+    log.info("Realm created successfully.");
+  }
+
+  public void recreateAirbyteRealm() {
+    if (!doesRealmExist()) {
+      log.info("Ignoring reset because realm {} does not exist. Creating it...", keycloakConfiguration.getAirbyteRealm());
+      createAirbyteRealm();
+      return;
+    }
+
+    log.info("Recreating realm {}...", keycloakConfiguration.getAirbyteRealm());
+    final RealmResource airbyteRealm = keycloakAdminClient.realm(keycloakConfiguration.getAirbyteRealm());
+    airbyteRealm.remove();
+    log.info("Realm removed successfully. Recreating...");
+    createRealm();
+    configureRealm();
+    log.info("Realm recreated successfully.");
   }
 
   private boolean doesRealmExist() {

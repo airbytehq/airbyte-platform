@@ -79,16 +79,4 @@ public class IdentityProvidersCreator {
     }
   }
 
-  /**
-   * Delete existing identity providers and re-create them. This is useful when we want to update the
-   * configuration of an existing identity provider.
-   */
-  public void resetIdentityProviders(RealmResource realmResource) {
-    realmResource.identityProviders().findAll().forEach(idpRepresentation -> {
-      realmResource.identityProviders().get(idpRepresentation.getInternalId()).remove();
-    });
-
-    createIdps(realmResource);
-  }
-
 }

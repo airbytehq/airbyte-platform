@@ -25,8 +25,8 @@ else
   set_dev_image_tag_if_true=""
 fi
 
-if [ "$RESET_KEYCLOAK_REALM" == "true" ]; then
-  set_reset_realm_if_true="--set keycloak-setup.resetRealm=true"
+if [ "$KEYCLOAK_RESET_REALM" == "true" ]; then
+  set_reset_realm_if_true="--set keycloak-setup.env_vars.KEYCLOAK_RESET_REALM=true"
 else
   set_reset_realm_if_true=""
 fi
