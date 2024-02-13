@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -59,10 +60,10 @@ class RbacRoleHelperTest {
 
   @ParameterizedTest
   @ArgumentsSource(GetRbacRolesArgumentsProvider.class)
-  void getRbacRoles(final Boolean hasWorkspacePermission,
-                    final Boolean hasOrganizationPermission,
-                    final Boolean userMatchesTargetUser,
-                    final Boolean isInstanceAdmin)
+  void getRbacRolesBasic(final Boolean hasWorkspacePermission,
+                         final Boolean hasOrganizationPermission,
+                         final Boolean userMatchesTargetUser,
+                         final Boolean isInstanceAdmin)
       throws IOException {
 
     final Set<String> expectedRoles = new HashSet<>();
@@ -101,6 +102,104 @@ class RbacRoleHelperTest {
     final Collection<String> actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
 
     Assertions.assertEquals(expectedRoles, actualRoles);
+  }
+
+  @Test
+  void getRbacRolesMultipleIdsAndCombinations() throws IOException {
+    // first, start by just testing how it handles multiple workspace IDs.
+
+    final UUID workspaceId1 = UUID.randomUUID();
+    final UUID workspaceId2 = UUID.randomUUID();
+    final UUID workspaceId3 = UUID.randomUUID();
+
+    when(mHeaderResolver.resolveWorkspace(any())).thenReturn(List.of(workspaceId1, workspaceId2, workspaceId3));
+    when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId1, AUTH_USER_ID))
+        .thenReturn(PermissionType.WORKSPACE_ADMIN);
+    when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId2, AUTH_USER_ID))
+        .thenReturn(PermissionType.WORKSPACE_EDITOR);
+    when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId3, AUTH_USER_ID))
+        .thenReturn(PermissionType.WORKSPACE_READER);
+
+    Collection<String> actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
+
+    // minimum common permission is reader, so expect only reader auth role set.
+    Assertions.assertEquals(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_READER), actualRoles);
+
+    // change reader to admin, now expect editor as minimum role set.
+    when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId3, AUTH_USER_ID))
+        .thenReturn(PermissionType.WORKSPACE_ADMIN);
+
+    actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
+    Assertions.assertEquals(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_EDITOR), actualRoles);
+
+    // now add organization IDs into the mix.
+
+    final UUID organizationId1 = UUID.randomUUID();
+    final UUID organizationId2 = UUID.randomUUID();
+
+    when(mHeaderResolver.resolveOrganization(any())).thenReturn(List.of(organizationId1, organizationId2));
+    when(mPermissionPersistence.findPermissionTypeForUserAndOrganization(organizationId1, AUTH_USER_ID))
+        .thenReturn(PermissionType.ORGANIZATION_EDITOR);
+    when(mPermissionPersistence.findPermissionTypeForUserAndOrganization(organizationId2, AUTH_USER_ID))
+        .thenReturn(PermissionType.ORGANIZATION_MEMBER);
+
+    actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
+    final Set<String> expectedRoles = new HashSet<>();
+    // still expect editor as minimum workspace role set
+    expectedRoles.addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_EDITOR));
+    // expect minimum org role set to be member
+    expectedRoles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_MEMBER));
+    Assertions.assertEquals(expectedRoles, actualRoles);
+
+    // now add target user auth id into the mix, at first NOT matching AUTH_USER_ID.
+    // no new role should be added.
+
+    when(mHeaderResolver.resolveUserAuthId(any())).thenReturn(UUID.randomUUID().toString());
+
+    actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
+    Assertions.assertEquals(expectedRoles, actualRoles);
+
+    // now make target user auth id match AUTH_USER_ID.
+    // expect SELF role to be added.
+
+    when(mHeaderResolver.resolveUserAuthId(any())).thenReturn(AUTH_USER_ID);
+
+    actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
+    expectedRoles.add(AuthRoleConstants.SELF);
+    Assertions.assertEquals(expectedRoles, actualRoles);
+  }
+
+  @Test
+  void getRbacRolesMultipleIdsAndCombinationsWithNull() throws IOException {
+    final UUID workspaceId1 = UUID.randomUUID();
+    final UUID workspaceId2 = UUID.randomUUID();
+    final UUID workspaceId3 = UUID.randomUUID();
+
+    when(mHeaderResolver.resolveWorkspace(any())).thenReturn(List.of(workspaceId1, workspaceId2, workspaceId3));
+    when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId1, AUTH_USER_ID))
+        .thenReturn(PermissionType.WORKSPACE_ADMIN);
+    when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId2, AUTH_USER_ID))
+        .thenReturn(PermissionType.WORKSPACE_EDITOR);
+    when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId3, AUTH_USER_ID))
+        .thenReturn(null); // should cause overall role to be NONE
+
+    Set<String> actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
+
+    // one workspace of the three has no permission, so expect NONE
+    Assertions.assertEquals(Set.of(WorkspaceAuthRole.NONE.getLabel()), actualRoles);
+
+    // now test the same for organizations
+    final UUID organizationId1 = UUID.randomUUID();
+    final UUID organizationId2 = UUID.randomUUID();
+
+    when(mHeaderResolver.resolveOrganization(any())).thenReturn(List.of(organizationId1, organizationId2));
+    when(mPermissionPersistence.findPermissionTypeForUserAndOrganization(organizationId1, AUTH_USER_ID))
+        .thenReturn(PermissionType.ORGANIZATION_EDITOR);
+    when(mPermissionPersistence.findPermissionTypeForUserAndOrganization(organizationId2, AUTH_USER_ID))
+        .thenReturn(null);
+
+    actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
+    Assertions.assertEquals(Set.of(OrganizationAuthRole.NONE.getLabel()), actualRoles);
   }
 
   static class GetRbacRolesArgumentsProvider implements ArgumentsProvider {
