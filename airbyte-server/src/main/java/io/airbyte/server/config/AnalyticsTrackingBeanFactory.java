@@ -61,7 +61,8 @@ public class AnalyticsTrackingBeanFactory {
             .defaultGeography(Enums.convertTo(workspace.getDefaultGeography(), Geography.class))
             .organizationId(workspace.getOrganizationId());
       } catch (final ConfigNotFoundException | JsonValidationException | IOException e) {
-        throw new RuntimeException(e);
+        // No longer throwing a runtime exception so that we can support the Airbyte API.
+        return new WorkspaceRead().workspaceId(workspaceId).customerId(workspaceId);
       }
     };
   }

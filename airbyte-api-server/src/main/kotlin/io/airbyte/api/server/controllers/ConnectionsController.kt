@@ -4,7 +4,6 @@
 
 package io.airbyte.api.server.controllers
 
-import io.airbyte.airbyte_api.generated.ConnectionsApi
 import io.airbyte.airbyte_api.model.generated.ConnectionCreateRequest
 import io.airbyte.airbyte_api.model.generated.ConnectionPatchRequest
 import io.airbyte.airbyte_api.model.generated.ConnectionResponse
@@ -20,6 +19,7 @@ import io.airbyte.api.server.constants.DELETE
 import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.POST
 import io.airbyte.api.server.constants.PUT
+import io.airbyte.api.server.controllers.interfaces.ConnectionsApi
 import io.airbyte.api.server.helpers.AirbyteCatalogHelper
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.services.ConnectionService
@@ -41,7 +41,7 @@ open class ConnectionsController(
   private val trackingHelper: TrackingHelper,
 ) : ConnectionsApi {
   override fun createConnection(
-    connectionCreateRequest: ConnectionCreateRequest?,
+    connectionCreateRequest: ConnectionCreateRequest,
     authorization: String?,
     userInfo: String?,
   ): Response {
@@ -50,14 +50,14 @@ open class ConnectionsController(
 
     trackingHelper.callWithTracker({
       AirbyteCatalogHelper.validateCronConfiguration(
-        connectionCreateRequest!!.schedule,
+        connectionCreateRequest.schedule,
       )
     }, CONNECTIONS_PATH, POST, userId)
 
     // get destination response to retrieve workspace id as well as input for destination sync modes
     val destinationResponse: DestinationResponse =
       trackingHelper.callWithTracker(
-        { destinationService.getDestination(connectionCreateRequest!!.destinationId, authorization, validUserInfo) },
+        { destinationService.getDestination(connectionCreateRequest.destinationId, authorization, validUserInfo) },
         CONNECTIONS_PATH,
         POST,
         userId,
@@ -66,7 +66,7 @@ open class ConnectionsController(
     // get source schema for catalog id and airbyte catalog
     val schemaResponse: SourceDiscoverSchemaRead =
       trackingHelper.callWithTracker(
-        { sourceService.getSourceSchema(connectionCreateRequest!!.sourceId, false, authorization, validUserInfo) },
+        { sourceService.getSourceSchema(connectionCreateRequest.sourceId, false, authorization, validUserInfo) },
         CONNECTIONS_PATH,
         POST,
         userId,
@@ -85,7 +85,7 @@ open class ConnectionsController(
       )
 
     // check user configs
-    if (AirbyteCatalogHelper.hasStreamConfigurations(connectionCreateRequest!!.configurations)) {
+    if (AirbyteCatalogHelper.hasStreamConfigurations(connectionCreateRequest.configurations)) {
       // validate user inputs
       trackingHelper.callWithTracker(
         {
@@ -217,7 +217,7 @@ open class ConnectionsController(
   }
 
   override fun listConnections(
-    workspaceIds: MutableList<UUID>?,
+    workspaceIds: List<UUID>?,
     includeDeleted: Boolean?,
     limit: Int?,
     offset: Int?,

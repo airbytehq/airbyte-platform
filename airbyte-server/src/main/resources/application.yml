@@ -280,11 +280,17 @@ airbyte:
     username: ${KEYCLOAK_ADMIN_USER:airbyteAdmin}
     password: ${KEYCLOAK_ADMIN_PASSWORD:keycloak123}
 
+  # Airbyte API
+  api:
+    host: ${AIRBYTE_API_HOST}
+  internal:
+    documentation:
+      host: https://reference.airbyte.com/
+
   connector-builder-server-api:
     base-path: ${CONNECTOR_BUILDER_SERVER_API_HOST:}
     connect-timeout-seconds: ${CONNECTOR_BUILDER_SERVER_API_CONNECT_TIMEOUT_SECONDS:30}
     read-timeout-seconds: ${CONNECTOR_BUILDER_SERVER_API_READ_TIMEOUT_SECONDS:300}
-
   internal-api:
     auth-header:
       name: ${AIRBYTE_API_AUTH_HEADER_NAME:}

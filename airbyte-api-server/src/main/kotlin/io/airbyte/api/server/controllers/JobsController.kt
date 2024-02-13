@@ -4,7 +4,6 @@
 
 package io.airbyte.api.server.controllers
 
-import io.airbyte.airbyte_api.generated.JobsApi
 import io.airbyte.airbyte_api.model.generated.ConnectionResponse
 import io.airbyte.airbyte_api.model.generated.JobCreateRequest
 import io.airbyte.airbyte_api.model.generated.JobStatusEnum
@@ -19,6 +18,7 @@ import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.JOBS_PATH
 import io.airbyte.api.server.constants.JOBS_WITH_ID_PATH
 import io.airbyte.api.server.constants.POST
+import io.airbyte.api.server.controllers.interfaces.JobsApi
 import io.airbyte.api.server.filters.JobsFilter
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.problems.BadRequestProblem
