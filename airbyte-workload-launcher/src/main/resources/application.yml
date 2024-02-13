@@ -136,6 +136,20 @@ airbyte:
         cpu-request: ${CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST:}
         memory-limit: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
         memory-request: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+      discover:
+        annotations: ${DISCOVER_JOB_KUBE_ANNOTATIONS:}
+        labels: ${DISCOVER_JOB_KUBE_LABELS:}
+        node-selectors: ${DISCOVER_JOB_KUBE_NODE_SELECTORS:}
+        cpu-limit: ${DISCOVER_JOB_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${DISCOVER_JOB_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${DISCOVER_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${DISCOVER_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+    connector-sidecar:
+      resources:
+        cpu-limit: ${SIDECAR_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${SIDECAR_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${SIDECAR_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${SIDECAR_MAIN_CONTAINER_MEMORY_REQUEST:}
     isolated:
       kube:
         use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}

@@ -102,7 +102,7 @@ public class OrchestratorConstants {
   public static final String INIT_FILE_JOB_RUN_CONFIG = "jobRunConfig.json";
   public static final String INIT_FILE_APPLICATION = "application.txt";
   public static final String WORKLOAD_ID_FILE = "workload.txt";
-  public static final String CHECK_JOB_OUTPUT_FILENAME = "checkJobOutput.json";
+  public static final String JOB_OUTPUT_FILENAME = "jobOutput.json";
   public static final String EXIT_CODE_FILE = "exitCode.txt";
   public static final String CONNECTION_CONFIGURATION = "connectionConfiguration.json";
   public static final String SIDECAR_INPUT = "sidecarInput.json";

@@ -18,21 +18,18 @@ import io.fabric8.kubernetes.api.model.PodBuilder
 import io.fabric8.kubernetes.api.model.Toleration
 import io.fabric8.kubernetes.api.model.Volume
 import io.fabric8.kubernetes.api.model.VolumeMount
-import io.micronaut.context.annotation.Value
-import jakarta.inject.Named
-import jakarta.inject.Singleton
 
-@Singleton
-class CheckPodFactory(
+class ConnectorSidecarPodFactory(
+  private val operationCommand: String,
   private val featureFlagClient: FeatureFlagClient,
-  @Named("checkConnectorReqs") private val checkReqs: ResourceRequirements,
-  @Named("checkSidecarReqs") private val sidecarReqs: ResourceRequirements,
-  @Named("checkPodTolerations") private val checkPodTolerations: List<Toleration>,
-  @Named("checkImagePullSecrets") private val imagePullSecrets: List<LocalObjectReference>,
-  @Named("checkEnvVars") private val envVars: List<EnvVar>,
-  @Named("checkSideCarEnvVars") private val checkSideCarEnvVars: List<EnvVar>,
-  @Named("sidecarKubeContainerInfo") private val sidecarContainerInfo: KubeContainerInfo,
-  @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
+  private val connectorReqs: ResourceRequirements,
+  private val sidecarReqs: ResourceRequirements,
+  private val tolerations: List<Toleration>,
+  private val imagePullSecrets: List<LocalObjectReference>,
+  private val connectorEnvVars: List<EnvVar>,
+  private val sideCarEnvVars: List<EnvVar>,
+  private val sidecarContainerInfo: KubeContainerInfo,
+  private val serviceAccount: String?,
   private val volumeFactory: VolumeFactory,
 ) {
   fun create(
@@ -85,7 +82,7 @@ class CheckPodFactory(
       .withInitContainers(init)
       .withVolumes(volumes)
       .withNodeSelector<String, String>(nodeSelectors)
-      .withTolerations(checkPodTolerations)
+      .withTolerations(tolerations)
       .withImagePullSecrets(imagePullSecrets) // An empty list or an empty LocalObjectReference turns this into a no-op setting.
       .endSpec()
       .build()
@@ -122,7 +119,7 @@ class CheckPodFactory(
           ),
         ),
       )
-      .withResources(KubePodProcess.getResourceRequirementsBuilder(checkReqs).build())
+      .withResources(KubePodProcess.getResourceRequirementsBuilder(connectorReqs).build())
       .withVolumeMounts(volumeMounts)
       .build()
   }
@@ -136,9 +133,9 @@ class CheckPodFactory(
       """
       pwd
       
-      eval "${'$'}AIRBYTE_ENTRYPOINT check --config ${KubePodProcess.CONFIG_DIR}/connectionConfiguration.json" > ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.CHECK_JOB_OUTPUT_FILENAME}
+      eval "${'$'}AIRBYTE_ENTRYPOINT $operationCommand --config ${KubePodProcess.CONFIG_DIR}/connectionConfiguration.json" > ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.JOB_OUTPUT_FILENAME}
       
-      cat ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.CHECK_JOB_OUTPUT_FILENAME}
+      cat ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.JOB_OUTPUT_FILENAME}
       
       echo $? > ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.EXIT_CODE_FILE}
       """.trimIndent()
@@ -148,10 +145,10 @@ class CheckPodFactory(
       .withImage(containerInfo.image)
       .withImagePullPolicy(containerInfo.pullPolicy)
       .withCommand("sh", "-c", mainCommand)
-      .withEnv(envVars + extraEnvVars)
+      .withEnv(connectorEnvVars + extraEnvVars)
       .withWorkingDir(KubePodProcess.CONFIG_DIR)
       .withVolumeMounts(volumeMounts)
-      .withResources(KubePodProcess.getResourceRequirementsBuilder(checkReqs).build())
+      .withResources(KubePodProcess.getResourceRequirementsBuilder(connectorReqs).build())
       .build()
   }
 
@@ -161,7 +158,7 @@ class CheckPodFactory(
       .withImage(sidecarContainerInfo.image)
       .withImagePullPolicy(sidecarContainerInfo.pullPolicy)
       .withWorkingDir(KubePodProcess.CONFIG_DIR)
-      .withEnv(checkSideCarEnvVars)
+      .withEnv(sideCarEnvVars)
       .withVolumeMounts(volumeMounts)
       .withResources(KubePodProcess.getResourceRequirementsBuilder(sidecarReqs).build())
       .build()

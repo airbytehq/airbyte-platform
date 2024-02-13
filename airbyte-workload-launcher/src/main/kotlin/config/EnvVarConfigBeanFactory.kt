@@ -121,47 +121,8 @@ class EnvVarConfigBeanFactory {
    * The list of env vars to be passed to the check sidecar container.
    */
   @Singleton
-  @Named("checkSideCarEnvVars")
-  fun checkSideCarEnvVars(
-    cloudLoggingConfig: CloudLoggingConfig,
-    cloudStateConfig: CloudStateConfig,
-    @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
-    @Named("apiClientEnvMap") apiClientEnvMap: Map<String, String>,
-    @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
-    @Named("workloadApiSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
-  ): List<EnvVar> {
-    val envMap: MutableMap<String, String> = HashMap()
-    // Cloud logging configuration
-    envMap.putAll(cloudLoggingConfig.toEnvVarMap())
-
-    // Cloud state configuration
-    envMap.putAll(cloudStateConfig.toEnvVarMap())
-
-    // Workload Api configuration
-    envMap.putAll(workloadApiEnvMap)
-
-    // Api client configuration
-    envMap.putAll(apiClientEnvMap)
-
-    // Micronaut environment
-    envMap.putAll(micronautEnvMap)
-
-    val envVars =
-      envMap
-        .map { EnvVar(it.key, it.value, null) }
-        .toList()
-
-    val secretEnvVars =
-      secretsEnvMap
-        .map { EnvVar(it.key, null, it.value) }
-        .toList()
-
-    return envVars + secretEnvVars
-  }
-
-  @Singleton
-  @Named("discoverSideCarEnvVars")
-  fun discoverSideCarEnvVars(
+  @Named("sideCarEnvVars")
+  fun sideCarEnvVars(
     cloudLoggingConfig: CloudLoggingConfig,
     cloudStateConfig: CloudStateConfig,
     @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
@@ -207,6 +168,19 @@ class EnvVarConfigBeanFactory {
     @Named("checkWorkerConfigs") checkWorkerConfigs: WorkerConfigs,
   ): List<EnvVar> {
     return checkWorkerConfigs.envMap
+      .map { EnvVar(it.key, it.value, null) }
+      .toList()
+  }
+
+  /**
+   * The list of env vars to be passed to the connector container we are discovering.
+   */
+  @Singleton
+  @Named("discoverEnvVars")
+  fun discoverEnvVars(
+    @Named("discoverWorkerConfigs") discoverWorkerConfigs: WorkerConfigs,
+  ): List<EnvVar> {
+    return discoverWorkerConfigs.envMap
       .map { EnvVar(it.key, it.value, null) }
       .toList()
   }

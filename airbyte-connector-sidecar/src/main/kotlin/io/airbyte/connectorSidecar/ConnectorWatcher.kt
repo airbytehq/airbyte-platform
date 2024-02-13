@@ -18,8 +18,8 @@ import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration
 import io.airbyte.workers.models.SidecarInput
-import io.airbyte.workers.sync.OrchestratorConstants.CHECK_JOB_OUTPUT_FILENAME
 import io.airbyte.workers.sync.OrchestratorConstants.EXIT_CODE_FILE
+import io.airbyte.workers.sync.OrchestratorConstants.JOB_OUTPUT_FILENAME
 import io.airbyte.workers.sync.OrchestratorConstants.SIDECAR_INPUT
 import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workload.api.client.generated.WorkloadApi
@@ -71,8 +71,8 @@ class ConnectorWatcher(
       }
 
       val outputIS =
-        if (Files.exists(Path.of(CHECK_JOB_OUTPUT_FILENAME))) {
-          Files.newInputStream(Path.of(CHECK_JOB_OUTPUT_FILENAME))
+        if (Files.exists(Path.of(JOB_OUTPUT_FILENAME))) {
+          Files.newInputStream(Path.of(JOB_OUTPUT_FILENAME))
         } else {
           InputStream.nullInputStream()
         }

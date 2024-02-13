@@ -15,11 +15,12 @@ import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_SO
 import io.airbyte.workload.launcher.model.setDestinationLabels
 import io.airbyte.workload.launcher.model.setSourceLabels
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
-import io.airbyte.workload.launcher.pods.factories.CheckPodFactory
+import io.airbyte.workload.launcher.pods.factories.ConnectorSidecarPodFactory
 import io.airbyte.workload.launcher.pods.factories.OrchestratorPodFactory
 import io.fabric8.kubernetes.api.model.Pod
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.env.Environment
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.util.UUID
@@ -37,7 +38,7 @@ class KubePodClient(
   private val mapper: PayloadKubeInputMapper,
   private val featureFlagClient: FeatureFlagClient,
   private val orchestratorPodFactory: OrchestratorPodFactory,
-  private val checkPodFactory: CheckPodFactory,
+  @Named("checkPodFactory") private val checkPodFactory: ConnectorSidecarPodFactory,
 ) : PodClient {
   override fun podsExistForAutoId(autoId: UUID): Boolean {
     return kubePodLauncher.podsExist(labeler.getAutoIdLabels(autoId))

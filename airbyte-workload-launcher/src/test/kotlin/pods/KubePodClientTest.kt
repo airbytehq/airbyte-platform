@@ -18,7 +18,7 @@ import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.launcherInpu
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.replKubeInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.sharedLabels
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.workloadId
-import io.airbyte.workload.launcher.pods.factories.CheckPodFactory
+import io.airbyte.workload.launcher.pods.factories.ConnectorSidecarPodFactory
 import io.airbyte.workload.launcher.pods.factories.OrchestratorPodFactory
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.Pod
@@ -53,7 +53,7 @@ class KubePodClientTest {
   private lateinit var orchestratorPodFactory: OrchestratorPodFactory
 
   @MockK
-  private lateinit var checkPodFactory: CheckPodFactory
+  private lateinit var checkPodFactory: ConnectorSidecarPodFactory
 
   private lateinit var client: KubePodClient
 

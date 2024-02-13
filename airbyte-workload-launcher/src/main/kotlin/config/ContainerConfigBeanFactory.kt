@@ -112,34 +112,84 @@ class ContainerConfigBeanFactory {
   }
 
   @Singleton
-  @Named("checkConnectorReqs")
-  fun check(checkPodConfig: CheckPodConfig): ResourceRequirements {
-    return ResourceRequirements()
-      .withMemoryRequest(checkPodConfig.memoryRequest)
-      .withMemoryLimit(checkPodConfig.memoryLimit)
-      .withCpuRequest(checkPodConfig.cpuRequest)
-      .withCpuLimit(checkPodConfig.cpuLimit)
+  @Named("discoverWorkerConfigs")
+  fun discoverWorkerConfigs(workerConfigsProvider: WorkerConfigsProvider): WorkerConfigs {
+    return workerConfigsProvider.getConfig(WorkerConfigsProvider.ResourceType.DISCOVER)
   }
 
   @Singleton
-  @Named("checkSidecarReqs")
-  fun sidecar(checkPodConfig: CheckPodConfig): ResourceRequirements {
+  @Named("checkConnectorReqs")
+  fun checkConnectorReqs(
+    @Value("\${airbyte.worker.kube-job-configs.check.cpu-limit:2}") cpuLimit: String,
+    @Value("\${airbyte.worker.kube-job-configs.check.cpu-request:2}") cpuRequest: String,
+    @Value("\${airbyte.worker.kube-job-configs.check.memory-limit:500Mi}") memoryLimit: String,
+    @Value("\${airbyte.worker.kube-job-configs.check.memory-request:500Mi}") memoryRequest: String,
+  ): ResourceRequirements {
     return ResourceRequirements()
-      .withMemoryRequest(checkPodConfig.memoryRequest)
-      .withMemoryLimit(checkPodConfig.memoryLimit)
-      .withCpuRequest(checkPodConfig.cpuRequest)
-      .withCpuLimit(checkPodConfig.cpuLimit)
+      .withCpuLimit(cpuLimit)
+      .withCpuRequest(cpuRequest)
+      .withMemoryLimit(memoryLimit)
+      .withMemoryRequest(memoryRequest)
+  }
+
+  @Singleton
+  @Named("discoverConnectorReqs")
+  fun discoverConnectorReqs(
+    @Value("\${airbyte.worker.kube-job-configs.discover.cpu-limit:2}") cpuLimit: String,
+    @Value("\${airbyte.worker.kube-job-configs.discover.cpu-request:2}") cpuRequest: String,
+    @Value("\${airbyte.worker.kube-job-configs.discover.memory-limit:500Mi}") memoryLimit: String,
+    @Value("\${airbyte.worker.kube-job-configs.discover.memory-request:500Mi}") memoryRequest: String,
+  ): ResourceRequirements {
+    return ResourceRequirements()
+      .withCpuLimit(cpuLimit)
+      .withCpuRequest(cpuRequest)
+      .withMemoryLimit(memoryLimit)
+      .withMemoryRequest(memoryRequest)
+  }
+
+  @Singleton
+  @Named("sidecarReqs")
+  fun sidecarReqs(
+    @Value("\${airbyte.worker.connector-sidecar.resources.cpu-limit:2}") cpuLimit: String,
+    @Value("\${airbyte.worker.connector-sidecar.resources.cpu-request:2}") cpuRequest: String,
+    @Value("\${airbyte.worker.connector-sidecar.resources.memory-limit:500Mi}") memoryLimit: String,
+    @Value("\${airbyte.worker.connector-sidecar.resources.memory-request:500Mi}") memoryRequest: String,
+  ): ResourceRequirements {
+    return ResourceRequirements()
+      .withCpuLimit(cpuLimit)
+      .withCpuRequest(cpuRequest)
+      .withMemoryLimit(memoryLimit)
+      .withMemoryRequest(memoryRequest)
   }
 
   @Singleton
   @Named("checkPodTolerations")
   fun checkPodTolerations(
-    @Named("checkWorkerConfigs") checkWorkerConfigs: WorkerConfigs,
+    @Named("checkWorkerConfigs") workerConfigs: WorkerConfigs,
   ): List<Toleration> {
-    if (checkWorkerConfigs.workerKubeTolerations.isNullOrEmpty()) {
+    if (workerConfigs.workerKubeTolerations.isNullOrEmpty()) {
       return listOf()
     }
-    return checkWorkerConfigs.workerKubeTolerations
+    return workerConfigs.workerKubeTolerations
+      .map { t ->
+        TolerationBuilder()
+          .withKey(t.key)
+          .withEffect(t.effect)
+          .withOperator(t.operator)
+          .withValue(t.value)
+          .build()
+      }
+  }
+
+  @Singleton
+  @Named("discoverPodTolerations")
+  fun discoverPodTolerations(
+    @Named("discoverWorkerConfigs") workerConfigs: WorkerConfigs,
+  ): List<Toleration> {
+    if (workerConfigs.workerKubeTolerations.isNullOrEmpty()) {
+      return listOf()
+    }
+    return workerConfigs.workerKubeTolerations
       .map { t ->
         TolerationBuilder()
           .withKey(t.key)
@@ -153,9 +203,18 @@ class ContainerConfigBeanFactory {
   @Singleton
   @Named("checkImagePullSecrets")
   fun checkImagePullSecrets(
-    @Named("checkWorkerConfigs") checkWorkerConfigs: WorkerConfigs,
+    @Named("checkWorkerConfigs") workerConfigs: WorkerConfigs,
   ): List<LocalObjectReference> {
-    return checkWorkerConfigs.jobImagePullSecrets
+    return workerConfigs.jobImagePullSecrets
+      .map { imagePullSecret -> LocalObjectReference(imagePullSecret) }
+  }
+
+  @Singleton
+  @Named("discoverImagePullSecrets")
+  fun discoverImagePullSecrets(
+    @Named("discoverWorkerConfigs") workerConfigs: WorkerConfigs,
+  ): List<LocalObjectReference> {
+    return workerConfigs.jobImagePullSecrets
       .map { imagePullSecret -> LocalObjectReference(imagePullSecret) }
   }
 }
