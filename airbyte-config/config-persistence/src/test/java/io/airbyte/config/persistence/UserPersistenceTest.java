@@ -151,6 +151,18 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
       Assertions.assertEquals(Optional.empty(), userPersistence.getUser(MockData.CREATOR_USER_ID_1));
     }
 
+    @Test
+    void listAuthUserIdsForUserTest() throws IOException {
+      final var user1 = MockData.users().getFirst();
+      // set auth_user_id to a known value
+      final var expectedAuthUserId = UUID.randomUUID().toString();
+      user1.setAuthUserId(expectedAuthUserId);
+      userPersistence.writeUser(user1);
+
+      final Set<String> actualAuthUserIds = new HashSet<>(userPersistence.listAuthUserIdsForUser(user1.getUserId()));
+      Assertions.assertEquals(Set.of(expectedAuthUserId), actualAuthUserIds);
+    }
+
   }
 
   @Nested

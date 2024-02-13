@@ -173,7 +173,7 @@ public class ConnectionApiController implements ConnectionApi {
   }
 
   @Override
-  @Post(uri = "/connections/status")
+  @Post(uri = "/status")
   @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)

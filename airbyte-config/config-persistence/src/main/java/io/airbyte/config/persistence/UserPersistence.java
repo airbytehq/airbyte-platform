@@ -250,7 +250,8 @@ public class UserPersistence {
   }
 
   /**
-   * Fetch user information from their email.
+   * Fetch user information from their email. TODO remove this after Firebase invitations are
+   * replaced, flawed because email is not unique
    *
    * @param email the user email address.
    * @return the user information if it exists in the database, Optional.empty() otherwise
@@ -299,6 +300,18 @@ public class UserPersistence {
         .stream()
         .map(record -> buildWorkspaceUserAccessInfoFromRecord(record, workspaceId))
         .toList();
+  }
+
+  /**
+   * Get all auth user IDs for a particular Airbyte user. Once Firebase is deprecated, there should
+   * only be one auth user ID per Airbyte user and this method can be removed.
+   */
+  public List<String> listAuthUserIdsForUser(final UUID userId) throws IOException {
+    return database.query(ctx -> ctx
+        .select(AUTH_USER.AUTH_USER_ID)
+        .from(AUTH_USER)
+        .where(AUTH_USER.USER_ID.eq(userId))
+        .fetch(AUTH_USER.AUTH_USER_ID));
   }
 
   // This method is used for testing purposes only. For some reason, the actual
