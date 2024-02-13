@@ -143,7 +143,7 @@ class AwsClient(
 
   private fun parseTags(tags: String?): Map<String, String> {
     // Define the regex pattern for the whole string validation
-    val pattern = "^\\w+=\\w+(,\\s*\\w+=\\w+)*$".toRegex()
+    val pattern = "^[\\w\\s._:\\/=+-@]+=[\\w\\s._:\\/=+-@]+(,\\s*[\\w\\s._:\\/=+-@]+=[\\w\\s._:\\/=+-@]+)*\$".toRegex()
 
     // Check if unparsedTags is not null, not blank, and matches the pattern
     return if (!tags.isNullOrBlank() && pattern.matches(tags)) {
