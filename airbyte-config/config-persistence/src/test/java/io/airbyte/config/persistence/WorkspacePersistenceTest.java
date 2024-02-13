@@ -375,6 +375,25 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(expectedWorkspace, actualWorkspace);
   }
 
+  @ParameterizedTest
+  @CsvSource({
+    "true",
+    "false"
+  })
+  void getInitialSetupComplete(final boolean initialSetupComplete) throws JsonValidationException, IOException {
+    final StandardWorkspace workspace = createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspaceInOrganization1")
+        .withInitialSetupComplete(initialSetupComplete);
+
+    configRepository.writeStandardWorkspaceNoSecrets(workspace);
+
+    final boolean actualInitialSetupComplete = workspacePersistence.getInitialSetupComplete();
+
+    assertEquals(initialSetupComplete, actualInitialSetupComplete);
+  }
+
   @Test
   void testListWorkspacesByUserIdWithKeywordWithPagination() throws Exception {
     final UUID workspaceId1 = UUID.randomUUID();

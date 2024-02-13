@@ -184,4 +184,11 @@ public class WorkspacePersistence {
         .orElseThrow(() -> new RuntimeException("No workspace found for organization: " + organizationId));
   }
 
+  /**
+   * Check if any workspace exists with initialSetupComplete: true, tombstoned or not.
+   */
+  public Boolean getInitialSetupComplete() throws IOException {
+    return database.query(ctx -> ctx.fetchExists(WORKSPACE, WORKSPACE.INITIAL_SETUP_COMPLETE.eq(true)));
+  }
+
 }
