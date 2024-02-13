@@ -57,6 +57,7 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.invoker.generated.ApiClient;
+import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
@@ -204,7 +205,7 @@ public class AirbyteApiAcceptanceTests {
   }
 
   @BeforeEach
-  void setup() throws SQLException, URISyntaxException, IOException {
+  void setup() throws SQLException, URISyntaxException, IOException, ApiException {
     LOGGER.debug("Executing test case setup");
     testHarness.setup();
   }

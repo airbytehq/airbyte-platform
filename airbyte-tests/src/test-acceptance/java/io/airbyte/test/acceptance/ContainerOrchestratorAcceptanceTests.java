@@ -104,7 +104,7 @@ class ContainerOrchestratorAcceptanceTests {
   }
 
   @BeforeEach
-  void setup() throws URISyntaxException, IOException, SQLException {
+  void setup() throws URISyntaxException, IOException, SQLException, ApiException {
     testHarness.setup();
   }
 

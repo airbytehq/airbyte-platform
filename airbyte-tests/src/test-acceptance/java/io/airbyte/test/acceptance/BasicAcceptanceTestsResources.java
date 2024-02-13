@@ -383,7 +383,7 @@ public class BasicAcceptanceTestsResources {
     testHarness.stopDbAndContainers();
   }
 
-  void setup() throws SQLException, URISyntaxException, IOException {
+  void setup() throws SQLException, URISyntaxException, IOException, ApiException {
     LOGGER.debug("Executing test case setup");
     testHarness.setup();
   }

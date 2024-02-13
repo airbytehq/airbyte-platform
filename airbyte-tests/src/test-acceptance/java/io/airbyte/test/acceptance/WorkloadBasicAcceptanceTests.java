@@ -48,7 +48,7 @@ public class WorkloadBasicAcceptanceTests {
   }
 
   @BeforeEach
-  void setup() throws SQLException, URISyntaxException, IOException {
+  void setup() throws SQLException, URISyntaxException, IOException, ApiException {
     testResources.setup();
   }
 

@@ -38,6 +38,7 @@ import io.airbyte.api.client.model.generated.DestinationDefinitionCreate;
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.client.model.generated.DestinationDefinitionSpecificationRead;
+import io.airbyte.api.client.model.generated.DestinationDefinitionUpdate;
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationRead;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
@@ -147,6 +148,7 @@ public class AcceptanceTestHarness {
   private static final String SOURCE_E2E_TEST_CONNECTOR_VERSION = "0.1.2";
   private static final String DESTINATION_E2E_TEST_CONNECTOR_VERSION = "0.1.1";
 
+  public static final String POSTGRES_DESTINATION_CONNECTOR_VERSION = "0.6.3";
   public static final String POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION = "0.4.26";
 
   public static final String OUTPUT_STREAM_PREFIX = "output_table_";
@@ -297,7 +299,7 @@ public class AcceptanceTestHarness {
     }
   }
 
-  public void setup() throws SQLException, URISyntaxException, IOException {
+  public void setup() throws SQLException, URISyntaxException, IOException, ApiException {
     if (isGke) {
       // Prepare the database data sources.
       LOGGER.info("postgresPassword: {}", postgresPassword);
@@ -313,6 +315,17 @@ public class AcceptanceTestHarness {
 
       sourceDataSource = Databases.createDataSource(sourcePsql);
       destinationDataSource = Databases.createDataSource(destinationPsql);
+    }
+
+    // Pinning Postgres destination version
+    final DestinationDefinitionRead postgresDestDef = getPostgresDestinationDefinition();
+    if (!postgresDestDef.getDockerImageTag().equals(POSTGRES_DESTINATION_CONNECTOR_VERSION)) {
+      LOGGER.info("Setting postgres destination connector to version {}...", POSTGRES_DESTINATION_CONNECTOR_VERSION);
+      try {
+        updateDestinationDefinitionVersion(postgresDestDef.getDestinationDefinitionId(), POSTGRES_DESTINATION_CONNECTOR_VERSION);
+      } catch (final ApiException e) {
+        LOGGER.error("Error while updating destination definition version", e);
+      }
     }
   }
 
@@ -868,12 +881,20 @@ public class AcceptanceTestHarness {
   }
 
   public UUID getPostgresDestinationDefinitionId() {
+    return getPostgresDestinationDefinition().getDestinationDefinitionId();
+  }
+
+  public DestinationDefinitionRead getPostgresDestinationDefinition() {
     return AirbyteApiClient.retryWithJitter(() -> apiClient.getDestinationDefinitionApi().listDestinationDefinitions().getDestinationDefinitions()
         .stream()
         .filter(destRead -> "postgres".equalsIgnoreCase(destRead.getName()))
         .findFirst()
-        .orElseThrow()
-        .getDestinationDefinitionId(), "get postgres definition", 10, 60, 3);
+        .orElseThrow(), "get postgres definition", 10, 60, 3);
+  }
+
+  public void updateDestinationDefinitionVersion(final UUID destinationDefinitionId, final String dockerImageTag) throws ApiException {
+    apiClient.getDestinationDefinitionApi().updateDestinationDefinition(new DestinationDefinitionUpdate()
+        .destinationDefinitionId(destinationDefinitionId).dockerImageTag(dockerImageTag));
   }
 
   public void updateSourceDefinitionVersion(final UUID sourceDefinitionId, final String dockerImageTag) throws ApiException {

@@ -163,7 +163,7 @@ class CdcAcceptanceTests {
   }
 
   @BeforeEach
-  void setup() throws URISyntaxException, IOException, InterruptedException, SQLException {
+  void setup() throws URISyntaxException, IOException, InterruptedException, SQLException, ApiException {
     testHarness = new AcceptanceTestHarness(apiClient, workspaceId, POSTGRES_INIT_SQL_FILE);
     testHarness.setup();
   }
