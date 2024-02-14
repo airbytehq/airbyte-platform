@@ -57,6 +57,7 @@ export const useUpdatePermissions = () => {
         if (data.workspaceId) {
           queryClient.invalidateQueries(workspaceKeys.listUsers(data.workspaceId));
         }
+        queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
       },
       onError: () => {
         registerNotification({
@@ -93,6 +94,7 @@ export const useCreatePermission = () => {
         if (data.workspaceId) {
           queryClient.invalidateQueries(workspaceKeys.listUsers(data.workspaceId));
         }
+        queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
       },
       onError: () => {
         registerNotification({

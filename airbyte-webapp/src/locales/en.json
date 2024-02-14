@@ -868,7 +868,7 @@
   "settings.accessManagement.youHint": "You",
   "settings.accessManagement.members": "Members",
   "settings.accessManagement.permissionCreate.success": "Permission created successfully!",
-  "settings.accessManagement.permissionCreate.error": "There was an creating a permission for this user.",
+  "settings.accessManagement.permissionCreate.error": "There was an error creating a permission for this user.",
   "settings.accessManagement.permissionUpdate.success": "Permission updated successfully!",
   "settings.accessManagement.permissionUpdate.error": "There was an error updating this permission.",
   "settings.accessManagement.permissionDelete.success": "Permission deleted successfully!",
