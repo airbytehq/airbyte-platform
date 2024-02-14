@@ -149,7 +149,7 @@ public class JobNotifier {
             MoreMaps.merge(jobMetadata, sourceMetadata, destinationMetadata, notificationMetadata));
       }
     } catch (final Exception e) {
-      LOGGER.error("Unable to read configuration for notification. Non-blocking. Error:", e);
+      LOGGER.error("Unable to read configuration for notification on connectionId '{}'. Non-blocking. Error: {}", connectionId, e.toString());
     }
   }
 
