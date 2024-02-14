@@ -5,8 +5,10 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
+import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
@@ -14,6 +16,7 @@ import io.airbyte.api.generated.StateApi;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionState;
 import io.airbyte.api.model.generated.ConnectionStateCreateOrUpdate;
+import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.StateHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.http.annotation.Controller;
@@ -41,7 +44,8 @@ public class StateApiController implements StateApi {
   }
 
   @Post("/create_or_update_safe")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public ConnectionState createOrUpdateStateSafe(final ConnectionStateCreateOrUpdate connectionStateCreateOrUpdate) {
@@ -49,7 +53,8 @@ public class StateApiController implements StateApi {
   }
 
   @Post("/get")
-  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public ConnectionState getState(final ConnectionIdRequestBody connectionIdRequestBody) {

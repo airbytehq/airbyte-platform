@@ -6,6 +6,7 @@ package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
+import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
@@ -29,6 +30,7 @@ import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
+import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.WorkspacesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.http.HttpStatus;
@@ -66,7 +68,8 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/delete")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
   @Override
   @Status(HttpStatus.NO_CONTENT)
   public void deleteWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
@@ -77,7 +80,8 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/get_organization_info")
-  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceOrganizationInfoRead getOrganizationInfo(final WorkspaceIdRequestBody workspaceIdRequestBody) {
@@ -85,7 +89,8 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/get")
-  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceRead getWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
@@ -93,7 +98,8 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/get_by_slug")
-  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceRead getWorkspaceBySlug(@Body final SlugRequestBody slugRequestBody) {
@@ -117,7 +123,8 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post(uri = "/list_paginated")
-  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceReadList listWorkspacesPaginated(@Body final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody) {
@@ -125,7 +132,8 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/update")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceRead updateWorkspace(@Body final WorkspaceUpdate workspaceUpdate) {
@@ -133,7 +141,8 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/tag_feedback_status_as_done")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public void updateWorkspaceFeedback(@Body final WorkspaceGiveFeedback workspaceGiveFeedback) {
@@ -144,7 +153,8 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/update_name")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceRead updateWorkspaceName(@Body final WorkspaceUpdateName workspaceUpdateName) {
@@ -160,7 +170,8 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/get_by_connection_id")
-  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceRead getWorkspaceByConnectionId(@Body final ConnectionIdRequestBody connectionIdRequestBody) {

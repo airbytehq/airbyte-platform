@@ -5,8 +5,10 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
+import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
@@ -19,6 +21,7 @@ import io.airbyte.api.model.generated.OperationRead;
 import io.airbyte.api.model.generated.OperationReadList;
 import io.airbyte.api.model.generated.OperationUpdate;
 import io.airbyte.api.model.generated.OperatorConfiguration;
+import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.OperationsHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.http.HttpStatus;
@@ -51,14 +54,16 @@ public class OperationApiController implements OperationApi {
 
   @Post("/create")
   @Override
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public OperationRead createOperation(@Body final OperationCreate operationCreate) {
     return ApiHelper.execute(() -> operationsHandler.createOperation(operationCreate));
   }
 
   @Post("/delete")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
@@ -70,7 +75,8 @@ public class OperationApiController implements OperationApi {
   }
 
   @Post("/get")
-  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public OperationRead getOperation(@Body final OperationIdRequestBody operationIdRequestBody) {
@@ -78,7 +84,8 @@ public class OperationApiController implements OperationApi {
   }
 
   @Post("/list")
-  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public OperationReadList listOperationsForConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
@@ -86,7 +93,8 @@ public class OperationApiController implements OperationApi {
   }
 
   @Post("/update")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public OperationRead updateOperation(@Body final OperationUpdate operationUpdate) {

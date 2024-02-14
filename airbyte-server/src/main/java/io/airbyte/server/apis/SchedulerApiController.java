@@ -5,6 +5,7 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
+import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 
@@ -13,6 +14,7 @@ import io.airbyte.api.model.generated.CheckConnectionRead;
 import io.airbyte.api.model.generated.DestinationCoreConfig;
 import io.airbyte.api.model.generated.SourceCoreConfig;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead;
+import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.http.annotation.Controller;
@@ -48,7 +50,8 @@ public class SchedulerApiController implements SchedulerApi {
   }
 
   @Post("/sources/discover_schema")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
   public SourceDiscoverSchemaRead executeSourceDiscoverSchema(final SourceCoreConfig sourceCoreConfig) {

@@ -4,8 +4,10 @@
 
 package io.airbyte.server.apis;
 
+import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
@@ -21,6 +23,7 @@ import io.airbyte.api.model.generated.DestinationUpdate;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.PartialDestinationUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.DestinationHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
@@ -46,7 +49,8 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post(uri = "/check_connection")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
   public CheckConnectionRead checkConnectionToDestination(@Body final DestinationIdRequestBody destinationIdRequestBody) {
@@ -54,7 +58,8 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post(uri = "/check_connection_for_update")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public CheckConnectionRead checkConnectionToDestinationForUpdate(@Body final DestinationUpdate destinationUpdate) {
@@ -69,7 +74,8 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post(uri = "/create")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationRead createDestination(@Body final DestinationCreate destinationCreate) {
@@ -77,7 +83,8 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post(uri = "/delete")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
@@ -89,7 +96,8 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post(uri = "/get")
-  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationRead getDestination(@Body final DestinationIdRequestBody destinationIdRequestBody) {
@@ -97,7 +105,8 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post(uri = "/list")
-  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationReadList listDestinationsForWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
@@ -106,7 +115,8 @@ public class DestinationApiController implements DestinationApi {
 
   @SuppressWarnings("LineLength")
   @Post(uri = "/list_paginated")
-  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationReadList listDestinationsForWorkspacesPaginated(@Body final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody) {
@@ -121,7 +131,8 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post(uri = "/update")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationRead updateDestination(@Body final DestinationUpdate destinationUpdate) {
@@ -129,7 +140,8 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post("/upgrade_version")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(HttpStatus.NO_CONTENT)
   @Override
@@ -141,7 +153,8 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post(uri = "/partial_update")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationRead partialUpdateDestination(@Body final PartialDestinationUpdate partialDestinationUpdate) {

@@ -6,8 +6,10 @@ package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
+import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
@@ -23,6 +25,7 @@ import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList;
 import io.airbyte.api.model.generated.ScopeType;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator;
@@ -50,7 +53,8 @@ public class DestinationDefinitionApiController implements DestinationDefinition
   }
 
   @Post(uri = "/create_custom")
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionRead createCustomDestinationDefinition(final CustomDestinationDefinitionCreate customDestinationDefinitionCreate) {
@@ -85,7 +89,8 @@ public class DestinationDefinitionApiController implements DestinationDefinition
   }
 
   @Post("/get_for_scope")
-  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionRead getDestinationDefinitionForScope(final ActorDefinitionIdWithScope actorDefinitionIdWithScope) {
@@ -94,7 +99,8 @@ public class DestinationDefinitionApiController implements DestinationDefinition
 
   @SuppressWarnings("LineLength")
   @Post(uri = "/get_for_workspace")
-  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionRead getDestinationDefinitionForWorkspace(
@@ -120,7 +126,8 @@ public class DestinationDefinitionApiController implements DestinationDefinition
   }
 
   @Post(uri = "/list_for_workspace")
-  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionReadList listDestinationDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) {

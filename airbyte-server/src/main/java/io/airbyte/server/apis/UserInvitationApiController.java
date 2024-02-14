@@ -4,8 +4,8 @@
 
 package io.airbyte.server.apis;
 
-import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
-import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_ADMIN;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_ADMIN;
 
 import io.airbyte.api.generated.UserInvitationApi;
 import io.airbyte.api.model.generated.InviteCodeRequestBody;
@@ -50,7 +50,7 @@ public class UserInvitationApiController implements UserInvitationApi {
   }
 
   @Override
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @Secured({WORKSPACE_ADMIN, ORGANIZATION_ADMIN})
   public UserInvitationRead createUserInvitation(@Body final UserInvitationCreateRequestBody invitationCreateRequestBody) {
     return ApiHelper.execute(() -> {
       final User currentUser = currentUserService.getCurrentUser();
