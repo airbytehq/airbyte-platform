@@ -30,6 +30,7 @@ airbyte:
             secret-name: ${AWS_ASSUME_ROLE_SECRET_NAME:}
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
   data-plane-id: ${DATA_PLANE_ID}
+  data-plane-name: ${DATA_PLANE_NAME:default-data-plane}
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}

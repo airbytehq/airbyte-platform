@@ -7,6 +7,7 @@ import io.airbyte.config.messages.LauncherInputMessage
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Geography
 import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.PlaneName
 import io.airbyte.featureflag.Priority
 import io.airbyte.featureflag.Priority.Companion.HIGH_PRIORITY
 import io.airbyte.featureflag.WorkloadApiRouting
@@ -84,8 +85,15 @@ class TemporalBeanFactory {
   fun launcherQueue(
     featureFlagClient: FeatureFlagClient,
     @Property(name = "airbyte.workload-launcher.geography") geography: String,
+    @Property(name = "airbyte.data-plane-name") dataPlaneName: String?,
   ): String {
-    return featureFlagClient.stringVariation(WorkloadApiRouting, Geography(geography))
+    val context =
+      if (dataPlaneName.isNullOrBlank()) {
+        Geography(geography)
+      } else {
+        Multi(listOf(Geography(geography), PlaneName(dataPlaneName)))
+      }
+    return featureFlagClient.stringVariation(WorkloadApiRouting, context)
   }
 
   @Named("workloadLauncherHighPriorityQueue")
@@ -93,8 +101,15 @@ class TemporalBeanFactory {
   fun highPriorityLauncherQueue(
     featureFlagClient: FeatureFlagClient,
     @Property(name = "airbyte.workload-launcher.geography") geography: String,
+    @Property(name = "airbyte.data-plane-name") dataPlaneName: String?,
   ): String {
-    return featureFlagClient.stringVariation(WorkloadApiRouting, Multi(listOf(Geography(geography), Priority(HIGH_PRIORITY))))
+    val context =
+      if (dataPlaneName.isNullOrBlank()) {
+        Multi(listOf(Geography(geography), Priority(HIGH_PRIORITY)))
+      } else {
+        Multi(listOf(Geography(geography), Priority(HIGH_PRIORITY), PlaneName(dataPlaneName)))
+      }
+    return featureFlagClient.stringVariation(WorkloadApiRouting, context)
   }
 
   private fun baseWorkerFactory(workflowClient: WorkflowClient): WorkerFactory {
