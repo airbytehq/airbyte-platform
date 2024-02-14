@@ -7,7 +7,6 @@ package io.airbyte.config.secrets.persistence
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider
-import com.amazonaws.regions.Regions
 import com.amazonaws.secretsmanager.caching.SecretCache
 import com.amazonaws.services.secretsmanager.AWSSecretsManager
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder
@@ -130,8 +129,8 @@ class AwsSecretManagerPersistence(private val awsClient: AwsClient, private val 
 
 @Singleton
 class AwsClient(
-  @Value("\${airbyte.secret.store.aws.access-key}") private val awsAccessKey: String,
-  @Value("\${airbyte.secret.store.aws.secret-key}") private val awsSecretKey: String,
+  @Value("\${airbyte.secret.store.aws.access-key}") private val awsAccessKey: String?,
+  @Value("\${airbyte.secret.store.aws.secret-key}") private val awsSecretKey: String?,
   @Value("\${airbyte.secret.store.aws.region}") private val awsRegion: String,
   @Value("\${airbyte.secret.store.aws.kmsKeyArn}") val kmsKeyArn: String?,
   @Value("\${airbyte.secret.store.aws.tags}") val unparsedTags: String?,
@@ -180,26 +179,27 @@ class AwsClient(
     // let the SDK's default credential provider take over.
     if (serializedConfig == null) {
       logger.debug { "fetching access key/secret key based AWS secret manager" }
-      AWSSecretsManagerClientBuilder.standard()
-        .withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
-        .withRegion(awsRegion)
-        .build()
+      AWSSecretsManagerClientBuilder.standard().withRegion(awsRegion).apply {
+        if (awsAccessKey != null && awsSecretKey != null) {
+          withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
+        }
+      }.build()
     } else {
       logger.debug { "fetching role based AWS secret manager" }
       val stsClient =
-        AWSSecurityTokenServiceClientBuilder.standard()
-          .withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
-          .withRegion(awsRegion)
-          .build()
+        AWSSecurityTokenServiceClientBuilder.standard().withRegion(awsRegion).apply {
+          if (awsAccessKey != null && awsSecretKey != null) {
+            withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
+          }
+        }.build()
+
       val credentialsProvider =
         STSAssumeRoleSessionCredentialsProvider.Builder(roleArn, "airbyte")
           .withStsClient(stsClient)
           .withExternalId(externalId)
           .build()
-      AWSSecretsManagerClientBuilder.standard()
-        .withCredentials(credentialsProvider)
-        .withRegion(Regions.fromName(region))
-        .build()
+
+      AWSSecretsManagerClientBuilder.standard().withCredentials(credentialsProvider).withRegion(awsRegion).build()
     }
   }
 }
