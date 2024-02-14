@@ -82,7 +82,7 @@ jobs:
               - 'airbyte-connector-builder-server/src/main/openapi/openapi.yaml'
               - 'airbyte-webapp/**'
             frontendServers:
-              - 'airbyte-(server|data|connector-builder-server|commons-*)/**'
+              - 'airbyte-(server|data|connector-builder-server|commons|commons-!(worker|temporal*))/**'
 
   # Uncomment to debug.
   #  changes-output:
