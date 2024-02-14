@@ -29,6 +29,7 @@ import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
@@ -86,19 +87,22 @@ public class SourceServiceJooqImpl implements SourceService {
   private final SecretsRepositoryReader secretRepositoryReader;
   private final SecretsRepositoryWriter secretsRepositoryWriter;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
-  private final ConnectionServiceJooqImpl connectionService;
+  private final ConnectionService connectionService;
+  private final ConnectorMetadataJooqHelper connectorMetadataJooqHelper;
 
   public SourceServiceJooqImpl(@Named("configDatabase") final Database database,
                                final FeatureFlagClient featureFlagClient,
                                final SecretsRepositoryReader secretsRepositoryReader,
                                final SecretsRepositoryWriter secretsRepositoryWriter,
-                               final SecretPersistenceConfigService secretPersistenceConfigService) {
+                               final SecretPersistenceConfigService secretPersistenceConfigService,
+                               final ConnectionService connectionService) {
     this.database = new ExceptionWrappingDatabase(database);
-    this.connectionService = new ConnectionServiceJooqImpl(database);
+    this.connectionService = connectionService;
     this.featureFlagClient = featureFlagClient;
     this.secretRepositoryReader = secretsRepositoryReader;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
+    this.connectorMetadataJooqHelper = new ConnectorMetadataJooqHelper(featureFlagClient, connectionService);
   }
 
   /**
@@ -481,7 +485,7 @@ public class SourceServiceJooqImpl implements SourceService {
                                       final DSLContext ctx) {
     writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
     ConnectorMetadataJooqHelper.writeActorDefinitionBreakingChanges(breakingChangesForDefinition, ctx);
-    ConnectorMetadataJooqHelper.setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
+    connectorMetadataJooqHelper.setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
   }
 
   private Stream<StandardSourceDefinition> sourceDefQuery(final Optional<UUID> sourceDefId, final boolean includeTombstone) throws IOException {

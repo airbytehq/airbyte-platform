@@ -41,6 +41,7 @@ import io.airbyte.config.persistence.ConfigRepository.SourceAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
@@ -107,17 +108,19 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
+    final ConnectionService connectionService = new ConnectionServiceJooqImpl(database);
     configRepository = spy(
         new ConfigRepository(
             new ActorDefinitionServiceJooqImpl(database),
             new CatalogServiceJooqImpl(database),
-            new ConnectionServiceJooqImpl(database),
+            connectionService,
             new ConnectorBuilderServiceJooqImpl(database),
             new DestinationServiceJooqImpl(database,
                 featureFlagClient,
                 secretsRepositoryReader,
                 secretsRepositoryWriter,
-                secretPersistenceConfigService),
+                secretPersistenceConfigService,
+                connectionService),
             new HealthCheckServiceJooqImpl(database),
             new OAuthServiceJooqImpl(database,
                 featureFlagClient,
@@ -129,7 +132,8 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
                 featureFlagClient,
                 secretsRepositoryReader,
                 secretsRepositoryWriter,
-                secretPersistenceConfigService),
+                secretPersistenceConfigService,
+                connectionService),
             new WorkspaceServiceJooqImpl(database,
                 featureFlagClient,
                 secretsRepositoryReader,

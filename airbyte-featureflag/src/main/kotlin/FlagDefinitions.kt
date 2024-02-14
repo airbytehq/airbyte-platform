@@ -65,6 +65,8 @@ object NotifyOnConnectorBreakingChanges : Temporary<Boolean>(key = "connectors.n
 
 object NotifyBreakingChangesOnSupportStateUpdate : Temporary<Boolean>(key = "connectors.notifyBreakingChangesOnSupportStateUpdate", default = true)
 
+object UseBreakingChangeScopes : Temporary<Boolean>(key = "connectors.useBreakingChangeScopes", default = true)
+
 object RefreshSchemaPeriod : Temporary<Int>(key = "refreshSchema.period.hours", default = 24)
 
 object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.stream.read", default = false)
