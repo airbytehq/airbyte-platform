@@ -1,11 +1,10 @@
-package pods
+package io.airbyte.workload.launcher.pods
 
 import dev.failsafe.RetryPolicy
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.OssMetricsRegistry
-import io.airbyte.workload.launcher.pods.KubeCopyClient
-import io.airbyte.workload.launcher.pods.KubePodLauncher
+import io.airbyte.workload.launcher.config.ApplicationBeanFactory
 import io.fabric8.kubernetes.api.model.HasMetadata
 import io.fabric8.kubernetes.api.model.ObjectMeta
 import io.fabric8.kubernetes.api.model.Pod
@@ -22,12 +21,15 @@ import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
 import io.mockk.verify
+import okhttp3.internal.http2.ErrorCode
+import okhttp3.internal.http2.StreamResetException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
+import java.io.IOException
 import java.net.SocketTimeoutException
 import java.time.Duration
 import java.util.concurrent.TimeUnit
@@ -123,9 +125,11 @@ class KubePodLauncherTest {
   fun `test retry on socket timeout exception`() {
     val maxRetries = 3
     val counter = AtomicInteger(0)
+    val handleIf = ApplicationBeanFactory().kubeHttpErrorRetryPredicate()
+
     val kubernetesClientRetryPolicy =
       RetryPolicy.builder<Any>()
-        .handleIf { e -> e.cause is SocketTimeoutException }
+        .handleIf(handleIf)
         .onRetry { counter.incrementAndGet() }
         .withMaxRetries(maxRetries)
         .build()
@@ -156,12 +160,52 @@ class KubePodLauncherTest {
   }
 
   @Test
-  fun `test retry is skipped on non-socket timeout exception`() {
+  fun `retry on stream reset exception`() {
     val maxRetries = 3
     val counter = AtomicInteger(0)
+    val handleIf = ApplicationBeanFactory().kubeHttpErrorRetryPredicate()
+
     val kubernetesClientRetryPolicy =
       RetryPolicy.builder<Any>()
-        .handleIf { e -> e.cause is SocketTimeoutException }
+        .handleIf(handleIf)
+        .onRetry { counter.incrementAndGet() }
+        .withMaxRetries(maxRetries)
+        .build()
+
+    val pods: MixedOperation<Pod, PodList, PodResource> = mockk()
+    val namespaceable: NonNamespaceOperation<Pod, PodList, PodResource> = mockk()
+    val labels: FilterWatchListDeletable<Pod, PodList, PodResource> = mockk()
+
+    every { pods.inNamespace(any()) } returns namespaceable
+    every { namespaceable.withLabels(any()) } returns labels
+    every { labels.waitUntilCondition(any(), any(), any()) } throws
+      KubernetesClientException("An error has occurred", IOException("stream refused", StreamResetException(ErrorCode.INTERNAL_ERROR)))
+    every { kubernetesClient.pods() } returns pods
+
+    val kubePodLauncher =
+      KubePodLauncher(
+        kubernetesClient,
+        metricClient,
+        kubeCopyClient,
+        "namespace",
+        kubernetesClientRetryPolicy,
+      )
+
+    assertThrows<KubernetesClientException> {
+      kubePodLauncher.waitForPodReadyOrTerminal(mapOf("label" to "value"), Duration.ofSeconds(30))
+    }
+    assertEquals(maxRetries, counter.get())
+  }
+
+  @Test
+  fun `retry is skipped on unexpected exception`() {
+    val maxRetries = 3
+    val counter = AtomicInteger(0)
+    val handleIf = ApplicationBeanFactory().kubeHttpErrorRetryPredicate()
+
+    val kubernetesClientRetryPolicy =
+      RetryPolicy.builder<Any>()
+        .handleIf(handleIf)
         .onRetry { counter.incrementAndGet() }
         .withMaxRetries(maxRetries)
         .build()
