@@ -41,6 +41,8 @@ class KeycloakServerTest {
   @Mock
   private AccountClientUpdater accountClientUpdater;
   @Mock
+  private ClientScopeCreator clientScopeCreator;
+  @Mock
   private Keycloak keycloakAdminClient;
   @Mock
   private RealmsResource realmsResource;
@@ -66,7 +68,8 @@ class KeycloakServerTest {
         userCreator,
         webClientCreator,
         identityProvidersCreator,
-        accountClientUpdater);
+        accountClientUpdater,
+        clientScopeCreator);
   }
 
   @Test

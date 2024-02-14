@@ -26,19 +26,22 @@ public class KeycloakServer {
   private final WebClientCreator webClientCreator;
   private final IdentityProvidersCreator identityProvidersCreator;
   private final AccountClientUpdater accountClientUpdater;
+  private ClientScopeCreator clientScopeCreator;
 
   public KeycloakServer(final KeycloakAdminClientProvider keycloakAdminClientProvider,
                         final AirbyteKeycloakConfiguration keycloakConfiguration,
                         final UserCreator userCreator,
                         final WebClientCreator webClientCreator,
                         final IdentityProvidersCreator identityProvidersCreator,
-                        final AccountClientUpdater accountClientUpdater) {
+                        final AccountClientUpdater accountClientUpdater,
+                        final ClientScopeCreator clientScopeCreator) {
     this.keycloakAdminClientProvider = keycloakAdminClientProvider;
     this.keycloakConfiguration = keycloakConfiguration;
     this.userCreator = userCreator;
     this.webClientCreator = webClientCreator;
     this.identityProvidersCreator = identityProvidersCreator;
     this.accountClientUpdater = accountClientUpdater;
+    this.clientScopeCreator = clientScopeCreator;
     this.keycloakAdminClient = initializeKeycloakAdminClient();
   }
 
@@ -95,6 +98,7 @@ public class KeycloakServer {
     webClientCreator.createWebClient(airbyteRealm);
     identityProvidersCreator.createIdps(airbyteRealm);
     accountClientUpdater.updateAccountClientHomeUrl(airbyteRealm);
+    clientScopeCreator.createClientScope(airbyteRealm);
   }
 
   private Keycloak initializeKeycloakAdminClient() {
