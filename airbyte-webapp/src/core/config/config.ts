@@ -20,6 +20,7 @@ export const config: AirbyteWebappConfig = {
     clientToken: process.env.REACT_APP_DATADOG_CLIENT_TOKEN,
     site: process.env.REACT_APP_DATADOG_SITE,
     service: process.env.REACT_APP_DATADOG_SERVICE,
+    env: process.env.REACT_APP_DATADOG_ENV,
   },
 };
 

@@ -5,7 +5,7 @@ import { config } from "core/config";
 export const loadDatadog = (): void => {
   const {
     version,
-    datadog: { applicationId, clientToken, site, service },
+    datadog: { applicationId, clientToken, site, service, env },
   } = config;
 
   if (!applicationId || !clientToken) {
@@ -18,6 +18,7 @@ export const loadDatadog = (): void => {
     site,
     service,
     version,
+    env,
     sampleRate: 100,
     sessionReplaySampleRate: 0,
     trackInteractions: false,
