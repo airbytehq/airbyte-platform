@@ -153,11 +153,6 @@ class SegmentTrackingClient(
     action: String?,
     metadata: Map<String?, Any?>?,
   ) {
-    if (workspaceId == null) {
-      logger.error { "Could not track action $action due to null workspaceId" }
-      return
-    }
-
     val mapCopy: MutableMap<String, Any?> = java.util.HashMap(metadata)
     val deployment: Deployment = deploymentFetcher.get()
     val trackingIdentity: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId)

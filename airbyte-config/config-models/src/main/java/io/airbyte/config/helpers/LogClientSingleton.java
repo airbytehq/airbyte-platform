@@ -96,49 +96,6 @@ public class LogClientSingleton {
   }
 
   /**
-   * Get server log file.
-   *
-   * @param workspaceRoot workspace root dir
-   * @param workerEnvironment worker type
-   * @param logConfigs log configs
-   * @return server log
-   */
-  public File getServerLogFile(final Path workspaceRoot, final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs) {
-    if (shouldUseLocalLogs(workerEnvironment)) {
-      return getServerLogsRoot(workspaceRoot).resolve(LOG_FILENAME).toFile();
-    }
-    final var cloudLogPath = sanitisePath(APP_LOGGING_CLOUD_PREFIX, getServerLogsRoot(workspaceRoot));
-    try {
-      createCloudClientIfNull(logConfigs);
-      return logClient.downloadCloudLog(logConfigs, cloudLogPath);
-    } catch (final IOException e) {
-      throw new RuntimeException("Error retrieving log file: " + cloudLogPath + " from S3", e);
-    }
-  }
-
-  /**
-   * Get scheduler log file.
-   *
-   * @param workspaceRoot root dir of workspace
-   * @param workerEnvironment worker type
-   * @param logConfigs configuration of logs
-   * @return scheduler log file
-   */
-  public File getSchedulerLogFile(final Path workspaceRoot, final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs) {
-    if (shouldUseLocalLogs(workerEnvironment)) {
-      return getSchedulerLogsRoot(workspaceRoot).resolve(LOG_FILENAME).toFile();
-    }
-
-    final var cloudLogPath = APP_LOGGING_CLOUD_PREFIX + getSchedulerLogsRoot(workspaceRoot);
-    try {
-      createCloudClientIfNull(logConfigs);
-      return logClient.downloadCloudLog(logConfigs, cloudLogPath);
-    } catch (final IOException e) {
-      throw new RuntimeException("Error retrieving log file: " + cloudLogPath + " from S3", e);
-    }
-  }
-
-  /**
    * Tail log file.
    *
    * @param workerEnvironment environment of worker.
