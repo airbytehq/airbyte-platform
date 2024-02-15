@@ -4,6 +4,9 @@
 
 package io.airbyte.workers.general;
 
+import static io.airbyte.workers.general.BufferedReplicationWorkerType.BUFFERED;
+import static io.airbyte.workers.general.BufferedReplicationWorkerType.BUFFERED_WITH_LINKED_BLOCKING_QUEUE;
+
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.DestinationApi;
@@ -390,15 +393,31 @@ public class ReplicationWorkerFactory {
         new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
             messageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApi,
             workloadEnabled, analyticsMessageTracker, workloadId);
-    if ("buffered".equals(workerImpl)) {
+    final Optional<BufferedReplicationWorkerType> bufferedReplicationWorkerType = bufferedReplicationWorkerType(workerImpl);
+
+    if (bufferedReplicationWorkerType.isPresent()) {
       metricClient.count(OssMetricsRegistry.REPLICATION_WORKER_CREATED, 1, new MetricAttribute(MetricTags.IMPLEMENTATION, workerImpl));
       return new BufferedReplicationWorker(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator,
-          srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, replicationWorkerHelper, destinationTimeout);
+          srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, replicationWorkerHelper, destinationTimeout,
+          bufferedReplicationWorkerType.get());
     } else {
       metricClient.count(OssMetricsRegistry.REPLICATION_WORKER_CREATED, 1, new MetricAttribute(MetricTags.IMPLEMENTATION, "default"));
       return new DefaultReplicationWorker(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator,
           srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, replicationWorkerHelper, destinationTimeout);
     }
+  }
+
+  private static Optional<BufferedReplicationWorkerType> bufferedReplicationWorkerType(final String workerImpl) {
+    if (workerImpl == null || workerImpl.isBlank()) {
+      return Optional.empty();
+    }
+
+    if (workerImpl.equals(BUFFERED.workerType)) {
+      return Optional.of(BUFFERED);
+    } else if (workerImpl.equals(BUFFERED_WITH_LINKED_BLOCKING_QUEUE.workerType)) {
+      return Optional.of(BUFFERED_WITH_LINKED_BLOCKING_QUEUE);
+    }
+    return Optional.empty();
   }
 
   /**

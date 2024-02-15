@@ -15,6 +15,7 @@ import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.workers.internal.FieldSelector;
 import java.util.Optional;
+import java.util.OptionalInt;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -39,7 +40,13 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
         heartbeatTimeoutChaperone,
         replicationFeatureFlagReader,
         replicationWorkerHelper,
-        destinationTimeoutMonitor);
+        destinationTimeoutMonitor,
+        getQueueType(),
+        OptionalInt.of(1));
+  }
+
+  public BufferedReplicationWorkerType getQueueType() {
+    return BufferedReplicationWorkerType.BUFFERED_WITH_LINKED_BLOCKING_QUEUE;
   }
 
   // BufferedReplicationWorkerTests.
