@@ -3,7 +3,6 @@ import { act, Queries, queries, render as rtlRender, RenderOptions, RenderResult
 import React, { Suspense } from "react";
 import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
-import { ThemeProvider } from "styled-components";
 
 import {
   ConnectionStatus,
@@ -51,23 +50,21 @@ export const TestWrapper: React.FC<React.PropsWithChildren<TestWrapperOptions>> 
   children,
   features = defaultOssFeatures,
 }) => (
-  <ThemeProvider theme={{}}>
-    <IntlProvider locale="en" messages={en} onError={() => null}>
-      <ConfigContext.Provider value={{ config }}>
-        <NotificationService>
-          <FeatureService features={features}>
-            <ModalServiceProvider>
-              <ConfirmationModalService>
-                <QueryClientProvider client={new QueryClient()}>
-                  <MemoryRouter>{children}</MemoryRouter>
-                </QueryClientProvider>
-              </ConfirmationModalService>
-            </ModalServiceProvider>
-          </FeatureService>
-        </NotificationService>
-      </ConfigContext.Provider>
-    </IntlProvider>
-  </ThemeProvider>
+  <IntlProvider locale="en" messages={en} onError={() => null}>
+    <ConfigContext.Provider value={{ config }}>
+      <NotificationService>
+        <FeatureService features={features}>
+          <ModalServiceProvider>
+            <ConfirmationModalService>
+              <QueryClientProvider client={new QueryClient()}>
+                <MemoryRouter>{children}</MemoryRouter>
+              </QueryClientProvider>
+            </ConfirmationModalService>
+          </ModalServiceProvider>
+        </FeatureService>
+      </NotificationService>
+    </ConfigContext.Provider>
+  </IntlProvider>
 );
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

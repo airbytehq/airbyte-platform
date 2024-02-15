@@ -1,7 +1,6 @@
 import React, { Suspense } from "react";
 import { HelmetProvider } from "react-helmet-async";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { ThemeProvider } from "styled-components";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import { DeployPreviewMessage } from "components/DeployPreviewMessage";
@@ -23,14 +22,9 @@ import { NotificationService } from "hooks/services/Notification";
 import { AirbyteThemeProvider } from "hooks/theme/useAirbyteTheme";
 import en from "locales/en.json";
 import { Routing } from "packages/cloud/cloudRoutes";
-import { theme } from "packages/cloud/theme";
 
 import { AppServicesProvider } from "./services/AppServicesProvider";
 import { ZendeskProvider } from "./services/thirdParty/zendesk";
-
-const StyleProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
-  <ThemeProvider theme={theme}>{children}</ThemeProvider>
-);
 
 const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
   <NotificationService>
@@ -54,28 +48,26 @@ const App: React.FC = () => {
   return (
     <React.StrictMode>
       <AirbyteThemeProvider>
-        <StyleProvider>
-          <I18nProvider locale="en" messages={en}>
-            <QueryProvider>
-              <BlockerService>
-                <Suspense fallback={<LoadingPage />}>
-                  <ConfigServiceProvider config={config}>
-                    <ApiErrorBoundary>
-                      <AnalyticsProvider>
-                        <AppMonitoringServiceProvider>
-                          <Services>
-                            <DeployPreviewMessage />
-                            <Routing />
-                          </Services>
-                        </AppMonitoringServiceProvider>
-                      </AnalyticsProvider>
-                    </ApiErrorBoundary>
-                  </ConfigServiceProvider>
-                </Suspense>
-              </BlockerService>
-            </QueryProvider>
-          </I18nProvider>
-        </StyleProvider>
+        <I18nProvider locale="en" messages={en}>
+          <QueryProvider>
+            <BlockerService>
+              <Suspense fallback={<LoadingPage />}>
+                <ConfigServiceProvider config={config}>
+                  <ApiErrorBoundary>
+                    <AnalyticsProvider>
+                      <AppMonitoringServiceProvider>
+                        <Services>
+                          <DeployPreviewMessage />
+                          <Routing />
+                        </Services>
+                      </AppMonitoringServiceProvider>
+                    </AnalyticsProvider>
+                  </ApiErrorBoundary>
+                </ConfigServiceProvider>
+              </Suspense>
+            </BlockerService>
+          </QueryProvider>
+        </I18nProvider>
       </AirbyteThemeProvider>
       {isDevelopment() && <DevToolsToggle />}
     </React.StrictMode>
