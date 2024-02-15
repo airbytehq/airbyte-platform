@@ -20,19 +20,19 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
 import io.micronaut.context.env.Environment
-import io.micronaut.scheduling.annotation.Scheduled
 import io.temporal.worker.WorkerFactory
 import jakarta.inject.Named
-import jakarta.inject.Singleton
 import java.time.Duration
 import java.time.Instant
 
 private val logger = KotlinLogging.logger {}
 
+// TODO We may want to delete this.
+// @Singleton
+
 /**
  * Monitors for resource exhaustion in the Kubernetes cluster.
  */
-@Singleton
 @Requires(env = [Environment.KUBERNETES])
 open class KubeResourceMonitor(
   private val kubernetesClient: KubernetesClient,
@@ -50,7 +50,7 @@ open class KubeResourceMonitor(
    * unable to run new pods.
    */
   @Trace(operationName = KUBERNETES_RESOURCE_MONITOR_NAME)
-  @Scheduled(fixedRate = "\${airbyte.kubernetes.resource-check-rate}")
+  // @Scheduled(fixedRate = "\${airbyte.kubernetes.resource-check-rate}")
   @Instrument(
     start = "WORKLOAD_LAUNCHER_KUBERNETES_RESOURCE_MONITOR_START",
     duration = "WORKLOAD_LAUNCHER_KUBERNETES_RESOURCE_MONITOR_RUN",

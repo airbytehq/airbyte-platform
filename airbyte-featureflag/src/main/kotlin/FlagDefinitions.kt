@@ -148,6 +148,11 @@ object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-defaul
 
 object WorkloadHeartbeatRate : Permanent<Int>(key = "workload.heartbeat.rate", default = 5)
 
+/**
+ * Defines whether a workload launcher should be consuming tasks.
+ */
+object WorkloadLauncherConsumerEnabled : Permanent<Boolean>(key = "workload-launcher-consumer-enabled", default = true)
+
 object WorkloadPollingInterval : Permanent<Int>(key = "workload.polling.interval", default = 30)
 
 /**

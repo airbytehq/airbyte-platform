@@ -25,6 +25,7 @@ class MeterFilterFactory(
 
   companion object {
     const val DATA_PLANE_ID_TAG = "data_plane_id"
+    const val QUEUE_NAME_TAG = "queue_name"
     const val STAGE_NAME_TAG = "stage_name"
     const val STATUS_TAG = "status"
     const val WORKLOAD_ID_TAG = "workload_id"
