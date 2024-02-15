@@ -141,6 +141,21 @@ public class UserPersistence {
     });
   }
 
+  public void writeAuthUser(UUID userId, String authUserId, io.airbyte.config.AuthProvider authProvider) throws IOException {
+    database.query(ctx -> {
+      final OffsetDateTime now = OffsetDateTime.now();
+      ctx.insertInto(AUTH_USER)
+          .set(AUTH_USER.ID, UUID.randomUUID())
+          .set(AUTH_USER.USER_ID, userId)
+          .set(AUTH_USER.AUTH_USER_ID, authUserId)
+          .set(AUTH_USER.AUTH_PROVIDER, Enums.toEnum(authProvider.value(), AuthProvider.class).orElseThrow())
+          .set(AUTH_USER.CREATED_AT, now)
+          .set(AUTH_USER.UPDATED_AT, now)
+          .execute();
+      return null;
+    });
+  }
+
   /**
    * Delete User.
    *

@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.data.services.impls.keycloak;
+package io.airbyte.commons.auth;
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.micronaut.context.annotation.Factory;

@@ -15,6 +15,7 @@ configurations.all {
 dependencies {
     kapt(platform(libs.micronaut.bom))
     kapt(libs.bundles.micronaut.annotation.processor)
+    kapt(libs.micronaut.jaxrs.processor)
 
     kaptTest(platform(libs.micronaut.bom))
     kaptTest(libs.bundles.micronaut.test.annotation.processor)

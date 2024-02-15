@@ -193,6 +193,26 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/users/create_keycloak_user:
+    post:
+      tags:
+        - user
+      summary: Creates the user in keycloak if it does not exist yet
+      operationId: createKeycloakUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateKeycloakUserRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateKeycloakUserResponseBody"
+        "409":
+          $ref: "#/components/responses/ExceptionResponse"
   # CLOUD_WORKSPACE
   /v1/cloud_workspaces/create:
     post:
@@ -699,6 +719,22 @@ components:
         db:
           type: boolean
     # USER
+    CreateKeycloakUserRequestBody:
+      type: object
+      required:
+        - authUserId
+      properties:
+        authUserId:
+          type: string
+        password:
+          type: string
+    CreateKeycloakUserResponseBody:
+      type: object
+      required:
+        - keycloakUserId
+      properties:
+        keycloakUserId:
+          type: string
     UserId:
       type: string
       description: Internal Airbyte Cloud User ID
