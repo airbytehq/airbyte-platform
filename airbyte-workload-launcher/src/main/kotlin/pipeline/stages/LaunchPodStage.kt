@@ -40,6 +40,7 @@ open class LaunchPodStage(private val launcher: PodClient, metricPublisher: Cust
     when (payload) {
       is SyncPayload -> launcher.launchReplication(payload.input, input.msg)
       is CheckPayload -> launcher.launchCheck(payload.input, input.msg)
+      else -> logger.info { "${payload.javaClass.name} not supported yet." }
     }
 
     return input

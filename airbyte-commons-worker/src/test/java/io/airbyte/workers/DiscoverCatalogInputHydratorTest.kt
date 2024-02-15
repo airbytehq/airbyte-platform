@@ -2,39 +2,38 @@ package io.airbyte.workers
 
 import com.fasterxml.jackson.databind.node.POJONode
 import io.airbyte.config.ActorContext
-import io.airbyte.config.ActorType
-import io.airbyte.config.StandardCheckConnectionInput
+import io.airbyte.config.StandardDiscoverCatalogInput
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
-class CheckConnectionInputHydratorTest {
+class DiscoverCatalogInputHydratorTest {
   @Test
   fun `hydrates from base hydrator and copies expected values over`() {
     val base: BaseInputHydrator = mockk()
 
-    val hydrator = CheckConnectionInputHydrator(base)
+    val hydrator = DiscoverCatalogInputHydrator(base)
 
     val unhyrdatedConfig = POJONode("un-hydrated")
     val hydratedConfig = POJONode("hydrated")
 
     val orgId = UUID.randomUUID()
     val input =
-      StandardCheckConnectionInput()
+      StandardDiscoverCatalogInput()
         .withActorContext(ActorContext().withOrganizationId(orgId))
-        .withActorType(ActorType.DESTINATION)
-        .withActorId(UUID.randomUUID())
+        .withConfigHash(UUID.randomUUID().toString())
+        .withSourceId(UUID.randomUUID().toString())
         .withConnectionConfiguration(unhyrdatedConfig)
 
     every { base.hydrateConfig(unhyrdatedConfig, orgId) } returns hydratedConfig
 
-    val result = hydrator.getHydratedStandardCheckInput(input)
+    val result = hydrator.getHydratedStandardDiscoverInput(input)
 
     Assertions.assertEquals(input.actorContext, result.actorContext)
-    Assertions.assertEquals(input.actorId, result.actorId)
-    Assertions.assertEquals(input.actorType, result.actorType)
+    Assertions.assertEquals(input.configHash, result.configHash)
+    Assertions.assertEquals(input.sourceId, result.sourceId)
     Assertions.assertEquals(hydratedConfig, result.connectionConfiguration)
   }
 }

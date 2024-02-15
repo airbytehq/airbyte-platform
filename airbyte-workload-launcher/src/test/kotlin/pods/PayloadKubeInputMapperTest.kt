@@ -187,7 +187,7 @@ class PayloadKubeInputMapperTest {
         every { isCustomConnector } returns customConnector
         every { workspaceId } returns workspaceId1
       }
-    every { input.connectionConfiguration } returns checkConnectionInput
+    every { input.checkConnectionInput } returns checkConnectionInput
 
     val mockSerializedOutput = "Serialized Obj."
     every { serializer.serialize<Any>(any()) } returns mockSerializedOutput

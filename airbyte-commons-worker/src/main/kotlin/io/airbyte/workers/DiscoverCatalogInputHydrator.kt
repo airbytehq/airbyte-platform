@@ -1,21 +1,21 @@
 package io.airbyte.workers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.config.StandardCheckConnectionInput
+import io.airbyte.config.StandardDiscoverCatalogInput
 import java.util.UUID
 
-class CheckConnectionInputHydrator(
+class DiscoverCatalogInputHydrator(
   private val hydrator: BaseInputHydrator,
 ) {
-  fun getHydratedStandardCheckInput(rawInput: StandardCheckConnectionInput): StandardCheckConnectionInput {
+  fun getHydratedStandardDiscoverInput(rawInput: StandardDiscoverCatalogInput): StandardDiscoverCatalogInput {
     val organizationId: UUID? = rawInput.actorContext.organizationId
 
     val fullConfig: JsonNode? = hydrator.hydrateConfig(rawInput.connectionConfiguration, organizationId)
 
-    return StandardCheckConnectionInput()
+    return StandardDiscoverCatalogInput()
       .withActorContext(rawInput.actorContext)
-      .withActorId(rawInput.actorId)
-      .withActorType(rawInput.actorType)
+      .withConfigHash(rawInput.configHash)
+      .withSourceId(rawInput.sourceId)
       .withConnectionConfiguration(fullConfig)
   }
 }

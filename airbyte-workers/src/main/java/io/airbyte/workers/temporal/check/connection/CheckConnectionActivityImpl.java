@@ -48,6 +48,7 @@ import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
+import io.airbyte.workers.BaseInputHydrator;
 import io.airbyte.workers.CheckConnectionInputHydrator;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.exception.WorkerException;
@@ -146,9 +147,10 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         workloadIdGenerator,
         jobOutputDocStore,
         new CheckConnectionInputHydrator(
-            secretsRepositoryReader,
-            airbyteApiClient.getSecretPersistenceConfigApi(),
-            featureFlagClient),
+            new BaseInputHydrator(
+                secretsRepositoryReader,
+                airbyteApiClient.getSecretPersistenceConfigApi(),
+                featureFlagClient)),
         metricClient);
   }
 
@@ -198,7 +200,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
     ApmTraceUtils
         .addTagsToTrace(Map.of(ATTEMPT_NUMBER_KEY, args.getJobRunConfig().getAttemptId(), JOB_ID_KEY, args.getJobRunConfig().getJobId(),
             DOCKER_IMAGE_KEY, args.getLauncherConfig().getDockerImage()));
-    final StandardCheckConnectionInput rawInput = args.getConnectionConfiguration();
+    final StandardCheckConnectionInput rawInput = args.getCheckConnectionInput();
     final StandardCheckConnectionInput input = inputHydrator.getHydratedStandardCheckInput(rawInput);
 
     final ActivityExecutionContext context = Activity.getExecutionContext();
@@ -230,11 +232,11 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
     final String jobId = input.getJobRunConfig().getJobId();
     final int attemptNumber = input.getJobRunConfig().getAttemptId() == null ? 0 : Math.toIntExact(input.getJobRunConfig().getAttemptId());
     final String workloadId =
-        workloadIdGenerator.generateCheckWorkloadId(input.getConnectionConfiguration().getActorContext().getActorDefinitionId(), jobId,
+        workloadIdGenerator.generateCheckWorkloadId(input.getCheckConnectionInput().getActorContext().getActorDefinitionId(), jobId,
             attemptNumber);
     final String serializedInput = Jsons.serialize(input);
 
-    final UUID workspaceId = input.getConnectionConfiguration().getActorContext().getWorkspaceId();
+    final UUID workspaceId = input.getCheckConnectionInput().getActorContext().getWorkspaceId();
     final Geography geo = getGeography(Optional.ofNullable(input.getLauncherConfig().getConnectionId()),
         Optional.ofNullable(workspaceId));
 
@@ -243,7 +245,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         List.of(new WorkloadLabel(Metadata.JOB_LABEL_KEY, jobId.toString()),
             new WorkloadLabel(Metadata.ATTEMPT_LABEL_KEY, String.valueOf(attemptNumber)),
             new WorkloadLabel(Metadata.WORKSPACE_LABEL_KEY, workspaceId.toString()),
-            new WorkloadLabel(Metadata.ACTOR_TYPE, String.valueOf(input.getConnectionConfiguration().getActorType().toString()))),
+            new WorkloadLabel(Metadata.ACTOR_TYPE, String.valueOf(input.getCheckConnectionInput().getActorType().toString()))),
         serializedInput,
         fullLogPath(Path.of(workloadId)),
         geo.getValue(),

@@ -150,7 +150,7 @@ public class CheckConnectionActivityTest {
   private CheckConnectionInput getCheckInput() {
     final CheckConnectionInput input = new CheckConnectionInput();
     input.setJobRunConfig(new JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_NUMBER));
-    input.setConnectionConfiguration(new StandardCheckConnectionInput()
+    input.setCheckConnectionInput(new StandardCheckConnectionInput()
         .withActorType(ActorType.SOURCE)
         .withActorContext(
             new ActorContext().withActorDefinitionId(ACTOR_DEFINITION_ID)

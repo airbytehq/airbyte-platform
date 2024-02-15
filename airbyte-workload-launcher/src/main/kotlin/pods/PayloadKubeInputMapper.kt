@@ -185,11 +185,11 @@ class PayloadKubeInputMapper(
   ): Map<String, String> {
     return sharedFileMap(jobRunConfig) +
       mapOf(
-        OrchestratorConstants.CONNECTION_CONFIGURATION to serializer.serialize(input.connectionConfiguration.connectionConfiguration),
+        OrchestratorConstants.CONNECTION_CONFIGURATION to serializer.serialize(input.checkConnectionInput.connectionConfiguration),
         OrchestratorConstants.SIDECAR_INPUT to
           serializer.serialize(
             SidecarInput(
-              input.connectionConfiguration,
+              input.checkConnectionInput,
               null,
               workloadId,
               input.launcherConfig,

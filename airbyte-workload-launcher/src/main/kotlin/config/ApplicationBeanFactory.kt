@@ -16,7 +16,9 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricClientFactory
 import io.airbyte.metrics.lib.MetricEmittingApps
+import io.airbyte.workers.BaseInputHydrator
 import io.airbyte.workers.CheckConnectionInputHydrator
+import io.airbyte.workers.DiscoverCatalogInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
 import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
@@ -57,16 +59,26 @@ class ApplicationBeanFactory {
   }
 
   @Singleton
-  fun checkInputHydrator(
+  fun baseInputHydrator(
     secretsPersistenceConfigApi: SecretsPersistenceConfigApi,
     secretsRepositoryReader: SecretsRepositoryReader,
     featureFlagClient: FeatureFlagClient,
-  ): CheckConnectionInputHydrator {
-    return CheckConnectionInputHydrator(
+  ): BaseInputHydrator {
+    return BaseInputHydrator(
       secretsRepositoryReader,
       secretsPersistenceConfigApi,
       featureFlagClient,
     )
+  }
+
+  @Singleton
+  fun checkInputHydrator(baseInputHydrator: BaseInputHydrator): CheckConnectionInputHydrator {
+    return CheckConnectionInputHydrator(baseInputHydrator)
+  }
+
+  @Singleton
+  fun discoverCatalogInputHydrator(baseInputHydrator: BaseInputHydrator): DiscoverCatalogInputHydrator {
+    return DiscoverCatalogInputHydrator(baseInputHydrator)
   }
 
   @Singleton

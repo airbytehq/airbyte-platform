@@ -8,13 +8,17 @@ import com.fasterxml.jackson.databind.node.POJONode
 import fixtures.RecordFixtures
 import io.airbyte.config.ActorType
 import io.airbyte.config.StandardCheckConnectionInput
+import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadType
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.CheckConnectionInputHydrator
+import io.airbyte.workers.DiscoverCatalogInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.models.CheckConnectionInput
+import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
+import io.airbyte.workload.launcher.pipeline.stages.model.DiscoverCatalogPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.serde.PayloadDeserializer
@@ -37,6 +41,7 @@ class BuildInputStageTest {
         .withDestinationConfiguration(destConfig)
 
     val checkInputHydrator: CheckConnectionInputHydrator = mockk()
+    val discoverInputHydrator: DiscoverCatalogInputHydrator = mockk()
     val replicationInputHydrator: ReplicationInputHydrator = mockk()
     val deserializer: PayloadDeserializer = mockk()
     every { deserializer.toReplicationActivityInput(inputStr) } returns unhydrated
@@ -45,6 +50,7 @@ class BuildInputStageTest {
     val stage =
       BuildInputStage(
         checkInputHydrator,
+        discoverInputHydrator,
         replicationInputHydrator,
         deserializer,
         mockk(),
@@ -75,7 +81,7 @@ class BuildInputStageTest {
         .withActorType(ActorType.DESTINATION)
     val unhydrated =
       checkInput.apply {
-        connectionConfiguration = unhydratedConfig
+        checkConnectionInput = unhydratedConfig
       }
 
     val hydratedConfig =
@@ -86,6 +92,7 @@ class BuildInputStageTest {
         .withConnectionConfiguration(POJONode("bar"))
 
     val checkInputHydrator: CheckConnectionInputHydrator = mockk()
+    val discoverInputHydrator: DiscoverCatalogInputHydrator = mockk()
     val replicationInputHydrator: ReplicationInputHydrator = mockk()
     val deserializer: PayloadDeserializer = mockk()
     every { deserializer.toCheckConnectionInput(inputStr) } returns unhydrated
@@ -94,6 +101,7 @@ class BuildInputStageTest {
     val stage =
       BuildInputStage(
         checkInputHydrator,
+        discoverInputHydrator,
         replicationInputHydrator,
         deserializer,
         mockk(),
@@ -108,7 +116,58 @@ class BuildInputStageTest {
     }
 
     when (val payload = result.payload) {
-      is CheckPayload -> assert(hydratedConfig == payload.input.connectionConfiguration)
+      is CheckPayload -> assert(hydratedConfig == payload.input.checkConnectionInput)
+      else -> "Incorrect payload type: ${payload?.javaClass?.name}"
+    }
+  }
+
+  @Test
+  fun `parses discover input and hydrates`() {
+    val inputStr = "foo"
+    val discoverInput = DiscoverCatalogInput()
+    val unhydratedConfig =
+      StandardDiscoverCatalogInput()
+        .withSourceId(UUID.randomUUID().toString())
+        .withConfigHash(UUID.randomUUID().toString())
+        .withAdditionalProperty("whatever", "random value")
+    val unhydrated =
+      discoverInput.apply {
+        discoverCatalogInput = unhydratedConfig
+      }
+
+    val hydratedConfig =
+      StandardDiscoverCatalogInput()
+        .withSourceId(UUID.randomUUID().toString())
+        .withConfigHash(UUID.randomUUID().toString())
+        .withAdditionalProperty("whatever", "random value")
+        .withConnectionConfiguration(POJONode("bar"))
+
+    val checkInputHydrator: CheckConnectionInputHydrator = mockk()
+    val discoverInputHydrator: DiscoverCatalogInputHydrator = mockk()
+    val replicationInputHydrator: ReplicationInputHydrator = mockk()
+    val deserializer: PayloadDeserializer = mockk()
+    every { deserializer.toDiscoverCatalogInput(inputStr) } returns unhydrated
+    every { discoverInputHydrator.getHydratedStandardDiscoverInput(unhydratedConfig) } returns hydratedConfig
+
+    val stage =
+      BuildInputStage(
+        checkInputHydrator,
+        discoverInputHydrator,
+        replicationInputHydrator,
+        deserializer,
+        mockk(),
+      )
+    val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.DISCOVER))
+
+    val result = stage.applyStage(io)
+
+    verify {
+      deserializer.toDiscoverCatalogInput(inputStr)
+      discoverInputHydrator.getHydratedStandardDiscoverInput(unhydratedConfig)
+    }
+
+    when (val payload = result.payload) {
+      is DiscoverCatalogPayload -> assert(hydratedConfig == payload.input.discoverCatalogInput)
       else -> "Incorrect payload type: ${payload?.javaClass?.name}"
     }
   }

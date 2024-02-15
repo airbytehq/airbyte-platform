@@ -12,7 +12,7 @@ fun CheckConnectionInput.getAttemptId(): Long {
 }
 
 fun CheckConnectionInput.getActorType(): ActorType {
-  return this.connectionConfiguration.actorType
+  return this.checkConnectionInput.actorType
 }
 
 fun CheckConnectionInput.setConnectorLabels(labels: Map<String, String>): CheckConnectionInput {
