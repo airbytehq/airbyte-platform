@@ -25,8 +25,11 @@ public class IdentityProvidersCreator {
   // static map of ProviderType to Keycloak provider id
   private static final Map<IdentityProviderConfiguration.ProviderType, String> PROVIDER_TYPE_TO_KEYCLOAK_PROVIDER_ID = new HashMap<>();
 
+  // oidc is the default provider id for OIDC identity providers.
+  // keycloak-oidc extends OIDCIdentityProvider
   static {
     PROVIDER_TYPE_TO_KEYCLOAK_PROVIDER_ID.put(IdentityProviderConfiguration.ProviderType.OKTA, "keycloak-oidc");
+    PROVIDER_TYPE_TO_KEYCLOAK_PROVIDER_ID.put(IdentityProviderConfiguration.ProviderType.OIDC, "oidc");
   }
 
   private final List<IdentityProviderConfiguration> identityProviderConfigurations;
