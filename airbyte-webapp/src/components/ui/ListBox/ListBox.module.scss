@@ -53,6 +53,10 @@
   }
 }
 
+.defaultControlButton {
+  font-weight: normal;
+}
+
 .optionsMenu {
   background-color: colors.$foreground;
   border-radius: variables.$border-radius-lg;
@@ -60,16 +64,21 @@
   padding: 0;
   margin: 0;
   width: 100%;
-  min-width: fit-content;
+  min-width: variables.$min-width-listbox-options-list;
+  max-height: variables.$height-long-listbox-options-list;
   display: flex;
   flex-direction: column;
   gap: 0;
-  overflow: hidden;
+  overflow: auto;
+
+  &.nonAdaptive {
+    max-width: variables.$min-width-listbox-options-list;
+  }
 }
 
 .option {
   list-style-type: none;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .optionValue {

@@ -10,8 +10,8 @@ import { LabeledSwitch } from "components/LabeledSwitch";
 import { CodeEditor } from "components/ui/CodeEditor";
 import { ComboBox, MultiComboBox, Option } from "components/ui/ComboBox";
 import DatePicker from "components/ui/DatePicker";
-import { DropDown } from "components/ui/DropDown";
 import { Input } from "components/ui/Input";
+import { ListBox } from "components/ui/ListBox";
 import { TagInput } from "components/ui/TagInput";
 import { Text } from "components/ui/Text";
 import { TextArea } from "components/ui/TextArea";
@@ -84,7 +84,7 @@ export type BuilderFieldProps = BaseFieldProps &
 
 const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, ...props }) => {
   return (
-    <DropDown
+    <ListBox
       {...props}
       options={
         typeof options[0] === "string"
@@ -93,9 +93,9 @@ const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, 
             })
           : (options as Array<{ label: string; value: string }>)
       }
-      onChange={(selected) => selected && setValue(selected.value)}
-      value={value}
-      error={error}
+      onSelect={(selected) => selected && setValue(selected)}
+      selectedValue={value}
+      hasError={error}
     />
   );
 };

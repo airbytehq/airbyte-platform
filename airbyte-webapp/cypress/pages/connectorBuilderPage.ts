@@ -1,3 +1,5 @@
+import { selectFromDropdown } from "@cy/commands/common";
+
 const startFromScratchButton = "button[data-testid='start-from-scratch']";
 const nameInput = "input[name='name']";
 const urlBaseInput = "input[name='formValues.global.urlBase']";
@@ -49,12 +51,6 @@ export const enterUrlBase = (urlBase: string) => {
 export const enterRecordSelector = (recordSelector: string) => {
   cy.get(recordSelectorInput).first().type(recordSelector);
   cy.get(recordSelectorInput).first().type("{enter}");
-};
-
-export const selectFromDropdown = (selector: string, value: string) => {
-  cy.get(`${selector} .react-select__dropdown-indicator`).last().click();
-
-  cy.get(`.react-select__option`).contains(value).click();
 };
 
 export const selectAuthMethod = (value: string) => {
