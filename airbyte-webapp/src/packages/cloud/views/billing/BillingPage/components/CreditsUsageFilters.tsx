@@ -1,6 +1,8 @@
-import { FormattedMessage, useIntl } from "react-intl";
+import React from "react";
+import { useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
+import { ClearFiltersButton } from "components/ui/ClearFiltersButton";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
@@ -18,7 +20,9 @@ const CustomControlButton = <T,>({ selectedOption }: ListBoxControlButtonProps<T
   return (
     <>
       {selectedOption ? (
-        <div className={styles.controlButtonLabel}>{selectedOption.label}</div>
+        <Text color="grey" bold className={styles.controlButtonLabel}>
+          {selectedOption.label}
+        </Text>
       ) : (
         <Text as="span" size="lg" color="grey">
           {formatMessage({ id: "form.selectValue" })}
@@ -30,7 +34,7 @@ const CustomControlButton = <T,>({ selectedOption }: ListBoxControlButtonProps<T
   );
 };
 
-export const CreditsUsageFilters = () => {
+export const CreditsUsageFilters: React.FC = () => {
   const {
     sourceOptions,
     destinationOptions,
@@ -41,6 +45,8 @@ export const CreditsUsageFilters = () => {
     selectedSource,
     selectedTimeWindow,
   } = useCreditsContext();
+
+  const hasAnyFilterSelected = [selectedSource, selectedDestination].some((selection) => !!selection);
 
   const onSourceSelect = (currentSourceOption: SourceId | null) => {
     setSelectedSource(currentSourceOption);
@@ -53,48 +59,44 @@ export const CreditsUsageFilters = () => {
   return (
     <Box px="lg">
       <FlexContainer>
-        <FlexContainer direction="column" gap="xs">
-          <Text color="grey" size="sm">
-            <FormattedMessage id="credits.timePeriod" />
-          </Text>
-          <ListBox
-            className={styles.listboxContainer}
-            controlButton={CustomControlButton}
-            options={[
-              { label: "Last 30 Days", value: ConsumptionTimeWindow.lastMonth },
-              { label: "Last 6 months", value: ConsumptionTimeWindow.lastSixMonths },
-              { label: "Last 12 months", value: ConsumptionTimeWindow.lastYear },
-            ]}
-            selectedValue={selectedTimeWindow}
-            onSelect={(selectedValue) => setSelectedTimeWindow(selectedValue)}
+        <ListBox
+          controlButton={CustomControlButton}
+          buttonClassName={styles.controlButton}
+          optionsMenuClassName={styles.periodOptionsMenu}
+          options={[
+            { label: "Last 30 Days", value: ConsumptionTimeWindow.lastMonth },
+            { label: "Last 6 months", value: ConsumptionTimeWindow.lastSixMonths },
+            { label: "Last 12 months", value: ConsumptionTimeWindow.lastYear },
+          ]}
+          selectedValue={selectedTimeWindow}
+          onSelect={(selectedValue) => setSelectedTimeWindow(selectedValue)}
+        />
+        <ListBox
+          className={styles.listboxContainer}
+          controlButton={CustomControlButton}
+          buttonClassName={styles.controlButton}
+          optionsMenuClassName={styles.connectorOptionsMenu}
+          options={[{ label: "All Sources", value: null }, ...sourceOptions]}
+          selectedValue={selectedSource}
+          onSelect={(selectedValue) => onSourceSelect(selectedValue)}
+        />
+        <ListBox
+          className={styles.listboxContainer}
+          controlButton={CustomControlButton}
+          buttonClassName={styles.controlButton}
+          optionsMenuClassName={styles.connectorOptionsMenu}
+          options={[{ label: "All Destinations", value: null }, ...destinationOptions]}
+          selectedValue={selectedDestination}
+          onSelect={(selectedValue) => onDestinationSelect(selectedValue)}
+        />
+        {hasAnyFilterSelected && (
+          <ClearFiltersButton
+            onClick={() => {
+              onSourceSelect(null);
+              onDestinationSelect(null);
+            }}
           />
-        </FlexContainer>
-
-        <FlexContainer direction="column" gap="xs">
-          <Text color="grey" size="sm">
-            <FormattedMessage id="credits.source" />
-          </Text>
-          <ListBox
-            className={styles.listboxContainer}
-            controlButton={CustomControlButton}
-            options={[{ label: "All Sources", value: null }, ...sourceOptions]}
-            selectedValue={selectedSource}
-            onSelect={(selectedValue) => onSourceSelect(selectedValue)}
-          />
-        </FlexContainer>
-
-        <FlexContainer direction="column" gap="xs">
-          <Text color="grey" size="sm">
-            <FormattedMessage id="credits.destination" />
-          </Text>
-          <ListBox
-            className={styles.listboxContainer}
-            controlButton={CustomControlButton}
-            options={[{ label: "All Destinations", value: null }, ...destinationOptions]}
-            selectedValue={selectedDestination}
-            onSelect={(selectedValue) => onDestinationSelect(selectedValue)}
-          />
-        </FlexContainer>
+        )}
       </FlexContainer>
     </Box>
   );
