@@ -31,7 +31,6 @@ export const PasswordFormControl: React.FC<PasswordFormControlProps> = ({ label 
           placeholder={formatMessage({ id: "login.password.placeholder" })}
           error={Boolean(error)}
           autoComplete="new-password"
-          data-testid="password-input"
         />
       </Box>
       <FlexContainer gap="sm" alignItems="center">

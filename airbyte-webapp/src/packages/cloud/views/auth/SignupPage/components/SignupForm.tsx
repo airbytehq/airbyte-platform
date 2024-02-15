@@ -26,7 +26,7 @@ export const SignupSubmissionButton: React.FC<SignupSubmissionButtonProps> = ({ 
   const { isSubmitting } = useFormState();
 
   return (
-    <Button full size="lg" type="submit" isLoading={isSubmitting} data-testid="signup.submit">
+    <Button full size="lg" type="submit" isLoading={isSubmitting}>
       <FormattedMessage id={buttonMessageId} />
     </Button>
   );
@@ -120,7 +120,6 @@ export const SignupForm: React.FC<SignupFormProps> = ({ signUp }) => {
                 label={formatMessage({ id: "login.fullName" })}
                 placeholder={formatMessage({ id: "login.fullName.placeholder" })}
                 autoComplete="name"
-                data-testid="signup.name"
               />
             </FlexItem>
           )}
@@ -132,7 +131,6 @@ export const SignupForm: React.FC<SignupFormProps> = ({ signUp }) => {
                 type="text"
                 label={formatMessage({ id: "login.companyName" })}
                 placeholder={formatMessage({ id: "login.companyName.placeholder" })}
-                data-testid="signup.companyName"
               />
             </FlexItem>
           )}
