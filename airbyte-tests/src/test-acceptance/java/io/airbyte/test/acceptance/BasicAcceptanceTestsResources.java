@@ -14,26 +14,18 @@ import io.airbyte.api.client.invoker.generated.ApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.AirbyteStream;
-import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionScheduleData;
 import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule;
 import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule.TimeUnitEnum;
-import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
-import io.airbyte.api.client.model.generated.JobConfigType;
-import io.airbyte.api.client.model.generated.JobIdRequestBody;
 import io.airbyte.api.client.model.generated.JobInfoRead;
-import io.airbyte.api.client.model.generated.JobListRequestBody;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobStatus;
-import io.airbyte.api.client.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceDefinitionRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
-import io.airbyte.api.client.model.generated.StreamDescriptor;
-import io.airbyte.api.client.model.generated.StreamState;
 import io.airbyte.api.client.model.generated.StreamStatusJobType;
 import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.api.client.model.generated.SyncMode;
@@ -89,22 +81,12 @@ public class BasicAcceptanceTestsResources {
   static final int MAX_SCHEDULED_JOB_RETRIES = 10;
 
   private AcceptanceTestHarness testHarness;
-  private AirbyteApiClient apiClient;
-  private WebBackendApi webBackendApi;
   private UUID workspaceId;
 
   private final ConnectionScheduleData basicScheduleData;
 
   public AcceptanceTestHarness getTestHarness() {
     return testHarness;
-  }
-
-  public AirbyteApiClient getApiClient() {
-    return apiClient;
-  }
-
-  public WebBackendApi getWebBackendApi() {
-    return webBackendApi;
   }
 
   public UUID getWorkspaceId() {
@@ -120,35 +102,6 @@ public class BasicAcceptanceTestsResources {
         new ConnectionScheduleDataBasicSchedule().units(1L).timeUnit(TimeUnitEnum.HOURS));
   }
 
-  void assertStreamStateContainsStream(final UUID connectionId, final List<StreamDescriptor> expectedStreamDescriptors) throws ApiException {
-    final ConnectionState state = apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId));
-    final List<StreamDescriptor> streamDescriptors = state.getStreamState().stream().map(StreamState::getStreamDescriptor).toList();
-
-    Assertions.assertTrue(streamDescriptors.containsAll(expectedStreamDescriptors) && expectedStreamDescriptors.containsAll(streamDescriptors));
-  }
-
-  JobRead getMostRecentSyncJobId(final UUID connectionId) throws Exception {
-    return apiClient.getJobsApi()
-        .listJobsFor(new JobListRequestBody().configId(connectionId.toString()).configTypes(List.of(JobConfigType.SYNC)))
-        .getJobs()
-        .stream().findFirst().map(JobWithAttemptsRead::getJob).orElseThrow();
-  }
-
-  @SuppressWarnings("BusyWait")
-  JobRead waitUntilTheNextJobIsStarted(final UUID connectionId) throws Exception {
-    final JobRead lastJob = getMostRecentSyncJobId(connectionId);
-    if (lastJob.getStatus() != JobStatus.SUCCEEDED) {
-      return lastJob;
-    }
-
-    JobRead mostRecentSyncJob = getMostRecentSyncJobId(connectionId);
-    while (mostRecentSyncJob.getId().equals(lastJob.getId())) {
-      Thread.sleep(Duration.ofSeconds(10).toMillis());
-      mostRecentSyncJob = getMostRecentSyncJobId(connectionId);
-    }
-    return mostRecentSyncJob;
-  }
-
   /**
    * Waits for the given connection to finish, waiting at 30s intervals, until maxRetries is reached.
    *
@@ -159,7 +112,7 @@ public class BasicAcceptanceTestsResources {
     int i;
     for (i = 0; i < MAX_SCHEDULED_JOB_RETRIES; i++) {
       try {
-        AcceptanceTestHarness.waitForSuccessfulJob(apiClient.getJobsApi(), jobRead);
+        testHarness.waitForSuccessfulJob(jobRead);
         break;
       } catch (final Exception e) {
         LOGGER.info("Something went wrong querying jobs API, retrying...");
@@ -204,17 +157,16 @@ public class BasicAcceptanceTestsResources {
 
     final var connectionId = conn.getConnectionId();
     final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
-    AcceptanceTestHarness.waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
-    final var successfulJob1 = apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(connectionSyncRead1.getJob().getId()));
+    testHarness.waitForSuccessfulJob(connectionSyncRead1.getJob());
+    final var successfulJob1 = testHarness.getJobInfoRead(connectionSyncRead1.getJob().getId());
 
-    LOGGER.info(STATE_AFTER_SYNC_ONE,
-        apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info(STATE_AFTER_SYNC_ONE, testHarness.getConnectionState(connectionId));
 
     final var src = testHarness.getSourceDatabase();
     final var dst = testHarness.getDestinationDatabase();
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(src, dst, conn.getNamespaceFormat(), AcceptanceTestHarness.PUBLIC_SCHEMA_NAME, false,
         WITHOUT_SCD_TABLE);
-    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, successfulJob1, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, successfulJob1, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
 
     // add new records and run again.
     final Database source = testHarness.getSourceDatabase();
@@ -231,29 +183,27 @@ public class BasicAcceptanceTestsResources {
 
     LOGGER.info("Starting testIncrementalSync() sync 2");
     final JobInfoRead connectionSyncRead2 = testHarness.syncConnection(connectionId);
-    AcceptanceTestHarness.waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
-    final var successfulJob2 = apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(connectionSyncRead2.getJob().getId()));
+    testHarness.waitForSuccessfulJob(connectionSyncRead2.getJob());
+    final var successfulJob2 = testHarness.getJobInfoRead(connectionSyncRead2.getJob().getId());
 
-    LOGGER.info(STATE_AFTER_SYNC_TWO,
-        apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info(STATE_AFTER_SYNC_TWO, testHarness.getConnectionState(connectionId));
 
     Asserts.assertRawDestinationContains(dst, expectedRecords, conn.getNamespaceFormat(), AcceptanceTestHarness.STREAM_NAME);
-    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, successfulJob2, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, successfulJob2, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
 
     // reset back to no data.
 
     LOGGER.info("Starting testIncrementalSync() reset");
     final JobInfoRead jobInfoRead = testHarness.resetConnection(connectionId);
-    AcceptanceTestHarness.waitWhileJobHasStatus(apiClient.getJobsApi(), jobInfoRead.getJob(),
+    testHarness.waitWhileJobHasStatus(jobInfoRead.getJob(),
         Sets.newHashSet(JobStatus.PENDING, JobStatus.RUNNING, JobStatus.INCOMPLETE, JobStatus.FAILED));
     // This is a band-aid to prevent some race conditions where the job status was updated but we may
     // still be cleaning up some data in the reset table. This would be an argument for reworking the
     // source of truth of the replication workflow state to be in DB rather than in Memory and
     // serialized automagically by temporal
-    AcceptanceTestHarness.waitWhileJobIsRunning(apiClient.getJobsApi(), jobInfoRead.getJob(), Duration.ofMinutes(1));
+    testHarness.waitWhileJobIsRunning(jobInfoRead.getJob(), Duration.ofMinutes(1));
 
-    LOGGER.info("state after reset: {}",
-        apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info("state after reset: {}", testHarness.getConnectionState(connectionId));
     // TODO enable once stream status for resets has been fixed
     // testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE,
     // StreamStatusJobType.RESET);
@@ -268,15 +218,14 @@ public class BasicAcceptanceTestsResources {
     // sync one more time. verify it is the equivalent of a full refresh.
     LOGGER.info("Starting testIncrementalSync() sync 3");
     final JobInfoRead connectionSyncRead3 = testHarness.syncConnection(connectionId);
-    AcceptanceTestHarness.waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead3.getJob());
-    final var successfulJob3 = apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(connectionSyncRead3.getJob().getId()));
+    testHarness.waitForSuccessfulJob(connectionSyncRead3.getJob());
+    final var successfulJob3 = testHarness.getJobInfoRead(connectionSyncRead3.getJob().getId());
 
-    LOGGER.info("state after sync 3: {}",
-        apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info("state after sync 3: {}", testHarness.getConnectionState(connectionId));
 
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(src, dst, conn.getNamespaceFormat(), AcceptanceTestHarness.PUBLIC_SCHEMA_NAME, false,
         WITHOUT_SCD_TABLE);
-    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, successfulJob3, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, successfulJob3, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   void runSmallSyncForAWorkspaceId(final UUID workspaceId) throws Exception {
@@ -311,17 +260,16 @@ public class BasicAcceptanceTestsResources {
 
     final var connectionId = conn.getConnectionId();
     final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
-    AcceptanceTestHarness.waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
-    final var successfulJob = apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(connectionSyncRead1.getJob().getId()));
+    testHarness.waitForSuccessfulJob(connectionSyncRead1.getJob());
+    final var successfulJob = testHarness.getJobInfoRead(connectionSyncRead1.getJob().getId());
 
-    LOGGER.info(STATE_AFTER_SYNC_ONE,
-        apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    LOGGER.info(STATE_AFTER_SYNC_ONE, testHarness.getConnectionState(connectionId));
 
     final var src = testHarness.getSourceDatabase();
     final var dst = testHarness.getDestinationDatabase();
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(src, dst, conn.getNamespaceFormat(), AcceptanceTestHarness.PUBLIC_SCHEMA_NAME, false,
         WITHOUT_SCD_TABLE);
-    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, successfulJob, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, successfulJob, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   void init() throws URISyntaxException, IOException, InterruptedException, ApiException {
@@ -336,7 +284,7 @@ public class BasicAcceptanceTestsResources {
     if (isGke) {
       underlyingApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
     }
-    apiClient = new AirbyteApiClient(underlyingApiClient);
+    final var apiClient = new AirbyteApiClient(underlyingApiClient);
 
     // Set up the WebBackend API client.
     final var underlyingWebBackendApiClient = new ApiClient().setScheme(url.getScheme())
@@ -346,7 +294,7 @@ public class BasicAcceptanceTestsResources {
     if (isGke) {
       underlyingWebBackendApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
     }
-    webBackendApi = new WebBackendApi(underlyingWebBackendApiClient);
+    final var webBackendApi = new WebBackendApi(underlyingWebBackendApiClient);
 
     // If a workspace id is passed, use that. Otherwise, create a new workspace.
     // NOTE: we want to sometimes use a pre-configured workspace e.g., if we run against a production
@@ -373,7 +321,7 @@ public class BasicAcceptanceTestsResources {
     LOGGER.info("pg source definition: {}", sourceDef.getDockerImageTag());
     LOGGER.info("pg destination definition: {}", destinationDef.getDockerImageTag());
 
-    testHarness = new AcceptanceTestHarness(apiClient, workspaceId);
+    testHarness = new AcceptanceTestHarness(apiClient, webBackendApi, workspaceId);
 
     testHarness.ensureCleanSlate();
   }

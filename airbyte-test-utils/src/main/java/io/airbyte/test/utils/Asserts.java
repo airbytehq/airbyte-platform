@@ -20,11 +20,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.JobInfoRead;
-import io.airbyte.api.client.model.generated.Pagination;
+import io.airbyte.api.client.model.generated.StreamDescriptor;
+import io.airbyte.api.client.model.generated.StreamState;
 import io.airbyte.api.client.model.generated.StreamStatusJobType;
-import io.airbyte.api.client.model.generated.StreamStatusListRequestBody;
 import io.airbyte.api.client.model.generated.StreamStatusRead;
 import io.airbyte.api.client.model.generated.StreamStatusReadList;
 import io.airbyte.api.client.model.generated.StreamStatusRunState;
@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -200,7 +201,7 @@ public class Asserts {
    * @param expectedJobType The expected type of the stream status.
    */
   public static void assertStreamStatuses(
-                                          final AirbyteApiClient apiClient,
+                                          final AcceptanceTestHarness testHarness,
                                           final UUID workspaceId,
                                           final UUID connectionId,
                                           final JobInfoRead jobInfoRead,
@@ -209,12 +210,30 @@ public class Asserts {
     final var jobId = jobInfoRead.getJob().getId();
     final var attemptNumber = jobInfoRead.getAttempts().size() - 1;
 
-    final List<StreamStatusRead> streamStatuses = fetchStreamStatus(apiClient, workspaceId, connectionId, jobId, attemptNumber);
+    final List<StreamStatusRead> streamStatuses = fetchStreamStatus(testHarness, workspaceId, connectionId, jobId, attemptNumber);
     assertNotNull(streamStatuses);
     final List<StreamStatusRead> filteredStreamStatuses = streamStatuses.stream().filter(s -> expectedJobType.equals(s.getJobType())).toList();
     assertFalse(filteredStreamStatuses.isEmpty());
     filteredStreamStatuses.forEach(status -> assertEquals(expectedRunState, status.getRunState()));
 
+  }
+
+  /**
+   * Assert that all the expected stream descriptors are contained in the state for the given
+   * connection.
+   *
+   * @param connectionId to check the state
+   * @param expectedStreamDescriptors the streams we expect to find
+   * @throws Exception if the API requests fail
+   */
+  public static void assertStreamStateContainsStream(final AcceptanceTestHarness testHarness,
+                                                     final UUID connectionId,
+                                                     final List<StreamDescriptor> expectedStreamDescriptors)
+      throws Exception {
+    final ConnectionState state = testHarness.getConnectionState(connectionId);
+    final List<StreamDescriptor> streamDescriptors = state.getStreamState().stream().map(StreamState::getStreamDescriptor).toList();
+
+    Assertions.assertTrue(streamDescriptors.containsAll(expectedStreamDescriptors) && expectedStreamDescriptors.containsAll(streamDescriptors));
   }
 
   /**
@@ -227,29 +246,23 @@ public class Asserts {
    * @param attempt The attempt number associated with the sync execution.
    */
   private static List<StreamStatusRead> fetchStreamStatus(
-                                                          final AirbyteApiClient apiClient,
+                                                          final AcceptanceTestHarness testHarness,
                                                           final UUID workspaceId,
                                                           final UUID connectionId,
                                                           final Long jobId,
                                                           final Integer attempt) {
     List<StreamStatusRead> results = List.of();
-    final StreamStatusListRequestBody streamStatusListRequestBody = new StreamStatusListRequestBody()
-        .connectionId(connectionId)
-        .jobId(jobId)
-        .attemptNumber(attempt)
-        .workspaceId(workspaceId)
-        .pagination(new Pagination().pageSize(100).rowOffset(0));
 
     int count = 0;
     while (count < 60 && results.isEmpty()) {
-      LOGGER.debug("Fetching stream status for {}...", streamStatusListRequestBody);
+      LOGGER.debug("Fetching stream status for {} {} {} {}...", connectionId, jobId, attempt, workspaceId);
       try {
-        final StreamStatusReadList result = apiClient.getStreamStatusesApi().getStreamStatuses(streamStatusListRequestBody);
+        final StreamStatusReadList result = testHarness.getStreamStatuses(connectionId, jobId, attempt, workspaceId);
         if (result != null) {
           LOGGER.debug("Stream status result for connection {}: {}", connectionId, result);
           results = result.getStreamStatuses();
         }
-      } catch (final ApiException e) {
+      } catch (final Exception e) {
         LOGGER.info("Unable to call stream status API.", e);
       }
       count++;

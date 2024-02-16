@@ -4,8 +4,6 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.test.utils.AcceptanceTestHarness.waitForSuccessfulJob;
-import static io.airbyte.test.utils.AcceptanceTestHarness.waitWhileJobHasStatus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.airbyte.api.client.AirbyteApiClient;
@@ -94,7 +92,7 @@ class ContainerOrchestratorAcceptanceTests {
     LOGGER.info("pg source definition: {}", sourceDef.getDockerImageTag());
     LOGGER.info("pg destination definition: {}", destinationDef.getDockerImageTag());
 
-    testHarness = new AcceptanceTestHarness(apiClient, workspaceId);
+    testHarness = new AcceptanceTestHarness(apiClient, null, workspaceId);
     kubernetesClient = testHarness.getKubernetesClient();
   }
 
@@ -138,7 +136,7 @@ class ContainerOrchestratorAcceptanceTests {
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
 
     LOGGER.info("Waiting for job to run...");
-    waitWhileJobHasStatus(apiClient.getJobsApi(), connectionSyncRead.getJob(), Set.of(JobStatus.PENDING));
+    testHarness.waitWhileJobHasStatus(connectionSyncRead.getJob(), Set.of(JobStatus.PENDING));
 
     LOGGER.info("Scaling down worker...");
     kubernetesClient.apps().deployments().inNamespace(NAMESPACE).withName(AIRBYTE_WORKER).scale(0, true);
@@ -146,7 +144,7 @@ class ContainerOrchestratorAcceptanceTests {
     LOGGER.info("Scaling up worker...");
     kubernetesClient.apps().deployments().inNamespace(NAMESPACE).withName(AIRBYTE_WORKER).scale(1);
 
-    waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
+    testHarness.waitForSuccessfulJob(connectionSyncRead.getJob());
   }
 
   @AfterEach
@@ -173,7 +171,7 @@ class ContainerOrchestratorAcceptanceTests {
             .getConnectionId();
 
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
-    waitWhileJobHasStatus(apiClient.getJobsApi(), connectionSyncRead.getJob(), Set.of(JobStatus.PENDING));
+    testHarness.waitWhileJobHasStatus(connectionSyncRead.getJob(), Set.of(JobStatus.PENDING));
 
     kubernetesClient.apps().deployments().inNamespace(NAMESPACE).withName(AIRBYTE_WORKER).scale(0, true);
     kubernetesClient.apps().deployments().inNamespace(NAMESPACE).withName(AIRBYTE_WORKER).scale(1);
@@ -208,7 +206,7 @@ class ContainerOrchestratorAcceptanceTests {
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
 
     LOGGER.info("Waiting for job to run...");
-    waitWhileJobHasStatus(apiClient.getJobsApi(), connectionSyncRead.getJob(), Set.of(JobStatus.PENDING));
+    testHarness.waitWhileJobHasStatus(connectionSyncRead.getJob(), Set.of(JobStatus.PENDING));
 
     LOGGER.info("Waiting for job to run a little...");
     Thread.sleep(1000);

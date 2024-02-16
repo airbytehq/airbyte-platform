@@ -4,7 +4,6 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.test.utils.AcceptanceTestHarness.waitForSuccessfulJob;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -177,7 +176,7 @@ public class ConnectorBuilderTests {
     workspaceId = apiClient.getWorkspaceApi()
         .createWorkspace(new WorkspaceCreate().email("acceptance-tests@airbyte.io").name("Airbyte Acceptance Tests" + UUID.randomUUID().toString()))
         .getWorkspaceId();
-    testHarness = new AcceptanceTestHarness(apiClient, workspaceId);
+    testHarness = new AcceptanceTestHarness(apiClient, null, workspaceId);
     testHarness.setup();
 
     echoServer = new GenericContainer(DockerImageName.parse(ECHO_SERVER_IMAGE)).withExposedPorts(8080);
@@ -252,7 +251,7 @@ public class ConnectorBuilderTests {
   private static void runConnection(final UUID connectionId) throws ApiException, InterruptedException {
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi()
         .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
-    waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
+    testHarness.waitForSuccessfulJob(connectionSyncRead.getJob());
   }
 
   private String getEchoServerUrl() {

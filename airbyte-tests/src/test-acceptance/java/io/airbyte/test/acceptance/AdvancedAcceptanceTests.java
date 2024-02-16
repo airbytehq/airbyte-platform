@@ -6,9 +6,6 @@ package io.airbyte.test.acceptance;
 
 import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_ID;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
-import static io.airbyte.test.utils.AcceptanceTestHarness.waitForConnectionState;
-import static io.airbyte.test.utils.AcceptanceTestHarness.waitForSuccessfulJob;
-import static io.airbyte.test.utils.AcceptanceTestHarness.waitWhileJobHasStatus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,13 +19,11 @@ import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.AirbyteStream;
 import io.airbyte.api.client.model.generated.AttemptInfoRead;
-import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.client.model.generated.DestinationRead;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
-import io.airbyte.api.client.model.generated.JobIdRequestBody;
 import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobStatus;
@@ -89,14 +84,13 @@ class AdvancedAcceptanceTests {
   private static final String COLUMN1 = "column1";
 
   private static AcceptanceTestHarness testHarness;
-  private static AirbyteApiClient apiClient;
   private static UUID workspaceId;
   private static final String AIRBYTE_SERVER_HOST = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001");
 
   @BeforeAll
   static void init() throws URISyntaxException, IOException, InterruptedException, ApiException {
     final URI url = new URI(AIRBYTE_SERVER_HOST);
-    apiClient = new AirbyteApiClient(
+    final var apiClient = new AirbyteApiClient(
         new ApiClient().setScheme(url.getScheme())
             .setHost(url.getHost())
             .setPort(url.getPort())
@@ -115,7 +109,7 @@ class AdvancedAcceptanceTests {
     LOGGER.info("pg source definition: {}", sourceDef.getDockerImageTag());
     LOGGER.info("pg destination definition: {}", destinationDef.getDockerImageTag());
 
-    testHarness = new AcceptanceTestHarness(apiClient, workspaceId);
+    testHarness = new AcceptanceTestHarness(apiClient, null, workspaceId);
   }
 
   @AfterAll
@@ -146,14 +140,14 @@ class AdvancedAcceptanceTests {
             discoverResult.getCatalogId())
                 .build());
     final var connectionId = conn.getConnectionId();
-    final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
-    waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
+    final JobInfoRead connectionSyncRead = testHarness.syncConnection(connectionId);
+    testHarness.waitForSuccessfulJob(connectionSyncRead.getJob());
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
         conn.getNamespaceFormat(), false, false);
 
     LOGGER.info("===== before stream");
-    final var finalJob = apiClient.getJobsApi().getJobInfoWithoutLogs(new JobIdRequestBody().id(connectionSyncRead.getJob().getId()));
-    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, finalJob, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    final var finalJob = testHarness.getJobInfoRead(connectionSyncRead.getJob().getId());
+    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, finalJob, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
 
     testHarness.cleanup();
   }
@@ -203,21 +197,20 @@ class AdvancedAcceptanceTests {
             catalog,
             discoverResult.getCatalogId()).build())
             .getConnectionId();
-    final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
-        .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
+    final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
 
     // wait to get out of pending.
-    final JobRead runningJob = waitWhileJobHasStatus(apiClient.getJobsApi(), connectionSyncRead1.getJob(), Sets.newHashSet(JobStatus.PENDING));
+    final JobRead runningJob = testHarness.waitWhileJobHasStatus(connectionSyncRead1.getJob(), Sets.newHashSet(JobStatus.PENDING));
     // wait to get out of running.
-    waitWhileJobHasStatus(apiClient.getJobsApi(), runningJob, Sets.newHashSet(JobStatus.RUNNING));
+    testHarness.waitWhileJobHasStatus(runningJob, Sets.newHashSet(JobStatus.RUNNING));
     // now cancel it so that we freeze state!
     try {
-      apiClient.getJobsApi().cancelJob(new JobIdRequestBody().id(connectionSyncRead1.getJob().getId()));
+      testHarness.cancelSync(connectionSyncRead1.getJob().getId());
     } catch (final Exception e) {
       LOGGER.error("error:", e);
     }
 
-    final ConnectionState connectionState = waitForConnectionState(apiClient, connectionId);
+    final ConnectionState connectionState = testHarness.waitForConnectionState(connectionId);
 
     /*
      * the source is set to emit a state message every 5th message. because of the multithreaded nature,
@@ -268,15 +261,14 @@ class AdvancedAcceptanceTests {
             catalog,
             discoverResult.getCatalogId()).build())
             .getConnectionId();
-    final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
-        .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
+    final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
 
     // wait to get out of pending.
-    final JobRead runningJob = waitWhileJobHasStatus(apiClient.getJobsApi(), connectionSyncRead1.getJob(), Sets.newHashSet(JobStatus.PENDING));
+    final JobRead runningJob = testHarness.waitWhileJobHasStatus(connectionSyncRead1.getJob(), Sets.newHashSet(JobStatus.PENDING));
     // wait to get out of running.
-    waitWhileJobHasStatus(apiClient.getJobsApi(), runningJob, Sets.newHashSet(JobStatus.RUNNING));
+    testHarness.waitWhileJobHasStatus(runningJob, Sets.newHashSet(JobStatus.RUNNING));
 
-    final JobInfoRead jobInfo = apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(runningJob.getId()));
+    final JobInfoRead jobInfo = testHarness.getJobInfoRead(runningJob.getId());
     final AttemptInfoRead attemptInfoRead = jobInfo.getAttempts().get(jobInfo.getAttempts().size() - 1);
     assertNotNull(attemptInfoRead);
 
