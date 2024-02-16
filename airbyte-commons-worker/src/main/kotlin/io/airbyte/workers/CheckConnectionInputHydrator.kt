@@ -5,7 +5,7 @@ import io.airbyte.config.StandardCheckConnectionInput
 import java.util.UUID
 
 class CheckConnectionInputHydrator(
-  private val hydrator: BaseInputHydrator,
+  private val hydrator: ConnectorSecretsHydrator,
 ) {
   fun getHydratedStandardCheckInput(rawInput: StandardCheckConnectionInput): StandardCheckConnectionInput {
     val organizationId: UUID? = rawInput.actorContext.organizationId

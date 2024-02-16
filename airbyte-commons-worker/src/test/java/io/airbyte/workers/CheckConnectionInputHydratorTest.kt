@@ -13,11 +13,11 @@ import java.util.UUID
 class CheckConnectionInputHydratorTest {
   @Test
   fun `hydrates from base hydrator and copies expected values over`() {
-    val base: BaseInputHydrator = mockk()
+    val base: ConnectorSecretsHydrator = mockk()
 
     val hydrator = CheckConnectionInputHydrator(base)
 
-    val unhyrdatedConfig = POJONode("un-hydrated")
+    val unhydratedConfig = POJONode("un-hydrated")
     val hydratedConfig = POJONode("hydrated")
 
     val orgId = UUID.randomUUID()
@@ -26,9 +26,9 @@ class CheckConnectionInputHydratorTest {
         .withActorContext(ActorContext().withOrganizationId(orgId))
         .withActorType(ActorType.DESTINATION)
         .withActorId(UUID.randomUUID())
-        .withConnectionConfiguration(unhyrdatedConfig)
+        .withConnectionConfiguration(unhydratedConfig)
 
-    every { base.hydrateConfig(unhyrdatedConfig, orgId) } returns hydratedConfig
+    every { base.hydrateConfig(unhydratedConfig, orgId) } returns hydratedConfig
 
     val result = hydrator.getHydratedStandardCheckInput(input)
 

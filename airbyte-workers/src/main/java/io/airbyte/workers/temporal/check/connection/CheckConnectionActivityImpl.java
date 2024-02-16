@@ -48,8 +48,8 @@ import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
-import io.airbyte.workers.BaseInputHydrator;
 import io.airbyte.workers.CheckConnectionInputHydrator;
+import io.airbyte.workers.ConnectorSecretsHydrator;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.general.DefaultCheckConnectionWorker;
@@ -147,7 +147,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         workloadIdGenerator,
         jobOutputDocStore,
         new CheckConnectionInputHydrator(
-            new BaseInputHydrator(
+            new ConnectorSecretsHydrator(
                 secretsRepositoryReader,
                 airbyteApiClient.getSecretPersistenceConfigApi(),
                 featureFlagClient)),

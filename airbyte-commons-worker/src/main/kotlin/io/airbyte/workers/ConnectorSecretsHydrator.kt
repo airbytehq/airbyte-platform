@@ -14,7 +14,10 @@ import io.airbyte.workers.helper.SecretPersistenceConfigHelper
 import java.lang.RuntimeException
 import java.util.UUID
 
-class BaseInputHydrator(
+/**
+ * Performs secrets hydration of raw JSON connector configs.
+ */
+class ConnectorSecretsHydrator(
   private val secretsRepositoryReader: SecretsRepositoryReader,
   private val secretsApiClient: SecretsPersistenceConfigApi,
   private val featureFlagClient: FeatureFlagClient,
@@ -26,10 +29,14 @@ class BaseInputHydrator(
     return if (useRuntimeHydration(organizationId)) {
       hydrateFromRuntimePersistence(jsonConfig, organizationId!!) // useRuntimeHydration null checks org id
     } else {
+      // Hydrates secrets from Airbyte's secret manager.
       secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(jsonConfig)
     }
   }
 
+  /**
+   *  Hydrates secrets from customer's configured secret manager.
+   */
   private fun hydrateFromRuntimePersistence(
     jsonConfig: JsonNode,
     organizationId: UUID,

@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
-class BaseInputHydratorTest {
+class ConnectorSecretsHydratorTest {
   @Test
   fun `uses runtime hydration if ff enabled for organization id`() {
     val secretsRepositoryReader: SecretsRepositoryReader = mockk()
@@ -27,13 +27,13 @@ class BaseInputHydratorTest {
     val featureFlagClient: FeatureFlagClient = mockk()
 
     val hydrator =
-      BaseInputHydrator(
+      ConnectorSecretsHydrator(
         secretsRepositoryReader,
         secretsApiClient,
         featureFlagClient,
       )
 
-    val unhyrdatedConfig = POJONode("un-hydrated")
+    val unhydratedConfig = POJONode("un-hydrated")
     val hydratedConfig = POJONode("hydrated")
 
     val orgId = UUID.randomUUID()
@@ -50,13 +50,13 @@ class BaseInputHydratorTest {
     every { SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretConfig) } returns runtimeSecretPersistence
 
     every { secretsApiClient.getSecretsPersistenceConfig(any()) } returns secretConfig
-    every { secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(unhyrdatedConfig, runtimeSecretPersistence) } returns hydratedConfig
+    every { secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(unhydratedConfig, runtimeSecretPersistence) } returns hydratedConfig
 
     every { featureFlagClient.boolVariation(eq(UseRuntimeSecretPersistence), eq(Organization(orgId))) } returns true
 
-    val result = hydrator.hydrateConfig(unhyrdatedConfig, orgId)
+    val result = hydrator.hydrateConfig(unhydratedConfig, orgId)
 
-    verify { secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(unhyrdatedConfig, runtimeSecretPersistence) }
+    verify { secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(unhydratedConfig, runtimeSecretPersistence) }
 
     Assertions.assertEquals(hydratedConfig, result)
   }
@@ -68,24 +68,24 @@ class BaseInputHydratorTest {
     val featureFlagClient: FeatureFlagClient = mockk()
 
     val hydrator =
-      BaseInputHydrator(
+      ConnectorSecretsHydrator(
         secretsRepositoryReader,
         secretsApiClient,
         featureFlagClient,
       )
 
-    val unhyrdatedConfig = POJONode("un-hydrated")
+    val unhydratedConfig = POJONode("un-hydrated")
     val hydratedConfig = POJONode("hydrated")
 
     val orgId = UUID.randomUUID()
 
-    every { secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(unhyrdatedConfig) } returns hydratedConfig
+    every { secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(unhydratedConfig) } returns hydratedConfig
 
     every { featureFlagClient.boolVariation(eq(UseRuntimeSecretPersistence), eq(Organization(orgId))) } returns false
 
-    val result = hydrator.hydrateConfig(unhyrdatedConfig, orgId)
+    val result = hydrator.hydrateConfig(unhydratedConfig, orgId)
 
-    verify { secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(unhyrdatedConfig) }
+    verify { secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(unhydratedConfig) }
 
     Assertions.assertEquals(hydratedConfig, result)
   }
