@@ -241,7 +241,7 @@ endpoints:
     sensitive: false
   threaddump:
     enabled: true
-    sensitive: true
+    sensitive: false
 
 temporal:
   cloud:
