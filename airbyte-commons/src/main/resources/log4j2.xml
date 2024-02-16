@@ -13,8 +13,8 @@
         <!-- Note that logging to S3 will leverage the DefaultAWSCredentialsProviderChain for auth. -->
         <Property name="s3-bucket">${sys:S3_LOG_BUCKET:-${env:S3_LOG_BUCKET:-}}</Property>
         <Property name="s3-region">${sys:S3_LOG_BUCKET_REGION:-${env:S3_LOG_BUCKET_REGION:-}}</Property>
-        <Property name="s3-minio-endpoint">${sys:S3_MINIO_ENDPOINT:-${env:S3_MINIO_ENDPOINT}}</Property>
-        <Property name="s3-path-style-access">${sys:S3_PATH_STYLE_ACCESS:-${env:S3_PATH_STYLE_ACCESS}}</Property>
+        <Property name="s3-minio-endpoint">${sys:S3_MINIO_ENDPOINT:-${env:S3_MINIO_ENDPOINT:-}}</Property>
+        <Property name="s3-path-style-access">${sys:S3_PATH_STYLE_ACCESS:-${env:S3_PATH_STYLE_ACCESS:-}}</Property>
 
         <Property name="gcs-log-bucket">${sys:GCS_LOG_BUCKET:-${env:GCS_LOG_BUCKET:-}}</Property>
     </Properties>
