@@ -45,6 +45,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -168,17 +169,21 @@ public class JobNotifier {
   Map<String, Object> buildNotificationMetadata(final UUID connectionId, final NotificationItem notificationItem) {
     final Builder<String, Object> notificationMetadata = ImmutableMap.builder();
     notificationMetadata.put("connection_id", connectionId);
+    List<String> notificationTypes = new ArrayList<>();
     for (final var notificationType : notificationItem.getNotificationType()) {
       if (NotificationType.SLACK.equals(notificationType)
           && notificationItem.getSlackConfiguration().getWebhook().contains("hooks.slack.com")) {
         // flag as slack if the webhook URL is also pointing to slack
-        notificationMetadata.put("notification_type", NotificationType.SLACK);
+        notificationTypes.add(NotificationType.SLACK.toString());
       } else if (NotificationType.CUSTOMERIO.equals(notificationType)) {
-        notificationMetadata.put("notification_type", NotificationType.CUSTOMERIO);
+        notificationTypes.add(NotificationType.CUSTOMERIO.toString());
       } else {
         // Slack Notification type could be "hacked" and re-used for custom webhooks
-        notificationMetadata.put("notification_type", "N/A");
+        notificationTypes.add("N/A");
       }
+    }
+    if (!notificationTypes.isEmpty()) {
+      notificationMetadata.put("notification_type", notificationTypes);
     }
     return notificationMetadata.build();
   }

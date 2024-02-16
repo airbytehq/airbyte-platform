@@ -138,7 +138,7 @@ class JobNotifierTest {
     metadata.put("connector_destination", "destination-test");
     metadata.put("connector_destination_version", TEST_DOCKER_TAG);
     metadata.put("connector_destination_docker_repository", actorDefinitionVersion.getDockerRepository());
-    metadata.put("notification_type", NotificationType.SLACK);
+    metadata.put("notification_type", List.of(NotificationType.SLACK.toString()));
     verify(trackingClient).track(WORKSPACE_ID, JobNotifier.FAILURE_NOTIFICATION, metadata.build());
   }
 
@@ -170,6 +170,17 @@ class JobNotifierTest {
         ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
     verify(customerIoNotificationClient).notifyConnectionDisabled(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
         ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
+  }
+
+  @Test
+  void testBuildNotificationMetadata() {
+    NotificationItem notificationItem = new NotificationItem()
+        .withNotificationType(List.of(NotificationType.SLACK, NotificationType.CUSTOMERIO))
+        .withSlackConfiguration(new SlackNotificationConfiguration().withWebhook("http://someurl"));
+    UUID connectionId = UUID.randomUUID();
+    var metadata = jobNotifier.buildNotificationMetadata(connectionId, notificationItem);
+    assert metadata.get("connection_id").toString().equals(connectionId.toString());
+    assert metadata.containsKey("notification_type");
   }
 
   private static StandardWorkspace getWorkspace() {
