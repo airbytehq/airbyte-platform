@@ -846,12 +846,10 @@ public class AcceptanceTestHarness {
     }
   }
 
-  public JobInfoRead getJobInfoRead(final long id) {
-    try {
-      return apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(id));
-    } catch (final ApiException e) {
-      throw new RuntimeException(e);
-    }
+  public JobInfoRead getJobInfoRead(final long id) throws Exception {
+    return AirbyteApiClient.retryWithJitterThrows(
+        () -> apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(id)),
+        "get job info", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 
   public SourceDefinitionRead createE2eSourceDefinition(final UUID workspaceId) {
@@ -1085,7 +1083,7 @@ public class AcceptanceTestHarness {
    * TODO: re-work the collection of polling helpers we have here into a sane set that rely on test
    * timeouts instead of implementing their own deadline logic.
    */
-  public void waitForSuccessfulSyncNoTimeout(final JobRead jobRead) throws InterruptedException {
+  public void waitForSuccessfulSyncNoTimeout(final JobRead jobRead) throws Exception {
     var job = jobRead;
     while (IN_PROGRESS_JOB_STATUSES.contains(job.getStatus())) {
       job = getJobInfoRead(job.getId()).getJob();

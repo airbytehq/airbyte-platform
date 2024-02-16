@@ -414,7 +414,6 @@ class BasicAcceptanceTests {
             .build());
     final var connectionId = conn.getConnectionId();
     final var jobRead = testHarness.getMostRecentSyncForConnection(connectionId);
-    final var jobInfoRead = testHarness.getJobInfoRead(jobRead.getId());
 
     testResources.waitForSuccessfulJobWithRetries(jobRead);
 
@@ -422,7 +421,7 @@ class BasicAcceptanceTests {
         testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
         conn.getNamespaceFormat(),
         false, WITHOUT_SCD_TABLE);
-    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, jobInfoRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, jobRead.getId(), StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -449,7 +448,6 @@ class BasicAcceptanceTests {
 
     final var connectionId = conn.getConnectionId();
     final var jobRead = testHarness.getMostRecentSyncForConnection(connectionId);
-    final var jobInfoRead = testHarness.getJobInfoRead(jobRead.getId());
 
     testResources.waitForSuccessfulJobWithRetries(jobRead);
 
@@ -465,7 +463,7 @@ class BasicAcceptanceTests {
         MAX_TRIES);
     assertEquals("success", retryAssertOutcome);
 
-    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, jobInfoRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, jobRead.getId(), StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
 
     testHarness.deleteConnection(connectionId);
 
@@ -499,7 +497,8 @@ class BasicAcceptanceTests {
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(
         testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(),
         Set.of(PUBLIC_SCHEMA_NAME, "staging"), conn.getNamespaceFormat(), false, false);
-    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, connectionSyncRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, connectionSyncRead.getJob().getId(), StreamStatusRunState.COMPLETE,
+        StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -533,7 +532,8 @@ class BasicAcceptanceTests {
         testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
         conn.getNamespaceFormat().replace("${SOURCE_NAMESPACE}", PUBLIC), false,
         WITHOUT_SCD_TABLE);
-    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, connectionSyncRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, connectionSyncRead.getJob().getId(), StreamStatusRunState.COMPLETE,
+        StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -571,7 +571,7 @@ class BasicAcceptanceTests {
     final var dst = testHarness.getDestinationDatabase();
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), dst, PUBLIC_SCHEMA_NAME, conn.getNamespaceFormat(), true,
         WITH_SCD_TABLE);
-    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, connectionSyncRead1, StreamStatusRunState.COMPLETE,
+    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, connectionSyncRead1.getJob().getId(), StreamStatusRunState.COMPLETE,
         StreamStatusJobType.SYNC);
 
     // add new records and run again.
@@ -590,7 +590,7 @@ class BasicAcceptanceTests {
 
     Asserts.assertRawDestinationContains(dst, expectedRawRecords, conn.getNamespaceFormat(), STREAM_NAME);
     Asserts.assertNormalizedDestinationContains(dst, conn.getNamespaceFormat(), expectedNormalizedRecords);
-    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, connectionSyncRead2, StreamStatusRunState.COMPLETE,
+    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, connectionSyncRead2.getJob().getId(), StreamStatusRunState.COMPLETE,
         StreamStatusJobType.SYNC);
   }
 

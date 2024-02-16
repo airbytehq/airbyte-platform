@@ -21,7 +21,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ConnectionState;
-import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamState;
 import io.airbyte.api.client.model.generated.StreamStatusJobType;
@@ -204,10 +203,11 @@ public class Asserts {
                                           final AcceptanceTestHarness testHarness,
                                           final UUID workspaceId,
                                           final UUID connectionId,
-                                          final JobInfoRead jobInfoRead,
+                                          final Long jobId,
                                           final StreamStatusRunState expectedRunState,
-                                          final StreamStatusJobType expectedJobType) {
-    final var jobId = jobInfoRead.getJob().getId();
+                                          final StreamStatusJobType expectedJobType)
+      throws Exception {
+    final var jobInfoRead = testHarness.getJobInfoRead(jobId);
     final var attemptNumber = jobInfoRead.getAttempts().size() - 1;
 
     final List<StreamStatusRead> streamStatuses = fetchStreamStatus(testHarness, workspaceId, connectionId, jobId, attemptNumber);

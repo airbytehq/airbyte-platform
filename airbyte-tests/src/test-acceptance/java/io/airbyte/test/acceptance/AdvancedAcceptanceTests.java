@@ -146,8 +146,8 @@ class AdvancedAcceptanceTests {
         conn.getNamespaceFormat(), false, false);
 
     LOGGER.info("===== before stream");
-    final var finalJob = testHarness.getJobInfoRead(connectionSyncRead.getJob().getId());
-    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, finalJob, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, connectionSyncRead.getJob().getId(), StreamStatusRunState.COMPLETE,
+        StreamStatusJobType.SYNC);
 
     testHarness.cleanup();
   }
