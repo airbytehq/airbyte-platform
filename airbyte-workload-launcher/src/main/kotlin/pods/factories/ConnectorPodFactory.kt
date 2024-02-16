@@ -19,7 +19,7 @@ import io.fabric8.kubernetes.api.model.Toleration
 import io.fabric8.kubernetes.api.model.Volume
 import io.fabric8.kubernetes.api.model.VolumeMount
 
-class ConnectorSidecarPodFactory(
+class ConnectorPodFactory(
   private val operationCommand: String,
   private val featureFlagClient: FeatureFlagClient,
   private val connectorReqs: ResourceRequirements,
@@ -132,11 +132,11 @@ class ConnectorSidecarPodFactory(
     val mainCommand =
       """
       pwd
-      
+
       eval "${'$'}AIRBYTE_ENTRYPOINT $operationCommand --config ${KubePodProcess.CONFIG_DIR}/connectionConfiguration.json" > ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.JOB_OUTPUT_FILENAME}
       
       cat ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.JOB_OUTPUT_FILENAME}
-      
+
       echo $? > ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.EXIT_CODE_FILE}
       """.trimIndent()
 

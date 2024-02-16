@@ -33,6 +33,20 @@ class PodNameGenerator(
     )
   }
 
+  fun getDiscoverPodName(
+    image: String,
+    jobId: String,
+    attemptId: Long,
+  ): String {
+    return ProcessFactory.createProcessName(
+      image,
+      "discover",
+      jobId,
+      attemptId.toInt(),
+      KUBE_NAME_LEN_LIMIT,
+    )
+  }
+
   fun getOrchestratorOutputLocation(
     jobId: String,
     attemptId: Long,

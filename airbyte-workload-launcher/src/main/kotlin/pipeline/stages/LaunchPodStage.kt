@@ -6,6 +6,7 @@ import io.airbyte.metrics.annotations.Tag
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
+import io.airbyte.workload.launcher.pipeline.stages.model.DiscoverCatalogPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
@@ -40,7 +41,7 @@ open class LaunchPodStage(private val launcher: PodClient, metricPublisher: Cust
     when (payload) {
       is SyncPayload -> launcher.launchReplication(payload.input, input.msg)
       is CheckPayload -> launcher.launchCheck(payload.input, input.msg)
-      else -> logger.info { "${payload.javaClass.name} not supported yet." }
+      is DiscoverCatalogPayload -> launcher.launchDiscover(payload.input, input.msg)
     }
 
     return input

@@ -11,6 +11,7 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
+import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SidecarInput.OperationType
 import io.airbyte.workers.orchestrator.PodNameGenerator
@@ -47,13 +48,14 @@ class PayloadKubeInputMapper(
   @Named("connectorAwsAssumedRoleSecretEnv") private val connectorAwsAssumedRoleSecretEnvList: List<EnvVar>,
   @Named("replicationWorkerConfigs") private val replicationWorkerConfigs: WorkerConfigs,
   @Named("checkWorkerConfigs") private val checkWorkerConfigs: WorkerConfigs,
+  @Named("discoverWorkerConfigs") private val discoverWorkerConfigs: WorkerConfigs,
   private val featureFlagClient: FeatureFlagClient,
 ) {
   fun toKubeInput(
     workloadId: String,
     input: ReplicationInput,
     sharedLabels: Map<String, String>,
-  ): ReplicationOrchestratorKubeInput {
+  ): OrchestratorKubeInput {
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
 
@@ -71,7 +73,7 @@ class PayloadKubeInputMapper(
 
     val fileMap = buildSyncFileMap(workloadId, input, input.jobRunConfig, orchestratorPodInfo)
 
-    return ReplicationOrchestratorKubeInput(
+    return OrchestratorKubeInput(
       labeler.getReplicationOrchestratorLabels() + sharedLabels,
       labeler.getSourceLabels() + sharedLabels,
       labeler.getDestinationLabels() + sharedLabels,
@@ -97,7 +99,7 @@ class PayloadKubeInputMapper(
     workloadId: String,
     input: CheckConnectionInput,
     sharedLabels: Map<String, String>,
-  ): CheckConnectorKubeInput {
+  ): ConnectorKubeInput {
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
 
@@ -119,12 +121,48 @@ class PayloadKubeInputMapper(
 
     val extraEnv = resolveAwsAssumedRoleEnvVars(input.launcherConfig)
 
-    return CheckConnectorKubeInput(
+    return ConnectorKubeInput(
       labeler.getCheckConnectorLabels() + sharedLabels,
       nodeSelectors,
       connectorPodInfo,
       fileMap,
       checkWorkerConfigs.workerKubeAnnotations,
+      extraEnv,
+    )
+  }
+
+  fun toKubeInput(
+    workloadId: String,
+    input: DiscoverCatalogInput,
+    sharedLabels: Map<String, String>,
+  ): ConnectorKubeInput {
+    val jobId = input.getJobId()
+    val attemptId = input.getAttemptId()
+
+    val podName = podNameGenerator.getDiscoverPodName(input.launcherConfig.dockerImage, jobId, attemptId)
+
+    val connectorPodInfo =
+      KubePodInfo(
+        namespace,
+        podName,
+        KubeContainerInfo(
+          input.launcherConfig.dockerImage,
+          discoverWorkerConfigs.jobImagePullPolicy,
+        ),
+      )
+
+    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), discoverWorkerConfigs)
+
+    val fileMap = buildDiscoverFileMap(workloadId, input, input.jobRunConfig)
+
+    val extraEnv = resolveAwsAssumedRoleEnvVars(input.launcherConfig)
+
+    return ConnectorKubeInput(
+      labeler.getCheckConnectorLabels() + sharedLabels,
+      nodeSelectors,
+      connectorPodInfo,
+      fileMap,
+      discoverWorkerConfigs.workerKubeAnnotations,
       extraEnv,
     )
   }
@@ -199,6 +237,27 @@ class PayloadKubeInputMapper(
       )
   }
 
+  private fun buildDiscoverFileMap(
+    workloadId: String,
+    input: DiscoverCatalogInput,
+    jobRunConfig: JobRunConfig,
+  ): Map<String, String> {
+    return sharedFileMap(jobRunConfig) +
+      mapOf(
+        OrchestratorConstants.CONNECTION_CONFIGURATION to serializer.serialize(input.discoverCatalogInput.connectionConfiguration),
+        OrchestratorConstants.SIDECAR_INPUT to
+          serializer.serialize(
+            SidecarInput(
+              null,
+              input.discoverCatalogInput,
+              workloadId,
+              input.launcherConfig,
+              OperationType.DISCOVER,
+            ),
+          ),
+      )
+  }
+
   private fun sharedFileMap(jobRunConfig: JobRunConfig): Map<String, String> {
     return mapOf(
       OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to serializer.serialize(jobRunConfig),
@@ -206,7 +265,7 @@ class PayloadKubeInputMapper(
   }
 }
 
-data class ReplicationOrchestratorKubeInput(
+data class OrchestratorKubeInput(
   val orchestratorLabels: Map<String, String>,
   val sourceLabels: Map<String, String>,
   val destinationLabels: Map<String, String>,
@@ -217,7 +276,7 @@ data class ReplicationOrchestratorKubeInput(
   val annotations: Map<String, String>,
 )
 
-data class CheckConnectorKubeInput(
+data class ConnectorKubeInput(
   val connectorLabels: Map<String, String>,
   val nodeSelectors: Map<String, String>,
   val kubePodInfo: KubePodInfo,

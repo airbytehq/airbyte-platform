@@ -3,7 +3,7 @@ package io.airbyte.workload.launcher.config
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.workers.process.KubeContainerInfo
-import io.airbyte.workload.launcher.pods.factories.ConnectorSidecarPodFactory
+import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.VolumeFactory
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.LocalObjectReference
@@ -28,8 +28,8 @@ class PodFactoryBeanFactory {
     @Named("sidecarKubeContainerInfo") sidecarContainerInfo: KubeContainerInfo,
     @Value("\${airbyte.worker.job.kube.serviceAccount}") serviceAccount: String?,
     volumeFactory: VolumeFactory,
-  ): ConnectorSidecarPodFactory {
-    return ConnectorSidecarPodFactory(
+  ): ConnectorPodFactory {
+    return ConnectorPodFactory(
       "check",
       featureFlagClient,
       connectorReqs,
@@ -57,8 +57,8 @@ class PodFactoryBeanFactory {
     @Named("sidecarKubeContainerInfo") sidecarContainerInfo: KubeContainerInfo,
     @Value("\${airbyte.worker.job.kube.serviceAccount}") serviceAccount: String?,
     volumeFactory: VolumeFactory,
-  ): ConnectorSidecarPodFactory {
-    return ConnectorSidecarPodFactory(
+  ): ConnectorPodFactory {
+    return ConnectorPodFactory(
       "discover",
       featureFlagClient,
       connectorReqs,
