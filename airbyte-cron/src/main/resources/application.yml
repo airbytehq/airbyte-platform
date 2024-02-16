@@ -59,8 +59,8 @@ airbyte:
       not-started-check-rate: PT1M
       non-sync-age-check-rate: PT1M
       sync-age-check-rate: PT1M
-      non-sync-workload-timeout: ${NON_SYNC_WORKLOAD_TIMEOUT:PT9M}
-      sync-workload-timeout: ${SYNC_WORKLOAD_TIMEOUT:P30D}
+      non-sync-workload-timeout: ${NON_SYNC_WORKLOAD_TIMEOUT:PT4H} # Should be longer than the sum of the deadlines
+      sync-workload-timeout: ${SYNC_WORKLOAD_TIMEOUT:P30D} # Should be longer than the sum of the deadlines
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
