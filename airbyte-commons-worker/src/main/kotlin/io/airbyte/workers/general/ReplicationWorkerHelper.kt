@@ -138,12 +138,12 @@ class ReplicationWorkerHelper(
               WorkloadHeartbeatRequest(workloadId.get()),
             )
             lastSuccessfulHeartbeat = Instant.now()
-          }
-          /**
-           * The WorkloadApi returns responseCode "410" from the heartbeat endpoint if
-           * Workload should stop because it is no longer expected to be running.
-           * See [io.airbyte.workload.api.WorkloadApi.workloadHeartbeat]
-           */ catch (e: Exception) {
+          } catch (e: Exception) {
+            /**
+             * The WorkloadApi returns responseCode "410" from the heartbeat endpoint if
+             * Workload should stop because it is no longer expected to be running.
+             * See [io.airbyte.workload.api.WorkloadApi.workloadHeartbeat]
+             */
             if (e is ClientException && e.statusCode == HttpStatus.GONE.code) {
               logger.warn(e) { "Received kill response from API, shutting down heartbeat" }
               markCancelled()
