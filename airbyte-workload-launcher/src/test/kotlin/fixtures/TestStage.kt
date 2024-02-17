@@ -18,7 +18,8 @@ class TestStage(
   private val msgTemplate: (name: StageName, input: LaunchStageIO) -> String,
   private val shouldThrow: Boolean = false,
   metricPublisher: CustomMetricPublisher = mockk(relaxed = true),
-) : LaunchStage(metricPublisher) {
+  dataplaneId: String = "test-data-plane",
+) : LaunchStage(metricPublisher, dataplaneId) {
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
     logger.info { msgTemplate(name, input) }
 

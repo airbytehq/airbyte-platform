@@ -9,13 +9,16 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.util.Optional
 import java.util.function.Function
 import javax.ws.rs.ClientErrorException
 
 class SuccessHandlerTest {
-  @Test
-  fun `workload status updated to launched`() {
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun `workload status updated to launched if not skipped`(skipped: Boolean) {
     val apiClient: WorkloadApiClient = mockk()
     val metricClient: CustomMetricPublisher = mockk()
     val logMsgTmp: Optional<Function<String, String>> = Optional.empty()
@@ -24,6 +27,7 @@ class SuccessHandlerTest {
 
     val workloadId = "1337"
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadId = workloadId))
+    io.skip = skipped
 
     every {
       metricClient.count(
@@ -39,7 +43,11 @@ class SuccessHandlerTest {
 
     handler.accept(io)
 
-    verify { apiClient.updateStatusToLaunched(workloadId) }
+    if (skipped) {
+      verify(exactly = 0) { apiClient.updateStatusToLaunched(workloadId) }
+    } else {
+      verify { apiClient.updateStatusToLaunched(workloadId) }
+    }
   }
 
   @Test

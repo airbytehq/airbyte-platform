@@ -21,6 +21,7 @@ import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.WorkloadPayload
 import io.airbyte.workload.launcher.serde.PayloadDeserializer
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
@@ -40,7 +41,8 @@ open class BuildInputStage(
   private val replicationInputHydrator: ReplicationInputHydrator,
   private val deserializer: PayloadDeserializer,
   metricPublisher: CustomMetricPublisher,
-) : LaunchStage(metricPublisher) {
+  @Value("\${airbyte.data-plane-id}") dataplaneId: String,
+) : LaunchStage(metricPublisher, dataplaneId) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "BuildInputStage")
   @Instrument(
     start = "WORKLOAD_STAGE_START",

@@ -54,6 +54,7 @@ class BuildInputStageTest {
         replicationInputHydrator,
         deserializer,
         mockk(),
+        "dataplane-id",
       )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.SYNC))
 
@@ -105,6 +106,7 @@ class BuildInputStageTest {
         replicationInputHydrator,
         deserializer,
         mockk(),
+        "dataplane-id",
       )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.CHECK))
 
@@ -156,6 +158,7 @@ class BuildInputStageTest {
         replicationInputHydrator,
         deserializer,
         mockk(),
+        "dataplane-id",
       )
     val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.DISCOVER))
 
