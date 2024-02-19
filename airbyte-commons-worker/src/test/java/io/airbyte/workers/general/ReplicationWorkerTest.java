@@ -491,7 +491,10 @@ abstract class ReplicationWorkerTest {
     // Since the thread was left to hang after the first call, we expect 1, not 2, calls to
     // validateInitializedSchema by the time the replication worker is done and shuts down the
     // validation thread. We therefore expect the metricReporter to only report on the first record.
-    verify(jsonSchemaValidator, Mockito.times(1)).validateInitializedSchema(any(), any());
+    // NOTE: we use atMost because validateInitializedSchema is called async, and isn't guaranteed to be
+    // invoked at all. The test still verifies that we shut it down without validating the second
+    // record.
+    verify(jsonSchemaValidator, Mockito.atMost(1)).validateInitializedSchema(any(), any());
   }
 
   @Test
