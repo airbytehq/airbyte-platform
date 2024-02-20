@@ -7,7 +7,6 @@ import { Text } from "components/ui/Text";
 
 import { ConnectionScheduleType } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./ConnectionConfigurationPreview.module.scss";
 import { FormConnectionFormValues } from "./formConfig";
@@ -94,20 +93,14 @@ const NonBreakingChanges: React.FC = () => {
   const { control } = useFormContext<FormConnectionFormValues>();
   const nonBreakingChangesPreference = useWatch({ name: "nonBreakingChangesPreference", control });
 
-  const autoPropagationEnabled = useExperiment("autopropagation.enabled", true);
-  const autoPropagationPrefix = autoPropagationEnabled ? "autopropagation." : "";
-  const labelKey = autoPropagationEnabled
-    ? "connectionForm.nonBreakingChangesPreference.autopropagation.label"
-    : "connectionForm.nonBreakingChangesPreference.label";
-
   return (
     <div>
       <Text size="xs" color="grey">
-        <FormattedMessage id={labelKey} />:
+        <FormattedMessage id="connectionForm.nonBreakingChangesPreference.autopropagation.label" />:
       </Text>
       <Text size="md" color="grey">
         <FormattedMessage
-          id={`connectionForm.nonBreakingChangesPreference.${autoPropagationPrefix}${nonBreakingChangesPreference}`}
+          id={`connectionForm.nonBreakingChangesPreference.autopropagation.${nonBreakingChangesPreference}`}
         />
       </Text>
     </div>

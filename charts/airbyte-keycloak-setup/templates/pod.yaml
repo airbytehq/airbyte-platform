@@ -63,8 +63,6 @@ spec:
             configMapKeyRef:
               name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
               key: KEYCLOAK_INTERNAL_HOST
-        - name: KEYCLOAK_SETUP_RESET_REALM
-          value: {{ .Values.resetRealm | default "false" | quote }}
         # Values from secret
         {{- if .Values.secrets }}
         {{- range $k, $v := .Values.secrets }}

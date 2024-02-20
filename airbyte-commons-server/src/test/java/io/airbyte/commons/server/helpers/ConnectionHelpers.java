@@ -25,6 +25,7 @@ import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.JobStatus;
 import io.airbyte.api.model.generated.ResourceRequirements;
 import io.airbyte.api.model.generated.SchemaChange;
+import io.airbyte.api.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceSnippetRead;
 import io.airbyte.api.model.generated.SyncMode;
@@ -170,7 +171,8 @@ public class ConnectionHelpers {
                                                               final Geography geography,
                                                               final boolean breaking,
                                                               final Boolean notifySchemaChange,
-                                                              final Boolean notifySchemaChangeByEmail) {
+                                                              final Boolean notifySchemaChangeByEmail,
+                                                              final SchemaChangeBackfillPreference backfillPreference) {
 
     return new ConnectionRead()
         .connectionId(connectionId)
@@ -194,7 +196,8 @@ public class ConnectionHelpers {
         .geography(geography)
         .breakingChange(breaking)
         .notifySchemaChanges(notifySchemaChange)
-        .notifySchemaChangesByEmail(notifySchemaChangeByEmail);
+        .notifySchemaChangesByEmail(notifySchemaChangeByEmail)
+        .backfillPreference(backfillPreference);
   }
 
   public static ConnectionRead generateExpectedConnectionRead(final StandardSync standardSync) {
@@ -207,7 +210,8 @@ public class ConnectionHelpers {
         Enums.convertTo(standardSync.getGeography(), Geography.class),
         standardSync.getBreakingChange(),
         standardSync.getNotifySchemaChanges(),
-        standardSync.getNotifySchemaChangesByEmail());
+        standardSync.getNotifySchemaChangesByEmail(),
+        Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class));
 
     if (standardSync.getSchedule() == null) {
       connectionRead.schedule(null);

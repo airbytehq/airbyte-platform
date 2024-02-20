@@ -9,8 +9,8 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { useSetupInstanceConfiguration } from "core/api";
-import { useConfig } from "core/config";
+import { useGetInstanceConfiguration, useSetupInstanceConfiguration } from "core/api";
+import { InstanceConfigurationResponseTrackingStrategy } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 
 import { SecurityCheck } from "./SecurityCheck";
@@ -45,8 +45,8 @@ const setupFormValidationSchema = yup.object().shape({
 
 export const SetupForm: React.FC = () => {
   const { formatMessage } = useIntl();
+  const { trackingStrategy } = useGetInstanceConfiguration();
   const { mutateAsync: setUpInstance } = useSetupInstanceConfiguration();
-  const config = useConfig();
   const analyticsService = useAnalyticsService();
 
   const onSubmit = async (values: SetupFormValues) => {
@@ -63,7 +63,7 @@ export const SetupForm: React.FC = () => {
     <Form<SetupFormValues>
       defaultValues={{
         email: "",
-        anonymousDataCollection: !config.segment.enabled,
+        anonymousDataCollection: trackingStrategy !== InstanceConfigurationResponseTrackingStrategy.segment,
         securityCheck: "loading",
       }}
       schema={setupFormValidationSchema}
@@ -84,7 +84,7 @@ export const SetupForm: React.FC = () => {
           label={formatMessage({ id: "form.organizationName" })}
           placeholder={formatMessage({ id: "form.organizationName.placeholder" })}
         />
-        {config.segment.enabled && (
+        {trackingStrategy === InstanceConfigurationResponseTrackingStrategy.segment && (
           <FormControl<SetupFormValues>
             name="anonymousDataCollection"
             fieldType="switch"

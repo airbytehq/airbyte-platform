@@ -53,10 +53,9 @@ class JwtUserAuthenticationResolverTest {
     assertEquals(expectedUserRead, userRead);
 
     // In this case we do not have ssoRealm in the attributes; expecting not throw and treat it as a
-    // request
-    // without realm.
-    final String ssoRealm = jwtUserAuthenticationResolver.resolveSsoRealm();
-    assertNull(ssoRealm);
+    // request without realm.
+    final Optional<String> ssoRealm = jwtUserAuthenticationResolver.resolveSsoRealm();
+    assertTrue(ssoRealm.isEmpty());
   }
 
   @Test
@@ -66,17 +65,17 @@ class JwtUserAuthenticationResolverTest {
         Optional.of(Authentication.build(AUTH_USER_ID, Map.of(JWT_AUTH_PROVIDER, AuthProvider.GOOGLE_IDENTITY_PLATFORM)));
     when(securityService.getAuthentication()).thenReturn(authentication);
 
-    final String ssoRealm = jwtUserAuthenticationResolver.resolveSsoRealm();
-    assertNull(ssoRealm);
+    final Optional<String> ssoRealm = jwtUserAuthenticationResolver.resolveSsoRealm();
+    assertTrue(ssoRealm.isEmpty());
   }
 
   @Test
   void testResolveSsoRealm_keycloak() {
     when(securityService.username()).thenReturn(Optional.of(AUTH_USER_ID));
-    Optional<Authentication> authentication =
+    final Optional<Authentication> authentication =
         Optional.of(Authentication.build(AUTH_USER_ID, Map.of(JWT_SSO_REALM, "airbyte")));
     when(securityService.getAuthentication()).thenReturn(authentication);
-    final String ssoRealm = jwtUserAuthenticationResolver.resolveSsoRealm();
+    final String ssoRealm = jwtUserAuthenticationResolver.resolveSsoRealm().orElseThrow();
     assertEquals("airbyte", ssoRealm);
   }
 

@@ -9,12 +9,9 @@ export const useBillingPageBanners = () => {
   const currentWorkspace = useCurrentWorkspace();
   const cloudWorkspace = useGetCloudWorkspace(currentWorkspace.workspaceId);
 
-  const isNewTrialPolicyEnabled = useExperiment("billing.newTrialPolicy", false);
   const isAutoRechargeEnabled = useExperiment("billing.autoRecharge", false);
 
-  const isPreTrial = isNewTrialPolicyEnabled
-    ? cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.pre_trial
-    : false;
+  const isPreTrial = cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.pre_trial;
 
   const creditStatus =
     (cloudWorkspace.remainingCredits ?? 0) < LOW_BALANCE_CREDIT_THRESHOLD

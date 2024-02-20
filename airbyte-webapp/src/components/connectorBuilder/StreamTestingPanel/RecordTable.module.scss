@@ -3,6 +3,10 @@
 
 .table {
   padding-bottom: variables.$spacing-md;
+
+  // Improve performance of table when there are many records.
+  // Should be safe since nothing gets rendered outside of the table boundaries.
+  contain: strict;
 }
 
 .content {

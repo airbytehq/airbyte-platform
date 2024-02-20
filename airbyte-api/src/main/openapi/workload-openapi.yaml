@@ -83,6 +83,24 @@ paths:
                 type: object
         "200":
           description: Workload with given workload id already exists.
+  /api/v1/workload/expired_deadline_list:
+    post:
+      tags:
+      - workload
+      summary: Get workloads according to the filters.
+      operationId: workloadListWithExpiredDeadline
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpiredDeadlineWorkloadListRequest'
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkloadListResponse'
   /api/v1/workload/failure:
     put:
       tags:
@@ -302,6 +320,24 @@ components:
       properties:
         claimed:
           type: boolean
+    ExpiredDeadlineWorkloadListRequest:
+      required:
+      - deadline
+      type: object
+      properties:
+        dataplane:
+          type: array
+          nullable: true
+          items:
+            type: string
+        status:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/WorkloadStatus'
+        deadline:
+          type: string
+          format: date-time
     KnownExceptionInfo:
       required:
       - message
@@ -362,6 +398,10 @@ components:
         terminationReason:
           type: string
           nullable: true
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
         autoId:
           type: string
           format: uuid
@@ -388,6 +428,10 @@ components:
           type: string
         dataplaneId:
           type: string
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
     WorkloadCreateRequest:
       required:
       - geography
@@ -415,6 +459,10 @@ components:
           nullable: true
         type:
           $ref: '#/components/schemas/WorkloadType'
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
     WorkloadFailureRequest:
       required:
       - workloadId
@@ -435,6 +483,10 @@ components:
       properties:
         workloadId:
           type: string
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
     WorkloadLabel:
       required:
       - key
@@ -452,6 +504,10 @@ components:
       properties:
         workloadId:
           type: string
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
     WorkloadListRequest:
       type: object
       properties:
@@ -485,6 +541,10 @@ components:
       properties:
         workloadId:
           type: string
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
     WorkloadStatus:
       type: string
       enum:

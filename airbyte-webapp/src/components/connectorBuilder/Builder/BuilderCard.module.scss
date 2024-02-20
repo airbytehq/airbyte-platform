@@ -2,11 +2,11 @@
 @use "scss/colors";
 
 .card {
-  padding: variables.$spacing-xl;
   display: flex;
   flex-direction: column;
   gap: variables.$spacing-xl;
   position: relative;
+  flex-grow: 1;
 }
 
 .copyButtonContainer {

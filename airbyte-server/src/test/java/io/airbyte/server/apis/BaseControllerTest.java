@@ -16,7 +16,6 @@ import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler;
 import io.airbyte.commons.server.handlers.DestinationHandler;
 import io.airbyte.commons.server.handlers.HealthCheckHandler;
 import io.airbyte.commons.server.handlers.JobHistoryHandler;
-import io.airbyte.commons.server.handlers.LogsHandler;
 import io.airbyte.commons.server.handlers.MatchSearchHandler;
 import io.airbyte.commons.server.handlers.NotificationsHandler;
 import io.airbyte.commons.server.handlers.OAuthHandler;
@@ -154,14 +153,6 @@ abstract class BaseControllerTest {
   @Replaces(JobHistoryHandler.class)
   JobHistoryHandler mmJobHistoryHandler() {
     return jobHistoryHandler;
-  }
-
-  LogsHandler logsHandler = Mockito.mock(LogsHandler.class);
-
-  @MockBean(LogsHandler.class)
-  @Replaces(LogsHandler.class)
-  LogsHandler mmLogsHandler() {
-    return logsHandler;
   }
 
   NotificationsHandler notificationsHandler = Mockito.mock(NotificationsHandler.class);

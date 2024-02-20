@@ -46,6 +46,8 @@ data class Workload(
   @Nullable
   var terminationReason: String? = null,
   @Nullable
+  var deadline: OffsetDateTime? = null,
+  @Nullable
   var autoId: UUID? = null,
 ) {
   @VisibleForTesting

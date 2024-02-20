@@ -5,9 +5,10 @@
 .button {
   width: 100%;
   cursor: pointer;
-  border: 1px solid colors.$grey-50;
-  background-color: colors.$grey-50;
-  border-radius: variables.$border-radius-xs;
+  background-color: initial;
+  color: colors.$dark-blue;
+  border: 1px solid colors.$grey-200;
+  border-radius: variables.$border-radius-sm;
   padding: 7px 8px;
   text-align: left;
   display: flex;
@@ -19,16 +20,28 @@
   min-height: 36px;
 
   &:disabled {
-    background: colors.$grey-30;
+    border-color: colors.$grey-100;
     cursor: default;
   }
 
+  &[aria-expanded="true"] {
+    border-color: colors.$blue;
+  }
+
   &:hover:not(:disabled) {
-    border-color: colors.$grey-100;
+    border-color: colors.$grey-300;
+  }
+
+  &:focus:not(:disabled) {
+    border-color: colors.$blue;
+  }
+
+  &:hover:not(:disabled)[aria-expanded="true"] {
+    border-color: colors.$blue;
   }
 
   &--error {
-    border-color: colors.$red-100;
+    border-color: colors.$red-200;
 
     &:hover:not(:disabled) {
       border-color: colors.$red;
@@ -36,8 +49,12 @@
   }
 
   .disabledText {
-    color: colors.$dark-blue-200;
+    color: colors.$grey-300;
   }
+}
+
+.defaultControlButton {
+  font-weight: normal;
 }
 
 .optionsMenu {
@@ -47,16 +64,21 @@
   padding: 0;
   margin: 0;
   width: 100%;
-  min-width: fit-content;
+  min-width: variables.$min-width-listbox-options-list;
+  max-height: variables.$height-long-listbox-options-list;
   display: flex;
   flex-direction: column;
   gap: 0;
-  overflow: hidden;
+  overflow: auto;
+
+  &.nonAdaptive {
+    max-width: variables.$min-width-listbox-options-list;
+  }
 }
 
 .option {
   list-style-type: none;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .optionValue {

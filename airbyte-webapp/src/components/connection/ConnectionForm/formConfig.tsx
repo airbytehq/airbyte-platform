@@ -6,10 +6,8 @@ import { isDbtTransformation, isNormalizationTransformation } from "area/connect
 import { useCurrentWorkspace } from "core/api";
 import {
   AirbyteCatalog,
-  DestinationDefinitionSpecificationRead,
   DestinationSyncMode,
   OperationCreate,
-  SchemaChange,
   SyncMode,
   ActorDefinitionVersionRead,
   ConnectionScheduleData,
@@ -24,9 +22,8 @@ import {
   ConnectionOrPartialConnection,
   useConnectionFormService,
 } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 
-import { analyzeSyncCatalogBreakingChanges, calculateInitialCatalog } from "./calculateInitialCatalog";
+import { analyzeSyncCatalogBreakingChanges } from "./calculateInitialCatalog";
 import { BASIC_FREQUENCY_DEFAULT_VALUE } from "./ScheduleFormField/useBasicFrequencyDropdownData";
 import { createConnectionValidationSchema } from "./schema";
 import { DbtOperationRead } from "../TransformationForm";
@@ -108,53 +105,12 @@ export const getInitialNormalization = (
 export const useInitialFormValues = (
   connection: ConnectionOrPartialConnection,
   destDefinitionVersion: ActorDefinitionVersionRead,
-  destDefinitionSpecification: DestinationDefinitionSpecificationRead,
   isEditMode?: boolean
 ): FormConnectionFormValues => {
-  const autoPropagationEnabled = useExperiment("autopropagation.enabled", false);
-  const skipInitialCalculation = useExperiment("catalog.skipInitialCalculation", false);
   const workspace = useCurrentWorkspace();
   const { catalogDiff, syncCatalog, schemaChange } = connection;
 
-  const defaultNonBreakingChangesPreference = autoPropagationEnabled
-    ? NonBreakingChangesPreference.propagate_columns
-    : NonBreakingChangesPreference.ignore;
-
-  // used to determine if we should calculate optimal sync mode
-  const newStreamDescriptors = catalogDiff?.transforms
-    .filter((transform) => transform.transformType === "add_stream")
-    .map((stream) => stream.streamDescriptor);
-
-  // used to determine if we need to clear any primary keys or cursor fields that were removed
-  const streamTransformsWithBreakingChange = useMemo(() => {
-    if (schemaChange === SchemaChange.breaking) {
-      return catalogDiff?.transforms.filter((streamTransform) => {
-        if (streamTransform.transformType === "update_stream") {
-          return streamTransform.updateStream?.filter((fieldTransform) => fieldTransform.breaking);
-        }
-        return false;
-      });
-    }
-    return undefined;
-  }, [catalogDiff?.transforms, schemaChange]);
-
-  const initialSchema = useMemo(
-    () =>
-      calculateInitialCatalog(
-        connection.syncCatalog,
-        destDefinitionSpecification?.supportedDestinationSyncModes || [],
-        streamTransformsWithBreakingChange,
-        isEditMode,
-        newStreamDescriptors
-      ),
-    [
-      connection.syncCatalog,
-      destDefinitionSpecification?.supportedDestinationSyncModes,
-      streamTransformsWithBreakingChange,
-      isEditMode,
-      newStreamDescriptors,
-    ]
-  );
+  const defaultNonBreakingChangesPreference = NonBreakingChangesPreference.propagate_columns;
 
   return useMemo(() => {
     const initialValues: FormConnectionFormValues = {
@@ -196,9 +152,7 @@ export const useInitialFormValues = (
         ...(destDefinitionVersion.supportsDbt && {
           transformations: getInitialTransformations(connection.operations ?? []),
         }),
-        syncCatalog: skipInitialCalculation
-          ? analyzeSyncCatalogBreakingChanges(syncCatalog, catalogDiff, schemaChange)
-          : initialSchema,
+        syncCatalog: analyzeSyncCatalogBreakingChanges(syncCatalog, catalogDiff, schemaChange),
       },
     };
 
@@ -219,10 +173,8 @@ export const useInitialFormValues = (
     defaultNonBreakingChangesPreference,
     workspace.defaultGeography,
     destDefinitionVersion.supportsDbt,
-    skipInitialCalculation,
     syncCatalog,
     catalogDiff,
     schemaChange,
-    initialSchema,
   ]);
 };

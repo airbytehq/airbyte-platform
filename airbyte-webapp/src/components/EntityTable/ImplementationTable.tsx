@@ -85,6 +85,7 @@ const ImplementationTable: React.FC<IProps> = ({ data, entity }) => {
         id: "status",
         meta: {
           noPadding: true,
+          tdClassName: styles.statusIcons,
         },
         cell: (props) => (
           <Link to={props.row.original.entityId} variant="primary" className={styles.cellContent}>

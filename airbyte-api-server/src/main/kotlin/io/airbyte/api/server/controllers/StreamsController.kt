@@ -7,7 +7,6 @@ package io.airbyte.api.server.controllers
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import io.airbyte.airbyte_api.generated.StreamsApi
 import io.airbyte.airbyte_api.model.generated.ConnectionSyncModeEnum
 import io.airbyte.airbyte_api.model.generated.StreamProperties
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration
@@ -16,6 +15,7 @@ import io.airbyte.api.client.model.generated.SyncMode
 import io.airbyte.api.server.apiTracking.TrackingHelper
 import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.STREAMS_PATH
+import io.airbyte.api.server.controllers.interfaces.StreamsApi
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.problems.UnexpectedProblem
 import io.airbyte.api.server.services.DestinationService
@@ -41,7 +41,7 @@ class StreamsController(
 
   override fun getStreamProperties(
     sourceId: UUID,
-    destinationId: UUID?,
+    destinationId: UUID,
     ignoreCache: Boolean?,
     authorization: String?,
     userInfo: String?,
@@ -65,7 +65,7 @@ class StreamsController(
       trackingHelper.callWithTracker(
         {
           destinationService.getDestinationSyncModes(
-            destinationId!!,
+            destinationId,
             authorization,
             getLocalUserInfoIfNull(userInfo),
           )

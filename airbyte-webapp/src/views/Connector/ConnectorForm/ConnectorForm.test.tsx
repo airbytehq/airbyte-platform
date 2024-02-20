@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { getByTestId, screen, waitFor } from "@testing-library/react";
+import { getByTestId, screen, waitFor, getByRole, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BroadcastChannel } from "broadcast-channel";
 import React from "react";
-import selectEvent from "react-select-event";
 
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { render, useMockIntersectionObserver } from "test-utils/testutils";
@@ -68,6 +67,15 @@ const connectorDefinition = {
   documentationUrl: "",
 } as ConnectorDefinition;
 
+const selectDropdownOption = (container: HTMLElement, dropdownContainerTestId: string, option: string) => {
+  const dropdownContainer = getByTestId(container, dropdownContainerTestId);
+  const selectButton = getByTestId(container, `${dropdownContainerTestId}-listbox-button`);
+  fireEvent.click(selectButton);
+
+  const listBoxOption = getByRole(dropdownContainer, "option", { name: option });
+  fireEvent.click(listBoxOption);
+};
+
 const useAddPriceListItem = (container: HTMLElement, initialIndex = 0) => {
   const priceList = getByTestId(container, "connectionConfiguration.priceList");
   let index = initialIndex;
@@ -77,21 +85,22 @@ const useAddPriceListItem = (container: HTMLElement, initialIndex = 0) => {
     await userEvent.click(addButton);
 
     const getPriceListInput = (index: number, key: string) =>
-      priceList.querySelector(`input[name='connectionConfiguration.priceList.${index}.${key}']`);
+      priceList.querySelector<HTMLInputElement>(`input[name='connectionConfiguration.priceList.${index}.${key}']`);
 
     // Type items into input
     const nameInput = getPriceListInput(index, "name");
     await userEvent.type(nameInput!, name);
+    await waitFor(() => {
+      expect(nameInput?.value).toEqual(name);
+    });
 
     const priceInput = getPriceListInput(index, "price");
     await userEvent.type(priceInput!, price);
+    await waitFor(() => {
+      expect(priceInput?.value).toEqual(price);
+    });
 
-    const selectContainer = getByTestId(priceList, `connectionConfiguration.priceList.${index}.origin`);
-    await waitFor(() =>
-      selectEvent.select(selectContainer, originType, {
-        container: document.body,
-      })
-    );
+    selectDropdownOption(priceList, `connectionConfiguration.priceList.${index}.origin`, originType);
 
     const originInput = priceList.querySelector(
       `input[name='connectionConfiguration.priceList.${index}.origin.${originType}']`
@@ -379,10 +388,12 @@ describe("Connector form", () => {
     });
 
     it("should display oneOf field", () => {
-      const credentials = container.querySelector("div[data-testid='connectionConfiguration.credentials']");
+      const credentials = container.querySelector(
+        "button[data-testid='connectionConfiguration.credentials-listbox-button']"
+      );
       const apiKey = getInputByName(container, "connectionConfiguration.credentials.api_key");
       expect(credentials).toBeInTheDocument();
-      expect(credentials?.getAttribute("role")).toEqual("combobox");
+      expect(credentials?.getAttribute("aria-haspopup")).toEqual("listbox");
       expect(apiKey).toBeInTheDocument();
     });
 
@@ -670,15 +681,8 @@ describe("Connector form", () => {
         },
       });
 
-      const selectContainer = getByTestId(container, "connectionConfiguration.condition");
-      await selectEvent.select(selectContainer, "option2", {
-        container: document.body,
-      });
-
-      const selectContainer2 = getByTestId(container, "connectionConfiguration.condition.nestedcondition");
-      await selectEvent.select(selectContainer2, "nestedoption2", {
-        container: document.body,
-      });
+      selectDropdownOption(container, "connectionConfiguration.condition", "option2");
+      selectDropdownOption(container, "connectionConfiguration.condition.nestedcondition", "nestedoption2");
 
       const uri = container.querySelector(
         "input[name='connectionConfiguration.condition.nestedcondition.doublenestedinput']"
@@ -745,7 +749,7 @@ describe("Connector form", () => {
 
     it("should change password", async () => {
       const container = await renderForm({ formValuesOverride: { ...filledForm, password: "*****" } });
-      await waitFor(() => userEvent.click(screen.getByTestId("edit-secret")!));
+      await waitFor(() => userEvent.click(screen.getByTestId("edit-secret")));
       const password = getInputByName(container, "connectionConfiguration.password");
       await userEvent.type(password!, "testword");
 
@@ -814,13 +818,7 @@ describe("Connector form", () => {
       const apiKey = getInputByName(container, "connectionConfiguration.credentials.api_key");
       expect(apiKey).toBeInTheDocument();
 
-      const selectContainer = getByTestId(container, "connectionConfiguration.credentials");
-
-      await waitFor(() =>
-        selectEvent.select(selectContainer, "oauth", {
-          container: document.body,
-        })
-      );
+      selectDropdownOption(container, "connectionConfiguration.credentials", "oauth");
 
       const uri = getInputByName(container, "connectionConfiguration.credentials.redirect_uri");
       expect(uri).toBeInTheDocument();
@@ -837,13 +835,8 @@ describe("Connector form", () => {
 
     it("should fill right values oneOf field", async () => {
       const container = await renderForm({ formValuesOverride: { ...filledForm, credentials: { type: "api" } } });
-      const selectContainer = getByTestId(container, "connectionConfiguration.credentials");
 
-      await waitFor(() =>
-        selectEvent.select(selectContainer, "oauth", {
-          container: document.body,
-        })
-      );
+      selectDropdownOption(container, "connectionConfiguration.credentials", "oauth");
 
       const uri = getInputByName(container, "connectionConfiguration.credentials.redirect_uri");
       await userEvent.type(uri!, "test-uri");
@@ -1064,13 +1057,9 @@ describe("Connector form", () => {
 
     it("should hide the oauth button when switching auth strategy", async () => {
       const container = await renderNewOAuthForm();
-      const selectContainer = getByTestId(container, "connectionConfiguration.credentials");
 
-      await waitFor(() =>
-        selectEvent.select(selectContainer, "Personal Access Token", {
-          container: document.body,
-        })
-      );
+      selectDropdownOption(container, "connectionConfiguration.credentials", "Personal Access Token");
+
       expect(getOAuthButton(container)).not.toBeInTheDocument();
       expect(
         getInputByName(container, "connectionConfiguration.credentials.personal_access_token")

@@ -68,6 +68,7 @@ services:
       - DATABASE_USER=${DATABASE_USER}
       - DATA_PLANE_ID=local
       - DOCKER_NETWORK=${COMPOSE_PROJECT_NAME}_airbyte_internal
+      - DOCKER_SOCKET=${DOCKER_SOCKET}
       - DEPLOYMENT_MODE=${DEPLOYMENT_MODE}
       - DD_AGENT_HOST=${DD_AGENT_HOST}
       - DD_DOGSTATSD_PORT=${DD_DOGSTATSD_PORT}
@@ -99,7 +100,7 @@ services:
     configs:
       - flags
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - workspace:${WORKSPACE_ROOT}
       - data:${CONFIG_ROOT}
       - ${LOCAL_ROOT}:${LOCAL_ROOT}

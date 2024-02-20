@@ -86,10 +86,42 @@ class AwsSecretManagerPersistenceTest {
     every { mockCache.cache } returns mockAwsCache
     every { mockClient.client } returns mockAwsClient
     every { mockClient.serializedConfig } returns null
+    every { mockClient.kmsKeyArn } returns null
+    every { mockClient.tags } returns emptyMap()
 
     persistence.write(coordinate, secret)
 
     verify { mockAwsClient.createSecret(any()) }
+  }
+
+  @Test
+  fun `test writing a secret with tags via the client creates the secret`() {
+    val secret = "secret value"
+    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val mockClient: AwsClient = mockk()
+    val mockCache: AwsCache = mockk()
+    val mockAwsCache: SecretCache = mockk()
+    val mockAwsClient: AWSSecretsManager = mockk()
+    val persistence = AwsSecretManagerPersistence(mockClient, mockCache)
+    every { mockAwsCache.getSecretString(any()) } throws ResourceNotFoundException("test")
+    every { mockAwsClient.createSecret(any()) } returns mockk<CreateSecretResult>()
+    every { mockCache.cache } returns mockAwsCache
+    every { mockClient.client } returns mockAwsClient
+    every { mockClient.serializedConfig } returns null
+    every { mockClient.kmsKeyArn } returns "testKms"
+    every { mockClient.tags } returns mapOf("key1" to "value1", "key2" to "value2")
+
+    persistence.write(coordinate, secret)
+
+    verify {
+      mockAwsClient.createSecret(
+        withArg {
+          assert(it.kmsKeyId.equals("testKms"))
+          val expectedTags = listOf<Tag>(Tag().withKey("key1").withValue("value1"), Tag().withKey("key2").withValue("value2"))
+          assert(it.tags.containsAll(expectedTags))
+        },
+      )
+    }
   }
 
   @Test
@@ -106,6 +138,8 @@ class AwsSecretManagerPersistenceTest {
     every { mockCache.cache } returns mockAwsCache
     every { mockClient.client } returns mockAwsClient
     every { mockClient.serializedConfig } returns AwsRoleSecretPersistenceConfig().withKmsKeyArn("testKms").withTagKey("testTag")
+    every { mockClient.kmsKeyArn } returns "testKms"
+    every { mockClient.tags } returns emptyMap()
 
     persistence.write(coordinate, secret)
 
@@ -133,6 +167,8 @@ class AwsSecretManagerPersistenceTest {
     every { mockCache.cache } returns mockAwsCache
     every { mockClient.client } returns mockAwsClient
     every { mockClient.serializedConfig } returns null
+    every { mockClient.kmsKeyArn } returns null
+    every { mockClient.tags } returns emptyMap()
 
     persistence.write(coordinate, secret)
 

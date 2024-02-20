@@ -4,7 +4,6 @@ import { FormattedMessage, FormattedNumber, useIntl } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
-import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
@@ -103,68 +102,66 @@ export const RemainingCredits: React.FC = () => {
         [styles.info]: bannerVariant === "info",
       })}
     >
-      <Box p="xl">
-        <FlexContainer alignItems="center" justifyContent="space-between">
-          <FlexItem>
-            <FlexContainer alignItems="baseline">
-              <Text size="xl" as="span">
-                <FormattedMessage id="credits.remainingCredits" />
-              </Text>
-              <ExternalLink href={links.creditDescription} variant="primary">
-                <Text size="sm" as="span">
-                  <FormattedMessage id="credits.whatAre" />
-                </Text>
-              </ExternalLink>
-            </FlexContainer>
-
-            <Text size="xl" bold>
-              <FormattedNumber
-                value={cloudWorkspace.remainingCredits ?? 0}
-                maximumFractionDigits={2}
-                minimumFractionDigits={2}
-              />
+      <FlexContainer alignItems="center" justifyContent="space-between">
+        <FlexItem>
+          <FlexContainer alignItems="baseline">
+            <Text size="xl" as="span">
+              <FormattedMessage id="credits.remainingCredits" />
             </Text>
-          </FlexItem>
-          <FlexContainer>
-            <Button
-              variant="dark"
-              disabled={!emailVerified || !canBuyCredits}
-              type="button"
-              size="xs"
-              onClick={showCreditsModal}
-              isLoading={isWaitingForCredits}
-              icon={<Icon type="plus" />}
-            >
-              <FormattedMessage id="credits.buyCredits" />
-            </Button>
-            <Button size="xs" onClick={() => window.open(links.contactSales, "_blank")} variant="dark">
-              <FormattedMessage id="credits.talkToSales" />
-            </Button>
+            <ExternalLink href={links.creditDescription} variant="primary">
+              <Text size="sm" as="span">
+                <FormattedMessage id="credits.whatAre" />
+              </Text>
+            </ExternalLink>
           </FlexContainer>
-        </FlexContainer>
-        <FlexContainer direction="column">
-          {isAutoRechargeEnabled && (
-            <Message
-              text={
-                <FormattedMessage
-                  id="credits.autoRechargeEnabled"
-                  values={{
-                    contact: (node: React.ReactNode) => (
-                      <Link opensInNewTab to="mailto:billing@airbyte.io" variant="primary">
-                        {node}
-                      </Link>
-                    ),
-                  }}
-                />
-              }
+
+          <Text size="xl" bold>
+            <FormattedNumber
+              value={cloudWorkspace.remainingCredits ?? 0}
+              maximumFractionDigits={2}
+              minimumFractionDigits={2}
             />
-          )}
-          {!emailVerified && sendEmailVerification && (
-            <EmailVerificationHint variant={bannerVariant} sendEmailVerification={sendEmailVerification} />
-          )}
-          {!isAutoRechargeEnabled && <LowCreditBalanceHint variant={bannerVariant} />}
+          </Text>
+        </FlexItem>
+        <FlexContainer>
+          <Button variant="secondaryDark" size="xs" onClick={() => window.open(links.contactSales, "_blank")}>
+            <FormattedMessage id="credits.talkToSales" />
+          </Button>
+          <Button
+            variant="primaryDark"
+            disabled={!emailVerified || !canBuyCredits}
+            type="button"
+            size="xs"
+            onClick={showCreditsModal}
+            isLoading={isWaitingForCredits}
+            icon={<Icon type="plus" />}
+          >
+            <FormattedMessage id="credits.buyCredits" />
+          </Button>
         </FlexContainer>
-      </Box>
+      </FlexContainer>
+      <FlexContainer direction="column">
+        {isAutoRechargeEnabled && (
+          <Message
+            text={
+              <FormattedMessage
+                id="credits.autoRechargeEnabled"
+                values={{
+                  contact: (node: React.ReactNode) => (
+                    <Link opensInNewTab to="mailto:billing@airbyte.io" variant="primary">
+                      {node}
+                    </Link>
+                  ),
+                }}
+              />
+            }
+          />
+        )}
+        {!emailVerified && sendEmailVerification && (
+          <EmailVerificationHint variant={bannerVariant} sendEmailVerification={sendEmailVerification} />
+        )}
+        {!isAutoRechargeEnabled && <LowCreditBalanceHint variant={bannerVariant} />}
+      </FlexContainer>
     </Card>
   );
 };

@@ -16,27 +16,41 @@ import org.junit.jupiter.api.Test;
 public class ApplyDefinitionMetricsHelperTest {
 
   @Test
-  void testGetSuccessAttributes() {
-    final List<DefinitionProcessingSuccessOutcome> successOutcomes = Arrays.asList(DefinitionProcessingSuccessOutcome.values());
-    successOutcomes.forEach((successOutcome) -> {
-      final MetricAttribute[] attributes = ApplyDefinitionMetricsHelper.getSuccessAttributes(successOutcome);
-      assertEquals(2, attributes.length);
-      assertEquals("status", attributes[0].key());
-      assertEquals("ok", attributes[0].value());
-      assertEquals("success_outcome", attributes[1].key());
-      assertEquals(successOutcome.toString(), attributes[1].value());
-    });
+  void testGetMetricAttributesForNoOpSuccess() {
+    final DefinitionProcessingSuccessOutcome successOutcome = DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED;
+    final MetricAttribute[] attributes = ApplyDefinitionMetricsHelper.getMetricAttributes("airbyte/source-test", successOutcome);
+    assertEquals(2, attributes.length);
+    assertEquals("status", attributes[0].key());
+    assertEquals("ok", attributes[0].value());
+    assertEquals("outcome", attributes[1].key());
+    assertEquals(successOutcome.toString(), attributes[1].value());
   }
 
   @Test
-  void testGetFailureAttributes() {
+  void testGetMetricAttributesForNonNoOpSuccessOutcomes() {
+    final List<DefinitionProcessingSuccessOutcome> successOutcomes = Arrays.asList(DefinitionProcessingSuccessOutcome.values());
+    successOutcomes.stream().filter((successOutcome) -> !successOutcome.equals(DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED))
+        .forEach((successOutcome) -> {
+          final MetricAttribute[] attributes = ApplyDefinitionMetricsHelper.getMetricAttributes("airbyte/source-test", successOutcome);
+          assertEquals(3, attributes.length);
+          assertEquals("status", attributes[0].key());
+          assertEquals("ok", attributes[0].value());
+          assertEquals("outcome", attributes[1].key());
+          assertEquals(successOutcome.toString(), attributes[1].value());
+          assertEquals("docker_repository", attributes[2].key());
+          assertEquals("airbyte/source-test", attributes[2].value());
+        });
+  }
+
+  @Test
+  void testGetMetricAttributesForFailureOutcomes() {
     final List<DefinitionProcessingFailureReason> failureReasons = Arrays.asList(DefinitionProcessingFailureReason.values());
     failureReasons.forEach((failureReason) -> {
-      final MetricAttribute[] attributes = ApplyDefinitionMetricsHelper.getFailureAttributes("airbyte/source-test", failureReason);
+      final MetricAttribute[] attributes = ApplyDefinitionMetricsHelper.getMetricAttributes("airbyte/source-test", failureReason);
       assertEquals(3, attributes.length);
       assertEquals("status", attributes[0].key());
       assertEquals("failed", attributes[0].value());
-      assertEquals("failure_reason", attributes[1].key());
+      assertEquals("outcome", attributes[1].key());
       assertEquals(failureReason.toString(), attributes[1].value());
       assertEquals("docker_repository", attributes[2].key());
       assertEquals("airbyte/source-test", attributes[2].value());

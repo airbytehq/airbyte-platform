@@ -1,9 +1,9 @@
 import get from "lodash/get";
 import React, { useCallback } from "react";
-import { useController, useFormContext } from "react-hook-form";
+import { useController, useFormContext, useWatch } from "react-hook-form";
 
-import { DropDown } from "components/ui/DropDown";
 import { Input } from "components/ui/Input";
+import { ListBox } from "components/ui/ListBox";
 import { Multiselect } from "components/ui/Multiselect";
 import { TagInput } from "components/ui/TagInput/TagInput";
 import { TextArea } from "components/ui/TextArea";
@@ -28,6 +28,8 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
     formState: { defaultValues: initialValues },
   } = useFormContext();
   const { field } = useController({ name });
+  // use value from useWatch since this will respect updates made to parent paths in the form
+  const fieldValue = useWatch({ name });
   const setFocusedField = useOptionalDocumentationPanelContext()?.setFocusedField;
 
   const onChange = useCallback(
@@ -42,7 +44,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
       <TagInput
         name={name}
         itemType={property.itemType}
-        fieldValue={field.value === undefined ? [] : Array.isArray(field.value) ? field.value : [field.value]}
+        fieldValue={fieldValue === undefined ? [] : Array.isArray(fieldValue) ? fieldValue : [fieldValue]}
         onChange={(tagLabels) => {
           field.onChange(tagLabels);
         }}
@@ -64,7 +66,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
         name={name}
         data={data}
         onChange={(dataItems) => field.onChange(dataItems)}
-        value={field.value}
+        value={fieldValue}
         disabled={disabled}
         readOnly={property.readOnly}
       />
@@ -84,7 +86,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
             : undefined
         }
         onChange={field.onChange}
-        value={field.value}
+        value={fieldValue}
         disabled={disabled}
         readOnly={property.readOnly}
         onFocus={() => setFocusedField?.(name)}
@@ -95,17 +97,17 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
 
   if (property.enum) {
     return (
-      <DropDown
-        {...field}
+      <ListBox
         options={property.enum.map((dataItem) => ({
           label: dataItem?.toString() ?? "",
           value: dataItem?.toString() ?? "",
         }))}
-        onChange={(selectedItem) => selectedItem && field.onChange(selectedItem.value)}
-        value={field.value}
+        onSelect={(selectedItem) => selectedItem && field.onChange(selectedItem)}
+        selectedValue={fieldValue}
         isDisabled={disabled || property.readOnly}
         onFocus={() => setFocusedField?.(name)}
-        error={error}
+        hasError={error}
+        data-testid={field.name}
       />
     );
   } else if (property.multiline && !property.isSecret) {
@@ -114,7 +116,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
         {...field}
         onChange={onChange}
         autoComplete="off"
-        value={field.value ?? ""}
+        value={fieldValue ?? ""}
         rows={3}
         disabled={disabled}
         error={error}
@@ -146,7 +148,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
       placeholder={inputType === "number" ? property.default?.toString() : undefined}
       autoComplete="off"
       type={inputType}
-      value={field.value ?? ""}
+      value={fieldValue ?? ""}
       disabled={disabled}
       readOnly={property.readOnly}
       onFocus={() => setFocusedField?.(name)}

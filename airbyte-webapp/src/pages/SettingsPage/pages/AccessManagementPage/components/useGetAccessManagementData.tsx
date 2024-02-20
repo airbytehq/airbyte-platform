@@ -1,7 +1,13 @@
 import { useCurrentWorkspace, useListUsersInOrganization, useListUsersInWorkspace } from "core/api";
-import { OrganizationUserRead, PermissionRead, PermissionType, WorkspaceUserRead } from "core/api/types/AirbyteClient";
+import {
+  OrganizationUserRead,
+  PermissionRead,
+  PermissionType,
+  WorkspaceUserAccessInfoRead,
+  WorkspaceUserRead,
+} from "core/api/types/AirbyteClient";
 import { useIntent } from "core/utils/rbac";
-
+import { RbacRole, RbacRoleHierarchy, partitionPermissionType } from "core/utils/rbac/rbacPermissionsQuery";
 export type ResourceType = "workspace" | "organization" | "instance";
 
 export const permissionStringDictionary: Record<PermissionType, Record<string, string>> = {
@@ -44,8 +50,8 @@ export const permissionsByResourceType: Record<ResourceType, PermissionType[]> =
   ],
   organization: [
     PermissionType.organization_admin,
-    // PermissionType.organization_editor, -- role not supported in MVP
-    // PermissionType.organization_reader, -- role not supported in MVP
+    // PermissionType.organization_editor,
+    // PermissionType.organization_reader,
     PermissionType.organization_member,
   ],
   instance: [PermissionType.instance_admin],
@@ -67,7 +73,10 @@ export interface AccessUsers {
 export interface NextAccessUsers {
   workspace?: { users: NextAccessUserRead[]; usersToAdd: OrganizationUserRead[] };
 }
-
+/**
+ *
+ * @deprecated this will be removed with RBAC UI v2.  For now, use useNextGetWorkspaceAccessUsers instead.  However, that will be, at least in part, replaced by a new endpoint instead.
+ */
 export const useGetWorkspaceAccessUsers = (): AccessUsers => {
   const workspace = useCurrentWorkspace();
   const canListOrganizationUsers = useIntent("ListOrganizationMembers", { organizationId: workspace.organizationId });
@@ -81,7 +90,7 @@ export const useGetWorkspaceAccessUsers = (): AccessUsers => {
       usersToAdd: organizationUsers.filter(
         (user) =>
           user.permissionType === "organization_member" &&
-          !workspaceUsers.find((workspaceUser) => workspaceUser.userId === user.userId)
+          !(workspaceUsers ?? []).find((workspaceUser) => workspaceUser.userId === user.userId)
       ),
     },
     organization: {
@@ -89,74 +98,6 @@ export const useGetWorkspaceAccessUsers = (): AccessUsers => {
       usersToAdd: [],
     },
   };
-};
-
-export const useNextGetWorkspaceAccessUsers = (): NextAccessUsers => {
-  const workspace = useCurrentWorkspace();
-  const organizationUsers = useListUsersInOrganization(workspace.organizationId ?? "").users;
-
-  const workspaceUsers: NextAccessUserRead[] = useListUsersInWorkspace(workspace.workspaceId).users.map(
-    (workspaceUser) => {
-      const organizationUser = organizationUsers.find((user) => user.userId === workspaceUser.userId);
-
-      return {
-        userId: workspaceUser.userId,
-        name: workspaceUser.name,
-        email: workspaceUser.email,
-        workspacePermission: {
-          workspaceId: workspaceUser.workspaceId,
-          permissionType: workspaceUser.permissionType,
-          permissionId: workspaceUser.permissionId,
-          userId: workspaceUser.userId,
-        },
-        organizationPermission: organizationUser
-          ? {
-              organizationId: organizationUser?.organizationId,
-              permissionType: organizationUser?.permissionType,
-              permissionId: organizationUser?.permissionId,
-              userId: organizationUser?.userId,
-            }
-          : undefined,
-      };
-    }
-  );
-
-  const orgUsers: NextAccessUserRead[] = organizationUsers
-    .map((organizationUser) => {
-      if (
-        workspaceUsers.some((workspaceUser) => workspaceUser.userId === organizationUser.userId) ||
-        organizationUser.permissionType === "organization_member"
-      ) {
-        return null; // Skip if user already exists in workspaceUsers OR if their permission doesn't grant them access to the workspace
-      }
-
-      return {
-        userId: organizationUser.userId,
-        email: organizationUser.email,
-        name: organizationUser.name,
-        organizationPermission: {
-          organizationId: organizationUser.organizationId,
-          permissionType: organizationUser.permissionType,
-          permissionId: organizationUser.permissionId,
-          userId: organizationUser.userId,
-        },
-      };
-    })
-    .filter(Boolean) as NextAccessUserRead[];
-
-  const orgUsersToAdd = organizationUsers
-    .filter(
-      (user) =>
-        user.permissionType === "organization_member" &&
-        !workspaceUsers.find((workspaceUser) => workspaceUser.userId === user.userId)
-    )
-    .map((orgUser) => ({
-      ...orgUser,
-      organizationPermissionType: orgUser.permissionType,
-      organizationPermissionId: orgUser.permissionId,
-    }));
-
-  return { workspace: { users: [...workspaceUsers, ...orgUsers], usersToAdd: orgUsersToAdd } };
 };
 
 export const useGetOrganizationAccessUsers = (): AccessUsers => {
@@ -167,37 +108,19 @@ export const useGetOrganizationAccessUsers = (): AccessUsers => {
   };
 };
 
-export const getHighestPermissionType = (
-  user: NextAccessUserRead,
-  resourceType: "workspace" | "organization" | "instance"
-) => {
-  const orgPermissionType = user.organizationPermission ? user.organizationPermission.permissionType : undefined;
-  const workspacePermissionType = user.workspacePermission ? user.workspacePermission.permissionType : undefined;
+export const getWorkspaceAccessLevel = (user: WorkspaceUserAccessInfoRead): RbacRole => {
+  const orgPermissionType = user.organizationPermission?.permissionType;
+  const workspacePermissionType = user.workspacePermission?.permissionType;
 
-  switch (resourceType) {
-    case "instance":
-      return undefined;
-    case "organization":
-      switch (orgPermissionType) {
-        case "organization_admin":
-          return "admin";
-        case "organization_editor":
-          return "editor";
-        case "organization_reader":
-          return "reader";
-        default:
-          return "member";
-      }
-    default:
-      switch (true) {
-        case workspacePermissionType === "workspace_admin" || orgPermissionType === "organization_admin":
-          return "admin";
-        case workspacePermissionType === "workspace_editor" || orgPermissionType === "organization_editor":
-          return "editor";
-        case workspacePermissionType === "workspace_reader" || orgPermissionType === "organization_reader":
-          return "reader";
-        default:
-          return "member";
-      }
-  }
+  const orgRole = orgPermissionType ? partitionPermissionType(orgPermissionType)[1] : undefined;
+  const workspaceRole = workspacePermissionType ? partitionPermissionType(workspacePermissionType)[1] : undefined;
+
+  // return whatever is the "highest" role ie the lowest index greater than -1.
+  // the reason we set the index to the length of the array is so that if there is not a given type of role, it will not be the lowest index.
+  return RbacRoleHierarchy[
+    Math.min(
+      orgRole ? RbacRoleHierarchy.indexOf(orgRole) : RbacRoleHierarchy.length,
+      workspaceRole ? RbacRoleHierarchy.indexOf(workspaceRole) : RbacRoleHierarchy.length
+    )
+  ];
 };

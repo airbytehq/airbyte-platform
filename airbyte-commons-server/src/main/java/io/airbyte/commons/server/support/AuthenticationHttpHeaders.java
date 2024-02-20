@@ -82,6 +82,9 @@ public final class AuthenticationHttpHeaders {
 
   public static final String ORGANIZATION_ID_HEADER = AIRBYTE_HEADER_PREFIX + "Organization-Id";
   public static final String PERMISSION_ID_HEADER = AIRBYTE_HEADER_PREFIX + "Permission-Id";
+  public static final String IS_PUBLIC_API_HEADER = AIRBYTE_HEADER_PREFIX + "Is-Public-Api";
+
+  public static final String AIRBYTE_AUTH_USER_ID_HEADER = AIRBYTE_HEADER_PREFIX + "Auth-User-Id";
 
   /**
    * HTTP header that contains the scope type (ie 'workspace' or 'organization') for authorization

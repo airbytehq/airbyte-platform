@@ -64,6 +64,13 @@ services:
       context: airbyte-temporal
       labels:
         io.airbyte.git-revision: ${GIT_REVISION}
+  connector-sidecar:
+    image: airbyte/connector-sidecar:${VERSION}
+    build:
+      dockerfile: Dockerfile
+      context: airbyte-connector-sidecar
+      labels:
+        io.airbyte.git-revision: ${GIT_REVISION}
   container-orchestrator:
     image: airbyte/container-orchestrator:${VERSION}
     build:

@@ -1,85 +1,21 @@
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.ScopedConfiguration
-import io.airbyte.db.factory.DSLContextFactory
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigOriginType
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigResourceType
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigScopeType
-import io.airbyte.db.instance.test.TestDatabaseProviders
-import io.micronaut.context.ApplicationContext
-import io.micronaut.context.env.PropertySource
 import io.micronaut.data.exceptions.DataAccessException
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
-import io.micronaut.transaction.jdbc.DelegatingDataSource
-import org.jooq.DSLContext
-import org.jooq.SQLDialect
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.testcontainers.containers.PostgreSQLContainer
 import java.sql.Date
 import java.time.LocalDate
 import java.util.UUID
-import javax.sql.DataSource
 
 @MicronautTest
-internal class ScopedConfigurationRepositoryTest {
+internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<ScopedConfigurationRepository>(ScopedConfigurationRepository::class) {
   companion object {
     const val CONFIG_KEY = "config_key"
-
-    private lateinit var context: ApplicationContext
-    lateinit var repository: ScopedConfigurationRepository
-    private lateinit var jooqDslContext: DSLContext
-
-    // we run against an actual database to ensure micronaut data and jooq properly integrate
-    private val container: PostgreSQLContainer<*> =
-      PostgreSQLContainer("postgres:13-alpine")
-        .withDatabaseName("airbyte")
-        .withUsername("docker")
-        .withPassword("docker")
-
-    @BeforeAll
-    @JvmStatic
-    fun setup() {
-      container.start()
-      // set the micronaut datasource properties to match our container we started up
-      context =
-        ApplicationContext.run(
-          PropertySource.of(
-            "test",
-            mapOf(
-              "datasources.config.driverClassName" to "org.postgresql.Driver",
-              "datasources.config.db-type" to "postgres",
-              "datasources.config.dialect" to "POSTGRES",
-              "datasources.config.url" to container.jdbcUrl,
-              "datasources.config.username" to container.username,
-              "datasources.config.password" to container.password,
-            ),
-          ),
-        )
-
-      // removes micronaut transactional wrapper that doesn't play nice with our non-micronaut factories
-      val dataSource = (context.getBean(DataSource::class.java) as DelegatingDataSource).targetDataSource
-      jooqDslContext = DSLContextFactory.create(dataSource, SQLDialect.POSTGRES)
-      val databaseProviders = TestDatabaseProviders(dataSource, jooqDslContext)
-
-      // this line is what runs the migrations
-      databaseProviders.createNewConfigsDatabase()
-      repository = context.getBean(ScopedConfigurationRepository::class.java)
-    }
-
-    @AfterAll
-    @JvmStatic
-    fun dbDown() {
-      container.close()
-    }
-  }
-
-  @AfterEach
-  fun cleanDb() {
-    repository.deleteAll()
   }
 
   @Test
@@ -256,5 +192,156 @@ internal class ScopedConfigurationRepositoryTest {
         UUID.randomUUID(),
       )
     assert(persistedConfig == null)
+  }
+
+  @Test
+  fun `test db find by key`() {
+    val configId = UUID.randomUUID()
+    val config =
+      ScopedConfiguration(
+        id = configId,
+        key = CONFIG_KEY,
+        value = "config_value",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = UUID.randomUUID(),
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+        description = "my_description",
+        expiresAt = Date.valueOf(LocalDate.now()),
+      )
+
+    repository.save(config)
+
+    val config2 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value2",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = UUID.randomUUID(),
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+        description = "my_description",
+        expiresAt = Date.valueOf(LocalDate.now()),
+      )
+
+    repository.save(config2)
+
+    val otherConfig =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = "other key",
+        value = "config_value2",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = UUID.randomUUID(),
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+        description = "my_description",
+        expiresAt = Date.valueOf(LocalDate.now()),
+      )
+
+    repository.save(otherConfig)
+    assert(repository.count() == 3L)
+
+    val persistedConfigs = repository.findByKey(config.key)
+    assert(persistedConfigs.size == 2)
+
+    val persistedIds = persistedConfigs.map { it.id }
+
+    assert(persistedIds.containsAll(listOf(configId, config2.id)))
+    assert(persistedIds.contains(otherConfig.id).not())
+
+    val persistedConfigs2 = repository.findByKey(otherConfig.key)
+    assert(persistedConfigs2.size == 1)
+
+    val persistedIds2 = persistedConfigs2.map { it.id }
+
+    assert(persistedIds2.containsAll(listOf(otherConfig.id)))
+    assert(persistedIds2.contains(configId).not())
+    assert(persistedIds2.contains(config2.id).not())
+  }
+
+  @Test
+  fun `test db find by scope id list`() {
+    val resourceId = UUID.randomUUID()
+    val config =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = UUID.randomUUID().toString(),
+      )
+
+    repository.save(config)
+
+    val config2 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value2",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = UUID.randomUUID().toString(),
+      )
+
+    repository.save(config2)
+
+    val otherConfig =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value2",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = UUID.randomUUID().toString(),
+      )
+
+    repository.save(otherConfig)
+
+    val otherConfig2 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value2",
+        scopeType = ConfigScopeType.organization,
+        scopeId = config.scopeId,
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = UUID.randomUUID().toString(),
+      )
+
+    repository.save(otherConfig2)
+    assert(repository.count() == 4L)
+
+    val findConfigsResult =
+      repository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeIdInList(
+        CONFIG_KEY,
+        ConfigResourceType.actor_definition,
+        resourceId,
+        ConfigScopeType.workspace,
+        listOf(config.scopeId, config2.scopeId),
+      )
+    assert(findConfigsResult.size == 2)
+
+    val persistedIds = findConfigsResult.map { it.id }
+    assert(persistedIds.containsAll(listOf(config.id, config2.id)))
   }
 }

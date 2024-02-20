@@ -74,6 +74,7 @@ data:
 {{- end }}
   JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: "0.29.15.001"
   LOCAL_ROOT: /tmp/airbyte_local
+  LOG4J_CONFIGURATION_FILE: {{ $.Values.global.log4jConfig }}
   MICROMETER_METRICS_ENABLED: "false"
   MICROMETER_METRICS_STATSD_FLAVOR: "datadog"
   RUN_DATABASE_MIGRATION_ON_STARTUP: {{ index .Values "airbyte-bootloader" "runDatabaseMigrationsOnStartup" | default "true" | quote  }}
@@ -108,5 +109,7 @@ data:
   WORKER_STATE_STORAGE_TYPE:  {{ .Values.global.state.storage.type | quote }}
   SHOULD_RUN_NOTIFY_WORKFLOWS: "true"
   MAX_NOTIFY_WORKERS: {{ .Values.worker.maxNotifyWorkers | default "5" | quote }}
+  KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS: ""
   WORKLOAD_LAUNCHER_PARALLELISM: "10"
+  CONNECTOR_BUILDER_SERVER_API_HOST: http://{{ .Release.Name }}-airbyte-connector-builder-server-svc:{{ index .Values "connector-builder-server" "service" "port" }}
 {{- end }}

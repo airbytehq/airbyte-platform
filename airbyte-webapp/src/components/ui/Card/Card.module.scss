@@ -2,25 +2,32 @@
 @use "scss/variables";
 @use "scss/mixins";
 
-.header {
-  padding: variables.$spacing-xl;
+$default-border-radius: variables.$border-radius-lg;
+$default-padding: variables.$spacing-xl;
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   color: colors.$dark-blue;
-  letter-spacing: 0.008em;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
+  padding: $default-padding $default-padding 0 $default-padding;
+  border-top-left-radius: $default-border-radius;
+  border-top-right-radius: $default-border-radius;
 
-  &.lightPadding {
-    padding: 19px 20px 20px;
+  &.withBorderBottom {
+    border-bottom: colors.$grey-100 variables.$border-thin solid;
+    padding-bottom: $default-padding;
   }
 
-  &.roundedBottom {
-    border-radius: variables.$border-radius-lg;
+  &.withPaddingBottom {
+    padding-bottom: $default-padding;
   }
+}
 
-  &.withDescription {
-    display: flex;
-    align-items: center;
-  }
+.cardBody {
+  padding: $default-padding;
+  background: colors.$foreground;
+  border-radius: variables.$border-radius-lg;
 }
 
 .container {
@@ -30,18 +37,19 @@
   background: colors.$foreground;
   border-radius: variables.$border-radius-lg;
 
-  &.fullWidth {
-    width: 100%;
+  .infoTooltip {
+    color: colors.$foreground;
   }
 
-  &.withPadding {
-    padding: 20px;
-  }
-
-  &:has(.header + *) .header {
+  &:has(.cardBody:empty) .cardHeader {
     // apply the bottom border to the header only if it has a rendered sibling (the card content)
     // checking for `children` in tsx isn't enough as the passed child can return null
-    border-bottom: colors.$grey-100 variables.$border-thin solid;
+    border-bottom: 0;
+  }
+
+  &:has(.cardBody:empty) .cardBody {
+    // same here, don't show empty card body
+    padding: 0;
   }
 
   &.inset {
@@ -49,6 +57,21 @@
   }
 }
 
-.infoTooltip {
-  color: colors.$foreground;
+.headerBtn {
+  all: unset;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+
+  .icon {
+    transition: variables.$transition;
+
+    &.expanded {
+      transform: rotate(90deg);
+    }
+  }
+}
+
+.noPadding {
+  padding: 0;
 }

@@ -216,7 +216,8 @@ abstract class ReplicationWorkerTest {
     replicationFeatureFlagReader = mock(ReplicationFeatureFlagReader.class);
 
     final HeartbeatMonitor heartbeatMonitor = mock(HeartbeatMonitor.class);
-    heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMinutes(5), null, null, null, metricClient);
+    heartbeatTimeoutChaperone =
+        new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMinutes(5), null, null, null, "docker image", metricClient);
     destinationTimeoutMonitor = mock(DestinationTimeoutMonitor.class);
     replicationAirbyteMessageEventPublishingHelper = mock(ReplicationAirbyteMessageEventPublishingHelper.class);
     workloadApi = mock(WorkloadApi.class);
@@ -490,7 +491,10 @@ abstract class ReplicationWorkerTest {
     // Since the thread was left to hang after the first call, we expect 1, not 2, calls to
     // validateInitializedSchema by the time the replication worker is done and shuts down the
     // validation thread. We therefore expect the metricReporter to only report on the first record.
-    verify(jsonSchemaValidator, Mockito.times(1)).validateInitializedSchema(any(), any());
+    // NOTE: we use atMost because validateInitializedSchema is called async, and isn't guaranteed to be
+    // invoked at all. The test still verifies that we shut it down without validating the second
+    // record.
+    verify(jsonSchemaValidator, Mockito.atMost(1)).validateInitializedSchema(any(), any());
   }
 
   @Test
@@ -965,7 +969,7 @@ abstract class ReplicationWorkerTest {
     final MetricClient mMetricClient = mock(MetricClient.class);
     heartbeatTimeoutChaperone =
         new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMillis(1), new TestClient(Map.of("heartbeat.failSync", true)), UUID.randomUUID(),
-            connectionId, mMetricClient);
+            connectionId, "docker image", mMetricClient);
     sourceStub.setInfiniteSourceWithMessages(RECORD_MESSAGE1);
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
@@ -973,7 +977,9 @@ abstract class ReplicationWorkerTest {
     final ReplicationOutput actual = worker.run(replicationInput, jobRoot);
 
     verify(mMetricClient).count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
-        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+        new MetricAttribute(MetricTags.KILLED, "true"),
+        new MetricAttribute(MetricTags.SOURCE_IMAGE, "docker image"));
     assertEquals(1, actual.getFailures().size());
     assertEquals(FailureOrigin.SOURCE, actual.getFailures().get(0).getFailureOrigin());
     assertEquals(FailureReason.FailureType.HEARTBEAT_TIMEOUT, actual.getFailures().get(0).getFailureType());
@@ -1150,7 +1156,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(replicationWorkerHelper, times(0)).getWorkloadStatusHeartbeat();
+    verify(replicationWorkerHelper, times(0)).getWorkloadStatusHeartbeat(any());
   }
 
   @Test
@@ -1162,7 +1168,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(replicationWorkerHelper).getWorkloadStatusHeartbeat();
+    verify(replicationWorkerHelper).getWorkloadStatusHeartbeat(any());
   }
 
   private ReplicationContext simpleContext(final boolean isReset) {

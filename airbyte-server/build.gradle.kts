@@ -4,6 +4,8 @@ plugins {
     id("io.airbyte.gradle.jvm.app")
     id("io.airbyte.gradle.docker")
     id("io.airbyte.gradle.publish")
+    kotlin("jvm")
+    kotlin("kapt")
 }
 
 configurations.all {
@@ -47,6 +49,7 @@ dependencies {
     implementation(project(":airbyte-commons-converters"))
     implementation(project(":airbyte-commons-license"))
     implementation(project(":airbyte-commons-micronaut"))
+    implementation(project(":airbyte-commons-micronaut-security"))
     implementation(project(":airbyte-commons-temporal"))
     implementation(project(":airbyte-commons-temporal-core"))
     implementation(project(":airbyte-commons-server"))
@@ -97,6 +100,14 @@ dependencies {
     testImplementation(libs.assertj.core)
 
     testImplementation(libs.junit.pioneer)
+
+    // Airbyte API server
+    kapt(platform(libs.micronaut.bom))
+    kapt(libs.bundles.micronaut.annotation.processor)
+    kapt(libs.micronaut.jaxrs.processor)
+    implementation("com.cronutils:cron-utils:9.2.1")
+    implementation("org.apache.logging.log4j:log4j-slf4j2-impl") // Because cron-utils uses slf4j 2.0+
+    testImplementation(libs.mockk)
 }
 
 // we want to be able to access the generated db files from config/init when we build the server docker image.)
@@ -163,4 +174,13 @@ tasks.named<Test>("test") {
  "MICRONAUT_ENVIRONMENTS" to  "test",
  "SERVICE_NAME" to project.name,
     ))
+}
+
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.)
+// Kapt, by default, runs all annotation(processors and disables annotation(processing by javac, however)
+// this default behavior(breaks the lombok java annotation(processor.  To avoid(lombok breaking, kapt(has)
+// keepJavacAnnotationProcessors enabled, which causes duplicate META-INF files to be generated.)
+// Once lombok has been removed, this can also be removed.)
+tasks.withType<Jar>().configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

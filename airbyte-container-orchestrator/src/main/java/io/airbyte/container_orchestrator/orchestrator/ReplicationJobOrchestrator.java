@@ -124,8 +124,9 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
 
     final ReplicationOutput replicationOutput;
     if (workloadEnabled) {
-      replicationOutput = runWithWorkloadEnabled(replicationWorker, replicationInput, jobRoot);
+      replicationOutput = runWithWorkloadEnabled(replicationWorker, replicationInput, jobRoot, workloadId.get());
       jobOutputDocStore.writeSyncOutput(workloadId.get(), replicationOutput);
+      updateStatusInWorkloadApi(replicationOutput, workloadId.get());
     } else {
       replicationOutput = replicationWorker.run(replicationInput, jobRoot);
     }
@@ -135,26 +136,16 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   }
 
   @VisibleForTesting
-  ReplicationOutput runWithWorkloadEnabled(final ReplicationWorker replicationWorker, final ReplicationInput replicationInput, final Path jobRoot)
+  ReplicationOutput runWithWorkloadEnabled(final ReplicationWorker replicationWorker,
+                                           final ReplicationInput replicationInput,
+                                           final Path jobRoot,
+                                           final String workloadId)
       throws WorkerException, IOException {
 
     final Long jobId = Long.parseLong(jobRunConfig.getJobId());
     final Integer attemptNumber = Math.toIntExact(jobRunConfig.getAttemptId());
-    final String workloadId = workloadIdGenerator.generateSyncWorkloadId(
-        replicationInput.getConnectionId(),
-        jobId,
-        attemptNumber);
-
     try {
-      final ReplicationOutput replicationOutput = replicationWorker.run(replicationInput, jobRoot);
-      switch (replicationOutput.getReplicationAttemptSummary().getStatus()) {
-        case FAILED -> failWorkload(workloadId, replicationOutput.getFailures().stream().findFirst());
-        case CANCELLED -> cancelWorkload(workloadId);
-        case COMPLETED -> succeedWorkload(workloadId);
-        default -> throw new RuntimeException(String.format("Unknown status %s.", replicationOutput.getReplicationAttemptSummary().getStatus()));
-      }
-
-      return replicationOutput;
+      return replicationWorker.run(replicationInput, jobRoot);
     } catch (final DestinationException e) {
       failWorkload(workloadId, Optional.of(FailureHelper.destinationFailure(e, jobId, attemptNumber)));
       throw e;
@@ -164,6 +155,20 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
     } catch (final WorkerException e) {
       failWorkload(workloadId, Optional.of(FailureHelper.platformFailure(e, jobId, attemptNumber)));
       throw e;
+    }
+  }
+
+  @VisibleForTesting
+  void updateStatusInWorkloadApi(final ReplicationOutput replicationOutput, final String workloadId) throws IOException {
+    if (replicationOutput == null || replicationOutput.getReplicationAttemptSummary() == null) {
+      log.warn("The replication output is null, skipping updating the workload status via API");
+      return;
+    }
+    switch (replicationOutput.getReplicationAttemptSummary().getStatus()) {
+      case FAILED -> failWorkload(workloadId, replicationOutput.getFailures().stream().findFirst());
+      case CANCELLED -> cancelWorkload(workloadId);
+      case COMPLETED -> succeedWorkload(workloadId);
+      default -> throw new RuntimeException(String.format("Unknown status %s.", replicationOutput.getReplicationAttemptSummary().getStatus()));
     }
   }
 

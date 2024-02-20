@@ -103,4 +103,28 @@ class ScopedConfigurationServiceDataImpl(private val repository: ScopedConfigura
   override fun listScopedConfigurations(): List<ScopedConfiguration> {
     return repository.findAll().map { it.toConfigModel() }.toList()
   }
+
+  override fun listScopedConfigurations(key: String): List<ScopedConfiguration> {
+    return repository.findByKey(key).map { it.toConfigModel() }.toList()
+  }
+
+  override fun listScopedConfigurationsWithScopes(
+    key: String,
+    resourceType: ConfigResourceType,
+    resourceId: UUID,
+    scopeType: ConfigScopeType,
+    scopeIds: List<UUID>,
+  ): List<ScopedConfiguration> {
+    return repository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeIdInList(
+      key,
+      resourceType.toEntity(),
+      resourceId,
+      scopeType.toEntity(),
+      scopeIds,
+    ).map { it.toConfigModel() }.toList()
+  }
+
+  override fun deleteScopedConfiguration(configId: UUID) {
+    repository.deleteById(configId)
+  }
 }

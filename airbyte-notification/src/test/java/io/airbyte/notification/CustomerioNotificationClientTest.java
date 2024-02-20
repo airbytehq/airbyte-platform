@@ -16,6 +16,10 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.notification.messages.ConnectionInfo;
+import io.airbyte.notification.messages.SchemaUpdateNotification;
+import io.airbyte.notification.messages.SourceInfo;
+import io.airbyte.notification.messages.WorkspaceInfo;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -188,9 +192,14 @@ class CustomerioNotificationClientTest {
             .streamDescriptor(new StreamDescriptor().name("removed")));
     String recipient = "airbyte@airbyte.io";
     String transactionMessageId = "455";
+    SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
+        .workspace(WorkspaceInfo.builder().id(workspaceId).name(workspaceName).build())
+        .connectionInfo(ConnectionInfo.builder().id(connectionId).name(connectionName).build())
+        .sourceInfo(SourceInfo.builder().id(sourceId).name(sourceName).build())
+        .catalogDiff(diff)
+        .build();
     ObjectNode node =
-        CustomerioNotificationClient.buildSchemaPropagationJson(workspaceId, workspaceName, connectionId, connectionName, sourceId, sourceName, diff,
-            recipient, transactionMessageId);
+        CustomerioNotificationClient.buildSchemaPropagationJson(notification, recipient, transactionMessageId);
 
     assertEquals(transactionMessageId, node.get("transactional_message_id").asText());
     assertEquals(recipient, node.get("to").asText());

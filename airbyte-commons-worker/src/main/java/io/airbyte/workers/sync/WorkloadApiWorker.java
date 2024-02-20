@@ -18,7 +18,6 @@ import io.airbyte.featureflag.Destination;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Source;
-import io.airbyte.featureflag.WorkloadHeartbeatRate;
 import io.airbyte.featureflag.WorkloadPollingInterval;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -27,7 +26,7 @@ import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.models.ReplicationActivityInput;
-import io.airbyte.workers.orchestrator.OrchestratorNameGenerator;
+import io.airbyte.workers.orchestrator.PodNameGenerator;
 import io.airbyte.workers.process.Metadata;
 import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.workload.JobOutputDocStore;
@@ -44,8 +43,6 @@ import io.micronaut.http.HttpStatus;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -69,7 +66,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   private static final Logger log = LoggerFactory.getLogger(WorkloadApiWorker.class);
   private static final Set<WorkloadStatus> TERMINAL_STATUSES = Set.of(WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS);
   private final DocumentStoreClient documentStoreClient;
-  private final OrchestratorNameGenerator orchestratorNameGenerator;
+  private final PodNameGenerator podNameGenerator;
   private final JobOutputDocStore jobOutputDocStore;
   private final AirbyteApiClient apiClient;
   private final WorkloadApi workloadApi;
@@ -80,7 +77,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   private String workloadId = null;
 
   public WorkloadApiWorker(final DocumentStoreClient documentStoreClient,
-                           final OrchestratorNameGenerator orchestratorNameGenerator,
+                           final PodNameGenerator podNameGenerator,
                            final JobOutputDocStore jobOutputDocStore,
                            final AirbyteApiClient apiClient,
                            final WorkloadApi workloadApi,
@@ -88,7 +85,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
                            final ReplicationActivityInput input,
                            final FeatureFlagClient featureFlagClient) {
     this.documentStoreClient = documentStoreClient;
-    this.orchestratorNameGenerator = orchestratorNameGenerator;
+    this.podNameGenerator = podNameGenerator;
     this.jobOutputDocStore = jobOutputDocStore;
     this.apiClient = apiClient;
     this.workloadApi = workloadApi;
@@ -126,7 +123,8 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
           fullLogPath(jobRoot),
           geo.getValue(),
           WorkloadType.SYNC,
-          replicationInput.getConnectionId().toString()));
+          replicationInput.getConnectionId().toString(),
+          null));
     } catch (final ServerException e) {
       if (e.getStatusCode() != HTTP_CONFLICT_CODE) {
         throw e;
@@ -209,9 +207,6 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   }
 
   private ReplicationOutput getReplicationOutput(final String workloadId) throws DocStoreAccessException {
-    final String outputLocation = orchestratorNameGenerator.getOrchestratorOutputLocation(input.getJobRunConfig().getJobId(),
-        input.getJobRunConfig().getAttemptId());
-
     final Optional<ReplicationOutput> output;
 
     output = fetchReplicationOutput(workloadId, (location) -> {
@@ -228,16 +223,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
 
   private Optional<ReplicationOutput> fetchReplicationOutput(final String location,
                                                              final Function<String, Optional<ReplicationOutput>> replicationFetcher) {
-    final Context context = getFeatureFlagContext();
-    final int workloadHeartbeatRate = featureFlagClient.intVariation(WorkloadHeartbeatRate.INSTANCE, context);
-    final Instant cutoffTime = Instant.now().plus(workloadHeartbeatRate, ChronoUnit.SECONDS);
-    do {
-      final Optional<ReplicationOutput> output = replicationFetcher.apply(location);
-      if (output.isPresent()) {
-        return output;
-      }
-    } while (Instant.now().isBefore(cutoffTime));
-    return Optional.empty();
+    return replicationFetcher.apply(location);
   }
 
   private Context getFeatureFlagContext() {

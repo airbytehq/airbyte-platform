@@ -5,6 +5,7 @@
 package io.airbyte.workers.helper;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.airbyte.api.client.model.generated.CatalogDiff;
@@ -93,8 +94,9 @@ class BackfillHelperTest {
   @Test
   void testClearStateForStreamsToBackfill() {
     List<StreamDescriptor> streamsToBackfill = List.of(STREAM_DESCRIPTOR);
-    final var actualState = BackfillHelper.clearStateForStreamsToBackfill(STATE, streamsToBackfill);
-    final var typedState = StateMessageHelper.getTypedState(actualState.getState());
+    final State updatedState = BackfillHelper.clearStateForStreamsToBackfill(STATE, streamsToBackfill);
+    assertNotNull(updatedState);
+    final var typedState = StateMessageHelper.getTypedState(updatedState.getState());
     assertEquals(1, typedState.get().getStateMessages().size());
     assertEquals(JsonNodeFactory.instance.nullNode(), typedState.get().getStateMessages().get(0).getStream().getStreamState());
   }

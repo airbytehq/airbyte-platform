@@ -11,7 +11,6 @@ import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.JITTER_MA
 import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.MAX_TRIES;
 import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.TRUE;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
-import static io.airbyte.test.utils.AcceptanceTestHarness.waitForSuccessfulJob;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -57,6 +56,7 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.invoker.generated.ApiClient;
+import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
@@ -170,7 +170,7 @@ public class AirbyteApiAcceptanceTests {
         : UUID.fromString(System.getenv().get(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID));
     LOGGER.info("workspaceId = " + workspaceId);
 
-    testHarness = new AcceptanceTestHarness(configApiClient, workspaceId);
+    testHarness = new AcceptanceTestHarness(configApiClient, null, workspaceId);
 
     testHarness.ensureCleanSlate();
     final URI publicApiUrl = new URI(AIRBYTE_PUBLIC_API_SERVER_HOST);
@@ -204,7 +204,7 @@ public class AirbyteApiAcceptanceTests {
   }
 
   @BeforeEach
-  void setup() throws SQLException, URISyntaxException, IOException {
+  void setup() throws SQLException, URISyntaxException, IOException, ApiException {
     LOGGER.debug("Executing test case setup");
     testHarness.setup();
   }
@@ -248,7 +248,7 @@ public class AirbyteApiAcceptanceTests {
     jobCreate.withConnectionId(connectionId.toString());
     jobCreate.withJobType(expectedJobType);
     airbyteApiClient.jobs.createJob(jobCreate);
-    waitForSuccessfulJob(configApiClient.getJobsApi(), testHarness.getMostRecentSyncForConnection(connectionId));
+    testHarness.waitForSuccessfulJob(testHarness.getMostRecentSyncForConnection(connectionId));
 
     // Test regular old get jobs
     final ListJobsRequest listJobsRequest = new ListJobsRequest()
@@ -340,7 +340,7 @@ public class AirbyteApiAcceptanceTests {
     // publicApiJobsClient.createJob(jobCreate);
 
     final JobInfoRead jobInfoRead = configApiClient.getConnectionApi().resetConnection(new ConnectionIdRequestBody().connectionId(connectionId));
-    waitForSuccessfulJob(configApiJobsClient, jobInfoRead.getJob());
+    testHarness.waitForSuccessfulJob(jobInfoRead.getJob());
 
     // null response type means we return both sync and reset
     final ListJobsRequest noFilterRequest = new ListJobsRequest().withLimit(1000);

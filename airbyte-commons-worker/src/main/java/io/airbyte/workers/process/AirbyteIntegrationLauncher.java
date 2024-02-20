@@ -238,6 +238,9 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         null,
         buildSourceConnectorResourceRequirements(resourceRequirement, syncResourceRequirements),
         allowedHosts,
+        // IMPORTANT: Do NOT change these labels until https://github.com/airbytehq/airbyte/issues/34061 is
+        // closed. If these labels need to be changed please also update PodLabeler#getSourceLabels and
+        // contact Move.
         getLabels(Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, READ_STEP)),
         getWorkerMetadata(),
         Collections.emptyMap(),
@@ -273,6 +276,9 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         null,
         buildDestinationConnectorResourceRequirements(resourceRequirement, syncResourceRequirements),
         allowedHosts,
+        // IMPORTANT: Do NOT change these labels until https://github.com/airbytehq/airbyte/issues/34061 is
+        // closed. If these labels need to be changed please also update PodLabeler#getDestinationLabels and
+        // contact Move.
         getLabels(Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, WRITE_STEP)),
         getWorkerMetadata(),
         Collections.emptyMap(),

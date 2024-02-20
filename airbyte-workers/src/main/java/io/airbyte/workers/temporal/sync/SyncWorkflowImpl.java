@@ -52,10 +52,7 @@ import org.slf4j.LoggerFactory;
 public class SyncWorkflowImpl implements SyncWorkflow {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SyncWorkflowImpl.class);
-  private static final String USE_WORKLOAD_API_FF_CHECK_TAG = "use_workload_api_ff_check";
-  private static final int USE_WORKLOAD_API_FF_CHECK_VERSION = 1;
-  private static final String USE_WORKLOAD_OUTPUT_DOC_STORE_FF_CHECK_TAG = "use_workload_output_doc_store_ff_check";
-  private static final int USE_WORKLOAD_OUTPUT_DOC_STORE_FF_CHECK_VERSION = 1;
+
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
   private ReplicationActivity replicationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
@@ -231,13 +228,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   }
 
   private boolean checkUseWorkloadApiFlag(final StandardSyncInput syncInput) {
-    final int version = Workflow.getVersion(USE_WORKLOAD_API_FF_CHECK_TAG, Workflow.DEFAULT_VERSION, USE_WORKLOAD_API_FF_CHECK_VERSION);
-    final boolean shouldCheckFlag = version >= USE_WORKLOAD_API_FF_CHECK_VERSION;
-
-    if (!shouldCheckFlag) {
-      return false;
-    }
-
     return workloadFeatureFlagActivity.useWorkloadApi(new WorkloadFeatureFlagActivity.Input(
         syncInput.getWorkspaceId(),
         syncInput.getConnectionId(),
@@ -245,14 +235,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   }
 
   private boolean checkUseWorkloadOutputFlag(final StandardSyncInput syncInput) {
-    final int version =
-        Workflow.getVersion(USE_WORKLOAD_OUTPUT_DOC_STORE_FF_CHECK_TAG, Workflow.DEFAULT_VERSION, USE_WORKLOAD_OUTPUT_DOC_STORE_FF_CHECK_VERSION);
-    final boolean shouldCheckFlag = version >= USE_WORKLOAD_OUTPUT_DOC_STORE_FF_CHECK_VERSION;
-
-    if (!shouldCheckFlag) {
-      return false;
-    }
-
     return workloadFeatureFlagActivity.useOutputDocStore(new WorkloadFeatureFlagActivity.Input(
         syncInput.getWorkspaceId(),
         syncInput.getConnectionId(),

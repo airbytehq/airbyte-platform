@@ -2,6 +2,7 @@ package io.airbyte.workload.launcher.serde
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.workers.models.CheckConnectionInput
+import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.ReplicationActivityInput
 import jakarta.inject.Singleton
 
@@ -13,5 +14,9 @@ class PayloadDeserializer {
 
   fun toCheckConnectionInput(payload: String): CheckConnectionInput {
     return Jsons.deserialize(payload, CheckConnectionInput::class.java)
+  }
+
+  fun toDiscoverCatalogInput(payload: String): DiscoverCatalogInput {
+    return Jsons.deserialize(payload, DiscoverCatalogInput::class.java)
   }
 }

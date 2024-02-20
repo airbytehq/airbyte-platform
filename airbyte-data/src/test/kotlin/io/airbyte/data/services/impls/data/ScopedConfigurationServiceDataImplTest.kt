@@ -7,8 +7,11 @@ import io.airbyte.data.services.impls.data.mappers.ModelConfigScopeType
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.shared.ScopedConfigurationKey
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigOriginType
+import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigResourceType
+import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigScopeType
 import io.mockk.clearAllMocks
 import io.mockk.every
+import io.mockk.justRun
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
@@ -471,5 +474,119 @@ internal class ScopedConfigurationServiceDataImplTest {
     verify {
       scopedConfigurationRepository.findAll()
     }
+  }
+
+  @Test
+  fun `test list configurations by key`() {
+    val resourceId = UUID.randomUUID()
+
+    val config =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = "key",
+        value = "value",
+        scopeType = EntityConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+        description = "my_description",
+      )
+
+    val config2 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = "key",
+        value = "value2",
+        scopeType = EntityConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = "my_user_id2",
+        description = "my_description2",
+        referenceUrl = "https://github.com/",
+        expiresAt = Date.valueOf(LocalDate.now()),
+      )
+
+    every { scopedConfigurationRepository.findByKey("key") } returns listOf(config, config2)
+
+    val res = scopedConfigurationService.listScopedConfigurations("key")
+    assert(res == listOf(config.toConfigModel(), config2.toConfigModel()))
+
+    verify {
+      scopedConfigurationRepository.findByKey("key")
+    }
+  }
+
+  @Test
+  fun `test list configurations with scopes`() {
+    val resourceId = UUID.randomUUID()
+
+    val config =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = "key",
+        value = "value",
+        scopeType = EntityConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+      )
+
+    val config2 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = "key",
+        value = "value2",
+        scopeType = EntityConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = "my_user_id2",
+      )
+
+    every {
+      scopedConfigurationRepository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeIdInList(
+        "key",
+        ConfigResourceType.actor_definition, resourceId,
+        ConfigScopeType.workspace, listOf(config.scopeId, config2.scopeId),
+      )
+    } returns listOf(config, config2)
+
+    val res =
+      scopedConfigurationService.listScopedConfigurationsWithScopes(
+        "key",
+        ModelConfigResourceType.ACTOR_DEFINITION,
+        resourceId,
+        ModelConfigScopeType.WORKSPACE,
+        listOf(config.scopeId, config2.scopeId),
+      )
+    assert(res == listOf(config.toConfigModel(), config2.toConfigModel()))
+
+    verify {
+      scopedConfigurationRepository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeIdInList(
+        "key",
+        ConfigResourceType.actor_definition,
+        resourceId,
+        ConfigScopeType.workspace,
+        listOf(config.scopeId, config2.scopeId),
+      )
+    }
+  }
+
+  @Test
+  fun `test delete scoped configuration`() {
+    val configId = UUID.randomUUID()
+
+    justRun { scopedConfigurationRepository.deleteById(configId) }
+
+    scopedConfigurationService.deleteScopedConfiguration(configId)
+
+    verify { scopedConfigurationRepository.deleteById(configId) }
   }
 }

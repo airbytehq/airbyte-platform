@@ -16,7 +16,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
@@ -60,7 +59,6 @@ import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.UseIconUrlInApiResponse;
@@ -81,7 +79,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class SourceDefinitionsHandlerTest {
 
@@ -672,11 +670,10 @@ class SourceDefinitionsHandlerTest {
   }
 
   @ParameterizedTest
-  @CsvSource({"true,true", "true,false", "false,true", "false, false"})
+  @ValueSource(booleans = {true, false})
   @DisplayName("updateSourceDefinition should correctly update a sourceDefinition")
-  void testUpdateSource(final boolean runSupportStateUpdaterFlagValue, final boolean useIconUrlInApiResponseFlagValue)
-      throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException {
-    when(featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(runSupportStateUpdaterFlagValue);
+  void testUpdateSource(final boolean useIconUrlInApiResponseFlagValue)
+      throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(useIconUrlInApiResponseFlagValue);
 
     final String newDockerImageTag = "averydifferenttag";
@@ -728,11 +725,7 @@ class SourceDefinitionsHandlerTest {
         sourceDefinition.getCustom());
     verify(actorDefinitionHandlerHelper).getBreakingChanges(updatedSourceDefVersion, ActorType.SOURCE);
     verify(configRepository).writeConnectorMetadata(updatedSource, updatedSourceDefVersion, breakingChanges);
-    if (runSupportStateUpdaterFlagValue) {
-      verify(supportStateUpdater).updateSupportStatesForSourceDefinition(persistedUpdatedSource);
-    } else {
-      verifyNoInteractions(supportStateUpdater);
-    }
+    verify(supportStateUpdater).updateSupportStatesForSourceDefinition(persistedUpdatedSource);
     verifyNoMoreInteractions(actorDefinitionHandlerHelper, supportStateUpdater);
   }
 

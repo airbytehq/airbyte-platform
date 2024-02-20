@@ -13,7 +13,7 @@ import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
-import { useExperiment } from "hooks/services/Experiment";
+import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
@@ -72,8 +72,10 @@ const CloudSettingsPage = React.lazy(() => import("./views/settings/CloudSetting
 const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
   const organization = useCurrentOrganizationInfo();
-  const isSsoEnabled = organization?.sso;
+  const isSsoEnabled = organization?.sso ?? false;
   const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
+  const isUpdatedOrganizationsUi = useExperiment("settings.organizationsUpdates", false);
+  useExperimentContext("organization", organization?.organizationId);
 
   const analyticsContext = useMemo(
     () => ({
@@ -120,10 +122,12 @@ const MainRoutes: React.FC = () => {
           )}
           <Route path={CloudSettingsRoutePaths.Source} element={<SettingsSourcesPage />} />
           <Route path={CloudSettingsRoutePaths.Destination} element={<SettingsDestinationsPage />} />
-          <Route
-            path={CloudSettingsRoutePaths.AccessManagement}
-            element={isSsoEnabled ? <WorkspaceAccessManagementPage /> : <UsersSettingsView />}
-          />
+          {!isUpdatedOrganizationsUi && (
+            <Route
+              path={CloudSettingsRoutePaths.AccessManagement}
+              element={isSsoEnabled ? <WorkspaceAccessManagementPage /> : <UsersSettingsView />}
+            />
+          )}
           <Route path={CloudSettingsRoutePaths.Notifications} element={<NotificationPage />} />
           {supportsCloudDbtIntegration && (
             <Route path={CloudSettingsRoutePaths.DbtCloud} element={<DbtCloudSettingsView />} />

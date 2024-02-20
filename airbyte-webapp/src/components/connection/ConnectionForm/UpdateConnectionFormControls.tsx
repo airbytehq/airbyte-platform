@@ -25,7 +25,7 @@ export const UpdateConnectionFormControls: React.FC<UpdateConnectionFormControls
   const { mode, getErrorMessage } = useConnectionFormService();
   const { schemaHasBeenRefreshed } = useConnectionEditService();
   const { isValid, isDirty, isSubmitting, isSubmitSuccessful, errors } = useFormState<FormConnectionFormValues>();
-  const { reset, trigger, formState } = useFormContext<FormConnectionFormValues>();
+  const { reset, trigger } = useFormContext<FormConnectionFormValues>();
 
   // for cancel and submit buttons
   const isControlDisabled = isSubmitting || (!isDirty && !(schemaHasBeenRefreshed || isDirty));
@@ -48,13 +48,7 @@ export const UpdateConnectionFormControls: React.FC<UpdateConnectionFormControls
   }, [clearFormChange, schemaHasBeenRefreshed, trackFormChange, trigger]);
 
   const onCancelButtonClick = () => {
-    /**
-     * Since we update streams via "setValue()" (mutable) instead of fieldsArray's "update()" (immutable).
-     * there is some inconsistency in the form state
-     * to fix that we manually set default values form values on reset.
-     * TODO: Replace "setValue()" with "update()" when we fix the issue https://github.com/airbytehq/airbyte/issues/31820
-     */
-    reset({ ...formState.defaultValues });
+    reset();
     if (schemaHasBeenRefreshed) {
       clearFormChange("schemaHasBeenRefreshed");
     }

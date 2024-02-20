@@ -15,7 +15,6 @@ import io.airbyte.protocol.models.AirbyteStreamState
 import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.context.ReplicationFeatureFlags
 import io.airbyte.workers.exception.InvalidChecksumException
-import io.airbyte.workers.general.ReplicationFeatureFlagReader
 import io.airbyte.workers.test_utils.AirbyteMessageUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.mockk.every
@@ -26,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.mockito.Mockito
+import java.util.UUID
 
 private val logger = KotlinLogging.logger { }
 
@@ -37,6 +37,10 @@ class ParallelStreamStatsTrackerTest {
 
     // This is based of the current size of a record from createRecord
     const val MESSAGE_SIZE = 16L
+
+    val CONNECTION_ID: UUID = UUID.randomUUID()
+    const val JOB_ID: Long = 123L
+    const val ATTEMPT_NUMBER: Int = 0
   }
 
   private val stream1 = AirbyteStreamNameNamespacePair(STREAM1_NAME, null)
@@ -55,7 +59,7 @@ class ParallelStreamStatsTrackerTest {
   @BeforeEach
   fun beforeEach() {
     metricClient = Mockito.mock(MetricClient::class.java)
-    statsTracker = ParallelStreamStatsTracker(metricClient)
+    statsTracker = ParallelStreamStatsTracker(metricClient, CONNECTION_ID, JOB_ID, ATTEMPT_NUMBER)
   }
 
   @Test
@@ -562,10 +566,8 @@ class ParallelStreamStatsTrackerTest {
         .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
-    val replicationFeatureFlagReader: ReplicationFeatureFlagReader = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
-    every { replicationFeatureFlagReader.readReplicationFeatureFlags() } returns replicationFeatureFlags
-    statsTracker.setReplicationFeatureFlagReader(replicationFeatureFlagReader)
+    statsTracker.setReplicationFeatureFlags(replicationFeatureFlags)
 
     trackRecords(recordCount, name, namespace)
 
@@ -606,10 +608,8 @@ class ParallelStreamStatsTrackerTest {
         .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
-    val replicationFeatureFlagReader: ReplicationFeatureFlagReader = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
-    every { replicationFeatureFlagReader.readReplicationFeatureFlags() } returns replicationFeatureFlags
-    statsTracker.setReplicationFeatureFlagReader(replicationFeatureFlagReader)
+    statsTracker.setReplicationFeatureFlags(replicationFeatureFlags)
 
     trackRecords(recordCount, name, namespace)
 
@@ -653,10 +653,8 @@ class ParallelStreamStatsTrackerTest {
         .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
-    val replicationFeatureFlagReader: ReplicationFeatureFlagReader = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
-    every { replicationFeatureFlagReader.readReplicationFeatureFlags() } returns replicationFeatureFlags
-    statsTracker.setReplicationFeatureFlagReader(replicationFeatureFlagReader)
+    statsTracker.setReplicationFeatureFlags(replicationFeatureFlags)
 
     trackRecords(recordCount, name, namespace)
 
@@ -700,10 +698,8 @@ class ParallelStreamStatsTrackerTest {
         .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
-    val replicationFeatureFlagReader: ReplicationFeatureFlagReader = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
-    every { replicationFeatureFlagReader.readReplicationFeatureFlags() } returns replicationFeatureFlags
-    statsTracker.setReplicationFeatureFlagReader(replicationFeatureFlagReader)
+    statsTracker.setReplicationFeatureFlags(replicationFeatureFlags)
 
     assertDoesNotThrow {
       trackRecords(recordCount, name, namespace)
@@ -734,10 +730,8 @@ class ParallelStreamStatsTrackerTest {
         .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
-    val replicationFeatureFlagReader: ReplicationFeatureFlagReader = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
-    every { replicationFeatureFlagReader.readReplicationFeatureFlags() } returns replicationFeatureFlags
-    statsTracker.setReplicationFeatureFlagReader(replicationFeatureFlagReader)
+    statsTracker.setReplicationFeatureFlags(replicationFeatureFlags)
 
     assertDoesNotThrow {
       trackRecords(recordCount, name, namespace)
@@ -801,10 +795,8 @@ class ParallelStreamStatsTrackerTest {
         .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
-    val replicationFeatureFlagReader: ReplicationFeatureFlagReader = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
-    every { replicationFeatureFlagReader.readReplicationFeatureFlags() } returns replicationFeatureFlags
-    statsTracker.setReplicationFeatureFlagReader(replicationFeatureFlagReader)
+    statsTracker.setReplicationFeatureFlags(replicationFeatureFlags)
 
     assertDoesNotThrow {
       trackRecords(recordCountStream1, name1, namespace1)
@@ -869,10 +861,8 @@ class ParallelStreamStatsTrackerTest {
         .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
-    val replicationFeatureFlagReader: ReplicationFeatureFlagReader = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
-    every { replicationFeatureFlagReader.readReplicationFeatureFlags() } returns replicationFeatureFlags
-    statsTracker.setReplicationFeatureFlagReader(replicationFeatureFlagReader)
+    statsTracker.setReplicationFeatureFlags(replicationFeatureFlags)
 
     assertDoesNotThrow {
       trackRecords(recordCountStream1, name1, namespace1)
@@ -919,10 +909,8 @@ class ParallelStreamStatsTrackerTest {
         .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
-    val replicationFeatureFlagReader: ReplicationFeatureFlagReader = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
-    every { replicationFeatureFlagReader.readReplicationFeatureFlags() } returns replicationFeatureFlags
-    statsTracker.setReplicationFeatureFlagReader(replicationFeatureFlagReader)
+    statsTracker.setReplicationFeatureFlags(replicationFeatureFlags)
 
     assertDoesNotThrow {
       trackRecords(recordCountStream1, name1, namespace1)
@@ -990,10 +978,8 @@ class ParallelStreamStatsTrackerTest {
         .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
-    val replicationFeatureFlagReader: ReplicationFeatureFlagReader = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
-    every { replicationFeatureFlagReader.readReplicationFeatureFlags() } returns replicationFeatureFlags
-    statsTracker.setReplicationFeatureFlagReader(replicationFeatureFlagReader)
+    statsTracker.setReplicationFeatureFlags(replicationFeatureFlags)
 
     trackRecords(recordCountStream1, name1, namespace1)
     trackRecords(recordCountStream2, name2, namespace2)

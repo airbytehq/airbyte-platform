@@ -51,6 +51,5 @@ public final class Metadata {
 
   public static final String CHECK_STEP_KEY = "check_step";
   public static final String CONNECTOR_STEP = "connector";
-  public static final String ORCHESTRATOR_CHECK_STEP = "orchestrator-check";
 
 }

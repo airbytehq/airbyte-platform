@@ -109,6 +109,8 @@ airbyte:
         access-key: ${AWS_ACCESS_KEY:}
         secret-key: ${AWS_SECRET_ACCESS_KEY:}
         region: ${AWS_REGION:}
+        kmsKeyArn: ${AWS_KMS_KEY_ARN:}
+        tags: ${AWS_SECRET_MANAGER_SECRET_TAGS:}
       gcp:
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
@@ -164,7 +166,7 @@ airbyte:
         memory-request: 25Mi
       orchestrator:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
-        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.5}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       source:
@@ -190,7 +192,7 @@ airbyte:
         memory-request: 25Mi
       orchestrator-api:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
-        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.3}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       destination-api:
@@ -216,7 +218,7 @@ airbyte:
         memory-request: 25Mi
       orchestrator-database:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:2}
-        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:2}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       destination-database:
@@ -272,6 +274,27 @@ airbyte:
     base-path: ${KEYCLOAK_BASE_PATH:`/auth`}
     airbyte-realm: ${KEYCLOAK_AIRBYTE_REALM:airbyte}
     web-client-id: ${KEYCLOAK_WEB_CLIENT_ID:airbyte-webapp}
+    client-realm: ${KEYCLOAK_CLIENT_REALM:airbyte}
+    client-id: ${KEYCLOAK_CLIENT_ID:admin-cli}
+    realm: ${KEYCLOAK_REALM:master}
+    username: ${KEYCLOAK_ADMIN_USER:airbyteAdmin}
+    password: ${KEYCLOAK_ADMIN_PASSWORD:keycloak123}
+
+  # Airbyte API
+  api:
+    host: ${AIRBYTE_API_HOST}
+  internal:
+    documentation:
+      host: https://reference.airbyte.com/
+
+  connector-builder-server-api:
+    base-path: ${CONNECTOR_BUILDER_SERVER_API_HOST:}
+    connect-timeout-seconds: ${CONNECTOR_BUILDER_SERVER_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${CONNECTOR_BUILDER_SERVER_API_READ_TIMEOUT_SECONDS:300}
+  internal-api:
+    auth-header:
+      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
 
 temporal:
   cloud:

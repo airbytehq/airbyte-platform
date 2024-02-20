@@ -58,6 +58,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpStatus
 import org.apache.commons.io.FileUtils
 import org.openapitools.client.infrastructure.ClientException
+import org.slf4j.MDC
 import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
@@ -111,15 +112,17 @@ class ReplicationWorkerHelper(
     onReplicationRunning.call()
   }
 
-  fun getWorkloadStatusHeartbeat(): Runnable {
-    return getWorkloadStatusHeartbeat(Duration.ofSeconds(replicationFeatureFlags.workloadHeartbeatRate.toLong()), workloadId)
+  fun getWorkloadStatusHeartbeat(mdc: Map<String, String>): Runnable {
+    return getWorkloadStatusHeartbeat(Duration.ofSeconds(replicationFeatureFlags.workloadHeartbeatRate.toLong()), workloadId, mdc)
   }
 
   private fun getWorkloadStatusHeartbeat(
     heartbeatInterval: Duration,
     workloadId: Optional<String>,
+    mdc: Map<String, String>,
   ): Runnable {
     return Runnable {
+      MDC.setContextMap(mdc)
       logger.info { "Starting workload heartbeat" }
       var lastSuccessfulHeartbeat: Instant = Instant.now()
       val heartbeatTimeoutDuration: Duration = Duration.ofMinutes(replicationFeatureFlags.workloadHeartbeatTimeoutInMinutes)
@@ -130,16 +133,17 @@ class ReplicationWorkerHelper(
             if (workloadId.isEmpty) {
               throw RuntimeException("workloadId should always be present")
             }
+            logger.info { "Sending workload heartbeat" }
             workloadApi.workloadHeartbeat(
               WorkloadHeartbeatRequest(workloadId.get()),
             )
             lastSuccessfulHeartbeat = Instant.now()
-          }
-          /**
-           * The WorkloadApi returns responseCode "410" from the heartbeat endpoint if
-           * Workload should stop because it is no longer expected to be running.
-           * See [io.airbyte.workload.api.WorkloadApi.workloadHeartbeat]
-           */ catch (e: Exception) {
+          } catch (e: Exception) {
+            /**
+             * The WorkloadApi returns responseCode "410" from the heartbeat endpoint if
+             * Workload should stop because it is no longer expected to be running.
+             * See [io.airbyte.workload.api.WorkloadApi.workloadHeartbeat]
+             */
             if (e is ClientException && e.statusCode == HttpStatus.GONE.code) {
               logger.warn(e) { "Received kill response from API, shutting down heartbeat" }
               markCancelled()
@@ -320,6 +324,12 @@ class ReplicationWorkerHelper(
       logger.info { "sync summary: ${mapper.writerWithDefaultPrettyPrinter().writeValueAsString(summary)}" }
       logger.info { "failures: ${mapper.writerWithDefaultPrettyPrinter().writeValueAsString(failures)}" }
     }
+
+    // Metric to help investigating https://github.com/airbytehq/airbyte/issues/34567
+    if (failures.any { f -> f.failureOrigin.equals("destination") && f.internalMessage.contains("Unable to deserialize PartialAirbyteMessage") }) {
+      metricClient.count(OssMetricsRegistry.DESTINATION_DESERIALIZATION_ERROR, 1, *metricAttrs.toTypedArray())
+    }
+
     LineGobbler.endSection("REPLICATION")
     return output
   }

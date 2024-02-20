@@ -35,7 +35,7 @@ class BlockingShutdownAnalyticsPluginTest {
     val bodyJson = "{}"
     val client: Client = mockk()
     val response: Response = mockk()
-    val flushInterval = 10L
+    val flushInterval = 60L
     val writeKey = "write-key"
     val plugin = BlockingShutdownAnalyticsPlugin(flushInterval)
 

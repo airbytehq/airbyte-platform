@@ -18,8 +18,10 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.init.BreakingChangeNotificationHelper.BreakingChangeNotificationData;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.BreakingChangesHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ActorDefinitionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.NotifyBreakingChangesOnSupportStateUpdate;
 import io.airbyte.featureflag.Workspace;
@@ -64,18 +66,24 @@ public class SupportStateUpdater {
   }
 
   private final DeploymentMode deploymentMode;
-  private final ConfigRepository configRepository;
+  private final ActorDefinitionService actorDefinitionService;
+  private final SourceService sourceService;
+  private final DestinationService destinationService;
   private final FeatureFlagClient featureFlagClient;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final BreakingChangeNotificationHelper breakingChangeNotificationHelper;
 
-  public SupportStateUpdater(final ConfigRepository configRepository,
+  public SupportStateUpdater(final ActorDefinitionService actorDefinitionService,
+                             final SourceService sourceService,
+                             final DestinationService destinationService,
                              final DeploymentMode deploymentMode,
                              final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                              final BreakingChangeNotificationHelper breakingChangeNotificationHelper,
                              final FeatureFlagClient featureFlagClient) {
     this.deploymentMode = deploymentMode;
-    this.configRepository = configRepository;
+    this.actorDefinitionService = actorDefinitionService;
+    this.sourceService = sourceService;
+    this.destinationService = destinationService;
     this.featureFlagClient = featureFlagClient;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.breakingChangeNotificationHelper = breakingChangeNotificationHelper;
@@ -141,7 +149,8 @@ public class SupportStateUpdater {
   /**
    * Updates the version support states for all source and destination definitions.
    */
-  public void updateSupportStates() throws IOException, JsonValidationException, ConfigNotFoundException {
+  public void updateSupportStates()
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     updateSupportStates(LocalDate.now());
   }
 
@@ -150,11 +159,12 @@ public class SupportStateUpdater {
    * reference date, and disables syncs with unsupported versions.
    */
   @VisibleForTesting
-  void updateSupportStates(final LocalDate referenceDate) throws IOException, JsonValidationException, ConfigNotFoundException {
+  void updateSupportStates(final LocalDate referenceDate)
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     log.info("Updating support states for all definitions");
-    final List<StandardSourceDefinition> sourceDefinitions = configRepository.listPublicSourceDefinitions(false);
-    final List<StandardDestinationDefinition> destinationDefinitions = configRepository.listPublicDestinationDefinitions(false);
-    final List<ActorDefinitionBreakingChange> allBreakingChanges = configRepository.listBreakingChanges();
+    final List<StandardSourceDefinition> sourceDefinitions = sourceService.listPublicSourceDefinitions(false);
+    final List<StandardDestinationDefinition> destinationDefinitions = destinationService.listPublicDestinationDefinitions(false);
+    final List<ActorDefinitionBreakingChange> allBreakingChanges = actorDefinitionService.listBreakingChanges();
     final Map<UUID, List<ActorDefinitionBreakingChange>> breakingChangesMap = allBreakingChanges.stream()
         .collect(Collectors.groupingBy(ActorDefinitionBreakingChange::getActorDefinitionId));
 
@@ -163,7 +173,7 @@ public class SupportStateUpdater {
 
     for (final StandardSourceDefinition sourceDefinition : sourceDefinitions) {
       final List<ActorDefinitionVersion> actorDefinitionVersions =
-          configRepository.listActorDefinitionVersionsForDefinition(sourceDefinition.getSourceDefinitionId());
+          actorDefinitionService.listActorDefinitionVersionsForDefinition(sourceDefinition.getSourceDefinitionId());
       final Version currentDefaultVersion = getVersionTag(actorDefinitionVersions, sourceDefinition.getDefaultVersionId());
       final List<ActorDefinitionBreakingChange> breakingChangesForDef =
           breakingChangesMap.getOrDefault(sourceDefinition.getSourceDefinitionId(), List.of());
@@ -174,7 +184,8 @@ public class SupportStateUpdater {
 
       if (shouldNotifyBreakingChanges() && !supportStateUpdate.deprecatedVersionIds.isEmpty()) {
         final ActorDefinitionBreakingChange latestBreakingChange =
-            BreakingChangesHelper.getLastApplicableBreakingChange(configRepository, sourceDefinition.getDefaultVersionId(), breakingChangesForDef);
+            BreakingChangesHelper.getLastApplicableBreakingChange(actorDefinitionService, sourceDefinition.getDefaultVersionId(),
+                breakingChangesForDef);
         notificationData.add(buildSourceNotificationData(
             sourceDefinition,
             latestBreakingChange,
@@ -185,7 +196,7 @@ public class SupportStateUpdater {
 
     for (final StandardDestinationDefinition destinationDefinition : destinationDefinitions) {
       final List<ActorDefinitionVersion> actorDefinitionVersions =
-          configRepository.listActorDefinitionVersionsForDefinition(destinationDefinition.getDestinationDefinitionId());
+          actorDefinitionService.listActorDefinitionVersionsForDefinition(destinationDefinition.getDestinationDefinitionId());
       final Version currentDefaultVersion = getVersionTag(actorDefinitionVersions, destinationDefinition.getDefaultVersionId());
       final List<ActorDefinitionBreakingChange> breakingChangesForDef =
           breakingChangesMap.getOrDefault(destinationDefinition.getDestinationDefinitionId(), List.of());
@@ -195,7 +206,7 @@ public class SupportStateUpdater {
       comboSupportStateUpdate = SupportStateUpdate.merge(comboSupportStateUpdate, supportStateUpdate);
 
       if (shouldNotifyBreakingChanges() && !supportStateUpdate.deprecatedVersionIds.isEmpty()) {
-        final ActorDefinitionBreakingChange latestBreakingChange = BreakingChangesHelper.getLastApplicableBreakingChange(configRepository,
+        final ActorDefinitionBreakingChange latestBreakingChange = BreakingChangesHelper.getLastApplicableBreakingChange(actorDefinitionService,
             destinationDefinition.getDefaultVersionId(), breakingChangesForDef);
         notificationData.add(buildDestinationNotificationData(
             destinationDefinition,
@@ -215,7 +226,7 @@ public class SupportStateUpdater {
                                                              final ActorDefinitionBreakingChange breakingChange,
                                                              final List<ActorDefinitionVersion> versionsBeforeUpdate,
                                                              final SupportStateUpdate supportStateUpdate)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final List<UUID> newlyDeprecatedVersionIds = getNewlyDeprecatedVersionIds(versionsBeforeUpdate, supportStateUpdate);
     final List<Pair<UUID, List<UUID>>> workspaceSyncIds =
         actorDefinitionVersionHelper.getActiveWorkspaceSyncsWithSourceVersionIds(sourceDefinition, newlyDeprecatedVersionIds);
@@ -232,7 +243,7 @@ public class SupportStateUpdater {
                                                                   final ActorDefinitionBreakingChange breakingChange,
                                                                   final List<ActorDefinitionVersion> versionsBeforeUpdate,
                                                                   final SupportStateUpdate supportStateUpdate)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final List<UUID> newlyDeprecatedVersionIds = getNewlyDeprecatedVersionIds(versionsBeforeUpdate, supportStateUpdate);
     final List<Pair<UUID, List<UUID>>> workspaceSyncIds =
         actorDefinitionVersionHelper.getActiveWorkspaceSyncsWithDestinationVersionIds(destinationDefinition, newlyDeprecatedVersionIds);
@@ -269,7 +280,8 @@ public class SupportStateUpdater {
       throws ConfigNotFoundException, IOException {
     if (!sourceDefinition.getCustom()) {
       log.info("Updating support states for source definition: {}", sourceDefinition.getName());
-      final ActorDefinitionVersion defaultActorDefinitionVersion = configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId());
+      final ActorDefinitionVersion defaultActorDefinitionVersion =
+          actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId());
       final Version currentDefaultVersion = new Version(defaultActorDefinitionVersion.getDockerImageTag());
       updateSupportStatesForActorDefinition(sourceDefinition.getSourceDefinitionId(), currentDefaultVersion);
 
@@ -285,7 +297,7 @@ public class SupportStateUpdater {
     if (!destinationDefinition.getCustom()) {
       log.info("Updating support states for destination definition: {}", destinationDefinition.getName());
       final ActorDefinitionVersion defaultActorDefinitionVersion =
-          configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId());
+          actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId());
       final Version currentDefaultVersion = new Version(defaultActorDefinitionVersion.getDockerImageTag());
       updateSupportStatesForActorDefinition(destinationDefinition.getDestinationDefinitionId(), currentDefaultVersion);
 
@@ -294,8 +306,8 @@ public class SupportStateUpdater {
   }
 
   private void updateSupportStatesForActorDefinition(final UUID actorDefinitionId, final Version currentDefaultVersion) throws IOException {
-    final List<ActorDefinitionBreakingChange> breakingChanges = configRepository.listBreakingChangesForActorDefinition(actorDefinitionId);
-    final List<ActorDefinitionVersion> actorDefinitionVersions = configRepository.listActorDefinitionVersionsForDefinition(actorDefinitionId);
+    final List<ActorDefinitionBreakingChange> breakingChanges = actorDefinitionService.listBreakingChangesForActorDefinition(actorDefinitionId);
+    final List<ActorDefinitionVersion> actorDefinitionVersions = actorDefinitionService.listActorDefinitionVersionsForDefinition(actorDefinitionId);
     final SupportStateUpdate supportStateUpdate =
         getSupportStateUpdate(currentDefaultVersion, LocalDate.now(), breakingChanges, actorDefinitionVersions);
     executeSupportStateUpdate(supportStateUpdate);
@@ -334,17 +346,17 @@ public class SupportStateUpdater {
    */
   private void executeSupportStateUpdate(final SupportStateUpdate supportStateUpdate) throws IOException {
     if (!supportStateUpdate.unsupportedVersionIds.isEmpty()) {
-      configRepository.setActorDefinitionVersionSupportStates(supportStateUpdate.unsupportedVersionIds,
+      actorDefinitionService.setActorDefinitionVersionSupportStates(supportStateUpdate.unsupportedVersionIds,
           ActorDefinitionVersion.SupportState.UNSUPPORTED);
     }
 
     if (!supportStateUpdate.deprecatedVersionIds.isEmpty()) {
-      configRepository.setActorDefinitionVersionSupportStates(supportStateUpdate.deprecatedVersionIds,
+      actorDefinitionService.setActorDefinitionVersionSupportStates(supportStateUpdate.deprecatedVersionIds,
           ActorDefinitionVersion.SupportState.DEPRECATED);
     }
 
     if (!supportStateUpdate.supportedVersionIds.isEmpty()) {
-      configRepository.setActorDefinitionVersionSupportStates(supportStateUpdate.supportedVersionIds,
+      actorDefinitionService.setActorDefinitionVersionSupportStates(supportStateUpdate.supportedVersionIds,
           ActorDefinitionVersion.SupportState.SUPPORTED);
     }
   }

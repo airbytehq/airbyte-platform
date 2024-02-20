@@ -12,6 +12,7 @@ import { PageHeader } from "components/ui/PageHeader";
 import { useCurrentWorkspace } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
+import { useExperiment } from "hooks/services/Experiment";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 import { SettingsRoutePaths } from "pages/routePaths";
 
@@ -20,8 +21,8 @@ export const SettingsPage: React.FC = () => {
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
-  const apiTokenManagement = false;
-  // const apiTokenManagement = useFeature(FeatureItem.APITokenManagement);
+  const apiTokenManagement = useFeature(FeatureItem.APITokenManagement);
+  const isUpdatedOrganizationsUi = useExperiment("settings.organizationsUpdates", false);
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
   const { formatMessage } = useIntl();
@@ -42,27 +43,41 @@ export const SettingsPage: React.FC = () => {
       <FlexContainer direction="row" gap="2xl">
         <SettingsNavigation>
           <SettingsNavigationBlock title={formatMessage({ id: "settings.userSettings" })}>
-            <SettingsLink name={formatMessage({ id: "settings.account" })} to={SettingsRoutePaths.Account} />
+            <SettingsLink
+              iconType="user"
+              name={formatMessage({ id: "settings.account" })}
+              to={SettingsRoutePaths.Account}
+            />
+            {apiTokenManagement && (
+              <SettingsLink
+                iconType="grid"
+                name={formatMessage({ id: "settings.applications" })}
+                to={SettingsRoutePaths.Applications}
+              />
+            )}
           </SettingsNavigationBlock>
-          {apiTokenManagement && (
-            <SettingsLink name={formatMessage({ id: "settings.applications" })} to={SettingsRoutePaths.Applications} />
-          )}
           {canViewWorkspaceSettings && (
             <SettingsNavigationBlock title={formatMessage({ id: "settings.workspaceSettings" })}>
               {multiWorkspaceUI && (
                 <SettingsLink
-                  name={formatMessage({ id: "settings.generalSettings" })}
+                  iconType={isUpdatedOrganizationsUi ? "community" : "gear"}
+                  name={formatMessage({
+                    id: isUpdatedOrganizationsUi ? "settings.members" : "settings.generalSettings",
+                  })}
                   to={SettingsRoutePaths.Workspace}
                 />
               )}
               {!multiWorkspaceUI && (
                 <>
                   <SettingsLink
+                    iconType="source"
                     count={countNewSourceVersion}
                     name={formatMessage({ id: "tables.sources" })}
                     to={SettingsRoutePaths.Source}
                   />
+
                   <SettingsLink
+                    iconType="destination"
                     count={countNewDestinationVersion}
                     name={formatMessage({ id: "tables.destinations" })}
                     to={SettingsRoutePaths.Destination}
@@ -70,12 +85,18 @@ export const SettingsPage: React.FC = () => {
                 </>
               )}
               <SettingsLink
+                iconType="bell"
                 name={formatMessage({ id: "settings.notifications" })}
                 to={SettingsRoutePaths.Notifications}
               />
-              <SettingsLink name={formatMessage({ id: "settings.metrics" })} to={SettingsRoutePaths.Metrics} />
-              {multiWorkspaceUI && isAccessManagementEnabled && (
+              <SettingsLink
+                iconType="chart"
+                name={formatMessage({ id: "settings.metrics" })}
+                to={SettingsRoutePaths.Metrics}
+              />
+              {multiWorkspaceUI && isAccessManagementEnabled && !isUpdatedOrganizationsUi && (
                 <SettingsLink
+                  iconType="community"
                   name={formatMessage({ id: "settings.accessManagement" })}
                   to={`${SettingsRoutePaths.Workspace}/${SettingsRoutePaths.AccessManagement}`}
                 />
@@ -85,11 +106,13 @@ export const SettingsPage: React.FC = () => {
           {multiWorkspaceUI && organizationId && canViewOrganizationSettings && (
             <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
               <SettingsLink
-                name={formatMessage({ id: "settings.generalSettings" })}
+                iconType={isUpdatedOrganizationsUi ? "community" : "gear"}
+                name={formatMessage({ id: isUpdatedOrganizationsUi ? "settings.members" : "settings.generalSettings" })}
                 to={SettingsRoutePaths.Organization}
               />
-              {isAccessManagementEnabled && (
+              {isAccessManagementEnabled && !isUpdatedOrganizationsUi && (
                 <SettingsLink
+                  iconType="community"
                   name={formatMessage({ id: "settings.accessManagement" })}
                   to={`${SettingsRoutePaths.Organization}/${SettingsRoutePaths.AccessManagement}`}
                 />
@@ -99,11 +122,13 @@ export const SettingsPage: React.FC = () => {
           {multiWorkspaceUI && canViewWorkspaceSettings && (
             <SettingsNavigationBlock title={formatMessage({ id: "settings.instanceSettings" })}>
               <SettingsLink
+                iconType="source"
                 count={countNewSourceVersion}
                 name={formatMessage({ id: "tables.sources" })}
                 to={SettingsRoutePaths.Source}
               />
               <SettingsLink
+                iconType="destination"
                 count={countNewDestinationVersion}
                 name={formatMessage({ id: "tables.destinations" })}
                 to={SettingsRoutePaths.Destination}

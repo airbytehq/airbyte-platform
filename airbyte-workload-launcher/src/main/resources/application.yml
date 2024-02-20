@@ -18,8 +18,19 @@ micronaut:
         port: ${STATSD_PORT:8125}
 
 airbyte:
+  connector:
+    source:
+      credentials:
+        aws:
+          assumed-role:
+            # These properties represent the AWS assume role credentials used to connect to an AWS source
+            #  using Airbyte's IAM role
+            access-key: AWS_ACCESS_KEY_ID
+            secret-key: AWS_SECRET_ACCESS_KEY
+            secret-name: ${AWS_ASSUME_ROLE_SECRET_NAME:}
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
   data-plane-id: ${DATA_PLANE_ID}
+  data-plane-name: ${DATA_PLANE_NAME:default-data-plane}
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
@@ -33,9 +44,13 @@ airbyte:
       connection-pool:
         keep-alive-sec: ${KUBERNETES_CLIENT_CONNECTION_KEEP_ALIVE_SECONDS:600}
         max-idle-connections: ${KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS:25}
+      retries:
+        delay-seconds: ${KUBERNETES_CLIENT_RETRY_DELAY_SECONDS:2}
+        max: ${KUBERNETES_CLIENT_MAX_RETRIES:5}
     pending-time-limit-sec: ${WORKLOAD_LAUNCHER_POD_PENDING_TIME_LIMIT:600}
     resource-check-rate: ${WORKLOAD_LAUNCHER_POD_PENDING_RESOURCE_CHECK_RATE:PT30S}
   docker:
+    docker-socket: ${DOCKER_SOCKET:/var/run/docker.sock}
     network: ${DOCKER_NETWORK:host}
     workspace-mount-name: ${WORKSPACE_DOCKER_MOUNT:}
     workspace-mount-path: ${WORKSPACE_ROOT}
@@ -52,7 +67,13 @@ airbyte:
   workload-launcher:
     geography: ${WORKLOAD_LAUNCHER_GEOGRAPHY:auto}
     workload-start-timeout: ${WORKLOAD_LAUNCHER_WORKLOAD_START_TIMEOUT:PT5H}
-    parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
+    temporal:
+      default-queue:
+        parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
+        workflow-parallelism: ${WORKLOAD_LAUNCHER_WORKFLOW_PARALLELISM:10}
+      high-priority-queue:
+        parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
+        workflow-parallelism: ${WORKLOAD_LAUNCHER_WORKFLOW_PARALLELISM:10}
   secret:
     persistence: ${SECRET_PERSISTENCE}
     store:
@@ -116,6 +137,20 @@ airbyte:
         cpu-request: ${CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST:}
         memory-limit: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
         memory-request: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+      discover:
+        annotations: ${DISCOVER_JOB_KUBE_ANNOTATIONS:}
+        labels: ${DISCOVER_JOB_KUBE_LABELS:}
+        node-selectors: ${DISCOVER_JOB_KUBE_NODE_SELECTORS:}
+        cpu-limit: ${DISCOVER_JOB_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${DISCOVER_JOB_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${DISCOVER_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${DISCOVER_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+    connector-sidecar:
+      resources:
+        cpu-limit: ${SIDECAR_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${SIDECAR_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${SIDECAR_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${SIDECAR_MAIN_CONTAINER_MEMORY_REQUEST:}
     isolated:
       kube:
         use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
@@ -206,7 +241,7 @@ endpoints:
     sensitive: false
   threaddump:
     enabled: true
-    sensitive: true
+    sensitive: false
 
 temporal:
   cloud:

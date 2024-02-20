@@ -10,6 +10,7 @@ import io.airbyte.commons.auth.OrganizationAuthRole;
 import io.airbyte.commons.auth.WorkspaceAuthRole;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.config.Permission;
+import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.micronaut.http.HttpRequest;
 import jakarta.inject.Singleton;
@@ -67,7 +68,7 @@ public class RbacRoleHelper {
     return roles;
   }
 
-  private static Set<String> getInstanceAdminRoles() {
+  public static Set<String> getInstanceAdminRoles() {
     final Set<String> roles = new HashSet<>();
     roles.addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN));
     roles.addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN));
@@ -80,14 +81,21 @@ public class RbacRoleHelper {
   }
 
   private Set<String> getWorkspaceAuthRoles(final String authUserId, final List<UUID> workspaceIds) {
-    final Optional<WorkspaceAuthRole> minAuthRoleOptional = workspaceIds.stream()
+    final List<PermissionType> workspacePermissionTypes = workspaceIds.stream()
         .map(workspaceId -> fetchWorkspacePermission(authUserId, workspaceId))
-        .filter(Objects::nonNull)
+        .toList();
+
+    // if any workspace permission type is null, the user should not have any workspace roles for this
+    // request at all.
+    if (workspacePermissionTypes.stream().anyMatch(Objects::isNull)) {
+      return WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.NONE);
+    }
+
+    final Optional<WorkspaceAuthRole> minAuthRoleOptional = workspacePermissionTypes.stream()
         .map(this::convertToWorkspaceAuthRole)
-        .filter(Objects::nonNull)
         .min(Comparator.comparingInt(WorkspaceAuthRole::getAuthority));
 
-    WorkspaceAuthRole authRole = minAuthRoleOptional.orElse(WorkspaceAuthRole.NONE);
+    final WorkspaceAuthRole authRole = minAuthRoleOptional.orElse(WorkspaceAuthRole.NONE);
     return WorkspaceAuthRole.buildWorkspaceAuthRolesSet(authRole);
   }
 
@@ -101,23 +109,25 @@ public class RbacRoleHelper {
   }
 
   private WorkspaceAuthRole convertToWorkspaceAuthRole(final Permission.PermissionType permissionType) {
-    try {
-      return Enums.convertTo(permissionType, WorkspaceAuthRole.class);
-    } catch (final Exception ex) {
-      log.error("Failed to convert permissionType {} to WorkspaceAuthRole", permissionType, ex);
-      return null;
-    }
+    return Enums.convertTo(permissionType, WorkspaceAuthRole.class);
   }
 
   private Set<String> getOrganizationAuthRoles(final String authUserId, final List<UUID> organizationIds) {
-    final Optional<OrganizationAuthRole> minAuthRoleOptional = organizationIds.stream()
+    final List<PermissionType> orgPermissionTypes = organizationIds.stream()
         .map(orgId -> fetchOrganizationPermission(authUserId, orgId))
-        .filter(Objects::nonNull)
+        .toList();
+
+    // if any org permission type is null, the user should not have any org roles for this request at
+    // all.
+    if (orgPermissionTypes.stream().anyMatch(Objects::isNull)) {
+      return OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.NONE);
+    }
+
+    final Optional<OrganizationAuthRole> minAuthRoleOptional = orgPermissionTypes.stream()
         .map(this::convertToOrganizationAuthRole)
-        .filter(Objects::nonNull)
         .min(Comparator.comparingInt(OrganizationAuthRole::getAuthority));
 
-    OrganizationAuthRole authRole = minAuthRoleOptional.orElse(OrganizationAuthRole.NONE);
+    final OrganizationAuthRole authRole = minAuthRoleOptional.orElse(OrganizationAuthRole.NONE);
     return OrganizationAuthRole.buildOrganizationAuthRolesSet(authRole);
   }
 
@@ -131,12 +141,7 @@ public class RbacRoleHelper {
   }
 
   private OrganizationAuthRole convertToOrganizationAuthRole(final Permission.PermissionType permissionType) {
-    try {
-      return Enums.convertTo(permissionType, OrganizationAuthRole.class);
-    } catch (Exception ex) {
-      log.error("Failed to convert permissionType to OrganizationAuthRole", ex);
-      return null;
-    }
+    return Enums.convertTo(permissionType, OrganizationAuthRole.class);
   }
 
 }

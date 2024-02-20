@@ -8,6 +8,8 @@ import datadog.trace.api.Trace
 import io.airbyte.commons.temporal.queue.TemporalMessageProducer
 import io.airbyte.config.WorkloadType
 import io.airbyte.config.messages.LauncherInputMessage
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Geography
 import io.airbyte.featureflag.Multi
@@ -35,6 +37,10 @@ open class WorkloadService(
   private val metricPublisher: CustomMetricPublisher,
   private val featureFlagClient: FeatureFlagClient,
 ) {
+  companion object {
+    const val CONNECTION_ID_LABEL_KEY = "connection_id"
+  }
+
   @Trace(operationName = WORKLOAD_PUBLISHER_OPERATION_NAME)
   open fun create(
     workloadId: String,
@@ -48,7 +54,7 @@ open class WorkloadService(
   ) {
     // TODO feature flag geography
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadId) as Map<String, Any>?)
-    val queue = getQueueName(geography, workloadType)
+    val queue = getQueueName(geography, workloadType, labels)
     // TODO: We could pass through created_at, but I'm use using system time for now.
     // This may get just replaced by tracing at some point if we manage to set it up properly.
     val startTimeMs = System.currentTimeMillis()
@@ -68,12 +74,15 @@ open class WorkloadService(
   private fun getQueueName(
     geography: String,
     workloadType: WorkloadType,
+    labels: Map<String, String>,
   ): String {
-    val context = Geography(geography)
-    return if (workloadType == WorkloadType.SYNC) {
-      featureFlagClient.stringVariation(WorkloadApiRouting, context)
-    } else {
-      featureFlagClient.stringVariation(WorkloadApiRouting, Multi(listOf(context, Priority(HIGH_PRIORITY))))
+    val context = mutableListOf<Context>(Geography(geography))
+    if (workloadType != WorkloadType.SYNC) {
+      context.add(Priority(HIGH_PRIORITY))
     }
+    labels[CONNECTION_ID_LABEL_KEY]?.let {
+      context.add(Connection(it))
+    }
+    return featureFlagClient.stringVariation(WorkloadApiRouting, Multi(context))
   }
 }

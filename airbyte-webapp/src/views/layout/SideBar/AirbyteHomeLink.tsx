@@ -34,7 +34,7 @@ export const AirbyteHomeLink: React.FC = () => {
 const EnterpriseBadge = () => (
   <Badge variant="green">
     <FlexContainer gap="xs" alignItems="center">
-      <Icon type="star" size="sm" />
+      <Icon type="star" size="xs" />
       <FormattedMessage id="enterprise.enterprise" />
     </FlexContainer>
   </Badge>

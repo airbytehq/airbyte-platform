@@ -16,12 +16,19 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.SlackNotificationConfiguration;
+import io.airbyte.notification.messages.ConnectionInfo;
+import io.airbyte.notification.messages.DestinationInfo;
+import io.airbyte.notification.messages.SchemaUpdateNotification;
+import io.airbyte.notification.messages.SourceInfo;
+import io.airbyte.notification.messages.SyncSummary;
+import io.airbyte.notification.messages.WorkspaceInfo;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.apache.commons.io.IOUtils;
@@ -84,15 +91,38 @@ class SlackNotificationClientTest {
   void testBadWebhookUrl() {
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + "/bad"));
+    SyncSummary summary = SyncSummary.builder()
+        .connection(ConnectionInfo.builder()
+            .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
+        .source(SourceInfo.builder()
+            .name(SOURCE_TEST).id(UUID.randomUUID()).url("http://source").build())
+        .destination(DestinationInfo.builder()
+            .name(DESTINATION_TEST).id(UUID.randomUUID()).url("http://destination").build())
+        .errorMessage("")
+        .jobId(JOB_ID)
+        .isSuccess(true)
+        .startedAt(Instant.MIN)
+        .finishedAt(Instant.MAX)
+        .build();
     assertThrows(IOException.class,
-        () -> client.notifyJobFailure(null, SOURCE_TEST, DESTINATION_TEST, CONNECTION_NAME, JOB_DESCRIPTION, LOG_URL, JOB_ID));
+        () -> client.notifyJobFailure(summary, null));
   }
 
   @Test
   void testEmptyWebhookUrl() throws IOException, InterruptedException {
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration());
-    assertFalse(client.notifyJobFailure(null, SOURCE_TEST, DESTINATION_TEST, CONNECTION_NAME, JOB_DESCRIPTION, LOG_URL, JOB_ID));
+    SyncSummary summary = SyncSummary.builder()
+        .connection(ConnectionInfo.builder()
+            .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
+        .source(SourceInfo.builder()
+            .name(SOURCE_TEST).id(UUID.randomUUID()).url("http://source").build())
+        .destination(DestinationInfo.builder()
+            .name(DESTINATION_TEST).id(UUID.randomUUID()).url("http://destination").build())
+        .errorMessage("Job timed out")
+        .jobId(JOB_ID)
+        .build();
+    assertFalse(client.notifyJobFailure(summary, null));
   }
 
   @Test
@@ -108,17 +138,37 @@ class SlackNotificationClientTest {
   @Test
   void testNotifyJobFailure() throws IOException, InterruptedException {
     server.createContext(TEST_PATH, new ServerHandler(EXPECTED_FAIL_MESSAGE));
+    SyncSummary summary = SyncSummary.builder()
+        .connection(ConnectionInfo.builder()
+            .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
+        .source(SourceInfo.builder()
+            .name(SOURCE_TEST).id(UUID.randomUUID()).url("http://source").build())
+        .destination(DestinationInfo.builder()
+            .name(DESTINATION_TEST).id(UUID.randomUUID()).url("http://destination").build())
+        .errorMessage(JOB_DESCRIPTION)
+        .jobId(JOB_ID)
+        .build();
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
-    assertTrue(client.notifyJobFailure(null, SOURCE_TEST, DESTINATION_TEST, CONNECTION_NAME, JOB_DESCRIPTION, LOG_URL, JOB_ID));
+    assertTrue(client.notifyJobFailure(summary, null));
   }
 
   @Test
   void testNotifyJobSuccess() throws IOException, InterruptedException {
     server.createContext(TEST_PATH, new ServerHandler(EXPECTED_SUCCESS_MESSAGE));
+    SyncSummary summary = SyncSummary.builder()
+        .connection(ConnectionInfo.builder()
+            .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
+        .source(SourceInfo.builder()
+            .name(SOURCE_TEST).id(UUID.randomUUID()).url("http://source").build())
+        .destination(DestinationInfo.builder()
+            .name(DESTINATION_TEST).id(UUID.randomUUID()).url("http://destination").build())
+        .errorMessage(JOB_DESCRIPTION)
+        .jobId(JOB_ID)
+        .build();
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
-    assertTrue(client.notifyJobSuccess(null, SOURCE_TEST, DESTINATION_TEST, CONNECTION_NAME, JOB_DESCRIPTION, LOG_URL, JOB_ID));
+    assertTrue(client.notifyJobSuccess(summary, null));
   }
 
   @SuppressWarnings("LineLength")
@@ -167,26 +217,28 @@ class SlackNotificationClientTest {
     final UUID sourceId = UUID.randomUUID();
     final CatalogDiff diff = new CatalogDiff();
     String workspaceName = "";
+    String workspaceUrl = "http://airbyte.io/workspaces/123";
     String connectionName = "PSQL ->> BigQuery";
     String sourceName = "";
+    String sourceUrl = "http://airbyte.io/workspaces/123/source/456";
     boolean isBreaking = false;
     String connectionUrl = "http://airbyte.io/your_connection";
     String recipient = "";
 
-    final String expectedNotificationMessage =
-        """
-        Your source schema has changed for connection 'PSQL ->> BigQuery' and the following changes were automatically propagated:
-
-        Visit the connection page: http://airbyte.io/your_connection
-        """;
+    final String expectedNotificationMessage = "The schema of '<http://airbyte.io/your_connection|PSQL -&gt;&gt; BigQuery>' has changed.";
     server.createContext(TEST_PATH, new ServerHandler(expectedNotificationMessage));
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
 
+    UUID workpaceId = UUID.randomUUID();
+    SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
+        .connectionInfo(ConnectionInfo.builder().name(connectionName).id(connectionId).url(connectionUrl).build())
+        .workspace(WorkspaceInfo.builder().name(workspaceName).id(workpaceId).url(workspaceUrl).build())
+        .catalogDiff(diff)
+        .isBreakingChange(isBreaking)
+        .sourceInfo(SourceInfo.builder().name(sourceName).id(sourceId).url(sourceUrl).build()).build();
     assertTrue(
-        client.notifySchemaPropagated(UUID.randomUUID(), workspaceName, connectionId, connectionName, connectionUrl, sourceId, sourceName, diff,
-            recipient,
-            isBreaking));
+        client.notifySchemaPropagated(notification, recipient));
 
   }
 

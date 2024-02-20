@@ -40,9 +40,9 @@ export interface LocationWithState extends Location {
 export const SyncCatalogCard: React.FC = () => {
   const listRef = useRef<HTMLElement | Window | null>(null);
   const { mode } = useConnectionFormService();
-  const { control, trigger, setValue } = useFormContext<FormConnectionFormValues>();
+  const { control, trigger } = useFormContext<FormConnectionFormValues>();
   const { isSubmitting, isDirty, errors } = useFormState<FormConnectionFormValues>();
-  const { fields, replace } = useFieldArray({
+  const { fields, replace, update } = useFieldArray({
     name: "syncCatalog.streams",
     control,
   });
@@ -63,15 +63,12 @@ export const SyncCatalogCard: React.FC = () => {
   const onUpdateStream = useCallback(
     ({ config, id }: SyncStreamFieldWithId) => {
       const streamNodeIndex = fields.findIndex((streamNode) => streamNode.id === id);
+      update(streamNodeIndex, { ...fields[streamNodeIndex], config });
 
-      // TODO: Replace "setValue()" with "update()" when we fix the issue https://github.com/airbytehq/airbyte/issues/31820
-      setValue(`syncCatalog.streams.${streamNodeIndex}.config`, config, {
-        shouldDirty: true,
-      });
       // force validation of the form
       trigger(`syncCatalog.streams`);
     },
-    [fields, setValue, trigger]
+    [fields, trigger, update]
   );
 
   // Scroll to the stream that was redirected from the Status tab
@@ -91,24 +88,26 @@ export const SyncCatalogCard: React.FC = () => {
   }, [locationState?.action, locationState?.namespace, locationState?.streamName, filteredStreams]);
 
   return (
-    <Card>
-      <FlexContainer justifyContent="space-between" alignItems="center" className={styles.header}>
-        <Heading as="h2" size="sm">
-          <FormattedMessage id={mode === "readonly" ? "form.dataSync.readonly" : "form.dataSync"} />
-        </Heading>
-        {mode !== "readonly" && (
-          <Button
-            onClick={refreshSchema}
-            type="button"
-            variant="secondary"
-            data-testid="refresh-source-schema-btn"
-            disabled={isSubmitting}
-            icon={<Icon type="sync" />}
-          >
-            <FormattedMessage id="connection.updateSchema" />
-          </Button>
-        )}
-      </FlexContainer>
+    <Card noPadding>
+      <Box m="xl">
+        <FlexContainer justifyContent="space-between" alignItems="center">
+          <Heading as="h2" size="sm">
+            <FormattedMessage id={mode === "readonly" ? "form.dataSync.readonly" : "form.dataSync"} />
+          </Heading>
+          {mode !== "readonly" && (
+            <Button
+              onClick={refreshSchema}
+              type="button"
+              variant="secondary"
+              data-testid="refresh-source-schema-btn"
+              disabled={isSubmitting}
+              icon={<Icon type="sync" />}
+            >
+              <FormattedMessage id="connection.updateSchema" />
+            </Button>
+          )}
+        </FlexContainer>
+      </Box>
       <LoadingBackdrop loading={isSubmitting}>
         <SyncCatalogStreamSearch onSearch={setSearchString} />
         <DisabledStreamsSwitch checked={hideDisabledStreams} onChange={toggleHideDisabledStreams} />

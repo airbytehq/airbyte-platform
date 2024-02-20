@@ -13,13 +13,14 @@ import {
   ConnectionFormServiceProvider,
   useConnectionFormService,
 } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperimentContext } from "hooks/services/Experiment";
+import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 
 import { ConnectionNameCard } from "./ConnectionNameCard";
 import styles from "./CreateConnectionForm.module.scss";
 import { DataResidencyCard } from "./DataResidencyCard";
 import { SchemaError } from "./SchemaError";
+import { SimplifiedConnectionConfiguration } from "./SimplifiedConnectionCreation/SimplifiedConnectionConfiguration";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 import { ConnectionConfigurationCard } from "../ConnectionForm/ConnectionConfigurationCard";
 import { CreateConnectionFormControls } from "../ConnectionForm/CreateConnectionFormControls";
@@ -80,6 +81,8 @@ const CreateConnectionFormInner: React.FC = () => {
     ]
   );
 
+  const useSimpliedCreation = useExperiment("connection.simplifiedCreation", false);
+
   return (
     <Suspense fallback={<LoadingSchema />}>
       <Form<FormConnectionFormValues>
@@ -89,12 +92,18 @@ const CreateConnectionFormInner: React.FC = () => {
         trackDirtyChanges
       >
         <FlexContainer direction="column" className={styles.formContainer}>
-          <ConnectionNameCard />
-          {canEditDataGeographies && <DataResidencyCard />}
-          <ConnectionConfigurationCard />
-          <SyncCatalogCard />
-          <OperationsSectionCard />
-          <CreateConnectionFormControls />
+          {useSimpliedCreation ? (
+            <SimplifiedConnectionConfiguration />
+          ) : (
+            <>
+              <ConnectionNameCard />
+              {canEditDataGeographies && <DataResidencyCard />}
+              <ConnectionConfigurationCard />
+              <SyncCatalogCard />
+              <OperationsSectionCard />
+              <CreateConnectionFormControls />
+            </>
+          )}
         </FlexContainer>
       </Form>
     </Suspense>

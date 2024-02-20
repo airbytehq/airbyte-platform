@@ -50,7 +50,8 @@ spec:
       affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
       {{- end }}
       initContainers:
-        {{- if eq .Values.global.deploymentMode "oss"  }}
+        {{- if and (eq .Values.global.deploymentMode "oss") (ne .Values.bypassInit true)}}
+        # This init container will only executed if the deployment mode is "oss" and the bypassInit is not true.
         - name: init-db
           image: postgres:13-alpine
           command: [ "sh", "-c" ]

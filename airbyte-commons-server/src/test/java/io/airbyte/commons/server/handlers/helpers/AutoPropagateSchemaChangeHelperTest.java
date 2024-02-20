@@ -15,6 +15,8 @@ import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
+import io.airbyte.api.model.generated.CatalogDiff;
+import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
@@ -26,7 +28,6 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -109,8 +110,7 @@ class AutoPropagateSchemaChangeHelperTest {
 
     final AirbyteCatalog result =
         getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
-            UUID.randomUUID()).catalog();
+            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(1);
     Assertions.assertThat(result.getStreams().get(0).getStream().getJsonSchema()).isEqualTo(newSchema);
@@ -130,8 +130,7 @@ class AutoPropagateSchemaChangeHelperTest {
 
     final AirbyteCatalog result =
         getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
-            UUID.randomUUID()).catalog();
+            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);
@@ -155,8 +154,7 @@ class AutoPropagateSchemaChangeHelperTest {
 
     final AirbyteCatalog result =
         getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
-            UUID.randomUUID()).catalog();
+            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     final var stream0 = result.getStreams().get(0);
@@ -186,8 +184,7 @@ class AutoPropagateSchemaChangeHelperTest {
 
     final AirbyteCatalog result =
         getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
-            UUID.randomUUID()).catalog();
+            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     final var stream0 = result.getStreams().get(0);
@@ -217,8 +214,7 @@ class AutoPropagateSchemaChangeHelperTest {
 
     final AirbyteCatalog result =
         getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
-            UUID.randomUUID()).catalog();
+            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     final var stream1 = result.getStreams().get(1);
@@ -241,8 +237,7 @@ class AutoPropagateSchemaChangeHelperTest {
 
     final AirbyteCatalog result =
         getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
-            UUID.randomUUID()).catalog();
+            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     final var stream1 = result.getStreams().get(1);
@@ -263,8 +258,7 @@ class AutoPropagateSchemaChangeHelperTest {
 
     final AirbyteCatalog result =
         getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
-            UUID.randomUUID()).catalog();
+            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(0);
   }
@@ -283,8 +277,7 @@ class AutoPropagateSchemaChangeHelperTest {
 
     final AirbyteCatalog result =
         getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS,
-            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
-            UUID.randomUUID()).catalog();
+            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(1);
     Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);
@@ -304,8 +297,7 @@ class AutoPropagateSchemaChangeHelperTest {
 
     final AirbyteCatalog result =
         getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS,
-            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
-            UUID.randomUUID()).catalog();
+            SUPPORTED_DESTINATION_SYNC_MODES).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(1);
     Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);
@@ -414,6 +406,26 @@ class AutoPropagateSchemaChangeHelperTest {
     Assertions.assertThat(AutoPropagateSchemaChangeHelper.staticFormatDiff(transform))
         .isEqualTo(
             "Modified stream 'bar.foo': Added fields ['path.new_field'], Removed fields ['old_field', 'old_path.deprecated'], Altered fields ['properties.changed_type']");
+  }
+
+  @Test
+  void emptyDiffShouldAlwaysPropagate() {
+    Assertions.assertThat(AutoPropagateSchemaChangeHelper.shouldAutoPropagate(new CatalogDiff(),
+        new ConnectionRead().nonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE))).isTrue();
+  }
+
+  @Test
+  void emptyDiffCanBeApplied() {
+    final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
+    final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
+
+    final AutoPropagateSchemaChangeHelper.UpdateSchemaResult result =
+        getUpdatedSchema(oldAirbyteCatalog, oldAirbyteCatalog, List.of(), NonBreakingChangesPreference.PROPAGATE_FULLY,
+            SUPPORTED_DESTINATION_SYNC_MODES);
+
+    Assertions.assertThat(result.catalog()).isEqualTo(oldAirbyteCatalog);
+    Assertions.assertThat(result.appliedDiff().getTransforms()).isEmpty();
+    Assertions.assertThat(result.changeDescription()).isEmpty();
   }
 
 }

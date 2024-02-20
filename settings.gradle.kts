@@ -1,10 +1,10 @@
 pluginManagement {
     repositories {
         // uncomment for local dev
-//        maven {
-//            name = "localPluginRepo"
-//            url = uri("../.gradle-plugins-local")
-//        }
+        // maven {
+        //     name = "localPluginRepo"
+        //     url = uri("../.gradle-plugins-local")
+        // }
         maven(url = "https://airbyte.mycloudrepo.io/public/repositories/airbyte-public-jars")
         gradlePluginPortal()
         maven(url = "https://oss.sonatype.org/content/repositories/snapshots")
@@ -35,17 +35,17 @@ gradleEnterprise {
     }
 }
 
+val isCiServer = System.getenv().containsKey("CI")
+
 gradleEnterprise {
     buildScan {
+        isUploadInBackground = !isCiServer // Disable async upload so that the containers doesn't terminate the upload
         buildScanPublished {
             file("scan-journal.log").writeText("${java.util.Date()} - $buildScanId - ${buildScanUri}\n")
         }
     }
 }
 
-
-val isCiServer = System.getenv().containsKey("CI")
-//
 buildCache {
     // we use a different caching mechanism for Dagger builds
     if (System.getenv("DAGGER") == null) {
@@ -111,6 +111,7 @@ include(":airbyte-bootloader")
 include(":airbyte-commons-auth")
 include(":airbyte-commons-license")
 include(":airbyte-commons-micronaut")
+include(":airbyte-commons-micronaut-security")
 include(":airbyte-commons-server")
 include(":airbyte-commons-with-dependencies")
 include(":airbyte-connector-builder-server")
@@ -126,3 +127,4 @@ include(":airbyte-tests")
 include(":airbyte-webapp")
 include(":airbyte-workers")
 include(":airbyte-workload-launcher")
+include(":airbyte-connector-sidecar")

@@ -4,7 +4,6 @@
 
 package io.airbyte.config.init;
 
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.CONNECTOR_REGISTRY_DEFINITION_PROCESSED;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -27,12 +26,10 @@ import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingFailureReason;
 import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingSuccessOutcome;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.DefinitionsProvider;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.RunSupportStateUpdater;
-import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.Workspace;
+import io.airbyte.data.services.ActorDefinitionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.JobPersistence;
@@ -56,11 +53,12 @@ import org.junit.jupiter.params.provider.ValueSource;
  */
 class ApplyDefinitionsHelperTest {
 
-  private ConfigRepository configRepository;
   private DefinitionsProvider definitionsProvider;
   private JobPersistence jobPersistence;
   private SupportStateUpdater supportStateUpdater;
-  private FeatureFlagClient featureFlagClient;
+  private ActorDefinitionService actorDefinitionService;
+  private SourceService sourceService;
+  private DestinationService destinationService;
 
   private MetricClient metricClient;
   private ApplyDefinitionsHelper applyDefinitionsHelper;
@@ -106,17 +104,17 @@ class ApplyDefinitionsHelperTest {
 
   @BeforeEach
   void setup() {
-    configRepository = mock(ConfigRepository.class);
     definitionsProvider = mock(DefinitionsProvider.class);
     jobPersistence = mock(JobPersistence.class);
     supportStateUpdater = mock(SupportStateUpdater.class);
-    featureFlagClient = mock(TestClient.class);
+    actorDefinitionService = mock(ActorDefinitionService.class);
+    sourceService = mock(SourceService.class);
+    destinationService = mock(DestinationService.class);
+
     metricClient = mock(MetricClient.class);
 
-    applyDefinitionsHelper =
-        new ApplyDefinitionsHelper(definitionsProvider, jobPersistence, configRepository, featureFlagClient, metricClient, supportStateUpdater);
-
-    when(featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
+    applyDefinitionsHelper = new ApplyDefinitionsHelper(definitionsProvider, jobPersistence, actorDefinitionService, sourceService,
+        destinationService, metricClient, supportStateUpdater);
 
     // Default calls to empty.
     when(definitionsProvider.getDestinationDefinitions()).thenReturn(Collections.emptyList());
@@ -127,107 +125,122 @@ class ApplyDefinitionsHelperTest {
     final Map<UUID, ActorDefinitionVersion> seededDefinitionsAndDefaultVersions = new HashMap<>();
     seededDefinitionsAndDefaultVersions.put(POSTGRES_ID, ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES));
     seededDefinitionsAndDefaultVersions.put(S3_ID, ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3));
-    when(configRepository.getActorDefinitionIdsToDefaultVersionsMap()).thenReturn(seededDefinitionsAndDefaultVersions);
+    when(actorDefinitionService.getActorDefinitionIdsToDefaultVersionsMap()).thenReturn(seededDefinitionsAndDefaultVersions);
   }
 
-  private void verifyConfigRepositoryGetInteractions() throws IOException {
-    verify(configRepository).getActorDefinitionIdsToDefaultVersionsMap();
-    verify(configRepository).getActorDefinitionIdsInUse();
+  private void verifyActorDefinitionServiceInteractions() throws IOException {
+    verify(actorDefinitionService).getActorDefinitionIdsToDefaultVersionsMap();
+    verify(actorDefinitionService).getActorDefinitionIdsInUse();
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   void testNewConnectorIsWritten(final boolean updateAll)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(SOURCE_POSTGRES));
     when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(DESTINATION_S3));
 
     applyDefinitionsHelper.apply(updateAll);
-    verifyConfigRepositoryGetInteractions();
+    verifyActorDefinitionServiceInteractions();
 
-    verify(configRepository).writeConnectorMetadata(
+    verify(sourceService).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES),
         ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES));
-    verify(configRepository).writeConnectorMetadata(
+    verify(destinationService).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3),
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3));
-    verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
-        new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()));
+    List.of("airbyte/source-postgres", "airbyte/destination-s3").forEach(
+        dockerRepo -> verify(metricClient, times(1)).count(
+            CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
+            1,
+            new MetricAttribute("status", "ok"),
+            new MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()),
+            new MetricAttribute("docker_repository", dockerRepo)));
     verify(supportStateUpdater).updateSupportStates();
 
-    verifyNoMoreInteractions(configRepository, supportStateUpdater, metricClient);
+    verifyNoMoreInteractions(actorDefinitionService, sourceService, destinationService, supportStateUpdater, metricClient);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   void testConnectorIsUpdatedIfItIsNotInUse(final boolean updateAll)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     mockSeedInitialDefinitions();
-    when(configRepository.getActorDefinitionIdsInUse()).thenReturn(Set.of());
+    when(actorDefinitionService.getActorDefinitionIdsInUse()).thenReturn(Set.of());
 
     // New definitions come in
     when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(SOURCE_POSTGRES_2));
     when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(DESTINATION_S3_2));
 
     applyDefinitionsHelper.apply(updateAll);
-    verifyConfigRepositoryGetInteractions();
+    verifyActorDefinitionServiceInteractions();
 
-    verify(configRepository).writeConnectorMetadata(
+    verify(sourceService).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
         ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2));
-    verify(configRepository).writeConnectorMetadata(
+    verify(destinationService).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
-    verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
-        new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED.toString()));
+    List.of("airbyte/source-postgres", "airbyte/destination-s3").forEach(
+        dockerRepo -> verify(metricClient, times(1)).count(
+            CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
+            1,
+            new MetricAttribute("status", "ok"),
+            new MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED.toString()),
+            new MetricAttribute("docker_repository", dockerRepo)));
     verify(supportStateUpdater).updateSupportStates();
 
-    verifyNoMoreInteractions(configRepository, supportStateUpdater, metricClient);
+    verifyNoMoreInteractions(actorDefinitionService, sourceService, destinationService, supportStateUpdater, metricClient);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   void testUpdateBehaviorIfConnectorIsInUse(final boolean updateAll)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     mockSeedInitialDefinitions();
-    when(configRepository.getActorDefinitionIdsInUse()).thenReturn(Set.of(POSTGRES_ID, S3_ID));
+    when(actorDefinitionService.getActorDefinitionIdsInUse()).thenReturn(Set.of(POSTGRES_ID, S3_ID));
 
     when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(SOURCE_POSTGRES_2));
     when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(DESTINATION_S3_2));
 
     applyDefinitionsHelper.apply(updateAll);
-    verifyConfigRepositoryGetInteractions();
+    verifyActorDefinitionServiceInteractions();
 
     if (updateAll) {
-      verify(configRepository).writeConnectorMetadata(
+      verify(sourceService).writeConnectorMetadata(
           ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
           ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2),
           ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2));
-      verify(configRepository).writeConnectorMetadata(
+      verify(destinationService).writeConnectorMetadata(
           ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
           ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
           ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
-      verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
-          new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED.toString()));
+      List.of("airbyte/source-postgres", "airbyte/destination-s3").forEach(
+          dockerRepo -> verify(metricClient, times(1)).count(
+              CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
+              1,
+              new MetricAttribute("status", "ok"),
+              new MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED.toString()),
+              new MetricAttribute("docker_repository", dockerRepo)));
     } else {
-      verify(configRepository).updateStandardSourceDefinition(ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2));
-      verify(configRepository).updateStandardDestinationDefinition(ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2));
+      verify(sourceService).updateStandardSourceDefinition(ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2));
+      verify(destinationService).updateStandardDestinationDefinition(ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2));
       verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
-          new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED.toString()));
+          new MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED.toString()));
     }
     verify(supportStateUpdater).updateSupportStates();
 
-    verifyNoMoreInteractions(configRepository, supportStateUpdater, metricClient);
+    verifyNoMoreInteractions(actorDefinitionService, sourceService, destinationService, supportStateUpdater, metricClient);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   void testDefinitionsFiltering(final boolean updateAll)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(jobPersistence.getCurrentProtocolVersionRange())
         .thenReturn(Optional.of(new AirbyteProtocolVersionRange(new Version("2.0.0"), new Version("3.0.0"))));
     final ConnectorRegistrySourceDefinition postgresWithOldProtocolVersion =
@@ -239,67 +252,47 @@ class ApplyDefinitionsHelperTest {
     when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(s3withOldProtocolVersion, DESTINATION_S3_2));
 
     applyDefinitionsHelper.apply(updateAll);
-    verifyConfigRepositoryGetInteractions();
+    verifyActorDefinitionServiceInteractions();
 
     List.of("airbyte/source-postgres", "airbyte/destination-s3").forEach(
         dockerRepo -> verify(metricClient, times(1)).count(
             CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
             1,
             new MetricAttribute("status", "failed"),
-            new MetricAttribute("failure_reason", DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION.toString()),
+            new MetricAttribute("outcome", DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION.toString()),
             new MetricAttribute("docker_repository", dockerRepo)));
 
-    verify(configRepository, never()).writeConnectorMetadata(
+    verify(sourceService, never()).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardSourceDefinition(postgresWithOldProtocolVersion),
         ConnectorRegistryConverters.toActorDefinitionVersion(s3withOldProtocolVersion),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(postgresWithOldProtocolVersion));
-    verify(configRepository, never()).writeConnectorMetadata(
+    verify(destinationService, never()).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardDestinationDefinition(s3withOldProtocolVersion),
         ConnectorRegistryConverters.toActorDefinitionVersion(postgresWithOldProtocolVersion),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(s3withOldProtocolVersion));
 
-    verify(configRepository).writeConnectorMetadata(
+    verify(sourceService).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
         ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2));
-    verify(configRepository).writeConnectorMetadata(
+    verify(destinationService).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
     verify(supportStateUpdater).updateSupportStates();
-    verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
-        new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()));
-
-    verifyNoMoreInteractions(configRepository, supportStateUpdater, metricClient);
+    List.of("airbyte/source-postgres", "airbyte/destination-s3").forEach(
+        dockerRepo -> verify(metricClient, times(1)).count(
+            CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
+            1,
+            new MetricAttribute("status", "ok"),
+            new MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()),
+            new MetricAttribute("docker_repository", dockerRepo)));
+    verifyNoMoreInteractions(actorDefinitionService, sourceService, destinationService, supportStateUpdater, metricClient);
   }
 
   @Test
-  void testTurnOffRunSupportStateUpdaterFeatureFlag() throws JsonValidationException, ConfigNotFoundException, IOException {
-    when(featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(false);
-
-    when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(SOURCE_POSTGRES_2));
-    when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(DESTINATION_S3_2));
-
-    applyDefinitionsHelper.apply(true);
-    verifyConfigRepositoryGetInteractions();
-
-    verify(configRepository).writeConnectorMetadata(
-        ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
-        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2),
-        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2));
-    verify(configRepository).writeConnectorMetadata(
-        ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
-        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
-        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
-    verify(metricClient, times(2)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
-        new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()));
-
-    verify(supportStateUpdater, never()).updateSupportStates();
-    verifyNoMoreInteractions(configRepository, supportStateUpdater, metricClient);
-  }
-
-  @Test
-  void testMalformedDefinitionDoesNotBlockOtherDefinitionsFromUpdating() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testMalformedDefinitionDoesNotBlockOtherDefinitionsFromUpdating()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ConnectorRegistrySourceDefinition malformedRegistrySourceDefinition =
         Jsons.clone(SOURCE_POSTGRES).withDockerImageTag("a-non-semantic-version-for-example");
     assertThrows(RuntimeException.class, () -> ConnectorRegistryConverters.toActorDefinitionVersion(malformedRegistrySourceDefinition));
@@ -308,42 +301,53 @@ class ApplyDefinitionsHelperTest {
         Jsons.clone(DESTINATION_S3).withDockerImageTag("a-non-semantic-version-for-example");
     assertThrows(RuntimeException.class, () -> ConnectorRegistryConverters.toActorDefinitionVersion(malformedRegistryDestinationDefinition));
 
-    when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(SOURCE_POSTGRES, malformedRegistrySourceDefinition, SOURCE_POSTGRES_2));
+    final ConnectorRegistrySourceDefinition anotherNewSourceDefinition =
+        Jsons.clone(SOURCE_POSTGRES).withName("new").withDockerRepository("airbyte/source-new").withSourceDefinitionId(UUID.randomUUID());
+    final ConnectorRegistryDestinationDefinition anotherNewDestinationDefinition =
+        Jsons.clone(DESTINATION_S3).withName("new").withDockerRepository("airbyte/destination-new").withDestinationDefinitionId(UUID.randomUUID());
+
+    when(definitionsProvider.getSourceDefinitions())
+        .thenReturn(List.of(SOURCE_POSTGRES, malformedRegistrySourceDefinition, anotherNewSourceDefinition));
     when(definitionsProvider.getDestinationDefinitions())
-        .thenReturn(List.of(DESTINATION_S3, malformedRegistryDestinationDefinition, DESTINATION_S3_2));
+        .thenReturn(List.of(DESTINATION_S3, malformedRegistryDestinationDefinition, anotherNewDestinationDefinition));
 
     applyDefinitionsHelper.apply(true);
-    verifyConfigRepositoryGetInteractions();
+    verifyActorDefinitionServiceInteractions();
     List.of("airbyte/source-postgres", "airbyte/destination-s3").forEach(
         dockerRepo -> verify(metricClient, times(1)).count(
             CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
             1,
             new MetricAttribute("status", "failed"),
-            new MetricAttribute("failure_reason", DefinitionProcessingFailureReason.DEFINITION_CONVERSION_FAILED.toString()),
+            new MetricAttribute("outcome", DefinitionProcessingFailureReason.DEFINITION_CONVERSION_FAILED.toString()),
             new MetricAttribute("docker_repository", dockerRepo)));
 
-    verify(configRepository).writeConnectorMetadata(
+    verify(sourceService).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES),
         ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES));
-    verify(configRepository).writeConnectorMetadata(
+    verify(destinationService).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3),
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3));
-    verify(configRepository).writeConnectorMetadata(
-        ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
-        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2),
-        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2));
-    verify(configRepository).writeConnectorMetadata(
-        ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
-        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
-        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
+    verify(sourceService).writeConnectorMetadata(
+        ConnectorRegistryConverters.toStandardSourceDefinition(anotherNewSourceDefinition),
+        ConnectorRegistryConverters.toActorDefinitionVersion(anotherNewSourceDefinition),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(anotherNewSourceDefinition));
+    verify(destinationService).writeConnectorMetadata(
+        ConnectorRegistryConverters.toStandardDestinationDefinition(anotherNewDestinationDefinition),
+        ConnectorRegistryConverters.toActorDefinitionVersion(anotherNewDestinationDefinition),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(anotherNewDestinationDefinition));
     verify(supportStateUpdater).updateSupportStates();
-    verify(metricClient, times(4)).count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, new MetricAttribute("status", "ok"),
-        new MetricAttribute("success_outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()));
+    List.of("airbyte/source-postgres", "airbyte/destination-s3", "airbyte/source-new", "airbyte/destination-new").forEach(
+        dockerRepo -> verify(metricClient, times(1)).count(
+            CONNECTOR_REGISTRY_DEFINITION_PROCESSED,
+            1,
+            new MetricAttribute("status", "ok"),
+            new MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()),
+            new MetricAttribute("docker_repository", dockerRepo)));
 
     // The malformed definitions should not have been written.
-    verifyNoMoreInteractions(configRepository, supportStateUpdater, metricClient);
+    verifyNoMoreInteractions(actorDefinitionService, sourceService, destinationService, supportStateUpdater, metricClient);
   }
 
 }

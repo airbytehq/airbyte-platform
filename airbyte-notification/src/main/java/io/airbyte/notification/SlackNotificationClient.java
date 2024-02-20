@@ -4,23 +4,30 @@
 
 package io.airbyte.notification;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 import io.airbyte.api.common.StreamDescriptorUtils;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.SlackNotificationConfiguration;
+import io.airbyte.notification.messages.SchemaUpdateNotification;
+import io.airbyte.notification.messages.SyncSummary;
+import io.airbyte.notification.slack.Field;
+import io.airbyte.notification.slack.Notification;
+import io.airbyte.notification.slack.Section;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -51,41 +58,120 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifyJobFailure(final String receiverEmail,
-                                  final String sourceConnector,
-                                  final String destinationConnector,
-                                  final String connectionName,
-                                  final String jobDescription,
-                                  final String logUrl,
-                                  final Long jobId)
+  public boolean notifyJobFailure(final SyncSummary summary,
+                                  final String receiverEmail)
       throws IOException, InterruptedException {
-    return notifyFailure(renderTemplate(
+    String legacyMessage = renderTemplate(
         "slack/failure_slack_notification_template.txt",
-        connectionName,
-        sourceConnector,
-        destinationConnector,
-        jobDescription,
-        logUrl,
-        String.valueOf(jobId)));
+        summary.getConnection().getName(),
+        summary.getSource().getName(),
+        summary.getDestination().getName(),
+        summary.getErrorMessage(),
+        summary.getConnection().getUrl(),
+        String.valueOf(summary.getJobId()));
+    return notifyJson(buildJobCompletedNotification(summary, legacyMessage).toJsonNode());
   }
 
   @Override
-  public boolean notifyJobSuccess(final String receiverEmail,
-                                  final String sourceConnector,
-                                  final String destinationConnector,
-                                  final String connectionName,
-                                  final String jobDescription,
-                                  final String logUrl,
-                                  final Long jobId)
+  public boolean notifyJobSuccess(final SyncSummary summary,
+                                  final String receiverEmail)
       throws IOException, InterruptedException {
-    return notifySuccess(renderTemplate(
+    String legacyMessage = renderTemplate(
         "slack/success_slack_notification_template.txt",
-        connectionName,
-        sourceConnector,
-        destinationConnector,
-        jobDescription,
-        logUrl,
-        String.valueOf(jobId)));
+        summary.getConnection().getName(),
+        summary.getSource().getName(),
+        summary.getDestination().getName(),
+        summary.getErrorMessage(),
+        summary.getConnection().getUrl(),
+        String.valueOf(summary.getJobId()));
+    return notifyJson(buildJobCompletedNotification(summary, legacyMessage).toJsonNode());
+  }
+
+  @NotNull
+  static String formatDuration(final Instant start, final Instant end) {
+    Duration duration = Duration.between(start, end);
+    if (duration.toMinutes() == 0) {
+      return String.format("%d sec", duration.toSecondsPart());
+    } else if (duration.toHours() == 0) {
+      return String.format("%d min %d sec", duration.toMinutesPart(), duration.toSecondsPart());
+    } else if (duration.toDays() == 0) {
+      return String.format("%d hours %d min", duration.toHoursPart(), duration.toMinutesPart());
+    }
+    return String.format("%d days %d hours", duration.toDays(), duration.toHoursPart());
+  }
+
+  @NotNull
+  static String formatVolume(final long bytes) {
+    long currentValue = bytes;
+    for (String unit : List.of("B", "kB", "MB", "GB")) {
+      if (currentValue < 1024) {
+        return String.format("%d %s", currentValue, unit);
+      }
+      currentValue = currentValue / 1024;
+    }
+    return String.format("%d TB", currentValue);
+  }
+
+  @NotNull
+  static Notification buildJobCompletedNotification(final SyncSummary summary, final String text) {
+    Notification notification = new Notification();
+    notification.setText(text);
+    Section title = notification.addSection();
+    String connectionLink = Notification.createLink(summary.getConnection().getName(), summary.getConnection().getUrl());
+    String titleText = summary.isSuccess() ? "Sync completed" : "Sync failure occurred";
+    title.setText(String.format("%s: %s", titleText, connectionLink));
+    Section description = notification.addSection();
+
+    Field field = description.addField();
+    field.setType("mrkdwn");
+    field.setText("*Source:*");
+    field = description.addField();
+    if (summary.getStartedAt() != null && summary.getFinishedAt() != null) {
+      field.setType("mrkdwn");
+      field.setText("*Duration:*");
+    }
+
+    field = description.addField();
+    field.setType("mrkdwn");
+    field.setText(Notification.createLink(summary.getSource().getName(), summary.getSource().getUrl()));
+
+    if (summary.getStartedAt() != null && summary.getFinishedAt() != null) {
+      field = description.addField();
+      field.setType("mrkdwn");
+      field.setText(formatDuration(summary.getStartedAt(), summary.getFinishedAt()));
+    }
+
+    field = description.addField();
+    field.setType("mrkdwn");
+    field.setText("*Destination:*");
+    field = description.addField();
+    field.setType("mrkdwn");
+    field.setText(" ");
+
+    field = description.addField();
+    field.setType("mrkdwn");
+    field.setText(Notification.createLink(summary.getDestination().getName(), summary.getDestination().getUrl()));
+
+    if (!summary.isSuccess() && summary.getErrorMessage() != null) {
+      Section failureSection = notification.addSection();
+      failureSection.setText(String.format("""
+                                           *Failure reason:*
+
+                                           ```
+                                           %s
+                                           ```
+                                           """, summary.getErrorMessage()));
+    }
+    Section summarySection = notification.addSection();
+    summarySection.setText(String.format("""
+                                         *Sync Summary:*
+                                         %d record(s) loaded / %d record(s) extracted
+                                         %s loaded / %s extracted
+                                         """,
+        summary.getRecordsCommitted(), summary.getRecordsEmitted(),
+        formatVolume(summary.getBytesCommitted()), formatVolume(summary.getBytesEmitted())));
+
+    return notification;
   }
 
   @Override
@@ -155,31 +241,27 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifySchemaPropagated(final UUID workspaceId,
-                                        final String workspaceName,
-                                        final UUID connectionId,
-                                        final String connectionName,
-                                        final String connectionUrl,
-                                        final UUID sourceId,
-                                        final String sourceName,
-                                        final CatalogDiff diff,
-                                        final String recipient,
-                                        boolean isBreaking)
+  public boolean notifySchemaPropagated(final SchemaUpdateNotification notification,
+                                        final String recipient)
       throws IOException, InterruptedException {
-    String summary = buildSummary(diff);
-    final String message =
-        isBreaking ? renderTemplate("slack/breaking_schema_change_slack_notification_template.txt", connectionId.toString(), connectionUrl)
-            : renderTemplate("slack/schema_propagation_slack_notification_template.txt", connectionName, summary, connectionUrl);
+    String summary = buildSummary(notification.getCatalogDiff());
+
+    final String header = String.format("The schema of '%s' has changed.",
+        Notification.createLink(notification.getConnectionInfo().getName(), notification.getConnectionInfo().getUrl()));
+    Notification slackNotification =
+        buildSchemaPropagationNotification(notification.getWorkspace().getName(), notification.getSourceInfo().getName(), summary, header,
+            notification.getWorkspace().getUrl(), notification.getSourceInfo().getUrl());
+
     final String webhookUrl = config.getWebhook();
     if (!Strings.isEmpty(webhookUrl)) {
-      return notify(message);
+      return notifyJson(slackNotification.toJsonNode());
     }
     return false;
   }
 
   @NotNull
   @VisibleForTesting
-  protected static String buildSummary(CatalogDiff diff) {
+  protected static String buildSummary(final CatalogDiff diff) {
     final StringBuilder summaryBuilder = new StringBuilder();
 
     var newStreams =
@@ -245,15 +327,53 @@ public class SlackNotificationClient extends NotificationClient {
     return summaryBuilder.toString();
   }
 
+  @NotNull
+  static Notification buildSchemaPropagationNotification(final String workspaceName,
+                                                         final String sourceName,
+                                                         final String summary,
+                                                         final String header,
+                                                         final String workspaceUrl,
+                                                         final String sourceUrl) {
+    Notification slackNotification = new Notification();
+    slackNotification.setText(header);
+    Section titleSection = slackNotification.addSection();
+    titleSection.setText(header);
+    Section section = slackNotification.addSection();
+    Field field = section.addField();
+    field.setType("mrkdwn");
+    field.setText("*Workspace*");
+    field = section.addField();
+    field.setType("mrkdwn");
+    field.setText("*Source*");
+    field = section.addField();
+    field.setType("mrkdwn");
+    field.setText(Notification.createLink(workspaceName, workspaceUrl));
+    field = section.addField();
+    field.setType("mrkdwn");
+    field.setText(Notification.createLink(sourceName, sourceUrl));
+    slackNotification.addDivider();
+    Section changeSection = slackNotification.addSection();
+    changeSection.setText(summary);
+    return slackNotification;
+  }
+
   private boolean notify(final String message) throws IOException, InterruptedException {
+    ObjectMapper mapper = new ObjectMapper();
+    ObjectNode node = mapper.createObjectNode();
+    node.put("text", message);
+    return notifyJson(node);
+  }
+
+  private boolean notifyJson(final JsonNode node) throws IOException, InterruptedException {
+    if (Strings.isEmpty(config.getWebhook())) {
+      return false;
+    }
+    ObjectMapper mapper = new ObjectMapper();
     final HttpClient httpClient = HttpClient.newBuilder()
         .version(HttpClient.Version.HTTP_2)
         .build();
-    final ImmutableMap<String, String> body = new Builder<String, String>()
-        .put("text", message)
-        .build();
     final HttpRequest request = HttpRequest.newBuilder()
-        .POST(HttpRequest.BodyPublishers.ofString(Jsons.serialize(body)))
+        .POST(HttpRequest.BodyPublishers.ofByteArray(mapper.writeValueAsBytes(node)))
         .uri(URI.create(config.getWebhook()))
         .header("Content-Type", "application/json")
         .build();
@@ -262,7 +382,8 @@ public class SlackNotificationClient extends NotificationClient {
       LOGGER.info("Successful notification ({}): {}", response.statusCode(), response.body());
       return true;
     } else {
-      final String errorMessage = String.format("Failed to deliver notification (%s): %s", response.statusCode(), response.body());
+      final String errorMessage =
+          String.format("Failed to deliver notification (%s): %s [%s]", response.statusCode(), response.body(), node.toString());
       throw new IOException(errorMessage);
     }
   }

@@ -22,18 +22,21 @@ typealias StageFunction<T> = Function<T, Mono<T>>
 
 private val logger = KotlinLogging.logger {}
 
-abstract class Stage<T : StageIO>(protected val metricPublisher: CustomMetricPublisher) : StageFunction<T> {
+abstract class Stage<T : StageIO>(
+  protected val metricPublisher: CustomMetricPublisher,
+  protected val dataplaneId: String,
+) : StageFunction<T> {
   override fun apply(input: T): Mono<T> {
     withLoggingContext(input.logCtx) {
       if (skipStage(input)) {
-        logger.info { "SKIP Stage: ${getStageName()} — (workloadId = ${input.msg.workloadId})" }
+        logger.info { "SKIP Stage: ${getStageName()} — (workloadId = ${input.msg.workloadId}) — (dataplaneId = $dataplaneId)" }
         return input.toMono()
       }
 
       val startTime = TimeSource.Monotonic.markNow()
       var success = true
 
-      logger.info { "APPLY Stage: ${getStageName()} — (workloadId = ${input.msg.workloadId})" }
+      logger.info { "APPLY Stage: ${getStageName()} — (workloadId = ${input.msg.workloadId}) — (dataplaneId = $dataplaneId)" }
 
       return try {
         applyStage(input).toMono()
@@ -62,7 +65,7 @@ abstract class Stage<T : StageIO>(protected val metricPublisher: CustomMetricPub
   abstract fun getMetricAttrs(input: T): List<MetricAttribute>
 }
 
-abstract class LaunchStage(metricPublisher: CustomMetricPublisher) : Stage<LaunchStageIO>(metricPublisher) {
+abstract class LaunchStage(metricPublisher: CustomMetricPublisher, dataplaneId: String) : Stage<LaunchStageIO>(metricPublisher, dataplaneId) {
   override fun skipStage(input: StageIO): Boolean {
     return input !is LaunchStageIO || input.skip
   }

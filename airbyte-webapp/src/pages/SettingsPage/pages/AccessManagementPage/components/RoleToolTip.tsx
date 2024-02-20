@@ -11,7 +11,9 @@ import {
   permissionStringDictionary,
   permissionsByResourceType,
 } from "./useGetAccessManagementData";
-
+/**
+ * @deprecated this component will be removed when RBAC UI v2 is turned on. Role descriptions will live in the RoleManagementMenu instead.
+ */
 export const RoleToolTip: React.FC<{ resourceType: ResourceType }> = ({ resourceType }) => {
   return (
     <InfoTooltip>

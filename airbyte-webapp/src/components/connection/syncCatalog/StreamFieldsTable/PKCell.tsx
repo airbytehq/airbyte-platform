@@ -13,9 +13,17 @@ interface PKCellProps extends CellContext<TableStream, boolean | undefined> {
   isPKDefinitionSupported: boolean;
   isPrimaryKey: (path: string[]) => boolean;
   onPkSelect: (pkPath: string[]) => void;
+  disabled?: boolean;
 }
 
-export const PKCell: React.FC<PKCellProps> = ({ getValue, row, isPKDefinitionSupported, isPrimaryKey, onPkSelect }) => {
+export const PKCell: React.FC<PKCellProps> = ({
+  getValue,
+  row,
+  isPKDefinitionSupported,
+  isPrimaryKey,
+  onPkSelect,
+  disabled,
+}) => {
   if (!isPKDefinitionSupported) {
     return null;
   }
@@ -26,7 +34,7 @@ export const PKCell: React.FC<PKCellProps> = ({ getValue, row, isPKDefinitionSup
     <CheckBox
       checked={isSelectedPrimaryKey}
       onChange={() => onPkSelect(row.original.path)}
-      disabled={!getValue()}
+      disabled={!getValue() || disabled}
       data-testid="field-primary-key-checkbox"
     />
   );

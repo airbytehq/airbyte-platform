@@ -12,6 +12,7 @@ import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.CREATO
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.DESTINATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.EMAIL_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.EXTERNAL_AUTH_ID_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.IS_PUBLIC_API_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.OPERATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER;
@@ -35,6 +36,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -142,12 +144,21 @@ public class AuthenticationHeaderResolver {
         final String configId = properties.get(CONFIG_ID_HEADER);
         return List.of(workspaceHelper.getWorkspaceForConnectionId(UUID.fromString(configId)));
       } else if (properties.containsKey(WORKSPACE_IDS_HEADER)) {
+        // If workspaceIds were passed in as empty list [], they apparently don't show up in the headers so
+        // this will be skipped
+        // The full list of workspace ID permissions is handled below in the catch-all.
         return resolveWorkspaces(properties);
       } else if (properties.containsKey(SCOPE_TYPE_HEADER) && properties.containsKey(SCOPE_ID_HEADER) && properties.get(SCOPE_TYPE_HEADER)
           .equals(ScopeType.WORKSPACE.value().toLowerCase())) {
         // if the scope type is workspace, we can use the scope id directly to resolve a workspace id.
         final String workspaceId = properties.get(SCOPE_ID_HEADER);
         return List.of(UUID.fromString(workspaceId));
+      } else if (!properties.containsKey(WORKSPACE_IDS_HEADER) && properties.containsKey(IS_PUBLIC_API_HEADER)) {
+        // If the WORKSPACE_IDS_HEADER is missing and this is a public API request, we should return empty
+        // list so that we pass through
+        // the permission check and the controller/handler can either pull all workspaces the user has
+        // access to or fail.
+        return Collections.emptyList();
       } else {
         // resolving by permission id requires a database fetch, so we
         // handle it last and with a dedicated check to minimize latency.

@@ -52,7 +52,7 @@ const MyFormControl = FormControl<MyFormValues>;
 export const Primary: StoryObj<typeof Form> = {
   render: (props) => (
     <div style={{ maxWidth: "1200px" }}>
-      <Card withPadding>
+      <Card>
         <Form
           {...props}
           schema={schema}
@@ -96,7 +96,7 @@ export const Primary: StoryObj<typeof Form> = {
 export const InlineFormControls: StoryObj<typeof Form> = {
   render: (props) => (
     <div style={{ maxWidth: "1200px" }}>
-      <Card withPadding>
+      <Card>
         <Form
           {...props}
           schema={schema}

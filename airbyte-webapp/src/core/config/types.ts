@@ -1,12 +1,6 @@
-declare global {
-  interface Window {
-    TRACKING_STRATEGY?: string;
-  }
-}
-
 export interface AirbyteWebappConfig {
   keycloakBaseUrl: string;
-  segment: { token?: string; enabled: boolean };
+  segmentToken?: string;
   apiUrl: string;
   connectorBuilderApiUrl: string;
   version?: string;
@@ -24,5 +18,6 @@ export interface AirbyteWebappConfig {
     clientToken?: string;
     site?: string;
     service?: string;
+    env?: string;
   };
 }

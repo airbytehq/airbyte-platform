@@ -25,8 +25,11 @@ public class IdentityProvidersCreator {
   // static map of ProviderType to Keycloak provider id
   private static final Map<IdentityProviderConfiguration.ProviderType, String> PROVIDER_TYPE_TO_KEYCLOAK_PROVIDER_ID = new HashMap<>();
 
+  // oidc is the default provider id for OIDC identity providers.
+  // keycloak-oidc extends OIDCIdentityProvider
   static {
     PROVIDER_TYPE_TO_KEYCLOAK_PROVIDER_ID.put(IdentityProviderConfiguration.ProviderType.OKTA, "keycloak-oidc");
+    PROVIDER_TYPE_TO_KEYCLOAK_PROVIDER_ID.put(IdentityProviderConfiguration.ProviderType.OIDC, "oidc");
   }
 
   private final List<IdentityProviderConfiguration> identityProviderConfigurations;
@@ -77,18 +80,6 @@ public class IdentityProvidersCreator {
       log.error(error);
       throw new RuntimeException(error);
     }
-  }
-
-  /**
-   * Delete existing identity providers and re-create them. This is useful when we want to update the
-   * configuration of an existing identity provider.
-   */
-  public void resetIdentityProviders(RealmResource realmResource) {
-    realmResource.identityProviders().findAll().forEach(idpRepresentation -> {
-      realmResource.identityProviders().get(idpRepresentation.getInternalId()).remove();
-    });
-
-    createIdps(realmResource);
   }
 
 }

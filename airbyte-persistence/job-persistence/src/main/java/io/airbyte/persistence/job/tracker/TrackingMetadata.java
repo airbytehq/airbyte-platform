@@ -241,7 +241,10 @@ public class TrackingMetadata {
         .flatMap(Optional::stream)
         .map(AttemptFailureSummary::getFailures)
         .flatMap(Collection::stream)
-        .sorted(Comparator.comparing(FailureReason::getTimestamp))
+        .sorted(Comparator.comparing(f -> {
+          var timestamp = f.getTimestamp();
+          return timestamp != null ? timestamp : 0L;
+        }))
         .toList();
   }
 

@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler.CONNECTION_SPECIFICATION_FIELD;
+import static io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler.SPEC_FIELD;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -20,10 +22,18 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest;
+import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest.HttpMethodEnum;
+import io.airbyte.api.model.generated.ConnectorBuilderHttpResponse;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetails;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamRead;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadRequestBody;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInner;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInnerPagesInner;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectTestingValuesUpdate;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody;
@@ -49,6 +59,14 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.connectorbuilderserver.api.client.generated.ConnectorBuilderServerApi;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpRequest;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpRequest.HttpMethod;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpResponse;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamRead;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRequestBody;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInner;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInnerPagesInner;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
@@ -58,6 +76,8 @@ import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -104,9 +124,44 @@ class ConnectorBuilderProjectsHandlerTest {
   private SecretPersistenceConfigService secretPersistenceConfigService;
   private ConnectorBuilderService connectorBuilderService;
   private JsonSecretsProcessor secretsProcessor;
+  private ConnectorBuilderServerApi connectorBuilderServerApiClient;
   private ConnectorSpecification adaptedConnectorSpecification;
   private UUID workspaceId;
-  private final String draftJsonString = "{\"test\":123,\"empty\":{\"array_in_object\":[]}}";
+  private final String specString =
+      """
+      {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "airbyte_secret": true
+          }
+        }
+      }""";
+  private final JsonNode draftManifest = addSpec(Jsons.deserialize("{\"test\":123,\"empty\":{\"array_in_object\":[]}}"));
+  private final JsonNode testingValues = Jsons.deserialize(
+      """
+      {
+        "username": "bob",
+        "password": "hunter2"
+      }""");
+  private final JsonNode testingValuesWithSecretCoordinates = Jsons.deserialize(
+      """
+      {
+        "username": "bob",
+        "password": {
+          "_secret": "airbyte_workspace_123_secret_456_v1"
+        }
+      }""");
+  private final JsonNode testingValuesWithObfuscatedSecrets = Jsons.deserialize(
+      """
+      {
+        "username": "bob",
+        "password": "**********"
+      }""");
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -122,6 +177,7 @@ class ConnectorBuilderProjectsHandlerTest {
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     connectorBuilderService = mock(ConnectorBuilderService.class);
     secretsProcessor = mock(JsonSecretsProcessor.class);
+    connectorBuilderServerApiClient = mock(ConnectorBuilderServerApi.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     adaptedConnectorSpecification = mock(ConnectorSpecification.class);
     setupConnectorSpecificationAdapter(any(), "");
@@ -129,13 +185,14 @@ class ConnectorBuilderProjectsHandlerTest {
 
     connectorBuilderProjectsHandler =
         new ConnectorBuilderProjectsHandler(configRepository, cdkVersionProvider, uuidSupplier, manifestInjector, workspaceService, featureFlagClient,
-            secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService, connectorBuilderService, secretsProcessor);
+            secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService, connectorBuilderService, secretsProcessor,
+            connectorBuilderServerApiClient);
   }
 
   private ConnectorBuilderProject generateBuilderProject() throws JsonProcessingException {
     final UUID projectId = UUID.randomUUID();
     return new ConnectorBuilderProject().withBuilderProjectId(projectId).withWorkspaceId(workspaceId).withName("Test project")
-        .withHasDraft(true).withManifestDraft(new ObjectMapper().readTree(draftJsonString));
+        .withHasDraft(true).withManifestDraft(draftManifest);
   }
 
   @Test
@@ -305,6 +362,31 @@ class ConnectorBuilderProjectsHandlerTest {
     final ConnectorBuilderProject project = generateBuilderProject();
     project.setActorDefinitionId(UUID.randomUUID());
     project.setActiveDeclarativeManifestVersion(A_VERSION);
+    project.setTestingValues(testingValuesWithSecretCoordinates);
+
+    when(configRepository.getConnectorBuilderProject(eq(project.getBuilderProjectId()), any(Boolean.class))).thenReturn(project);
+    when(secretsProcessor.prepareSecretsForOutput(testingValuesWithSecretCoordinates, Jsons.deserialize(specString)))
+        .thenReturn(testingValuesWithObfuscatedSecrets);
+
+    final ConnectorBuilderProjectRead response =
+        connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(
+            new ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(project.getBuilderProjectId()).workspaceId(workspaceId));
+
+    assertEquals(project.getBuilderProjectId(), response.getBuilderProject().getBuilderProjectId());
+    assertEquals(project.getActorDefinitionId(), response.getBuilderProject().getSourceDefinitionId());
+    assertEquals(project.getActiveDeclarativeManifestVersion(), response.getBuilderProject().getActiveDeclarativeManifestVersion());
+    assertTrue(response.getDeclarativeManifest().getIsDraft());
+    assertEquals(Jsons.serialize(draftManifest), new ObjectMapper().writeValueAsString(response.getDeclarativeManifest().getManifest()));
+    assertEquals(testingValuesWithObfuscatedSecrets, response.getTestingValues());
+  }
+
+  @Test
+  @DisplayName("getConnectorBuilderProject should return a builder project with draft and null testing values if it doesn't have any")
+  void testGetConnectorBuilderProjectNullTestingValues() throws IOException, ConfigNotFoundException {
+    final ConnectorBuilderProject project = generateBuilderProject();
+    project.setActorDefinitionId(UUID.randomUUID());
+    project.setActiveDeclarativeManifestVersion(A_VERSION);
+    project.setTestingValues(null);
 
     when(configRepository.getConnectorBuilderProject(eq(project.getBuilderProjectId()), any(Boolean.class))).thenReturn(project);
 
@@ -316,7 +398,9 @@ class ConnectorBuilderProjectsHandlerTest {
     assertEquals(project.getActorDefinitionId(), response.getBuilderProject().getSourceDefinitionId());
     assertEquals(project.getActiveDeclarativeManifestVersion(), response.getBuilderProject().getActiveDeclarativeManifestVersion());
     assertTrue(response.getDeclarativeManifest().getIsDraft());
-    assertEquals(draftJsonString, new ObjectMapper().writeValueAsString(response.getDeclarativeManifest().getManifest()));
+    assertEquals(Jsons.serialize(draftManifest), new ObjectMapper().writeValueAsString(response.getDeclarativeManifest().getManifest()));
+    assertNull(response.getTestingValues());
+    verify(secretsProcessor, never()).prepareSecretsForOutput(any(), any());
   }
 
   @Test
@@ -325,6 +409,7 @@ class ConnectorBuilderProjectsHandlerTest {
     final ConnectorBuilderProject project = generateBuilderProject();
     project.setManifestDraft(null);
     project.setHasDraft(false);
+    project.setTestingValues(null);
 
     when(configRepository.getConnectorBuilderProject(eq(project.getBuilderProjectId()), any(Boolean.class))).thenReturn(project);
 
@@ -335,6 +420,8 @@ class ConnectorBuilderProjectsHandlerTest {
     assertEquals(project.getBuilderProjectId(), response.getBuilderProject().getBuilderProjectId());
     assertFalse(response.getBuilderProject().getHasDraft());
     assertNull(response.getDeclarativeManifest());
+    assertNull(response.getTestingValues());
+    verify(secretsProcessor, never()).prepareSecretsForOutput(any(), any());
   }
 
   @Test
@@ -344,12 +431,16 @@ class ConnectorBuilderProjectsHandlerTest {
     final ConnectorBuilderProject project = generateBuilderProject()
         .withManifestDraft(null)
         .withHasDraft(false)
-        .withActorDefinitionId(A_SOURCE_DEFINITION_ID);
+        .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+        .withTestingValues(testingValuesWithSecretCoordinates);
+    final JsonNode manifest = addSpec(A_MANIFEST);
     when(configRepository.getConnectorBuilderProject(eq(project.getBuilderProjectId()), any(Boolean.class))).thenReturn(project);
     when(configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID)).thenReturn(new DeclarativeManifest()
-        .withManifest(A_MANIFEST)
+        .withManifest(manifest)
         .withVersion(A_VERSION)
         .withDescription(A_DESCRIPTION));
+    when(secretsProcessor.prepareSecretsForOutput(testingValuesWithSecretCoordinates, Jsons.deserialize(specString)))
+        .thenReturn(testingValuesWithObfuscatedSecrets);
 
     final ConnectorBuilderProjectRead response = connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(
         new ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(project.getBuilderProjectId()).workspaceId(workspaceId));
@@ -357,13 +448,15 @@ class ConnectorBuilderProjectsHandlerTest {
     assertEquals(project.getBuilderProjectId(), response.getBuilderProject().getBuilderProjectId());
     assertFalse(response.getBuilderProject().getHasDraft());
     assertEquals(A_VERSION, response.getDeclarativeManifest().getVersion());
-    assertEquals(A_MANIFEST, response.getDeclarativeManifest().getManifest());
+    assertEquals(manifest, response.getDeclarativeManifest().getManifest());
     assertEquals(false, response.getDeclarativeManifest().getIsDraft());
     assertEquals(A_DESCRIPTION, response.getDeclarativeManifest().getDescription());
+    assertEquals(testingValuesWithObfuscatedSecrets, response.getTestingValues());
   }
 
   @Test
   void givenVersionWhenGetConnectorBuilderProjectWithManifestThenReturnSpecificVersion() throws ConfigNotFoundException, IOException {
+    final JsonNode manifest = addSpec(A_MANIFEST);
     when(configRepository.getConnectorBuilderProject(eq(A_BUILDER_PROJECT_ID), eq(false))).thenReturn(
         new ConnectorBuilderProject().withWorkspaceId(A_WORKSPACE_ID));
     when(configRepository.getVersionedConnectorBuilderProject(eq(A_BUILDER_PROJECT_ID), eq(A_VERSION))).thenReturn(
@@ -373,9 +466,12 @@ class ConnectorBuilderProjectsHandlerTest {
             .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
             .withHasDraft(true)
             .withName(A_NAME)
-            .withManifest(A_MANIFEST)
+            .withManifest(manifest)
             .withManifestVersion(A_VERSION)
-            .withManifestDescription(A_DESCRIPTION));
+            .withManifestDescription(A_DESCRIPTION)
+            .withTestingValues(testingValuesWithSecretCoordinates));
+    when(secretsProcessor.prepareSecretsForOutput(testingValuesWithSecretCoordinates, Jsons.deserialize(specString)))
+        .thenReturn(testingValuesWithObfuscatedSecrets);
 
     final ConnectorBuilderProjectRead response = connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(
         new ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(A_BUILDER_PROJECT_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION));
@@ -386,9 +482,10 @@ class ConnectorBuilderProjectsHandlerTest {
     assertEquals(A_SOURCE_DEFINITION_ID, response.getBuilderProject().getSourceDefinitionId());
     assertEquals(true, response.getBuilderProject().getHasDraft());
     assertEquals(A_VERSION, response.getDeclarativeManifest().getVersion());
-    assertEquals(A_MANIFEST, response.getDeclarativeManifest().getManifest());
+    assertEquals(manifest, response.getDeclarativeManifest().getManifest());
     assertEquals(false, response.getDeclarativeManifest().getIsDraft());
     assertEquals(A_DESCRIPTION, response.getDeclarativeManifest().getDescription());
+    assertEquals(testingValuesWithObfuscatedSecrets, response.getTestingValues());
   }
 
   @Test
@@ -457,26 +554,6 @@ class ConnectorBuilderProjectsHandlerTest {
   void testUpdateTestingValuesOnProjectWithNoExistingValues()
       throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ConnectorBuilderProject project = generateBuilderProject();
-    final JsonNode testingValues = Jsons.deserialize(
-        """
-        {
-          "username": "bob",
-          "password": "hunter1"
-        }""");
-    final JsonNode testingValuesWithSecretCoordinates = Jsons.deserialize(
-        """
-        {
-          "username": "bob",
-          "password": {
-            "_secret": "airbyte_workspace_123_secret_456_v1"
-          }
-        }""");
-    final JsonNode testingValuesWithObfuscatedSecrets = Jsons.deserialize(
-        """
-        {
-          "username": "bob",
-          "password": "**********"
-        }""");
     final JsonNode spec = Jsons.deserialize(
         """
         {
@@ -506,26 +583,12 @@ class ConnectorBuilderProjectsHandlerTest {
   @Test
   void testUpdateTestingValuesOnProjectWithExistingValues()
       throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
-    final JsonNode oldTestingValues = Jsons.deserialize(
-        """
-        {
-          "username": "bob",
-          "password": "hunter1"
-        }""");
-    final JsonNode oldTestingValuesWithSecretCoordinates = Jsons.deserialize(
-        """
-        {
-          "username": "bob",
-          "password": {
-            "_secret": "airbyte_workspace_123_secret_456_v1"
-          }
-        }""");
-    final ConnectorBuilderProject project = generateBuilderProject().withTestingValues(oldTestingValuesWithSecretCoordinates);
+    final ConnectorBuilderProject project = generateBuilderProject().withTestingValues(testingValuesWithSecretCoordinates);
     final JsonNode newTestingValues = Jsons.deserialize(
         """
         {
           "username": "bob",
-          "password": "hunter2"
+          "password": "hunter3"
         }""");
     final JsonNode newTestingValuesWithSecretCoordinates = Jsons.deserialize(
         """
@@ -535,37 +598,140 @@ class ConnectorBuilderProjectsHandlerTest {
             "_secret": "airbyte_workspace_123_secret_456_v2"
           }
         }""");
-    final JsonNode newTestingValuesWithObfuscatedSecrets = Jsons.deserialize(
-        """
-        {
-          "username": "bob",
-          "password": "**********"
-        }""");
-    final JsonNode spec = Jsons.deserialize(
+    final JsonNode spec = Jsons.deserialize(specString);
+
+    when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
+    when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(testingValuesWithSecretCoordinates)).thenReturn(testingValues);
+    when(secretsProcessor.copySecrets(testingValues, newTestingValues, spec)).thenReturn(newTestingValues);
+    when(secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(workspaceId, Optional.of(testingValuesWithSecretCoordinates),
+        newTestingValues, spec, true)).thenReturn(newTestingValuesWithSecretCoordinates);
+    when(secretsProcessor.prepareSecretsForOutput(newTestingValuesWithSecretCoordinates, spec)).thenReturn(testingValuesWithObfuscatedSecrets);
+
+    final JsonNode response = connectorBuilderProjectsHandler.updateConnectorBuilderProjectTestingValues(
+        new ConnectorBuilderProjectTestingValuesUpdate().builderProjectId(project.getBuilderProjectId()).testingValues(newTestingValues).spec(spec));
+    assertEquals(response, testingValuesWithObfuscatedSecrets);
+    verify(connectorBuilderService, times(1)).updateBuilderProjectTestingValues(project.getBuilderProjectId(), newTestingValuesWithSecretCoordinates);
+  }
+
+  @Test
+  void testReadStreamWithNoExistingTestingValues() throws Exception {
+    final ConnectorBuilderProject project = generateBuilderProject();
+
+    testStreamReadForProject(project, Jsons.emptyObject());
+  }
+
+  @Test
+  void testReadStreamWithExistingTestingValues() throws Exception {
+    final ConnectorBuilderProject project = generateBuilderProject().withTestingValues(testingValuesWithSecretCoordinates);
+    when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(testingValuesWithSecretCoordinates)).thenReturn(testingValues);
+
+    testStreamReadForProject(project, testingValues);
+  }
+
+  private void testStreamReadForProject(ConnectorBuilderProject project, JsonNode testingValues) throws Exception {
+    final String streamName = "stream1";
+    final ConnectorBuilderProjectStreamReadRequestBody projectStreamReadRequestBody = new ConnectorBuilderProjectStreamReadRequestBody()
+        .builderProjectId(project.getBuilderProjectId())
+        .manifest(project.getManifestDraft())
+        .streamName(streamName)
+        .workspaceId(project.getWorkspaceId())
+        .formGeneratedManifest(false);
+
+    final StreamReadRequestBody streamReadRequestBody = new StreamReadRequestBody(testingValues, project.getManifestDraft(), streamName, false,
+        project.getBuilderProjectId().toString(), null, null, project.getWorkspaceId().toString());
+
+    final JsonNode record1 = Jsons.deserialize(
         """
         {
           "type": "object",
           "properties": {
-            "username": {
-              "type": "string"
-            },
-            "password": {
-              "type": "string",
-              "airbyte_secret": true
-            }
+            "id": 1,
+            "name": "Bob"
           }
         }""");
+    final JsonNode record2 = Jsons.deserialize(
+        """
+        {
+          "type": "object",
+          "properties": {
+            "id": 2,
+            "name": "Alice"
+          }
+        }""");
+    final String responseBody = "[" + Jsons.serialize(record1) + "," + Jsons.serialize(record2) + "]";
+    final String requestUrl = "https://api.com/users";
+    final int responseStatus = 200;
+    final HttpRequest httpRequest = new HttpRequest(requestUrl, HttpMethod.GET, null, null, null);
+    final HttpResponse httpResponse = new HttpResponse(responseStatus, responseBody, null);
+    final StreamRead streamRead = new StreamRead(Collections.emptyList(), List.of(
+        new StreamReadSlicesInner(List.of(new StreamReadSlicesInnerPagesInner(List.of(record1, record2), httpRequest, httpResponse)), null, null)),
+        false, null, null, null, null);
 
     when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
-    when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(oldTestingValuesWithSecretCoordinates)).thenReturn(oldTestingValues);
-    when(secretsProcessor.copySecrets(oldTestingValues, newTestingValues, spec)).thenReturn(newTestingValues);
-    when(secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(workspaceId, Optional.of(oldTestingValuesWithSecretCoordinates),
+    when(connectorBuilderServerApiClient.readStream(streamReadRequestBody)).thenReturn(streamRead);
+
+    final ConnectorBuilderProjectStreamRead expectedProjectStreamRead = new ConnectorBuilderProjectStreamRead()
+        .logs(Collections.emptyList())
+        .slices(List.of(new ConnectorBuilderProjectStreamReadSlicesInner()
+            .pages(List.of(new ConnectorBuilderProjectStreamReadSlicesInnerPagesInner()
+                .records(List.of(record1, record2))
+                .request(new ConnectorBuilderHttpRequest().url(requestUrl).httpMethod(HttpMethodEnum.GET))
+                .response(new ConnectorBuilderHttpResponse().status(responseStatus).body(responseBody))))))
+        .testReadLimitReached(false);
+    final ConnectorBuilderProjectStreamRead actualProjectStreamRead =
+        connectorBuilderProjectsHandler.readConnectorBuilderProjectStream(projectStreamReadRequestBody);
+    assertEquals(expectedProjectStreamRead, actualProjectStreamRead);
+  }
+
+  @Test
+  void testReadStreamUpdatesPersistedTestingValues() throws Exception {
+    final JsonNode spec = Jsons.deserialize(specString);
+    final ConnectorBuilderProject project = generateBuilderProject().withTestingValues(testingValuesWithSecretCoordinates);
+    when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(testingValuesWithSecretCoordinates)).thenReturn(testingValues);
+
+    final String streamName = "stream1";
+    final ConnectorBuilderProjectStreamReadRequestBody projectStreamReadRequestBody = new ConnectorBuilderProjectStreamReadRequestBody()
+        .builderProjectId(project.getBuilderProjectId())
+        .manifest(project.getManifestDraft())
+        .streamName(streamName)
+        .workspaceId(project.getWorkspaceId())
+        .formGeneratedManifest(false);
+
+    final StreamReadRequestBody streamReadRequestBody = new StreamReadRequestBody(testingValues, project.getManifestDraft(), streamName, false,
+        project.getBuilderProjectId().toString(), null, null, project.getWorkspaceId().toString());
+
+    final JsonNode newTestingValues = Jsons.deserialize(
+        """
+        {
+          "username": "alice",
+          "password": "hunter3"
+        }""");
+    final JsonNode newTestingValuesWithSecretCoordinates = Jsons.deserialize(
+        """
+        {
+          "username": "alice",
+          "password": {
+            "_secret": "airbyte_workspace_123_secret_456_v2"
+          }
+        }""");
+    final JsonNode newTestingValuesWithObfuscatedSecrets = Jsons.deserialize(
+        """
+        {
+          "username": "alice",
+          "password": "**********"
+        }""");
+    final StreamRead streamRead = new StreamRead(Collections.emptyList(), Collections.emptyList(), false, null, null, null, newTestingValues);
+
+    when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
+    when(connectorBuilderServerApiClient.readStream(streamReadRequestBody)).thenReturn(streamRead);
+    when(secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(workspaceId, Optional.of(testingValuesWithSecretCoordinates),
         newTestingValues, spec, true)).thenReturn(newTestingValuesWithSecretCoordinates);
     when(secretsProcessor.prepareSecretsForOutput(newTestingValuesWithSecretCoordinates, spec)).thenReturn(newTestingValuesWithObfuscatedSecrets);
 
-    final JsonNode response = connectorBuilderProjectsHandler.updateConnectorBuilderProjectTestingValues(
-        new ConnectorBuilderProjectTestingValuesUpdate().builderProjectId(project.getBuilderProjectId()).testingValues(newTestingValues).spec(spec));
-    assertEquals(response, newTestingValuesWithObfuscatedSecrets);
+    final ConnectorBuilderProjectStreamRead projectStreamRead =
+        connectorBuilderProjectsHandler.readConnectorBuilderProjectStream(projectStreamReadRequestBody);
+
+    assertEquals(newTestingValuesWithObfuscatedSecrets, projectStreamRead.getLatestConfigUpdate());
     verify(connectorBuilderService, times(1)).updateBuilderProjectTestingValues(project.getBuilderProjectId(), newTestingValuesWithSecretCoordinates);
   }
 
@@ -584,6 +750,11 @@ class ConnectorBuilderProjectsHandlerTest {
   private void setupConnectorSpecificationAdapter(final JsonNode spec, final String documentationUrl) {
     when(manifestInjector.createDeclarativeManifestConnectorSpecification(spec)).thenReturn(adaptedConnectorSpecification);
     when(adaptedConnectorSpecification.getDocumentationUrl()).thenReturn(URI.create(documentationUrl));
+  }
+
+  private JsonNode addSpec(JsonNode manifest) {
+    final JsonNode spec = Jsons.deserialize("{\"" + CONNECTION_SPECIFICATION_FIELD + "\":" + specString + "}");
+    return ((ObjectNode) Jsons.clone(manifest)).set(SPEC_FIELD, spec);
   }
 
 }

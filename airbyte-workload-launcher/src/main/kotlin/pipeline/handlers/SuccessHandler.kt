@@ -44,14 +44,17 @@ class SuccessHandler(
         )
       }
 
-      try {
-        apiClient.updateStatusToLaunched(io.msg.workloadId)
-      } catch (e: Exception) {
-        val errorMsg = "Failed to update workload status to launched. Workload may be reprocessed on restart."
-        if (e is ApiException && e.code == 410) {
-          logger.debug(e) { errorMsg }
-        } else {
-          logger.warn(e) { errorMsg }
+      // If we skipped then we didn't launch the workload on this run so we don't set it to launched.
+      if (!io.skip) {
+        try {
+          apiClient.updateStatusToLaunched(io.msg.workloadId)
+        } catch (e: Exception) {
+          val errorMsg = "Failed to update workload status to launched. Workload may be reprocessed on restart."
+          if (e is ApiException && e.code == 410) {
+            logger.debug(e) { errorMsg }
+          } else {
+            logger.warn(e) { errorMsg }
+          }
         }
       }
 

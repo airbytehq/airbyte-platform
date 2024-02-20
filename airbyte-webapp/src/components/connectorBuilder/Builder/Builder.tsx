@@ -81,7 +81,7 @@ export const Builder: React.FC<BuilderProps> = ({ hasMultipleStreams }) => {
   return useMemo(
     () => (
       <div className={styles.container}>
-        <BuilderSidebar className={styles.sidebar} />
+        <BuilderSidebar />
         <div className={styles.builderView}>{getView(selectedView, hasMultipleStreams)}</div>
       </div>
     ),

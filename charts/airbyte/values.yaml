@@ -8,6 +8,8 @@ global:
   deploymentMode: "oss"
   # -- Edition; "community" or "pro"
   edition: "community"
+  # -- Log4j configuration file, if not using minio, update to "log4j2-no-minio.xml"
+  log4jConfig: "log4j2.xml"
 
   # -- Environment variables
   env_vars: {}
@@ -1661,6 +1663,7 @@ airbyte-api-server:
 
 keycloak:
   enabled: false
+  env_vars: {}
 
   auth:
     adminUsername: airbyteAdmin
@@ -1668,6 +1671,7 @@ keycloak:
 
 keycloak-setup:
   enabled: false
+  env_vars: {}
 
 workload-api-server:
   enabled: false

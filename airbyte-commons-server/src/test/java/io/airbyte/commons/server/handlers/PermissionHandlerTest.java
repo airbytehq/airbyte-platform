@@ -645,6 +645,52 @@ class PermissionHandlerTest {
       assertEquals(coveredPermissionTypes, Set.of(PermissionType.values()));
     }
 
+    @Test
+    void ensureNoExceptionOnOrgPermissionCheckForWorkspaceOutsideTheOrg() throws IOException, JsonValidationException, ConfigNotFoundException {
+      // Ensure that when we check permissions for a workspace that's not in an organization against an
+      // org permission, we don't throw an exception.
+      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(new Permission()
+          .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
+          .withOrganizationId(ORGANIZATION_ID)
+          .withUserId(USER_ID),
+          new Permission()
+              .withPermissionType(PermissionType.WORKSPACE_ADMIN)
+              .withWorkspaceId(WORKSPACE_ID)
+              .withUserId(USER_ID)));
+
+      when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, false))
+          .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID));
+
+      assertEquals(StatusEnum.SUCCEEDED, permissionHandler.checkPermissions(new PermissionCheckRequest()
+          .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_ADMIN)
+          .workspaceId(WORKSPACE_ID)
+          .userId(USER_ID)).getStatus());
+
+    }
+
+    @Test
+    void ensureFailedPermissionCheckForWorkspaceOutsideTheOrg() throws IOException, JsonValidationException, ConfigNotFoundException {
+      // Ensure that when we check permissions for a workspace that's not in an organization against an
+      // org permission, we fail the check if the workspace has no org ID set
+      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(new Permission()
+          .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
+          .withOrganizationId(ORGANIZATION_ID)
+          .withUserId(USER_ID),
+          new Permission()
+              .withPermissionType(PermissionType.WORKSPACE_ADMIN)
+              .withWorkspaceId(WORKSPACE_ID)
+              .withUserId(USER_ID)));
+
+      when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, false))
+          .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID));
+
+      assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(new PermissionCheckRequest()
+          .permissionType(io.airbyte.api.model.generated.PermissionType.ORGANIZATION_ADMIN)
+          .workspaceId(WORKSPACE_ID)
+          .userId(USER_ID)).getStatus());
+
+    }
+
     private PermissionCheckRequest getWorkspacePermissionCheck(final PermissionType targetPermissionType) {
       return new PermissionCheckRequest()
           .permissionType(Enums.convertTo(targetPermissionType, io.airbyte.api.model.generated.PermissionType.class))

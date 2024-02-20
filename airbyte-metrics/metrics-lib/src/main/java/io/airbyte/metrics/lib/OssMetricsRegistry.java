@@ -388,15 +388,29 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   WORKLOAD_LAUNCHER_KUBE_ERROR(MetricEmittingApps.WORKLOAD_LAUNCHER,
       "workload_kube_error",
       "Number of kube error in the workload launcher"),
+  WORKLOAD_LAUNCHER_KUBE_COPY_SUCCESS_OOM(MetricEmittingApps.WORKLOAD_LAUNCHER,
+      "workload_launcher_kube_copy_success_oom",
+      "Number of kube cp errors when trying to write the success file in the launcher"),
   JOB_OUTPUT_WRITE(MetricEmittingApps.ORCHESTRATOR,
       "job_output_write",
       "Write a job output in the output folder"),
   JOB_OUTPUT_READ(MetricEmittingApps.WORKER,
       "job_output_read",
       "Read a job output from the output folder"),
+  SYNC_RECORD_CHECKSUM(MetricEmittingApps.ORCHESTRATOR,
+      "sync_record_checksum",
+      "Report the status of a record checksum"),
   SYNC_STATE_RECORD_COUNT(MetricEmittingApps.ORCHESTRATOR,
       "sync_state_record_count",
-      "The record count emitted between state messages.");
+      "The record count emitted between state messages."),
+
+  DESTINATION_DESERIALIZATION_ERROR(MetricEmittingApps.ORCHESTRATOR,
+      "destination_deserialization_error",
+      "When a sync failed with a deserialization error from the destination"),
+
+  SIDECAR_CHECK(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
+      "sidecar_check",
+      "Exit of the connetor sidecar");
 
   private final MetricEmittingApp application;
   private final String metricName;

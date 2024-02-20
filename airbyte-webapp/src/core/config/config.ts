@@ -2,10 +2,7 @@ import { AirbyteWebappConfig } from "./types";
 
 export const config: AirbyteWebappConfig = {
   keycloakBaseUrl: process.env.REACT_APP_KEYCLOAK_BASE_URL || window.location.origin,
-  segment: {
-    token: process.env.REACT_APP_SEGMENT_TOKEN,
-    enabled: !window.TRACKING_STRATEGY || window.TRACKING_STRATEGY === "segment",
-  },
+  segmentToken: process.env.REACT_APP_SEGMENT_TOKEN,
   apiUrl: process.env.REACT_APP_API_URL ?? "/api",
   cloudApiUrl: process.env.REACT_APP_CLOUD_API_URL ?? "/cloud",
   connectorBuilderApiUrl: process.env.REACT_APP_CONNECTOR_BUILDER_API_URL ?? "/connector-builder-api",
@@ -23,6 +20,7 @@ export const config: AirbyteWebappConfig = {
     clientToken: process.env.REACT_APP_DATADOG_CLIENT_TOKEN,
     site: process.env.REACT_APP_DATADOG_SITE,
     service: process.env.REACT_APP_DATADOG_SERVICE,
+    env: process.env.REACT_APP_DATADOG_ENV,
   },
 };
 

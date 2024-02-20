@@ -25,11 +25,14 @@ class MeterFilterFactory(
 
   companion object {
     const val DATA_PLANE_ID_TAG = "data_plane_id"
+    const val QUEUE_NAME_TAG = "queue_name"
     const val STAGE_NAME_TAG = "stage_name"
     const val STATUS_TAG = "status"
     const val WORKLOAD_ID_TAG = "workload_id"
     const val WORKLOAD_TYPE_TAG = "workload_type"
     const val MUTEX_KEY_TAG = "mutex_key"
+    const val KUBE_COMMAND_TYPE_TAG = "kube_command_type"
+    const val KUBE_POD_TYPE_TAG = "kube_pod_type"
 
     const val LAUNCH_PIPELINE_OPERATION_NAME = "launch-pipeline"
     const val LAUNCH_PIPELINE_STAGE_OPERATION_NAME = "launch-pipeline-stage"

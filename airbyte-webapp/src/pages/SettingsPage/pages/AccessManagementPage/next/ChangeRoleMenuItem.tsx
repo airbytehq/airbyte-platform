@@ -7,7 +7,7 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { useCreatePermission, useCurrentOrganizationInfo, useCurrentWorkspace, useUpdatePermissions } from "core/api";
-import { PermissionType } from "core/api/types/AirbyteClient";
+import { PermissionType, WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 
 import styles from "./ChangeRoleMenuItem.module.scss";
@@ -15,11 +15,10 @@ import {
   ResourceType,
   permissionStringDictionary,
   permissionDescriptionDictionary,
-  NextAccessUserRead,
 } from "../components/useGetAccessManagementData";
 
 const useCreateOrUpdateRole = (
-  user: NextAccessUserRead,
+  user: WorkspaceUserAccessInfoRead,
   resourceType: ResourceType,
   permissionType: PermissionType
 ) => {
@@ -55,7 +54,7 @@ const useCreateOrUpdateRole = (
 };
 
 export const disallowedRoles = (
-  user: NextAccessUserRead,
+  user: WorkspaceUserAccessInfoRead,
   targetResourceType: ResourceType,
   isCurrentUser: boolean
 ): PermissionType[] => {
@@ -88,7 +87,7 @@ export const disallowedRoles = (
 };
 
 interface RoleMenuItemProps {
-  user: NextAccessUserRead;
+  user: WorkspaceUserAccessInfoRead;
   permissionType: PermissionType;
   resourceType: ResourceType;
   onClose: () => void;
@@ -106,34 +105,36 @@ export const ChangeRoleMenuItem: React.FC<RoleMenuItemProps> = ({ user, permissi
   const roleIsInvalid = disallowedRoles(user, resourceType, isCurrentUser).includes(permissionType);
 
   return (
-    <Box mb="xs">
-      <button
-        disabled={roleIsInvalid || roleIsActive}
-        onClick={async () => {
-          await createOrUpdateRole();
-          onClose();
-        }}
-        className={classNames(styles.changeRoleMenuItem__button, {
-          [styles["changeRoleMenuItem__button--active"]]: roleIsActive,
-        })}
-      >
-        <Box px="md" py="lg">
-          <FlexContainer alignItems="center" justifyContent="space-between">
+    <button
+      disabled={roleIsInvalid || roleIsActive}
+      onClick={async () => {
+        await createOrUpdateRole();
+        onClose();
+      }}
+      className={classNames(styles.changeRoleMenuItem__button, {
+        [styles["changeRoleMenuItem__button--active"]]: roleIsActive,
+      })}
+    >
+      <Box px="md" py="lg">
+        <FlexContainer alignItems="center" justifyContent="space-between">
+          <FlexItem>
+            <Text color={roleIsInvalid ? "grey300" : undefined}>
+              <FormattedMessage id={permissionStringDictionary[permissionType].role} />
+            </Text>
+            <Text color={roleIsInvalid ? "grey300" : "grey"}>
+              <FormattedMessage
+                id={permissionDescriptionDictionary[permissionType].id}
+                values={permissionDescriptionDictionary[permissionType].values}
+              />
+            </Text>
+          </FlexItem>
+          {roleIsActive && (
             <FlexItem>
-              <Text color={roleIsInvalid ? "grey300" : undefined}>
-                <FormattedMessage id={permissionStringDictionary[permissionType].role} />
-              </Text>
-              <Text color={roleIsInvalid ? "grey300" : "grey"}>
-                <FormattedMessage
-                  id={permissionDescriptionDictionary[permissionType].id}
-                  values={permissionDescriptionDictionary[permissionType].values}
-                />
-              </Text>
+              <Icon type="check" color="primary" size="md" />
             </FlexItem>
-            {roleIsActive && <Icon type="check" color="primary" />}
-          </FlexContainer>
-        </Box>
-      </button>
-    </Box>
+          )}
+        </FlexContainer>
+      </Box>
+    </button>
   );
 };

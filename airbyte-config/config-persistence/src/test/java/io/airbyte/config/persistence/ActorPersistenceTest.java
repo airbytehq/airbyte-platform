@@ -18,10 +18,10 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.HealthCheckServiceJooqImpl;
@@ -32,6 +32,7 @@ import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -60,17 +61,19 @@ class ActorPersistenceTest extends BaseConfigDatabaseTest {
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
+    final ConnectionService connectionService = mock(ConnectionService.class);
     configRepository = spy(
         new ConfigRepository(
             new ActorDefinitionServiceJooqImpl(database),
             new CatalogServiceJooqImpl(database),
-            new ConnectionServiceJooqImpl(database),
+            connectionService,
             new ConnectorBuilderServiceJooqImpl(database),
             new DestinationServiceJooqImpl(database,
                 featureFlagClient,
                 secretsRepositoryReader,
                 secretsRepositoryWriter,
-                secretPersistenceConfigService),
+                secretPersistenceConfigService,
+                connectionService),
             new HealthCheckServiceJooqImpl(database),
             new OAuthServiceJooqImpl(database,
                 featureFlagClient,
@@ -82,7 +85,8 @@ class ActorPersistenceTest extends BaseConfigDatabaseTest {
                 featureFlagClient,
                 secretsRepositoryReader,
                 secretsRepositoryWriter,
-                secretPersistenceConfigService),
+                secretPersistenceConfigService,
+                connectionService),
             new WorkspaceServiceJooqImpl(database,
                 featureFlagClient,
                 secretsRepositoryReader,

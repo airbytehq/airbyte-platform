@@ -59,6 +59,7 @@ import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.NamespaceDefinitionType;
 import io.airbyte.api.model.generated.ResourceRequirements;
+import io.airbyte.api.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.api.model.generated.SelectedFieldInfo;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
@@ -123,6 +124,7 @@ import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
+import io.airbyte.persistence.job.models.JobsRecordsCommitted;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
@@ -269,7 +271,8 @@ class ConnectionsHandlerTest {
         .withGeography(Geography.AUTO)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(true)
-        .withBreakingChange(false);
+        .withBreakingChange(false)
+        .withBackfillPreference(StandardSync.BackfillPreference.ENABLED);
     standardSync2 = new StandardSync()
         .withConnectionId(connection2Id)
         .withName(PRESTO_TO_HUDI)
@@ -479,7 +482,7 @@ class ConnectionsHandlerTest {
 
     @Test
     void testSearchConnections() throws JsonValidationException, ConfigNotFoundException, IOException {
-      final ConnectionRead connectionRead1 = ConnectionHelpers.connectionReadFromStandardSync(standardSync);
+      final ConnectionRead connectionRead1 = ConnectionHelpers.generateExpectedConnectionRead(standardSync);
       final StandardSync standardSync2 = new StandardSync()
           .withConnectionId(UUID.randomUUID())
           .withName("test connection")
@@ -694,9 +697,9 @@ class ConnectionsHandlerTest {
 
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any());
-        verify(jobNotifier, times(1)).autoDisableConnectionWarning(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
+        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any(), any());
+        verify(jobNotifier, times(1)).autoDisableConnectionWarning(any(), any());
       }
 
       @SuppressWarnings("LineLength")
@@ -714,9 +717,9 @@ class ConnectionsHandlerTest {
 
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any());
-        verify(jobNotifier, times(1)).autoDisableConnectionWarning(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
+        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any(), any());
+        verify(jobNotifier, times(1)).autoDisableConnectionWarning(any(), any());
       }
 
       @Test
@@ -736,9 +739,9 @@ class ConnectionsHandlerTest {
 
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
       @Test
@@ -758,9 +761,9 @@ class ConnectionsHandlerTest {
 
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
       @SuppressWarnings("LineLength")
@@ -777,9 +780,9 @@ class ConnectionsHandlerTest {
 
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
       // test should disable / shouldn't disable cases
@@ -817,9 +820,9 @@ class ConnectionsHandlerTest {
 
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
 
       }
 
@@ -833,9 +836,9 @@ class ConnectionsHandlerTest {
 
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
       @Test
@@ -866,17 +869,17 @@ class ConnectionsHandlerTest {
 
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
       }
 
       private void verifyDisabled() throws IOException {
         verify(configRepository, times(1)).writeStandardSync(
             argThat(standardSync -> (standardSync.getStatus().equals(Status.INACTIVE) && standardSync.getConnectionId().equals(connectionId))));
         verify(configRepository, times(1)).writeStandardSync(standardSync);
-        verify(jobNotifier, times(1)).autoDisableConnection(job);
-        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), eq(job));
-        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
+        verify(jobNotifier, times(1)).autoDisableConnection(eq(job), any());
+        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), eq(job), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
     }
@@ -904,7 +907,8 @@ class ConnectionsHandlerTest {
             .sourceCatalogId(standardSync.getSourceCatalogId())
             .geography(ApiPojoConverters.toApiGeography(standardSync.getGeography()))
             .notifySchemaChanges(standardSync.getNotifySchemaChanges())
-            .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail());
+            .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail())
+            .backfillPreference(Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class));
       }
 
       @Test
@@ -928,14 +932,20 @@ class ConnectionsHandlerTest {
 
         assertEquals(expectedConnectionRead, actualConnectionRead);
 
-        verify(configRepository).writeStandardSync(standardSync.withNotifySchemaChanges(null).withNotifySchemaChangesByEmail(null));
+        verify(configRepository).writeStandardSync(standardSync
+            .withNotifySchemaChanges(null)
+            .withNotifySchemaChangesByEmail(null)
+            .withBackfillPreference(StandardSync.BackfillPreference.ENABLED));
 
         // Use new schedule schema, verify that we get the same results.
         connectionCreate
             .schedule(null)
             .scheduleType(ConnectionScheduleType.BASIC)
             .scheduleData(ConnectionHelpers.generateBasicConnectionScheduleData());
-        assertEquals(expectedConnectionRead.notifySchemaChanges(null).notifySchemaChangesByEmail(null),
+        assertEquals(expectedConnectionRead
+            .notifySchemaChanges(null)
+            .notifySchemaChangesByEmail(null)
+            .backfillPreference(SchemaChangeBackfillPreference.ENABLED),
             connectionsHandler.createConnection(connectionCreate));
       }
 
@@ -974,7 +984,9 @@ class ConnectionsHandlerTest {
         final ConnectionRead actualConnectionRead = connectionsHandler.createConnection(connectionCreate);
 
         assertEquals(expectedConnectionRead, actualConnectionRead);
-        verify(configRepository).writeStandardSync(standardSync.withNotifySchemaChanges(null).withNotifySchemaChangesByEmail(null));
+        verify(configRepository).writeStandardSync(standardSync
+            .withNotifySchemaChanges(null)
+            .withNotifySchemaChangesByEmail(null));
       }
 
       @Test
@@ -1438,7 +1450,8 @@ class ConnectionsHandlerTest {
             ApiPojoConverters.toApiGeography(standardSync.getGeography()),
             false,
             standardSync.getNotifySchemaChanges(),
-            standardSync.getNotifySchemaChangesByEmail())
+            standardSync.getNotifySchemaChangesByEmail(),
+            Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class))
             .status(ConnectionStatus.INACTIVE)
             .scheduleType(ConnectionScheduleType.MANUAL)
             .scheduleData(null)
@@ -1582,9 +1595,15 @@ class ConnectionsHandlerTest {
         final AttemptWithJobInfo attemptWithJobInfo3 = new AttemptWithJobInfo(attempt3, generateMockJob(connectionId, attempt3));
 
         final List<AttemptWithJobInfo> attempts = Arrays.asList(attemptWithJobInfo1, attemptWithJobInfo2, attemptWithJobInfo3);
+        final List<JobsRecordsCommitted> jobsAndRecords = attempts.stream().map(attempt -> new JobsRecordsCommitted(
+            attempt.getAttempt().getAttemptNumber(),
+            attempt.getJobInfo().getId(),
+            attempt.getAttempt().getOutput().map(output -> output.getSync().getStandardSyncSummary().getTotalStats().getRecordsCommitted())
+                .orElse(0L),
+            attempt.getAttempt().getEndedAtInSecond().map(endedAt -> endedAt).orElse(0L))).toList();
 
-        when(jobPersistence.listAttemptsForConnectionAfterTimestamp(eq(connectionId), eq(ConfigType.SYNC), any(Instant.class)))
-            .thenReturn(attempts);
+        when(jobPersistence.listRecordsCommittedForConnectionAfterTimestamp(eq(connectionId), any(Instant.class)))
+            .thenReturn(jobsAndRecords);
 
         final ConnectionDataHistoryRequestBody requestBody = new ConnectionDataHistoryRequestBody()
             .connectionId(connectionId)
@@ -1598,7 +1617,7 @@ class ConnectionsHandlerTest {
         expected.get(1).setRecordsCommitted(attempt1Records + attempt2Records);
         expected.get(2).setRecordsCommitted(attempt3Records);
 
-        assertEquals(actual, expected);
+        assertEquals(expected, actual);
       }
 
     }

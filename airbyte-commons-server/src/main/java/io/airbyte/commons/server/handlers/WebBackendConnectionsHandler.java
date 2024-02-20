@@ -341,7 +341,9 @@ public class WebBackendConnectionsHandler {
         .geography(connectionRead.getGeography())
         .notifySchemaChanges(connectionRead.getNotifySchemaChanges())
         .notifySchemaChangesByEmail(connectionRead.getNotifySchemaChangesByEmail())
-        .nonBreakingChangesPreference(connectionRead.getNonBreakingChangesPreference());
+        .createdAt(connectionRead.getCreatedAt())
+        .nonBreakingChangesPreference(connectionRead.getNonBreakingChangesPreference())
+        .backfillPreference(connectionRead.getBackfillPreference());
   }
 
   // todo (cgardens) - This logic is a headache to follow it stems from the internal data model not
@@ -738,6 +740,7 @@ public class WebBackendConnectionsHandler {
     connectionCreate.sourceCatalogId(webBackendConnectionCreate.getSourceCatalogId());
     connectionCreate.geography(webBackendConnectionCreate.getGeography());
     connectionCreate.nonBreakingChangesPreference(webBackendConnectionCreate.getNonBreakingChangesPreference());
+    connectionCreate.backfillPreference(webBackendConnectionCreate.getBackfillPreference());
 
     return connectionCreate;
   }
@@ -772,6 +775,7 @@ public class WebBackendConnectionsHandler {
     connectionPatch.notifySchemaChanges(webBackendConnectionPatch.getNotifySchemaChanges());
     connectionPatch.notifySchemaChangesByEmail(webBackendConnectionPatch.getNotifySchemaChangesByEmail());
     connectionPatch.nonBreakingChangesPreference(webBackendConnectionPatch.getNonBreakingChangesPreference());
+    connectionPatch.backfillPreference(webBackendConnectionPatch.getBackfillPreference());
     connectionPatch.breakingChange(breakingChange);
 
     connectionPatch.operationIds(finalOperationIds);

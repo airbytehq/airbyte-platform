@@ -94,6 +94,7 @@ import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
+import io.airbyte.persistence.job.models.JobsRecordsCommitted;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
@@ -250,6 +251,10 @@ public class ConnectionsHandler {
     if (patch.getNonBreakingChangesPreference() != null) {
       sync.setNonBreakingChangesPreference(ApiPojoConverters.toPersistenceNonBreakingChangesPreference(patch.getNonBreakingChangesPreference()));
     }
+
+    if (patch.getBackfillPreference() != null) {
+      sync.setBackfillPreference(ApiPojoConverters.toPersistenceBackfillPreference(patch.getBackfillPreference()));
+    }
   }
 
   private static String getFrequencyStringFromScheduleType(final ScheduleType scheduleType, final ScheduleData scheduleData) {
@@ -319,7 +324,10 @@ public class ConnectionsHandler {
 
     final boolean warningPreviouslySentForMaxDays =
         warningPreviouslySentForMaxDays(numFailures, successTimestamp, maxDaysOfOnlyFailedJobsBeforeWarning, optionalFirstJob.get(), jobs);
-
+    List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+    for (Attempt attempt : optionalLastJob.get().getAttempts()) {
+      attemptStats.add(jobPersistence.getAttemptStats(optionalLastJob.get().getId(), attempt.getAttemptNumber()));
+    }
     if (numFailures == 0) {
       return new InternalOperationResult().succeeded(false);
     } else if (numFailures >= maxFailedJobsInARowBeforeConnectionDisable) {
@@ -328,10 +336,10 @@ public class ConnectionsHandler {
       return new InternalOperationResult().succeeded(true);
     } else if (numFailures == maxFailedJobsInARowBeforeConnectionDisableWarning && !warningPreviouslySentForMaxDays) {
       // warn if number of consecutive failures hits 50% of MaxFailedJobsInARow
-      jobNotifier.autoDisableConnectionWarning(optionalLastJob.get());
+      jobNotifier.autoDisableConnectionWarning(optionalLastJob.get(), attemptStats);
       // explicitly send to email if customer.io api key is set, since email notification cannot be set by
       // configs through UI yet
-      jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, optionalLastJob.get());
+      jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, optionalLastJob.get(), attemptStats);
       return new InternalOperationResult().succeeded(false);
     }
 
@@ -361,10 +369,11 @@ public class ConnectionsHandler {
     // send warning if there are only failed jobs in the past maxDaysOfOnlyFailedJobsBeforeWarning days
     // _unless_ a warning should have already been sent in the previous failure
     if (firstReplicationOlderThanMaxDisableWarningDays && successOlderThanPrevFailureByMaxWarningDays) {
-      jobNotifier.autoDisableConnectionWarning(optionalLastJob.get());
+
+      jobNotifier.autoDisableConnectionWarning(optionalLastJob.get(), attemptStats);
       // explicitly send to email if customer.io api key is set, since email notification cannot be set by
       // configs through UI yet
-      jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, optionalLastJob.get());
+      jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, optionalLastJob.get(), attemptStats);
     }
     return new InternalOperationResult().succeeded(false);
   }
@@ -373,10 +382,14 @@ public class ConnectionsHandler {
     standardSync.setStatus(Status.INACTIVE);
     configRepository.writeStandardSync(standardSync);
 
-    jobNotifier.autoDisableConnection(lastJob);
+    List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+    for (Attempt attempt : lastJob.getAttempts()) {
+      attemptStats.add(jobPersistence.getAttemptStats(lastJob.getId(), attempt.getAttemptNumber()));
+    }
+    jobNotifier.autoDisableConnection(lastJob, attemptStats);
     // explicitly send to email if customer.io api key is set, since email notification cannot be set by
     // configs through UI yet
-    jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_NOTIFICATION, lastJob);
+    jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_NOTIFICATION, lastJob, attemptStats);
   }
 
   private int getDaysSinceTimestamp(final long currentTimestampInSeconds, final long timestampInSeconds) {
@@ -462,7 +475,8 @@ public class ConnectionsHandler {
         .withGeography(getGeographyFromConnectionCreateOrWorkspace(connectionCreate))
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(
-            ApiPojoConverters.toPersistenceNonBreakingChangesPreference(connectionCreate.getNonBreakingChangesPreference()));
+            ApiPojoConverters.toPersistenceNonBreakingChangesPreference(connectionCreate.getNonBreakingChangesPreference()))
+        .withBackfillPreference(ApiPojoConverters.toPersistenceBackfillPreference(connectionCreate.getBackfillPreference()));
     if (connectionCreate.getResourceRequirements() != null) {
       standardSync.withResourceRequirements(ApiPojoConverters.resourceRequirementsToInternal(connectionCreate.getResourceRequirements()));
     }
@@ -913,9 +927,8 @@ public class ConnectionsHandler {
     // Convert start time to UTC (since that's what the database uses)
     final Instant startTimeInUTC = startTimeInUserTimeZone.toInstant();
 
-    final List<AttemptWithJobInfo> attempts = jobPersistence.listAttemptsForConnectionAfterTimestamp(
+    final List<JobsRecordsCommitted> attempts = jobPersistence.listRecordsCommittedForConnectionAfterTimestamp(
         connectionDataHistoryRequestBody.getConnectionId(),
-        ConfigType.SYNC,
         startTimeInUTC);
 
     // we want an entry per day - even if it's empty
@@ -928,8 +941,8 @@ public class ConnectionsHandler {
           .recordsCommitted(0L));
     }
 
-    for (final AttemptWithJobInfo attempt : attempts) {
-      final Optional<Long> endedAtOptional = attempt.getAttempt().getEndedAtInSecond();
+    for (final JobsRecordsCommitted attempt : attempts) {
+      final Optional<Long> endedAtOptional = attempt.getEndedAtInSecond();
 
       if (endedAtOptional.isPresent()) {
         // Convert the endedAt timestamp from the database to the designated timezone
@@ -938,8 +951,7 @@ public class ConnectionsHandler {
             .toLocalDate();
 
         // Merge it with the bytes synced from the attempt
-        final long recordsCommitted = attempt.getAttempt().getOutput()
-            .map(output -> output.getSync().getStandardSyncSummary().getTotalStats().getRecordsCommitted()).orElse(0L);
+        final long recordsCommitted = attempt.getRecordsCommitted().orElse(0L);
 
         // Update the bytes synced for the corresponding day
         final ConnectionDataHistoryReadItem existingItem = connectionDataHistoryReadItemsByDate.get(attemptDateInUserTimeZone);
@@ -1093,8 +1105,7 @@ public class ConnectionsHandler {
         newCatalog,
         transformations,
         nonBreakingChangesPreference,
-        supportedDestinationSyncModes,
-        featureFlagClient, workspaceId);
+        supportedDestinationSyncModes);
     updateObject.setSyncCatalog(propagateResult.catalog());
     updateObject.setSourceCatalogId(sourceCatalogId);
     trackSchemaChange(workspaceId, connectionId, propagateResult);

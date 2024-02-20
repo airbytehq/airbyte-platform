@@ -3,26 +3,33 @@ import { FormattedMessage } from "react-intl";
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
+import { WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
+import { FeatureItem, useFeature } from "core/services/features";
+
 import { ChangeRoleMenuItem } from "./ChangeRoleMenuItem";
 import { RemoveRoleMenuItem } from "./RemoveRoleMenuItem";
 import styles from "./RoleManagementMenuBody.module.scss";
 import {
-  NextAccessUserRead,
   ResourceType,
   permissionStringDictionary,
   permissionsByResourceType,
 } from "../components/useGetAccessManagementData";
 interface RoleManagementMenuBodyProps {
-  user: NextAccessUserRead;
+  user: WorkspaceUserAccessInfoRead;
   resourceType: ResourceType;
   close: () => void;
 }
 export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ user, resourceType, close }) => {
+  const areAllRbacRolesEnabled = useFeature(FeatureItem.AllowAllRBACRoles);
+  const rolesToAllow =
+    areAllRbacRolesEnabled || resourceType === "organization" ? permissionsByResourceType[resourceType] : [];
+
   return (
     <ul className={styles.roleManagementMenu__rolesList}>
-      {user.organizationPermission?.permissionType &&
+      {resourceType === "workspace" &&
+        user.organizationPermission?.permissionType &&
         user.organizationPermission?.permissionType !== "organization_member" && (
-          <li className={styles.roleManagementMenu__role}>
+          <li className={styles.roleManagementMenu__listItem}>
             <Box pt="xl" pb="xl" px="lg" className={styles.roleManagementMenu__menuTitle}>
               <Text
                 color="grey"
@@ -34,7 +41,7 @@ export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ 
                 <FormattedMessage
                   id="role.organization.userDescription"
                   values={{
-                    name: user.name,
+                    name: user.userName || user.userEmail,
                     role: (
                       <FormattedMessage
                         id={permissionStringDictionary[user.organizationPermission.permissionType].role}
@@ -46,9 +53,9 @@ export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ 
             </Box>
           </li>
         )}
-      {permissionsByResourceType[resourceType].map((permissionOption) => {
+      {rolesToAllow.map((permissionOption) => {
         return (
-          <li key={permissionOption}>
+          <li key={permissionOption} className={styles.roleManagementMenu__listItem}>
             <ChangeRoleMenuItem
               permissionType={permissionOption}
               resourceType={resourceType}
@@ -58,10 +65,11 @@ export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ 
           </li>
         );
       })}
-
-      <li>
-        <RemoveRoleMenuItem user={user} resourceType={resourceType} />
-      </li>
+      {resourceType === "workspace" && (
+        <li className={styles.roleManagementMenu__listItem}>
+          <RemoveRoleMenuItem user={user} resourceType={resourceType} />
+        </li>
+      )}
     </ul>
   );
 };

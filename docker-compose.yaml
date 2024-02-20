@@ -130,7 +130,7 @@ services:
     configs:
       - flags
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - workspace:${WORKSPACE_ROOT}
       - ${LOCAL_ROOT}:${LOCAL_ROOT}
     ports:
@@ -188,6 +188,7 @@ services:
       - WEBAPP_URL=${WEBAPP_URL}
       - WORKER_ENVIRONMENT=${WORKER_ENVIRONMENT}
       - WORKSPACE_ROOT=${WORKSPACE_ROOT}
+      - CONNECTOR_BUILDER_SERVER_API_HOST=${CONNECTOR_BUILDER_SERVER_API_HOST}
     ports:
       - "8001"
     configs:
@@ -210,7 +211,6 @@ services:
     environment:
       - INTERNAL_API_HOST=${INTERNAL_API_HOST}
       - CONNECTOR_BUILDER_API_HOST=${CONNECTOR_BUILDER_API_HOST}
-      - TRACKING_STRATEGY=${TRACKING_STRATEGY}
       - KEYCLOAK_INTERNAL_HOST=localhost # placeholder to ensure the webapp's nginx config is valid
     networks:
       - airbyte_internal

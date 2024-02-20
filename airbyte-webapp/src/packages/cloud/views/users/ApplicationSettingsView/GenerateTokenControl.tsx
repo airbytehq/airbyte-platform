@@ -20,14 +20,14 @@ export const GenerateTokenControl: React.FC<{ clientId: string; clientSecret: st
     const { access_token } = await generateToken({ client_id: clientId, client_secret: clientSecret });
 
     return openModal({
-      title: <FormattedMessage id="settings.application.token.new" />,
+      title: <FormattedMessage id="settings.applications.table.generateToken" />,
       content: () => <TokenModalBody token={access_token} />,
       size: "md",
     });
   }, [generateToken, clientId, clientSecret, openModal]);
 
   return (
-    <Button className={styles.actionButton} onClick={onGenerateToken} variant="dark" isLoading={isLoading}>
+    <Button className={styles.actionButton} onClick={onGenerateToken} variant="primaryDark" isLoading={isLoading}>
       <FormattedMessage id="settings.applications.table.generateToken" />
     </Button>
   );

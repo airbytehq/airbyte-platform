@@ -38,7 +38,7 @@ class WorkloadServiceTest {
     clearAllMocks()
     every { messageProducer.publish(any(), any(), any()) } returns Unit
     every { metricPublisher.count(any(), any(), any(), any()) } returns Unit
-    every { featureFlagClient.stringVariation(WorkloadApiRouting, Geography(geography)) } returns REGULAR_QUEUE
+    every { featureFlagClient.stringVariation(WorkloadApiRouting, Multi(listOf(Geography(geography)))) } returns REGULAR_QUEUE
     every {
       featureFlagClient.stringVariation(WorkloadApiRouting, Multi(listOf(Geography(geography), Priority(Priority.HIGH_PRIORITY))))
     } returns HIGH_PRIORITY_QUEUE

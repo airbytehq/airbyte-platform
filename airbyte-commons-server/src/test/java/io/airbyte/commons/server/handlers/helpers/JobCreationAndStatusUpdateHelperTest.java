@@ -141,12 +141,14 @@ class JobCreationAndStatusUpdateHelperTest {
 
     verify(mJobPersistence).failJob(runningJob.getId());
     verify(mJobPersistence).failJob(pendingJob.getId());
+    verify(mJobPersistence).getAttemptStats(runningJob.getId(), attemptNo1);
+    verify(mJobPersistence).getAttemptStats(runningJob.getId(), attemptNo2);
     verify(mJobPersistence).failAttempt(runningJob.getId(), attemptNo2);
     verify(mJobPersistence).writeAttemptFailureSummary(eq(runningJob.getId()), eq(attemptNo2), any());
     verify(mJobPersistence).getJob(runningJob.getId());
     verify(mJobPersistence).getJob(pendingJob.getId());
-    verify(mJobNotifier).failJob(any(), eq(runningJob));
-    verify(mJobNotifier).failJob(any(), eq(pendingJob));
+    verify(mJobNotifier).failJob(any(), eq(runningJob), any());
+    verify(mJobNotifier).failJob(any(), eq(pendingJob), any());
     verify(mJobTracker).trackSync(runningJob, JobState.FAILED);
     verify(mJobTracker).trackSync(pendingJob, JobState.FAILED);
     verify(mJobPersistence).listJobsForConnectionWithStatuses(Fixtures.CONNECTION_ID, Job.REPLICATION_TYPES, JobStatus.NON_TERMINAL_STATUSES);

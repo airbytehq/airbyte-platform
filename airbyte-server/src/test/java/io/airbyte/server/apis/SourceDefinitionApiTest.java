@@ -163,7 +163,8 @@ class SourceDefinitionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testUpdateSourceDefinition() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testUpdateSourceDefinition()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(sourceDefinitionsHandler.updateSourceDefinition(Mockito.any()))
         .thenReturn(new SourceDefinitionRead())
         .thenThrow(new ConfigNotFoundException("", ""));

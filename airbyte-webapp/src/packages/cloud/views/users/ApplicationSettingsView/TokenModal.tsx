@@ -35,7 +35,7 @@ export const TokenModalBody: React.FC<{ token: string }> = ({ token }) => {
         <CopyButton content={token}>
           <FormattedMessage id="copyButton.title" />
         </CopyButton>
-        <Button onClick={downloadFileWithToken} icon={<Icon type="download" size="sm" />}>
+        <Button onClick={downloadFileWithToken} icon={<Icon type="download" size="xs" />}>
           <FormattedMessage id="settings.applications.token.download" />
         </Button>
       </ModalFooter>

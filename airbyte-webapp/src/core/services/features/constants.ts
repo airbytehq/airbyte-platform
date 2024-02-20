@@ -8,6 +8,16 @@ export const defaultOssFeatures = [
   FeatureItem.AllowSyncSubOneHourCronExpressions,
 ];
 
+export const defaultEnterpriseFeatures = [
+  ...defaultOssFeatures,
+  FeatureItem.MultiWorkspaceUI,
+  FeatureItem.RBAC,
+  FeatureItem.AllowAllRBACRoles,
+  FeatureItem.EnterpriseBranding,
+  FeatureItem.APITokenManagement,
+  FeatureItem.ConnectionHistoryGraphs,
+];
+
 export const defaultCloudFeatures = [
   FeatureItem.AllowAutoDetectSchema,
   FeatureItem.AllowOAuthConnector,
@@ -20,4 +30,5 @@ export const defaultCloudFeatures = [
   FeatureItem.RestrictAdminInForeignWorkspace,
   FeatureItem.ConnectorBreakingChangeDeadlines,
   FeatureItem.RBAC,
+  FeatureItem.ConnectionHistoryGraphs,
 ];

@@ -69,12 +69,14 @@ import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
+import io.airbyte.db.instance.configs.jooq.generated.enums.BackfillPreference;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -142,7 +144,11 @@ public class DbConverter {
             Enums.toEnum(Optional.ofNullable(record.get(SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).orElse(AutoPropagationStatus.ignore)
                 .getLiteral(), NonBreakingChangesPreference.class).orElseThrow())
         .withNotifySchemaChanges(isWebhookNotificationEnabled)
-        .withNotifySchemaChangesByEmail(isEmailNotificationEnabled);
+        .withNotifySchemaChangesByEmail(isEmailNotificationEnabled)
+        .withCreatedAt(record.get(CONNECTION.CREATED_AT, OffsetDateTime.class).toEpochSecond())
+        .withBackfillPreference(
+            Enums.toEnum(Optional.ofNullable(record.get(SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).orElse(BackfillPreference.disabled).getLiteral(),
+                StandardSync.BackfillPreference.class).orElseThrow());
   }
 
   private static ConfiguredAirbyteCatalog parseConfiguredAirbyteCatalog(final String configuredAirbyteCatalogString) {

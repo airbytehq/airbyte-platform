@@ -12,7 +12,10 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionBreakingChange;
@@ -21,17 +24,19 @@ import io.airbyte.config.BreakingChangeScope;
 import io.airbyte.config.BreakingChangeScope.ScopeType;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
+import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.HealthCheckServiceJooqImpl;
@@ -41,8 +46,13 @@ import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
+import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -77,20 +87,24 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
   void setup() throws SQLException, JsonValidationException, IOException {
     truncateAllTables();
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
+    when(featureFlagClient.stringVariation(eq(HeartbeatMaxSecondsBetweenMessages.INSTANCE), any(SourceDefinition.class))).thenReturn("3600");
+
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
+    final ConnectionService connectionService = mock(ConnectionService.class);
     configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(database),
         new CatalogServiceJooqImpl(database),
-        new ConnectionServiceJooqImpl(database),
+        connectionService,
         new ConnectorBuilderServiceJooqImpl(database),
         new DestinationServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
             secretsRepositoryWriter,
-            secretPersistenceConfigService),
+            secretPersistenceConfigService,
+            connectionService),
         new HealthCheckServiceJooqImpl(database),
         new OAuthServiceJooqImpl(database,
             featureFlagClient,
@@ -102,7 +116,8 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
             featureFlagClient,
             secretsRepositoryReader,
             secretsRepositoryWriter,
-            secretPersistenceConfigService),
+            secretPersistenceConfigService,
+            connectionService),
         new WorkspaceServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
@@ -580,6 +595,23 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
         .withDestinationDefinitionId(actorDefinitionId)
         .withWorkspaceId(WORKSPACE_ID)
         .withName("destination-" + id);
+  }
+
+  private StandardSync createStandardSync(final SourceConnection source,
+                                          final DestinationConnection destination,
+                                          final List<ConfiguredAirbyteStream> streams) {
+    final UUID connectionId = UUID.randomUUID();
+    return new StandardSync()
+        .withConnectionId(connectionId)
+        .withSourceId(source.getSourceId())
+        .withDestinationId(destination.getDestinationId())
+        .withName("standard-sync-" + connectionId)
+        .withCatalog(new ConfiguredAirbyteCatalog().withStreams(streams))
+        .withManual(true)
+        .withNamespaceDefinition(NamespaceDefinitionType.SOURCE)
+        .withGeography(Geography.AUTO)
+        .withBreakingChange(false)
+        .withStatus(StandardSync.Status.ACTIVE);
   }
 
 }

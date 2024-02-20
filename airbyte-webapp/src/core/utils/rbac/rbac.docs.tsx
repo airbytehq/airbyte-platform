@@ -81,7 +81,8 @@ const PermissionQueryResult: React.FC<PermissionQueryResultProps> = ({
   role,
   permissions,
 }) => {
-  const query = resourceType === "INSTANCE" ? { resourceType, role } : { resourceType, role, resourceId };
+  const query =
+    resourceType === "INSTANCE" ? { resourceType, role, resourceId: "" } : { resourceType, role, resourceId };
 
   const hasMatchingPermissions = useRbacPermissionsQuery(
     permissions.map(({ resourceType, role, resourceId }) => {
@@ -178,7 +179,10 @@ const PermisisonTestViewInner = () => {
             variant="secondary"
             icon={<Icon type="plus" />}
             onClick={() => {
-              setPermissions([...permissions, { resourceType: RbacResourceHierarchy[0], role: RbacRoleHierarchy[0] }]);
+              setPermissions([
+                ...permissions,
+                { resourceType: RbacResourceHierarchy[0], role: RbacRoleHierarchy[0], resourceId: "" },
+              ]);
             }}
           />
         </strong>

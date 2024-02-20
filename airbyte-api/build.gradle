@@ -12,6 +12,7 @@ def specFile = "$projectDir/src/main/openapi/config.yaml"
 def airbyteApiSpecFile = "$projectDir/src/main/openapi/api.yaml"
 def airbyteApiSpecTemplateDirApi = "$projectDir/src/main/resources/templates/jaxrs-spec-api"
 def workloadSpecFile = "$projectDir/src/main/openapi/workload-openapi.yaml"
+def connectorBuilderServerSpecFile = project(":airbyte-connector-builder-server").file("src/main/openapi/openapi.yaml").getPath()
 
 def genApiServer = tasks.register("generateApiServer", GenerateTask) {
     def serverOutputDir = "$buildDir/generated/api/server"
@@ -38,6 +39,7 @@ def genApiServer = tasks.register("generateApiServer", GenerateTask) {
             'FieldSchema'                       : 'com.fasterxml.jackson.databind.JsonNode',
             'DeclarativeManifest'               : 'com.fasterxml.jackson.databind.JsonNode',
             'SecretPersistenceConfigurationJson': 'com.fasterxml.jackson.databind.JsonNode',
+            'ConnectorBuilderProjectTestingValues': 'com.fasterxml.jackson.databind.JsonNode',
     ]
 
     generateApiDocumentation = false
@@ -84,6 +86,7 @@ def genApiClient = tasks.register("generateApiClient", GenerateTask) {
             'StateBlob'                         : 'com.fasterxml.jackson.databind.JsonNode',
             'FieldSchema'                       : 'com.fasterxml.jackson.databind.JsonNode',
             'SecretPersistenceConfigurationJson': 'com.fasterxml.jackson.databind.JsonNode',
+            'ConnectorBuilderProjectTestingValues': 'com.fasterxml.jackson.databind.JsonNode',
     ]
 
     library = "native"
@@ -121,6 +124,7 @@ def genApiClient2 = tasks.register("genApiClient2", GenerateTask) {
             'StateBlob'                         : 'com.fasterxml.jackson.databind.JsonNode',
             'FieldSchema'                       : 'com.fasterxml.jackson.databind.JsonNode',
             'SecretPersistenceConfigurationJson': 'com.fasterxml.jackson.databind.JsonNode',
+            'ConnectorBuilderProjectTestingValues': 'com.fasterxml.jackson.databind.JsonNode',
     ]
 
     generateApiDocumentation = false
@@ -160,6 +164,9 @@ import dev.failsafe.okhttp.FailsafeCall'''
 
 
         updateDomainClientsWithFailsafe('build/generated/api/client2/src/main/kotlin/io/airbyte/api/client2/generated')
+
+        // a JsonNode adapter needs to be added to the kotlin client's serializer to handle JsonNode fields in requests
+        updateApiClientSerializerWithJsonNodeAdapter('build/generated/api/client2/src/main/kotlin/org/openapitools/client/infrastructure/Serializer.kt')
     }
 }
 
@@ -183,6 +190,7 @@ def genApiDocs = tasks.register("generateApiDocs", GenerateTask) {
             'StreamJsonSchema'                  : 'com.fasterxml.jackson.databind.JsonNode',
             'StateBlob'                         : 'com.fasterxml.jackson.databind.JsonNode',
             'FieldSchema'                       : 'com.fasterxml.jackson.databind.JsonNode',
+            'ConnectorBuilderProjectTestingValues': 'com.fasterxml.jackson.databind.JsonNode',
     ]
 
     generateApiDocumentation = false
@@ -227,6 +235,7 @@ def genAirbyteApiServer = tasks.register('generateAirbyteApiServer', GenerateTas
             'OAuthInputConfiguration'      : 'com.fasterxml.jackson.databind.JsonNode',
             'OAuthCredentialsConfiguration': 'com.fasterxml.jackson.databind.JsonNode',
             'DestinationConfiguration'     : 'com.fasterxml.jackson.databind.JsonNode',
+            'ConnectorBuilderProjectTestingValues': 'com.fasterxml.jackson.databind.JsonNode',
     ]
 }
 
@@ -254,6 +263,7 @@ def genWorkloadApiClient = tasks.register("genWorkloadApiClient", GenerateTask) 
             'StreamJsonSchema'                  : 'com.fasterxml.jackson.databind.JsonNode',
             'StateBlob'                         : 'com.fasterxml.jackson.databind.JsonNode',
             'FieldSchema'                       : 'com.fasterxml.jackson.databind.JsonNode',
+            'ConnectorBuilderProjectTestingValues': 'com.fasterxml.jackson.databind.JsonNode',
     ]
 
     generateApiDocumentation = false
@@ -277,6 +287,47 @@ def genWorkloadApiClient = tasks.register("genWorkloadApiClient", GenerateTask) 
     dependsOn(':airbyte-workload-api-server:compileKotlin', 'genApiClient2')
 }
 
+def genConnectorBuilderServerApiClient = tasks.register("genConnectorBuilderServerApiClient", GenerateTask) {
+    def clientOutputDir = "$buildDir/generated/connectorbuilderserverapi/client"
+
+    inputs.file connectorBuilderServerSpecFile
+    outputs.dir clientOutputDir
+
+    generatorName = "kotlin"
+    inputSpec = connectorBuilderServerSpecFile
+    outputDir = clientOutputDir
+
+    apiPackage = "io.airbyte.connectorbuilderserver.api.client.generated"
+    invokerPackage = "io.airbyte.connectorbuilderserver.api.client.invoker.generated"
+    modelPackage = "io.airbyte.connectorbuilderserver.api.client.model.generated"
+
+    schemaMappings = [
+            'ConnectorConfig'   : 'com.fasterxml.jackson.databind.JsonNode',
+            'ConnectorManifest' : 'com.fasterxml.jackson.databind.JsonNode',
+            'ConnectorBuilderProjectTestingValues': 'com.fasterxml.jackson.databind.JsonNode',
+    ]
+
+    generateApiDocumentation = false
+
+    configOptions = [
+            enumPropertyNaming  : "UPPERCASE",
+            generatePom         : "false",
+            interfaceOnly       : "true"
+    ]
+
+    doLast {
+        // Delete file generated by the client2 task
+        def dir = file('build/generated/connectorbuilderserverapi/client/src/main/kotlin/org').deleteDir()
+
+        def generatedDomainClientsPath = 'build/generated/connectorbuilderserverapi/client/src/main/kotlin/io/airbyte/connectorbuilderserver/api/client/generated'
+        updateDomainClientsWithFailsafe(generatedDomainClientsPath)
+        // the kotlin client (as opposed to the java client) doesn't include the response body in the exception message.
+        updateDomainClientsToIncludeHttpResponseBodyOnClientException(generatedDomainClientsPath)
+    }
+
+    dependsOn('genApiClient2')
+}
+
 
 compileJava.dependsOn genApiDocs, genApiClient, genApiServer, genAirbyteApiServer
 
@@ -288,21 +339,27 @@ kapt {
 afterEvaluate {
     tasks.named('kaptGenerateStubsKotlin').configure {
         mustRunAfter genApiDocs, genApiClient, genApiClient2, genApiServer, genAirbyteApiServer,
-                genWorkloadApiClient
+                genWorkloadApiClient, genConnectorBuilderServerApiClient
     }
 }
 
 tasks.named("compileKotlin") {
     dependsOn tasks.named("genApiClient2")
     dependsOn tasks.named("genWorkloadApiClient")
+    dependsOn tasks.named("genConnectorBuilderServerApiClient")
 }
 
 dependencies {
     annotationProcessor libs.micronaut.openapi
     kapt libs.micronaut.openapi
+    kapt platform(libs.micronaut.bom)
+    kapt libs.bundles.micronaut.annotation.processor
+    api libs.bundles.micronaut.annotation
 
     compileOnly libs.v3.swagger.annotations
     kapt libs.v3.swagger.annotations
+
+    api(libs.kotlin.logging)
 
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
@@ -313,12 +370,15 @@ dependencies {
     implementation libs.javax.ws.rs.api
     implementation libs.javax.validation.api
     implementation libs.jackson.datatype
+    implementation libs.jackson.databind
     implementation libs.moshi.kotlin
     implementation libs.okhttp
     implementation libs.openapi.jackson.databind.nullable
     implementation libs.reactor.core
     implementation libs.slf4j.api
     implementation libs.swagger.annotations
+
+    implementation project(":airbyte-commons")
 
     testRuntimeOnly libs.junit.jupiter.engine
     testImplementation libs.bundles.junit
@@ -335,7 +395,8 @@ sourceSets {
                     "$buildDir/generated/airbyte_api/server/src/gen/java",
                     "$buildDir/generated/api/client/src/main/java",
                     "$buildDir/generated/api/client2/src/main/kotlin",
-                    "$buildDir/generated/workloadapi/client/src/main/kotlin"
+                    "$buildDir/generated/workloadapi/client/src/main/kotlin",
+                    "$buildDir/generated/connectorbuilderserverapi/client/src/main/kotlin"
             "$projectDir/src/main/java"
         }
         resources {
@@ -354,6 +415,13 @@ airbyte {
     spotless {
         excludes = ["src/main/openapi/workload-openapi.yaml"]
     }
+}
+
+// Even though Kotlin is excluded on Spotbugs, this project
+// still runs into spotbug issues. Working theory is that
+// generated code is being picked up. Disable as a short-term fix.
+tasks.named("spotbugsMain") {
+    enabled = false
 }
 
 private def updateDomainClientsWithFailsafe(def clientPath) {
@@ -395,4 +463,24 @@ private def updateDomainClientsToIncludeHttpResponseBodyOnClientException(def cl
             domainClient.write(domainClientFileText)
         }
     }
+}
+
+private def updateApiClientSerializerWithJsonNodeAdapter(def serializerPath) {
+    /*
+     * UPDATE Serializer to include JsonNode adapter
+     */
+    def serializerFile = file(serializerPath)
+    def serializerFileText = serializerFile.text
+
+    // add import if not exists
+    if (!serializerFileText.contains("import io.airbyte.api.client.infrastructure.JsonNodeAdapter")) {
+        def newImport = "import io.airbyte.api.client.infrastructure.JsonNodeAdapter"
+        serializerFileText = serializerFileText.replaceFirst('import ', newImport + '\nimport ')
+    }
+
+    // add JsonNode adapter to builder
+    serializerFileText = serializerFileText.replace("Moshi.Builder()", '''Moshi.Builder()
+        .add(JsonNodeAdapter())''')
+
+    serializerFile.write(serializerFileText)
 }

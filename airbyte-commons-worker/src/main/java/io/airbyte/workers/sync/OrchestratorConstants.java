@@ -9,6 +9,7 @@ import io.airbyte.analytics.TrackingClientConstants;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.helpers.LogClientSingleton;
+import io.airbyte.workers.process.Metadata;
 import java.util.Set;
 
 /**
@@ -42,6 +43,7 @@ public class OrchestratorConstants {
           EnvConfigs.JOB_ISOLATED_KUBE_NODE_SELECTORS,
           EnvConfigs.USE_CUSTOM_NODE_SELECTOR,
           EnvConfigs.LOCAL_DOCKER_MOUNT,
+          EnvConfigs.LOG4J_CONFIGURATION_FILE,
           EnvConfigs.WORKSPACE_DOCKER_MOUNT,
           EnvConfigs.WORKSPACE_ROOT,
           EnvConfigs.JOB_KUBE_LABELS,
@@ -91,7 +93,8 @@ public class OrchestratorConstants {
           TrackingClientConstants.AIRBYTE_VERSION_ENV_VAR,
           TrackingClientConstants.DEPLOYMENT_MODE_ENV_VAR,
           TrackingClientConstants.SEGMENT_WRITE_KEY_ENV_VAR,
-          TrackingClientConstants.TRACKING_STRATEGY_ENV_VAR))
+          TrackingClientConstants.TRACKING_STRATEGY_ENV_VAR,
+          Metadata.AWS_ASSUME_ROLE_SECRET_NAME))
       .build();
 
   public static final String INIT_FILE_ENV_MAP = "envMap.json";
@@ -99,8 +102,10 @@ public class OrchestratorConstants {
   public static final String INIT_FILE_JOB_RUN_CONFIG = "jobRunConfig.json";
   public static final String INIT_FILE_APPLICATION = "application.txt";
   public static final String WORKLOAD_ID_FILE = "workload.txt";
-
-  public static final String CHECK_APPLICATION_NAME = "check-orchestrator";
+  public static final String JOB_OUTPUT_FILENAME = "jobOutput.json";
+  public static final String EXIT_CODE_FILE = "exitCode.txt";
+  public static final String CONNECTION_CONFIGURATION = "connectionConfiguration.json";
+  public static final String SIDECAR_INPUT = "sidecarInput.json";
 
   // define two ports for stdout/stderr usage on the container orchestrator pod
   public static final int PORT1 = 9877;

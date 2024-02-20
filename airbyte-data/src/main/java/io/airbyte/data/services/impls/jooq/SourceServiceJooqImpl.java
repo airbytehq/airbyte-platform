@@ -7,11 +7,8 @@ package io.airbyte.data.services.impls.jooq;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.field;
 import static org.jooq.impl.DSL.noCondition;
@@ -23,17 +20,16 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
-import io.airbyte.config.ConfigWithMetadata;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
-import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
@@ -44,16 +40,16 @@ import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.SourceType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord;
-import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.Organization;
+import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -73,7 +69,6 @@ import org.jooq.Field;
 import org.jooq.InsertSetMoreStep;
 import org.jooq.JSONB;
 import org.jooq.JoinType;
-import org.jooq.Query;
 import org.jooq.Record;
 import org.jooq.Record1;
 import org.jooq.Result;
@@ -92,18 +87,22 @@ public class SourceServiceJooqImpl implements SourceService {
   private final SecretsRepositoryReader secretRepositoryReader;
   private final SecretsRepositoryWriter secretsRepositoryWriter;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
-  private final static long heartbeatMaxSecondBetweenMessage = 3600L;
+  private final ConnectionService connectionService;
+  private final ConnectorMetadataJooqHelper connectorMetadataJooqHelper;
 
   public SourceServiceJooqImpl(@Named("configDatabase") final Database database,
                                final FeatureFlagClient featureFlagClient,
                                final SecretsRepositoryReader secretsRepositoryReader,
                                final SecretsRepositoryWriter secretsRepositoryWriter,
-                               final SecretPersistenceConfigService secretPersistenceConfigService) {
+                               final SecretPersistenceConfigService secretPersistenceConfigService,
+                               final ConnectionService connectionService) {
     this.database = new ExceptionWrappingDatabase(database);
+    this.connectionService = connectionService;
     this.featureFlagClient = featureFlagClient;
     this.secretRepositoryReader = secretsRepositoryReader;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
+    this.connectorMetadataJooqHelper = new ConnectorMetadataJooqHelper(featureFlagClient, connectionService);
   }
 
   /**
@@ -148,7 +147,7 @@ public class SourceServiceJooqImpl implements SourceService {
   @Override
   public StandardSourceDefinition getSourceDefinitionFromConnection(final UUID connectionId) {
     try {
-      final StandardSync sync = getStandardSyncWithMetadata(connectionId).getConfig();
+      final StandardSync sync = connectionService.getStandardSync(connectionId);
       return getSourceDefinitionFromSource(sync.getSourceId());
     } catch (final Exception e) {
       throw new RuntimeException(e);
@@ -180,7 +179,7 @@ public class SourceServiceJooqImpl implements SourceService {
       throws IOException {
     return listStandardActorDefinitions(
         ActorType.source,
-        record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessage),
+        record -> DbConverter.buildStandardSourceDefinition(record, retrieveDefaultMaxSecondsBetweenMessages(record.get(ACTOR_DEFINITION.ID))),
         includeTombstones(ACTOR_DEFINITION.TOMBSTONE, includeTombstone),
         ACTOR_DEFINITION.PUBLIC.eq(true));
   }
@@ -202,7 +201,7 @@ public class SourceServiceJooqImpl implements SourceService {
         io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType.workspace,
         JoinType.JOIN,
         ActorType.source,
-        record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessage),
+        record -> DbConverter.buildStandardSourceDefinition(record, retrieveDefaultMaxSecondsBetweenMessages(record.get(ACTOR_DEFINITION.ID))),
         includeTombstones(ACTOR_DEFINITION.TOMBSTONE, includeTombstones));
   }
 
@@ -225,7 +224,7 @@ public class SourceServiceJooqImpl implements SourceService {
         JoinType.LEFT_OUTER_JOIN,
         ActorType.source,
         record -> actorDefinitionWithGrantStatus(record,
-            entry -> DbConverter.buildStandardSourceDefinition(entry, heartbeatMaxSecondBetweenMessage)),
+            entry -> DbConverter.buildStandardSourceDefinition(entry, retrieveDefaultMaxSecondsBetweenMessages(record.get(ACTOR_DEFINITION.ID)))),
         ACTOR_DEFINITION.CUSTOM.eq(false),
         includeTombstones(ACTOR_DEFINITION.TOMBSTONE, includeTombstones));
   }
@@ -390,7 +389,8 @@ public class SourceServiceJooqImpl implements SourceService {
 
     for (final Record record : records) {
       final SourceConnection source = DbConverter.buildSourceConnection(record);
-      final StandardSourceDefinition definition = DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessage);
+      final StandardSourceDefinition definition = DbConverter.buildStandardSourceDefinition(record,
+          retrieveDefaultMaxSecondsBetweenMessages(source.getSourceDefinitionId()));
       sourceAndDefinitions.add(new SourceAndDefinition(source, definition));
     }
 
@@ -452,6 +452,17 @@ public class SourceServiceJooqImpl implements SourceService {
     return result.stream().map(DbConverter::buildSourceConnection).toList();
   }
 
+  /**
+   * Retrieve from Launch Darkly the default max seconds between messages for a given source. This
+   * allows us to dynamically change the default max seconds between messages for a source.
+   *
+   * @param sourceDefinitionId to retrieve the default max seconds between messages for.
+   * @return
+   */
+  private Long retrieveDefaultMaxSecondsBetweenMessages(UUID sourceDefinitionId) {
+    return Long.parseLong(featureFlagClient.stringVariation(HeartbeatMaxSecondsBetweenMessages.INSTANCE, new SourceDefinition(sourceDefinitionId)));
+  }
+
   private int writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId,
                                                  final UUID scopeId,
                                                  final io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType scopeType,
@@ -473,109 +484,8 @@ public class SourceServiceJooqImpl implements SourceService {
                                       final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
                                       final DSLContext ctx) {
     writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
-    writeActorDefinitionBreakingChanges(breakingChangesForDefinition, ctx);
-    ActorDefinitionVersionJooqHelper.setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
-  }
-
-  /**
-   * Writes a list of actor definition breaking changes in one transaction. Updates entries if they
-   * already exist.
-   *
-   * @param breakingChanges - actor definition breaking changes to write
-   * @param ctx database context
-   * @throws IOException - you never know when you io
-   */
-  private void writeActorDefinitionBreakingChanges(final List<ActorDefinitionBreakingChange> breakingChanges, final DSLContext ctx) {
-    final OffsetDateTime timestamp = OffsetDateTime.now();
-    final List<Query> upsertQueries = breakingChanges.stream()
-        .map(breakingChange -> upsertBreakingChangeQuery(ctx, breakingChange, timestamp))
-        .collect(Collectors.toList());
-    ctx.batch(upsertQueries).execute();
-  }
-
-  private Query upsertBreakingChangeQuery(final DSLContext ctx, final ActorDefinitionBreakingChange breakingChange, final OffsetDateTime timestamp) {
-    return ctx.insertInto(Tables.ACTOR_DEFINITION_BREAKING_CHANGE)
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID, breakingChange.getActorDefinitionId())
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.VERSION, breakingChange.getVersion().serialize())
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPGRADE_DEADLINE, LocalDate.parse(breakingChange.getUpgradeDeadline()))
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MESSAGE, breakingChange.getMessage())
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL, breakingChange.getMigrationDocumentationUrl())
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.SCOPED_IMPACT, JSONB.valueOf(Jsons.serialize(breakingChange.getScopedImpact())))
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.CREATED_AT, timestamp)
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPDATED_AT, timestamp)
-        .onConflict(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID, Tables.ACTOR_DEFINITION_BREAKING_CHANGE.VERSION).doUpdate()
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPGRADE_DEADLINE, LocalDate.parse(breakingChange.getUpgradeDeadline()))
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MESSAGE, breakingChange.getMessage())
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL, breakingChange.getMigrationDocumentationUrl())
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.SCOPED_IMPACT, JSONB.valueOf(Jsons.serialize(breakingChange.getScopedImpact())))
-        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPDATED_AT, timestamp);
-  }
-
-  private ConfigWithMetadata<StandardSync> getStandardSyncWithMetadata(final UUID connectionId) throws IOException, ConfigNotFoundException {
-    final List<ConfigWithMetadata<StandardSync>> result = listStandardSyncWithMetadata(Optional.of(connectionId));
-
-    final boolean foundMoreThanOneConfig = result.size() > 1;
-    if (result.isEmpty()) {
-      throw new ConfigNotFoundException(ConfigSchema.STANDARD_SYNC, connectionId.toString());
-    } else if (foundMoreThanOneConfig) {
-      throw new IllegalStateException(String.format("Multiple %s configs found for ID %s: %s", ConfigSchema.STANDARD_SYNC, connectionId, result));
-    }
-    return result.get(0);
-  }
-
-  private List<ConfigWithMetadata<StandardSync>> listStandardSyncWithMetadata(final Optional<UUID> configId) throws IOException {
-    final Result<Record> result = database.query(ctx -> {
-      final SelectJoinStep<Record> query = ctx.select(CONNECTION.asterisk(),
-          SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
-          .from(CONNECTION)
-          // The schema management can be non-existent for a connection id, thus we need to do a left join
-          .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID));
-      if (configId.isPresent()) {
-        return query.where(CONNECTION.ID.eq(configId.get())).fetch();
-      }
-      return query.fetch();
-    });
-
-    final List<ConfigWithMetadata<StandardSync>> standardSyncs = new ArrayList<>();
-    for (final Record record : result) {
-      final List<NotificationConfigurationRecord> notificationConfigurationRecords = database.query(ctx -> {
-        if (configId.isPresent()) {
-          return ctx.selectFrom(NOTIFICATION_CONFIGURATION)
-              .where(NOTIFICATION_CONFIGURATION.CONNECTION_ID.eq(configId.get()))
-              .fetch();
-        } else {
-          return ctx.selectFrom(NOTIFICATION_CONFIGURATION)
-              .fetch();
-        }
-      });
-
-      final StandardSync standardSync =
-          DbConverter.buildStandardSync(record, connectionOperationIds(record.get(CONNECTION.ID)), notificationConfigurationRecords);
-      if (ScheduleHelpers.isScheduleTypeMismatch(standardSync)) {
-        throw new RuntimeException("unexpected schedule type mismatch");
-      }
-      standardSyncs.add(new ConfigWithMetadata<>(
-          record.get(CONNECTION.ID).toString(),
-          ConfigSchema.STANDARD_SYNC.name(),
-          record.get(CONNECTION.CREATED_AT).toInstant(),
-          record.get(CONNECTION.UPDATED_AT).toInstant(),
-          standardSync));
-    }
-    return standardSyncs;
-  }
-
-  private List<UUID> connectionOperationIds(final UUID connectionId) throws IOException {
-    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
-        .from(CONNECTION_OPERATION)
-        .where(CONNECTION_OPERATION.CONNECTION_ID.eq(connectionId))
-        .fetch());
-
-    final List<UUID> ids = new ArrayList<>();
-    for (final Record record : result) {
-      ids.add(record.get(CONNECTION_OPERATION.OPERATION_ID));
-    }
-
-    return ids;
+    ConnectorMetadataJooqHelper.writeActorDefinitionBreakingChanges(breakingChangesForDefinition, ctx);
+    connectorMetadataJooqHelper.setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
   }
 
   private Stream<StandardSourceDefinition> sourceDefQuery(final Optional<UUID> sourceDefId, final boolean includeTombstone) throws IOException {
@@ -586,7 +496,7 @@ public class SourceServiceJooqImpl implements SourceService {
         .and(includeTombstone ? noCondition() : ACTOR_DEFINITION.TOMBSTONE.notEqual(true))
         .fetch())
         .stream()
-        .map(record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessage));
+        .map(record -> DbConverter.buildStandardSourceDefinition(record, retrieveDefaultMaxSecondsBetweenMessages(sourceDefId.orElse(ANONYMOUS))));
   }
 
   private <T> List<T> listStandardActorDefinitions(final ActorType actorType,
@@ -770,7 +680,7 @@ public class SourceServiceJooqImpl implements SourceService {
    * but not yet set its default version.
    */
   private Optional<ActorDefinitionVersion> getDefaultVersionForActorDefinitionIdOptional(final UUID actorDefinitionId, final DSLContext ctx) {
-    return ActorDefinitionVersionJooqHelper.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx);
+    return ConnectorMetadataJooqHelper.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx);
   }
 
   /**

@@ -8,15 +8,6 @@
   display: flex;
 }
 
-.sidebar {
-  @include mixins.shadow;
-
-  width: builderVariables.$sideBarWidth;
-  flex: 0 0 auto;
-  background-color: colors.$foreground;
-  border-left: 1px solid colors.$grey-100;
-}
-
 .builderView {
   flex: 1;
   padding: variables.$spacing-xl;

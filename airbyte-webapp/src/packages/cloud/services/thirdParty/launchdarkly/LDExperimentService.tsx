@@ -7,7 +7,6 @@ import { finalize, Subject } from "rxjs";
 import { LoadingPage } from "components";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useCurrentOrganizationInfo } from "core/api";
 import { useConfig } from "core/config";
 import { useAnalyticsService } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
@@ -72,12 +71,10 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
   const { setMessageOverwrite } = useI18nContext();
   const { trackAction } = useAppMonitoringService();
   const workspaceId = useCurrentWorkspaceId();
-  const workspaceOrganizationInfo = useCurrentOrganizationInfo();
 
   const [contextState, dispatchContextUpdate] = useReducer(contextReducer, {
     context: createMultiContext(
       createUserContext(user, locale),
-      ...(workspaceOrganizationInfo ? [createLDContext("organization", workspaceOrganizationInfo.organizationId)] : []),
       ...(workspaceId ? [createLDContext("workspace", workspaceId)] : [])
     ),
   });
@@ -92,17 +89,13 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
   useEffect(() => {
     if (workspaceId) {
       const workspaceContext = createLDContext("workspace", workspaceId);
-      const organizationContext = workspaceOrganizationInfo
-        ? createLDContext("organization", workspaceOrganizationInfo?.organizationId)
-        : null;
 
       dispatchContextUpdate({ type: "add", context: workspaceContext });
-      organizationContext && dispatchContextUpdate({ type: "add", context: organizationContext });
     } else {
       dispatchContextUpdate({ type: "remove", kind: "workspace" });
       dispatchContextUpdate({ type: "remove", kind: "organization" });
     }
-  }, [workspaceId, workspaceOrganizationInfo]);
+  }, [workspaceId]);
 
   const addContext = useCallback((kind: ContextKind, key: string) => {
     dispatchContextUpdate({ type: "add", context: createLDContext(kind, key) });

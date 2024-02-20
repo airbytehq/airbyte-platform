@@ -21,6 +21,12 @@ interface WorkloadHandler {
     updatedBefore: OffsetDateTime?,
   ): List<Workload>
 
+  fun getWorkloadsWithExpiredDeadline(
+    dataplaneId: List<String>?,
+    workloadStatus: List<ApiWorkloadStatus>?,
+    deadline: OffsetDateTime,
+  ): List<Workload>
+
   fun workloadAlreadyExists(workloadId: String): Boolean
 
   fun createWorkload(
@@ -32,11 +38,13 @@ interface WorkloadHandler {
     mutexKey: String?,
     type: WorkloadType,
     autoId: UUID,
+    deadline: OffsetDateTime,
   )
 
   fun claimWorkload(
     workloadId: String,
     dataplaneId: String,
+    deadline: OffsetDateTime,
   ): Boolean
 
   fun cancelWorkload(
@@ -53,11 +61,20 @@ interface WorkloadHandler {
 
   fun succeedWorkload(workloadId: String)
 
-  fun setWorkloadStatusToRunning(workloadId: String)
+  fun setWorkloadStatusToRunning(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  )
 
-  fun setWorkloadStatusToLaunched(workloadId: String)
+  fun setWorkloadStatusToLaunched(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  )
 
-  fun heartbeat(workloadId: String)
+  fun heartbeat(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  )
 
   fun getWorkloadsRunningCreatedBefore(
     dataplaneId: List<String>?,

@@ -66,10 +66,11 @@ class WorkloadApiClient(
             dataplaneId,
           ),
         )
+      logger.info { "Claimed: ${resp.claimed} for $workloadId via API for $dataplaneId" }
 
       result = resp.claimed
     } catch (e: Exception) {
-      logger.error(e) { "Error claiming workload $workloadId via API" }
+      logger.error(e) { "Error claiming workload $workloadId via API for $dataplaneId" }
     }
 
     return result

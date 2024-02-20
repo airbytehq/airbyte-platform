@@ -33,6 +33,7 @@ import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
+import io.airbyte.db.instance.configs.jooq.generated.enums.BackfillPreference;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
@@ -56,6 +57,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
@@ -85,7 +87,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException - error while accessing db.
    */
   @Override
-  public void deleteStandardSync(UUID syncId) throws IOException {
+  public void deleteStandardSync(final UUID syncId) throws IOException {
     database.transaction(ctx -> {
       deleteConfig(NOTIFICATION_CONFIGURATION, NOTIFICATION_CONFIGURATION.CONNECTION_ID, syncId, ctx);
       deleteConfig(CONNECTION_OPERATION, CONNECTION_OPERATION.CONNECTION_ID, syncId, ctx);
@@ -105,7 +107,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException if there is an issue while interacting with db.
    */
   @Override
-  public StandardSync getStandardSync(UUID connectionId)
+  public StandardSync getStandardSync(final UUID connectionId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final List<ConfigWithMetadata<StandardSync>> result = listStandardSyncWithMetadata(Optional.of(connectionId));
 
@@ -125,7 +127,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException - exception while interacting with the db
    */
   @Override
-  public void writeStandardSync(StandardSync standardSync) throws IOException {
+  public void writeStandardSync(final StandardSync standardSync) throws IOException {
     database.transaction(ctx -> {
       writeStandardSync(standardSync, ctx);
       return null;
@@ -151,13 +153,13 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException if there is an issue while interacting with db.
    */
   @Override
-  public List<StandardSync> listStandardSyncsUsingOperation(UUID operationId) throws IOException {
+  public List<StandardSync> listStandardSyncsUsingOperation(final UUID operationId) throws IOException {
     final Result<Record> connectionAndOperationIdsResult = database.query(ctx -> ctx
         // SELECT connection.* plus the connection's associated operationIds as a concatenated list
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
         .from(CONNECTION)
 
         // inner join with all connection_operation rows that match the connection's id
@@ -172,7 +174,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
                 .where(CONNECTION_OPERATION.OPERATION_ID.eq(operationId))))
 
         // group by connection.id so that the groupConcat above works
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -188,7 +190,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException if there is an issue while interacting with db.
    */
   @Override
-  public List<StandardSync> listWorkspaceStandardSyncs(UUID workspaceId, boolean includeDeleted)
+  public List<StandardSync> listWorkspaceStandardSyncs(final UUID workspaceId, final boolean includeDeleted)
       throws IOException {
     return listWorkspaceStandardSyncs(new StandardSyncQuery(workspaceId, null, null, includeDeleted));
   }
@@ -201,14 +203,14 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException if there is an issue while interacting with db.
    */
   @Override
-  public List<StandardSync> listWorkspaceStandardSyncs(StandardSyncQuery standardSyncQuery)
+  public List<StandardSync> listWorkspaceStandardSyncs(final StandardSyncQuery standardSyncQuery)
       throws IOException {
     final Result<Record> connectionAndOperationIdsResult = database.query(ctx -> ctx
         // SELECT connection.* plus the connection's associated operationIds as a concatenated list
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
         .from(CONNECTION)
 
         // left join with all connection_operation rows that match the connection's id.
@@ -228,7 +230,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
                     StatusType.deprecated)))
 
         // group by connection.id so that the groupConcat above works
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -239,10 +241,10 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * List connections. Paginated.
    */
   @Override
-  public Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(List<UUID> workspaceIds,
-                                                                           boolean includeDeleted,
-                                                                           int pageSize,
-                                                                           int rowOffset)
+  public Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(final List<UUID> workspaceIds,
+                                                                           final boolean includeDeleted,
+                                                                           final int pageSize,
+                                                                           final int rowOffset)
       throws IOException {
     return listWorkspaceStandardSyncsPaginated(new StandardSyncsQueryPaginated(
         workspaceIds,
@@ -262,7 +264,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    */
   @Override
   public Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(
-                                                                           StandardSyncsQueryPaginated standardSyncsQueryPaginated)
+                                                                           final StandardSyncsQueryPaginated standardSyncsQueryPaginated)
       throws IOException {
     final Result<Record> connectionAndOperationIdsResult = database.query(ctx -> ctx
         // SELECT connection.* plus the connection's associated operationIds as a concatenated list
@@ -270,7 +272,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
             ACTOR.WORKSPACE_ID,
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
         .from(CONNECTION)
 
         // left join with all connection_operation rows that match the connection's id.
@@ -288,7 +290,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
                 : CONNECTION.SOURCE_ID.in(standardSyncsQueryPaginated.sourceId()))
             .and(standardSyncsQueryPaginated.includeDeleted() ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
         // group by connection.id so that the groupConcat above works
-        .groupBy(CONNECTION.ID, ACTOR.WORKSPACE_ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS))
+        .groupBy(CONNECTION.ID, ACTOR.WORKSPACE_ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE))
         .limit(standardSyncsQueryPaginated.pageSize())
         .offset(standardSyncsQueryPaginated.rowOffset())
         .fetch();
@@ -306,19 +308,19 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException if there is an issue while interacting with db.
    */
   @Override
-  public List<StandardSync> listConnectionsBySource(UUID sourceId, boolean includeDeleted)
+  public List<StandardSync> listConnectionsBySource(final UUID sourceId, final boolean includeDeleted)
       throws IOException {
     final Result<Record> connectionAndOperationIdsResult = database.query(ctx -> ctx
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
         .from(CONNECTION)
         .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
         .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
         .where(CONNECTION.SOURCE_ID.eq(sourceId)
             .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -335,9 +337,9 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException you never know when you IO
    */
   @Override
-  public List<StandardSync> listConnectionsByActorDefinitionIdAndType(UUID actorDefinitionId,
-                                                                      String actorTypeValue,
-                                                                      boolean includeDeleted)
+  public List<StandardSync> listConnectionsByActorDefinitionIdAndType(final UUID actorDefinitionId,
+                                                                      final String actorTypeValue,
+                                                                      final boolean includeDeleted)
       throws IOException {
     final Condition actorDefinitionJoinCondition = switch (ActorType.valueOf(actorTypeValue)) {
       case source -> ACTOR.ACTOR_TYPE.eq(ActorType.source).and(ACTOR.ID.eq(CONNECTION.SOURCE_ID));
@@ -348,14 +350,14 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
         .from(CONNECTION)
         .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
         .leftJoin(ACTOR).on(actorDefinitionJoinCondition)
         .leftJoin(SCHEMA_MANAGEMENT).on(CONNECTION.ID.eq(SCHEMA_MANAGEMENT.CONNECTION_ID))
         .where(ACTOR.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
             .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
-        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -371,12 +373,12 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException if there is an issue while interacting with db.
    */
   @Override
-  public List<StreamDescriptor> getAllStreamsForConnection(UUID connectionId)
+  public List<StreamDescriptor> getAllStreamsForConnection(final UUID connectionId)
       throws ConfigNotFoundException, IOException {
     try {
       final StandardSync standardSync = getStandardSync(connectionId);
       return standardSync.getCatalog().getStreams().stream().map(CatalogHelpers::extractDescriptor).toList();
-    } catch (JsonValidationException e) {
+    } catch (final JsonValidationException e) {
       throw new RuntimeException(e);
     }
   }
@@ -391,7 +393,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException if there is an issue while interacting with db.
    */
   @Override
-  public ConfiguredAirbyteCatalog getConfiguredCatalogForConnection(UUID connectionId)
+  public ConfiguredAirbyteCatalog getConfiguredCatalogForConnection(final UUID connectionId)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardSync standardSync = getStandardSync(connectionId);
     return standardSync.getCatalog();
@@ -405,7 +407,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException exception while interacting with the db
    */
   @Override
-  public Geography getGeographyForConnection(UUID connectionId) throws IOException {
+  public Geography getGeographyForConnection(final UUID connectionId) throws IOException {
     return database.query(ctx -> ctx.select(CONNECTION.GEOGRAPHY)
         .from(CONNECTION)
         .where(CONNECTION.ID.eq(connectionId))
@@ -427,7 +429,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @return boolean indicating if an alpha or beta connector is used by the connection
    */
   @Override
-  public boolean getConnectionHasAlphaOrBetaConnector(UUID connectionId) throws IOException {
+  public boolean getConnectionHasAlphaOrBetaConnector(final UUID connectionId) throws IOException {
     final Condition releaseStageAlphaOrBeta = ACTOR_DEFINITION_VERSION.RELEASE_STAGE.eq(ReleaseStage.alpha)
         .or(ACTOR_DEFINITION_VERSION.RELEASE_STAGE.eq(ReleaseStage.beta));
 
@@ -444,7 +446,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   }
 
   @Override
-  public Set<Long> listEarlySyncJobs(int freeUsageInterval, int jobsFetchRange) throws IOException {
+  public Set<Long> listEarlySyncJobs(final int freeUsageInterval, final int jobsFetchRange) throws IOException {
     return database.query(ctx -> getEarlySyncJobsFromResult(ctx.fetch(
         EARLY_SYNC_JOB_QUERY, freeUsageInterval, jobsFetchRange)));
   }
@@ -456,7 +458,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException if there is an issue while interacting with db.
    */
   @Override
-  public void disableConnectionsById(List<UUID> connectionIds) throws IOException {
+  public void disableConnectionsById(final List<UUID> connectionIds) throws IOException {
     database.transaction(ctx -> {
       ctx.update(CONNECTION)
           .set(CONNECTION.UPDATED_AT, OffsetDateTime.now())
@@ -534,7 +536,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   private List<ConfigWithMetadata<StandardSync>> listStandardSyncWithMetadata(final Optional<UUID> configId) throws IOException {
     final Result<Record> result = database.query(ctx -> {
       final SelectJoinStep<Record> query = ctx.select(CONNECTION.asterisk(),
-          SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
+          SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
           .from(CONNECTION)
           // The schema management can be non-existent for a connection id, thus we need to do a left join
           .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID));
@@ -630,7 +632,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
           .execute();
 
       updateOrCreateNotificationConfiguration(standardSync, timestamp, ctx);
-      updateOrCreateSchemaChangeNotificationPreference(standardSync.getConnectionId(), standardSync.getNonBreakingChangesPreference(), timestamp,
+      updateOrCreateSchemaChangePreference(standardSync.getConnectionId(), standardSync.getNonBreakingChangesPreference(),
+          standardSync.getBackfillPreference(), timestamp,
           ctx);
 
       ctx.deleteFrom(CONNECTION_OPERATION)
@@ -680,7 +683,8 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
           .execute();
 
       updateOrCreateNotificationConfiguration(standardSync, timestamp, ctx);
-      updateOrCreateSchemaChangeNotificationPreference(standardSync.getConnectionId(), standardSync.getNonBreakingChangesPreference(), timestamp,
+      updateOrCreateSchemaChangePreference(standardSync.getConnectionId(), standardSync.getNonBreakingChangesPreference(),
+          standardSync.getBackfillPreference(), timestamp,
           ctx);
 
       for (final UUID operationIdFromStandardSync : standardSync.getOperationIds()) {
@@ -714,10 +718,11 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * foreign key on the Connection Table.
    */
   @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
-  private void updateOrCreateSchemaChangeNotificationPreference(final UUID connectionId,
-                                                                final StandardSync.NonBreakingChangesPreference nonBreakingChangesPreference,
-                                                                final OffsetDateTime timestamp,
-                                                                final DSLContext ctx) {
+  private void updateOrCreateSchemaChangePreference(final UUID connectionId,
+                                                    final StandardSync.NonBreakingChangesPreference nonBreakingChangesPreference,
+                                                    final StandardSync.BackfillPreference backfillPreference,
+                                                    final OffsetDateTime timestamp,
+                                                    final DSLContext ctx) {
     if (nonBreakingChangesPreference == null) {
       return;
     }
@@ -729,12 +734,16 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
           .set(SCHEMA_MANAGEMENT.ID, UUID.randomUUID())
           .set(SCHEMA_MANAGEMENT.CONNECTION_ID, connectionId)
           .set(SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, AutoPropagationStatus.valueOf(nonBreakingChangesPreference.value()))
+          .set(SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE,
+              backfillPreference == null ? BackfillPreference.disabled : BackfillPreference.valueOf(backfillPreference.value()))
           .set(SCHEMA_MANAGEMENT.CREATED_AT, timestamp)
           .set(SCHEMA_MANAGEMENT.UPDATED_AT, timestamp)
           .execute();
     } else if (schemaManagementConfigurations.size() == 1) {
       ctx.update(SCHEMA_MANAGEMENT)
           .set(SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, AutoPropagationStatus.valueOf(nonBreakingChangesPreference.value()))
+          .set(SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE,
+              backfillPreference == null ? BackfillPreference.disabled : BackfillPreference.valueOf(backfillPreference.value()))
           .set(SCHEMA_MANAGEMENT.UPDATED_AT, timestamp)
           .where(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(connectionId))
           .execute();
@@ -786,12 +795,41 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   static boolean getNotificationEnabled(final StandardSync standardSync, final NotificationType notificationType) {
     switch (notificationType) {
       case webhook:
-        return standardSync.getNotifySchemaChanges() == null ? false : standardSync.getNotifySchemaChanges();
+        return standardSync.getNotifySchemaChanges() != null && standardSync.getNotifySchemaChanges();
       case email:
-        return standardSync.getNotifySchemaChangesByEmail() == null ? false : standardSync.getNotifySchemaChangesByEmail();
+        return standardSync.getNotifySchemaChangesByEmail() != null && standardSync.getNotifySchemaChangesByEmail();
       default:
         throw new IllegalStateException("Notification type unsupported");
     }
+  }
+
+  @Override
+  public boolean actorSyncsAnyListedStream(final UUID actorId, final List<String> streamNames) throws IOException {
+    return database.query(ctx -> actorSyncsAnyListedStream(actorId, streamNames, ctx));
+  }
+
+  public static boolean actorSyncsAnyListedStream(final UUID actorId, final List<String> streamNames, final DSLContext ctx) {
+    // Retrieve both active and inactive syncs to be safe - we don't know why syncs were turned off,
+    // and we don't want to accidentally upgrade a sync that someone is trying to use, but was turned
+    // off when they e.g. temporarily ran out of credits.
+    final List<StandardSync> connectionsForActor = getNonDeprecatedConnectionsForActor(actorId, ctx);
+    for (final StandardSync connection : connectionsForActor) {
+      final List<String> configuredStreams =
+          connection.getCatalog().getStreams().stream().map(configuredStream -> configuredStream.getStream().getName()).toList();
+      if (configuredStreams.stream().anyMatch(streamNames::contains)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public static List<StandardSync> getNonDeprecatedConnectionsForActor(final UUID actorId, final DSLContext ctx) {
+    return ctx.select(CONNECTION.asterisk())
+        .from(CONNECTION)
+        .where(CONNECTION.SOURCE_ID.eq(actorId).or(CONNECTION.DESTINATION_ID.eq(actorId)).and(CONNECTION.STATUS.notEqual(StatusType.deprecated)))
+        .fetch().stream()
+        .map(record -> record.into(CONNECTION).into(StandardSync.class))
+        .collect(Collectors.toList());
   }
 
   private List<StandardSync> getStandardSyncsFromResult(final Result<Record> connectionAndOperationIdsResult,

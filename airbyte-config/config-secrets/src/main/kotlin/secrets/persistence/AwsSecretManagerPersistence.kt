@@ -7,7 +7,6 @@ package io.airbyte.config.secrets.persistence
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider
-import com.amazonaws.regions.Regions
 import com.amazonaws.secretsmanager.caching.SecretCache
 import com.amazonaws.services.secretsmanager.AWSSecretsManager
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder
@@ -96,11 +95,17 @@ class AwsSecretManagerPersistence(private val awsClient: AwsClient, private val 
           .withSecretString(payload)
           .withDescription("Airbyte secret.")
 
-      if (awsClient.serializedConfig?.kmsKeyArn != null) {
+      if (!awsClient.kmsKeyArn.isNullOrEmpty()) {
+        secretRequest.withKmsKeyId(awsClient.kmsKeyArn)
+      } else if (awsClient.serializedConfig?.kmsKeyArn != null) {
         secretRequest.withKmsKeyId(awsClient.serializedConfig?.kmsKeyArn)
       }
 
-      if (awsClient.serializedConfig?.tagKey != null) {
+      if (awsClient.tags.isNotEmpty()) {
+        for (tag in awsClient.tags) {
+          secretRequest.withTags(Tag().withKey(tag.key).withValue(tag.value))
+        }
+      } else if (awsClient.serializedConfig?.tagKey != null) {
         secretRequest.withTags(Tag().withKey(awsClient.serializedConfig?.tagKey).withValue("true"))
       }
 
@@ -124,19 +129,45 @@ class AwsSecretManagerPersistence(private val awsClient: AwsClient, private val 
 
 @Singleton
 class AwsClient(
-  @Value("\${airbyte.secret.store.aws.access-key}") private val awsAccessKey: String,
-  @Value("\${airbyte.secret.store.aws.secret-key}") private val awsSecretKey: String,
+  @Value("\${airbyte.secret.store.aws.access-key}") private val awsAccessKey: String?,
+  @Value("\${airbyte.secret.store.aws.secret-key}") private val awsSecretKey: String?,
   @Value("\${airbyte.secret.store.aws.region}") private val awsRegion: String,
+  @Value("\${airbyte.secret.store.aws.kmsKeyArn}") val kmsKeyArn: String?,
+  @Value("\${airbyte.secret.store.aws.tags}") val unparsedTags: String?,
 ) {
   // values coming from a passed in SecretPersistenceConfig
   var serializedConfig: AwsRoleSecretPersistenceConfig? = null
+
+  val tags: Map<String, String> = parseTags(unparsedTags)
+
+  private fun parseTags(tags: String?): Map<String, String> {
+    // Define the regex pattern for the whole string validation
+    val pattern = "^[\\w\\s._:\\/=+-@]+=[\\w\\s._:\\/=+-@]+(,\\s*[\\w\\s._:\\/=+-@]+=[\\w\\s._:\\/=+-@]+)*\$".toRegex()
+
+    // Check if unparsedTags is not null, not blank, and matches the pattern
+    return if (!tags.isNullOrBlank() && pattern.matches(tags)) {
+      tags.split(",").associate { part ->
+        val (key, value) = part.trim().split("=")
+        key to value
+      }
+    } else if (tags.isNullOrBlank()) {
+      emptyMap() // Return an empty map if unparsedTags is null or blank
+    } else {
+      // If the string doesn't match the pattern, throw an error
+      throw IllegalArgumentException(
+        "AWS_SECRET_MANAGER_SECRET_TAGS does not match the expected format \"key1=value2,key2=value2\": $tags." +
+          " Please update the AWS_SECRET_MANAGER_SECRET_TAGS env var configurations.",
+      )
+    }
+  }
+
   private lateinit var roleArn: String
   private lateinit var externalId: String
   private lateinit var region: String
 
   // Sets data for usage with Assume Role
   constructor(serializedConfig: AwsRoleSecretPersistenceConfig, airbyteAccessKey: String, airbyteSecretKey: String) :
-    this(airbyteAccessKey, airbyteSecretKey, serializedConfig.awsRegion) {
+    this(airbyteAccessKey, airbyteSecretKey, serializedConfig.awsRegion, null, null) {
     this.serializedConfig = serializedConfig
     this.roleArn = serializedConfig.roleArn
     this.externalId = serializedConfig.externalId
@@ -148,26 +179,27 @@ class AwsClient(
     // let the SDK's default credential provider take over.
     if (serializedConfig == null) {
       logger.debug { "fetching access key/secret key based AWS secret manager" }
-      AWSSecretsManagerClientBuilder.standard()
-        .withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
-        .withRegion(awsRegion)
-        .build()
+      AWSSecretsManagerClientBuilder.standard().withRegion(awsRegion).apply {
+        if (awsAccessKey != null && awsSecretKey != null) {
+          withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
+        }
+      }.build()
     } else {
       logger.debug { "fetching role based AWS secret manager" }
       val stsClient =
-        AWSSecurityTokenServiceClientBuilder.standard()
-          .withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
-          .withRegion(awsRegion)
-          .build()
+        AWSSecurityTokenServiceClientBuilder.standard().withRegion(awsRegion).apply {
+          if (awsAccessKey != null && awsSecretKey != null) {
+            withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
+          }
+        }.build()
+
       val credentialsProvider =
         STSAssumeRoleSessionCredentialsProvider.Builder(roleArn, "airbyte")
           .withStsClient(stsClient)
           .withExternalId(externalId)
           .build()
-      AWSSecretsManagerClientBuilder.standard()
-        .withCredentials(credentialsProvider)
-        .withRegion(Regions.fromName(region))
-        .build()
+
+      AWSSecretsManagerClientBuilder.standard().withCredentials(credentialsProvider).withRegion(awsRegion).build()
     }
   }
 }

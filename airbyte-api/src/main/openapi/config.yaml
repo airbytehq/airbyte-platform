@@ -85,6 +85,8 @@ tags:
     description: Metadata about the Airbyte deployment
   - name: applications
     description: Applications can be used to provide api access for Users
+  - name: scoped_configuration
+    description: Scoped configuration store specific configuration for a given entity. e.g. Overriding a workspaces connector version.
 
 paths:
   /v1/workspaces/create:
@@ -770,6 +772,27 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_definition_versions/resolve:
+    post:
+      tags:
+        - actor_definition_version
+      summary: Resolve an actor definition version by version tag.
+      operationId: resolveActorDefinitionVersionByTag
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveActorDefinitionVersionRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResolveActorDefinitionVersionResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/declarative_source_definitions/create_manifest:
     post:
       tags:
@@ -955,7 +978,26 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectorBuilderProjectTestingValuesRead"
+                $ref: "#/components/schemas/ConnectorBuilderProjectTestingValues"
+  /v1/connector_builder_projects/read_stream:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Reads the target stream of the connector builder project using the persisted testing values
+      operationId: readConnectorBuilderProjectStream
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorBuilderProjectStreamReadRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorBuilderProjectStreamRead"
   /v1/connector_documentation/get:
     post:
       tags:
@@ -3552,6 +3594,30 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/users/list_access_info_by_workspace_id:
+    post:
+      tags:
+        - user
+      summary: List user access info for a particular workspace.
+      operationId: listAccessInfoByWorkspaceId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceUserAccessInfoReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   /v1/users/list_by_organization_id:
     post:
       summary: List all users with permissions of the given org
@@ -3822,30 +3888,6 @@ paths:
                 $ref: "#/components/schemas/HealthCheckRead"
       # This route is unsecured for external monitoring.
       security: []
-  /v1/logs/get:
-    post:
-      tags:
-        - logs
-      summary: Get logs
-      operationId: getLogs
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/LogsRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Returns the log file
-          content:
-            text/plain:
-              schema:
-                type: string
-                format: binary
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
   /v1/openapi:
     get:
       tags:
@@ -4346,7 +4388,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ApplicationId"
+              $ref: "#/components/schemas/ApplicationIdRequestBody"
         required: true
       tags:
         - applications
@@ -4362,6 +4404,8 @@ paths:
       description: Deletes an Application.
   /v1/applications/create:
     post:
+      tags:
+        - applications
       requestBody:
         content:
           application/json:
@@ -4382,6 +4426,8 @@ paths:
       description: Creates a new Application.
   /v1/applications/token:
     post:
+      tags:
+        - applications
       requestBody:
         content:
           application/json:
@@ -4401,6 +4447,240 @@ paths:
       summary: Grant an Access Token for an Application.
       description: Takes the client_id and client_secret for an application and returns an Access Token.
 
+  # Scoped Configuration
+  /v1/scoped_configuration/list:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScopedConfigurationListRequestBody"
+
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScopedConfigurationListResponse"
+          description: An array of scoped configurations
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      operationId: getScopedConfigurationsList
+      summary: Get all scoped configurations with a given key
+      tags:
+        - scoped_configuration
+
+  /v1/scoped_configuration/get_context:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScopedConfigurationContextRequestBody"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScopedConfigurationContextResponse"
+          description: An array of scoped configurations
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      operationId: getScopedConfigurationContext
+      summary: Get related configurations for a given scope
+      tags:
+        - scoped_configuration
+
+  /v1/scoped_configuration/create:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScopedConfigurationCreateRequestBody"
+      responses:
+        "200":
+          description: Newly created scoped configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScopedConfigurationCreateResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+      operationId: createScopedConfiguration
+      summary: Create a new scoped configuration
+      tags:
+        - scoped_configuration
+
+  /v1/scoped_configuration/get:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScopedConfigurationReadRequestBody"
+
+      responses:
+        "200":
+          description: A Scoped configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScopedConfigurationReadResponse"
+
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Get a scoped configuration by ID
+      operationId: getScopedConfigurationById
+      tags:
+        - scoped_configuration
+
+  /v1/scoped_configuration/update:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScopedConfigurationUpdateRequestBody"
+      responses:
+        "200":
+          description: Updated scoped configuration object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScopedConfigurationUpdateResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+      summary: Update a scoped configuration by ID
+      operationId: updateScopedConfiguration
+      tags:
+        - scoped_configuration
+
+  /v1/scoped_configuration/delete:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScopedConfigurationDeleteRequestBody"
+      responses:
+        "200":
+          description: Deleted scoped configuration object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScopedConfigurationDeleteResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Delete a scoped configuration by ID
+      operationId: deleteScopedConfiguration
+      tags:
+        - scoped_configuration
+
+  # User Invitations
+  /v1/user_invitations/create:
+    post:
+      summary: Create a user invitation
+      tags:
+        - user_invitation
+      operationId: createUserInvitation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInvitationCreateRequestBody"
+      responses:
+        "201":
+          description: Successfully created user invitation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInvitationRead"
+
+  /v1/user_invitations/{inviteCode}:
+    get:
+      summary: Get a user invitation by its unique code (not primary key ID)
+      tags:
+        - user_invitation
+      operationId: getUserInvitation
+      parameters:
+        - name: inviteCode
+          in: path
+          description: The invite code of the user invitation to get.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successfully retrieved user invitation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInvitationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+
+  /v1/user_invitations/accept:
+    post:
+      summary: Accept a user invitation
+      tags:
+        - user_invitation
+      operationId: acceptUserInvitation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteCodeRequestBody"
+      responses:
+        "201":
+          description: Successfully accepted user invitation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInvitationRead"
+
+  /v1/user_invitations/decline:
+    post:
+      summary: Decline a user invitation
+      tags:
+        - user_invitation
+      operationId: declineUserInvitation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteCodeRequestBody"
+      responses:
+        "201":
+          description: Successfully declined user invitation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInvitationRead"
+
+  /v1/user_invitations/cancel:
+    post:
+      summary: Cancel a user invitation
+      tags:
+        - user_invitation
+      operationId: cancelUserInvitation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteCodeRequestBody"
+      responses:
+        "201":
+          description: Successfully cancelled user invitation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInvitationRead"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -4408,6 +4688,197 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    # Scoped Configuration
+    ScopedConfigurationRead:
+      type: object
+      properties:
+        id:
+          type: string
+        value:
+          type: string
+        value_name:
+          type: string
+        description:
+          type: string
+        reference_url:
+          type: string
+        config_key:
+          type: string
+        resource_id:
+          type: string
+        resource_name:
+          type: string
+        resource_type:
+          type: string
+        scope_id:
+          type: string
+        scope_type:
+          type: string
+        scope_name:
+          type: string
+        origin:
+          type: string
+        origin_type:
+          type: string
+        origin_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd")'
+
+    ScopedConfigurationListRequestBody:
+      type: object
+      properties:
+        config_key:
+          type: string
+          description: Key of the configuration to filter by
+
+    ScopedConfigurationListResponse:
+      type: object
+      properties:
+        scopedConfigurations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScopedConfigurationRead"
+
+    ScopedConfigurationCreateRequestBody:
+      type: object
+      required:
+        - value
+        - config_key
+        - resource_id
+        - resource_type
+        - scope_id
+        - scope_type
+        - origin
+        - origin_type
+      properties:
+        value:
+          type: string
+        description:
+          type: string
+        reference_url:
+          type: string
+        config_key:
+          type: string
+        resource_id:
+          type: string
+        resource_type:
+          type: string
+        scope_id:
+          type: string
+        scope_type:
+          type: string
+        origin:
+          type: string
+        origin_type:
+          type: string
+        expires_at:
+          type: string
+          format: date
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd")'
+
+    ScopedConfigurationCreateResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ScopedConfigurationRead"
+
+    ScopedConfigurationContextRequestBody:
+      type: object
+      required:
+        - config_key
+        - resource_id
+        - resource_type
+        - scope_id
+        - scope_type
+      properties:
+        config_key:
+          type: string
+        resource_id:
+          type: string
+          format: UUID
+        resource_type:
+          type: string
+        scope_id:
+          type: string
+          format: UUID
+        scope_type:
+          type: string
+
+    ScopedConfigurationContextResponse:
+      type: object
+      properties:
+        # The configuration that is currently active for the scope being configured.
+        activeConfiguration:
+          $ref: "#/components/schemas/ScopedConfigurationRead"
+        ancestorConfigurations:
+          description: List of configurations that have been created that will get overridden by the scope currently being configured.
+          type: array
+          items:
+            $ref: "#/components/schemas/ScopedConfigurationRead"
+        descendantConfigurations:
+          description: List of configurations that have been created that will override the scope currently being configured.
+          type: array
+          items:
+            $ref: "#/components/schemas/ScopedConfigurationRead"
+
+    ScopedConfigurationReadRequestBody:
+      type: object
+      properties:
+        scopedConfigurationId:
+          type: string
+          format: uuid
+      required:
+        - scopedConfigurationId
+
+    ScopedConfigurationReadResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ScopedConfigurationRead"
+
+    ScopedConfigurationUpdateRequestBody:
+      type: object
+      required:
+        - scopedConfigurationId
+        - data
+      properties:
+        scopedConfigurationId:
+          type: string
+          format: uuid
+        data:
+          $ref: "#/components/schemas/ScopedConfigurationCreateRequestBody"
+
+    ScopedConfigurationUpdateResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ScopedConfigurationRead"
+
+    ScopedConfigurationDeleteRequestBody:
+      type: object
+      properties:
+        scopedConfigurationId:
+          type: string
+          format: uuid
+      required:
+        - scopedConfigurationId
+
+    ScopedConfigurationDeleteResponse:
+      type: object
+      properties:
+        scopedConfigurationId:
+          type: string
+          format: uuid
+
     # WORKSPACE
     WorkspaceId:
       type: string
@@ -4910,6 +5381,11 @@ components:
           $ref: "#/components/schemas/ConnectorBuilderProjectDetailsRead"
         declarativeManifest:
           $ref: "#/components/schemas/DeclarativeManifestRead"
+        testingValues:
+          $ref: "#/components/schemas/ConnectorBuilderProjectTestingValues"
+    ConnectorBuilderProjectTestingValues:
+      type: object
+      description: The config blob containing the user inputs for testing
     ConnectorBuilderProjectReadList:
       type: object
       required:
@@ -4938,18 +5414,157 @@ components:
     ConnectorBuilderProjectTestingValuesUpdate:
       type: object
       required:
+        - workspaceId
         - builderProjectId
         - spec
         - testingValues
       properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
         builderProjectId:
           $ref: "#/components/schemas/ConnectorBuilderProjectId"
         spec:
           $ref: "#/components/schemas/SourceDefinitionSpecification"
         testingValues:
-          $ref: "#/components/schemas/SourceConfiguration"
-    ConnectorBuilderProjectTestingValuesRead:
-      $ref: "#/components/schemas/SourceConfiguration"
+          $ref: "#/components/schemas/ConnectorBuilderProjectTestingValues"
+    ConnectorBuilderProjectStreamReadRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - builderProjectId
+        - manifest
+        - streamName
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+        streamName:
+          type: string
+          description: Name of the stream to read
+        formGeneratedManifest:
+          type: boolean
+          description: Indicates if the manifest was auto-generated from the form-based Connector Builder UI
+          default: false
+        recordLimit:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          description: Number of records that will be returned to the client from the connector builder (max of 1000)
+        state:
+          type: object
+          description: The AirbyteStateMessage object to use as the starting state for this read
+    ConnectorBuilderProjectStreamRead:
+      type: object
+      required:
+        - logs
+        - slices
+        - test_read_limit_reached
+      properties:
+        logs:
+          type: array
+          description: The LOG AirbyteMessages that were emitted during the read of this slice
+          items:
+            type: object
+        slices:
+          type: array
+          description: The stream slices returned from the read command. If no stream slicer is configured, this should contain a single item containing all of the results.
+          items:
+            type: object
+            required:
+              - pages
+            properties:
+              pages:
+                type: array
+                description: The pages returned from the read command. If no pagination is configured, this should contain a single item containing all of the results.
+                items:
+                  type: object
+                  required:
+                    - records
+                  properties:
+                    records:
+                      type: array
+                      description: The RECORD AirbyteMessages coming from the read operation for this page
+                      items:
+                        type: object
+                    request:
+                      $ref: "#/components/schemas/ConnectorBuilderHttpRequest"
+                    response:
+                      $ref: "#/components/schemas/ConnectorBuilderHttpResponse"
+              slice_descriptor:
+                type: object
+                description: "An object describing the current slice. This can be omitted if a stream slicer is not configured."
+              state:
+                type: object
+                description: The STATE AirbyteMessage emitted at the end of this slice. This can be omitted if a stream slicer is not configured.
+        test_read_limit_reached:
+          type: boolean
+          description: Whether the maximum number of request per slice or the maximum number of slices queried has been reached
+        auxiliary_requests:
+          type: array
+          items:
+            type: object
+            required:
+              - description
+              - request
+              - response
+              - title
+            properties:
+              description:
+                type: string
+              request:
+                $ref: "#/components/schemas/ConnectorBuilderHttpRequest"
+              response:
+                $ref: "#/components/schemas/ConnectorBuilderHttpResponse"
+              title:
+                type: string
+        inferred_schema:
+          type: object
+          description: The narrowest JSON Schema against which every AirbyteRecord in the slices can validate successfully. This is inferred from reading every record in the output slices.
+        inferred_datetime_formats:
+          type: object
+          description: Fields that match the given datetime format in every encountered record. The property names are the fields, the property values are the datetime formats.
+        latest_config_update:
+          description: The latest configuration emitted by the platform. The connector builder uses this to update its state when a new configuration is generated, to ensure that the user always work with the latest configuration.
+          $ref: "#/components/schemas/ConnectorBuilderProjectTestingValues"
+    ConnectorBuilderHttpRequest:
+      type: object
+      required:
+        - url
+        - http_method
+      properties:
+        url:
+          type: string
+          description: URL that the request was sent to
+        parameters:
+          type: object
+          description: The request parameters that were set on the HTTP request, if any
+        body:
+          type: string
+          description: The body of the HTTP request, if present
+        headers:
+          type: object
+          description: The headers of the HTTP request, if any
+        http_method:
+          type: string
+          enum: ["GET", "POST", "PUT", "PATCH"]
+          description: The http method of the request ("GET", "POST", "PUT", or "PATCH")
+    ConnectorBuilderHttpResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: integer
+          description: The status of the response
+        body:
+          type: string
+          description: The body of the HTTP response, if present
+        headers:
+          type: object
+          description: The headers of the HTTP response, if any
     ManifestVersion:
       type: integer
       format: int64
@@ -5147,6 +5762,19 @@ components:
           $ref: "#/components/schemas/ScopeId"
         scopeType:
           $ref: "#/components/schemas/ScopeType"
+    ResolveActorDefinitionVersionRequestBody:
+      type: object
+      required:
+        - actorDefinitionId
+        - actorType
+        - dockerImageTag
+      properties:
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        actorType:
+          $ref: "#/components/schemas/ActorType"
+        dockerImageTag:
+          type: string
     ListDeclarativeManifestsRequestBody:
       type: object
       required:
@@ -5797,6 +6425,9 @@ components:
         destinationName:
           type: string
     # ACTOR DEFINITION VERSION
+    ActorDefinitionVersionId:
+      type: string
+      format: uuid
     ActorDefinitionVersionRead:
       type: object
       required:
@@ -5823,6 +6454,19 @@ components:
           $ref: "#/components/schemas/SupportState"
         breakingChanges:
           $ref: "#/components/schemas/ActorDefinitionVersionBreakingChanges"
+    ResolveActorDefinitionVersionResponse:
+      type: object
+      required:
+        - versionId
+        - dockerRepository
+        - dockerImageTag
+      properties:
+        versionId:
+          $ref: "#/components/schemas/ActorDefinitionVersionId"
+        dockerRepository:
+          type: string
+        dockerImageTag:
+          type: string
     ActorDefinitionBreakingChange:
       type: object
       required:
@@ -6003,6 +6647,8 @@ components:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        backfillPreference:
+          $ref: "#/components/schemas/SchemaChangeBackfillPreference"
     WebBackendConnectionCreate:
       type: object
       required:
@@ -6054,6 +6700,8 @@ components:
           $ref: "#/components/schemas/Geography"
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        backfillPreference:
+          $ref: "#/components/schemas/SchemaChangeBackfillPreference"
     ConnectionStateCreateOrUpdate:
       type: object
       required:
@@ -6112,6 +6760,8 @@ components:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        backfillPreference:
+          $ref: "#/components/schemas/SchemaChangeBackfillPreference"
         breakingChange:
           type: boolean
     WebBackendConnectionUpdate:
@@ -6164,6 +6814,8 @@ components:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        backfillPreference:
+          $ref: "#/components/schemas/SchemaChangeBackfillPreference"
     ConnectionRead:
       type: object
       required:
@@ -6222,6 +6874,11 @@ components:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        created_at:
+          type: integer
+          format: int64
+        backfillPreference:
+          $ref: "#/components/schemas/SchemaChangeBackfillPreference"
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
     ConnectionStatusesRequestBody:
@@ -7250,7 +7907,6 @@ components:
       type: object
       required:
         - configTypes
-        - configId
       properties:
         configTypes:
           type: array
@@ -7263,9 +7919,11 @@ components:
           $ref: "#/components/schemas/JobId"
         pagination:
           $ref: "#/components/schemas/Pagination"
-        status:
-          description: The Job status you want to filter by
-          $ref: "#/components/schemas/JobStatus"
+        statuses:
+          type: array
+          description: The Job statuses you want to filter by
+          items:
+            $ref: "#/components/schemas/JobStatus"
         createdAtStart:
           description: The start datetime to filter by
           type: string
@@ -7311,9 +7969,11 @@ components:
             $ref: "#/components/schemas/WorkspaceId"
         pagination:
           $ref: "#/components/schemas/Pagination"
-        status:
-          description: The Job status you want to filter by
-          $ref: "#/components/schemas/JobStatus"
+        statuses:
+          type: array
+          description: The Job statuses you want to filter by
+          items:
+            $ref: "#/components/schemas/JobStatus"
         createdAtStart:
           description: The start datetime to filter by
           type: string
@@ -7382,6 +8042,61 @@ components:
           $ref: "#/components/schemas/JobStatus"
         resetConfig:
           $ref: "#/components/schemas/ResetConfig"
+        aggregatedStats:
+          $ref: "#/components/schemas/JobAggregatedStats"
+        streamAggregatedStats:
+          $ref: "#/components/schemas/StreamAggregatedStats"
+    JobAggregatedStats:
+      type: object
+      required:
+        - recordsEmitted
+        - bytesEmitted
+        - recordsCommitted
+        - bytesCommitted
+      properties:
+        recordsEmitted:
+          type: integer
+          format: int64
+        bytesEmitted:
+          type: integer
+          format: int64
+        recordsCommitted:
+          type: integer
+          format: int64
+        bytesCommitted:
+          type: integer
+          format: int64
+    StreamAggregatedStats:
+      type: array
+      items:
+        $ref: "#/components/schemas/StreamStats"
+    StreamStats:
+      type: object
+      required:
+        - streamName
+        - recordsEmitted
+        - bytesEmitted
+        - recordsCommitted
+        - bytesCommitted
+      properties:
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        recordsEmitted:
+          type: integer
+          format: int64
+        bytesEmitted:
+          type: integer
+          format: int64
+        recordsCommitted:
+          type: integer
+          format: int64
+        bytesCommitted:
+          type: integer
+          format: int64
+        wasBackfilled:
+          type: boolean
     SyncInput:
       type: object
       required:
@@ -8428,12 +9143,22 @@ components:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        createdAt:
+          type: integer
+          format: int64
+        backfillPreference:
+          $ref: "#/components/schemas/SchemaChangeBackfillPreference"
     NonBreakingChangesPreference:
       enum:
         - ignore # do nothing if we detect a schema change
         - disable # disable the connection, pausing the sync
         - propagate_columns # automatically propagate the changes on selected streams and continue syncing
         - propagate_fully # automatically propagate the changes including new streams and continue syncing
+      type: string
+    SchemaChangeBackfillPreference:
+      enum:
+        - enabled # when a column is added or changed via auto-propagation, the stream will be backfilled
+        - disabled # backfill will not run
       type: string
     WebBackendConnectionReadList:
       type: object
@@ -8720,6 +9445,7 @@ components:
         - defaultUserId
         - defaultOrganizationId
         - defaultWorkspaceId
+        - trackingStrategy
       properties:
         edition:
           type: string
@@ -8747,6 +9473,11 @@ components:
         defaultWorkspaceId:
           type: string
           format: uuid
+        trackingStrategy:
+          type: string
+          enum:
+            - logging
+            - segment
     InstanceConfigurationSetupRequestBody:
       type: object
       required:
@@ -8956,6 +9687,40 @@ components:
         permissionId:
           type: string
           format: uuid
+    WorkspaceUserAccessInfoRead:
+      description: |
+        Information summarizing a user's access to a workspace. Includes the workspace-level and/or organization-level permission
+        object that grants the user access to the workspace in question, as well as basic user information to facilitate access
+        management of users in the workspace.
+      type: object
+      required:
+        - userId
+        - userEmail
+        - userName
+        - workspaceId
+      properties:
+        userId:
+          $ref: "#/components/schemas/UserId"
+        userEmail:
+          type: string
+          format: email
+        userName:
+          type: string
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        workspacePermission:
+          $ref: "#/components/schemas/PermissionRead"
+        organizationPermission:
+          $ref: "#/components/schemas/PermissionRead"
+    WorkspaceUserAccessInfoReadList:
+      type: object
+      required:
+        - usersWithAccess
+      properties:
+        usersWithAccess:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceUserAccessInfoRead"
     InvalidInputProperty:
       type: object
       required:
@@ -9147,6 +9912,16 @@ components:
           type: string
     ApplicationId:
       type: string
+      format: uuid
+    ApplicationIdRequestBody:
+      type: object
+      required:
+        - applicationId
+      properties:
+        applicationId:
+          $ref: "#/components/schemas/ApplicationId"
+        includeTombstone:
+          type: boolean
     ApplicationReadList:
       required:
         - applications
@@ -9192,6 +9967,78 @@ components:
       type: object
       properties:
         access_token:
+          type: string
+    UserInvitationCreateRequestBody:
+      type: object
+      required:
+        - invitedEmail
+        - permissionType
+        - scopeType
+        - scopeId
+      properties:
+        invitedEmail:
+          type: string
+          format: email
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          type: string
+          format: uuid
+    UserInvitationRead:
+      type: object
+      required:
+        - id
+        - inviteCode
+        - inviterUserId
+        - invitedEmail
+        - scopeId
+        - scopeType
+        - permissionType
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        inviteCode:
+          type: string
+        inviterUserId:
+          type: string
+          format: uuid
+        invitedEmail:
+          type: string
+          format: email
+        scopeId:
+          type: string
+          format: uuid
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        status:
+          $ref: "#/components/schemas/UserInvitationStatus"
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
+    UserInvitationStatus:
+      type: string
+      enum:
+        - pending
+        - accepted
+        - cancelled
+        - declined
+    InviteCodeRequestBody:
+      type: object
+      required:
+        - inviteCode
+      properties:
+        inviteCode:
           type: string
 
   responses:

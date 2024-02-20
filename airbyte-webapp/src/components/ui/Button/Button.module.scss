@@ -206,7 +206,7 @@
     }
   }
 
-  &.typeDark {
+  &.typePrimaryDark {
     background-color: colors.$dark-blue;
     color: colors.$foreground;
 
@@ -218,6 +218,23 @@
     &:active {
       background-color: colors.$dark-blue-1000;
       color: colors.$foreground;
+    }
+  }
+
+  &.typeSecondaryDark {
+    background-color: colors.$transparentColor;
+    color: colors.$dark-blue-900;
+    border: 1px solid colors.$dark-blue-900;
+    box-shadow: none;
+
+    &:hover {
+      border-color: colors.$dark-blue-600;
+      color: colors.$dark-blue-600;
+    }
+
+    &:active {
+      border-color: colors.$dark-blue-1000;
+      color: colors.$dark-blue-1000;
     }
   }
 

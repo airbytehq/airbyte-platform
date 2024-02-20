@@ -22,6 +22,7 @@ import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserUpdate;
 import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.SecuredUser;
 import io.airbyte.commons.server.handlers.UserHandler;
@@ -113,6 +114,14 @@ public class UserApiController implements UserApi {
   @Override
   public WorkspaceUserReadList listUsersInWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> userHandler.listUsersInWorkspace(workspaceIdRequestBody));
+  }
+
+  @Post("/list_access_info_by_workspace_id")
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public WorkspaceUserAccessInfoReadList listAccessInfoByWorkspaceId(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
+    return ApiHelper.execute(() -> userHandler.listAccessInfoByWorkspaceId(workspaceIdRequestBody));
   }
 
   @Post("/list_instance_admins")

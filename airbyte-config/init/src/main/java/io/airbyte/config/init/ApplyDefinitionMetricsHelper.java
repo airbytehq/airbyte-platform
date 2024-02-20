@@ -15,44 +15,50 @@ import java.util.List;
 @Singleton
 public class ApplyDefinitionMetricsHelper {
 
-  public enum DefinitionProcessingSuccessOutcome {
+  public interface DefinitionProcessingOutcome {
+
+    String getStatus();
+
+  }
+
+  public enum DefinitionProcessingSuccessOutcome implements DefinitionProcessingOutcome {
+
     INITIAL_VERSION_ADDED,
     DEFAULT_VERSION_UPDATED,
-    VERSION_UNCHANGED
+    VERSION_UNCHANGED;
+
+    public String getStatus() {
+      return "ok";
+    }
+
   }
 
-  public enum DefinitionProcessingFailureReason {
+  public enum DefinitionProcessingFailureReason implements DefinitionProcessingOutcome {
+
     INCOMPATIBLE_PROTOCOL_VERSION,
-    DEFINITION_CONVERSION_FAILED
+    DEFINITION_CONVERSION_FAILED;
+
+    public String getStatus() {
+      return "failed";
+    }
+
   }
 
   /**
-   * Get attributes for a successful definition processing event. The docker repository is not added
-   * to keep the number of unique metrics low - this can be added if we want it later.
+   * Get metric attributes for a definition processing event.
    *
-   * @param successOutcome The outcome of the processing event.
-   * @return A list of attributes for the successful event.
+   * @param outcome The outcome of the processing event.
+   * @return A list of attributes for the event.
    */
-  public static MetricAttribute[] getSuccessAttributes(final DefinitionProcessingSuccessOutcome successOutcome) {
+  public static MetricAttribute[] getMetricAttributes(final String dockerRepository, final DefinitionProcessingOutcome outcome) {
     final List<MetricAttribute> metricAttributes = new ArrayList<>();
-    metricAttributes.add(new MetricAttribute("status", "ok"));
-    metricAttributes.add(new MetricAttribute("success_outcome", successOutcome.toString()));
-    return metricAttributes.toArray(metricAttributes.toArray(new MetricAttribute[0]));
-  }
-
-  /**
-   * Get attributes for a failed definition processing event. The docker repository is added for
-   * easier debugging of failures.
-   *
-   * @param dockerRepository The docker repository that was unsuccessfully processed.
-   * @param failureReason The reason for the failure.
-   * @return A list of attributes for the failed event.
-   */
-  public static MetricAttribute[] getFailureAttributes(final String dockerRepository, final DefinitionProcessingFailureReason failureReason) {
-    final List<MetricAttribute> metricAttributes = new ArrayList<>();
-    metricAttributes.add(new MetricAttribute("status", "failed"));
-    metricAttributes.add(new MetricAttribute("failure_reason", failureReason.toString()));
-    metricAttributes.add(new MetricAttribute("docker_repository", dockerRepository));
+    metricAttributes.add(new MetricAttribute("status", outcome.getStatus()));
+    metricAttributes.add(new MetricAttribute("outcome", outcome.toString()));
+    // Don't add the docker repository if the outcome is that version is unchanged -
+    // this blows up the number of unique metrics per hour and is not that useful
+    if (!outcome.equals(DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED)) {
+      metricAttributes.add(new MetricAttribute("docker_repository", dockerRepository));
+    }
     return metricAttributes.toArray(metricAttributes.toArray(new MetricAttribute[0]));
   }
 

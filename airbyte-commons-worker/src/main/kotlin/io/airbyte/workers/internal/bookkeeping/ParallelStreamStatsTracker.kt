@@ -2,7 +2,10 @@ package io.airbyte.workers.internal.bookkeeping
 
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
+import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage.Type
 import io.airbyte.protocol.models.AirbyteRecordMessage
@@ -10,11 +13,13 @@ import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStateStats
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair
 import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.workers.context.ReplicationFeatureFlags
 import io.airbyte.workers.exception.InvalidChecksumException
-import io.airbyte.workers.general.ReplicationFeatureFlagReader
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Parameter
 import io.micronaut.context.annotation.Prototype
 import jakarta.inject.Named
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
@@ -27,17 +32,28 @@ private data class SyncStatsCounters(
 
 @Prototype
 @Named("parallelStreamStatsTracker")
-class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncStatsTracker {
+class ParallelStreamStatsTracker(
+  private val metricClient: MetricClient,
+  @param:Parameter private val connectionId: UUID,
+  @param:Parameter private val jobId: Long,
+  @param:Parameter private val attemptNumber: Int,
+) : SyncStatsTracker {
   private val streamTrackers: MutableMap<AirbyteStreamNameNamespacePair, StreamStatsTracker> = ConcurrentHashMap()
   private val syncStatsCounters = SyncStatsCounters()
   private var expectedEstimateType: Type? = null
-  private var replicationFeatureFlagReader: ReplicationFeatureFlagReader? = null
+  private var replicationFeatureFlags: ReplicationFeatureFlags? = null
 
   @Volatile
   private var hasEstimatesErrors = false
 
   @Volatile
   private var checksumValidationEnabled = true
+
+  companion object {
+    const val CHECKSUM_OK = "ok"
+    const val CHECKSUM_PLATFORM_DESTINATION_MISMATCH = "platform-destination-mismatch"
+    const val CHECKSUM_SOURCE_PLATFORM_MISMATCH = "source-platform-mismatch"
+  }
 
   override fun updateStats(recordMessage: AirbyteRecordMessage) {
     getOrCreateStreamStatsTracker(getNameNamespacePair(recordMessage))
@@ -69,7 +85,7 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
   }
 
   override fun updateSourceStatesStats(stateMessage: AirbyteStateMessage) {
-    val failOnInvalidChecksum = replicationFeatureFlagReader?.readReplicationFeatureFlags()?.failOnInvalidChecksum ?: false
+    val failOnInvalidChecksum = replicationFeatureFlags?.failOnInvalidChecksum ?: false
 
     when (stateMessage.type) {
       AirbyteStateMessage.AirbyteStateType.GLOBAL -> {
@@ -100,7 +116,7 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
   }
 
   override fun updateDestinationStateStats(stateMessage: AirbyteStateMessage) {
-    val failOnInvalidChecksum = replicationFeatureFlagReader?.readReplicationFeatureFlags()?.failOnInvalidChecksum ?: false
+    val failOnInvalidChecksum = replicationFeatureFlags?.failOnInvalidChecksum ?: false
 
     when (stateMessage.type) {
       AirbyteStateMessage.AirbyteStateType.GLOBAL -> {
@@ -148,7 +164,7 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
     failOnInvalidChecksum: Boolean,
   ) {
     val expectedRecordCount = streamTrackers.values.sumOf { getEmittedCount(origin, stateMessage, it).toDouble() }
-    validateStateChecksum(stateMessage, expectedRecordCount, origin, failOnInvalidChecksum)
+    validateStateChecksum(stateMessage, expectedRecordCount, origin, failOnInvalidChecksum, false)
   }
 
   private fun getEmittedCount(
@@ -168,6 +184,7 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
     expectedRecordCount: Double,
     origin: AirbyteMessageOrigin,
     failOnInvalidChecksum: Boolean,
+    includeStreamInLogs: Boolean = true,
   ) {
     if (checksumValidationEnabled) {
       val stats: AirbyteStateStats? =
@@ -181,8 +198,10 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
         if (stateRecordCount != expectedRecordCount) {
           val errorMessage =
             "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: state " +
-              "record count $stateRecordCount does not equal tracked record count $expectedRecordCount."
+              "record count $stateRecordCount does not equal tracked record count $expectedRecordCount" +
+              if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
           logger.error { errorMessage }
+          emitChecksumMetrics(CHECKSUM_SOURCE_PLATFORM_MISMATCH)
           if (failOnInvalidChecksum) {
             throw InvalidChecksumException(errorMessage)
           }
@@ -194,8 +213,10 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
             if (sourceRecordCount != destinationRecordCount) {
               val errorMessage =
                 "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: " +
-                  "state source record count $sourceRecordCount does not equal state destination record count $destinationRecordCount."
+                  "state source record count $sourceRecordCount does not equal state destination record count $destinationRecordCount" +
+                  if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
               logger.error { errorMessage }
+              emitChecksumMetrics(CHECKSUM_PLATFORM_DESTINATION_MISMATCH)
               if (failOnInvalidChecksum) {
                 throw InvalidChecksumException(errorMessage)
               }
@@ -203,7 +224,8 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
               logger.info {
                 "${
                   origin.name.lowercase().replaceFirstChar { it.uppercase() }
-                } state message checksum is valid."
+                } state message checksum is valid" +
+                  if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
               }
             }
           }
@@ -211,11 +233,24 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
           logger.info {
             "${
               origin.name.lowercase().replaceFirstChar { it.uppercase() }
-            } state message checksum is valid."
+            } state message checksum is valid" +
+              if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
           }
+          emitChecksumMetrics(CHECKSUM_OK)
         }
       }
     }
+  }
+
+  private fun emitChecksumMetrics(status: String) {
+    metricClient.count(
+      OssMetricsRegistry.SYNC_RECORD_CHECKSUM,
+      1,
+      MetricAttribute(MetricTags.STATUS, status),
+      MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+      MetricAttribute(MetricTags.JOB_ID, jobId.toString()),
+      MetricAttribute(MetricTags.ATTEMPT_NUMBER, attemptNumber.toString()),
+    )
   }
 
   /**
@@ -367,8 +402,8 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
 
   override fun getUnreliableStateTimingMetrics() = hasSourceStateErrors()
 
-  override fun setReplicationFeatureFlagReader(replicationFeatureFlagReader: ReplicationFeatureFlagReader) {
-    this.replicationFeatureFlagReader = replicationFeatureFlagReader
+  override fun setReplicationFeatureFlags(replicationFeatureFlags: ReplicationFeatureFlags?) {
+    this.replicationFeatureFlags = replicationFeatureFlags
   }
 
   private fun hasSourceStateErrors(): Boolean = streamTrackers.any { it.value.streamStats.unreliableStateOperations.get() }

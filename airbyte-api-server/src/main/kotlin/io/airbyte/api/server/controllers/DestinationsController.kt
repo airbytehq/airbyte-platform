@@ -5,7 +5,6 @@
 package io.airbyte.api.server.controllers
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.airbyte_api.generated.DestinationsApi
 import io.airbyte.airbyte_api.model.generated.DestinationCreateRequest
 import io.airbyte.airbyte_api.model.generated.DestinationPatchRequest
 import io.airbyte.airbyte_api.model.generated.DestinationPutRequest
@@ -18,6 +17,7 @@ import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.PATCH
 import io.airbyte.api.server.constants.POST
 import io.airbyte.api.server.constants.PUT
+import io.airbyte.api.server.controllers.interfaces.DestinationsApi
 import io.airbyte.api.server.helpers.getActorDefinitionIdFromActorName
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.helpers.removeDestinationType
@@ -152,7 +152,7 @@ open class DestinationsController(
   }
 
   override fun listDestinations(
-    workspaceIds: MutableList<UUID>?,
+    workspaceIds: List<UUID>?,
     includeDeleted: Boolean?,
     limit: Int?,
     offset: Int?,

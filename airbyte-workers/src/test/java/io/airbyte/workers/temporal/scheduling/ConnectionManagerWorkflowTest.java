@@ -2011,7 +2011,7 @@ class ConnectionManagerWorkflowTest {
     testEnv.sleep(Duration.ofMinutes(1));
 
     workflow.submitManualSync();
-    Thread.sleep(500); // any time after no-waiting manual run
+    testEnv.sleep(Duration.ofMinutes(1));
   }
 
   private void setupFailureCase(final Class<? extends SyncWorkflow> failureClass) throws Exception {

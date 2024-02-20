@@ -98,7 +98,7 @@ export const PasswordSection: React.FC<PasswordSectionProps> = ({ updatePassword
   };
 
   return (
-    <Card withPadding>
+    <Card>
       <Form<PasswordFormValues>
         defaultValues={defaultFormValues}
         onSubmit={onSubmit}

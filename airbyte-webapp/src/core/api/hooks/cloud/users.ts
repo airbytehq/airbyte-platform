@@ -15,6 +15,7 @@ import { SCOPE_WORKSPACE } from "../../scopes";
 import { UserUpdate } from "../../types/CloudApi";
 import { useRequestOptions } from "../../useRequestOptions";
 import { useSuspenseQuery } from "../../useSuspenseQuery";
+import { workspaceKeys } from "../workspaces";
 
 export const useGetUserService = () => {
   const requestOptions = useRequestOptions();
@@ -122,6 +123,8 @@ export const useUserHook = () => {
       {
         onSuccess: async () => {
           await queryClient.invalidateQueries(userKeys.lists());
+          await queryClient.invalidateQueries(workspaceKeys.allListUsers);
+          await queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
         },
       }
     ),

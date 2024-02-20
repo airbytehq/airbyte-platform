@@ -27,11 +27,8 @@ interface StreamsConfigTableRowInnerProps {
   availableSyncModes: SyncModeValue[];
   onSelectSyncMode: (data: SyncModeValue) => void;
   onSelectStream: () => void;
-  primitiveFields: SyncSchemaField[];
   pkType: FieldPathType;
-  onPrimaryKeyChange: (pkPath: Path[]) => void;
   cursorType: FieldPathType;
-  onCursorChange: (cursorPath: Path) => void;
   fields: SyncSchemaField[];
   openStreamDetailsPanel: () => void;
   configErrors?: Record<string, string>;

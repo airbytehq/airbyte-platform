@@ -116,7 +116,8 @@ public enum ConfigSchema implements AirbyteConfig {
   STATE("State.yaml", State.class),
   SECRET_PERSISTENCE_CONFIG("SecretPersistenceConfig.yaml", SecretPersistenceConfig.class),
 
-  SCOPED_CONFIGURATION("ScopedConfiguration.yaml", ScopedConfiguration.class);
+  SCOPED_CONFIGURATION("ScopedConfiguration.yaml", ScopedConfiguration.class),
+  USER_INVITATION("UserInvitation.yaml", UserInvitation.class);
 
   static final Path KNOWN_SCHEMAS_ROOT = JsonSchemas.prepareSchemas("types", ConfigSchema.class);
 

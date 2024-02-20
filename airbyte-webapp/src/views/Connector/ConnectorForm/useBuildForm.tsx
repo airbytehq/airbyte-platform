@@ -37,7 +37,7 @@ export function setDefaultValues(
     if (property.const && (!options.respectExistingValues || !values[property.fieldKey])) {
       values[property.fieldKey] = property.const;
     }
-    if ("default" in property && (!options.respectExistingValues || !values[property.fieldKey])) {
+    if ("default" in property && (!options.respectExistingValues || values[property.fieldKey] === undefined)) {
       values[property.fieldKey] = property.default;
     }
     switch (property._type) {

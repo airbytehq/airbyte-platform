@@ -2,11 +2,9 @@ flags:
   - name: performance.backgroundJsonSchemaValidation
     serve: false
   - name: heartbeat.failSync
-    serve: true
+    serve: false
   - name: connectors.versionOverridesEnabled
     serve: true
-  - name: billing.newTrialPolicy
-    serve: false
   - name: heartbeat-max-seconds-between-messages
     serve: "10800"
   - name: use-new-notification-workflow
@@ -26,7 +24,7 @@ flags:
   - name: connectors.useIconUrlInApiResponse
     serve: true
   - name: platform.use-new-schema-update-notification
-    serve: false
+    serve: true
   # whether the platform will track destination timeouts. If set to 'true', then the platform will monitor if there has been
   # a call to a destination that has taken more than the threshold defined in 'destination-timeout.maxSeconds', and if so,
   # the platform will consider the destination to have timed out.
@@ -48,7 +46,6 @@ flags:
       - type: "workspace"
         include:
           - "3d2985a0-a412-45f4-9124-e15800b739be"
-          - "480e631f-1c88-4c2d-9081-855981018205"
         serve: true
   - name: platform.fail-sync-on-invalid-checksum
     serve: false

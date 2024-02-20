@@ -8,10 +8,6 @@ x-logging: &default-logging
     max-file: "5"
   driver: json-file
 services:
-  airbyte-proxy:
-    environment:
-      - BASIC_AUTH_USERNAME=
-      - BASIC_AUTH_PASSWORD=
   airbyte-temporal:
     ports:
       - 7233:7233
@@ -28,6 +24,12 @@ services:
     networks:
       - airbyte_internal
       - airbyte_public
+  # Acceptance tests do not need the webapp. Ideally we would not build the webapp
+  # and deploy the webapp to save time (~ 5 mins) on CI. However, the proxy currently
+  # written requires the webapp to run. So we pin the webapp to a specific commit.
+  # This is not expected to change frequently - or at all.
+  webapp:
+    image: "airbyte/webapp:dev-0e74a851e8"
 configs:
   flags:
     file: ./tools/bin/acceptance-test-flags.yml

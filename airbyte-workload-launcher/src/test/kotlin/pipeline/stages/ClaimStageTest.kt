@@ -25,7 +25,7 @@ class ClaimStageTest {
       )
     } returns true
 
-    val claimStage = ClaimStage(workloadApiClient, metricPublisher)
+    val claimStage = ClaimStage(workloadApiClient, metricPublisher, "dataplane-id")
     val originalInput = LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
     val outputFromClaimStage = claimStage.applyStage(originalInput)
 
@@ -45,7 +45,7 @@ class ClaimStageTest {
       )
     } returns false
 
-    val claimStage = ClaimStage(workloadApiClient, metricPublisher)
+    val claimStage = ClaimStage(workloadApiClient, metricPublisher, "dataplane-id")
     val originalInput = LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
     val outputFromClaimStage = claimStage.applyStage(originalInput)
 

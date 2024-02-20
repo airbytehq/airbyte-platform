@@ -17,6 +17,7 @@ interface CodeEditorProps {
   onMount?: (editor: editor.IStandaloneCodeEditor) => void;
   automaticLayout?: boolean;
   showSuggestions?: boolean;
+  paddingTop?: boolean;
 }
 
 function hslToHex(hue: number, saturation: number, lightness: number) {
@@ -47,6 +48,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   lineNumberCharacterWidth,
   onMount,
   automaticLayout,
+  paddingTop,
   showSuggestions = true,
 }) => {
   const monaco = useMonaco();
@@ -84,6 +86,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     },
     [colorValues]
   );
+  const paddingTopNum = Number(styles.paddingTop.replace("px", ""));
+  const paddingTopValue = paddingTopNum.toString() === "NaN" ? 15 : paddingTopNum;
 
   useEffect(() => {
     setAirbyteTheme(monaco);
@@ -108,6 +112,11 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           enabled: false,
         },
         suggestOnTriggerCharacters: showSuggestions,
+        padding: paddingTop
+          ? {
+              top: paddingTopValue,
+            }
+          : {},
       }}
     />
   );

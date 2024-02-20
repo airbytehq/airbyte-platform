@@ -21,6 +21,7 @@ import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobStatusSummary;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
+import io.airbyte.persistence.job.models.JobsRecordsCommitted;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -212,7 +213,7 @@ public interface JobPersistence {
    *
    * @param configTypes - the type of config, e.g. sync
    * @param connectionId - ID of the connection for which the job count should be retrieved
-   * @param status - status to filter by
+   * @param statuses - statuses to filter by
    * @param createdAtStart - minimum created at date to filter by
    * @param createdAtEnd - maximum created at date to filter by
    * @param updatedAtStart - minimum updated at date to filter by
@@ -221,7 +222,7 @@ public interface JobPersistence {
    */
   Long getJobCount(final Set<ConfigType> configTypes,
                    final String connectionId,
-                   final JobStatus status,
+                   final List<JobStatus> statuses,
                    final OffsetDateTime createdAtStart,
                    final OffsetDateTime createdAtEnd,
                    final OffsetDateTime updatedAtStart,
@@ -239,7 +240,7 @@ public interface JobPersistence {
   List<Job> listJobs(Set<ConfigType> configTypes, String configId, int limit) throws IOException;
 
   /**
-   * List jobs of a connection with filters. Pageable.
+   * List jobs with filters. Pageable.
    *
    * @param configTypes - type of config, e.g. sync
    * @param configId - id of that config
@@ -251,7 +252,7 @@ public interface JobPersistence {
                      String configId,
                      int limit,
                      int offset,
-                     JobStatus status,
+                     final List<JobStatus> statuses,
                      OffsetDateTime createdAtStart,
                      OffsetDateTime createdAtEnd,
                      OffsetDateTime updatedAtStart,
@@ -273,7 +274,7 @@ public interface JobPersistence {
                      List<UUID> workspaceIds,
                      int limit,
                      int offset,
-                     JobStatus status,
+                     final List<JobStatus> statuses,
                      OffsetDateTime createdAtStart,
                      OffsetDateTime createdAtEnd,
                      OffsetDateTime updatedAtStart,
@@ -317,6 +318,10 @@ public interface JobPersistence {
   List<AttemptWithJobInfo> listAttemptsForConnectionAfterTimestamp(UUID connectionId,
                                                                    ConfigType configType,
                                                                    Instant attemptEndedAtTimestamp)
+      throws IOException;
+
+  List<JobsRecordsCommitted> listRecordsCommittedForConnectionAfterTimestamp(UUID connectionId,
+                                                                             Instant attemptEndedAtTimestamp)
       throws IOException;
 
   /**

@@ -2,9 +2,8 @@ import React, { Suspense } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Outlet } from "react-router-dom";
 
-import { LoadingPage } from "components";
+import { LoadingPage, MainPageWithScroll } from "components";
 import { HeadTitle } from "components/common/HeadTitle";
-import { MainPageWithScroll } from "components/common/MainPageWithScroll";
 import {
   SettingsButton,
   SettingsLink,
@@ -28,6 +27,7 @@ export const CloudSettingsPage: React.FC = () => {
   const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
   const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
   const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
+  const updatedOrganizationsUi = useExperiment("settings.organizationsUpdates", false);
   const organization = useCurrentOrganizationInfo();
   const isSsoEnabled = organization?.sso;
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: organization?.organizationId });
@@ -48,15 +48,21 @@ export const CloudSettingsPage: React.FC = () => {
       <FlexContainer direction="row" gap="2xl">
         <SettingsNavigation>
           <SettingsNavigationBlock title={formatMessage({ id: "settings.userSettings" })}>
-            <SettingsLink name={formatMessage({ id: "settings.account" })} to={CloudSettingsRoutePaths.Account} />
+            <SettingsLink
+              iconType="user"
+              name={formatMessage({ id: "settings.account" })}
+              to={CloudSettingsRoutePaths.Account}
+            />
             {isTokenManagementEnabled && (
               <SettingsLink
+                iconType="grid"
                 name={formatMessage({ id: "settings.applications" })}
                 to={CloudSettingsRoutePaths.Applications}
               />
             )}
             {isOsanoActive() && (
               <SettingsButton
+                iconType="parameters"
                 onClick={() => showOsanoDrawer()}
                 name={formatMessage({ id: "settings.cookiePreferences" })}
               />
@@ -64,25 +70,43 @@ export const CloudSettingsPage: React.FC = () => {
           </SettingsNavigationBlock>
           <SettingsNavigationBlock title={formatMessage({ id: "settings.workspaceSettings" })}>
             <SettingsLink
-              name={formatMessage({ id: "settings.generalSettings" })}
+              iconType={updatedOrganizationsUi ? "community" : "gear"}
+              name={formatMessage({ id: updatedOrganizationsUi ? "settings.members" : "settings.generalSettings" })}
               to={CloudSettingsRoutePaths.Workspace}
             />
             {supportsDataResidency && (
               <SettingsLink
+                iconType="globe"
                 name={formatMessage({ id: "settings.dataResidency" })}
                 to={CloudSettingsRoutePaths.DataResidency}
               />
             )}
-            <SettingsLink name={formatMessage({ id: "tables.sources" })} to={CloudSettingsRoutePaths.Source} />
             <SettingsLink
+              iconType="source"
+              name={formatMessage({ id: "tables.sources" })}
+              to={CloudSettingsRoutePaths.Source}
+            />
+            <SettingsLink
+              iconType="destination"
               name={formatMessage({ id: "tables.destinations" })}
               to={CloudSettingsRoutePaths.Destination}
             />
+            {supportsCloudDbtIntegration && (
+              <SettingsLink
+                iconType="integrations"
+                name={formatMessage({ id: "settings.integrationSettings" })}
+                to={CloudSettingsRoutePaths.DbtCloud}
+              />
+            )}
+            {!updatedOrganizationsUi && (
+              <SettingsLink
+                iconType="community"
+                name={formatMessage({ id: "settings.accessManagement" })}
+                to={CloudSettingsRoutePaths.AccessManagement}
+              />
+            )}
             <SettingsLink
-              name={formatMessage({ id: "settings.accessManagement" })}
-              to={CloudSettingsRoutePaths.AccessManagement}
-            />
-            <SettingsLink
+              iconType="bell"
               name={formatMessage({ id: "settings.notifications" })}
               to={CloudSettingsRoutePaths.Notifications}
             />
@@ -90,23 +114,17 @@ export const CloudSettingsPage: React.FC = () => {
           {organization && canViewOrgSettings && (
             <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
               <SettingsLink
-                name={formatMessage({ id: "settings.generalSettings" })}
+                iconType={updatedOrganizationsUi ? "community" : "gear"}
+                name={formatMessage({ id: updatedOrganizationsUi ? "settings.members" : "settings.generalSettings" })}
                 to={CloudSettingsRoutePaths.Organization}
               />
-              {isSsoEnabled && (
+              {!updatedOrganizationsUi && isSsoEnabled && (
                 <SettingsLink
-                  name={formatMessage({ id: "settings.accessManagementSettings" })}
+                  iconType="community"
+                  name={formatMessage({ id: "settings.accessManagement" })}
                   to={`${CloudSettingsRoutePaths.Organization}/${CloudSettingsRoutePaths.AccessManagement}`}
                 />
               )}
-            </SettingsNavigationBlock>
-          )}
-          {supportsCloudDbtIntegration && (
-            <SettingsNavigationBlock title={formatMessage({ id: "settings.integrationSettings" })}>
-              <SettingsLink
-                name={formatMessage({ id: "settings.integrationSettings.dbtCloudSettings" })}
-                to={CloudSettingsRoutePaths.DbtCloud}
-              />
             </SettingsNavigationBlock>
           )}
         </SettingsNavigation>

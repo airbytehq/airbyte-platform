@@ -1,12 +1,13 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import classNames from "classnames";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
+import { Link } from "components/ui/Link";
 import { Modal, ModalBody } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
 import { Table } from "components/ui/Table";
@@ -186,17 +187,24 @@ export const ConnectorBuilderProjectTable = ({
   const navigate = useNavigate();
   const { workspaceId } = useCurrentWorkspace();
   const canUpdateConnector = useIntent("UpdateCustomConnector", { workspaceId });
+  const getEditUrl = useCallback(
+    (projectId: string) => `${basePath ? basePath : ""}${getEditPath(projectId)}`,
+    [basePath]
+  );
   const columns = useMemo(
     () => [
       columnHelper.accessor("name", {
         header: () => <FormattedMessage id="connectorBuilder.listPage.name" />,
         cell: (props) => (
-          <FlexContainer alignItems="center">
+          <Link to={getEditUrl(props.row.original.id)} className={styles.nameLink}>
             {/* TODO: replace with custom logos once available */}
             <BuilderLogo />
             <Text>{props.cell.getValue()}</Text>
-          </FlexContainer>
+          </Link>
         ),
+        meta: {
+          tdClassName: styles.nameCell,
+        },
       }),
       columnHelper.accessor("version", {
         header: () => <FormattedMessage id="connectorBuilder.listPage.version" />,
@@ -218,10 +226,7 @@ export const ConnectorBuilderProjectTable = ({
                   variant="clear"
                   data-testid={`edit-project-button-${props.row.original.name}`}
                   icon={<Icon type="pencil" />}
-                  onClick={() => {
-                    const editPath = getEditPath(props.row.original.id);
-                    navigate(basePath ? `${basePath}${editPath}` : editPath);
-                  }}
+                  onClick={() => navigate(getEditUrl(props.row.original.id))}
                 />
                 <Tooltip
                   disabled={!props.row.original.sourceDefinitionId}
@@ -274,10 +279,7 @@ export const ConnectorBuilderProjectTable = ({
                 variant="clear"
                 data-testid={`view-project-button-${props.row.original.name}`}
                 icon={<Icon type="eye" />}
-                onClick={() => {
-                  const editPath = getEditPath(props.row.original.id);
-                  navigate(basePath ? `${basePath}${editPath}` : editPath);
-                }}
+                onClick={() => navigate(getEditUrl(props.row.original.id))}
               />
             )}
           </FlexContainer>
@@ -285,15 +287,15 @@ export const ConnectorBuilderProjectTable = ({
       }),
     ],
     [
-      analyticsService,
-      basePath,
+      getEditUrl,
+      canUpdateConnector,
+      navigate,
+      unregisterNotificationById,
+      openConfirmationModal,
       closeConfirmationModal,
       deleteProject,
-      navigate,
-      openConfirmationModal,
+      analyticsService,
       registerNotification,
-      unregisterNotificationById,
-      canUpdateConnector,
     ]
   );
 

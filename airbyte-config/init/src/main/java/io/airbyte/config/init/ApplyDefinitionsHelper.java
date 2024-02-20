@@ -4,7 +4,6 @@
 
 package io.airbyte.config.init;
 
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.CONNECTOR_REGISTRY_DEFINITION_PROCESSED;
 
 import io.airbyte.commons.version.AirbyteProtocolVersion;
@@ -17,13 +16,13 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingFailureReason;
+import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingOutcome;
 import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingSuccessOutcome;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.DefinitionsProvider;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.RunSupportStateUpdater;
-import io.airbyte.featureflag.Workspace;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ActorDefinitionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.JobPersistence;
@@ -47,15 +46,15 @@ import org.slf4j.LoggerFactory;
  */
 @Singleton
 @Requires(bean = JobPersistence.class)
-@Requires(bean = ConfigRepository.class)
 @Requires(bean = MetricClient.class)
 @Slf4j
 public class ApplyDefinitionsHelper {
 
   private final DefinitionsProvider definitionsProvider;
   private final JobPersistence jobPersistence;
-  private final ConfigRepository configRepository;
-  private final FeatureFlagClient featureFlagClient;
+  private final ActorDefinitionService actorDefinitionService;
+  private final SourceService sourceService;
+  private final DestinationService destinationService;
   private final SupportStateUpdater supportStateUpdater;
   private final MetricClient metricClient;
   private int newConnectorCount;
@@ -64,19 +63,21 @@ public class ApplyDefinitionsHelper {
 
   public ApplyDefinitionsHelper(@Named("seedDefinitionsProvider") final DefinitionsProvider definitionsProvider,
                                 final JobPersistence jobPersistence,
-                                final ConfigRepository configRepository,
-                                final FeatureFlagClient featureFlagClient,
+                                final ActorDefinitionService actorDefinitionService,
+                                final SourceService sourceService,
+                                final DestinationService destinationService,
                                 final MetricClient metricClient,
                                 final SupportStateUpdater supportStateUpdater) {
     this.definitionsProvider = definitionsProvider;
     this.jobPersistence = jobPersistence;
-    this.configRepository = configRepository;
+    this.actorDefinitionService = actorDefinitionService;
+    this.sourceService = sourceService;
+    this.destinationService = destinationService;
     this.metricClient = metricClient;
     this.supportStateUpdater = supportStateUpdater;
-    this.featureFlagClient = featureFlagClient;
   }
 
-  public void apply() throws JsonValidationException, IOException, ConfigNotFoundException {
+  public void apply() throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     apply(false);
   }
 
@@ -87,7 +88,8 @@ public class ApplyDefinitionsHelper {
    *        consider whether a definition is in use before updating the definition and default
    *        version.
    */
-  public void apply(final boolean updateAll) throws JsonValidationException, IOException, ConfigNotFoundException {
+  public void apply(final boolean updateAll)
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final List<ConnectorRegistrySourceDefinition> latestSourceDefinitions = definitionsProvider.getSourceDefinitions();
     final List<ConnectorRegistryDestinationDefinition> latestDestinationDefinitions = definitionsProvider.getDestinationDefinitions();
 
@@ -97,8 +99,9 @@ public class ApplyDefinitionsHelper {
     final List<ConnectorRegistryDestinationDefinition> protocolCompatibleDestinationDefinitions =
         filterOutIncompatibleDestDefs(currentProtocolRange, latestDestinationDefinitions);
 
-    final Map<UUID, ActorDefinitionVersion> actorDefinitionIdsToDefaultVersionsMap = configRepository.getActorDefinitionIdsToDefaultVersionsMap();
-    final Set<UUID> actorDefinitionIdsInUse = configRepository.getActorDefinitionIdsInUse();
+    final Map<UUID, ActorDefinitionVersion> actorDefinitionIdsToDefaultVersionsMap =
+        actorDefinitionService.getActorDefinitionIdsToDefaultVersionsMap();
+    final Set<UUID> actorDefinitionIdsInUse = actorDefinitionService.getActorDefinitionIdsInUse();
 
     newConnectorCount = 0;
     changedConnectorCount = 0;
@@ -109,9 +112,7 @@ public class ApplyDefinitionsHelper {
     for (final ConnectorRegistryDestinationDefinition def : protocolCompatibleDestinationDefinitions) {
       applyDestinationDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll);
     }
-    if (featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))) {
-      supportStateUpdater.updateSupportStates();
-    }
+    supportStateUpdater.updateSupportStates();
 
     LOGGER.info("New connectors added: {}", newConnectorCount);
     LOGGER.info("Version changes applied: {}", changedConnectorCount);
@@ -139,9 +140,9 @@ public class ApplyDefinitionsHelper {
     final boolean connectorIsNew = !actorDefinitionIdsAndDefaultVersions.containsKey(newSourceDef.getSourceDefinitionId());
     if (connectorIsNew) {
       LOGGER.info("Adding new connector {}:{}", newDef.getDockerRepository(), newDef.getDockerImageTag());
-      configRepository.writeConnectorMetadata(newSourceDef, newADV, breakingChangesForDef);
+      sourceService.writeConnectorMetadata(newSourceDef, newADV, breakingChangesForDef);
       newConnectorCount++;
-      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED);
       return;
     }
 
@@ -153,12 +154,12 @@ public class ApplyDefinitionsHelper {
       LOGGER.info("Updating default version for connector {}: {} -> {}", currentDefaultADV.getDockerRepository(),
           currentDefaultADV.getDockerImageTag(),
           newADV.getDockerImageTag());
-      configRepository.writeConnectorMetadata(newSourceDef, newADV, breakingChangesForDef);
+      sourceService.writeConnectorMetadata(newSourceDef, newADV, breakingChangesForDef);
       changedConnectorCount++;
-      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED);
     } else {
-      configRepository.updateStandardSourceDefinition(newSourceDef);
-      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED);
+      sourceService.updateStandardSourceDefinition(newSourceDef);
+      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED);
     }
   }
 
@@ -166,7 +167,7 @@ public class ApplyDefinitionsHelper {
                                           final ConnectorRegistryDestinationDefinition newDef,
                                           final Set<UUID> actorDefinitionIdsInUse,
                                           final boolean updateAll)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // Skip and log if unable to parse registry entry.
     final StandardDestinationDefinition newDestinationDef;
     final ActorDefinitionVersion newADV;
@@ -184,9 +185,9 @@ public class ApplyDefinitionsHelper {
     final boolean connectorIsNew = !actorDefinitionIdsAndDefaultVersions.containsKey(newDestinationDef.getDestinationDefinitionId());
     if (connectorIsNew) {
       LOGGER.info("Adding new connector {}:{}", newDef.getDockerRepository(), newDef.getDockerImageTag());
-      configRepository.writeConnectorMetadata(newDestinationDef, newADV, breakingChangesForDef);
+      destinationService.writeConnectorMetadata(newDestinationDef, newADV, breakingChangesForDef);
       newConnectorCount++;
-      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED);
       return;
     }
 
@@ -198,12 +199,12 @@ public class ApplyDefinitionsHelper {
       LOGGER.info("Updating default version for connector {}: {} -> {}", currentDefaultADV.getDockerRepository(),
           currentDefaultADV.getDockerImageTag(),
           newADV.getDockerImageTag());
-      configRepository.writeConnectorMetadata(newDestinationDef, newADV, breakingChangesForDef);
+      destinationService.writeConnectorMetadata(newDestinationDef, newADV, breakingChangesForDef);
       changedConnectorCount++;
-      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED);
     } else {
-      configRepository.updateStandardDestinationDefinition(newDestinationDef);
-      trackDefinitionProcessed(DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED);
+      destinationService.updateStandardDestinationDefinition(newDestinationDef);
+      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED);
     }
 
   }
@@ -257,13 +258,8 @@ public class ApplyDefinitionsHelper {
     return protocolVersionRange.isSupported(AirbyteProtocolVersion.getWithDefault(protocolVersion));
   }
 
-  private void trackDefinitionProcessed(final DefinitionProcessingSuccessOutcome successOutcome) {
-    final MetricAttribute[] attributes = ApplyDefinitionMetricsHelper.getSuccessAttributes(successOutcome);
-    metricClient.count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, attributes);
-  }
-
-  private void trackDefinitionProcessed(final String dockerRepository, final DefinitionProcessingFailureReason failureReason) {
-    final MetricAttribute[] attributes = ApplyDefinitionMetricsHelper.getFailureAttributes(dockerRepository, failureReason);
+  private void trackDefinitionProcessed(final String dockerRepository, final DefinitionProcessingOutcome outcome) {
+    final MetricAttribute[] attributes = ApplyDefinitionMetricsHelper.getMetricAttributes(dockerRepository, outcome);
     metricClient.count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, attributes);
   }
 

@@ -1,6 +1,7 @@
 package io.airbyte.cron.jobs
 
 import datadog.trace.api.Trace
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
 import io.airbyte.metrics.lib.MetricAttribute
@@ -8,16 +9,15 @@ import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.workload.api.client.model.generated.ExpiredDeadlineWorkloadListRequest
 import io.airbyte.workload.api.client.model.generated.LongRunningWorkloadRequest
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadListRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
 import io.micronaut.scheduling.annotation.Scheduled
-import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.time.OffsetDateTime
@@ -26,10 +26,6 @@ import java.time.ZoneOffset
 
 private val logger = KotlinLogging.logger { }
 
-/**
- * The value for [heartbeatTimeout] should always be greater
- * than [io.airbyte.featureflag.WorkloadHeartbeatTimeout] value
- */
 @Singleton
 @Requires(
   property = "airbyte.workload.monitor.enabled",
@@ -37,11 +33,9 @@ private val logger = KotlinLogging.logger { }
 )
 open class WorkloadMonitor(
   private val workloadApi: WorkloadApi,
-  @Property(name = "airbyte.workload.monitor.claim-timeout") private val claimTimeout: Duration,
-  @Property(name = "airbyte.workload.monitor.heartbeat-timeout") private val heartbeatTimeout: Duration,
   @Property(name = "airbyte.workload.monitor.non-sync-workload-timeout") private val nonSyncWorkloadTimeout: Duration,
   @Property(name = "airbyte.workload.monitor.sync-workload-timeout") private val syncWorkloadTimeout: Duration,
-  @Named("replicationNotStartedTimeout") private val nonStartedTimeout: Duration,
+  private val featureFlagClient: FeatureFlagClient,
   private val metricClient: MetricClient,
   private val timeProvider: (ZoneId) -> OffsetDateTime = OffsetDateTime::now,
 ) {
@@ -63,15 +57,14 @@ open class WorkloadMonitor(
   @Scheduled(fixedRate = "\${airbyte.workload.monitor.not-started-check-rate}")
   open fun cancelNotStartedWorkloads() {
     logger.info { "Checking for not started workloads." }
-    val oldestStartedTime = timeProvider(ZoneOffset.UTC).minusSeconds(nonStartedTimeout.seconds)
+    val oldestStartedTime = timeProvider(ZoneOffset.UTC)
     val notStartedWorkloads =
-      workloadApi.workloadList(
-        WorkloadListRequest(
+      workloadApi.workloadListWithExpiredDeadline(
+        ExpiredDeadlineWorkloadListRequest(
+          oldestStartedTime,
           status = listOf(WorkloadStatus.CLAIMED),
-          updatedBefore = oldestStartedTime,
         ),
       )
-
     cancelWorkloads(notStartedWorkloads.workloads, "Not started within time limit", CHECK_START)
   }
 
@@ -85,12 +78,12 @@ open class WorkloadMonitor(
   @Scheduled(fixedRate = "\${airbyte.workload.monitor.claim-check-rate}")
   open fun cancelNotClaimedWorkloads() {
     logger.info { "Checking for not claimed workloads." }
-    val oldestClaimTime = timeProvider(ZoneOffset.UTC).minusSeconds(claimTimeout.seconds)
+    val oldestClaimTime = timeProvider(ZoneOffset.UTC)
     val notClaimedWorkloads =
-      workloadApi.workloadList(
-        WorkloadListRequest(
+      workloadApi.workloadListWithExpiredDeadline(
+        ExpiredDeadlineWorkloadListRequest(
+          oldestClaimTime,
           status = listOf(WorkloadStatus.PENDING),
-          updatedBefore = oldestClaimTime,
         ),
       )
 
@@ -107,12 +100,12 @@ open class WorkloadMonitor(
   @Scheduled(fixedRate = "\${airbyte.workload.monitor.heartbeat-check-rate}")
   open fun cancelNotHeartbeatingWorkloads() {
     logger.info { "Checking for non heartbeating workloads." }
-    val oldestHeartbeatTime = timeProvider(ZoneOffset.UTC).minusSeconds(heartbeatTimeout.seconds)
+    val oldestHeartbeatTime = timeProvider(ZoneOffset.UTC)
     val nonHeartbeatingWorkloads =
-      workloadApi.workloadList(
-        WorkloadListRequest(
+      workloadApi.workloadListWithExpiredDeadline(
+        ExpiredDeadlineWorkloadListRequest(
+          oldestHeartbeatTime,
           status = listOf(WorkloadStatus.RUNNING, WorkloadStatus.LAUNCHED),
-          updatedBefore = oldestHeartbeatTime,
         ),
       )
 

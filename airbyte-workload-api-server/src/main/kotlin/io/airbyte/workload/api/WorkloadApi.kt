@@ -7,6 +7,7 @@ package io.airbyte.workload.api
 import io.airbyte.config.WorkloadType
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.workload.api.domain.ClaimResponse
+import io.airbyte.workload.api.domain.ExpiredDeadlineWorkloadListRequest
 import io.airbyte.workload.api.domain.KnownExceptionInfo
 import io.airbyte.workload.api.domain.LongRunningWorkloadRequest
 import io.airbyte.workload.api.domain.Workload
@@ -20,6 +21,7 @@ import io.airbyte.workload.api.domain.WorkloadListRequest
 import io.airbyte.workload.api.domain.WorkloadListResponse
 import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.airbyte.workload.api.domain.WorkloadSuccessRequest
+import io.airbyte.workload.handler.DefaultDeadlineValues
 import io.airbyte.workload.handler.WorkloadHandler
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.DATA_PLANE_ID_TAG
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.GEOGRAPHY_TAG
@@ -57,6 +59,7 @@ import javax.ws.rs.Produces
 open class WorkloadApi(
   private val workloadHandler: WorkloadHandler,
   private val workloadService: WorkloadService,
+  private val defaultDeadlineValues: DefaultDeadlineValues,
 ) {
   @POST
   @Path("/create")
@@ -106,6 +109,7 @@ open class WorkloadApi(
       workloadCreateRequest.mutexKey,
       workloadCreateRequest.type,
       autoId,
+      workloadCreateRequest.deadline ?: defaultDeadlineValues.createStepDeadline(),
     )
     workloadService.create(
       workloadId = workloadCreateRequest.workloadId,
@@ -216,7 +220,10 @@ open class WorkloadApi(
     ) workloadRunningRequest: WorkloadRunningRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadRunningRequest.workloadId) as Map<String, Any>?)
-    workloadHandler.setWorkloadStatusToRunning(workloadRunningRequest.workloadId)
+    workloadHandler.setWorkloadStatusToRunning(
+      workloadRunningRequest.workloadId,
+      workloadRunningRequest.deadline ?: defaultDeadlineValues.runningStepDeadline(),
+    )
   }
 
   @PUT
@@ -295,7 +302,12 @@ open class WorkloadApi(
         DATA_PLANE_ID_TAG to workloadClaimRequest.dataplaneId,
       ) as Map<String, Any>?,
     )
-    val claimed = workloadHandler.claimWorkload(workloadClaimRequest.workloadId, workloadClaimRequest.dataplaneId)
+    val claimed =
+      workloadHandler.claimWorkload(
+        workloadClaimRequest.workloadId,
+        workloadClaimRequest.dataplaneId,
+        workloadClaimRequest.deadline ?: defaultDeadlineValues.claimStepDeadline(),
+      )
     return ClaimResponse(claimed)
   }
 
@@ -329,7 +341,10 @@ open class WorkloadApi(
     ) workloadLaunchedRequest: WorkloadLaunchedRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadLaunchedRequest.workloadId) as Map<String, Any>?)
-    workloadHandler.setWorkloadStatusToLaunched(workloadLaunchedRequest.workloadId)
+    workloadHandler.setWorkloadStatusToLaunched(
+      workloadLaunchedRequest.workloadId,
+      workloadLaunchedRequest.deadline ?: defaultDeadlineValues.launchStepDeadline(),
+    )
   }
 
   @GET
@@ -387,7 +402,7 @@ open class WorkloadApi(
     ) workloadHeartbeatRequest: WorkloadHeartbeatRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadHeartbeatRequest.workloadId) as Map<String, Any>?)
-    workloadHandler.heartbeat(workloadHeartbeatRequest.workloadId)
+    workloadHandler.heartbeat(workloadHeartbeatRequest.workloadId, workloadHeartbeatRequest.deadline ?: defaultDeadlineValues.heartbeatDeadline())
   }
 
   @POST
@@ -414,6 +429,34 @@ open class WorkloadApi(
         workloadListRequest.dataplane,
         workloadListRequest.status,
         workloadListRequest.updatedBefore,
+      ),
+    )
+  }
+
+  @POST
+  @Path("/expired_deadline_list")
+  @Consumes("application/json")
+  @Produces("application/json")
+  @Operation(summary = "Get workloads according to the filters.", tags = ["workload"])
+  @ApiResponses(
+    value = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Success",
+        content = [Content(schema = Schema(implementation = WorkloadListResponse::class))],
+      ),
+    ],
+  )
+  open fun workloadListWithExpiredDeadline(
+    @RequestBody(
+      content = [Content(schema = Schema(implementation = ExpiredDeadlineWorkloadListRequest::class))],
+    ) expiredDeadlineWorkloadListRequest: ExpiredDeadlineWorkloadListRequest,
+  ): WorkloadListResponse {
+    return WorkloadListResponse(
+      workloadHandler.getWorkloadsWithExpiredDeadline(
+        expiredDeadlineWorkloadListRequest.dataplane,
+        expiredDeadlineWorkloadListRequest.status,
+        expiredDeadlineWorkloadListRequest.deadline,
       ),
     )
   }

@@ -1,0 +1,74 @@
+micronaut:
+  application:
+    name: airbyte-connector-sidecar
+  server:
+    enable: false
+  metrics:
+    enabled: false
+    export:
+      statsd:
+        enabled: false
+  security:
+    enabled: false
+airbyte:
+  deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  role: ${AIRBYTE_ROLE:dev}
+  version: ${AIRBYTE_VERSION:dev}
+  config-dir: ${AIRBYTE_CONFIG_DIR:/config}
+  acceptance:
+    test:
+      enabled: ${ACCEPTANCE_TEST_ENABLED:false}
+  cloud:
+    storage:
+      logs:
+        type: ${WORKER_LOGS_STORAGE_TYPE:}
+        gcs:
+          application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
+          bucket: ${GCS_LOG_BUCKET:}
+        minio:
+          access-key: ${AWS_ACCESS_KEY_ID:}
+          bucket: ${S3_LOG_BUCKET:}
+          endpoint: ${S3_MINIO_ENDPOINT:}
+          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+        s3:
+          access-key: ${AWS_ACCESS_KEY_ID:}
+          bucket: ${S3_LOG_BUCKET:}
+          region: ${S3_LOG_BUCKET_REGION:}
+          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+        local:
+          root: ${WORKSPACE_ROOT:}
+      workload-outputs:
+        type: ${WORKER_STATE_STORAGE_TYPE}
+        gcs:
+          application-credentials: ${STATE_STORAGE_GCS_APPLICATION_CREDENTIALS:}
+          bucket: ${STATE_STORAGE_GCS_BUCKET_NAME:}
+        minio:
+          access-key: ${STATE_STORAGE_MINIO_ACCESS_KEY:}
+          bucket: ${STATE_STORAGE_MINIO_BUCKET_NAME:}
+          endpoint: ${STATE_STORAGE_MINIO_ENDPOINT:}
+          secret-access-key: ${STATE_STORAGE_MINIO_SECRET_ACCESS_KEY:}
+        s3:
+          access-key: ${STATE_STORAGE_S3_ACCESS_KEY:}
+          bucket: ${STATE_STORAGE_S3_BUCKET_NAME:}
+          region: ${STATE_STORAGE_S3_REGION:}
+          secret-access-key: ${STATE_STORAGE_S3_SECRET_ACCESS_KEY:}
+        local:
+          root: ${WORKSPACE_ROOT:}
+  internal:
+    api:
+      auth-header:
+        name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+        value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+      host: ${INTERNAL_API_HOST}
+  sidecar:
+    file-timeout-minutes: ${SIDECAR_FILE_TIMEOUT_MINUTES:9}
+  workload-api:
+    base-path: ${WORKLOAD_API_HOST:}
+    bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
+    connect-timeout-seconds: ${WORKLOAD_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${WORKLOAD_API_READ_TIMEOUT_SECONDS:300}
+    retries:
+      delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
+      max: ${WORKLOAD_API_MAX_RETRIES:5}
+  workload:
+    enabled: false

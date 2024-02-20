@@ -140,6 +140,22 @@ export const Table = <T,>({
         {headerGroup.headers.map((header) => {
           const meta = header.column.columnDef.meta as ColumnMeta | undefined;
           const isSorted = header.column.getIsSorted();
+
+          const customSortToggle = () => {
+            const currentSorting = table.getState().sorting;
+
+            // if we are sorting by another column, or if we are sorting by the same column but desc, toggle sorting to asc
+            if (
+              currentSorting.some((sort) => sort.id === header.column.id && sort.desc === true) ||
+              !currentSorting.some((sort) => sort.id === header.column.id)
+            ) {
+              // the first arg of toggleSorting() from react-table is desc: boolean
+              header.column.toggleSorting(false);
+            } else {
+              header.column.toggleSorting(true);
+            }
+          };
+
           return (
             <th
               colSpan={header.colSpan}
@@ -158,9 +174,9 @@ export const Table = <T,>({
             >
               {header.column.getCanSort() === true ? (
                 <SortableTableHeader
-                  onClick={() => header.column.toggleSorting()}
-                  isActive={header.column.getIsSorted() !== false}
-                  isAscending={header.column.getIsSorted() === "asc"}
+                  onClick={() => customSortToggle()}
+                  isActive={isSorted !== false}
+                  isAscending={isSorted === "asc"}
                 >
                   {flexRender(header.column.columnDef.header, header.getContext())}
                 </SortableTableHeader>

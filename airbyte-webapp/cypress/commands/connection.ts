@@ -62,10 +62,6 @@ export const createTestConnection = (sourceName: string, destinationName: string
       createLocalJsonDestination(destinationName);
   }
 
-  // TODO is this actually needed?
-  // eslint-disable-next-line cypress/no-unnecessary-waiting
-  cy.wait(5000);
-
   cy.get("a[data-testid='connections-step']").click();
   openCreateConnection();
 
@@ -93,7 +89,7 @@ export const startManualReset = () => {
 export const createPokeApiSourceViaApi = () => {
   let source: SourceRead;
   return requestWorkspaceId().then(() => {
-    const sourceRequestBody = getPokeApiCreateSourceBody(appendRandomString("PokeAPI Source"), "luxray");
+    const sourceRequestBody = getPokeApiCreateSourceBody(appendRandomString("PokeAPI Source"), "venusaur");
     requestCreateSource(sourceRequestBody).then((sourceResponse) => {
       source = sourceResponse;
     });

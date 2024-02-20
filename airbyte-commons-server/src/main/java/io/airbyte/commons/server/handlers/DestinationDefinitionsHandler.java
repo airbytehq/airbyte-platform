@@ -41,7 +41,6 @@ import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
@@ -264,7 +263,7 @@ public class DestinationDefinitionsHandler {
   }
 
   public DestinationDefinitionRead updateDestinationDefinition(final DestinationDefinitionUpdate destinationDefinitionUpdate)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardDestinationDefinition currentDestination = configRepository
         .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());
     final ActorDefinitionVersion currentVersion = configRepository.getActorDefinitionVersion(currentDestination.getDefaultVersionId());
@@ -290,11 +289,9 @@ public class DestinationDefinitionsHandler {
         actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.DESTINATION);
     configRepository.writeConnectorMetadata(newDestination, newVersion, breakingChangesForDef);
 
-    if (featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))) {
-      final StandardDestinationDefinition updatedDestinationDefinition = configRepository
-          .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());
-      supportStateUpdater.updateSupportStatesForDestinationDefinition(updatedDestinationDefinition);
-    }
+    final StandardDestinationDefinition updatedDestinationDefinition = configRepository
+        .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());
+    supportStateUpdater.updateSupportStatesForDestinationDefinition(updatedDestinationDefinition);
     return buildDestinationDefinitionRead(newDestination, newVersion);
   }
 

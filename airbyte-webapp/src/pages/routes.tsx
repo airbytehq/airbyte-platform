@@ -69,7 +69,8 @@ const MainViewRoutes: React.FC = () => {
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
-  const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
+  const isTokenManagementEnabled = useFeature(FeatureItem.APITokenManagement);
+  const isUpdatedOrganizationsUi = useExperiment("settings.organizationsUpdates", false);
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
 
@@ -104,7 +105,7 @@ const MainViewRoutes: React.FC = () => {
             {canViewWorkspaceSettings && multiWorkspaceUI && (
               <Route path={SettingsRoutePaths.Workspace} element={<GeneralWorkspaceSettingsPage />} />
             )}
-            {canViewWorkspaceSettings && !multiWorkspaceUI && (
+            {canViewWorkspaceSettings && (
               <>
                 <Route path={SettingsRoutePaths.Source} element={<SourcesPage />} />
                 <Route path={SettingsRoutePaths.Destination} element={<DestinationsPage />} />
@@ -112,7 +113,7 @@ const MainViewRoutes: React.FC = () => {
             )}
             <Route path={SettingsRoutePaths.Notifications} element={<NotificationPage />} />
             <Route path={SettingsRoutePaths.Metrics} element={<MetricsPage />} />
-            {multiWorkspaceUI && isAccessManagementEnabled && (
+            {multiWorkspaceUI && isAccessManagementEnabled && !isUpdatedOrganizationsUi && (
               <Route
                 path={`${SettingsRoutePaths.Workspace}/${SettingsRoutePaths.AccessManagement}`}
                 element={<WorkspaceAccessManagementPage />}
@@ -121,7 +122,7 @@ const MainViewRoutes: React.FC = () => {
             {multiWorkspaceUI && organizationId && canViewOrganizationSettings && (
               <>
                 <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
-                {isAccessManagementEnabled && (
+                {isAccessManagementEnabled && !isUpdatedOrganizationsUi && (
                   <Route
                     path={`${SettingsRoutePaths.Organization}/${SettingsRoutePaths.AccessManagement}`}
                     element={<OrganizationAccessManagementPage />}

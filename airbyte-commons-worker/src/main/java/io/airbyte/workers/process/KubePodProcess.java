@@ -121,6 +121,7 @@ public class KubePodProcess implements KubePod {
   private static final Logger LOGGER = LoggerFactory.getLogger(KubePodProcess.class);
 
   public static final String MAIN_CONTAINER_NAME = "main";
+  public static final String SIDECAR_CONTAINER_NAME = "connector-sidecar";
   public static final String INIT_CONTAINER_NAME = "init";
 
   private static final String PIPES_DIR = "/pipes";
@@ -330,7 +331,7 @@ public class KubePodProcess implements KubePod {
         // using kubectl cp directly here, because both fabric and the official kube client APIs have
         // several issues with copying files. See https://github.com/airbytehq/airbyte/issues/8643 for
         // details.
-        final String command = String.format("kubectl cp %s %s/%s:%s -c %s", tmpFile, podDefinition.getMetadata().getNamespace(),
+        final String command = String.format("kubectl cp %s %s/%s:%s -c %s --retries=3", tmpFile, podDefinition.getMetadata().getNamespace(),
             podDefinition.getMetadata().getName(), containerPath, INIT_CONTAINER_NAME);
         LOGGER.info(command);
 

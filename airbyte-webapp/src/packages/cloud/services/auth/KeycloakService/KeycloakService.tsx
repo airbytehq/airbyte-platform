@@ -20,6 +20,7 @@ import { config } from "core/config";
 const DEFAULT_KEYCLOAK_REALM = "airbyte";
 const DEFAULT_KEYCLOAK_CLIENT_ID = "airbyte-webapp";
 const KEYCLOAK_IDP_HINT = "default";
+const AIRBYTE_CLOUD_REALM = "_airbyte-cloud-users";
 
 export type KeycloakServiceContext = {
   userManager: UserManager;
@@ -194,6 +195,10 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
   }, [userManager, getAirbyteUser, authState]);
 
   const changeRealmAndRedirectToSignin = useCallback(async (realm: string) => {
+    // This is not a security measure. The realm is publicly accessible, but we don't want users to access it via the SSO flow, because that could cause confusion.
+    if (realm === AIRBYTE_CLOUD_REALM) {
+      throw new Error("Realm inaccessible via SSO flow. Use the default login flow instead.");
+    }
     const newUserManager = createUserManager(realm);
     await newUserManager.signinRedirect({ extraQueryParams: { kc_idp_hint: KEYCLOAK_IDP_HINT } });
   }, []);

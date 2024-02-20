@@ -13,6 +13,7 @@ dependencies {
     implementation(project(":airbyte-config:specs"))
     implementation(project(":airbyte-config:config-models"))
     implementation(project(":airbyte-config:config-persistence"))
+    implementation(project(":airbyte-data"))
     implementation(project(":airbyte-featureflag"))
     implementation(project(":airbyte-notification"))
     implementation(project(":airbyte-metrics:metrics-lib"))

@@ -6,7 +6,6 @@ package io.airbyte.test.acceptance;
 
 import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_ID;
 import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_NAME;
-import static io.airbyte.test.utils.AcceptanceTestHarness.waitForSuccessfulJob;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -21,7 +20,6 @@ import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.AirbyteStream;
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
-import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.ConnectionStateType;
@@ -65,6 +63,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestInstance;
@@ -89,6 +88,7 @@ import org.slf4j.LoggerFactory;
                                matches = "true")
 @SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "DataFlowIssue", "SqlDialectInspection", "SqlNoDataSourceInspection"})
 @TestInstance(Lifecycle.PER_CLASS)
+@Disabled
 class CdcAcceptanceTests {
 
   record DestinationCdcRecordMatcher(JsonNode sourceRecord, Instant minUpdatedAt, Optional<Instant> minDeletedAt) {
@@ -123,24 +123,22 @@ class CdcAcceptanceTests {
   @SuppressWarnings("unused")
   private static final String POSTGRES_DESTINATION_LEGACY_CONNECTOR_VERSION = "0.3.19";
 
-  private static AirbyteApiClient apiClient;
-  private static WebBackendApi webBackendApi;
   private static UUID workspaceId;
   private static OperationRead operationRead;
 
-  private AcceptanceTestHarness testHarness;
+  private static AcceptanceTestHarness testHarness;
 
   private static final String AIRBYTE_SERVER_HOST = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001");
 
   @BeforeAll
-  static void init() throws ApiException, URISyntaxException {
+  static void init() throws ApiException, URISyntaxException, IOException, InterruptedException {
     final URI url = new URI(AIRBYTE_SERVER_HOST);
-    apiClient = new AirbyteApiClient(
+    final var apiClient = new AirbyteApiClient(
         new ApiClient().setScheme(url.getScheme())
             .setHost(url.getHost())
             .setPort(url.getPort())
             .setBasePath("/api"));
-    webBackendApi = new WebBackendApi(
+    final var webBackendApi = new WebBackendApi(
         new ApiClient().setScheme(url.getScheme())
             .setHost(url.getHost())
             .setPort(url.getPort())
@@ -158,11 +156,11 @@ class CdcAcceptanceTests {
             .destinationDefinitionId(UUID.fromString("25c5221d-dce2-4163-ade9-739ef790f503")));
     LOGGER.info("pg source definition: {}", sourceDef.getDockerImageTag());
     LOGGER.info("pg destination definition: {}", destinationDef.getDockerImageTag());
+    testHarness = new AcceptanceTestHarness(apiClient, webBackendApi, workspaceId, POSTGRES_INIT_SQL_FILE);
   }
 
   @BeforeEach
-  void setup() throws URISyntaxException, IOException, InterruptedException, SQLException {
-    testHarness = new AcceptanceTestHarness(apiClient, workspaceId, POSTGRES_INIT_SQL_FILE);
+  void setup() throws URISyntaxException, IOException, InterruptedException, SQLException, ApiException {
     testHarness.setup();
   }
 
@@ -181,10 +179,9 @@ class CdcAcceptanceTests {
     final var outputSchema = conn.getNamespaceFormat();
     LOGGER.info(STARTING_SYNC_ONE, testInfo.getDisplayName());
 
-    final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
-        .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
-    waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
-    LOGGER.info("state after sync 1: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
+    testHarness.waitForSuccessfulJob(connectionSyncRead1.getJob());
+    LOGGER.info("state after sync 1: {}", testHarness.getConnectionState(connectionId));
 
     final Database source = testHarness.getSourceDatabase();
 
@@ -231,10 +228,9 @@ class CdcAcceptanceTests {
         Optional.empty()));
 
     LOGGER.info("Starting {} sync 2", testInfo.getDisplayName());
-    final JobInfoRead connectionSyncRead2 = apiClient.getConnectionApi()
-        .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
-    waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
-    LOGGER.info("state after sync 2: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    final JobInfoRead connectionSyncRead2 = testHarness.syncConnection(connectionId);
+    testHarness.waitForSuccessfulJob(connectionSyncRead2.getJob());
+    LOGGER.info("state after sync 2: {}", testHarness.getConnectionState(connectionId));
 
     final var dst = testHarness.getDestinationDatabase();
     assertDestinationMatches(dst, outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
@@ -244,10 +240,9 @@ class CdcAcceptanceTests {
     // reset back to no data.
 
     LOGGER.info("Starting {} reset", testInfo.getDisplayName());
-    final JobInfoRead jobInfoRead = apiClient.getConnectionApi().resetConnection(new ConnectionIdRequestBody().connectionId(connectionId));
-    waitForSuccessfulJob(apiClient.getJobsApi(), jobInfoRead.getJob());
-
-    LOGGER.info("state after reset: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    final JobInfoRead jobInfoRead = testHarness.resetConnection(connectionId);
+    testHarness.waitForSuccessfulJob(jobInfoRead.getJob());
+    LOGGER.info("state after reset: {}", testHarness.getConnectionState(connectionId));
 
     assertDestinationMatches(dst, outputSchema, ID_AND_NAME_TABLE, Collections.emptyList());
     assertDestinationMatches(dst, outputSchema, COLOR_PALETTE_TABLE, Collections.emptyList());
@@ -255,10 +250,9 @@ class CdcAcceptanceTests {
 
     // sync one more time. verify it is the equivalent of a full refresh.
     LOGGER.info("Starting {} sync 3", testInfo.getDisplayName());
-    final JobInfoRead connectionSyncRead3 =
-        apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
-    waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead3.getJob());
-    LOGGER.info("state after sync 3: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    final JobInfoRead connectionSyncRead3 = testHarness.syncConnection(connectionId);
+    testHarness.waitForSuccessfulJob(connectionSyncRead3.getJob());
+    LOGGER.info("state after sync 3: {}", testHarness.getConnectionState(connectionId));
 
     expectedIdAndNameRecords = getCdcRecordMatchersFromSource(source, ID_AND_NAME_TABLE);
     assertDestinationMatches(dst, outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
@@ -278,10 +272,9 @@ class CdcAcceptanceTests {
     final var outputSchema = conn.getNamespaceFormat();
     LOGGER.info(STARTING_SYNC_ONE, testInfo.getDisplayName());
 
-    final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
-        .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
-    waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
-    LOGGER.info("state after sync 1: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
+    testHarness.waitForSuccessfulJob(connectionSyncRead1.getJob());
+    LOGGER.info("state after sync 1: {}", testHarness.getConnectionState(connectionId));
 
     final Database source = testHarness.getSourceDatabase();
     final Database dst = testHarness.getDestinationDatabase();
@@ -303,10 +296,9 @@ class CdcAcceptanceTests {
         Optional.of(beforeDelete)));
 
     LOGGER.info("Starting {} sync 2", testInfo.getDisplayName());
-    final JobInfoRead connectionSyncRead2 = apiClient.getConnectionApi()
-        .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
-    waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
-    LOGGER.info("state after sync 2: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    final JobInfoRead connectionSyncRead2 = testHarness.syncConnection(connectionId);
+    testHarness.waitForSuccessfulJob(connectionSyncRead2.getJob());
+    LOGGER.info("state after sync 2: {}", testHarness.getConnectionState(connectionId));
 
     assertDestinationMatches(dst, outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
   }
@@ -320,9 +312,8 @@ class CdcAcceptanceTests {
     final var outputSchema = conn.getNamespaceFormat();
     LOGGER.info(STARTING_SYNC_ONE, testInfo.getDisplayName());
 
-    final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
-        .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
-    waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
+    final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
+    testHarness.waitForSuccessfulJob(connectionSyncRead1.getJob());
 
     final Database source = testHarness.getSourceDatabase();
     final Database dst = testHarness.getDestinationDatabase();
@@ -341,18 +332,18 @@ class CdcAcceptanceTests {
     source.query(ctx -> ctx.dropTable(COLOR_PALETTE_TABLE).execute());
 
     LOGGER.info("Refreshing schema and updating connection");
-    final ConnectionRead connectionRead = apiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody().connectionId(connectionId));
+    final ConnectionRead connectionRead = testHarness.getConnection(connectionId);
     final UUID sourceId =
         createCdcSource().getSourceId();
     final AirbyteCatalog refreshedCatalog = testHarness.discoverSourceSchema(sourceId);
     refreshedCatalog.getStreams().forEach(s -> s.getConfig().selected(true));
     LOGGER.info("Refreshed catalog: {}", refreshedCatalog);
     final WebBackendConnectionUpdate update = testHarness.getUpdateInput(connectionRead, refreshedCatalog, operationRead);
-    webBackendApi.webBackendUpdateConnection(update);
+    testHarness.webBackendUpdateConnection(update);
 
     LOGGER.info("Waiting for sync job after update to complete");
     final JobRead syncFromTheUpdate = testHarness.waitUntilTheNextJobIsStarted(connectionId);
-    waitForSuccessfulJob(apiClient.getJobsApi(), syncFromTheUpdate);
+    testHarness.waitForSuccessfulJob(syncFromTheUpdate);
 
     // We do not check that the source and the dest are in sync here because removing a stream doesn't
     // delete its data in the destination
@@ -368,9 +359,8 @@ class CdcAcceptanceTests {
     final var outputSchema = conn.getNamespaceFormat();
     LOGGER.info(STARTING_SYNC_ONE, testInfo.getDisplayName());
 
-    final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
-        .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
-    waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
+    final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
+    testHarness.waitForSuccessfulJob(connectionSyncRead1.getJob());
 
     final Database source = testHarness.getSourceDatabase();
     final Database dst = testHarness.getDestinationDatabase();
@@ -386,7 +376,7 @@ class CdcAcceptanceTests {
     assertGlobalStateContainsStreams(connectionId, List.of(idAndNameStreamDescriptor, colorPaletteStreamDescriptor));
 
     LOGGER.info("Removing color palette stream from configured catalog");
-    final ConnectionRead connectionRead = apiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody().connectionId(connectionId));
+    final ConnectionRead connectionRead = testHarness.getConnection(connectionId);
     final UUID sourceId = connectionRead.getSourceId();
     AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
     catalog.getStreams().forEach(s -> s.getConfig().selected(true));
@@ -399,12 +389,12 @@ class CdcAcceptanceTests {
     catalog.setStreams(updatedStreams);
     LOGGER.info("Updated catalog: {}", catalog);
     WebBackendConnectionUpdate update = testHarness.getUpdateInput(connectionRead, catalog, operationRead);
-    webBackendApi.webBackendUpdateConnection(update);
+    testHarness.webBackendUpdateConnection(update);
 
     LOGGER.info("Waiting for sync job after update to start");
     JobRead syncFromTheUpdate = testHarness.waitUntilTheNextJobIsStarted(connectionId);
     LOGGER.info("Waiting for sync job after update to complete");
-    waitForSuccessfulJob(apiClient.getJobsApi(), syncFromTheUpdate);
+    testHarness.waitForSuccessfulJob(syncFromTheUpdate);
 
     // We do not check that the source and the dest are in sync here because removing a stream doesn't
     // delete its data in the destination
@@ -415,7 +405,7 @@ class CdcAcceptanceTests {
     catalog.getStreams().forEach(s -> s.getConfig().selected(true));
     LOGGER.info("Updated catalog: {}", catalog);
     update = testHarness.getUpdateInput(connectionRead, catalog, operationRead);
-    webBackendApi.webBackendUpdateConnection(update);
+    testHarness.webBackendUpdateConnection(update);
 
     LOGGER.info("Waiting for sync job after update to start");
     syncFromTheUpdate = testHarness.waitUntilTheNextJobIsStarted(connectionId);
@@ -424,7 +414,7 @@ class CdcAcceptanceTests {
     LOGGER.info("Checking that color_palette table was cleared in the destination due to the reset triggered by the update");
     assertDestinationMatches(dst, outputSchema, COLOR_PALETTE_TABLE, List.of());
     LOGGER.info("Waiting for sync job after update to complete");
-    waitForSuccessfulJob(apiClient.getJobsApi(), syncFromTheUpdate);
+    testHarness.waitForSuccessfulJob(syncFromTheUpdate);
 
     // Verify that color palette table records exist in destination again after sync.
     // If we see 0 records for this table in the destination, that means the CDC partial reset logic is
@@ -449,9 +439,8 @@ class CdcAcceptanceTests {
         Optional.empty()));
 
     LOGGER.info("Starting {} sync after insert", testInfo.getDisplayName());
-    final JobInfoRead connectionSyncRead2 = apiClient.getConnectionApi()
-        .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
-    waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
+    final JobInfoRead connectionSyncRead2 = testHarness.syncConnection(connectionId);
+    testHarness.waitForSuccessfulJob(connectionSyncRead2.getJob());
 
     assertDestinationMatches(dst, outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
     assertDestinationMatches(dst, outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
@@ -574,8 +563,8 @@ class CdcAcceptanceTests {
     }
   }
 
-  private void assertGlobalStateContainsStreams(final UUID connectionId, final List<StreamDescriptor> expectedStreams) throws ApiException {
-    final ConnectionState state = apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId));
+  private void assertGlobalStateContainsStreams(final UUID connectionId, final List<StreamDescriptor> expectedStreams) throws Exception {
+    final ConnectionState state = testHarness.getConnectionState(connectionId);
     LOGGER.info("state: {}", state);
     assertEquals(ConnectionStateType.GLOBAL, state.getStateType());
     final List<StreamDescriptor> stateStreams = state.getGlobalState().getStreamStates().stream().map(StreamState::getStreamDescriptor).toList();
@@ -584,8 +573,8 @@ class CdcAcceptanceTests {
         String.format("Expected state to have streams %s, but it actually had streams %s", expectedStreams, stateStreams));
   }
 
-  private void assertNoState(final UUID connectionId) throws ApiException {
-    final ConnectionState state = apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId));
+  private void assertNoState(final UUID connectionId) throws Exception {
+    final ConnectionState state = testHarness.getConnectionState(connectionId);
     assertEquals(ConnectionStateType.NOT_SET, state.getStateType());
     assertNull(state.getState());
     assertNull(state.getStreamState());

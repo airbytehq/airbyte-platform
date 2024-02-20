@@ -22,11 +22,12 @@ const mockUseRbac = useRbac as unknown as jest.Mock;
 describe("useIntent", () => {
   it("maps intent to query", () => {
     mockUseRbac.mockClear();
-    renderHook(() => useIntent("__Mock_OrganizationReader", undefined));
+    renderHook(() => useIntent("__Mock_OrganizationReader", { organizationId: undefined }));
     expect(mockUseRbac).toHaveBeenCalledTimes(1);
     expect(mockUseRbac).toHaveBeenCalledWith({
       resourceType: "ORGANIZATION",
       role: "READER",
+      resourceId: undefined,
     });
   });
 
@@ -82,12 +83,10 @@ describe("useIntent", () => {
 
     // @TODO: if we have any instance-level intents, add checks here to exclude organizationId and workspaceId
 
-    processIntent("__Mock_OrganizationReader");
     processIntent("__Mock_OrganizationReader", { organizationId: "org" });
     // @ts-expect-error workspaceId is not valid for ListOrganizationREADERs
     processIntent("__Mock_OrganizationReader", { workspaceId: "workspace" });
 
-    processIntent("__Mock_WorkspaceReader");
     processIntent("__Mock_WorkspaceReader", { workspaceId: "workspace" });
     // @ts-expect-error workspaceId is not valid for ListWorkspaceREADERs
     processIntent("__Mock_WorkspaceReader", { organizationId: "organizationId" });

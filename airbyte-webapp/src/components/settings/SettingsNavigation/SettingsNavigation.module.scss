@@ -1,7 +1,9 @@
 @use "scss/colors";
+@use "scss/variables";
 
 .settingsNavigation {
-  min-width: 155px;
+  min-width: 165px;
+  max-width: 200px;
 
   &__blockTitle {
     text-transform: uppercase;
@@ -22,11 +24,21 @@
     line-height: 15px;
     color: colors.$grey-500;
     text-decoration: none;
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: variables.$spacing-md;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 
     &:hover {
       color: colors.$grey-500;
     }
+  }
+
+  &__linkIcon,
+  &__buttonIcon {
+    flex: 0 0 auto;
   }
 
   &__link--active {
@@ -50,6 +62,5 @@
     line-height: 13px;
     color: colors.$foreground;
     display: inline-block;
-    margin-left: 5px;
   }
 }
