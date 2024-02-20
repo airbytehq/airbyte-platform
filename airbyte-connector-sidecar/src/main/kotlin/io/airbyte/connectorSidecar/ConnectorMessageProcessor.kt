@@ -168,7 +168,7 @@ class ConnectorMessageProcessor(
       if (discoverSchemaInput.sourceId == null) null else UUID.fromString(discoverSchemaInput.sourceId),
     )
       .connectorVersion(
-        discoverSchemaInput.connectorVersion,
+        if (discoverSchemaInput.connectorVersion == null) "" else discoverSchemaInput.connectorVersion,
       )
       .configurationHash(
         discoverSchemaInput.configHash,
