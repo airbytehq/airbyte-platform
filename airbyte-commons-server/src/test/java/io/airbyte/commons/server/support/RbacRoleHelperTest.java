@@ -86,10 +86,13 @@ class RbacRoleHelperTest {
       expectedRoles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_EDITOR));
     }
     if (userMatchesTargetUser) {
-      when(mHeaderResolver.resolveUserAuthId(any())).thenReturn(AUTH_USER_ID);
+      when(mHeaderResolver.resolveAuthUserIds(any())).thenReturn(Set.of(AUTH_USER_ID, UUID.randomUUID().toString()));
 
       // expect roles to contain the SELF role
       expectedRoles.add(AuthRoleConstants.SELF);
+    } else {
+      // return two random auth user ids that do not match the auth user id, do not expect a SELF role
+      when(mHeaderResolver.resolveAuthUserIds(any())).thenReturn(Set.of(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
     }
     if (isInstanceAdmin) {
       when(mPermissionPersistence.isAuthUserInstanceAdmin(AUTH_USER_ID)).thenReturn(true);
@@ -155,7 +158,7 @@ class RbacRoleHelperTest {
     // now add target user auth id into the mix, at first NOT matching AUTH_USER_ID.
     // no new role should be added.
 
-    when(mHeaderResolver.resolveUserAuthId(any())).thenReturn(UUID.randomUUID().toString());
+    when(mHeaderResolver.resolveAuthUserIds(any())).thenReturn(Set.of(UUID.randomUUID().toString()));
 
     actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
     Assertions.assertEquals(expectedRoles, actualRoles);
@@ -163,7 +166,7 @@ class RbacRoleHelperTest {
     // now make target user auth id match AUTH_USER_ID.
     // expect SELF role to be added.
 
-    when(mHeaderResolver.resolveUserAuthId(any())).thenReturn(AUTH_USER_ID);
+    when(mHeaderResolver.resolveAuthUserIds(any())).thenReturn(Set.of(AUTH_USER_ID));
 
     actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
     expectedRoles.add(AuthRoleConstants.SELF);

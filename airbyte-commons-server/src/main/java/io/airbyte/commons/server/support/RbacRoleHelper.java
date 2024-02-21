@@ -43,7 +43,7 @@ public class RbacRoleHelper {
 
     final List<UUID> workspaceIds = headerResolver.resolveWorkspace(headerMap);
     final List<UUID> organizationIds = headerResolver.resolveOrganization(headerMap);
-    final String targetAuthUserId = headerResolver.resolveUserAuthId(headerMap);
+    final Set<String> targetAuthUserIds = headerResolver.resolveAuthUserIds(headerMap);
 
     final Set<String> roles = new HashSet<>();
 
@@ -53,7 +53,7 @@ public class RbacRoleHelper {
     if (organizationIds != null && !organizationIds.isEmpty()) {
       roles.addAll(getOrganizationAuthRoles(authUserId, organizationIds));
     }
-    if (targetAuthUserId != null && targetAuthUserId.equals(authUserId)) {
+    if (targetAuthUserIds != null && targetAuthUserIds.contains(authUserId)) {
       roles.add(AuthRoleConstants.SELF);
     }
     try {

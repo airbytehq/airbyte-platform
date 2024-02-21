@@ -37,9 +37,11 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 
@@ -178,17 +180,18 @@ public class AuthenticationHeaderResolver {
     }
   }
 
-  public String resolveUserAuthId(final Map<String, String> properties) {
+  public Set<String> resolveAuthUserIds(final Map<String, String> properties) {
     log.debug("properties: {}", properties);
     try {
       if (properties.containsKey(EXTERNAL_AUTH_ID_HEADER)) {
-        return properties.get(EXTERNAL_AUTH_ID_HEADER);
+        final String authUserId = properties.get(EXTERNAL_AUTH_ID_HEADER);
+        return Set.of(authUserId);
       } else if (properties.containsKey(AIRBYTE_USER_ID_HEADER)) {
-        return resolveUserId(properties.get(AIRBYTE_USER_ID_HEADER));
+        return resolveAirbyteUserIdToAuthUserIds(properties.get(AIRBYTE_USER_ID_HEADER));
       } else if (properties.containsKey(CREATOR_USER_ID_HEADER)) {
-        return resolveUserId(properties.get(CREATOR_USER_ID_HEADER));
+        return resolveAirbyteUserIdToAuthUserIds(properties.get(CREATOR_USER_ID_HEADER));
       } else if (properties.containsKey(EMAIL_HEADER)) {
-        return resolveEmail(properties.get(EMAIL_HEADER));
+        return resolveEmailToAuthUserIds(properties.get(EMAIL_HEADER));
       } else {
         log.debug("Request does not contain any headers that resolve to a user ID.");
         return null;
@@ -199,23 +202,24 @@ public class AuthenticationHeaderResolver {
     }
   }
 
-  private String resolveUserId(final String userId) throws IOException {
-    final Optional<User> user = userPersistence.getUser(UUID.fromString(userId));
+  private Set<String> resolveAirbyteUserIdToAuthUserIds(final String airbyteUserId) throws IOException {
+    final List<String> authUserIds = userPersistence.listAuthUserIdsForUser(UUID.fromString(airbyteUserId));
 
-    if (user.isEmpty()) {
-      log.debug("Could not find a user database record for userId {}.", userId);
-      return null;
+    if (authUserIds.isEmpty()) {
+      throw new IllegalArgumentException(String.format("Could not find any authUserIds for userId %s", airbyteUserId));
     }
-    return user.get().getAuthUserId();
+
+    return new HashSet<>(authUserIds);
   }
 
-  private String resolveEmail(final String email) throws IOException {
-    // assumes Cloud is using Google Identity Platform
+  // TODO remove email-based resolution after Firebase invitations
+  // are replaced, flawed because email is not unique
+  private Set<String> resolveEmailToAuthUserIds(final String email) throws IOException {
     final Optional<User> user = userPersistence.getUserByEmail(email);
     if (user.isEmpty()) {
       throw new IllegalArgumentException(String.format("Could not find a user database record for email %s", email));
     }
-    return user.get().getAuthUserId();
+    return Set.of(user.get().getAuthUserId());
   }
 
   private UUID resolveWorkspaceIdFromPermissionHeader(final Map<String, String> properties) throws ConfigNotFoundException, IOException {
