@@ -14,7 +14,9 @@ package io.airbyte.featureflag
  * This is a permanent flag and would implement the [Permanent] type once converted from an environment-variable.
  */
 object LogConnectorMessages : EnvVar(envVar = "LOG_CONNECTOR_MESSAGES")
+
 object AutoDetectSchema : EnvVar(envVar = "AUTO_DETECT_SCHEMA")
+
 object NeedStateValidation : EnvVar(envVar = "NEED_STATE_VALIDATION")
 
 object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValidationLimit", default = false)

@@ -93,8 +93,10 @@ internal class ScopedConfigurationServiceDataImplTest {
     every {
       scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
         "key",
-        EntityConfigResourceType.actor_definition, resourceId,
-        EntityConfigScopeType.workspace, scopeId,
+        EntityConfigResourceType.actor_definition,
+        resourceId,
+        EntityConfigScopeType.workspace,
+        scopeId,
       )
     } returns config
 
@@ -149,8 +151,10 @@ internal class ScopedConfigurationServiceDataImplTest {
     every {
       scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
         configKey.key,
-        EntityConfigResourceType.actor_definition, resourceId,
-        EntityConfigScopeType.workspace, scopeId,
+        EntityConfigResourceType.actor_definition,
+        resourceId,
+        EntityConfigScopeType.workspace,
+        scopeId,
       )
     } returns config
 
@@ -225,16 +229,20 @@ internal class ScopedConfigurationServiceDataImplTest {
     every {
       scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
         configKey.key,
-        EntityConfigResourceType.actor_definition, resourceId,
-        EntityConfigScopeType.workspace, workspaceId,
+        EntityConfigResourceType.actor_definition,
+        resourceId,
+        EntityConfigScopeType.workspace,
+        workspaceId,
       )
     } returns null
 
     every {
       scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
         configKey.key,
-        EntityConfigResourceType.actor_definition, resourceId,
-        EntityConfigScopeType.organization, organizationId,
+        EntityConfigResourceType.actor_definition,
+        resourceId,
+        EntityConfigScopeType.organization,
+        organizationId,
       )
     } returns config
 
@@ -553,8 +561,10 @@ internal class ScopedConfigurationServiceDataImplTest {
     every {
       scopedConfigurationRepository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeIdInList(
         "key",
-        ConfigResourceType.actor_definition, resourceId,
-        ConfigScopeType.workspace, listOf(config.scopeId, config2.scopeId),
+        ConfigResourceType.actor_definition,
+        resourceId,
+        ConfigScopeType.workspace,
+        listOf(config.scopeId, config2.scopeId),
       )
     } returns listOf(config, config2)
 

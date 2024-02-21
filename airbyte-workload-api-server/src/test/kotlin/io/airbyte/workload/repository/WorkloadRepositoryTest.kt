@@ -29,6 +29,7 @@ import javax.sql.DataSource
 @MicronautTest
 internal class WorkloadRepositoryTest {
   val defaultDeadline = OffsetDateTime.now()
+
   companion object {
     private lateinit var context: ApplicationContext
     lateinit var workloadRepo: WorkloadRepository
