@@ -297,6 +297,7 @@ class JobTrackerTest {
         .put(CONNECTOR_SOURCE_DEFINITION_ID_KEY, UUID1)
         .put(CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY, CONNECTOR_REPOSITORY)
         .put(CONNECTOR_SOURCE_VERSION_KEY, CONNECTOR_VERSION)
+        .put(WORKLOAD_ENABLED, true)
         .build();
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -310,6 +311,8 @@ class JobTrackerTest {
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID)).thenReturn(sourceVersion);
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
+    when(featureFlagClient.boolVariation(any(), any())).thenReturn(true);
+
     assertDiscoverCorrectMessageForEachState(
         (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, WORKSPACE_ID, SOURCE_ID, jobState, output),
         metadata,

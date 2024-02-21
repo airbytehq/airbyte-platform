@@ -57,7 +57,6 @@ class ConnectorWatcher(
     val discoverCatalogInput = input.discoverCatalogInput
     val workloadId = input.workloadId
     val integrationLauncherConfig = input.integrationLauncherConfig
-
     try {
       val stopwatch: Stopwatch = Stopwatch.createStarted()
       while (!areNeededFilesPresent()) {
@@ -69,21 +68,17 @@ class ConnectorWatcher(
           return
         }
       }
-
       val outputIS =
         if (Files.exists(Path.of(JOB_OUTPUT_FILENAME))) {
           Files.newInputStream(Path.of(JOB_OUTPUT_FILENAME))
         } else {
           InputStream.nullInputStream()
         }
-
       val exitCode = readFile(EXIT_CODE_FILE).trim().toInt()
-
       val streamFactory: AirbyteStreamFactory = getStreamFactory(integrationLauncherConfig)
-
       val connectorOutput: ConnectorJobOutput =
         when (input.operationType) {
-          SidecarInput.OperationType.CHECK ->
+          SidecarInput.OperationType.CHECK -> {
             connectorMessageProcessor.run(
               outputIS,
               streamFactory,
@@ -93,8 +88,9 @@ class ConnectorWatcher(
               exitCode,
               SidecarInput.OperationType.CHECK,
             )
+          }
 
-          SidecarInput.OperationType.DISCOVER ->
+          SidecarInput.OperationType.DISCOVER -> {
             connectorMessageProcessor.run(
               outputIS,
               streamFactory,
@@ -104,17 +100,15 @@ class ConnectorWatcher(
               exitCode,
               SidecarInput.OperationType.DISCOVER,
             )
+          }
         }
-
       jobOutputDocStore.write(workloadId, connectorOutput)
-
-      if (connectorOutput.checkConnection.status == StandardCheckConnectionOutput.Status.SUCCEEDED) {
+      if (connectorOutput.checkConnection == null || connectorOutput.checkConnection.status == StandardCheckConnectionOutput.Status.SUCCEEDED) {
         workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
       } else {
         failWorkload(workloadId, null)
       }
     } catch (e: Exception) {
-      logger.error { e }
       val output = getFailedOutput(checkConnectionConfiguration, e)
 
       jobOutputDocStore.write(workloadId, output)

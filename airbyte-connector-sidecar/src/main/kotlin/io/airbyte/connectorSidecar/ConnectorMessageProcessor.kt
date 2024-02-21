@@ -24,12 +24,15 @@ import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.helper.FailureHelper.ConnectorCommand
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.models.SidecarInput.OperationType
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.io.IOException
 import java.io.InputStream
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Collectors
+
+private val logger = KotlinLogging.logger {}
 
 @Singleton
 class ConnectorMessageProcessor(
@@ -59,9 +62,7 @@ class ConnectorMessageProcessor(
 
     try {
       val jobOutput: ConnectorJobOutput = createBaseOutput(operationType)
-
       val messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>> = getMessagesByType(inputStream, streamFactory)
-
       val result =
         when (operationType) {
           OperationType.CHECK -> getConnectionStatus(messagesByType)
@@ -73,14 +74,11 @@ class ConnectorMessageProcessor(
           OperationType.CHECK -> input.checkInput!!.connectionConfiguration
           OperationType.DISCOVER -> input.discoveryInput!!.connectionConfiguration
         }
-
       updateConfigFromControlMessagePerMessageType(operationType, input, messagesByType, inputConfig, jobOutput)
-
       val failureReason = getJobFailureReasonFromMessages(ConnectorJobOutput.OutputType.CHECK_CONNECTION, messagesByType)
       failureReason.ifPresent { failureReason: FailureReason? -> jobOutput.failureReason = failureReason }
 
       setOutput(operationType, result, jobOutput, failureReason, input)
-
       return jobOutput
     } catch (e: IOException) {
       val errorMessage: String = String.format("Lost connection to the connector")
@@ -148,10 +146,10 @@ class ConnectorMessageProcessor(
 
       OperationType.DISCOVER ->
         if (result.catalog != null && input.discoveryInput != null) {
-          val result =
+          val apiResult =
             sourceApi
               .writeDiscoverCatalogResult(buildSourceDiscoverSchemaWriteRequestBody(input.discoveryInput, result.catalog))
-          jobOutput.discoverCatalogId = result.catalogId
+          jobOutput.discoverCatalogId = apiResult.catalogId
         } else if (failureReason.isEmpty) {
           throw WorkerException("Error checking connection status: no status nor failure reason were outputted")
         }

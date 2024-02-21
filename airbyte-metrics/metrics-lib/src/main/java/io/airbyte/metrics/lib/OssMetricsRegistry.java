@@ -410,6 +410,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   SIDECAR_CHECK(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
       "sidecar_check",
+      "Exit of the connetor sidecar"),
+
+  CATALOG_DISCOVERY(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
+      "catalog_discover",
       "Exit of the connetor sidecar");
 
   private final MetricEmittingApp application;

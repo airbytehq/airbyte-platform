@@ -54,6 +54,9 @@ open class BuildInputStage(
   }
 
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
+    logger.error { input.msg }
+    logger.error { input.msg.workloadInput }
+    logger.error { input.msg.workloadType }
     val built = buildPayload(input.msg.workloadInput, input.msg.workloadType)
 
     return input.apply {

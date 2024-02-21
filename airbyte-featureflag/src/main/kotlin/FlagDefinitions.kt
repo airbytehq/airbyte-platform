@@ -185,3 +185,5 @@ object FailSyncOnInvalidChecksum : Temporary<Boolean>(key = "platform.fail-sync-
 object HydrateAggregatedStats : Temporary<Boolean>(key = "platform.hydrate-aggregated-stats", default = false)
 
 object BillingCronScopeChangeTimestamp : Permanent<String>(key = "platform.billing-cron-scope-change-timestamp", default = "1735711200")
+
+object UseWorkloadApiForDiscover : Temporary<Boolean>(key = "platform.use-workload-api-for-discover", default = false)
