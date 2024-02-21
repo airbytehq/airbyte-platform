@@ -50,14 +50,17 @@ public class ApplyDefinitionMetricsHelper {
    * @param outcome The outcome of the processing event.
    * @return A list of attributes for the event.
    */
-  public static MetricAttribute[] getMetricAttributes(final String dockerRepository, final DefinitionProcessingOutcome outcome) {
+  public static MetricAttribute[] getMetricAttributes(final String dockerRepository,
+                                                      final String dockerImageTag,
+                                                      final DefinitionProcessingOutcome outcome) {
     final List<MetricAttribute> metricAttributes = new ArrayList<>();
     metricAttributes.add(new MetricAttribute("status", outcome.getStatus()));
     metricAttributes.add(new MetricAttribute("outcome", outcome.toString()));
-    // Don't add the docker repository if the outcome is that version is unchanged -
+    // Don't add the docker repository or version if the outcome is that version is unchanged -
     // this blows up the number of unique metrics per hour and is not that useful
     if (!outcome.equals(DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED)) {
       metricAttributes.add(new MetricAttribute("docker_repository", dockerRepository));
+      metricAttributes.add(new MetricAttribute("docker_image_tag", dockerImageTag));
     }
     return metricAttributes.toArray(metricAttributes.toArray(new MetricAttribute[0]));
   }

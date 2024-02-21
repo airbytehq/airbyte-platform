@@ -133,7 +133,8 @@ public class ApplyDefinitionsHelper {
       breakingChangesForDef = ConnectorRegistryConverters.toActorDefinitionBreakingChanges(newDef);
     } catch (final IllegalArgumentException e) {
       LOGGER.error("Failed to convert source definition: {}", newDef.getName(), e);
-      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingFailureReason.DEFINITION_CONVERSION_FAILED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), newDef.getDockerImageTag(),
+          DefinitionProcessingFailureReason.DEFINITION_CONVERSION_FAILED);
       return;
     }
 
@@ -142,7 +143,7 @@ public class ApplyDefinitionsHelper {
       LOGGER.info("Adding new connector {}:{}", newDef.getDockerRepository(), newDef.getDockerImageTag());
       sourceService.writeConnectorMetadata(newSourceDef, newADV, breakingChangesForDef);
       newConnectorCount++;
-      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), newDef.getDockerImageTag(), DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED);
       return;
     }
 
@@ -156,10 +157,10 @@ public class ApplyDefinitionsHelper {
           newADV.getDockerImageTag());
       sourceService.writeConnectorMetadata(newSourceDef, newADV, breakingChangesForDef);
       changedConnectorCount++;
-      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), newDef.getDockerImageTag(), DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED);
     } else {
       sourceService.updateStandardSourceDefinition(newSourceDef);
-      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), newDef.getDockerImageTag(), DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED);
     }
   }
 
@@ -178,7 +179,8 @@ public class ApplyDefinitionsHelper {
       breakingChangesForDef = ConnectorRegistryConverters.toActorDefinitionBreakingChanges(newDef);
     } catch (final IllegalArgumentException e) {
       LOGGER.error("Failed to convert source definition: {}", newDef.getName(), e);
-      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingFailureReason.DEFINITION_CONVERSION_FAILED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), newDef.getDockerImageTag(),
+          DefinitionProcessingFailureReason.DEFINITION_CONVERSION_FAILED);
       return;
     }
 
@@ -187,7 +189,7 @@ public class ApplyDefinitionsHelper {
       LOGGER.info("Adding new connector {}:{}", newDef.getDockerRepository(), newDef.getDockerImageTag());
       destinationService.writeConnectorMetadata(newDestinationDef, newADV, breakingChangesForDef);
       newConnectorCount++;
-      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), newDef.getDockerImageTag(), DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED);
       return;
     }
 
@@ -201,10 +203,10 @@ public class ApplyDefinitionsHelper {
           newADV.getDockerImageTag());
       destinationService.writeConnectorMetadata(newDestinationDef, newADV, breakingChangesForDef);
       changedConnectorCount++;
-      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), newDef.getDockerImageTag(), DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED);
     } else {
       destinationService.updateStandardDestinationDefinition(newDestinationDef);
-      trackDefinitionProcessed(newDef.getDockerRepository(), DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED);
+      trackDefinitionProcessed(newDef.getDockerRepository(), newDef.getDockerImageTag(), DefinitionProcessingSuccessOutcome.VERSION_UNCHANGED);
     }
 
   }
@@ -231,7 +233,7 @@ public class ApplyDefinitionsHelper {
       if (!isSupported) {
         LOGGER.warn("Destination {} {} has an incompatible protocol version ({})... ignoring.",
             def.getDestinationDefinitionId(), def.getName(), def.getSpec().getProtocolVersion());
-        trackDefinitionProcessed(def.getDockerRepository(), DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION);
+        trackDefinitionProcessed(def.getDockerRepository(), def.getDockerImageTag(), DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION);
       }
       return isSupported;
     }).toList();
@@ -248,7 +250,7 @@ public class ApplyDefinitionsHelper {
       if (!isSupported) {
         LOGGER.warn("Source {} {} has an incompatible protocol version ({})... ignoring.",
             def.getSourceDefinitionId(), def.getName(), def.getSpec().getProtocolVersion());
-        trackDefinitionProcessed(def.getDockerRepository(), DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION);
+        trackDefinitionProcessed(def.getDockerRepository(), def.getDockerImageTag(), DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION);
       }
       return isSupported;
     }).toList();
@@ -258,8 +260,8 @@ public class ApplyDefinitionsHelper {
     return protocolVersionRange.isSupported(AirbyteProtocolVersion.getWithDefault(protocolVersion));
   }
 
-  private void trackDefinitionProcessed(final String dockerRepository, final DefinitionProcessingOutcome outcome) {
-    final MetricAttribute[] attributes = ApplyDefinitionMetricsHelper.getMetricAttributes(dockerRepository, outcome);
+  private void trackDefinitionProcessed(final String dockerRepository, final String dockerImageTag, final DefinitionProcessingOutcome outcome) {
+    final MetricAttribute[] attributes = ApplyDefinitionMetricsHelper.getMetricAttributes(dockerRepository, dockerImageTag, outcome);
     metricClient.count(CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, attributes);
   }
 
