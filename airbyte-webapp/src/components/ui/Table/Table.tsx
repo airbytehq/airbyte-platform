@@ -144,8 +144,9 @@ export const Table = <T,>({
           const customSortToggle = () => {
             const currentSorting = table.getState().sorting;
 
-            // if we are sorting by another column, or if we are sorting by the same column but desc, toggle sorting to asc
+            // if table is unsorted, or if we are sorting by another column, or if we are sorting by the same column but desc, toggle sorting to asc
             if (
+              currentSorting === undefined ||
               currentSorting.some((sort) => sort.id === header.column.id && sort.desc === true) ||
               !currentSorting.some((sort) => sort.id === header.column.id)
             ) {
