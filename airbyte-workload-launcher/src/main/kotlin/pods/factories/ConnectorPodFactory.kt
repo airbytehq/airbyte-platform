@@ -105,6 +105,8 @@ class ConnectorPodFactory(
               echo "${'$'}i - waiting for config file transfer to complete..."
               # check if the upload-complete file exists, if so exit without error
               if [ -f "%s/%s" ]; then
+                # Wait 50ms for the incoming kubectl cp call to cleanly exit
+                sleep .05
                 exit 0
               fi
               i=${'$'}((i+1))
