@@ -103,11 +103,7 @@ class ConnectorWatcher(
           }
         }
       jobOutputDocStore.write(workloadId, connectorOutput)
-      if (connectorOutput.checkConnection == null || connectorOutput.checkConnection.status == StandardCheckConnectionOutput.Status.SUCCEEDED) {
-        workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
-      } else {
-        failWorkload(workloadId, null)
-      }
+      workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
     } catch (e: Exception) {
       val output = getFailedOutput(checkConnectionConfiguration, e)
 

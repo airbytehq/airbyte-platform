@@ -130,14 +130,14 @@ class ConnectorWatchTest {
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
 
-    every { workloadApi.workloadFailure(WorkloadFailureRequest(workloadId)) } returns Unit
+    every { workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Unit
 
     connectorWatcher.run()
 
     verifyOrder {
       connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType))
       jobOutputDocStore.write(workloadId, output)
-      workloadApi.workloadFailure(WorkloadFailureRequest(workloadId))
+      workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
       connectorWatcher.exitProperly()
     }
   }
