@@ -94,13 +94,6 @@ public class UserPersistence {
             .set(USER.UPDATED_AT, timestamp)
             .where(USER.ID.eq(user.getUserId()))
             .execute();
-        ctx.update(AUTH_USER)
-            .set(AUTH_USER.AUTH_USER_ID, user.getAuthUserId())
-            .set(AUTH_USER.AUTH_PROVIDER, user.getAuthProvider() == null ? null
-                : Enums.toEnum(user.getAuthProvider().value(), AuthProvider.class).orElseThrow())
-            .set(AUTH_USER.UPDATED_AT, timestamp)
-            .where(AUTH_USER.USER_ID.eq(user.getUserId()))
-            .execute();
       } else {
         // TODO: authUserId and authProvider will be removed from user table once we migrate to auth_user
         // table https://github.com/airbytehq/airbyte-platform-internal/issues/10641

@@ -159,11 +159,10 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
       final var user1 = MockData.users().getFirst();
       // set auth_user_id to a known value
       final var expectedAuthUserId = UUID.randomUUID().toString();
-      user1.setAuthUserId(expectedAuthUserId);
-      userPersistence.writeUser(user1);
+      userPersistence.writeAuthUser(user1.getUserId(), expectedAuthUserId, AuthProvider.GOOGLE_IDENTITY_PLATFORM);
 
       final Set<String> actualAuthUserIds = new HashSet<>(userPersistence.listAuthUserIdsForUser(user1.getUserId()));
-      Assertions.assertEquals(Set.of(expectedAuthUserId), actualAuthUserIds);
+      Assertions.assertEquals(Set.of(expectedAuthUserId, user1.getAuthUserId()), actualAuthUserIds);
     }
 
   }
