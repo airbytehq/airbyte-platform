@@ -3,7 +3,6 @@ package authorization
 import io.airbyte.api.model.generated.PermissionCheckRead
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.server.problems.ForbiddenProblem
-import io.airbyte.api.server.services.UserService
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
 import io.airbyte.commons.server.support.CurrentUserService
@@ -17,10 +16,9 @@ import java.util.UUID
 
 class AirbyteApiAuthorizationHelperTest {
   private val authenticationHeaderResolver = mockk<AuthenticationHeaderResolver>()
-  private val userService = mockk<UserService>()
-  private val permissionHandler = mockk<PermissionHandler>()
-  private val airbyteApiAuthorizationHelper = AirbyteApiAuthorizationHelper(authenticationHeaderResolver, permissionHandler)
   private val currentUserService = mockk<CurrentUserService>()
+  private val permissionHandler = mockk<PermissionHandler>()
+  private val airbyteApiAuthorizationHelper = AirbyteApiAuthorizationHelper(authenticationHeaderResolver, permissionHandler, currentUserService)
 
   private val userId = UUID.randomUUID()
   private val workspaceId = UUID.randomUUID()
@@ -32,63 +30,83 @@ class AirbyteApiAuthorizationHelperTest {
   }
 
   @Test
-  fun `test checkPermissions for instance admin`() {
+  fun `test checkWorkspacePermissions for instance admin`() {
     every { permissionHandler.isUserInstanceAdmin(any()) } returns true
     // shouldn't matter because we're an instance admin.
     every { permissionHandler.permissionsCheckMultipleWorkspaces(any()) } returns
       PermissionCheckRead().message("no").status(PermissionCheckRead.StatusEnum.FAILED)
     val ids = listOf(UUID.randomUUID().toString())
     val scope = Scope.WORKSPACE
-    val permissionType = PermissionType.WORKSPACE_EDITOR
+    val permissionTypes = setOf(PermissionType.WORKSPACE_EDITOR, PermissionType.ORGANIZATION_EDITOR)
     assertDoesNotThrow {
-      airbyteApiAuthorizationHelper.checkWorkspacePermissions(ids, scope, userId, permissionType)
+      airbyteApiAuthorizationHelper.checkWorkspacePermissions(ids, scope, userId, permissionTypes)
     }
   }
 
   @Test
-  fun `test checkPermissions with empty or null workspace Ids`() {
+  fun `test checkWorkspacePermissions with empty workspace Ids`() {
     every { permissionHandler.isUserInstanceAdmin(any()) } returns false
-    every { authenticationHeaderResolver.resolveWorkspace(any()) } returns null
-    every { permissionHandler.permissionsCheckMultipleWorkspaces(any()) } returns
-      PermissionCheckRead().message("yes").status(PermissionCheckRead.StatusEnum.SUCCEEDED)
+
+    val permissionTypes = setOf(PermissionType.WORKSPACE_EDITOR, PermissionType.ORGANIZATION_EDITOR)
+
+    for (scope in Scope.entries) {
+      if (scope == Scope.WORKSPACES) {
+        // Allow empty ids for WORKSPACES scope specifically
+        assertDoesNotThrow {
+          airbyteApiAuthorizationHelper.checkWorkspacePermissions(emptyList(), scope, userId, permissionTypes)
+        }
+      } else {
+        // Disallow empty ids for other scopes
+        assertThrows<ForbiddenProblem> {
+          airbyteApiAuthorizationHelper.checkWorkspacePermissions(emptyList(), scope, userId, permissionTypes)
+        }
+      }
+    }
+  }
+
+  @Test
+  fun `test checkWorkspacePermissions with null workspace Ids`() {
+    every { permissionHandler.isUserInstanceAdmin(any()) } returns false
+
     val ids = listOf(UUID.randomUUID().toString())
-    val permissionType = PermissionType.WORKSPACE_EDITOR
+    val permissionTypes = setOf(PermissionType.WORKSPACE_EDITOR, PermissionType.ORGANIZATION_EDITOR)
+
     // can't resolve workspaces
-    assertThrows<ForbiddenProblem> {
-      airbyteApiAuthorizationHelper.checkWorkspacePermissions(ids, Scope.WORKSPACE, userId, permissionType)
-    }
+    every { authenticationHeaderResolver.resolveWorkspace(any()) } returns null
 
-    // No need to resolve workspaces because we have none to resolve for WORKSPACES scope.
-    assertDoesNotThrow {
-      airbyteApiAuthorizationHelper.checkWorkspacePermissions(emptyList(), Scope.WORKSPACES, userId, permissionType)
-    }
-
-    // Even if everything is filled out, if permission check fails, we throw.
-    every { permissionHandler.permissionsCheckMultipleWorkspaces(any()) } returns
-      PermissionCheckRead().message("no").status(PermissionCheckRead.StatusEnum.FAILED)
     assertThrows<ForbiddenProblem> {
-      airbyteApiAuthorizationHelper.checkWorkspacePermissions(ids, Scope.WORKSPACE, userId, permissionType)
+      airbyteApiAuthorizationHelper.checkWorkspacePermissions(ids, Scope.WORKSPACE, userId, permissionTypes)
     }
   }
 
   @Test
-  fun `test checkPermissions for permission check`() {
+  fun `test checkWorkspacePermissions for passing and failing permission checks`() {
     every { permissionHandler.isUserInstanceAdmin(any()) } returns false
-    every { permissionHandler.permissionsCheckMultipleWorkspaces(any()) } returns
-      PermissionCheckRead().message("yes").status(PermissionCheckRead.StatusEnum.SUCCEEDED)
+
     val ids = listOf(UUID.randomUUID().toString())
     val scope = Scope.WORKSPACES
-    val permissionType = PermissionType.WORKSPACE_EDITOR
-    // If everything goes right and we have the right permissions
+    val permissionTypes = setOf(PermissionType.WORKSPACE_EDITOR, PermissionType.ORGANIZATION_EDITOR)
+
+    // as long as we have one permission type that passes, we pass the overall check
+    every { permissionHandler.permissionsCheckMultipleWorkspaces(any()) } returnsMany
+      listOf(
+        PermissionCheckRead().message("no").status(PermissionCheckRead.StatusEnum.FAILED),
+        PermissionCheckRead().message("yes").status(PermissionCheckRead.StatusEnum.SUCCEEDED),
+      )
+
     assertDoesNotThrow {
-      airbyteApiAuthorizationHelper.checkWorkspacePermissions(ids, scope, userId, permissionType)
+      airbyteApiAuthorizationHelper.checkWorkspacePermissions(ids, scope, userId, permissionTypes)
     }
 
-    // We do not have the right permissions
-    every { permissionHandler.permissionsCheckMultipleWorkspaces(any()) } returns
-      PermissionCheckRead().message("no").status(PermissionCheckRead.StatusEnum.FAILED)
+    // if no permission types pass, we fail the overall check
+    every { permissionHandler.permissionsCheckMultipleWorkspaces(any()) } returnsMany
+      listOf(
+        PermissionCheckRead().message("no").status(PermissionCheckRead.StatusEnum.FAILED),
+        PermissionCheckRead().message("no again").status(PermissionCheckRead.StatusEnum.FAILED),
+      )
+
     assertThrows<ForbiddenProblem> {
-      airbyteApiAuthorizationHelper.checkWorkspacePermissions(ids, scope, userId, permissionType)
+      airbyteApiAuthorizationHelper.checkWorkspacePermissions(ids, scope, userId, permissionTypes)
     }
   }
 }

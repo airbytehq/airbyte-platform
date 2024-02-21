@@ -12,6 +12,7 @@ import io.airbyte.commons.server.support.AuthenticationHttpHeaders.DESTINATION_I
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_IDS_HEADER
+import io.airbyte.commons.server.support.CurrentUserService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -26,6 +27,7 @@ private val logger = KotlinLogging.logger {}
 class AirbyteApiAuthorizationHelper(
   private val authorizationHeaderResolver: AuthenticationHeaderResolver,
   private val permissionHandler: PermissionHandler,
+  private val currentUserService: CurrentUserService,
 ) {
   private fun resolveIdsToWorkspaceIds(
     ids: List<String>,
@@ -56,12 +58,30 @@ class AirbyteApiAuthorizationHelper(
   }
 
   /**
-   * Given a list of resolved workspace Ids and a userInfo header, confirm user access by checking against the list of
-   * workspace permissions for the user.
+   * Given a scoped ID, confirm that the current user has the given permission type.
+   *
+   * @param id - The ID we are checking permissions for
+   * @param scope - The scope of the ID
+   * @param permissionTypes - the set of permissions needed to access the resource(s).
+   * If the user has any of the permissions, the check will pass.
+   *
+   * @throws ForbiddenProblem - If the user does not have the required permissions
+   */
+  fun checkWorkspacePermissions(
+    id: String,
+    scope: Scope,
+    permissionTypes: Set<PermissionType>,
+  ) {
+    checkWorkspacePermissions(listOf(id), scope, currentUserService.currentUser.userId, permissionTypes)
+  }
+
+  /**
+   * Given a list of scoped IDs and a user ID, confirm that the indicated user
+   * has the given permission type.
    *
    * @param ids - The Ids we are checking permissions for
    * @param scope - The scope of the Ids
-   * @param userInfo - The userInfo header
+   * @param userId - The ID of the user we are checking permissions for
    * @param permissionType - the permission needed to access the resource(s)
    *
    * @throws ForbiddenProblem - If the user does not have the required permissions
@@ -71,6 +91,46 @@ class AirbyteApiAuthorizationHelper(
     scope: Scope,
     userId: UUID,
     permissionType: PermissionType,
+  ) {
+    checkWorkspacePermissions(ids, scope, userId, setOf(permissionType))
+  }
+
+  /**
+   * Given a list of scoped IDs, confirm that the current user has the
+   * given workspace permission type.
+   *
+   * @param ids - The Ids we are checking permissions for
+   * @param scope - The scope of the Ids
+   * @param permissionTypes - the set of permissions needed to access the resource(s).
+   * If the user has any of the permissions, the check will pass.
+   *
+   * @throws ForbiddenProblem - If the user does not have the required permissions
+   */
+  fun checkWorkspacePermissions(
+    ids: List<String>,
+    scope: Scope,
+    permissionTypes: Set<PermissionType>,
+  ) {
+    checkWorkspacePermissions(ids, scope, currentUserService.currentUser.userId, permissionTypes)
+  }
+
+  /**
+   * Given a list of scoped IDs, confirm that the current user has the
+   * given workspace permission type.
+   *
+   * @param ids - The Ids we are checking permissions for
+   * @param scope - The scope of the Ids
+   * @param userId - The ID of the user we are checking permissions for
+   * @param permissionTypes - the set of permissions needed to access the resource(s).
+   * If the user has any of the permissions, the check will pass.
+   *
+   * @throws ForbiddenProblem - If the user does not have the required permissions
+   */
+  fun checkWorkspacePermissions(
+    ids: List<String>,
+    scope: Scope,
+    userId: UUID,
+    permissionTypes: Set<PermissionType>,
   ) {
     logger.debug { "Checking workspace permissions for $ids in scope [${scope.name}]." }
     if (ids.isEmpty() && scope != Scope.WORKSPACES) {
@@ -93,16 +153,29 @@ class AirbyteApiAuthorizationHelper(
       throw ForbiddenProblem("Unable to resolve to a workspace for $ids in scope [${scope.name}].")
     }
 
-    val request = PermissionsCheckMultipleWorkspacesRequest()
-    request.permissionType = permissionType
-    request.userId = userId
-    request.workspaceIds = resolvedWorkspaceIds
-
-    val permissionCheckRead = permissionHandler.permissionsCheckMultipleWorkspaces(request)
-
-    if (permissionCheckRead.status != PermissionCheckRead.StatusEnum.SUCCEEDED) {
+    if (!checkIfAnyPermissionGranted(resolvedWorkspaceIds, userId, permissionTypes)) {
       throw ForbiddenProblem("User does not have the required permissions to access the resource(s) $ids of type [${scope.name}].")
     }
+  }
+
+  private fun checkIfAnyPermissionGranted(
+    resolvedWorkspaceIds: List<UUID>,
+    userId: UUID,
+    permissionTypes: Set<PermissionType>,
+  ): Boolean {
+    for (permissionType in permissionTypes) {
+      val request = PermissionsCheckMultipleWorkspacesRequest()
+      request.permissionType = permissionType
+      request.userId = userId
+      request.workspaceIds = resolvedWorkspaceIds
+
+      val permissionCheckRead = permissionHandler.permissionsCheckMultipleWorkspaces(request)
+
+      if (permissionCheckRead.status == PermissionCheckRead.StatusEnum.SUCCEEDED) {
+        return true
+      }
+    }
+    return false
   }
 
   private fun buildPropertiesMapForConnection(id: String): Map<String, String> {
