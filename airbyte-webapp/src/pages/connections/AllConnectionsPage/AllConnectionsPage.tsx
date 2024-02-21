@@ -182,7 +182,7 @@ export const AllConnectionsPage: React.FC = () => {
               />
             }
           >
-            <Card noPadding>
+            <Card noPadding className={styles.connections}>
               {isConnectionsSummaryEnabled && (
                 <ConnectionsFilters
                   connections={connections}

@@ -3,6 +3,7 @@ import React from "react";
 import { Outlet } from "react-router-dom";
 
 import { LoadingPage } from "components";
+import { FlexContainer } from "components/ui/Flex";
 
 import { useCurrentWorkspace } from "core/api";
 import { useGetCloudWorkspaceAsync, useListCloudWorkspacesInfinite } from "core/api/cloud";
@@ -21,7 +22,7 @@ import styles from "./CloudMainView.module.scss";
 import { InsufficientPermissionsErrorBoundary } from "./InsufficientPermissionsErrorBoundary";
 import { WorkspaceStatusBanner } from "./WorkspaceStatusBanner";
 
-const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
+const CloudMainView: React.FC<React.PropsWithChildren> = (props) => {
   const workspace = useCurrentWorkspace();
   const cloudWorkspace = useGetCloudWorkspaceAsync(workspace.workspaceId);
 
@@ -39,24 +40,26 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const showExperimentBanner = isExperimentVariant && isTrial && user && isCorporateEmail(user.email);
 
   return (
-    <div className={classNames(styles.mainContainer)}>
+    <FlexContainer className={classNames(styles.wrapper)} direction="column" gap="none">
       <InsufficientPermissionsErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
-        <SideBar workspaceFetcher={useListCloudWorkspacesInfinite} bottomSlot={<CloudHelpDropdown />} />
-        <div className={styles.content}>
+        <div>
           {cloudWorkspace &&
             (showExperimentBanner ? (
               <SpeedyConnectionBanner />
             ) : (
               <WorkspaceStatusBanner cloudWorkspace={cloudWorkspace} />
             ))}
-          <div className={styles.dataBlock}>
+        </div>
+        <FlexContainer className={styles.mainViewContainer} gap="none">
+          <SideBar workspaceFetcher={useListCloudWorkspacesInfinite} bottomSlot={<CloudHelpDropdown />} />
+          <div className={styles.content}>
             <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
               <React.Suspense fallback={<LoadingPage />}>{props.children ?? <Outlet />}</React.Suspense>
             </ResourceNotFoundErrorBoundary>
           </div>
-        </div>
+        </FlexContainer>
       </InsufficientPermissionsErrorBoundary>
-    </div>
+    </FlexContainer>
   );
 };
 
