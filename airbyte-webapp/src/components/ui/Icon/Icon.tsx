@@ -124,6 +124,7 @@ import TargetIcon from "./icons/targetIcon.svg?react";
 import TicketIcon from "./icons/ticketIcon.svg?react";
 import TrashIcon from "./icons/trashIcon.svg?react";
 import UnlockIcon from "./icons/unlockIcon.svg?react";
+import UnsortedIcon from "./icons/unsorted.svg?react";
 import UserIcon from "./icons/userIcon.svg?react";
 import WarningFilledIcon from "./icons/warningFilledIcon.svg?react";
 import WarningOutlineIcon from "./icons/warningOutlineIcon.svg?react";
@@ -270,6 +271,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   ticket: TicketIcon,
   trash: TrashIcon,
   unlock: UnlockIcon,
+  unsorted: UnsortedIcon,
   user: UserIcon,
   warningFilled: WarningFilledIcon,
   warningOutline: WarningOutlineIcon,

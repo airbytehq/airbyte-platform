@@ -120,6 +120,7 @@ export type IconType =
   | "ticket"
   | "trash"
   | "unlock"
+  | "unsorted"
   | "user"
   | "warningFilled"
   | "warningOutline"

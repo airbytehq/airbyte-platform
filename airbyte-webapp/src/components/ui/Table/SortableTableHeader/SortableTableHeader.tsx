@@ -18,6 +18,6 @@ export const SortableTableHeader: React.FC<PropsWithChildren<SortableTableHeader
 }) => (
   <button className={styles.sortButton} onClick={onClick} type="button">
     {children}
-    <Icon className={styles.sortIcon} type={!isActive ? "chevronUpDown" : isAscending ? "chevronUp" : "chevronDown"} />
+    <Icon className={styles.sortIcon} type={!isActive ? "unsorted" : isAscending ? "chevronUp" : "chevronDown"} />
   </button>
 );
