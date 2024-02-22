@@ -168,6 +168,8 @@ object UseRuntimeSecretPersistence : Temporary<Boolean>(key = "platform.use-runt
 
 object UseWorkloadApi : Temporary<Boolean>(key = "platform.use-workload-api", default = false)
 
+object EmitStateStatsToSegment : Temporary<Boolean>(key = "platform.emit-state-stats-segment", default = true)
+
 object AddInitialCreditsForWorkspace : Temporary<Int>(key = "add-credits-at-workspace-creation-for-org", default = 0)
 
 object WorkloadApiRouting : Permanent<String>(key = "workload-api-routing", default = "workload_default")

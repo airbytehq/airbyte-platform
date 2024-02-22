@@ -1,7 +1,12 @@
 package io.airbyte.workers.internal.bookkeeping
 
+import com.google.common.hash.Hashing
+import io.airbyte.analytics.TrackingClient
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.EmitStateStatsToSegment
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
@@ -34,6 +39,8 @@ private data class SyncStatsCounters(
 @Named("parallelStreamStatsTracker")
 class ParallelStreamStatsTracker(
   private val metricClient: MetricClient,
+  private val trackingClient: TrackingClient,
+  private val featureFlagClient: FeatureFlagClient,
   @param:Parameter private val connectionId: UUID,
   @param:Parameter private val jobId: Long,
   @param:Parameter private val attemptNumber: Int,
@@ -186,14 +193,14 @@ class ParallelStreamStatsTracker(
     failOnInvalidChecksum: Boolean,
     includeStreamInLogs: Boolean = true,
   ) {
-    if (checksumValidationEnabled) {
-      val stats: AirbyteStateStats? =
-        when (origin) {
-          AirbyteMessageOrigin.SOURCE -> stateMessage.sourceStats
-          AirbyteMessageOrigin.DESTINATION -> stateMessage.destinationStats
-          else -> null
-        }
-      if (stats != null) {
+    val stats: AirbyteStateStats? =
+      when (origin) {
+        AirbyteMessageOrigin.SOURCE -> stateMessage.sourceStats
+        AirbyteMessageOrigin.DESTINATION -> stateMessage.destinationStats
+        else -> null
+      }
+    if (stats != null) {
+      if (checksumValidationEnabled) {
         val stateRecordCount = stats.recordCount
         if (stateRecordCount != expectedRecordCount) {
           val errorMessage =
@@ -239,6 +246,28 @@ class ParallelStreamStatsTracker(
           emitChecksumMetrics(CHECKSUM_OK)
         }
       }
+
+      if (origin == AirbyteMessageOrigin.SOURCE) {
+        trackStateCountMetrics(
+          AirbyteMessageOrigin.SOURCE.toString(),
+          stats.recordCount,
+          stateMessage,
+          checksumValidationEnabled,
+        )
+        trackStateCountMetrics(
+          AirbyteMessageOrigin.INTERNAL.toString(),
+          expectedRecordCount,
+          stateMessage,
+          checksumValidationEnabled,
+        )
+      } else {
+        trackStateCountMetrics(
+          AirbyteMessageOrigin.DESTINATION.toString(),
+          stats.recordCount,
+          stateMessage,
+          checksumValidationEnabled,
+        )
+      }
     }
   }
 
@@ -251,6 +280,48 @@ class ParallelStreamStatsTracker(
       MetricAttribute(MetricTags.JOB_ID, jobId.toString()),
       MetricAttribute(MetricTags.ATTEMPT_NUMBER, attemptNumber.toString()),
     )
+  }
+
+  private fun shouldEmitStateStatsToSegment(stateMessage: AirbyteStateMessage): Boolean {
+    val connectionContext = Connection(connectionId)
+    return featureFlagClient.boolVariation(EmitStateStatsToSegment, connectionContext) &&
+      (
+        stateMessage.type == AirbyteStateMessage.AirbyteStateType.STREAM ||
+          stateMessage.type == AirbyteStateMessage.AirbyteStateType.GLOBAL
+      )
+  }
+
+  private fun trackStateCountMetrics(
+    stateOrigin: String,
+    recordCount: Double,
+    stateMessage: AirbyteStateMessage,
+    checksumValidationEnabled: Boolean,
+  ) {
+    try {
+      if (!shouldEmitStateStatsToSegment(stateMessage)) {
+        return
+      }
+      val payload: MutableMap<String?, Any?> = HashMap()
+      payload["connection_id"] = connectionId.toString()
+      payload["job_id"] = jobId.toString()
+      payload["attempt_number"] = attemptNumber.toString()
+      payload["state_origin"] = stateOrigin
+      payload["record_count"] = recordCount.toString()
+      payload["valid_data"] = checksumValidationEnabled.toString()
+      payload["state_type"] = stateMessage.type.toString()
+      payload["state_hash"] = stateMessage.getStateHashCode(Hashing.murmur3_32_fixed()).toString()
+      if (stateMessage.type == AirbyteStateMessage.AirbyteStateType.STREAM) {
+        val nameNamespacePair = getNameNamespacePair(stateMessage)
+        payload["stream_namespace"] = nameNamespacePair.namespace
+        payload["stream_name"] = nameNamespacePair.name
+      } else {
+        payload["stream_namespace"] = null
+        payload["stream_name"] = ""
+      }
+      trackingClient.track(connectionId, "State Stats Metrics", payload)
+    } catch (e: Exception) {
+      logger.error(e) { "Exception while trying to emit state count metrics" }
+    }
   }
 
   /**

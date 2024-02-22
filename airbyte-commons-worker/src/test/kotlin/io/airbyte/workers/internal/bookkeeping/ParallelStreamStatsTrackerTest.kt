@@ -1,8 +1,16 @@
 package io.airbyte.workers.internal.bookkeeping
 
+import io.airbyte.analytics.DeploymentFetcher
+import io.airbyte.analytics.LoggingTrackingClient
+import io.airbyte.analytics.TrackingClient
+import io.airbyte.analytics.TrackingIdentityFetcher
+import io.airbyte.api.client.model.generated.DeploymentMetadataRead
+import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
@@ -54,12 +62,16 @@ class ParallelStreamStatsTrackerTest {
   private val stream2Message3 = createRecord(STREAM2_NAME, "s2m3")
 
   private lateinit var metricClient: MetricClient
+  private lateinit var trackingClient: TrackingClient
+  private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var statsTracker: ParallelStreamStatsTracker
 
   @BeforeEach
   fun beforeEach() {
     metricClient = Mockito.mock(MetricClient::class.java)
-    statsTracker = ParallelStreamStatsTracker(metricClient, CONNECTION_ID, JOB_ID, ATTEMPT_NUMBER)
+    trackingClient = LoggingTrackingClient(DeploymentFetcher { DeploymentMetadataRead() }, TrackingIdentityFetcher { _ -> WorkspaceRead() })
+    featureFlagClient = TestClient(mapOf("platform.emit-state-stats-segment" to true))
+    statsTracker = ParallelStreamStatsTracker(metricClient, trackingClient, featureFlagClient, CONNECTION_ID, JOB_ID, ATTEMPT_NUMBER)
   }
 
   @Test
