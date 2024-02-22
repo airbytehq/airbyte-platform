@@ -29,6 +29,18 @@ Then run the server (You can also do this w/o build)
 
 The server is now reachable on localhost:80
 
+If you want to run the full platform with this local instance, you must edit the `.env` file as follows:
+
+``` bash
+# replace this
+CONNECTOR_BUILDER_SERVER_API_HOST=http://airbyte-connector-builder-server:80
+
+# with this
+CONNECTOR_BUILDER_SERVER_API_HOST=http://host.docker.internal:80
+```
+
+Note: there are two different, but very similarly-named, environment variables; you must edit `CONNECTOR_BUILDER_SERVER_API_HOST`, not `CONNECTOR_BUILDER_API_HOST`.
+
 ## OpenAPI generation
 
 Run it via Gradle by running this from the Airbyte project root:

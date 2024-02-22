@@ -96,11 +96,26 @@ interface FormStateContext {
   >;
 }
 
-interface TestReadContext {
+interface TestReadLimits {
+  recordLimit: number;
+  pageLimit: number;
+  sliceLimit: number;
+}
+
+export interface TestReadContext {
   resolvedManifest: ConnectorManifest;
   resolveErrorMessage: string | undefined;
   resolveError: CommonRequestError<KnownExceptionInfo> | null;
   streamRead: UseQueryResult<StreamRead, unknown>;
+  testReadLimits: {
+    recordLimit: number;
+    setRecordLimit: (newRecordLimit: number) => void;
+    pageLimit: number;
+    setPageLimit: (newPageLimit: number) => void;
+    sliceLimit: number;
+    setSliceLimit: (newSliceLimit: number) => void;
+    defaultLimits: TestReadLimits;
+  };
   isResolving: boolean;
   schemaWarnings: {
     schemaDifferences: boolean;
@@ -111,6 +126,8 @@ interface TestReadContext {
 interface FormManagementStateContext {
   isTestingValuesInputOpen: boolean;
   setTestingValuesInputOpen: (open: boolean) => void;
+  isTestReadSettingsOpen: boolean;
+  setTestReadSettingsOpen: (open: boolean) => void;
   scrollToField: string | undefined;
   setScrollToField: (field: string | undefined) => void;
   stateKey: number;
@@ -624,12 +641,37 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     streams: [testStream],
   };
   const streamName = testStream?.name ?? "";
+
+  const DEFAULT_PAGE_LIMIT = 5;
+  const DEFAULT_SLICE_LIMIT = 5;
+  const DEFAULT_RECORD_LIMIT = 1000;
+
+  const [pageLimit, setPageLimit] = useState(DEFAULT_PAGE_LIMIT);
+  const [sliceLimit, setSliceLimit] = useState(DEFAULT_SLICE_LIMIT);
+  const [recordLimit, setRecordLimit] = useState(DEFAULT_RECORD_LIMIT);
+
+  const testReadLimits = {
+    pageLimit,
+    setPageLimit,
+    sliceLimit,
+    setSliceLimit,
+    recordLimit,
+    setRecordLimit,
+    defaultLimits: {
+      recordLimit: DEFAULT_RECORD_LIMIT,
+      pageLimit: DEFAULT_PAGE_LIMIT,
+      sliceLimit: DEFAULT_SLICE_LIMIT,
+    },
+  };
+
   const streamRead = useBuilderProjectReadStream(
     {
       builderProjectId: projectId,
       manifest: filteredManifest,
       streamName,
-      recordLimit: 1000,
+      recordLimit,
+      pageLimit,
+      sliceLimit,
       workspaceId,
       formGeneratedManifest: mode === "ui",
     },
@@ -647,6 +689,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     resolveErrorMessage,
     resolveError,
     streamRead,
+    testReadLimits,
     isResolving,
     schemaWarnings,
   };
@@ -756,6 +799,7 @@ export const ConnectorBuilderFormManagementStateProvider: React.FC<React.PropsWi
   children,
 }) => {
   const [isTestingValuesInputOpen, setTestingValuesInputOpen] = useState(false);
+  const [isTestReadSettingsOpen, setTestReadSettingsOpen] = useState(false);
   const [scrollToField, setScrollToField] = useState<string | undefined>(undefined);
   const [stateKey, setStateKey] = useState(0);
 
@@ -763,12 +807,14 @@ export const ConnectorBuilderFormManagementStateProvider: React.FC<React.PropsWi
     () => ({
       isTestingValuesInputOpen,
       setTestingValuesInputOpen,
+      isTestReadSettingsOpen,
+      setTestReadSettingsOpen,
       scrollToField,
       setScrollToField,
       stateKey,
       setStateKey,
     }),
-    [isTestingValuesInputOpen, scrollToField, stateKey]
+    [isTestingValuesInputOpen, isTestReadSettingsOpen, scrollToField, stateKey]
   );
 
   return (

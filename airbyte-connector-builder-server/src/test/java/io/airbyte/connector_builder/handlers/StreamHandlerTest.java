@@ -75,24 +75,39 @@ class StreamHandlerTest {
 
   @Test
   void whenReadStreamThenReturnRequesterResponse() throws Exception {
-    when(requester.readStream(A_MANIFEST, A_CONFIG, A_STREAM, A_LIMIT)).thenReturn(streamRead);
+    when(requester.readStream(A_MANIFEST, A_CONFIG, A_STREAM, A_LIMIT, A_LIMIT, A_LIMIT)).thenReturn(streamRead);
     final StreamRead response =
-        handler.readStream(new StreamReadRequestBody().manifest(A_MANIFEST).config(A_CONFIG).stream(A_STREAM).recordLimit(A_LIMIT));
+        handler.readStream(new StreamReadRequestBody().manifest(A_MANIFEST).config(A_CONFIG).stream(A_STREAM).recordLimit(A_LIMIT).pageLimit(A_LIMIT)
+            .sliceLimit(A_LIMIT));
     assertEquals(streamRead, response);
   }
 
   @Test
   void givenIOExceptionWhenReadStreamThenRaiseConnectorBuilderException() throws Exception {
-    when(requester.readStream(A_MANIFEST, A_CONFIG, A_STREAM, A_LIMIT)).thenThrow(IOException.class);
+    when(requester.readStream(A_MANIFEST, A_CONFIG, A_STREAM, A_LIMIT, A_LIMIT, A_LIMIT)).thenThrow(IOException.class);
     assertThrows(ConnectorBuilderException.class,
-        () -> handler.readStream(new StreamReadRequestBody().manifest(A_MANIFEST).config(A_CONFIG).stream(A_STREAM).recordLimit(A_LIMIT)));
+        () -> handler.readStream(
+            new StreamReadRequestBody()
+                .manifest(A_MANIFEST)
+                .config(A_CONFIG)
+                .stream(A_STREAM)
+                .recordLimit(A_LIMIT)
+                .pageLimit(A_LIMIT)
+                .sliceLimit(A_LIMIT)));
   }
 
   @Test
   void givenAirbyteCdkInvalidInputExceptionWhenReadStreamThenRaiseConnectorBuilderException() throws Exception {
-    when(requester.readStream(A_MANIFEST, A_CONFIG, A_STREAM, A_LIMIT)).thenThrow(AirbyteCdkInvalidInputException.class);
+    when(requester.readStream(A_MANIFEST, A_CONFIG, A_STREAM, A_LIMIT, A_LIMIT, A_LIMIT)).thenThrow(AirbyteCdkInvalidInputException.class);
     assertThrows(AirbyteCdkInvalidInputException.class,
-        () -> handler.readStream(new StreamReadRequestBody().manifest(A_MANIFEST).config(A_CONFIG).stream(A_STREAM).recordLimit(A_LIMIT)));
+        () -> handler.readStream(
+            new StreamReadRequestBody()
+                .manifest(A_MANIFEST)
+                .config(A_CONFIG)
+                .stream(A_STREAM)
+                .recordLimit(A_LIMIT)
+                .pageLimit(A_LIMIT)
+                .sliceLimit(A_LIMIT)));
   }
 
 }

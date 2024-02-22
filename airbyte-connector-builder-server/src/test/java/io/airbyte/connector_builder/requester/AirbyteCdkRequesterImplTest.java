@@ -54,7 +54,7 @@ class AirbyteCdkRequesterImplTest {
     requester = new AirbyteCdkRequesterImpl(commandRunner);
   }
 
-  ArgumentCaptor<String> testReadStreamSuccess(final Integer limit) throws Exception {
+  ArgumentCaptor<String> testReadStreamSuccess(final Integer recordLimit, final Integer pageLimit, final Integer sliceLimit) throws Exception {
     final ObjectMapper mapper = new ObjectMapper();
     mapper.registerModule(new JavaTimeModule());
 
@@ -71,7 +71,7 @@ class AirbyteCdkRequesterImplTest {
     when(commandRunner.runCommand(eq(READ_STREAM_COMMAND), configCaptor.capture(), any()))
         .thenReturn(new AirbyteRecordMessage().withData(response));
 
-    final StreamRead streamRead = requester.readStream(A_MANIFEST, A_CONFIG, A_STREAM, limit);
+    final StreamRead streamRead = requester.readStream(A_MANIFEST, A_CONFIG, A_STREAM, recordLimit, pageLimit, sliceLimit);
 
     final boolean testReadLimitReached = mapper.convertValue(response.get("test_read_limit_reached"), new TypeReference<>() {});
     assertEquals(testReadLimitReached, streamRead.getTestReadLimitReached());
@@ -92,15 +92,38 @@ class AirbyteCdkRequesterImplTest {
   }
 
   @Test
-  void whenReadStreamWithLimitThenReturnAdaptedCommandRunnerResponse() throws Exception {
-    final ArgumentCaptor<String> configCaptor = testReadStreamSuccess(A_LIMIT);
-    assertRunCommandArgs(configCaptor, READ_STREAM_COMMAND, A_LIMIT);
+  void whenReadStreamWithLimitsThenReturnAdaptedCommandRunnerResponse() throws Exception {
+    // If all test read limits are present, all are passed along in command config
+    final ArgumentCaptor<String> configCaptor = testReadStreamSuccess(A_LIMIT, A_LIMIT, A_LIMIT);
+    assertRunCommandArgs(configCaptor, READ_STREAM_COMMAND, A_LIMIT, A_LIMIT, A_LIMIT);
+
+    // Test read limits which are not present will not be in the adapted command config
+    final ArgumentCaptor<String> noRecordLimitConfigCaptor = testReadStreamSuccess(null, A_LIMIT, A_LIMIT);
+    assertRunCommandArgs(noRecordLimitConfigCaptor, READ_STREAM_COMMAND, null, A_LIMIT, A_LIMIT);
+
+    final ArgumentCaptor<String> noPageLimitConfigCaptor = testReadStreamSuccess(A_LIMIT, null, A_LIMIT);
+    assertRunCommandArgs(noPageLimitConfigCaptor, READ_STREAM_COMMAND, A_LIMIT, null, A_LIMIT);
+
+    final ArgumentCaptor<String> noSliceLimitConfigCaptor = testReadStreamSuccess(A_LIMIT, A_LIMIT, null);
+    assertRunCommandArgs(noSliceLimitConfigCaptor, READ_STREAM_COMMAND, A_LIMIT, A_LIMIT, null);
+
+    // If any of the test read limits get special handling, it may be worth validating a
+    // more exhaustive set of permutations, but for now this should be plenty
+    final ArgumentCaptor<String> onlyPageLimitConfigCaptor = testReadStreamSuccess(null, A_LIMIT, null);
+    assertRunCommandArgs(onlyPageLimitConfigCaptor, READ_STREAM_COMMAND, null, A_LIMIT, null);
+  }
+
+  @Test
+  void whenReadStreamWithExcessiveLimitsThenThrowException() throws Exception {
+    assertThrows(AirbyteCdkInvalidInputException.class, () -> testReadStreamSuccess(requester.maxRecordLimit + 1, A_LIMIT, A_LIMIT));
+    assertThrows(AirbyteCdkInvalidInputException.class, () -> testReadStreamSuccess(A_LIMIT, requester.maxPageLimit + 1, A_LIMIT));
+    assertThrows(AirbyteCdkInvalidInputException.class, () -> testReadStreamSuccess(A_LIMIT, A_LIMIT, requester.maxSliceLimit + 1));
   }
 
   @Test
   void whenReadStreamWithoutLimitThenReturnAdaptedCommandRunnerResponse() throws Exception {
-    final ArgumentCaptor<String> configCaptor = testReadStreamSuccess(null);
-    assertRunCommandArgs(configCaptor, READ_STREAM_COMMAND, null);
+    final ArgumentCaptor<String> configCaptor = testReadStreamSuccess(null, null, null);
+    assertRunCommandArgs(configCaptor, READ_STREAM_COMMAND, null, null, null);
   }
 
   @Test
@@ -108,7 +131,7 @@ class AirbyteCdkRequesterImplTest {
     when(commandRunner.runCommand(eq(READ_STREAM_COMMAND), any(), any()))
         .thenReturn(
             new AirbyteRecordMessage().withData(new ObjectMapper().readTree("{\"streams\":[{\"name\": \"missing stream\", \"stream\": null}]}")));
-    assertThrows(AirbyteCdkInvalidInputException.class, () -> requester.readStream(A_MANIFEST, A_CONFIG, null, A_LIMIT));
+    assertThrows(AirbyteCdkInvalidInputException.class, () -> requester.readStream(A_MANIFEST, A_CONFIG, null, A_LIMIT, A_LIMIT, A_LIMIT));
   }
 
   void assertRunCommandArgs(final ArgumentCaptor<String> configCaptor, final String command) throws Exception {
@@ -122,13 +145,26 @@ class AirbyteCdkRequesterImplTest {
     assertEquals(config, new ObjectMapper().readTree(configCaptor.getValue()));
   }
 
-  void assertRunCommandArgs(final ArgumentCaptor<String> configCaptor, final String command, final Integer recordLimit) throws Exception {
+  void assertRunCommandArgs(final ArgumentCaptor<String> configCaptor,
+                            final String command,
+                            final Integer recordLimit,
+                            final Integer pageLimit,
+                            final Integer sliceLimit)
+      throws Exception {
     final JsonNode config = A_CONFIG.deepCopy();
     ((ObjectNode) config).put("__command", command);
     ((ObjectNode) config).set("__injected_declarative_manifest", A_MANIFEST);
     final ObjectMapper mapper = new ObjectMapper();
     final ObjectNode commandConfig = mapper.createObjectNode();
-    commandConfig.put("max_records", recordLimit);
+    if (recordLimit != null) {
+      commandConfig.put("max_records", recordLimit);
+    }
+    if (pageLimit != null) {
+      commandConfig.put("max_pages_per_slice", pageLimit);
+    }
+    if (sliceLimit != null) {
+      commandConfig.put("max_slices", sliceLimit);
+    }
     ((ObjectNode) config).set("__test_read_config", commandConfig);
     assertEquals(config, new ObjectMapper().readTree(configCaptor.getValue()));
   }

@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { ValidationError } from "yup";
 
+import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Spinner } from "components/ui/Spinner";
 
@@ -21,6 +22,7 @@ import { StreamSelector } from "./StreamSelector";
 import { StreamTester } from "./StreamTester";
 import styles from "./StreamTestingPanel.module.scss";
 import { TestingValuesMenu } from "./TestingValuesMenu";
+import { TestReadLimits } from "./TestReadLimits";
 import { useBuilderWatch } from "../types";
 
 const EMPTY_SCHEMA = {};
@@ -45,7 +47,8 @@ function useTestingValuesErrors(testingValues: ConnectorBuilderProjectTestingVal
 }
 
 export const StreamTestingPanel: React.FC<unknown> = () => {
-  const { isTestingValuesInputOpen, setTestingValuesInputOpen } = useConnectorBuilderFormManagementState();
+  const { isTestingValuesInputOpen, setTestingValuesInputOpen, isTestReadSettingsOpen, setTestReadSettingsOpen } =
+    useConnectorBuilderFormManagementState();
   const { jsonManifest, yamlEditorIsMounted } = useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
   const { theme } = useAirbyteTheme();
@@ -64,11 +67,14 @@ export const StreamTestingPanel: React.FC<unknown> = () => {
 
   return (
     <div className={styles.container}>
-      <TestingValuesMenu
-        testingValuesErrors={testingValuesErrors}
-        isOpen={isTestingValuesInputOpen}
-        setIsOpen={setTestingValuesInputOpen}
-      />
+      <FlexContainer justifyContent="space-between" gap="lg" className={styles.testingValues}>
+        <TestingValuesMenu
+          testingValuesErrors={testingValuesErrors}
+          isOpen={isTestingValuesInputOpen}
+          setIsOpen={setTestingValuesInputOpen}
+        />
+        <TestReadLimits isOpen={isTestReadSettingsOpen} setIsOpen={setTestReadSettingsOpen} />
+      </FlexContainer>
       {hasStreams || mode === "yaml" ? (
         <>
           <StreamSelector className={styles.streamSelector} />

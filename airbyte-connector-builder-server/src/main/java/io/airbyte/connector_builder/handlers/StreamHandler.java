@@ -46,7 +46,9 @@ public class StreamHandler {
           streamReadRequestBody.getManifest(),
           streamReadRequestBody.getConfig(),
           streamReadRequestBody.getStream(),
-          streamReadRequestBody.getRecordLimit());
+          streamReadRequestBody.getRecordLimit(),
+          streamReadRequestBody.getPageLimit(),
+          streamReadRequestBody.getSliceLimit());
     } catch (final IOException exc) {
       LOGGER.error("Error handling test_read request.", exc);
       throw new ConnectorBuilderException("Error handling test_read request.", exc);

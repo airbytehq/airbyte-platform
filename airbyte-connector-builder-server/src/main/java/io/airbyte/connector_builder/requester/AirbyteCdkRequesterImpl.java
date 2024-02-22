@@ -33,10 +33,15 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
 
+  static final Integer maxRecordLimit = 5000;
+  static final Integer maxSliceLimit = 20;
+  static final Integer maxPageLimit = 20;
   private static final String commandKey = "__command";
   private static final String commandConfigKey = "__test_read_config";
   private static final String manifestKey = "__injected_declarative_manifest";
   private static final String recordLimitKey = "max_records";
+  private static final String sliceLimitKey = "max_slices";
+  private static final String pageLimitKey = "max_pages_per_slice";
   private static final String resolveManifestCommand = "resolve_manifest";
   private static final String readStreamCommand = "test_read";
   private static final String catalogTemplate = """
@@ -68,12 +73,17 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
    */
   @Override
   @Trace(operationName = TracingHelper.CONNECTOR_BUILDER_OPERATION_NAME)
-  public StreamRead readStream(final JsonNode manifest, final JsonNode config, final String stream, final Integer recordLimit)
+  public StreamRead readStream(final JsonNode manifest,
+                               final JsonNode config,
+                               final String stream,
+                               final Integer recordLimit,
+                               final Integer pageLimit,
+                               final Integer sliceLimit)
       throws IOException, AirbyteCdkInvalidInputException, CdkProcessException {
     if (stream == null) {
       throw new AirbyteCdkInvalidInputException("Missing required `stream` field.");
     }
-    final AirbyteRecordMessage record = request(manifest, config, readStreamCommand, stream, recordLimit);
+    final AirbyteRecordMessage record = request(manifest, config, readStreamCommand, stream, recordLimit, pageLimit, sliceLimit);
     return recordToResponse(record);
   }
 
@@ -119,10 +129,14 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
                                        final JsonNode config,
                                        final String cdkCommand,
                                        final String stream,
-                                       final Integer recordLimit)
+                                       final Integer recordLimit,
+                                       final Integer pageLimit,
+                                       final Integer sliceLimit)
       throws IOException, AirbyteCdkInvalidInputException, CdkProcessException {
     LOGGER.debug("Creating CDK process: {}.", cdkCommand);
-    return this.commandRunner.runCommand(cdkCommand, this.adaptConfig(manifest, config, cdkCommand, recordLimit), this.adaptCatalog(stream));
+    return this.commandRunner.runCommand(cdkCommand,
+        this.adaptConfig(manifest, config, cdkCommand, recordLimit, pageLimit, sliceLimit),
+        this.adaptCatalog(stream));
   }
 
   private String adaptCatalog(final String stream) {
@@ -137,14 +151,46 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
     return OBJECT_WRITER.writeValueAsString(adaptedConfig);
   }
 
-  private String adaptConfig(final JsonNode manifest, final JsonNode config, final String command, final Integer recordLimit) throws IOException {
+  private String adaptConfig(final JsonNode manifest,
+                             final JsonNode config,
+                             final String command,
+                             final Integer userProvidedRecordLimit,
+                             final Integer userProvidedPageLimit,
+                             final Integer userProvidedSliceLimit)
+      throws IOException {
     final JsonNode adaptedConfig = Jsons.deserializeIfText(config).deepCopy();
     ((ObjectNode) adaptedConfig).set(manifestKey, Jsons.deserializeIfText(manifest));
     ((ObjectNode) adaptedConfig).put(commandKey, command);
 
     final ObjectMapper mapper = new ObjectMapper();
     final ObjectNode commandConfig = mapper.createObjectNode();
-    commandConfig.put(recordLimitKey, recordLimit);
+
+    // TODO it would be nicer to collect all applicable error messages and throw a single time with all
+    // violations
+    // listed than the current strategy of throwing at the first issue you happen to check
+    if (userProvidedRecordLimit != null) {
+      if (userProvidedRecordLimit > maxRecordLimit) {
+        throw new AirbyteCdkInvalidInputException(
+            "Requested record limit of " + userProvidedRecordLimit + " exceeds maximum of " + maxRecordLimit + ".");
+      }
+      commandConfig.put(recordLimitKey, userProvidedRecordLimit);
+    }
+
+    if (userProvidedPageLimit != null) {
+      if (userProvidedPageLimit > maxPageLimit) {
+        throw new AirbyteCdkInvalidInputException("Requested page limit of " + userProvidedPageLimit + " exceeds maximum of " + maxPageLimit + ".");
+      }
+      commandConfig.put(pageLimitKey, userProvidedPageLimit);
+    }
+
+    if (userProvidedSliceLimit != null) {
+      if (userProvidedSliceLimit > maxSliceLimit) {
+        throw new AirbyteCdkInvalidInputException(
+            "Requested slice limit of " + userProvidedSliceLimit + " exceeds maximum of " + maxSliceLimit + ".");
+      }
+      commandConfig.put(sliceLimitKey, userProvidedSliceLimit);
+    }
+
     ((ObjectNode) adaptedConfig).set(commandConfigKey, commandConfig);
 
     return OBJECT_WRITER.writeValueAsString(adaptedConfig);
