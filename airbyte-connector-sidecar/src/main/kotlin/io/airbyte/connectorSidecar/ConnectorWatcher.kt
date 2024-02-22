@@ -105,6 +105,8 @@ class ConnectorWatcher(
       jobOutputDocStore.write(workloadId, connectorOutput)
       workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
     } catch (e: Exception) {
+      logger.error(e) { "Error performing operation: ${e.javaClass.name}" }
+
       val output = getFailedOutput(checkConnectionConfiguration, e)
 
       jobOutputDocStore.write(workloadId, output)
