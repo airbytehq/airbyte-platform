@@ -2,7 +2,6 @@ import { createColumnHelper } from "@tanstack/react-table";
 import classNames from "classnames";
 import { useCallback, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
-import { useNavigate } from "react-router-dom";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
@@ -184,7 +183,6 @@ export const ConnectorBuilderProjectTable = ({
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const analyticsService = useAnalyticsService();
   const { mutateAsync: deleteProject } = useDeleteBuilderProject();
-  const navigate = useNavigate();
   const { workspaceId } = useCurrentWorkspace();
   const canUpdateConnector = useIntent("UpdateCustomConnector", { workspaceId });
   const getEditUrl = useCallback(
@@ -222,12 +220,12 @@ export const ConnectorBuilderProjectTable = ({
             </Text>
             {canUpdateConnector ? (
               <>
-                <Button
-                  variant="clear"
+                <Link
+                  to={getEditUrl(props.row.original.id)}
                   data-testid={`edit-project-button-${props.row.original.name}`}
-                  icon={<Icon type="pencil" />}
-                  onClick={() => navigate(getEditUrl(props.row.original.id))}
-                />
+                >
+                  <Icon type="pencil" />
+                </Link>
                 <Tooltip
                   disabled={!props.row.original.sourceDefinitionId}
                   control={
@@ -275,12 +273,12 @@ export const ConnectorBuilderProjectTable = ({
                 </Tooltip>
               </>
             ) : (
-              <Button
-                variant="clear"
+              <Link
+                to={getEditUrl(props.row.original.id)}
                 data-testid={`view-project-button-${props.row.original.name}`}
-                icon={<Icon type="eye" />}
-                onClick={() => navigate(getEditUrl(props.row.original.id))}
-              />
+              >
+                <Icon type="eye" />
+              </Link>
             )}
           </FlexContainer>
         ),
@@ -289,7 +287,6 @@ export const ConnectorBuilderProjectTable = ({
     [
       getEditUrl,
       canUpdateConnector,
-      navigate,
       unregisterNotificationById,
       openConfirmationModal,
       closeConfirmationModal,
