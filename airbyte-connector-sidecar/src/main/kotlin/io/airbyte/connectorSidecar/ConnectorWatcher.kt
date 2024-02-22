@@ -11,6 +11,7 @@ import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
+import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.airbyte.workers.helper.GsonPksExtractor
@@ -107,7 +108,11 @@ class ConnectorWatcher(
     } catch (e: Exception) {
       logger.error(e) { "Error performing operation: ${e.javaClass.name}" }
 
-      val output = getFailedOutput(checkConnectionConfiguration, e)
+      val output =
+        when (input.operationType) {
+          SidecarInput.OperationType.CHECK -> getFailedOutput(checkConnectionConfiguration, e)
+          SidecarInput.OperationType.DISCOVER -> getFailedOutput(discoverCatalogInput, e)
+        }
 
       jobOutputDocStore.write(workloadId, output)
       failWorkload(workloadId, output.failureReason)
@@ -184,6 +189,22 @@ class ConnectorWatcher(
             },
           )
           .withExternalMessage("The check connection failed because of an internal error")
+          .withInternalMessage(e.message)
+          .withStacktrace(e.toString()),
+      )
+  }
+
+  @VisibleForTesting
+  fun getFailedOutput(
+    input: StandardDiscoverCatalogInput,
+    e: Exception,
+  ): ConnectorJobOutput {
+    return ConnectorJobOutput().withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)
+      .withDiscoverCatalogId(null)
+      .withFailureReason(
+        FailureReason()
+          .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
+          .withExternalMessage("The check connection failed because of an internal error for source: ${input.sourceId}")
           .withInternalMessage(e.message)
           .withStacktrace(e.toString()),
       )

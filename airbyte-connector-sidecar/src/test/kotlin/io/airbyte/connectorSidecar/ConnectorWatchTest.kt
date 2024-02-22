@@ -146,7 +146,11 @@ class ConnectorWatchTest {
   @EnumSource(OperationType::class)
   fun `run for failed with exception check`(operationType: OperationType) {
     val exception = WorkerException("Broken check")
-    val output = connectorWatcher.getFailedOutput(checkInput, exception)
+    val output =
+      when (operationType) {
+        OperationType.CHECK -> connectorWatcher.getFailedOutput(checkInput, exception)
+        OperationType.DISCOVER -> connectorWatcher.getFailedOutput(discoveryInput, exception)
+      }
 
     every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
       Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType))
