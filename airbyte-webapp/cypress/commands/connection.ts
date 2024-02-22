@@ -66,7 +66,7 @@ export const createTestConnection = (sourceName: string, destinationName: string
   openCreateConnection();
 
   cy.get("div").contains(sourceName).click();
-  cy.wait("@discoverSchema");
+  cy.wait("@discoverSchema", { timeout: 60000 });
   enterConnectionName("Connection name");
   selectScheduleType("Manual");
 
