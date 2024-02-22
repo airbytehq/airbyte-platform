@@ -60,6 +60,7 @@ airbyte:
         name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
         value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
       host: ${INTERNAL_API_HOST}
+  control.plane.auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT}
   sidecar:
     file-timeout-minutes: ${SIDECAR_FILE_TIMEOUT_MINUTES:9}
   workload-api:
