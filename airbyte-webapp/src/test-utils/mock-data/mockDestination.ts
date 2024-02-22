@@ -34,7 +34,7 @@ export const mockDestinationDefinitionVersion: ActorDefinitionVersionRead = {
     normalizationTag: "0.2.25",
     normalizationIntegrationType: "postgres",
   },
-  isOverrideApplied: false,
+  isVersionOverrideApplied: false,
   supportState: SupportState.supported,
   supportLevel: "certified",
 };

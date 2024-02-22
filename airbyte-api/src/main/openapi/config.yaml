@@ -6023,6 +6023,12 @@ components:
           type: string
         icon:
           type: string
+        isVersionOverrideApplied:
+          type: boolean
+        breakingChanges:
+          $ref: "#/components/schemas/ActorDefinitionVersionBreakingChanges"
+        supportState:
+          $ref: "#/components/schemas/SupportState"
     SourceSnippetRead:
       type: object
       required:
@@ -6395,6 +6401,12 @@ components:
           type: string
         icon:
           type: string
+        isVersionOverrideApplied:
+          type: boolean
+        breakingChanges:
+          $ref: "#/components/schemas/ActorDefinitionVersionBreakingChanges"
+        supportState:
+          $ref: "#/components/schemas/SupportState"
     DestinationSnippetRead:
       type: object
       required:
@@ -6449,7 +6461,7 @@ components:
         - supportsDbt
         - normalizationConfig
         - supportState
-        - isOverrideApplied
+        - isVersionOverrideApplied
       properties:
         dockerRepository:
           type: string
@@ -6459,7 +6471,7 @@ components:
           type: boolean
         normalizationConfig:
           $ref: "#/components/schemas/NormalizationDestinationDefinitionConfig"
-        isOverrideApplied:
+        isVersionOverrideApplied:
           type: boolean
         supportLevel:
           $ref: "#/components/schemas/SupportLevel"

@@ -16,6 +16,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
@@ -35,10 +36,12 @@ import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
+import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.micronaut.http.uri.UriBuilder;
 import java.io.IOException;
 import java.net.URI;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -55,6 +58,7 @@ class ActorDefinitionHandlerHelperTest {
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private ActorDefinitionVersionResolver actorDefinitionVersionResolver;
   private RemoteDefinitionsProvider remoteDefinitionsProvider;
+  private ActorDefinitionService actorDefinitionService;
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID ACTOR_DEFINITION_ID = UUID.randomUUID();
   private static final String DOCKER_REPOSITORY = "source-test";
@@ -91,8 +95,9 @@ class ActorDefinitionHandlerHelperTest {
     final AirbyteProtocolVersionRange protocolVersionRange = new AirbyteProtocolVersionRange(new Version("0.0.0"), new Version("0.3.0"));
     actorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
     remoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
-    actorDefinitionHandlerHelper =
-        new ActorDefinitionHandlerHelper(synchronousSchedulerClient, protocolVersionRange, actorDefinitionVersionResolver, remoteDefinitionsProvider);
+    actorDefinitionService = mock(ActorDefinitionService.class);
+    actorDefinitionHandlerHelper = new ActorDefinitionHandlerHelper(
+        synchronousSchedulerClient, protocolVersionRange, actorDefinitionVersionResolver, remoteDefinitionsProvider, actorDefinitionService);
 
   }
 
@@ -336,6 +341,55 @@ class ActorDefinitionHandlerHelperTest {
 
       verifyNoMoreInteractions(remoteDefinitionsProvider);
       verifyNoInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver);
+    }
+
+  }
+
+  @Nested
+  class TestGetVersionBreakingChanges {
+
+    @Test
+    void testGetVersionBreakingChanges() throws IOException {
+      final List<ActorDefinitionBreakingChange> breakingChangeList = List.of(
+          new ActorDefinitionBreakingChange()
+              .withActorDefinitionId(ACTOR_DEFINITION_ID)
+              .withMigrationDocumentationUrl("https://docs.airbyte.io/2")
+              .withVersion(new Version("2.0.0"))
+              .withUpgradeDeadline("2023-01-01")
+              .withMessage("This is a breaking change"),
+          new ActorDefinitionBreakingChange()
+              .withActorDefinitionId(ACTOR_DEFINITION_ID)
+              .withMigrationDocumentationUrl("https://docs.airbyte.io/3")
+              .withVersion(new Version("3.0.0"))
+              .withUpgradeDeadline("2023-05-01")
+              .withMessage("This is another breaking change"));
+
+      when(actorDefinitionService.listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion)).thenReturn(breakingChangeList);
+
+      final ActorDefinitionVersionBreakingChanges expected = new ActorDefinitionVersionBreakingChanges()
+          .minUpgradeDeadline(LocalDate.parse("2023-01-01"))
+          .upcomingBreakingChanges(List.of(
+              new io.airbyte.api.model.generated.ActorDefinitionBreakingChange()
+                  .migrationDocumentationUrl("https://docs.airbyte.io/2")
+                  .version("2.0.0")
+                  .upgradeDeadline(LocalDate.parse(("2023-01-01")))
+                  .message("This is a breaking change"),
+              new io.airbyte.api.model.generated.ActorDefinitionBreakingChange()
+                  .migrationDocumentationUrl("https://docs.airbyte.io/3")
+                  .version("3.0.0")
+                  .upgradeDeadline(LocalDate.parse("2023-05-01"))
+                  .message("This is another breaking change")));
+
+      final Optional<ActorDefinitionVersionBreakingChanges> actual = actorDefinitionHandlerHelper.getVersionBreakingChanges(actorDefinitionVersion);
+      assertEquals(expected, actual.orElseThrow());
+    }
+
+    @Test
+    void testGetVersionBreakingChangesNoBreakingChanges() throws IOException {
+      when(actorDefinitionService.listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion)).thenReturn(List.of());
+
+      final Optional<ActorDefinitionVersionBreakingChanges> actual = actorDefinitionHandlerHelper.getVersionBreakingChanges(actorDefinitionVersion);
+      assertEquals(Optional.empty(), actual);
     }
 
   }

@@ -71,6 +71,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
@@ -105,6 +106,7 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
@@ -222,6 +224,7 @@ class ConnectionsHandlerTest {
   private SourceService sourceService;
   private WorkspaceService workspaceService;
   private SecretPersistenceConfigService secretPersistenceConfigService;
+  private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
 
   private DestinationHandler destinationHandler;
   private SourceHandler sourceHandler;
@@ -330,6 +333,7 @@ class ConnectionsHandlerTest {
     sourceService = mock(SourceService.class);
     workspaceService = mock(WorkspaceService.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
 
     featureFlagClient = mock(TestClient.class);
 
@@ -343,7 +347,8 @@ class ConnectionsHandlerTest {
             oAuthConfigSupplier,
             actorDefinitionVersionHelper,
             destinationService,
-            featureFlagClient);
+            featureFlagClient,
+            actorDefinitionHandlerHelper);
     sourceHandler = new SourceHandler(configRepository,
         secretsRepositoryReader,
         validator,
@@ -352,7 +357,8 @@ class ConnectionsHandlerTest {
         secretsProcessor,
         configurationUpdate,
         oAuthConfigSupplier,
-        actorDefinitionVersionHelper, featureFlagClient, sourceService, workspaceService, secretPersistenceConfigService);
+        actorDefinitionVersionHelper, featureFlagClient, sourceService, workspaceService, secretPersistenceConfigService,
+        actorDefinitionHandlerHelper);
 
     matchSearchHandler = new MatchSearchHandler(configRepository, destinationHandler, sourceHandler);
     jobNotifier = mock(JobNotifier.class);
@@ -507,6 +513,8 @@ class ConnectionsHandlerTest {
       final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
           .withName(DESTINATION_TEST)
           .withDestinationDefinitionId(UUID.randomUUID());
+      final ActorDefinitionVersion sourceVersion = mock(ActorDefinitionVersion.class);
+      final ActorDefinitionVersion destinationVersion = mock(ActorDefinitionVersion.class);
 
       when(configRepository.listStandardSyncs())
           .thenReturn(Lists.newArrayList(standardSync, standardSync2));
@@ -522,6 +530,11 @@ class ConnectionsHandlerTest {
           .thenReturn(sourceDefinition);
       when(configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId()))
           .thenReturn(destinationDefinition);
+      when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(sourceDefinition, source.getWorkspaceId(), source.getSourceId()))
+          .thenReturn(new ActorDefinitionVersionWithOverrideStatus(sourceVersion, false));
+      when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(destinationDefinition, destination.getWorkspaceId(),
+          destination.getDestinationId()))
+              .thenReturn(new ActorDefinitionVersionWithOverrideStatus(destinationVersion, false));
 
       final ConnectionSearch connectionSearch = new ConnectionSearch();
       connectionSearch.namespaceDefinition(NamespaceDefinitionType.SOURCE);

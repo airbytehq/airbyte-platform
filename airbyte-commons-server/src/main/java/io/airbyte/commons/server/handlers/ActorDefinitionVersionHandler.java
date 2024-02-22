@@ -16,7 +16,7 @@ import io.airbyte.api.model.generated.ResolveActorDefinitionVersionResponse;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.errors.NotFoundException;
-import io.airbyte.config.ActorDefinitionBreakingChange;
+import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.DestinationConnection;
@@ -34,8 +34,6 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.time.LocalDate;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -53,26 +51,21 @@ public class ActorDefinitionVersionHandler {
   private final ActorDefinitionService actorDefinitionService;
   private final ActorDefinitionVersionResolver actorDefinitionVersionResolver;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
 
   @Inject
   public ActorDefinitionVersionHandler(final SourceService sourceService,
                                        final DestinationService destinationService,
                                        final ActorDefinitionService actorDefinitionService,
                                        final ActorDefinitionVersionResolver actorDefinitionVersionResolver,
-                                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                                       final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper) {
     this.sourceService = sourceService;
     this.destinationService = destinationService;
     this.actorDefinitionService = actorDefinitionService;
     this.actorDefinitionVersionResolver = actorDefinitionVersionResolver;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
-  }
-
-  private LocalDate getMinBreakingChangeUpgradeDeadline(final List<ActorDefinitionBreakingChange> breakingChanges) {
-    return breakingChanges.stream()
-        .map(ActorDefinitionBreakingChange::getUpgradeDeadline)
-        .map(LocalDate::parse)
-        .min(LocalDate::compareTo)
-        .orElse(null);
+    this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
   }
 
   public ActorDefinitionVersionRead getActorDefinitionVersionForSourceId(final SourceIdRequestBody sourceIdRequestBody)
@@ -140,17 +133,11 @@ public class ActorDefinitionVersionHandler {
         .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(actorDefinitionVersion.getNormalizationConfig()))
         .supportState(toApiSupportState(actorDefinitionVersion.getSupportState()))
         .supportLevel(toApiSupportLevel(actorDefinitionVersion.getSupportLevel()))
-        .isOverrideApplied(versionWithOverrideStatus.isOverrideApplied());
+        .isVersionOverrideApplied(versionWithOverrideStatus.isOverrideApplied());
 
-    final List<ActorDefinitionBreakingChange> breakingChanges =
-        actorDefinitionService.listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion);
-
-    if (!breakingChanges.isEmpty()) {
-      final LocalDate minUpgradeDeadline = getMinBreakingChangeUpgradeDeadline(breakingChanges);
-      advRead.breakingChanges(new ActorDefinitionVersionBreakingChanges()
-          .upcomingBreakingChanges(breakingChanges.stream().map(ApiPojoConverters::toApiBreakingChange).toList())
-          .minUpgradeDeadline(minUpgradeDeadline));
-    }
+    final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =
+        actorDefinitionHandlerHelper.getVersionBreakingChanges(actorDefinitionVersion);
+    breakingChanges.ifPresent(advRead::setBreakingChanges);
 
     return advRead;
   }

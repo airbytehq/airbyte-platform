@@ -27,7 +27,7 @@ export const mockSourceDefinitionVersion: ActorDefinitionVersionRead = {
   normalizationConfig: {
     supported: false,
   },
-  isOverrideApplied: false,
+  isVersionOverrideApplied: false,
   supportState: SupportState.supported,
   supportLevel: "certified",
 };

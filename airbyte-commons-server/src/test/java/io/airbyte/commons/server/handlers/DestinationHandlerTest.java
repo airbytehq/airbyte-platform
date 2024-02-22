@@ -23,15 +23,18 @@ import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationReadList;
 import io.airbyte.api.model.generated.DestinationSearch;
 import io.airbyte.api.model.generated.DestinationUpdate;
+import io.airbyte.api.model.generated.SupportState;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.helpers.ConnectorSpecificationHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
@@ -54,6 +57,7 @@ class DestinationHandlerTest {
   private ConfigRepository configRepository;
   private StandardDestinationDefinition standardDestinationDefinition;
   private ActorDefinitionVersion destinationDefinitionVersion;
+  private ActorDefinitionVersionWithOverrideStatus destinationDefinitionVersionWithOverrideStatus;
   private DestinationDefinitionSpecificationRead destinationDefinitionSpecificationRead;
   private DestinationConnection destinationConnection;
   private DestinationHandler destinationHandler;
@@ -66,15 +70,18 @@ class DestinationHandlerTest {
   private OAuthConfigSupplier oAuthConfigSupplier;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private TestClient featureFlagClient;
+  private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
 
   // needs to match name of file in src/test/resources/icons
 
   private static final String ICON_URL = "https://connectors.airbyte.com/files/metadata/airbyte/destination-test/latest/icon.svg";
+  private static final Boolean IS_VERSION_OVERRIDE_APPLIED = true;
+  private static final SupportState SUPPORT_STATE = SupportState.SUPPORTED;
   private DestinationService destinationService;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
-  void setUp() throws IOException {
+  void setUp() throws IOException, JsonValidationException, ConfigNotFoundException {
     configRepository = mock(ConfigRepository.class);
     validator = mock(JsonSchemaValidator.class);
     uuidGenerator = mock(Supplier.class);
@@ -85,6 +92,7 @@ class DestinationHandlerTest {
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     destinationService = mock(DestinationService.class);
     featureFlagClient = mock(TestClient.class);
+    actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
 
     when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS)))
         .thenReturn(true);
@@ -99,6 +107,9 @@ class DestinationHandlerTest {
     destinationDefinitionVersion = new ActorDefinitionVersion()
         .withDockerImageTag("thelatesttag")
         .withSpec(connectorSpecification);
+
+    destinationDefinitionVersionWithOverrideStatus = new ActorDefinitionVersionWithOverrideStatus(
+        destinationDefinitionVersion, IS_VERSION_OVERRIDE_APPLIED);
 
     destinationDefinitionSpecificationRead = new DestinationDefinitionSpecificationRead()
         .connectionSpecification(connectorSpecification.getConnectionSpecification())
@@ -117,7 +128,11 @@ class DestinationHandlerTest {
             oAuthConfigSupplier,
             actorDefinitionVersionHelper,
             destinationService,
-            featureFlagClient);
+            featureFlagClient,
+            actorDefinitionHandlerHelper);
+
+    when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
+        destinationConnection.getDestinationId())).thenReturn(destinationDefinitionVersionWithOverrideStatus);
   }
 
   @Test
@@ -155,7 +170,9 @@ class DestinationHandlerTest {
         .destinationId(destinationConnection.getDestinationId())
         .connectionConfiguration(DestinationHelpers.getTestDestinationJson())
         .destinationName(standardDestinationDefinition.getName())
-        .icon(ICON_URL);
+        .icon(ICON_URL)
+        .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
+        .supportState(SUPPORT_STATE);
 
     assertEquals(expectedDestinationRead, actualDestinationRead);
 
@@ -208,7 +225,8 @@ class DestinationHandlerTest {
     final DestinationRead actualDestinationRead = destinationHandler.updateDestination(destinationUpdate);
 
     final DestinationRead expectedDestinationRead = DestinationHelpers
-        .getDestinationRead(expectedDestinationConnection, standardDestinationDefinition).connectionConfiguration(newConfiguration);
+        .getDestinationRead(expectedDestinationConnection, standardDestinationDefinition, IS_VERSION_OVERRIDE_APPLIED, SUPPORT_STATE)
+        .connectionConfiguration(newConfiguration);
 
     assertEquals(expectedDestinationRead, actualDestinationRead);
 
@@ -249,7 +267,9 @@ class DestinationHandlerTest {
         .destinationId(destinationConnection.getDestinationId())
         .connectionConfiguration(destinationConnection.getConfiguration())
         .destinationName(standardDestinationDefinition.getName())
-        .icon(ICON_URL);
+        .icon(ICON_URL)
+        .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
+        .supportState(SUPPORT_STATE);
     final DestinationIdRequestBody destinationIdRequestBody =
         new DestinationIdRequestBody().destinationId(expectedDestinationRead.getDestinationId());
 
@@ -285,7 +305,9 @@ class DestinationHandlerTest {
         .destinationId(destinationConnection.getDestinationId())
         .connectionConfiguration(destinationConnection.getConfiguration())
         .destinationName(standardDestinationDefinition.getName())
-        .icon(ICON_URL);
+        .icon(ICON_URL)
+        .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
+        .supportState(SUPPORT_STATE);
     final WorkspaceIdRequestBody workspaceIdRequestBody = new WorkspaceIdRequestBody().workspaceId(destinationConnection.getWorkspaceId());
 
     when(configRepository.getDestinationConnection(destinationConnection.getDestinationId())).thenReturn(destinationConnection);
@@ -318,7 +340,9 @@ class DestinationHandlerTest {
         .destinationId(destinationConnection.getDestinationId())
         .connectionConfiguration(destinationConnection.getConfiguration())
         .destinationName(standardDestinationDefinition.getName())
-        .icon(ICON_URL);
+        .icon(ICON_URL)
+        .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
+        .supportState(SUPPORT_STATE);
 
     when(configRepository.getDestinationConnection(destinationConnection.getDestinationId())).thenReturn(destinationConnection);
     when(configRepository.listDestinationConnection()).thenReturn(Lists.newArrayList(destinationConnection));
@@ -354,7 +378,9 @@ class DestinationHandlerTest {
         .destinationId(clonedConnection.getDestinationId())
         .connectionConfiguration(clonedConnection.getConfiguration())
         .destinationName(standardDestinationDefinition.getName())
-        .icon(ICON_URL);
+        .icon(ICON_URL)
+        .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
+        .supportState(SUPPORT_STATE);
     final DestinationRead destinationRead = new DestinationRead()
         .name(destinationConnection.getName())
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
@@ -362,7 +388,6 @@ class DestinationHandlerTest {
         .destinationId(destinationConnection.getDestinationId())
         .connectionConfiguration(destinationConnection.getConfiguration())
         .destinationName(standardDestinationDefinition.getName());
-
     final DestinationCloneConfiguration destinationCloneConfiguration = new DestinationCloneConfiguration().name("Copy Name");
     final DestinationCloneRequestBody destinationCloneRequestBody = new DestinationCloneRequestBody()
         .destinationCloneId(destinationRead.getDestinationId()).destinationConfiguration(destinationCloneConfiguration);
@@ -380,6 +405,8 @@ class DestinationHandlerTest {
     when(secretsProcessor.prepareSecretsForOutput(destinationConnection.getConfiguration(),
         destinationDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(destinationConnection.getConfiguration());
+    when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(standardDestinationDefinition, clonedConnection.getWorkspaceId(),
+        clonedConnection.getDestinationId())).thenReturn(destinationDefinitionVersionWithOverrideStatus);
 
     final DestinationRead actualDestinationRead = destinationHandler.cloneDestination(destinationCloneRequestBody);
 
@@ -397,7 +424,9 @@ class DestinationHandlerTest {
         .destinationId(clonedConnection.getDestinationId())
         .connectionConfiguration(clonedConnection.getConfiguration())
         .destinationName(standardDestinationDefinition.getName())
-        .icon(ICON_URL);
+        .icon(ICON_URL)
+        .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
+        .supportState(SUPPORT_STATE);
     final DestinationRead destinationRead = new DestinationRead()
         .name(destinationConnection.getName())
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
@@ -422,6 +451,8 @@ class DestinationHandlerTest {
     when(secretsProcessor.prepareSecretsForOutput(destinationConnection.getConfiguration(),
         destinationDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(destinationConnection.getConfiguration());
+    when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(standardDestinationDefinition, clonedConnection.getWorkspaceId(),
+        clonedConnection.getDestinationId())).thenReturn(destinationDefinitionVersionWithOverrideStatus);
 
     final DestinationRead actualDestinationRead = destinationHandler.cloneDestination(destinationCloneRequestBody);
 
