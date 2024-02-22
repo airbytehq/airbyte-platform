@@ -19,6 +19,7 @@ import static io.airbyte.test.utils.AcceptanceTestHarness.AWESOME_PEOPLE_TABLE_N
 import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_ID;
 import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_NAME;
 import static io.airbyte.test.utils.AcceptanceTestHarness.COOL_EMPLOYEES_TABLE_NAME;
+import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
 import static io.airbyte.test.utils.AcceptanceTestHarness.STAGING_SCHEMA_NAME;
 import static io.airbyte.test.utils.AcceptanceTestHarness.STREAM_NAME;
@@ -39,7 +40,6 @@ import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.AirbyteStream;
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
-import io.airbyte.api.client.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.client.model.generated.AttemptInfoRead;
 import io.airbyte.api.client.model.generated.AttemptStatus;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
@@ -143,7 +143,6 @@ class BasicAcceptanceTests {
   static final String DUPLICATE_TEST_IN_GKE =
       "TODO(https://github.com/airbytehq/airbyte-platform-internal/issues/5182): eliminate test duplication";
   static final String TYPE = "type";
-  static final String PUBLIC = "public";
   static final String E2E_TEST_SOURCE = "E2E Test Source -";
   static final String INFINITE_FEED = "INFINITE_FEED";
   static final String MESSAGE_INTERVAL = "message_interval";
@@ -277,42 +276,7 @@ class BasicAcceptanceTests {
 
     final AirbyteCatalog actual = testHarness.discoverSourceSchema(sourceId);
 
-    final JsonNode expectedSchema = Jsons.deserialize("""
-                                                      {
-                                                        "type": "object",
-                                                        "properties": {
-                                                          "%s": {
-                                                            "type": "number",
-                                                            "airbyte_type": "integer"
-                                                          },
-                                                          "%s": {
-                                                            "type": "string"
-                                                          }
-                                                        }
-                                                      }
-                                                      """.formatted(COLUMN_ID, COLUMN_NAME));
-    final AirbyteStream expectedStream = new AirbyteStream()
-        .name(STREAM_NAME)
-        .namespace(PUBLIC)
-        .jsonSchema(expectedSchema)
-        .sourceDefinedCursor(null)
-        .defaultCursorField(Collections.emptyList())
-        .sourceDefinedPrimaryKey(Collections.emptyList())
-        .supportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
-    final AirbyteStreamConfiguration expectedStreamConfig = new AirbyteStreamConfiguration()
-        .syncMode(SyncMode.FULL_REFRESH)
-        .cursorField(Collections.emptyList())
-        .destinationSyncMode(DestinationSyncMode.OVERWRITE)
-        .primaryKey(Collections.emptyList())
-        .aliasName(STREAM_NAME.replace(".", "_"))
-        .selected(true)
-        .suggested(true);
-    final AirbyteCatalog expected = new AirbyteCatalog()
-        .streams(Lists.newArrayList(new AirbyteStreamAndConfiguration()
-            .stream(expectedStream)
-            .config(expectedStreamConfig)));
-
-    assertEquals(expected, actual);
+    testHarness.compareCatalog(actual);
   }
 
   @Test

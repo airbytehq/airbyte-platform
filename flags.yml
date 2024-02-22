@@ -57,3 +57,11 @@ flags:
         include:
           - "1bdcfb61-219b-4290-be4f-12f9ac5461be"
         serve: true
+  - name: platform.use-workload-api-for-discover
+    serve: false
+    # Override used in order to run an acceptance test
+    context:
+      - type: "workspace"
+        include:
+          - "3851861d-ac0b-440c-bd60-408cf9e7fc0e"
+        serve: true

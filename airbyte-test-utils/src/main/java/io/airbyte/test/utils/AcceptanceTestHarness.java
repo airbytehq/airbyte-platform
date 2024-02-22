@@ -21,6 +21,9 @@ import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ActorDefinitionRequestBody;
 import io.airbyte.api.client.model.generated.ActorType;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
+import io.airbyte.api.client.model.generated.AirbyteStream;
+import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
+import io.airbyte.api.client.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.client.model.generated.AttemptInfoRead;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionCreate;
@@ -117,6 +120,7 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -181,6 +185,7 @@ public class AcceptanceTestHarness {
   public static final String STAGING_SCHEMA_NAME = "staging";
   public static final String COOL_EMPLOYEES_TABLE_NAME = "cool_employees";
   public static final String AWESOME_PEOPLE_TABLE_NAME = "awesome_people";
+  public static final String PUBLIC = "public";
 
   private static final String DEFAULT_POSTGRES_INIT_SQL_FILE = "postgres_init.sql";
 
@@ -1258,6 +1263,45 @@ public class AcceptanceTestHarness {
         .status(connection.getStatus())
         .prefix(connection.getPrefix())
         .skipReset(false);
+  }
+
+  public void compareCatalog(AirbyteCatalog actual) {
+    final JsonNode expectedSchema = Jsons.deserialize("""
+                                                      {
+                                                        "type": "object",
+                                                        "properties": {
+                                                          "%s": {
+                                                            "type": "number",
+                                                            "airbyte_type": "integer"
+                                                          },
+                                                          "%s": {
+                                                            "type": "string"
+                                                          }
+                                                        }
+                                                      }
+                                                      """.formatted(COLUMN_ID, COLUMN_NAME));
+    final AirbyteStream expectedStream = new AirbyteStream()
+        .name(STREAM_NAME)
+        .namespace(PUBLIC)
+        .jsonSchema(expectedSchema)
+        .sourceDefinedCursor(null)
+        .defaultCursorField(Collections.emptyList())
+        .sourceDefinedPrimaryKey(Collections.emptyList())
+        .supportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
+    final AirbyteStreamConfiguration expectedStreamConfig = new AirbyteStreamConfiguration()
+        .syncMode(SyncMode.FULL_REFRESH)
+        .cursorField(Collections.emptyList())
+        .destinationSyncMode(DestinationSyncMode.OVERWRITE)
+        .primaryKey(Collections.emptyList())
+        .aliasName(STREAM_NAME.replace(".", "_"))
+        .selected(true)
+        .suggested(true);
+    final AirbyteCatalog expected = new AirbyteCatalog()
+        .streams(Lists.newArrayList(new AirbyteStreamAndConfiguration()
+            .stream(expectedStream)
+            .config(expectedStreamConfig)));
+
+    assertEquals(expected, actual);
   }
 
 }
