@@ -87,6 +87,8 @@ tags:
     description: Applications can be used to provide api access for Users
   - name: scoped_configuration
     description: Scoped configuration store specific configuration for a given entity. e.g. Overriding a workspaces connector version.
+  - name: public
+    description: Public resources that are considered stable and are intended to be consumed as API by end users.
 
 paths:
   /v1/workspaces/create:
@@ -4680,6 +4682,1157 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserInvitationRead"
+
+  # Airbyte API
+  /public:
+    get:
+      tags:
+        - public_root
+        - public
+      responses:
+        "200":
+          content:
+            text/html: {}
+          description: Redirects to documentation
+      operationId: getDocumentation
+      summary: "Root path, currently returns a redirect to the documentation"
+      # This redirect route is unsecured since it points to our documentation.
+      security: []
+  /public/v1/health:
+    get:
+      tags:
+        - public_health
+        - public
+      responses:
+        "200":
+          description: Successful operation
+      operationId: publicGetHealthCheck
+      summary: Health Check
+      # This route is unsecured for external monitoring.
+      security: []
+  /public/v1/jobs:
+    get:
+      tags:
+        - public_jobs
+        - public
+        - Jobs
+      parameters:
+        - name: connectionId
+          description: Filter the Jobs by connectionId.
+          schema:
+            format: UUID
+            type: string
+          in: query
+          required: false
+        - name: limit
+          description: Set the limit on the number of Jobs returned. The default is 20 Jobs.
+          schema:
+            format: int32
+            default: 20
+            maximum: 100
+            minimum: 1
+            type: integer
+          in: query
+        - name: offset
+          description: Set the offset to start at when returning Jobs. The default is 0.
+          schema:
+            format: int32
+            default: 0
+            minimum: 0
+            type: integer
+          in: query
+        - name: jobType
+          description: Filter the Jobs by jobType.
+          schema:
+            $ref: "#/components/schemas/JobTypeEnum"
+          in: query
+        - name: workspaceIds
+          description: The UUIDs of the workspaces you wish to list jobs for. Empty list will retrieve all allowed workspaces.
+          schema:
+            type: array
+            items:
+              format: uuid
+              type: string
+          in: query
+          required: false
+        - name: status
+          description: The Job status you want to filter by
+          schema:
+            $ref: "#/components/schemas/JobStatusEnum"
+          in: query
+          required: false
+        - name: createdAtStart
+          description: The start date to filter by
+          schema:
+            type: string
+            format: date-time
+          in: query
+          required: false
+          example: 2023-06-22T16:15:00Z
+        - name: createdAtEnd
+          description: The end date to filter by
+          schema:
+            type: string
+            format: date-time
+          in: query
+          required: false
+          example: 2023-06-22T16:15:00Z
+        - name: updatedAtStart
+          description: The start date to filter by
+          schema:
+            type: string
+            format: date-time
+          example: 2023-06-22T16:15:00Z
+          in: query
+          required: false
+        - name: updatedAtEnd
+          description: The end date to filter by
+          schema:
+            type: string
+            format: date-time
+          in: query
+          required: false
+          example: 2023-06-22T16:15:00Z
+        - name: orderBy
+          description: The field and method to use for ordering
+          schema:
+            type: string
+            pattern: \w+|(ASC|DESC)
+          in: query
+          required: false
+          example: updatedAt|DESC
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobsResponse"
+              examples:
+                Job List Response Example:
+                  value:
+                    next: https://api.airbyte.com/v1/jobs?limit=5&offset=10
+                    previous: https://api.airbyte.com/v1/jobs?limit=5&offset=0
+                    data:
+                      - id: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+                        status: running
+                        jobType: sync
+          description: List all the Jobs by connectionId.
+        "403":
+          description: Not allowed
+      operationId: listJobs
+      summary: List Jobs by sync type
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobCreateRequest"
+            examples:
+              Job Creation Request Example:
+                value:
+                  connectionId: e735894a-e773-4938-969f-45f53957b75b
+                  jobType: sync
+        required: true
+      tags:
+        - public_jobs
+        - public
+        - Jobs
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobResponse"
+              examples:
+                Job Creation Response Example:
+                  value:
+                    jobId: 1234
+                    status: running
+                    jobType: sync
+          description: "Kicks off a new Job based on the JobType. The connectionId is the resource that Job will be run for."
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+      operationId: publicCreateJob
+      summary: Trigger a sync or reset job of a connection
+  /public/v1/jobs/{jobId}:
+    get:
+      tags:
+        - public_jobs
+        - public
+        - Jobs
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobResponse"
+              examples:
+                Job Get Response Example:
+                  value:
+                    id: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+                    status: running
+                    jobType: sync
+          description: Get a Job by the id in the path.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: getJob
+      summary: Get Job status and details
+    delete:
+      tags:
+        - public_jobs
+        - public
+        - Jobs
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobResponse"
+          description: Cancel a Job.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicCancelJob
+      summary: Cancel a running Job
+    parameters:
+      - name: jobId
+        schema:
+          format: int64
+          type: integer
+        in: path
+        required: true
+  /public/v1/sources:
+    get:
+      tags:
+        - public_sources
+        - public
+        - Sources
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourcesResponse"
+          description: Successful operation
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: listSources
+      summary: List sources
+      parameters:
+        - name: workspaceIds
+          description: The UUIDs of the workspaces you wish to list sources for. Empty list will retrieve all allowed workspaces.
+          schema:
+            type: array
+            items:
+              format: uuid
+              type: string
+          example: df08f6b0-b364-4cc1-9b3f-96f5d2fccfb2,b0796797-de23-4fc7-a5e2-7e131314718c
+          in: query
+          required: false
+        - name: includeDeleted
+          description: Include deleted sources in the returned results.
+          schema:
+            default: false
+            type: boolean
+          in: query
+          required: false
+        - name: limit
+          description: Set the limit on the number of sources returned. The default is 20.
+          schema:
+            format: int32
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          in: query
+        - name: offset
+          description: Set the offset to start at when returning sources. The default is 0
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+          in: query
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceCreateRequest"
+            examples:
+              Source Creation Request Example:
+                value:
+                  configuration:
+                    airbyte_source_name: google-ads
+                    conversion_window_days: 14
+                    customer_id: "1234567890"
+                    start_date: 2023-01-01
+                    end_date: 2024-01-01
+                  name: My Source
+                  workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
+      tags:
+        - public_sources
+        - public
+        - Sources
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceResponse"
+              examples:
+                Source Creation Response Example:
+                  value:
+                    sourceId: 0c31738c-0b2d-4887-b506-e2cd1c39cc35
+          description: Successful operation
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+      operationId: publicCreateSource
+      summary: Create a source
+      description: "Creates a source given a name, workspace id, and a json blob containing the configuration for the source."
+  /public/v1/sources/{sourceId}:
+    get:
+      tags:
+        - public_sources
+        - public
+        - Sources
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceResponse"
+              examples:
+                Source Get Response Example:
+                  value:
+                    sourceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+                    name: running
+                    sourceType: postgres
+                    workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
+          description: Get a Source by the id in the path.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetSource
+      summary: Get Source details
+    patch:
+      tags:
+        - public_sources
+        - public
+        - Sources
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourcePatchRequest"
+            examples:
+              Source Update Request Example:
+                value:
+                  configuration:
+                    airbyte_source_name: google-ads
+                    conversion_window_days: 14
+                    customer_id: "1234567890"
+                    start_date: 2023-01-01
+                    end_date: 2024-01-01
+                  name: My Source
+                  workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceResponse"
+              examples:
+                Source Update Response Example:
+                  value:
+                    sourceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+                    name: running
+                    sourceType: postgres
+                    workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
+          description: Update a Source
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: patchSource
+      summary: Update a Source
+    put:
+      tags:
+        - public_sources
+        - public
+        - Sources
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourcePutRequest"
+            examples:
+              Source Update Request Example:
+                value:
+                  configuration:
+                    airbyte_source_name: google-ads
+                    conversion_window_days: 14
+                    customer_id: "1234567890"
+                    start_date: 2023-01-01
+                    end_date: 2024-01-01
+                  name: My Source
+                  workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceResponse"
+              examples:
+                Source Update Response Example:
+                  value:
+                    sourceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+                    name: running
+                    sourceType: postgres
+                    workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
+          description: Update a source and fully overwrite it
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: putSource
+      summary: Update a Source and fully overwrite it
+    delete:
+      tags:
+        - public_sources
+        - public
+        - Sources
+      responses:
+        "204":
+          description: The resource was deleted successfully
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteSource
+      summary: Delete a Source
+    parameters:
+      - name: sourceId
+        schema:
+          format: UUID
+          type: string
+        in: path
+        required: true
+  /public/v1/destinations:
+    get:
+      tags:
+        - public_destinations
+        - public
+        - Destinations
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationsResponse"
+          description: Successful operation
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: listDestinations
+      summary: List destinations
+      parameters:
+        - name: workspaceIds
+          description: The UUIDs of the workspaces you wish to list destinations for. Empty list will retrieve all allowed workspaces.
+          schema:
+            type: array
+            items:
+              format: uuid
+              type: string
+          in: query
+          required: false
+        - name: includeDeleted
+          description: Include deleted destinations in the returned results.
+          schema:
+            default: false
+            type: boolean
+          in: query
+          required: false
+        - name: limit
+          description: Set the limit on the number of destinations returned. The default is 20.
+          schema:
+            format: int32
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          in: query
+        - name: offset
+          description: Set the offset to start at when returning destinations. The default is 0
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+          in: query
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationCreateRequest"
+            examples:
+              Destination Creation Request Example:
+                value:
+                  name: Postgres
+                  workspaceId: 2155ae5a-de39-4808-af6a-16fe7b8b4ed2
+                  configuration:
+                    airbyte_destination_name: postgres
+                    port: 5432
+                    schema: public
+                    ssl_mode:
+                      mode: prefer
+                    tunnel_method:
+                      tunnel_method: NO_TUNNEL
+                    host: localhost
+                    database: postgres
+                    username: postgres
+                    password: test
+      tags:
+        - public_destinations
+        - public
+        - Destinations
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationResponse"
+              examples:
+                Destination Creation Response Example:
+                  value:
+                    destinationId: af0c3c67-aa61-419f-8922-95b0bf840e86
+          description: Successful operation
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicCreateDestination
+      summary: Create a destination
+      description: "Creates a destination given a name, workspace id, and a json blob containing the configuration for the source."
+  /public/v1/destinations/{destinationId}:
+    get:
+      tags:
+        - public_destinations
+        - public
+        - Destinations
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationResponse"
+              examples:
+                Destination Get Response Example:
+                  value:
+                    destinationId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+                    name: My Destination
+                    sourceType: postgres
+                    workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
+                    configuration:
+                      conversion_window_days: 14
+                      customer_id: "1234567890"
+                      start_date: 2023-01-01
+                      end_date: 2024-01-01
+          description: Get a Destination by the id in the path.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetDestination
+      summary: Get Destination details
+    delete:
+      tags:
+        - public_destinations
+        - public
+        - Destinations
+      responses:
+        "204":
+          description: The resource was deleted successfully
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteDestination
+      summary: Delete a Destination
+    patch:
+      tags:
+        - public_destinations
+        - public
+        - Destinations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationPatchRequest"
+            examples:
+              Destination Update Request Example:
+                value:
+                  configuration:
+                    conversion_window_days: 14
+                    customer_id: "1234567890"
+                    start_date: 2023-01-01
+                    end_date: 2024-01-01
+                  name: My Destination
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationResponse"
+              examples:
+                Destination Update Response Example:
+                  value:
+                    destinationId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+                    name: running
+                    sourceType: postgres
+                    workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
+                    configuration:
+                      conversion_window_days: 14
+                      customer_id: "1234567890"
+                      start_date: 2023-01-01
+                      end_date: 2024-01-01
+          description: Update a Destination
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: patchDestination
+      summary: Update a Destination
+    put:
+      tags:
+        - public_destinations
+        - public
+        - Destinations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationPutRequest"
+            examples:
+              Destination Update Request Example:
+                value:
+                  configuration:
+                    conversion_window_days: 14
+                    customer_id: "1234567890"
+                    start_date: 2023-01-01
+                    end_date: 2024-01-01
+                  name: My Destination
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationResponse"
+              examples:
+                Destination Update Response Example:
+                  value:
+                    destinationId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+                    name: running
+                    sourceType: postgres
+                    workspaceId: 744cc0ed-7f05-4949-9e60-2a814f90c035
+                    configuration:
+                      conversion_window_days: 14
+                      customer_id: "1234567890"
+                      start_date: 2023-01-01
+                      end_date: 2024-01-01
+          description: Update a Destination and fully overwrite it
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: putDestination
+      summary: Update a Destination and fully overwrite it
+    parameters:
+      - name: destinationId
+        schema:
+          format: UUID
+          type: string
+        in: path
+        required: true
+  /public/v1/oauth/callback:
+    get:
+      tags:
+        - public_oauth
+        - public
+        - OAuth
+      parameters:
+        - name: queryParams
+          description: Query parameters. Should contain state and code.
+          required: false
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+          in: query
+      responses:
+        "302":
+          description: Redirect to the URL requested in the initiate call with the created secret ID.
+      operationId: oauthCallback
+      summary: Receive OAuth callbacks
+      description: Redirected to by identity providers after authentication.
+      # This route is unsecured because it's an OAuth callback.
+      security: []
+  /public/v1/sources/initiateOAuth:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InitiateOauthRequest"
+        required: true
+      tags:
+        - public_sources
+        - public
+        - Sources
+      responses:
+        "200":
+          $ref: "#/components/responses/InitiateOauthResponse"
+        "400":
+          description: A field in the body has not been set appropriately.
+        "403":
+          description: API key is invalid.
+      operationId: initiateOAuth
+      summary: Initiate OAuth for a source
+      description: >-
+        Given a source ID, workspace ID, and redirect URL, initiates OAuth for the source.
+
+
+        This returns a fully formed URL for performing user authentication against the relevant source
+        identity provider (IdP). Once authentication has been completed, the IdP will redirect to an
+        Airbyte endpoint which will save the access and refresh tokens off as a secret and return the
+        secret ID to the redirect URL specified in the `secret_id` query string parameter.
+
+
+        That secret ID can be used to create a source with credentials in place of actual tokens.
+  /public/v1/connections:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionCreateRequest"
+            examples:
+              Connection Creation Request Example:
+                value:
+                  sourceId: 95e66a59-8045-4307-9678-63bc3c9b8c93
+                  destinationId: e478de0d-a3a0-475c-b019-25f7dd29e281
+                  name: Postgres-to-Bigquery
+        required: true
+      tags:
+        - public_connections
+        - public
+        - Connections
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionResponse"
+              examples:
+                Connection Creation Response Example:
+                  value:
+                    connectionId: 9924bcd0-99be-453d-ba47-c2c9766f7da5
+          description: Successful operation
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+      operationId: publicCreateConnection
+      summary: Create a connection
+    get:
+      tags:
+        - public_connections
+        - public
+        - Connections
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionsResponse"
+          description: Successful operation
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: listConnections
+      summary: List connections
+      parameters:
+        - name: workspaceIds
+          description: The UUIDs of the workspaces you wish to list connections for. Empty list will retrieve all allowed workspaces.
+          schema:
+            type: array
+            items:
+              format: uuid
+              type: string
+          in: query
+          required: false
+        - name: includeDeleted
+          description: Include deleted connections in the returned results.
+          schema:
+            default: false
+            type: boolean
+          in: query
+          required: false
+        - name: limit
+          description: Set the limit on the number of Connections returned. The default is 20.
+          schema:
+            format: int32
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          in: query
+        - name: offset
+          description: Set the offset to start at when returning Connections. The default is 0
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+          in: query
+  /public/v1/connections/{connectionId}:
+    get:
+      tags:
+        - public_connections
+        - public
+        - Connections
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionResponse"
+              examples:
+                Connection Get Response Example:
+                  value:
+                    workspaceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+                    name: Postgres To Snowflake
+                    sourceId: 9924bcd0-99be-453d-ba47-c2c9766f7da5
+                    destinationId: 744cc0ed-7f05-4949-9e60-2a814f90c035
+          description: Get a Connection by the id in the path.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetConnection
+      summary: Get Connection details
+    patch:
+      tags:
+        - public_connections
+        - public
+        - Connections
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionPatchRequest"
+            examples:
+              Connection Update Request Example:
+                value:
+                  sourceId: 95e66a59-8045-4307-9678-63bc3c9b8c93
+                  destinationId: e478de0d-a3a0-475c-b019-25f7dd29e281
+                  name: Postgres-to-Bigquery
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionResponse"
+              examples:
+                Connection Get Response Example:
+                  value:
+                    workspaceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+                    name: Postgres To Snowflake
+                    sourceId: 9924bcd0-99be-453d-ba47-c2c9766f7da5
+                    destinationId: 744cc0ed-7f05-4949-9e60-2a814f90c035
+          description: Update a Connection by the id in the path.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: patchConnection
+      summary: Update Connection details
+    delete:
+      tags:
+        - public_connections
+        - public
+        - Connections
+      responses:
+        "204":
+          description: The resource was deleted successfully
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteConnection
+      summary: Delete a Connection
+    parameters:
+      - name: connectionId
+        schema:
+          format: UUID
+          type: string
+        in: path
+        required: true
+  /public/v1/streams:
+    get:
+      tags:
+        - public_streams
+        - public
+        - Streams
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamPropertiesResponse"
+          description: Get the available streams properties for a source/destination pair.
+        "400":
+          description: Required parameters are missing
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: getStreamProperties
+      summary: Get stream properties
+      parameters:
+        - name: "sourceId"
+          description: "ID of the source"
+          schema:
+            format: UUID
+            type: string
+          in: "query"
+          required: true
+        - name: "destinationId"
+          description: "ID of the destination"
+          schema:
+            format: UUID
+            type: string
+          in: "query"
+          required: true
+        - name: "ignoreCache"
+          description: "If true pull the latest schema from the source, else pull from cache (default false)"
+          schema:
+            type: boolean
+            default: false
+          in: "query"
+          required: false
+  /public/v1/workspaces:
+    get:
+      tags:
+        - public_workspaces
+        - public
+        - Workspaces
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspacesResponse"
+          description: Successful operation
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicListWorkspaces
+      summary: List workspaces
+      parameters:
+        - name: workspaceIds
+          description: The UUIDs of the workspaces you wish to fetch. Empty list will retrieve all allowed workspaces.
+          schema:
+            type: array
+            items:
+              format: uuid
+              type: string
+          in: query
+          required: false
+        - name: includeDeleted
+          description: Include deleted workspaces in the returned results.
+          schema:
+            default: false
+            type: boolean
+          in: query
+          required: false
+        - name: limit
+          description: Set the limit on the number of workspaces returned. The default is 20.
+          schema:
+            format: int32
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          in: query
+        - name: offset
+          description: Set the offset to start at when returning workspaces. The default is 0
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+          in: query
+    post:
+      tags:
+        - public_workspaces
+        - public
+        - Workspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceCreateRequest"
+            examples:
+              Workspace Creation Request Example:
+                value:
+                  name: Company Workspace Name
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceResponse"
+              examples:
+                Workspace Creation Response Example:
+                  value:
+                    workspaceId: 9924bcd0-99be-453d-ba47-c2c9766f7da5
+          description: Successful operation
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+      operationId: publicCreateWorkspace
+      summary: Create a workspace
+  /public/v1/workspaces/{workspaceId}:
+    parameters:
+      - name: workspaceId
+        schema:
+          format: UUID
+          type: string
+        in: path
+        required: true
+    get:
+      tags:
+        - public_workspaces
+        - public
+        - Workspaces
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceResponse"
+              examples:
+                Workspace Get Response Example:
+                  value:
+                    workspaceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+                    name: Acme Company
+                    dataResidency: auto
+          description: Get a Workspace by the id in the path.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetWorkspace
+      summary: Get Workspace details
+    patch:
+      tags:
+        - public_workspaces
+        - public
+        - Workspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceUpdateRequest"
+            examples:
+              Workspace Update Request Example:
+                value:
+                  name: Company Workspace Name
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceResponse"
+              examples:
+                Workspace Update Response Example:
+                  value:
+                    workspaceId: 9924bcd0-99be-453d-ba47-c2c9766f7da5
+          description: Successful operation
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+      operationId: publicUpdateWorkspace
+      summary: Update a workspace
+    delete:
+      tags:
+        - public_workspaces
+        - public
+        - Workspaces
+      responses:
+        "204":
+          description: The resource was deleted successfully
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteWorkspace
+      summary: Delete a Workspace
+  /public/v1/workspaces/{workspaceId}/oauthCredentials:
+    put:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceOAuthCredentialsRequest"
+        required: true
+      tags:
+        - public_workspaces
+        - public
+        - Workspaces
+      responses:
+        "200":
+          description: OAuth credential override was successful.
+        "400":
+          description: A field in the body has not been set appropriately.
+        "403":
+          description: API key is invalid.
+      operationId: createOrUpdateWorkspaceOAuthCredentials
+      summary: Create OAuth override credentials for a workspace and source type.
+      description: >-
+        Create/update a set of OAuth credentials to override the Airbyte-provided OAuth credentials used for source/destination OAuth.
+
+        In order to determine what the credential configuration needs to be, please see the connector specification of the relevant 
+        source/destination.
+    parameters:
+      - name: workspaceId
+        schema:
+          format: UUID
+          type: string
+        in: path
+        required: true
 
 components:
   securitySchemes:
@@ -10065,6 +11218,702 @@ components:
       properties:
         inviteCode:
           type: string
+    # Airbyte API
+    RedirectUrlResponse:
+      title: Root Type for RedirectUrlResponse
+      description: ""
+      type: object
+      properties:
+        redirectUrl:
+          format: url
+          type: string
+      example:
+        redirectUrl: https://example.com
+    JobResponse:
+      title: Root Type for JobResponse
+      description: Provides details of a single job.
+      required:
+        - jobId
+        - status
+        - jobType
+        - startTime
+        - connectionId
+      type: object
+      properties:
+        jobId:
+          format: int64
+          type: integer
+        status:
+          $ref: "#/components/schemas/JobStatusEnum"
+        jobType:
+          $ref: "#/components/schemas/JobTypeEnum"
+        startTime:
+          type: string
+        connectionId:
+          format: UUID
+          type: string
+        lastUpdatedAt:
+          type: string
+        duration:
+          description: "Duration of a sync in ISO_8601 format"
+          type: string
+        bytesSynced:
+          format: int64
+          type: integer
+        rowsSynced:
+          format: int64
+          type: integer
+      example:
+        id: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+        status: running
+        jobType: sync
+        startTime: 2023-03-25T01:30:50Z
+        duration: PT8H6M12S
+    JobsResponse:
+      title: Root Type for JobsResponse
+      description: ""
+      required:
+        - data
+      type: object
+      properties:
+        previous:
+          type: string
+        next:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/JobResponse"
+      example:
+        next: https://api.airbyte.com/v1/jobs?limit=5&offset=10
+        previous: https://api.airbyte.com/v1/jobs?limit=5&offset=0
+        data:
+          - id: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+            status: running
+            jobType: sync
+            startTime: 2023-03-25T01:30:50Z
+    ConnectionCreateRequest:
+      required:
+        - sourceId
+        - destinationId
+      type: object
+      properties:
+        name:
+          description: Optional name of the connection
+          type: string
+        sourceId:
+          format: uuid
+          type: string
+        destinationId:
+          format: uuid
+          type: string
+        configurations:
+          $ref: "#/components/schemas/StreamConfigurations"
+        schedule:
+          $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
+        dataResidency:
+          $ref: "#/components/schemas/GeographyEnum"
+        namespaceDefinition:
+          $ref: "#/components/schemas/NamespaceDefinitionEnum"
+        namespaceFormat:
+          type: string
+          description: Used when namespaceDefinition is 'custom_format'. If blank then behaves like namespaceDefinition = 'destination'. If "${SOURCE_NAMESPACE}" then behaves like namespaceDefinition = 'source'.
+          default: null
+          example: "${SOURCE_NAMESPACE}"
+        prefix:
+          type: string
+          description: Prefix that will be prepended to the name of each stream when it is written to the destination (ex. “airbyte_” causes “projects” => “airbyte_projects”).
+        nonBreakingSchemaUpdatesBehavior:
+          $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
+        status:
+          $ref: "#/components/schemas/ConnectionStatusEnum"
+    ConnectionPatchRequest:
+      type: object
+      properties:
+        name:
+          description: Optional name of the connection
+          type: string
+        configurations:
+          $ref: "#/components/schemas/StreamConfigurations"
+        schedule:
+          $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
+        dataResidency:
+          $ref: "#/components/schemas/GeographyEnumNoDefault"
+        namespaceDefinition:
+          $ref: "#/components/schemas/NamespaceDefinitionEnumNoDefault"
+        namespaceFormat:
+          type: string
+          description: Used when namespaceDefinition is 'custom_format'. If blank then behaves like namespaceDefinition = 'destination'. If "${SOURCE_NAMESPACE}" then behaves like namespaceDefinition = 'source'.
+          default: null
+          example: "${SOURCE_NAMESPACE}"
+        prefix:
+          type: string
+          description: Prefix that will be prepended to the name of each stream when it is written to the destination (ex. “airbyte_” causes “projects” => “airbyte_projects”).
+        nonBreakingSchemaUpdatesBehavior:
+          $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnumNoDefault"
+        status:
+          $ref: "#/components/schemas/ConnectionStatusEnum"
+    JobCreateRequest:
+      title: Root Type for JobCreate
+      description: Creates a new Job from the configuration provided in the request body.
+      required:
+        - jobType
+        - connectionId
+      type: object
+      properties:
+        connectionId:
+          format: UUID
+          type: string
+        jobType:
+          $ref: "#/components/schemas/JobTypeEnum"
+      example:
+        connectionId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+        jobType: sync
+    JobStatusEnum:
+      enum:
+        - pending
+        - running
+        - incomplete
+        - failed
+        - succeeded
+        - cancelled
+      type: string
+    JobTypeEnum:
+      description: Enum that describes the different types of jobs that the platform runs.
+      enum:
+        - sync
+        - reset
+      type: string
+    SourceCreateRequest:
+      required:
+        - name
+        - workspaceId
+        - configuration
+      type: object
+      properties:
+        name:
+          description: Name of the source e.g. dev-mysql-instance.
+          type: string
+        definitionId:
+          description: The UUID of the connector definition. One of configuration.sourceType or definitionId must be provided.
+          format: uuid
+          type: string
+        workspaceId:
+          format: uuid
+          type: string
+        configuration:
+          $ref: "#/components/schemas/SourceConfiguration"
+        secretId:
+          description: Optional secretID obtained through the  OAuth redirect flow.
+          type: string
+      x-implements: io.airbyte.api.common.ConfigurableActor
+    SourcePutRequest:
+      required:
+        - name
+        - configuration
+      type: object
+      properties:
+        name:
+          type: string
+        configuration:
+          $ref: "#/components/schemas/SourceConfiguration"
+      x-implements: io.airbyte.api.common.ConfigurableActor
+    SourcePatchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: My source
+        workspaceId:
+          format: uuid
+          type: string
+        configuration:
+          $ref: "#/components/schemas/SourceConfiguration"
+        secretId:
+          description: Optional secretID obtained through the  OAuth redirect flow.
+          type: string
+      x-implements: io.airbyte.api.common.ConfigurableActor
+    InitiateOauthRequest:
+      title: Root Type for initiate-oauth-post-body
+      required:
+        - redirectUrl
+        - workspaceId
+      type: object
+      properties:
+        name:
+          description: The name of the source to authenticate to. Deprecated - use sourceType instead.
+          type: string
+        sourceType:
+          description: The name of the source to authenticate to
+          type: string
+        redirectUrl:
+          description: >-
+            The URL to redirect the user to with the OAuth secret stored in the secret_id query
+            string parameter after authentication is complete.
+          type: string
+        workspaceId:
+          format: uuid
+          description: The workspace to create the secret and eventually the full source.
+          type: string
+        oAuthInputConfiguration:
+          $ref: "#/components/schemas/OAuthInputConfiguration"
+          description: Input configuration for OAuth required by some sources.
+      example:
+        redirectUrl: "https://cloud.airbyte.io/v1/api/oauth/callback"
+        workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
+        destinationId: 3d93b16c-ff5f-421c-8908-5a3c82088f14
+    WorkspaceOAuthCredentialsRequest:
+      title: Root Type for WorkspaceOAuthCredentials
+      description: POST body for creating/updating workspace level OAuth credentials
+      required:
+        - actorType
+        - name
+        - configuration
+      type: object
+      properties:
+        actorType:
+          $ref: "#/components/schemas/ActorTypeEnum"
+        name:
+          type: string
+          description: The name of the source i.e. google-ads
+        configuration:
+          $ref: "#/components/schemas/OAuthCredentialsConfiguration"
+    OAuthCredentialsConfiguration:
+      description: The configuration for this source/destination based on the OAuth section of the relevant specification.
+      type: object
+      example:
+        credentials:
+          client_id: 871d9b60-11d1-44cb-8c92-c246d53bf87e
+          client_secret: shhhhhh
+    ConnectionResponse:
+      title: Root Type for ConnectionResponse
+      description: Provides details of a single connection.
+      type: object
+      required:
+        - connectionId
+        - name
+        - sourceId
+        - destinationId
+        - workspaceId
+        - status
+        - schedule
+        - dataResidency
+        - configurations
+      properties:
+        connectionId:
+          format: UUID
+          type: string
+        name:
+          type: string
+        sourceId:
+          format: UUID
+          type: string
+        destinationId:
+          format: UUID
+          type: string
+        workspaceId:
+          format: UUID
+          type: string
+        status:
+          $ref: "#/components/schemas/ConnectionStatusEnum"
+        schedule:
+          $ref: "#/components/schemas/ConnectionScheduleResponse"
+        dataResidency:
+          $ref: "#/components/schemas/GeographyEnum"
+        nonBreakingSchemaUpdatesBehavior:
+          $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
+        namespaceDefinition:
+          $ref: "#/components/schemas/NamespaceDefinitionEnum"
+        namespaceFormat:
+          type: string
+        prefix:
+          type: string
+        configurations:
+          $ref: "#/components/schemas/StreamConfigurations"
+    AirbyteApiConnectionSchedule:
+      description: schedule for when the the connection should run, per the schedule type
+      type: object
+      required:
+        - scheduleType
+      properties:
+        scheduleType:
+          $ref: "#/components/schemas/ScheduleTypeEnum"
+        cronExpression:
+          type: string
+    ScheduleTypeEnum:
+      type: string
+      enum:
+        - manual
+        - cron
+    ConnectionScheduleResponse:
+      description: schedule for when the the connection should run, per the schedule type
+      type: object
+      required:
+        - scheduleType
+      properties:
+        scheduleType:
+          $ref: "#/components/schemas/ScheduleTypeWithBasicEnum"
+        cronExpression:
+          type: string
+        basicTiming:
+          type: string
+    ScheduleTypeWithBasicEnum:
+      type: string
+      enum:
+        - manual
+        - cron
+        - basic
+    GeographyEnum:
+      type: string
+      enum:
+        - auto
+        - us
+        - eu
+      default: "auto"
+    GeographyEnumNoDefault:
+      type: string
+      enum:
+        - auto
+        - us
+        - eu
+    ConnectionStatusEnum:
+      type: string
+      enum:
+        - active
+        - inactive
+        - deprecated
+    NamespaceDefinitionEnum:
+      type: string
+      description: Define the location where the data will be stored in the destination
+      enum:
+        - source
+        - destination
+        - custom_format
+      default: "destination"
+    NonBreakingSchemaUpdatesBehaviorEnum:
+      type: string
+      description: Set how Airbyte handles syncs when it detects a non-breaking schema change in the source
+      enum:
+        - ignore # do nothing if we detect a schema change
+        - disable_connection # disable the connection, pausing the sync
+        - propagate_columns # Auto propagate schema change for existing streams
+        - propagate_fully # Auto propagate schema change for all streams including the new ones
+      default: "ignore"
+    NamespaceDefinitionEnumNoDefault:
+      type: string
+      description: Define the location where the data will be stored in the destination
+      enum:
+        - source
+        - destination
+        - custom_format
+    NonBreakingSchemaUpdatesBehaviorEnumNoDefault:
+      type: string
+      description: Set how Airbyte handles syncs when it detects a non-breaking schema change in the source
+      enum:
+        - ignore # do nothing if we detect a schema change
+        - disable_connection # disable the connection, pausing the sync
+        - propagate_columns # Auto propagate schema change for existing streams
+        - propagate_fully # Auto propagate schema change for all streams including the new ones
+    DestinationResponse:
+      title: Root Type for DestinationResponse
+      description: Provides details of a single destination.
+      type: object
+      required:
+        - destinationId
+        - name
+        - destinationType
+        - workspaceId
+        - configuration
+      properties:
+        destinationId:
+          format: UUID
+          type: string
+        name:
+          type: string
+        destinationType:
+          type: string
+        workspaceId:
+          format: UUID
+          type: string
+        configuration:
+          $ref: "#/components/schemas/DestinationConfiguration"
+      example:
+        destinationId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+        name: Analytics Team Postgres
+        destinationType: postgres
+        workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
+    SourceResponse:
+      title: Root Type for SourceResponse
+      description: Provides details of a single source.
+      type: object
+      required:
+        - sourceId
+        - name
+        - sourceType
+        - workspaceId
+        - configuration
+      properties:
+        sourceId:
+          format: UUID
+          type: string
+        name:
+          type: string
+        sourceType:
+          type: string
+        workspaceId:
+          format: UUID
+          type: string
+        configuration:
+          $ref: "#/components/schemas/SourceConfiguration"
+      example:
+        sourceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+        name: Analytics Team Postgres
+        sourceType: postgres
+        workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
+    DestinationCreateRequest:
+      required:
+        - name
+        - workspaceId
+        - configuration
+      type: object
+      properties:
+        name:
+          description: Name of the destination e.g. dev-mysql-instance.
+          type: string
+        definitionId:
+          description: The UUID of the connector definition. One of configuration.destinationType or definitionId must be provided.
+          format: uuid
+          type: string
+        workspaceId:
+          format: uuid
+          type: string
+        configuration:
+          $ref: "#/components/schemas/DestinationConfiguration"
+      x-implements: io.airbyte.api.common.ConfigurableActor
+    DestinationPatchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        configuration:
+          $ref: "#/components/schemas/DestinationConfiguration"
+      x-implements: io.airbyte.api.common.ConfigurableActor
+    DestinationPutRequest:
+      required:
+        - name
+        - configuration
+      type: object
+      properties:
+        name:
+          type: string
+        configuration:
+          $ref: "#/components/schemas/DestinationConfiguration"
+      x-implements: io.airbyte.api.common.ConfigurableActor
+    WorkspaceCreateRequest:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          description: Name of the workspace
+          type: string
+    WorkspaceUpdateRequest:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          description: Name of the workspace
+          type: string
+    WorkspaceResponse:
+      title: Root Type for WorkspaceResponse
+      description: Provides details of a single workspace.
+      type: object
+      required:
+        - workspaceId
+        - name
+        - dataResidency
+      properties:
+        workspaceId:
+          format: UUID
+          type: string
+        name:
+          type: string
+        dataResidency:
+          $ref: "#/components/schemas/GeographyEnum"
+    ConnectionsResponse:
+      title: Root Type for ConnectionsResponse
+      description: ""
+      required:
+        - data
+      type: object
+      properties:
+        previous:
+          type: string
+        next:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionResponse"
+          default: []
+      example:
+        next: "https://api.airbyte.com/v1/connections?limit=5&offset=10"
+        previous: "https://api.airbyte.com/v1/connections?limit=5&offset=0"
+        data:
+          - name: "test-connection"
+          - connection_id: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+          - sourceId: 49237019-645d-47d4-b45b-5eddf97775ce
+          - destinationId: al312fs-0ab1-4f72-9ed7-0b8fc27c5826
+          - schedule:
+              scheduleType: manual
+          - status: active
+          - dataResidency: auto
+    SourcesResponse:
+      title: Root Type for SourcesResponse
+      description: ""
+      required:
+        - data
+      type: object
+      properties:
+        previous:
+          type: string
+        next:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SourceResponse"
+      example:
+        next: "https://api.airbyte.com/v1/sources?limit=5&offset=10"
+        previous: "https://api.airbyte.com/v1/sources?limit=5&offset=0"
+        data:
+          sourceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+          name: Analytics Team Postgres
+          sourceType: postgres
+          workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
+    DestinationsResponse:
+      title: Root Type for DestinationsResponse
+      description: ""
+      required:
+        - data
+      type: object
+      properties:
+        previous:
+          type: string
+        next:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/DestinationResponse"
+      example:
+        next: "https://api.airbyte.com/v1/destinations?limit=5&offset=10"
+        previous: "https://api.airbyte.com/v1/destinations?limit=5&offset=0"
+        data:
+          destinationId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+          name: Analytics Team Postgres
+          destinationType: postgres
+          workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
+    WorkspacesResponse:
+      title: Root Type for WorkspacesResponse
+      description: ""
+      required:
+        - data
+      type: object
+      properties:
+        previous:
+          type: string
+        next:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceResponse"
+      example:
+        next: "https://api.airbyte.com/v1/workspaces?limit=5&offset=10"
+        previous: "https://api.airbyte.com/v1/workspaces?limit=5&offset=0"
+        data:
+          workspaceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+          name: Acme Company
+          dataResidency: auto
+    StreamConfiguration:
+      description: Configurations for a single stream.
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        syncMode:
+          $ref: "#/components/schemas/ConnectionSyncModeEnum"
+        cursorField:
+          description: Path to the field that will be used to determine if a record is new or modified since the last sync. This field is REQUIRED if `sync_mode` is `incremental` unless there is a default.
+          type: array
+          items:
+            type: string
+        primaryKey:
+          description: Paths to the fields that will be used as primary key. This field is REQUIRED if `destination_sync_mode` is `*_dedup` unless it is already supplied by the source schema.
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+    StreamConfigurations:
+      description: A list of configured stream options for a connection.
+      type: object
+      properties:
+        streams:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamConfiguration"
+    StreamPropertiesResponse:
+      description: A list of stream properties.
+      type: object
+      properties:
+        streams:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamProperties"
+    StreamProperties:
+      description: The stream properties associated with a connection.
+      type: object
+      properties:
+        streamName:
+          type: string
+        syncModes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionSyncModeEnum"
+        defaultCursorField:
+          type: array
+          items:
+            type: string
+        sourceDefinedCursorField:
+          type: boolean
+        sourceDefinedPrimaryKey:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        propertyFields:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+    ConnectionSyncModeEnum:
+      enum:
+        - full_refresh_overwrite
+        - full_refresh_append
+        - incremental_append
+        - incremental_deduped_history
+    ActorTypeEnum:
+      description: Whether you're setting this override for a source or destination
+      enum:
+        - source
+        - destination
 
   responses:
     NotFoundResponse:
@@ -10091,5 +11940,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/KnownExceptionInfo"
+    InitiateOauthResponse:
+      content:
+        application/json: {}
+      description: >-
+        Response from the initiate OAuth call should be an object with a single property which will be
+        the `redirect_url`. If a user is redirected to this URL, they'll be prompted by the identity
+        provider to authenticate.
 security:
   - {}

@@ -19,14 +19,17 @@ const createTypeReexportFile = (name: string) => {
 };
 
 /**
- * A post processing hook that will enforce the options paramter to become mandatory, since
- * Orval always will generate it as an optional parameter.
+ * A post processing hook that will do all required transformation on the generated files.
  */
-const makeSecondParameterMandatory = (files: string[]) => {
-  console.log(`Make options parameter mandatory in ${path.basename(files[0])}...`);
+const postProcessFileContent = (files: string[]) => {
+  console.log(`Post process generated content in ${path.basename(files[0])}...`);
   const newContent = fs
     .readFileSync(files[0], { encoding: "utf-8" })
-    .replace(/options\?: SecondParameter/g, "options: SecondParameter");
+    // Make the options parameter mandatory, so it can't be forgetten to be passed in
+    .replace(/options\?: SecondParameter/g, "options: SecondParameter")
+    // Turn optional parameters (e.g. GET with non required parameters) into a `| undefined` type instead
+    // so they can be before the now mandatory options parameters.
+    .replace(/\?: ([^,]+),((?:[\s\S][^)])*options: SecondParameter)/g, ": $1 | undefined,$2");
   fs.writeFileSync(files[0], newContent);
 };
 
@@ -38,23 +41,22 @@ const makeSecondParameterMandatory = (files: string[]) => {
  * @param apiFn The API function in src/core/api/apis.ts to call for this API. This function must be specific
  *              for this API and use the base api path that this API is reachable under. You don't need to pass this
  *              for type only APIs (i.e. if you don't want to use the generated fetching functions).
- * @param filterApis A list of API pathes to filter by, i.e. only for those specified pathes the types will be generated.
+ * @param excludedPaths A list of API pathes to filter out, i.e. code won't be generated for pathes in this array.
  */
-const createApi = (inputSpecFile: string, name: string, apiFn?: ApiFn, filterApis?: string[]): Options => {
+const createApi = (inputSpecFile: string, name: string, apiFn?: ApiFn, excludedPaths?: string[]): Options => {
   return {
     input: {
       target: inputSpecFile,
       override: {
         transformer: (spec) => {
-          if (!filterApis) {
+          if (!excludedPaths) {
             // If no API filter has been specified return the spec as it is.
             return spec;
           }
 
           return {
             ...spec,
-            // Filter only for pathes specified in filterApis
-            paths: Object.fromEntries(Object.entries(spec.paths).filter(([path]) => filterApis.includes(path))),
+            paths: Object.fromEntries(Object.entries(spec.paths).filter(([path]) => !excludedPaths.includes(path))),
           };
         },
       },
@@ -84,22 +86,17 @@ const createApi = (inputSpecFile: string, name: string, apiFn?: ApiFn, filterApi
       },
     },
     hooks: {
-      afterAllFilesWrite: [makeSecondParameterMandatory, createTypeReexportFile(name)],
+      afterAllFilesWrite: [postProcessFileContent, createTypeReexportFile(name)],
     },
   };
 };
 
 export default defineConfig({
-  api: createApi("../airbyte-api/src/main/openapi/config.yaml", "AirbyteClient", "apiCall"),
+  api: createApi("../airbyte-api/src/main/openapi/config.yaml", "AirbyteClient", "apiCall", [
+    // Required to exclude, due to us not being able to convert JSON parameters
+    "/public/v1/oauth/callback",
+  ]),
   cloudApi: createApi("../airbyte-api/src/main/openapi/cloud-config.yaml", "CloudApi", "cloudApiCall"),
-  // Comment out the following line to manually regenerate the AirbyteApi types when running in airbyte-platform-internal
-  // airbyteApi: createApi(
-  //   "../../cloud-public-api-server/src/main/openapi/api.yaml",
-  //   "AirbyteApi",
-  //   "cloudAirbyteApiCall",
-  //   // Only generate code for the following API (since we don't use anything else yet)
-  //   ["/speakeasy_callback_url"]
-  // ),
   connectorBuilder: createApi(
     "../airbyte-connector-builder-server/src/main/openapi/openapi.yaml",
     "ConnectorBuilderClient",

@@ -4,7 +4,6 @@
 
 package io.airbyte.server.apis;
 
-import authorization.AirbyteApiAuthorizationHelper;
 import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
@@ -14,9 +13,10 @@ import io.airbyte.api.model.generated.WebBackendConnectionReadList;
 import io.airbyte.api.model.generated.WebBackendConnectionRequestBody;
 import io.airbyte.api.model.generated.WebBackendGeographiesListResult;
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult;
-import io.airbyte.api.server.problems.ForbiddenProblem;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.server.apis.publicapi.authorization.AirbyteApiAuthorizationHelper;
+import io.airbyte.server.apis.publicapi.problems.ForbiddenProblem;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Requires;

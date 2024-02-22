@@ -10,8 +10,6 @@ import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
-import authorization.AirbyteApiAuthorizationHelper;
-import authorization.Scope;
 import io.airbyte.api.generated.WebBackendApi;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionStateType;
@@ -32,6 +30,8 @@ import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler;
 import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.metrics.lib.TracingHelper;
+import io.airbyte.server.apis.publicapi.authorization.AirbyteApiAuthorizationHelper;
+import io.airbyte.server.apis.publicapi.authorization.Scope;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
