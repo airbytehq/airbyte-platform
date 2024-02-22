@@ -525,8 +525,12 @@ public class UserHandler {
   }
 
   private WorkspaceUserAccessInfoReadList buildWorkspaceUserAccessInfoReadList(final List<WorkspaceUserAccessInfo> accessInfos) {
-    return new WorkspaceUserAccessInfoReadList()
-        .usersWithAccess(accessInfos.stream().map(this::buildWorkspaceUserAccessInfoRead).collect(Collectors.toList()));
+    // we exclude the default user from this list because we don't want to expose it in the UI
+    return new WorkspaceUserAccessInfoReadList().usersWithAccess(accessInfos
+        .stream()
+        .filter(accessInfo -> !accessInfo.getUserId().equals(DEFAULT_USER_ID))
+        .map(this::buildWorkspaceUserAccessInfoRead)
+        .collect(Collectors.toList()));
   }
 
   private WorkspaceUserAccessInfoRead buildWorkspaceUserAccessInfoRead(final WorkspaceUserAccessInfo accessInfo) {

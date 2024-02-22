@@ -4,7 +4,6 @@
 
 package io.airbyte.server.apis;
 
-import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 
@@ -32,7 +31,7 @@ public class SchedulerApiController implements SchedulerApi {
   }
 
   @Post("/destinations/check_connection")
-  @Secured({AUTHENTICATED_USER})
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
   public CheckConnectionRead executeDestinationCheckConnection(final DestinationCoreConfig destinationCoreConfig) {
@@ -40,7 +39,7 @@ public class SchedulerApiController implements SchedulerApi {
   }
 
   @Post("/sources/check_connection")
-  @Secured({AUTHENTICATED_USER})
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
   public CheckConnectionRead executeSourceCheckConnection(final SourceCoreConfig sourceCoreConfig) {

@@ -221,6 +221,8 @@ class UserHandlerTest {
     final UUID workspaceId = UUID.randomUUID();
     when(userPersistence.listWorkspaceUserAccessInfo(workspaceId)).thenReturn(List.of(
         new WorkspaceUserAccessInfo()
+            .withUserId(DEFAULT_USER_ID), // expect the default user to be filtered out.
+        new WorkspaceUserAccessInfo()
             .withUserId(USER_ID)
             .withUserName(USER_NAME)
             .withUserEmail(USER_EMAIL)

@@ -33,6 +33,7 @@ import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler;
 import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler;
 import io.airbyte.commons.server.handlers.WorkspacesHandler;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
+import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.db.Database;
@@ -325,6 +326,14 @@ abstract class BaseControllerTest {
   @Replaces(SecurityService.class)
   SecurityService mmSecurityService() {
     return Mockito.mock(SecurityService.class);
+  }
+
+  CurrentUserService currentUserService = Mockito.mock(CurrentUserService.class);
+
+  @MockBean(CurrentUserService.class)
+  @Replaces(CurrentUserService.class)
+  CurrentUserService mmCurrentUserService() {
+    return currentUserService;
   }
 
   @MockBean(JobNotifier.class)
