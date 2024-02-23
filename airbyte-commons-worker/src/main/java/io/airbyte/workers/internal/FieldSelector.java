@@ -183,7 +183,7 @@ public class FieldSelector {
     recordSchemaValidator.validateSchemaWithoutCounting(record, messageStream, uncountedValidationErrors);
     final Set<String> unexpectedFieldNames = getUnexpectedFieldNames(record, streamToAllFields.get(messageStream));
     if (!unexpectedFieldNames.isEmpty()) {
-      unexpectedFields.computeIfAbsent(messageStream, k -> new HashSet<>()).addAll(unexpectedFieldNames);
+      unexpectedFields.computeIfAbsent(messageStream, k -> ConcurrentHashMap.newKeySet()).addAll(unexpectedFieldNames);
     }
   }
 
