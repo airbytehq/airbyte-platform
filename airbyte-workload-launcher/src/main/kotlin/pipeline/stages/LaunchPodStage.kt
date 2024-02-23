@@ -9,6 +9,7 @@ import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.DiscoverCatalogPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
+import io.airbyte.workload.launcher.pipeline.stages.model.SpecPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pods.PodClient
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -47,6 +48,7 @@ open class LaunchPodStage(
       is SyncPayload -> launcher.launchReplication(payload.input, input.msg)
       is CheckPayload -> launcher.launchCheck(payload.input, input.msg)
       is DiscoverCatalogPayload -> launcher.launchDiscover(payload.input, input.msg)
+      is SpecPayload -> logger.info { "${payload.javaClass.name} not supported yet." }
     }
 
     return input

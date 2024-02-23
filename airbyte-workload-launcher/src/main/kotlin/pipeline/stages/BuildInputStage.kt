@@ -11,12 +11,14 @@ import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.ReplicationActivityInput
+import io.airbyte.workers.models.SpecInput
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.DiscoverCatalogPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
+import io.airbyte.workload.launcher.pipeline.stages.model.SpecPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.WorkloadPayload
 import io.airbyte.workload.launcher.serde.PayloadDeserializer
@@ -89,6 +91,12 @@ open class BuildInputStage(
         val parsed: ReplicationActivityInput = deserializer.toReplicationActivityInput(rawPayload)
         val hydrated: ReplicationInput = replicationInputHydrator.getHydratedReplicationInput(parsed)
         SyncPayload(hydrated)
+      }
+
+      WorkloadType.SPEC -> {
+        val parsed: SpecInput = deserializer.toSpecInput(rawPayload)
+        // no need to hydrate as spec doesn't require secrets
+        SpecPayload(parsed)
       }
 
       else -> {

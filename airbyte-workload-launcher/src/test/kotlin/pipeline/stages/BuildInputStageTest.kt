@@ -17,9 +17,11 @@ import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.ReplicationActivityInput
+import io.airbyte.workers.models.SpecInput
 import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.DiscoverCatalogPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
+import io.airbyte.workload.launcher.pipeline.stages.model.SpecPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.serde.PayloadDeserializer
 import io.mockk.every
@@ -171,6 +173,40 @@ class BuildInputStageTest {
 
     when (val payload = result.payload) {
       is DiscoverCatalogPayload -> assert(hydratedConfig == payload.input.discoverCatalogInput)
+      else -> "Incorrect payload type: ${payload?.javaClass?.name}"
+    }
+  }
+
+  @Test
+  fun `parses spec input (no need to hydrate)`() {
+    val inputStr = "foo"
+    val specInput = SpecInput()
+
+    val checkInputHydrator: CheckConnectionInputHydrator = mockk()
+    val discoverInputHydrator: DiscoverCatalogInputHydrator = mockk()
+    val replicationInputHydrator: ReplicationInputHydrator = mockk()
+    val deserializer: PayloadDeserializer = mockk()
+    every { deserializer.toSpecInput(inputStr) } returns specInput
+
+    val stage =
+      BuildInputStage(
+        checkInputHydrator,
+        discoverInputHydrator,
+        replicationInputHydrator,
+        deserializer,
+        mockk(),
+        "dataplane-id",
+      )
+    val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.SPEC))
+
+    val result = stage.applyStage(io)
+
+    verify {
+      deserializer.toSpecInput(inputStr)
+    }
+
+    when (val payload = result.payload) {
+      is SpecPayload -> assert(specInput == payload.input)
       else -> "Incorrect payload type: ${payload?.javaClass?.name}"
     }
   }

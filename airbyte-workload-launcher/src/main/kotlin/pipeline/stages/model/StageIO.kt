@@ -3,6 +3,7 @@ package io.airbyte.workload.launcher.pipeline.stages.model
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
+import io.airbyte.workers.models.SpecInput
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 
 /**
@@ -35,4 +36,8 @@ data class CheckPayload(
 
 data class DiscoverCatalogPayload(
   var input: DiscoverCatalogInput,
+) : WorkloadPayload()
+
+data class SpecPayload(
+  var input: SpecInput,
 ) : WorkloadPayload()
