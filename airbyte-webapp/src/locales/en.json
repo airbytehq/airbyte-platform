@@ -430,6 +430,7 @@
   "jobs.failure.seeMore": "See more",
   "jobs.failure.copyText": "Copy text",
   "jobs.failure.copyText.success": "Text copied to clipboard",
+  "jobs.noMetadataAvailable": "No job metadata available",
   "sources.additionLogs": " Logs",
   "sources.emptyLogs": "Waiting for logs...",
   "sources.hour": "{hour}h ",

@@ -186,7 +186,7 @@ object WorkloadCheckFrequencyInSeconds : Permanent<Int>(key = "platform.workload
 
 object FailSyncOnInvalidChecksum : Temporary<Boolean>(key = "platform.fail-sync-on-invalid-checksum", default = false)
 
-object HydrateAggregatedStats : Temporary<Boolean>(key = "platform.hydrate-aggregated-stats", default = false)
+object HydrateAggregatedStats : Temporary<Boolean>(key = "platform.hydrate-aggregated-stats", default = true)
 
 object BillingCronScopeChangeTimestamp : Permanent<String>(key = "platform.billing-cron-scope-change-timestamp", default = "1735711200")
 
