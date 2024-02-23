@@ -43,6 +43,13 @@ public class ConfigurationMapService {
     // Copy all keys from configMap to the result map
     config.putAll(configMap);
 
+    // The refactor to use `.putAll` above caused the `validateSignature` key
+    // to be brought in to the IDP config unintentionally. This key is
+    // causing issues with Okta integrations, so we're removing it to
+    // restore the original behavior from before the refactor.
+    // TODO: investigate why setting this key causes issues with Okta.
+    config.remove("validateSignature");
+
     // Explicitly set required keys
     config.put("clientId", provider.getClientId());
     config.put("clientSecret", provider.getClientSecret());
