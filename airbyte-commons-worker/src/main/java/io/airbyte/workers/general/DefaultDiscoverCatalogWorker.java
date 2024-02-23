@@ -176,7 +176,7 @@ public class DefaultDiscoverCatalogWorker implements DiscoverCatalogWorker {
                 String.format(
                     "Source defined primary key validation failed for stream: %s. Error: %s",
                     s.getName(),
-                    jsonSchema.toPrettyString()));
+                    maybeErrorMsg));
           }
         }
       }
