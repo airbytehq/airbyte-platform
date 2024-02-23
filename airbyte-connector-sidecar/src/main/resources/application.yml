@@ -61,6 +61,9 @@ airbyte:
         value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
       host: ${INTERNAL_API_HOST}
   control.plane.auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT}
+  data.plane.service-account:
+    credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
+    email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
   sidecar:
     file-timeout-minutes: ${SIDECAR_FILE_TIMEOUT_MINUTES:9}
   workload-api:
