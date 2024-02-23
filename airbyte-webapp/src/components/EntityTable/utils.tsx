@@ -123,3 +123,15 @@ export const getConnectionSyncStatus = (
       return ConnectionSyncStatus.EMPTY;
   }
 };
+
+/**
+ * Filter entity table data by entityName(name defined by user) and connectorName
+ * @param searchFilter
+ * @param data
+ */
+export const filterBySearchEntityTableData = (searchFilter: string, data: EntityTableDataItem[]) =>
+  data.filter(({ entityName, connectorName }) =>
+    [entityName, connectorName]
+      .map((value) => value.toLowerCase())
+      .some((value) => value.includes(searchFilter.toLowerCase()))
+  );
