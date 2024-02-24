@@ -54,9 +54,9 @@ import org.slf4j.LoggerFactory;
  * suites can be enabled / disabled / configured as desired. This was extracted from
  * BasicAcceptanceTests and can be further broken up / refactored as necessary.
  */
-public class BasicAcceptanceTestsResources {
+public class AcceptanceTestsResources {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(BasicAcceptanceTestsResources.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(AcceptanceTestsResources.class);
 
   static final Boolean WITH_SCD_TABLE = true;
   static final Boolean WITHOUT_SCD_TABLE = false;
@@ -97,7 +97,7 @@ public class BasicAcceptanceTestsResources {
     return basicScheduleData;
   }
 
-  public BasicAcceptanceTestsResources() {
+  public AcceptanceTestsResources() {
     this.basicScheduleData = new ConnectionScheduleData().basicSchedule(
         new ConnectionScheduleDataBasicSchedule().units(1L).timeUnit(TimeUnitEnum.HOURS));
   }
