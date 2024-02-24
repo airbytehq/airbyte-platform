@@ -47,6 +47,7 @@ export const StreamTester: React.FC<{
       dataUpdatedAt,
       errorUpdatedAt,
     },
+    testReadLimits: { recordLimit, pageLimit, sliceLimit },
   } = useConnectorBuilderTestRead();
   const [showLimitWarning, setShowLimitWarning] = useLocalStorage("connectorBuilderLimitWarning", true);
   const mode = useBuilderWatch("mode");
@@ -187,7 +188,12 @@ export const StreamTester: React.FC<{
       {!isFetching && streamReadData && streamReadData.test_read_limit_reached && showLimitWarning && (
         <Message
           type="warning"
-          text={<FormattedMessage id="connectorBuilder.streamTestLimitReached" />}
+          text={
+            <FormattedMessage
+              id="connectorBuilder.streamTestLimitReached"
+              values={{ recordLimit, pageLimit, sliceLimit }}
+            />
+          }
           onClose={() => {
             setShowLimitWarning(false);
           }}

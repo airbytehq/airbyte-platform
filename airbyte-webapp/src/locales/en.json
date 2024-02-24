@@ -1169,7 +1169,7 @@
   "connectorBuilder.forkPage.prompt": "Load an existing connector",
   "connectorBuilder.loadingStreamList": "Loading",
   "connectorBuilder.noStreamSelected": "No stream selected",
-  "connectorBuilder.streamTestLimitReached": "Stream testing limit reached. During testing a maximum of 1000 records, or 5 stream partitions with 5 pages each will be returned.",
+  "connectorBuilder.streamTestLimitReached": "Stream testing limit reached. During testing a maximum of {recordLimit} records, or {sliceLimit} stream partitions with {pageLimit} pages each will be returned.",
   "connectorBuilder.builderPrompt.button": "Build your connector",
   "connectorBuilder.builderPrompt.title": "Need to build your own source?",
   "connectorBuilder.builderPrompt.description": "Build your source with our {adjective} {noun}",

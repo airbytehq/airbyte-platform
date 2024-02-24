@@ -39,6 +39,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
   const {
     streamRead,
     schemaWarnings: { incompatibleSchemaErrors, schemaDifferences },
+    testReadLimits: { recordLimit, pageLimit, sliceLimit },
   } = useConnectorBuilderTestRead();
 
   const autoImportSchema = useAutoImportSchema(testStreamIndex);
@@ -54,7 +55,10 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
           {`${formatMessage({ id: "connectorBuilder.recordsTab" })} (${page.records.length})`}
           {!streamRead.isFetching && streamRead.data && streamRead.data.test_read_limit_reached && (
             <InfoTooltip>
-              <FormattedMessage id="connectorBuilder.streamTestLimitReached" />
+              <FormattedMessage
+                id="connectorBuilder.streamTestLimitReached"
+                values={{ recordLimit, pageLimit, sliceLimit }}
+              />
             </InfoTooltip>
           )}
         </>
