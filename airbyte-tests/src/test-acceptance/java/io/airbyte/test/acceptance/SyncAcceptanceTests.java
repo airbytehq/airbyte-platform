@@ -1086,7 +1086,9 @@ class SyncAcceptanceTests {
     testHarness.waitWhileJobHasStatus(runningJob, Sets.newHashSet(JobStatus.RUNNING), Duration.ofMinutes(3));
 
     final JobInfoRead jobInfo = testHarness.getJobInfoRead(runningJob.getId());
-    final AttemptInfoRead attemptInfoRead = jobInfo.getAttempts().get(jobInfo.getAttempts().size() - 1);
+    // Only look at the first attempt. It's possible that in the time between leaving RUNNING and
+    // retrieving the job info, we'll have started a new attempt.
+    final AttemptInfoRead attemptInfoRead = jobInfo.getAttempts().get(0);
 
     // assert that the job attempt failed, and cancel the job regardless of status to prevent retries
     try {
