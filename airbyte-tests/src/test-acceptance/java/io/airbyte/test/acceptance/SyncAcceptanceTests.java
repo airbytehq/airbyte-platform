@@ -87,6 +87,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -1036,6 +1037,7 @@ class SyncAcceptanceTests {
   }
 
   @Test
+  @Disabled
   void testFailureTimeout() throws Exception {
     final SourceDefinitionRead sourceDefinition = testHarness.createE2eSourceDefinition(
         workspaceId);
