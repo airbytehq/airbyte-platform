@@ -12,7 +12,7 @@ export interface ApiCallOptions {
 export interface RequestOptions<DataType = unknown> {
   url: string;
   method: "get" | "post" | "put" | "delete" | "patch";
-  params?: Record<string, string | number | boolean>;
+  params?: Record<string, string | number | boolean | string[]>;
   data?: DataType;
   headers?: HeadersInit;
   responseType?: "blob";
@@ -49,7 +49,7 @@ export const fetchApiCall = async <T, U = unknown>(
   // We have a proper type for `params` in the RequestOptions interface, so types are validated correctly
   // when calling this method. Unfortunately the `URLSearchParams` typing in TS has wrong typings, since
   // it only allows for Record<string, string>, while the actual URLSearchParams API allow at least
-  // Record<string, string | number | boolean> so we expect a compilation error here.
+  // Record<string, string | number | boolean | string[]> so we expect a compilation error here.
   // see https://github.com/microsoft/TypeScript/issues/32951
   // @ts-expect-error Due to the wrong TS types.
   const queryParams = new URLSearchParams(params).toString();
@@ -60,12 +60,6 @@ export const fetchApiCall = async <T, U = unknown>(
     signal: signal ?? options.signal,
   });
 
-  /*
-   * Orval only generates `responseType: "blob"` if the schema for an endpoint
-   * is `type: string`, and `format: binary`.
-   * If it references a type that is `type: string`, and `format: binary` it does not interpret
-   * it correctly. So I am making an assumption that if it's not explicitly JSON, it's a binary file.
-   */
   return parseResponse(response, requestUrl, responseType);
 };
 

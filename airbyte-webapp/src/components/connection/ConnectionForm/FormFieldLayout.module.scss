@@ -3,9 +3,18 @@
 .leftFieldCol {
   flex: 1;
   max-width: 640px;
+
+  &.nextSizing {
+    max-width: unset;
+  }
 }
 
 .rightFieldCol {
   flex: 1;
   max-width: 320px;
+
+  &.nextSizing {
+    flex: 2;
+    max-width: unset;
+  }
 }

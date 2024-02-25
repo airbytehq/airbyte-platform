@@ -18,5 +18,6 @@ export interface AirbyteWebappConfig {
     clientToken?: string;
     site?: string;
     service?: string;
+    env?: string;
   };
 }

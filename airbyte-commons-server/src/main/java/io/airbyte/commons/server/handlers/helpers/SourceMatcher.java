@@ -34,6 +34,9 @@ public class SourceMatcher implements Matchable<SourceRead> {
     fromSearch.sourceName(Strings.isBlank(search.getSourceName()) ? query.getSourceName() : search.getSourceName());
     fromSearch.workspaceId(search.getWorkspaceId() == null ? query.getWorkspaceId() : search.getWorkspaceId());
     fromSearch.icon(query.getIcon());
+    fromSearch.isVersionOverrideApplied(query.getIsVersionOverrideApplied());
+    fromSearch.breakingChanges(query.getBreakingChanges());
+    fromSearch.supportState(query.getSupportState());
 
     if (search.getConnectionConfiguration() == null) {
       fromSearch.connectionConfiguration(query.getConnectionConfiguration());

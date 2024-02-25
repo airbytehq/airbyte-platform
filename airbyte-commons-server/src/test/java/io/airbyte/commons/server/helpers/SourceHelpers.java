@@ -6,6 +6,7 @@ package io.airbyte.commons.server.helpers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.SourceRead;
+import io.airbyte.api.model.generated.SupportState;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
@@ -50,6 +51,15 @@ public class SourceHelpers {
   }
 
   public static SourceRead getSourceRead(final SourceConnection source, final StandardSourceDefinition standardSourceDefinition) {
+    // sets reasonable defaults for isVersionOverrideApplied and supportState, use below method instead
+    // if you want to override them.
+    return getSourceRead(source, standardSourceDefinition, false, SupportState.SUPPORTED);
+  }
+
+  public static SourceRead getSourceRead(final SourceConnection source,
+                                         final StandardSourceDefinition standardSourceDefinition,
+                                         final boolean isVersionOverrideApplied,
+                                         final SupportState supportState) {
 
     return new SourceRead()
         .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
@@ -59,7 +69,9 @@ public class SourceHelpers {
         .connectionConfiguration(source.getConfiguration())
         .name(source.getName())
         .sourceName(standardSourceDefinition.getName())
-        .icon(standardSourceDefinition.getIconUrl());
+        .icon(standardSourceDefinition.getIconUrl())
+        .isVersionOverrideApplied(isVersionOverrideApplied)
+        .supportState(supportState);
   }
 
 }

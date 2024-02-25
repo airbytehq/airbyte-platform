@@ -22,7 +22,6 @@ import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.client.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
-import io.airbyte.api.client.model.generated.ConnectionUpdate;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.NonBreakingChangesPreference;
@@ -31,7 +30,6 @@ import io.airbyte.api.client.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.api.client.model.generated.WebBackendConnectionRead;
-import io.airbyte.api.client.model.generated.WebBackendConnectionRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceCreate;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.test.utils.AcceptanceTestHarness;
@@ -82,8 +80,6 @@ class SchemaManagementTests {
   public static final String FIELD_NAME = "name";
   private static final int DEFAULT_VALUE = 50;
   private static AcceptanceTestHarness testHarness;
-  private static AirbyteApiClient apiClient;
-  private static WebBackendApi webBackendApi;
   private static ConnectionRead createdConnection;
   private static ConnectionRead createdConnectionWithSameSource;
 
@@ -135,7 +131,7 @@ class SchemaManagementTests {
     if (isGke) {
       underlyingApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
     }
-    apiClient = new AirbyteApiClient(underlyingApiClient);
+    final var apiClient = new AirbyteApiClient(underlyingApiClient);
 
     // Set up the WebBackend API client.
     final var underlyingWebBackendApiClient = new ApiClient().setScheme(url.getScheme())
@@ -145,14 +141,14 @@ class SchemaManagementTests {
     if (isGke) {
       underlyingWebBackendApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
     }
-    webBackendApi = new WebBackendApi(underlyingWebBackendApiClient);
+    final var webBackendApi = new WebBackendApi(underlyingWebBackendApiClient);
 
     final UUID workspaceId = System.getenv().get(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID) == null ? apiClient.getWorkspaceApi()
         .createWorkspace(new WorkspaceCreate().email("acceptance-tests@airbyte.io").name("Airbyte Acceptance Tests" + UUID.randomUUID()))
         .getWorkspaceId()
         : UUID.fromString(System.getenv().get(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID));
 
-    testHarness = new AcceptanceTestHarness(apiClient, workspaceId);
+    testHarness = new AcceptanceTestHarness(apiClient, webBackendApi, workspaceId);
   }
 
   @BeforeEach
@@ -177,10 +173,7 @@ class SchemaManagementTests {
   void detectBreakingSchemaChangeViaWebBackendGetConnection() throws Exception {
     // Modify the underlying source to remove the id column, which is the primary key.
     testHarness.runSqlScriptInSource("postgres_remove_id_column.sql");
-
-    final WebBackendConnectionRead getConnectionAndRefresh = AirbyteApiClient.retryWithJitterThrows(() -> webBackendApi.webBackendGetConnection(
-        new WebBackendConnectionRequestBody().connectionId(createdConnection.getConnectionId()).withRefreshedCatalog(true)),
-        "get connection and refresh schema", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+    final WebBackendConnectionRead getConnectionAndRefresh = testHarness.webBackendGetConnectionAndRefreshSchema(createdConnection.getConnectionId());
     assertEquals(SchemaChange.BREAKING, getConnectionAndRefresh.getSchemaChange());
 
     final var currentConnection = testHarness.getConnection(createdConnection.getConnectionId());
@@ -199,11 +192,7 @@ class SchemaManagementTests {
            unit = TimeUnit.MINUTES)
   void testPropagateAllChangesViaSyncRefresh() throws Exception {
     // Update one connection to apply all (column + stream) changes.
-    AirbyteApiClient.retryWithJitter(() -> apiClient.getConnectionApi().updateConnection(
-        new ConnectionUpdate()
-            .connectionId(createdConnection.getConnectionId())
-            .nonBreakingChangesPreference(NonBreakingChangesPreference.PROPAGATE_FULLY)),
-        "update connection non breaking change preference", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+    testHarness.updateSchemaChangePreference(createdConnection.getConnectionId(), NonBreakingChangesPreference.PROPAGATE_FULLY, null);
 
     // Modify the underlying source to add a new column and a new table, and populate them with some
     // data.
@@ -232,12 +221,8 @@ class SchemaManagementTests {
            value = 10,
            unit = TimeUnit.MINUTES)
   void testBackfillDisabled() throws Exception {
-    AirbyteApiClient.retryWithJitter(() -> apiClient.getConnectionApi().updateConnection(
-        new ConnectionUpdate()
-            .connectionId(createdConnection.getConnectionId())
-            .nonBreakingChangesPreference(NonBreakingChangesPreference.PROPAGATE_FULLY)
-            .backfillPreference(SchemaChangeBackfillPreference.DISABLED)),
-        "update connection non breaking change preference", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+    testHarness.updateSchemaChangePreference(createdConnection.getConnectionId(), NonBreakingChangesPreference.PROPAGATE_FULLY,
+        SchemaChangeBackfillPreference.DISABLED);
     // Avoid a race with the connection manager.
     Thread.sleep(1000 * 5);
     // Run a sync with the initial data.
@@ -264,12 +249,8 @@ class SchemaManagementTests {
            value = 10,
            unit = TimeUnit.MINUTES)
   void testBackfillOnNewColumn() throws Exception {
-    AirbyteApiClient.retryWithJitter(() -> apiClient.getConnectionApi().updateConnection(
-        new ConnectionUpdate()
-            .connectionId(createdConnection.getConnectionId())
-            .nonBreakingChangesPreference(NonBreakingChangesPreference.PROPAGATE_FULLY)
-            .backfillPreference(SchemaChangeBackfillPreference.ENABLED)),
-        "update connection non breaking change preference", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+    testHarness.updateSchemaChangePreference(createdConnection.getConnectionId(), NonBreakingChangesPreference.PROPAGATE_FULLY,
+        SchemaChangeBackfillPreference.ENABLED);
     // We sometimes get a race where the connection manager isn't ready, and this results in
     // `syncConnection` simply
     // hanging. This is a bug we should fix in the backend, but we tolerate it here for now.

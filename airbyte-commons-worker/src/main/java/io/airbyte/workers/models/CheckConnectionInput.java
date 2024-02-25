@@ -21,6 +21,6 @@ public class CheckConnectionInput {
 
   private JobRunConfig jobRunConfig;
   private IntegrationLauncherConfig launcherConfig;
-  private StandardCheckConnectionInput connectionConfiguration;
+  private StandardCheckConnectionInput checkConnectionInput;
 
 }

@@ -27,6 +27,8 @@ import {
   CursorPagination,
   DeclarativeComponentSchemaMetadata,
   HttpRequesterErrorHandler,
+  NoAuth,
+  SessionTokenAuthenticator,
 } from "core/api/types/ConnectorManifest";
 import { removeEmptyProperties } from "core/utils/form";
 
@@ -52,8 +54,10 @@ import {
   isInterpolatedConfigKey,
   NO_AUTH,
   OAUTH_ACCESS_TOKEN_INPUT,
+  OAUTH_AUTHENTICATOR,
   OAUTH_TOKEN_EXPIRY_DATE_INPUT,
   RequestOptionOrPathInject,
+  SESSION_TOKEN_AUTHENTICATOR,
 } from "./types";
 import { formatJson } from "./utils";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
@@ -600,6 +604,26 @@ function removeTrailingSlashes(path: string) {
   return path.replace(/\/+$/, "");
 }
 
+type SupportedAuthenticators =
+  | ApiKeyAuthenticator
+  | BasicHttpAuthenticator
+  | BearerAuthenticator
+  | OAuthAuthenticator
+  | NoAuth
+  | SessionTokenAuthenticator;
+
+function isSupportedAuthenticator(authenticator: HttpRequesterAuthenticator): authenticator is SupportedAuthenticators {
+  const supportedAuthTypes: string[] = [
+    NO_AUTH,
+    API_KEY_AUTHENTICATOR,
+    BEARER_AUTHENTICATOR,
+    BASIC_AUTHENTICATOR,
+    OAUTH_AUTHENTICATOR,
+    SESSION_TOKEN_AUTHENTICATOR,
+  ];
+  return supportedAuthTypes.includes(authenticator.type);
+}
+
 function manifestAuthenticatorToBuilder(
   manifestAuthenticator: HttpRequesterAuthenticator | undefined,
   streamName?: string
@@ -610,11 +634,9 @@ function manifestAuthenticatorToBuilder(
       type: "NoAuth",
     };
   } else if (manifestAuthenticator.type === undefined) {
-    throw new ManifestCompatibilityError(streamName, "authenticator has no type");
-  } else if (manifestAuthenticator.type === "CustomAuthenticator") {
-    throw new ManifestCompatibilityError(streamName, "uses a CustomAuthenticator");
-  } else if (manifestAuthenticator.type === "LegacySessionTokenAuthenticator") {
-    throw new ManifestCompatibilityError(streamName, "uses a LegacySessionTokenAuthenticator");
+    throw new ManifestCompatibilityError(streamName, "Authenticator has no type");
+  } else if (!isSupportedAuthenticator(manifestAuthenticator)) {
+    throw new ManifestCompatibilityError(streamName, `Unsupported authenticator type: ${manifestAuthenticator.type}`);
   } else if (manifestAuthenticator.type === "ApiKeyAuthenticator") {
     builderAuthenticator = {
       ...manifestAuthenticator,

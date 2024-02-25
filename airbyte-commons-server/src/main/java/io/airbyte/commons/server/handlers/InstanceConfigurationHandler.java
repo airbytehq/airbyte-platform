@@ -74,17 +74,16 @@ public class InstanceConfigurationHandler {
 
   public InstanceConfigurationResponse getInstanceConfiguration() throws IOException {
     final UUID defaultOrganizationId = getDefaultOrganizationId();
-    final StandardWorkspace defaultWorkspace = getDefaultWorkspace(defaultOrganizationId);
+    final Boolean initialSetupComplete = workspacePersistence.getInitialSetupComplete();
 
     return new InstanceConfigurationResponse()
         .webappUrl(webappUrl)
         .edition(Enums.convertTo(airbyteEdition, EditionEnum.class))
         .licenseType(getLicenseType())
         .auth(getAuthConfiguration())
-        .initialSetupComplete(defaultWorkspace.getInitialSetupComplete())
+        .initialSetupComplete(initialSetupComplete)
         .defaultUserId(getDefaultUserId())
         .defaultOrganizationId(defaultOrganizationId)
-        .defaultWorkspaceId(defaultWorkspace.getWorkspaceId())
         .trackingStrategy(trackingStrategy.equalsIgnoreCase("segment") ? TrackingStrategyEnum.SEGMENT : TrackingStrategyEnum.LOGGING);
   }
 

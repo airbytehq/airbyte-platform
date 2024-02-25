@@ -427,11 +427,13 @@ internal class ScopedConfigurationHandlerTest {
 
     every { sourceService.getStandardSourceDefinition(any()) } throws
       ConfigNotFoundException(
-        ConfigSchema.STANDARD_SOURCE_DEFINITION, scopedConfigurationCreate.resourceId,
+        ConfigSchema.STANDARD_SOURCE_DEFINITION,
+        scopedConfigurationCreate.resourceId,
       )
     every { destinationService.getStandardDestinationDefinition(any()) } throws
       ConfigNotFoundException(
-        ConfigSchema.STANDARD_DESTINATION_DEFINITION, scopedConfigurationCreate.resourceId,
+        ConfigSchema.STANDARD_DESTINATION_DEFINITION,
+        scopedConfigurationCreate.resourceId,
       )
 
     assertThrows<BadRequestException> {
@@ -516,7 +518,8 @@ internal class ScopedConfigurationHandlerTest {
     every { userPersistence.getUser(any()) } returns Optional.of(User().withEmail("user@airbyte.io"))
     every { actorDefinitionService.getActorDefinitionVersion(any()) } throws
       ConfigNotFoundException(
-        ConfigSchema.ACTOR_DEFINITION_VERSION, scopedConfigurationCreate.resourceId,
+        ConfigSchema.ACTOR_DEFINITION_VERSION,
+        scopedConfigurationCreate.resourceId,
       )
 
     assertThrows<BadRequestException> {
@@ -593,7 +596,9 @@ internal class ScopedConfigurationHandlerTest {
 
     every {
       scopedConfigurationService.getScopedConfiguration(
-        ConnectorVersionKey, ConfigResourceType.ACTOR_DEFINITION, actorDefId,
+        ConnectorVersionKey,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefId,
         mapOf(
           ConfigScopeType.WORKSPACE to workspaceId,
           ConfigScopeType.ORGANIZATION to orgId,
@@ -616,8 +621,10 @@ internal class ScopedConfigurationHandlerTest {
     every {
       scopedConfigurationService.listScopedConfigurationsWithScopes(
         ConnectorVersionKey.key,
-        ConfigResourceType.ACTOR_DEFINITION, actorDefId,
-        ConfigScopeType.ORGANIZATION, listOf(orgId),
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefId,
+        ConfigScopeType.ORGANIZATION,
+        listOf(orgId),
       )
     } returns
       listOf(
@@ -635,8 +642,10 @@ internal class ScopedConfigurationHandlerTest {
     every {
       scopedConfigurationService.listScopedConfigurationsWithScopes(
         ConnectorVersionKey.key,
-        ConfigResourceType.ACTOR_DEFINITION, actorDefId,
-        ConfigScopeType.ACTOR, listOf(sourceId, sourceId2),
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefId,
+        ConfigScopeType.ACTOR,
+        listOf(sourceId, sourceId2),
       )
     } returns
       listOf(

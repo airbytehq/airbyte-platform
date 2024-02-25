@@ -1,8 +1,10 @@
 @use "scss/variables";
+@use "scss/colors";
 
 .addUserControl__dropdown {
   padding-bottom: 0;
   width: variables.$width-wide-menu;
+  background-color: colors.$foreground;
 }
 
 .addUserControl__dropdownMenu {

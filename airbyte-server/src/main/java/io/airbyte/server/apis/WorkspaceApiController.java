@@ -6,7 +6,6 @@ package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
-import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
@@ -19,6 +18,9 @@ import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody;
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
+import io.airbyte.api.model.generated.PermissionCheckRead.StatusEnum;
+import io.airbyte.api.model.generated.PermissionCheckRequest;
+import io.airbyte.api.model.generated.PermissionType;
 import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.WorkspaceCreate;
 import io.airbyte.api.model.generated.WorkspaceCreateWithId;
@@ -30,9 +32,11 @@ import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
-import io.airbyte.commons.auth.SecuredWorkspace;
+import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.commons.server.handlers.WorkspacesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
+import io.airbyte.commons.server.support.CurrentUserService;
+import io.airbyte.server.apis.publicapi.problems.ForbiddenProblem;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
@@ -48,28 +52,62 @@ import io.micronaut.security.rules.SecurityRule;
 public class WorkspaceApiController implements WorkspaceApi {
 
   private final WorkspacesHandler workspacesHandler;
+  private final PermissionHandler permissionHandler;
+  private final CurrentUserService currentUserService;
 
-  public WorkspaceApiController(final WorkspacesHandler workspacesHandler) {
+  public WorkspaceApiController(final WorkspacesHandler workspacesHandler,
+                                final PermissionHandler permissionHandler,
+                                final CurrentUserService currentUserService) {
     this.workspacesHandler = workspacesHandler;
+    this.permissionHandler = permissionHandler;
+    this.currentUserService = currentUserService;
   }
 
   @Post("/create")
   @Secured({AUTHENTICATED_USER})
   @Override
   public WorkspaceRead createWorkspace(@Body final WorkspaceCreate workspaceCreate) {
-    return ApiHelper.execute(() -> workspacesHandler.createWorkspace(workspaceCreate));
+    return ApiHelper.execute(() -> {
+      // Verify that the user has permission to create a workspace in an organization,
+      // need to be at least an organization editor to do so.
+      if (workspaceCreate.getOrganizationId() != null) {
+        final StatusEnum permissionCheckStatus = permissionHandler.checkPermissions(new PermissionCheckRequest()
+            .userId(currentUserService.getCurrentUser().getUserId())
+            .permissionType(PermissionType.ORGANIZATION_EDITOR)
+            .organizationId(workspaceCreate.getOrganizationId()))
+            .getStatus();
+        if (!permissionCheckStatus.equals(StatusEnum.SUCCEEDED)) {
+          throw new ForbiddenProblem("User does not have permission to create a workspace in organization " + workspaceCreate.getOrganizationId());
+        }
+      }
+      return workspacesHandler.createWorkspace(workspaceCreate);
+    });
   }
 
   @Post("/create_if_not_exist")
   @Secured({AUTHENTICATED_USER})
   @Override
   public WorkspaceRead createWorkspaceIfNotExist(@Body final WorkspaceCreateWithId workspaceCreateWithId) {
-    return ApiHelper.execute(() -> workspacesHandler.createWorkspaceIfNotExist(workspaceCreateWithId));
+    return ApiHelper.execute(() -> {
+      // Verify that the user has permission to create a workspace in an organization,
+      // need to be at least an organization editor to do so.
+      if (workspaceCreateWithId.getOrganizationId() != null) {
+        final StatusEnum permissionCheckStatus = permissionHandler.checkPermissions(new PermissionCheckRequest()
+            .userId(currentUserService.getCurrentUser().getUserId())
+            .permissionType(PermissionType.ORGANIZATION_EDITOR)
+            .organizationId(workspaceCreateWithId.getOrganizationId()))
+            .getStatus();
+        if (!permissionCheckStatus.equals(StatusEnum.SUCCEEDED)) {
+          throw new ForbiddenProblem(
+              "User does not have permission to create a workspace in organization " + workspaceCreateWithId.getOrganizationId());
+        }
+      }
+      return workspacesHandler.createWorkspaceIfNotExist(workspaceCreateWithId);
+    });
   }
 
   @Post("/delete")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @Override
   @Status(HttpStatus.NO_CONTENT)
   public void deleteWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
@@ -80,8 +118,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/get_organization_info")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceOrganizationInfoRead getOrganizationInfo(final WorkspaceIdRequestBody workspaceIdRequestBody) {
@@ -89,8 +126,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/get")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceRead getWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
@@ -98,8 +134,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/get_by_slug")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceRead getWorkspaceBySlug(@Body final SlugRequestBody slugRequestBody) {
@@ -123,8 +158,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post(uri = "/list_paginated")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceReadList listWorkspacesPaginated(@Body final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody) {
@@ -132,8 +166,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/update")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceRead updateWorkspace(@Body final WorkspaceUpdate workspaceUpdate) {
@@ -141,8 +174,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/tag_feedback_status_as_done")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public void updateWorkspaceFeedback(@Body final WorkspaceGiveFeedback workspaceGiveFeedback) {
@@ -153,8 +185,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/update_name")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceRead updateWorkspaceName(@Body final WorkspaceUpdateName workspaceUpdateName) {
@@ -170,8 +201,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/get_by_connection_id")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceRead getWorkspaceByConnectionId(@Body final ConnectionIdRequestBody connectionIdRequestBody) {

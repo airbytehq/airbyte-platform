@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.AUTH_USER;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.PERMISSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.USER;
 import static org.jooq.impl.DSL.asterisk;
@@ -280,8 +281,10 @@ public class PermissionPersistence {
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))
+        .join(AUTH_USER)
+        .on(USER.ID.eq(AUTH_USER.USER_ID))
         .where(PERMISSION.PERMISSION_TYPE.eq(io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.instance_admin))
-        .and(USER.AUTH_USER_ID.eq(authUserId)));
+        .and(AUTH_USER.AUTH_USER_ID.eq(authUserId)));
   }
 
   public PermissionType findPermissionTypeForUserAndWorkspace(final UUID workspaceId, final String authUserId)
@@ -296,8 +299,10 @@ public class PermissionPersistence {
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))
+        .join(AUTH_USER)
+        .on(USER.ID.eq(AUTH_USER.USER_ID))
         .where(PERMISSION.WORKSPACE_ID.eq(workspaceId))
-        .and(USER.AUTH_USER_ID.eq(authUserId))
+        .and(AUTH_USER.AUTH_USER_ID.eq(authUserId))
         .fetchOne();
     if (record == null) {
       return null;
@@ -320,8 +325,10 @@ public class PermissionPersistence {
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))
+        .join(AUTH_USER)
+        .on(USER.ID.eq(AUTH_USER.USER_ID))
         .where(PERMISSION.ORGANIZATION_ID.eq(organizationId))
-        .and(USER.AUTH_USER_ID.eq(authUserId))
+        .and(AUTH_USER.AUTH_USER_ID.eq(authUserId))
         .fetchOne();
 
     if (record == null) {

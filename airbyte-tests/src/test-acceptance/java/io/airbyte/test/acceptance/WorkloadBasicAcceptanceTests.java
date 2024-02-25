@@ -4,15 +4,16 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.DISABLE_TEMPORAL_TESTS_IN_GKE;
-import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.IS_GKE;
-import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.KUBE;
-import static io.airbyte.test.acceptance.BasicAcceptanceTestsResources.TRUE;
+import static io.airbyte.test.acceptance.AcceptanceTestsResources.DISABLE_TEMPORAL_TESTS_IN_GKE;
+import static io.airbyte.test.acceptance.AcceptanceTestsResources.IS_GKE;
+import static io.airbyte.test.acceptance.AcceptanceTestsResources.KUBE;
+import static io.airbyte.test.acceptance.AcceptanceTestsResources.TRUE;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
 import io.airbyte.api.client.model.generated.CheckConnectionRead.StatusEnum;
-import io.airbyte.api.client.model.generated.WorkspaceCreateWithId;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
@@ -25,8 +26,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Tests for operations utilizing the workload api / launcher. As development continues on these
@@ -35,12 +34,11 @@ import org.slf4j.LoggerFactory;
  */
 public class WorkloadBasicAcceptanceTests {
 
-  static final Logger LOGGER = LoggerFactory.getLogger(WorkloadBasicAcceptanceTests.class);
-
-  static final BasicAcceptanceTestsResources testResources = new BasicAcceptanceTestsResources();
+  static final AcceptanceTestsResources testResources = new AcceptanceTestsResources();
 
   static final UUID RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID = UUID.fromString("3d2985a0-a412-45f4-9124-e15800b739be");
   static final UUID RUN_CHECK_WITH_WORKLOAD_WORKSPACE_ID = UUID.fromString("1bdcfb61-219b-4290-be4f-12f9ac5461be");
+  static final UUID RUN_DISCOVER_WITH_WORKLOAD_WORKSPACE_ID = UUID.fromString("3851861d-ac0b-440c-bd60-408cf9e7fc0e");
 
   @BeforeAll
   static void init() throws URISyntaxException, IOException, InterruptedException, ApiException {
@@ -48,7 +46,7 @@ public class WorkloadBasicAcceptanceTests {
   }
 
   @BeforeEach
-  void setup() throws SQLException, URISyntaxException, IOException {
+  void setup() throws SQLException, URISyntaxException, IOException, ApiException {
     testResources.setup();
   }
 
@@ -69,11 +67,7 @@ public class WorkloadBasicAcceptanceTests {
   void testSyncWithWorkload() throws Exception {
     // Create workspace with static ID for test which is used in the flags.yaml to perform an override
     // in order to exercise the workload path.
-    testResources.getApiClient().getWorkspaceApi()
-        .createWorkspaceIfNotExist(new WorkspaceCreateWithId()
-            .id(RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID)
-            .email("acceptance-tests@airbyte.io")
-            .name("Airbyte Acceptance Tests" + UUID.randomUUID()));
+    testResources.getTestHarness().createWorkspaceWithId(RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID);
 
     testResources.runSmallSyncForAWorkspaceId(RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID);
   }
@@ -84,21 +78,35 @@ public class WorkloadBasicAcceptanceTests {
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
-  void testDestinationCheckConnectionWithWorkload() throws ApiException {
+  void testDestinationCheckConnectionWithWorkload() throws Exception {
     // Create workspace with static ID for test which is used in the flags.yaml to perform an override
     // in order to exercise the workload path.
-    testResources.getApiClient().getWorkspaceApi()
-        .createWorkspaceIfNotExist(new WorkspaceCreateWithId()
-            .id(RUN_CHECK_WITH_WORKLOAD_WORKSPACE_ID)
-            .email("acceptance-tests@airbyte.io")
-            .name("Airbyte Acceptance Tests" + UUID.randomUUID()));
+    testResources.getTestHarness().createWorkspaceWithId(RUN_CHECK_WITH_WORKLOAD_WORKSPACE_ID);
 
     final UUID destinationId = testResources.getTestHarness().createPostgresDestination(RUN_CHECK_WITH_WORKLOAD_WORKSPACE_ID).getDestinationId();
 
     final CheckConnectionRead.StatusEnum checkOperationStatus = testResources.getTestHarness().checkDestination(destinationId);
 
     Assertions.assertNotNull(checkOperationStatus);
-    Assertions.assertEquals(StatusEnum.SUCCEEDED, checkOperationStatus);
+    assertEquals(StatusEnum.SUCCEEDED, checkOperationStatus);
+  }
+
+  @Test
+  @EnabledIfEnvironmentVariable(named = KUBE,
+                                matches = TRUE)
+  @DisabledIfEnvironmentVariable(named = IS_GKE,
+                                 matches = TRUE,
+                                 disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
+  void testDiscoverSourceSchema() throws Exception {
+    // Create workspace with static ID for test which is used in the flags.yaml to perform an override
+    // in order to exercise the workload path.
+    testResources.getTestHarness().createWorkspaceWithId(RUN_DISCOVER_WITH_WORKLOAD_WORKSPACE_ID);
+
+    final UUID sourceId = testResources.getTestHarness().createPostgresSource(RUN_DISCOVER_WITH_WORKLOAD_WORKSPACE_ID).getSourceId();
+
+    final AirbyteCatalog actual = testResources.getTestHarness().discoverSourceSchema(sourceId);
+
+    testResources.getTestHarness().compareCatalog(actual);
   }
 
 }

@@ -70,8 +70,8 @@ export const CloudSettingsPage: React.FC = () => {
           </SettingsNavigationBlock>
           <SettingsNavigationBlock title={formatMessage({ id: "settings.workspaceSettings" })}>
             <SettingsLink
-              iconType="gear"
-              name={formatMessage({ id: "settings.generalSettings" })}
+              iconType={updatedOrganizationsUi ? "community" : "gear"}
+              name={formatMessage({ id: updatedOrganizationsUi ? "settings.members" : "settings.generalSettings" })}
               to={CloudSettingsRoutePaths.Workspace}
             />
             {supportsDataResidency && (
@@ -98,7 +98,7 @@ export const CloudSettingsPage: React.FC = () => {
                 to={CloudSettingsRoutePaths.DbtCloud}
               />
             )}
-            {(!isSsoEnabled || !updatedOrganizationsUi) && (
+            {!updatedOrganizationsUi && (
               <SettingsLink
                 iconType="community"
                 name={formatMessage({ id: "settings.accessManagement" })}
@@ -114,8 +114,8 @@ export const CloudSettingsPage: React.FC = () => {
           {organization && canViewOrgSettings && (
             <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
               <SettingsLink
-                iconType="gear"
-                name={formatMessage({ id: "settings.generalSettings" })}
+                iconType={updatedOrganizationsUi ? "community" : "gear"}
+                name={formatMessage({ id: updatedOrganizationsUi ? "settings.members" : "settings.generalSettings" })}
                 to={CloudSettingsRoutePaths.Organization}
               />
               {!updatedOrganizationsUi && isSsoEnabled && (

@@ -1297,7 +1297,7 @@ exports[`CreateConnectionForm should render when loading 1`] = `
           data-type="text"
         >
           We are fetching the schema of your data source. 
-This should take less than a minute, but may take a few minutes on slow internet connections or data sources with a large amount of tables.
+This should take less than a minute, but may take a few minutes on slow internet connections or data sources with a large amount of streams.
         </p>
       </div>
     </div>

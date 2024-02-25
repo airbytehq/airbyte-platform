@@ -32,6 +32,10 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.UseWorkloadApiForCheck;
+import io.airbyte.featureflag.UseWorkloadApiForDiscover;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.models.Attempt;
@@ -81,12 +85,15 @@ public class JobTracker {
   private final WorkspaceHelper workspaceHelper;
   private final TrackingClient trackingClient;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final FeatureFlagClient featureFlagClient;
 
   public JobTracker(final ConfigRepository configRepository,
                     final JobPersistence jobPersistence,
                     final TrackingClient trackingClient,
-                    final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
-    this(configRepository, jobPersistence, new WorkspaceHelper(configRepository, jobPersistence), trackingClient, actorDefinitionVersionHelper);
+                    final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                    final FeatureFlagClient featureFlagClient) {
+    this(configRepository, jobPersistence, new WorkspaceHelper(configRepository, jobPersistence), trackingClient, actorDefinitionVersionHelper,
+        featureFlagClient);
   }
 
   @VisibleForTesting
@@ -94,12 +101,14 @@ public class JobTracker {
              final JobPersistence jobPersistence,
              final WorkspaceHelper workspaceHelper,
              final TrackingClient trackingClient,
-             final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+             final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
     this.jobPersistence = jobPersistence;
     this.workspaceHelper = workspaceHelper;
     this.trackingClient = trackingClient;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.featureFlagClient = featureFlagClient;
   }
 
   /**
@@ -122,7 +131,7 @@ public class JobTracker {
     final FailureReason failureReason = jobOutput != null ? jobOutput.getFailureReason() : null;
 
     Exceptions.swallow(() -> {
-      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(responseOutput);
+      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(responseOutput, workspaceId);
       final Map<String, Object> failureReasonMetadata = generateFailureReasonMetadata(failureReason);
       final Map<String, Object> jobMetadata = generateJobMetadata(jobId.toString(), ConfigType.CHECK_CONNECTION_SOURCE);
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId, workspaceId, actorId);
@@ -153,7 +162,7 @@ public class JobTracker {
     final FailureReason failureReason = jobOutput != null ? jobOutput.getFailureReason() : null;
 
     Exceptions.swallow(() -> {
-      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(responseOutput);
+      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(responseOutput, workspaceId);
       final Map<String, Object> failureReasonMetadata = generateFailureReasonMetadata(failureReason);
       final Map<String, Object> jobMetadata = generateJobMetadata(jobId.toString(), ConfigType.CHECK_CONNECTION_DESTINATION);
       final Map<String, Object> destinationDefinitionMetadata = generateDestinationDefinitionMetadata(destinationDefinitionId, workspaceId, actorId);
@@ -186,8 +195,10 @@ public class JobTracker {
       final Map<String, Object> failureReasonMetadata = generateFailureReasonMetadata(failureReason);
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId, workspaceId, actorId);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
+      final Map<String, Object> workloadMetadata =
+          Map.of("workload_enabled", featureFlagClient.boolVariation(UseWorkloadApiForDiscover.INSTANCE, new Workspace(workspaceId)));
 
-      track(workspaceId, DISCOVER_EVENT, MoreMaps.merge(jobMetadata, failureReasonMetadata, sourceDefMetadata, stateMetadata));
+      track(workspaceId, DISCOVER_EVENT, MoreMaps.merge(jobMetadata, failureReasonMetadata, sourceDefMetadata, stateMetadata, workloadMetadata));
     });
   }
 
@@ -440,12 +451,14 @@ public class JobTracker {
    * job with a failed check. Because of this, tracking just the job attempt status does not capture
    * the whole picture. The `check_connection_outcome` field tracks this.
    */
-  private Map<String, Object> generateCheckConnectionMetadata(final @Nullable StandardCheckConnectionOutput output) {
+  private Map<String, Object> generateCheckConnectionMetadata(final @Nullable StandardCheckConnectionOutput output, final UUID workspaceId) {
+    final Map<String, Object> metadata = new HashMap<>();
+    metadata.put("workload_enabled", featureFlagClient.boolVariation(UseWorkloadApiForCheck.INSTANCE, new Workspace(workspaceId)));
+
     if (output == null) {
-      return Map.of();
+      return metadata;
     }
 
-    final Map<String, Object> metadata = new HashMap<>();
     if (output.getMessage() != null) {
       metadata.put("check_connection_message", output.getMessage());
     }

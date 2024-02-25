@@ -35,9 +35,6 @@ describe("useBillingPageBanners", () => {
   describe("pre-trial", () => {
     // because the pre-trial state can only exist with the flag enabled, we need to mock the flag as true!
     mockUseExperiment.mockImplementation((id) => {
-      if (id === "billing.newTrialPolicy") {
-        return true;
-      }
       if (id === "billing.autoRecharge") {
         return false;
       }

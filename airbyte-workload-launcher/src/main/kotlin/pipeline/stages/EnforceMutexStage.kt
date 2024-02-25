@@ -14,6 +14,7 @@ import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pods.PodClient
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
@@ -30,7 +31,8 @@ private val logger = KotlinLogging.logger {}
 open class EnforceMutexStage(
   private val launcher: PodClient,
   metricPublisher: CustomMetricPublisher,
-) : LaunchStage(metricPublisher) {
+  @Value("\${airbyte.data-plane-id}") dataplaneId: String,
+) : LaunchStage(metricPublisher, dataplaneId) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "EnforceMutexStage")
   @Instrument(
     start = "WORKLOAD_STAGE_START",

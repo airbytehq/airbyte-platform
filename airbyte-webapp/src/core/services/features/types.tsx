@@ -4,6 +4,7 @@
  */
 
 export enum FeatureItem {
+  AllowAllRBACRoles = "ALLOW_ALL_RBAC_ROLES",
   AllowAutoDetectSchema = "ALLOW_AUTO_DETECT_SCHEMA",
   AllowUploadCustomImage = "ALLOW_UPLOAD_CUSTOM_IMAGE",
   AllowCustomDBT = "ALLOW_CUSTOM_DBT",

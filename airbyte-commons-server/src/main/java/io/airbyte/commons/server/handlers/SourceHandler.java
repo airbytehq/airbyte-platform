@@ -4,12 +4,14 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.server.converters.ApiPojoConverters.toApiSupportState;
 import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt;
+import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
 import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DiscoverCatalogResult;
@@ -29,6 +31,7 @@ import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -37,6 +40,7 @@ import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
@@ -85,6 +89,7 @@ public class SourceHandler {
   private final SourceService sourceService;
   private final WorkspaceService workspaceService;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
+  private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
 
   @VisibleForTesting
   public SourceHandler(final ConfigRepository configRepository,
@@ -99,7 +104,8 @@ public class SourceHandler {
                        final FeatureFlagClient featureFlagClient,
                        final SourceService sourceService,
                        final WorkspaceService workspaceService,
-                       final SecretPersistenceConfigService secretPersistenceConfigService) {
+                       final SecretPersistenceConfigService secretPersistenceConfigService,
+                       final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper) {
     this.configRepository = configRepository;
     this.secretsRepositoryReader = secretsRepositoryReader;
     validator = integrationSchemaValidation;
@@ -113,6 +119,7 @@ public class SourceHandler {
     this.sourceService = sourceService;
     this.workspaceService = workspaceService;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
+    this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
   }
 
   public SourceRead createSourceWithOptionalSecret(final SourceCreate sourceCreate)
@@ -485,9 +492,17 @@ public class SourceHandler {
   }
 
   protected SourceRead toSourceRead(final SourceConnection sourceConnection,
-                                    final StandardSourceDefinition standardSourceDefinition) {
+                                    final StandardSourceDefinition standardSourceDefinition)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+
+    final ActorDefinitionVersionWithOverrideStatus sourceVersionWithOverrideStatus = actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
+        standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId());
 
     final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
+
+    final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =
+        actorDefinitionHandlerHelper.getVersionBreakingChanges(sourceVersionWithOverrideStatus.actorDefinitionVersion());
+
     return new SourceRead()
         .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
         .sourceName(standardSourceDefinition.getName())
@@ -496,7 +511,10 @@ public class SourceHandler {
         .sourceDefinitionId(sourceConnection.getSourceDefinitionId())
         .connectionConfiguration(sourceConnection.getConfiguration())
         .name(sourceConnection.getName())
-        .icon(iconUrlFeatureFlag ? standardSourceDefinition.getIconUrl() : SourceDefinitionsHandler.loadIcon(standardSourceDefinition.getIcon()));
+        .icon(iconUrlFeatureFlag ? standardSourceDefinition.getIconUrl() : SourceDefinitionsHandler.loadIcon(standardSourceDefinition.getIcon()))
+        .isVersionOverrideApplied(sourceVersionWithOverrideStatus.isOverrideApplied())
+        .breakingChanges(breakingChanges.orElse(null))
+        .supportState(toApiSupportState(sourceVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()));
   }
 
   protected SourceSnippetRead toSourceSnippetRead(final SourceConnection source, final StandardSourceDefinition sourceDefinition) {

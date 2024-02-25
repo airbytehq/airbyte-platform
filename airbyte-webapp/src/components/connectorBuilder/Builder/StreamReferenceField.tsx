@@ -3,7 +3,7 @@ import { get, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
-import { DropDown } from "components/ui/DropDown";
+import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
 import styles from "./StreamReferenceField.module.scss";
@@ -44,12 +44,12 @@ export const StreamReferenceField: React.FC<StreamReferenceFieldProps> = ({
 
   return (
     <ControlLabels label={label} infoTooltipContent={tooltip} optional={optional}>
-      <DropDown
+      <ListBox
         {...props}
         options={options}
-        onChange={(selected) => selected && setValue(path, selected.value)}
-        value={value}
-        error={hasError}
+        onSelect={(selected) => selected && setValue(path, selected)}
+        selectedValue={value}
+        hasError={hasError}
       />
       {hasError && (
         <Text className={styles.error}>

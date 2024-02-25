@@ -8,6 +8,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.field;
 import static org.jooq.impl.DSL.noCondition;
@@ -28,6 +29,7 @@ import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
@@ -39,7 +41,9 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.SourceType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.Organization;
+import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
@@ -83,20 +87,22 @@ public class SourceServiceJooqImpl implements SourceService {
   private final SecretsRepositoryReader secretRepositoryReader;
   private final SecretsRepositoryWriter secretsRepositoryWriter;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
-  private final ConnectionServiceJooqImpl connectionService;
-  private final static long heartbeatMaxSecondBetweenMessage = 3600L;
+  private final ConnectionService connectionService;
+  private final ConnectorMetadataJooqHelper connectorMetadataJooqHelper;
 
   public SourceServiceJooqImpl(@Named("configDatabase") final Database database,
                                final FeatureFlagClient featureFlagClient,
                                final SecretsRepositoryReader secretsRepositoryReader,
                                final SecretsRepositoryWriter secretsRepositoryWriter,
-                               final SecretPersistenceConfigService secretPersistenceConfigService) {
+                               final SecretPersistenceConfigService secretPersistenceConfigService,
+                               final ConnectionService connectionService) {
     this.database = new ExceptionWrappingDatabase(database);
-    this.connectionService = new ConnectionServiceJooqImpl(database);
+    this.connectionService = connectionService;
     this.featureFlagClient = featureFlagClient;
     this.secretRepositoryReader = secretsRepositoryReader;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
+    this.connectorMetadataJooqHelper = new ConnectorMetadataJooqHelper(featureFlagClient, connectionService);
   }
 
   /**
@@ -173,7 +179,7 @@ public class SourceServiceJooqImpl implements SourceService {
       throws IOException {
     return listStandardActorDefinitions(
         ActorType.source,
-        record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessage),
+        record -> DbConverter.buildStandardSourceDefinition(record, retrieveDefaultMaxSecondsBetweenMessages(record.get(ACTOR_DEFINITION.ID))),
         includeTombstones(ACTOR_DEFINITION.TOMBSTONE, includeTombstone),
         ACTOR_DEFINITION.PUBLIC.eq(true));
   }
@@ -195,7 +201,7 @@ public class SourceServiceJooqImpl implements SourceService {
         io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType.workspace,
         JoinType.JOIN,
         ActorType.source,
-        record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessage),
+        record -> DbConverter.buildStandardSourceDefinition(record, retrieveDefaultMaxSecondsBetweenMessages(record.get(ACTOR_DEFINITION.ID))),
         includeTombstones(ACTOR_DEFINITION.TOMBSTONE, includeTombstones));
   }
 
@@ -218,7 +224,7 @@ public class SourceServiceJooqImpl implements SourceService {
         JoinType.LEFT_OUTER_JOIN,
         ActorType.source,
         record -> actorDefinitionWithGrantStatus(record,
-            entry -> DbConverter.buildStandardSourceDefinition(entry, heartbeatMaxSecondBetweenMessage)),
+            entry -> DbConverter.buildStandardSourceDefinition(entry, retrieveDefaultMaxSecondsBetweenMessages(record.get(ACTOR_DEFINITION.ID)))),
         ACTOR_DEFINITION.CUSTOM.eq(false),
         includeTombstones(ACTOR_DEFINITION.TOMBSTONE, includeTombstones));
   }
@@ -383,7 +389,8 @@ public class SourceServiceJooqImpl implements SourceService {
 
     for (final Record record : records) {
       final SourceConnection source = DbConverter.buildSourceConnection(record);
-      final StandardSourceDefinition definition = DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessage);
+      final StandardSourceDefinition definition = DbConverter.buildStandardSourceDefinition(record,
+          retrieveDefaultMaxSecondsBetweenMessages(source.getSourceDefinitionId()));
       sourceAndDefinitions.add(new SourceAndDefinition(source, definition));
     }
 
@@ -445,6 +452,17 @@ public class SourceServiceJooqImpl implements SourceService {
     return result.stream().map(DbConverter::buildSourceConnection).toList();
   }
 
+  /**
+   * Retrieve from Launch Darkly the default max seconds between messages for a given source. This
+   * allows us to dynamically change the default max seconds between messages for a source.
+   *
+   * @param sourceDefinitionId to retrieve the default max seconds between messages for.
+   * @return
+   */
+  private Long retrieveDefaultMaxSecondsBetweenMessages(UUID sourceDefinitionId) {
+    return Long.parseLong(featureFlagClient.stringVariation(HeartbeatMaxSecondsBetweenMessages.INSTANCE, new SourceDefinition(sourceDefinitionId)));
+  }
+
   private int writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId,
                                                  final UUID scopeId,
                                                  final io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType scopeType,
@@ -467,7 +485,7 @@ public class SourceServiceJooqImpl implements SourceService {
                                       final DSLContext ctx) {
     writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
     ConnectorMetadataJooqHelper.writeActorDefinitionBreakingChanges(breakingChangesForDefinition, ctx);
-    ConnectorMetadataJooqHelper.setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
+    connectorMetadataJooqHelper.setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
   }
 
   private Stream<StandardSourceDefinition> sourceDefQuery(final Optional<UUID> sourceDefId, final boolean includeTombstone) throws IOException {
@@ -478,7 +496,7 @@ public class SourceServiceJooqImpl implements SourceService {
         .and(includeTombstone ? noCondition() : ACTOR_DEFINITION.TOMBSTONE.notEqual(true))
         .fetch())
         .stream()
-        .map(record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessage));
+        .map(record -> DbConverter.buildStandardSourceDefinition(record, retrieveDefaultMaxSecondsBetweenMessages(sourceDefId.orElse(ANONYMOUS))));
   }
 
   private <T> List<T> listStandardActorDefinitions(final ActorType actorType,

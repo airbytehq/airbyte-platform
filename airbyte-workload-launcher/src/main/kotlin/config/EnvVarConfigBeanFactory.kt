@@ -10,6 +10,8 @@ import io.airbyte.commons.features.FeatureFlags
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.Configs
 import io.airbyte.config.EnvConfigs
+import io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID
+import io.airbyte.workers.process.Metadata.AWS_SECRET_ACCESS_KEY
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workload.launcher.config.cloud.CloudLoggingConfig
 import io.airbyte.workload.launcher.config.cloud.CloudStateConfig
@@ -119,14 +121,14 @@ class EnvVarConfigBeanFactory {
    * The list of env vars to be passed to the check sidecar container.
    */
   @Singleton
-  @Named("checkSideCarEnvVars")
-  fun checkSideCarEnvVars(
+  @Named("sideCarEnvVars")
+  fun sideCarEnvVars(
     cloudLoggingConfig: CloudLoggingConfig,
     cloudStateConfig: CloudStateConfig,
     @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
     @Named("apiClientEnvMap") apiClientEnvMap: Map<String, String>,
     @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
-    @Named("orchestratorSecretsEnvMap") secretsEnvMap: Map<String, EnvVarSource>,
+    @Named("workloadApiSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
     // Cloud logging configuration
@@ -171,16 +173,78 @@ class EnvVarConfigBeanFactory {
   }
 
   /**
+   * The list of env vars to be passed to the connector container we are discovering.
+   */
+  @Singleton
+  @Named("discoverEnvVars")
+  fun discoverEnvVars(
+    @Named("discoverWorkerConfigs") discoverWorkerConfigs: WorkerConfigs,
+  ): List<EnvVar> {
+    return discoverWorkerConfigs.envMap
+      .map { EnvVar(it.key, it.value, null) }
+      .toList()
+  }
+
+  @Singleton
+  @Named("workloadApiSecretEnv")
+  fun workloadApiSecretEnv(
+    @Value("\${airbyte.workload-api.bearer-token-secret-name}") bearerTokenSecretName: String,
+    @Value("\${airbyte.workload-api.bearer-token-secret-key}") bearerTokenSecretKey: String,
+  ): Map<String, EnvVarSource> {
+    return buildMap {
+      if (bearerTokenSecretName.isNotBlank()) {
+        put(WORKLOAD_API_BEARER_TOKEN_ENV_VAR, createEnvVarSource(bearerTokenSecretName, bearerTokenSecretKey))
+      }
+    }
+  }
+
+  /**
+   * To be injected into orchestrator pods, so they can start AWS connector pods that use assumed role access.
+   */
+  @Singleton
+  @Named("orchestratorAwsAssumedRoleSecretEnv")
+  fun orchestratorAwsAssumedRoleSecretEnv(
+    @Value("\${airbyte.connector.source.credentials.aws.assumed-role.access-key}") awsAssumedRoleAccessKey: String,
+    @Value("\${airbyte.connector.source.credentials.aws.assumed-role.secret-key}") awsAssumedRoleSecretKey: String,
+    @Value("\${airbyte.connector.source.credentials.aws.assumed-role.secret-name}") awsAssumedRoleSecretName: String,
+  ): Map<String, EnvVarSource> {
+    return buildMap {
+      if (awsAssumedRoleSecretName.isNotBlank()) {
+        put(AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR, createEnvVarSource(awsAssumedRoleSecretName, awsAssumedRoleAccessKey))
+        put(AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR, createEnvVarSource(awsAssumedRoleSecretName, awsAssumedRoleSecretKey))
+      }
+    }
+  }
+
+  /**
+   * To be injected into AWS connector pods that use assumed role access.
+   */
+  @Singleton
+  @Named("connectorAwsAssumedRoleSecretEnv")
+  fun connectorAwsAssumedRoleSecretEnv(
+    @Value("\${airbyte.connector.source.credentials.aws.assumed-role.access-key}") accessKey: String,
+    @Value("\${airbyte.connector.source.credentials.aws.assumed-role.secret-key}") secretKey: String,
+    @Value("\${airbyte.connector.source.credentials.aws.assumed-role.secret-name}") secretName: String,
+  ): List<EnvVar> {
+    return buildList {
+      if (secretName.isNotBlank()) {
+        add(EnvVar(AWS_ACCESS_KEY_ID, null, createEnvVarSource(secretName, accessKey)))
+        add(EnvVar(AWS_SECRET_ACCESS_KEY, null, createEnvVarSource(secretName, secretKey)))
+      }
+    }
+  }
+
+  /**
    * Creates a map that represents environment variables that will be used by the orchestrator that are sourced from kubernetes secrets.
    * The map key is the environment variable name and the map value contains the kubernetes secret name and key
    */
   @Singleton
   @Named("orchestratorSecretsEnvMap")
   fun orchestratorSecretsEnvMap(
-    @Value("\${airbyte.workload-api.bearer-token-secret-name}") bearerTokenSecretName: String,
-    @Value("\${airbyte.workload-api.bearer-token-secret-key}") bearerTokenSecretKey: String,
+    @Named("workloadApiSecretEnv") workloadApiSecretEnv: Map<String, EnvVarSource>,
+    @Named("orchestratorAwsAssumedRoleSecretEnv") orchestratorAwsAssumedRoleSecretEnv: Map<String, EnvVarSource>,
   ): Map<String, EnvVarSource> {
-    return mapOf(WORKLOAD_API_BEARER_TOKEN_ENV_VAR to createEnvVarSource(bearerTokenSecretName, bearerTokenSecretKey))
+    return workloadApiSecretEnv + orchestratorAwsAssumedRoleSecretEnv
   }
 
   private fun createEnvVarSource(
@@ -330,6 +394,8 @@ class EnvVarConfigBeanFactory {
     private const val WORKLOAD_API_MAX_RETRIES_ENV_VAR = "WORKLOAD_API_MAX_RETRIES"
 
     // secrets
-    private const val WORKLOAD_API_BEARER_TOKEN_ENV_VAR = "WORKLOAD_API_BEARER_TOKEN"
+    const val AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR = "AWS_ASSUME_ROLE_ACCESS_KEY_ID"
+    const val AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR = "AWS_ASSUME_ROLE_SECRET_ACCESS_KEY"
+    const val WORKLOAD_API_BEARER_TOKEN_ENV_VAR = "WORKLOAD_API_BEARER_TOKEN"
   }
 }

@@ -4,12 +4,17 @@
 
 package io.airbyte.server.apis;
 
+import io.airbyte.api.model.generated.PermissionCheckRead;
+import io.airbyte.api.model.generated.PermissionCheckRead.StatusEnum;
 import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
+import io.airbyte.api.model.generated.WorkspaceCreate;
+import io.airbyte.api.model.generated.WorkspaceCreateWithId;
 import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.User;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -18,6 +23,7 @@ import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import java.io.IOException;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -28,12 +34,60 @@ class WorkspaceApiTest extends BaseControllerTest {
 
   @Test
   void testCreateWorkspace() throws JsonValidationException, IOException, ConfigNotFoundException {
+    Mockito.when(permissionHandler.checkPermissions(Mockito.any()))
+        .thenReturn(new PermissionCheckRead().status(StatusEnum.SUCCEEDED)) // first call with an orgId succeeds
+        .thenReturn(new PermissionCheckRead().status(StatusEnum.FAILED)); // second call with an orgId fails
+
     Mockito.when(workspacesHandler.createWorkspace(Mockito.any()))
         .thenReturn(new WorkspaceRead());
+
+    Mockito.when(currentUserService.getCurrentUser()).thenReturn(new User());
+
     final String path = "/api/v1/workspaces/create";
+
+    // no org id, expect 200
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, Jsons.serialize(new WorkspaceCreate())),
         HttpStatus.OK);
+
+    // org id present, permission check succeeds, expect 200
+    testEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new WorkspaceCreate().organizationId(UUID.randomUUID()))),
+        HttpStatus.OK);
+
+    // org id present, permission check fails, expect 403
+    testErrorEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new WorkspaceCreate().organizationId(UUID.randomUUID()))),
+        HttpStatus.FORBIDDEN);
+  }
+
+  @Test
+  void testCreateWorkspaceIfNotExist() throws JsonValidationException, IOException, ConfigNotFoundException {
+    Mockito.when(permissionHandler.checkPermissions(Mockito.any()))
+        .thenReturn(new PermissionCheckRead().status(StatusEnum.SUCCEEDED)) // first call with an orgId succeeds
+        .thenReturn(new PermissionCheckRead().status(StatusEnum.FAILED)); // second call with an orgId fails
+
+    Mockito.when(workspacesHandler.createWorkspaceIfNotExist(Mockito.any()))
+        .thenReturn(new WorkspaceRead());
+
+    Mockito.when(currentUserService.getCurrentUser()).thenReturn(new User());
+
+    final String path = "/api/v1/workspaces/create_if_not_exist";
+
+    // no org id, expect 200
+    testEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new WorkspaceCreateWithId())),
+        HttpStatus.OK);
+
+    // org id present, permission check succeeds, expect 200
+    testEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new WorkspaceCreateWithId().organizationId(UUID.randomUUID()))),
+        HttpStatus.OK);
+
+    // org id present, permission check fails, expect 403
+    testErrorEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new WorkspaceCreateWithId().organizationId(UUID.randomUUID()))),
+        HttpStatus.FORBIDDEN);
   }
 
   @Test

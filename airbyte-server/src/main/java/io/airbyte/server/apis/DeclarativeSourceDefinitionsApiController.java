@@ -4,7 +4,6 @@
 
 package io.airbyte.server.apis;
 
-import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 
@@ -13,7 +12,6 @@ import io.airbyte.api.model.generated.DeclarativeManifestsReadList;
 import io.airbyte.api.model.generated.DeclarativeSourceDefinitionCreateManifestRequestBody;
 import io.airbyte.api.model.generated.ListDeclarativeManifestsRequestBody;
 import io.airbyte.api.model.generated.UpdateActiveManifestRequestBody;
-import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.DeclarativeSourceDefinitionsHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.context.annotation.Context;
@@ -39,8 +37,7 @@ public class DeclarativeSourceDefinitionsApiController implements DeclarativeSou
   @Override
   @Post(uri = "/create_manifest")
   @Status(HttpStatus.CREATED)
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public void createDeclarativeSourceDefinitionManifest(final DeclarativeSourceDefinitionCreateManifestRequestBody requestBody) {
     ApiHelper.execute(() -> {
@@ -52,8 +49,7 @@ public class DeclarativeSourceDefinitionsApiController implements DeclarativeSou
   @Override
   @Post(uri = "/update_active_manifest")
   @Status(HttpStatus.NO_CONTENT)
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public void updateDeclarativeManifestVersion(UpdateActiveManifestRequestBody requestBody) {
     ApiHelper.execute(() -> {
@@ -65,8 +61,7 @@ public class DeclarativeSourceDefinitionsApiController implements DeclarativeSou
   @Override
   @Post(uri = "/list_manifests")
   @Status(HttpStatus.OK)
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public DeclarativeManifestsReadList listDeclarativeManifests(
                                                                final ListDeclarativeManifestsRequestBody requestBody) {

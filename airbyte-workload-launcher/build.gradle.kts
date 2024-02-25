@@ -37,7 +37,6 @@ dependencies {
     implementation(project(":airbyte-api"))
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-micronaut"))
-    implementation(project(":airbyte-commons-micronaut-security"))
     implementation(project(":airbyte-commons-temporal"))
     implementation(project(":airbyte-commons-temporal-core"))
     implementation(project(":airbyte-commons-with-dependencies"))

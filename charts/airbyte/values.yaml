@@ -1670,6 +1670,7 @@ airbyte-api-server:
 
 keycloak:
   enabled: false
+  env_vars: {}
 
   auth:
     adminUsername: airbyteAdmin
@@ -1677,6 +1678,7 @@ keycloak:
 
 keycloak-setup:
   enabled: false
+  env_vars: {}
 
 workload-api-server:
   enabled: false

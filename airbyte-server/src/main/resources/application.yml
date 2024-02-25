@@ -45,6 +45,16 @@ micronaut:
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
+  http:
+    client:
+      read-timeout: ${READ_TIMEOUT:10m}
+      max-content-length: 52428800 # 50MB
+      event-loop-group: http-client-event-loop
+  netty:
+    event-loops:
+      http-client-event-loop:
+        num-threads: 10
+        prefer-native-transport: true
 
 airbyte:
   edition: ${AIRBYTE_EDITION:COMMUNITY}
@@ -109,6 +119,8 @@ airbyte:
         access-key: ${AWS_ACCESS_KEY:}
         secret-key: ${AWS_SECRET_ACCESS_KEY:}
         region: ${AWS_REGION:}
+        kmsKeyArn: ${AWS_KMS_KEY_ARN:}
+        tags: ${AWS_SECRET_MANAGER_SECRET_TAGS:}
       gcp:
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
@@ -278,11 +290,17 @@ airbyte:
     username: ${KEYCLOAK_ADMIN_USER:airbyteAdmin}
     password: ${KEYCLOAK_ADMIN_PASSWORD:keycloak123}
 
+  # Airbyte API
+  api:
+    host: ${AIRBYTE_API_HOST}
+  internal:
+    documentation:
+      host: https://reference.airbyte.com/
+
   connector-builder-server-api:
     base-path: ${CONNECTOR_BUILDER_SERVER_API_HOST:}
     connect-timeout-seconds: ${CONNECTOR_BUILDER_SERVER_API_CONNECT_TIMEOUT_SECONDS:30}
     read-timeout-seconds: ${CONNECTOR_BUILDER_SERVER_API_READ_TIMEOUT_SECONDS:300}
-
   internal-api:
     auth-header:
       name: ${AIRBYTE_API_AUTH_HEADER_NAME:}

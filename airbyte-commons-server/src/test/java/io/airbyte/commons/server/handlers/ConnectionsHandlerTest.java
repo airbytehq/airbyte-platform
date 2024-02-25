@@ -71,6 +71,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
@@ -105,6 +106,7 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
@@ -124,6 +126,7 @@ import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
+import io.airbyte.persistence.job.models.JobsRecordsCommitted;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
@@ -221,6 +224,7 @@ class ConnectionsHandlerTest {
   private SourceService sourceService;
   private WorkspaceService workspaceService;
   private SecretPersistenceConfigService secretPersistenceConfigService;
+  private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
 
   private DestinationHandler destinationHandler;
   private SourceHandler sourceHandler;
@@ -329,6 +333,7 @@ class ConnectionsHandlerTest {
     sourceService = mock(SourceService.class);
     workspaceService = mock(WorkspaceService.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
 
     featureFlagClient = mock(TestClient.class);
 
@@ -342,7 +347,8 @@ class ConnectionsHandlerTest {
             oAuthConfigSupplier,
             actorDefinitionVersionHelper,
             destinationService,
-            featureFlagClient);
+            featureFlagClient,
+            actorDefinitionHandlerHelper);
     sourceHandler = new SourceHandler(configRepository,
         secretsRepositoryReader,
         validator,
@@ -351,7 +357,8 @@ class ConnectionsHandlerTest {
         secretsProcessor,
         configurationUpdate,
         oAuthConfigSupplier,
-        actorDefinitionVersionHelper, featureFlagClient, sourceService, workspaceService, secretPersistenceConfigService);
+        actorDefinitionVersionHelper, featureFlagClient, sourceService, workspaceService, secretPersistenceConfigService,
+        actorDefinitionHandlerHelper);
 
     matchSearchHandler = new MatchSearchHandler(configRepository, destinationHandler, sourceHandler);
     jobNotifier = mock(JobNotifier.class);
@@ -506,6 +513,8 @@ class ConnectionsHandlerTest {
       final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
           .withName(DESTINATION_TEST)
           .withDestinationDefinitionId(UUID.randomUUID());
+      final ActorDefinitionVersion sourceVersion = mock(ActorDefinitionVersion.class);
+      final ActorDefinitionVersion destinationVersion = mock(ActorDefinitionVersion.class);
 
       when(configRepository.listStandardSyncs())
           .thenReturn(Lists.newArrayList(standardSync, standardSync2));
@@ -521,6 +530,11 @@ class ConnectionsHandlerTest {
           .thenReturn(sourceDefinition);
       when(configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId()))
           .thenReturn(destinationDefinition);
+      when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(sourceDefinition, source.getWorkspaceId(), source.getSourceId()))
+          .thenReturn(new ActorDefinitionVersionWithOverrideStatus(sourceVersion, false));
+      when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(destinationDefinition, destination.getWorkspaceId(),
+          destination.getDestinationId()))
+              .thenReturn(new ActorDefinitionVersionWithOverrideStatus(destinationVersion, false));
 
       final ConnectionSearch connectionSearch = new ConnectionSearch();
       connectionSearch.namespaceDefinition(NamespaceDefinitionType.SOURCE);
@@ -696,9 +710,9 @@ class ConnectionsHandlerTest {
 
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any());
-        verify(jobNotifier, times(1)).autoDisableConnectionWarning(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
+        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any(), any());
+        verify(jobNotifier, times(1)).autoDisableConnectionWarning(any(), any());
       }
 
       @SuppressWarnings("LineLength")
@@ -716,9 +730,9 @@ class ConnectionsHandlerTest {
 
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any());
-        verify(jobNotifier, times(1)).autoDisableConnectionWarning(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
+        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any(), any());
+        verify(jobNotifier, times(1)).autoDisableConnectionWarning(any(), any());
       }
 
       @Test
@@ -738,9 +752,9 @@ class ConnectionsHandlerTest {
 
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
       @Test
@@ -760,9 +774,9 @@ class ConnectionsHandlerTest {
 
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
       @SuppressWarnings("LineLength")
@@ -779,9 +793,9 @@ class ConnectionsHandlerTest {
 
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
       // test should disable / shouldn't disable cases
@@ -819,9 +833,9 @@ class ConnectionsHandlerTest {
 
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
 
       }
 
@@ -835,9 +849,9 @@ class ConnectionsHandlerTest {
 
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
       @Test
@@ -868,17 +882,17 @@ class ConnectionsHandlerTest {
 
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
-        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
       }
 
       private void verifyDisabled() throws IOException {
         verify(configRepository, times(1)).writeStandardSync(
             argThat(standardSync -> (standardSync.getStatus().equals(Status.INACTIVE) && standardSync.getConnectionId().equals(connectionId))));
         verify(configRepository, times(1)).writeStandardSync(standardSync);
-        verify(jobNotifier, times(1)).autoDisableConnection(job);
-        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), eq(job));
-        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
+        verify(jobNotifier, times(1)).autoDisableConnection(eq(job), any());
+        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), eq(job), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
     }
@@ -1594,9 +1608,15 @@ class ConnectionsHandlerTest {
         final AttemptWithJobInfo attemptWithJobInfo3 = new AttemptWithJobInfo(attempt3, generateMockJob(connectionId, attempt3));
 
         final List<AttemptWithJobInfo> attempts = Arrays.asList(attemptWithJobInfo1, attemptWithJobInfo2, attemptWithJobInfo3);
+        final List<JobsRecordsCommitted> jobsAndRecords = attempts.stream().map(attempt -> new JobsRecordsCommitted(
+            attempt.getAttempt().getAttemptNumber(),
+            attempt.getJobInfo().getId(),
+            attempt.getAttempt().getOutput().map(output -> output.getSync().getStandardSyncSummary().getTotalStats().getRecordsCommitted())
+                .orElse(0L),
+            attempt.getAttempt().getEndedAtInSecond().map(endedAt -> endedAt).orElse(0L))).toList();
 
-        when(jobPersistence.listAttemptsForConnectionAfterTimestamp(eq(connectionId), eq(ConfigType.SYNC), any(Instant.class)))
-            .thenReturn(attempts);
+        when(jobPersistence.listRecordsCommittedForConnectionAfterTimestamp(eq(connectionId), any(Instant.class)))
+            .thenReturn(jobsAndRecords);
 
         final ConnectionDataHistoryRequestBody requestBody = new ConnectionDataHistoryRequestBody()
             .connectionId(connectionId)
@@ -1610,7 +1630,7 @@ class ConnectionsHandlerTest {
         expected.get(1).setRecordsCommitted(attempt1Records + attempt2Records);
         expected.get(2).setRecordsCommitted(attempt3Records);
 
-        assertEquals(actual, expected);
+        assertEquals(expected, actual);
       }
 
     }

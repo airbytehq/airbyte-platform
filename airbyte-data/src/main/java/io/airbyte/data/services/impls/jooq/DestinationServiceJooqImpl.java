@@ -28,6 +28,7 @@ import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.shared.DestinationAndDefinition;
@@ -79,20 +80,23 @@ public class DestinationServiceJooqImpl implements DestinationService {
   private final SecretsRepositoryReader secretsRepositoryReader;
   private final SecretsRepositoryWriter secretsRepositoryWriter;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
-  private final ConnectionServiceJooqImpl connectionService;
+  private final ConnectionService connectionService;
+  private final ConnectorMetadataJooqHelper connectorMetadataJooqHelper;
 
   @VisibleForTesting
   public DestinationServiceJooqImpl(@Named("configDatabase") final Database database,
                                     final FeatureFlagClient featureFlagClient,
                                     final SecretsRepositoryReader secretsRepositoryReader,
                                     final SecretsRepositoryWriter secretsRepositoryWriter,
-                                    final SecretPersistenceConfigService secretPersistenceConfigService) {
+                                    final SecretPersistenceConfigService secretPersistenceConfigService,
+                                    final ConnectionService connectionService) {
     this.database = new ExceptionWrappingDatabase(database);
-    this.connectionService = new ConnectionServiceJooqImpl(database);
+    this.connectionService = connectionService;
     this.featureFlagClient = featureFlagClient;
     this.secretsRepositoryReader = secretsRepositoryReader;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
+    this.connectorMetadataJooqHelper = new ConnectorMetadataJooqHelper(featureFlagClient, connectionService);
   }
 
   /**
@@ -466,7 +470,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
                                       final DSLContext ctx) {
     writeStandardDestinationDefinition(Collections.singletonList(destinationDefinition), ctx);
     ConnectorMetadataJooqHelper.writeActorDefinitionBreakingChanges(breakingChangesForDefinition, ctx);
-    ConnectorMetadataJooqHelper.setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
+    connectorMetadataJooqHelper.setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
   }
 
   private Stream<StandardDestinationDefinition> destDefQuery(final Optional<UUID> destDefId, final boolean includeTombstone) throws IOException {

@@ -7,6 +7,7 @@ package io.airbyte.data.services.impls.jooq;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.enums.Enums;
@@ -14,15 +15,24 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.BreakingChangeScope;
+import io.airbyte.config.helpers.BreakingChangeScopeFactory;
+import io.airbyte.config.helpers.StreamBreakingChangeScope;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.UseBreakingChangeScopes;
+import io.airbyte.featureflag.Workspace;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.jooq.DSLContext;
@@ -35,14 +45,21 @@ import org.jooq.Query;
  */
 public class ConnectorMetadataJooqHelper {
 
+  private final FeatureFlagClient featureFlagClient;
+  private final ConnectionService connectionService;
+
+  public ConnectorMetadataJooqHelper(final FeatureFlagClient featureFlagClient, final ConnectionService connectionService) {
+    this.featureFlagClient = featureFlagClient;
+    this.connectionService = connectionService;
+  }
+
   /**
    * Write an actor definition version.
    *
    * @param actorDefinitionVersion - actor definition version to write
    * @param ctx database context
-   * @throws IOException - you never know when you io
-   * @returns the POJO associated with the actor definition version written. Contains the versionId
-   *          field from the DB.
+   * @return the POJO associated with the actor definition version written. Contains the versionId
+   *         field from the DB.
    */
   public static ActorDefinitionVersion writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
@@ -158,7 +175,6 @@ public class ConnectorMetadataJooqHelper {
    * @param ctx database context
    * @return actor definition version if there is an entry in the DB already for this version,
    *         otherwise an empty optional
-   * @throws IOException - you never know when you io
    */
   public static Optional<ActorDefinitionVersion> getActorDefinitionVersion(final UUID actorDefinitionId,
                                                                            final String dockerImageTag,
@@ -178,18 +194,17 @@ public class ConnectorMetadataJooqHelper {
    * existing ADV for the tag as the default. Otherwise, insert the new ADV and set it as the default.
    *
    * @param actorDefinitionVersion new actor definition version
-   * @throws IOException - you never know when you IO
    */
-  public static void setActorDefinitionVersionForTagAsDefault(final ActorDefinitionVersion actorDefinitionVersion,
-                                                              final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
-                                                              final DSLContext ctx) {
+  public void setActorDefinitionVersionForTagAsDefault(final ActorDefinitionVersion actorDefinitionVersion,
+                                                       final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
+                                                       final DSLContext ctx) {
     final ActorDefinitionVersion writtenADV = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
     setActorDefinitionVersionAsDefaultVersion(writtenADV, breakingChangesForDefinition, ctx);
   }
 
-  private static void setActorDefinitionVersionAsDefaultVersion(final ActorDefinitionVersion actorDefinitionVersion,
-                                                                final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
-                                                                final DSLContext ctx) {
+  private void setActorDefinitionVersionAsDefaultVersion(final ActorDefinitionVersion actorDefinitionVersion,
+                                                         final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
+                                                         final DSLContext ctx) {
     if (actorDefinitionVersion.getVersionId() == null) {
       throw new RuntimeException("Can't set an actorDefinitionVersion as default without it having a versionId.");
     }
@@ -198,46 +213,82 @@ public class ConnectorMetadataJooqHelper {
         getDefaultVersionForActorDefinitionIdOptional(actorDefinitionVersion.getActorDefinitionId(), ctx);
     currentDefaultVersion
         .ifPresent(currentDefault -> {
-          final List<UUID> actorsToUpgrade = getActorsToUpgrade(currentDefault, actorDefinitionVersion, breakingChangesForDefinition, ctx);
+          final Set<UUID> actorsToUpgrade = getActorsToUpgrade(currentDefault, actorDefinitionVersion, breakingChangesForDefinition, ctx);
           updateActorsDefaultVersion(actorsToUpgrade, actorDefinitionVersion.getVersionId(), ctx);
         });
 
     updateActorDefinitionDefaultVersionId(actorDefinitionVersion.getActorDefinitionId(), actorDefinitionVersion.getVersionId(), ctx);
   }
 
-  private static List<UUID> getActorsToUpgrade(final ActorDefinitionVersion currentDefaultVersion,
-                                               final ActorDefinitionVersion newVersion,
-                                               final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
-                                               final DSLContext ctx) {
+  @VisibleForTesting
+  public Set<UUID> getActorsToUpgrade(final ActorDefinitionVersion currentDefaultVersion,
+                                      final ActorDefinitionVersion newVersion,
+                                      final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
+                                      final DSLContext ctx) {
     final List<ActorDefinitionBreakingChange> breakingChangesForUpgrade = getBreakingChangesForUpgrade(
         currentDefaultVersion.getDockerImageTag(), newVersion.getDockerImageTag(), breakingChangesForDefinition);
 
-    final List<UUID> upgradeCandidates = getActorsOnDefaultVersion(currentDefaultVersion.getVersionId(), ctx);
+    final Set<UUID> upgradeCandidates = getActorsOnDefaultVersion(currentDefaultVersion.getVersionId(), ctx);
 
     breakingChangesForUpgrade.forEach(breakingChange -> {
-      final List<UUID> actorsImpactedByBreakingChange = getActorsAffectedByBreakingChange(upgradeCandidates, breakingChange, ctx);
+      final Set<UUID> actorsImpactedByBreakingChange = getActorsAffectedByBreakingChange(upgradeCandidates, breakingChange);
       upgradeCandidates.removeAll(actorsImpactedByBreakingChange);
     });
 
     return upgradeCandidates;
   }
 
-  private static List<UUID> getActorsAffectedByBreakingChange(final List<UUID> actorIds,
-                                                              final ActorDefinitionBreakingChange breakingChange,
-                                                              final DSLContext ctx) {
-    // Right now, we don't have a way to know which actors are impacted by a breaking change.
-    // We assume that all actors will be impacted.
-    return actorIds;
+  @VisibleForTesting
+  public Set<UUID> getActorsAffectedByBreakingChange(final Set<UUID> actorIds,
+                                                     final ActorDefinitionBreakingChange breakingChange) {
+    if (!featureFlagClient.boolVariation(UseBreakingChangeScopes.INSTANCE, new Workspace(ANONYMOUS))) {
+      return actorIds;
+    }
+
+    final List<BreakingChangeScope> scopedImpact = breakingChange.getScopedImpact();
+    if (breakingChange.getScopedImpact() == null || breakingChange.getScopedImpact().isEmpty()) {
+      return actorIds;
+    }
+
+    final Set<UUID> actorsImpactedByBreakingChange = new HashSet<>();
+    scopedImpact.forEach((impactScope) -> {
+      switch (impactScope.getScopeType()) {
+        case STREAM: {
+          final StreamBreakingChangeScope streamBreakingChangeScope = BreakingChangeScopeFactory.createStreamBreakingChangeScope(impactScope);
+          actorsImpactedByBreakingChange.addAll(getActorsInStreamBreakingChangeScope(actorIds, streamBreakingChangeScope));
+          break;
+        }
+        default:
+          throw new RuntimeException("Unsupported breaking change scope type: " + impactScope.getScopeType());
+      }
+    });
+    return actorsImpactedByBreakingChange;
   }
 
-  private static List<UUID> getActorsOnDefaultVersion(final UUID defaultVersionId, final DSLContext ctx) {
+  private Set<UUID> getActorsInStreamBreakingChangeScope(final Set<UUID> actorIdsToFilter,
+                                                         final StreamBreakingChangeScope streamBreakingChangeScope) {
+    return actorIdsToFilter
+        .stream()
+        .filter(actorId -> getActorSyncsAnyListedStream(actorId, streamBreakingChangeScope.getImpactedScopes()))
+        .collect(Collectors.toSet());
+  }
+
+  private boolean getActorSyncsAnyListedStream(final UUID actorId, final List<String> streamNames) {
+    try {
+      return connectionService.actorSyncsAnyListedStream(actorId, streamNames);
+    } catch (final IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private static Set<UUID> getActorsOnDefaultVersion(final UUID defaultVersionId, final DSLContext ctx) {
     return ctx.select(ACTOR.ID)
         .from(ACTOR)
         .where(ACTOR.DEFAULT_VERSION_ID.eq(defaultVersionId))
         .fetch()
         .stream()
         .map(record -> record.get(ACTOR.ID))
-        .collect(Collectors.toList());
+        .collect(Collectors.toSet());
   }
 
   /**
@@ -257,7 +308,7 @@ public class ConnectorMetadataJooqHelper {
         .map(DbConverter::buildActorDefinitionVersion);
   }
 
-  private static void updateActorsDefaultVersion(final List<UUID> actorIds,
+  private static void updateActorsDefaultVersion(final Set<UUID> actorIds,
                                                  final UUID newDefaultVersionId,
                                                  final DSLContext ctx) {
     ctx.update(ACTOR)
@@ -314,7 +365,6 @@ public class ConnectorMetadataJooqHelper {
    *
    * @param breakingChanges - actor definition breaking changes to write
    * @param ctx database context
-   * @throws IOException - you never know when you io
    */
   public static void writeActorDefinitionBreakingChanges(final List<ActorDefinitionBreakingChange> breakingChanges, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();

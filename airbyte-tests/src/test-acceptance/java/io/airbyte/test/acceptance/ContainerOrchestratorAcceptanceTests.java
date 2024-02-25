@@ -4,8 +4,6 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.test.utils.AcceptanceTestHarness.waitForSuccessfulJob;
-import static io.airbyte.test.utils.AcceptanceTestHarness.waitWhileJobHasStatus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.airbyte.api.client.AirbyteApiClient;
@@ -35,14 +33,15 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,7 +93,7 @@ class ContainerOrchestratorAcceptanceTests {
     LOGGER.info("pg source definition: {}", sourceDef.getDockerImageTag());
     LOGGER.info("pg destination definition: {}", destinationDef.getDockerImageTag());
 
-    testHarness = new AcceptanceTestHarness(apiClient, workspaceId);
+    testHarness = new AcceptanceTestHarness(apiClient, null, workspaceId);
     kubernetesClient = testHarness.getKubernetesClient();
   }
 
@@ -104,14 +103,14 @@ class ContainerOrchestratorAcceptanceTests {
   }
 
   @BeforeEach
-  void setup() throws URISyntaxException, IOException, SQLException {
+  void setup() throws URISyntaxException, IOException, SQLException, ApiException {
     testHarness.setup();
   }
 
-  // This test is flaky. Warnings are suppressed until that condition us understood
-  // See: https://github.com/airbytehq/airbyte/issues/19948
   @Test
-  @Disabled("Flaky test, to be investigated before re-enabling")
+  @Timeout(
+           value = 10,
+           unit = TimeUnit.MINUTES)
   @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
   void testDowntimeDuringSync() throws Exception {
     // NOTE: PMD assert warning suppressed because the assertion was flaky. The test will throw if the
@@ -138,7 +137,7 @@ class ContainerOrchestratorAcceptanceTests {
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
 
     LOGGER.info("Waiting for job to run...");
-    waitWhileJobHasStatus(apiClient.getJobsApi(), connectionSyncRead.getJob(), Set.of(JobStatus.PENDING));
+    testHarness.waitWhileJobHasStatus(connectionSyncRead.getJob(), Set.of(JobStatus.PENDING));
 
     LOGGER.info("Scaling down worker...");
     kubernetesClient.apps().deployments().inNamespace(NAMESPACE).withName(AIRBYTE_WORKER).scale(0, true);
@@ -146,7 +145,7 @@ class ContainerOrchestratorAcceptanceTests {
     LOGGER.info("Scaling up worker...");
     kubernetesClient.apps().deployments().inNamespace(NAMESPACE).withName(AIRBYTE_WORKER).scale(1);
 
-    waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
+    testHarness.waitForSuccessfulJob(connectionSyncRead.getJob());
   }
 
   @AfterEach
@@ -173,7 +172,7 @@ class ContainerOrchestratorAcceptanceTests {
             .getConnectionId();
 
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
-    waitWhileJobHasStatus(apiClient.getJobsApi(), connectionSyncRead.getJob(), Set.of(JobStatus.PENDING));
+    testHarness.waitWhileJobHasStatus(connectionSyncRead.getJob(), Set.of(JobStatus.PENDING));
 
     kubernetesClient.apps().deployments().inNamespace(NAMESPACE).withName(AIRBYTE_WORKER).scale(0, true);
     kubernetesClient.apps().deployments().inNamespace(NAMESPACE).withName(AIRBYTE_WORKER).scale(1);
@@ -208,7 +207,7 @@ class ContainerOrchestratorAcceptanceTests {
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
 
     LOGGER.info("Waiting for job to run...");
-    waitWhileJobHasStatus(apiClient.getJobsApi(), connectionSyncRead.getJob(), Set.of(JobStatus.PENDING));
+    testHarness.waitWhileJobHasStatus(connectionSyncRead.getJob(), Set.of(JobStatus.PENDING));
 
     LOGGER.info("Waiting for job to run a little...");
     Thread.sleep(1000);

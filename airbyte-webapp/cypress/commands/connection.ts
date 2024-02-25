@@ -66,7 +66,7 @@ export const createTestConnection = (sourceName: string, destinationName: string
   openCreateConnection();
 
   cy.get("div").contains(sourceName).click();
-  cy.wait("@discoverSchema");
+  cy.wait("@discoverSchema", { timeout: 60000 });
   enterConnectionName("Connection name");
   selectScheduleType("Manual");
 
@@ -89,7 +89,7 @@ export const startManualReset = () => {
 export const createPokeApiSourceViaApi = () => {
   let source: SourceRead;
   return requestWorkspaceId().then(() => {
-    const sourceRequestBody = getPokeApiCreateSourceBody(appendRandomString("PokeAPI Source"), "luxray");
+    const sourceRequestBody = getPokeApiCreateSourceBody(appendRandomString("PokeAPI Source"), "venusaur");
     requestCreateSource(sourceRequestBody).then((sourceResponse) => {
       source = sourceResponse;
     });

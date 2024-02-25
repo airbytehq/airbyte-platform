@@ -117,13 +117,15 @@ class KubeResourceMonitorTest {
   ) {
     every {
       customMetricPublisher.gauge(
-        WorkloadLauncherMetricMetadata.TOTAL_PENDING_PODS, any(PodList::class),
+        WorkloadLauncherMetricMetadata.TOTAL_PENDING_PODS,
+        any(PodList::class),
         any(),
       )
     } returns Unit
     every {
       customMetricPublisher.gauge(
-        WorkloadLauncherMetricMetadata.OLDEST_PENDING_JOB_POD_TIME, any(Long::class),
+        WorkloadLauncherMetricMetadata.OLDEST_PENDING_JOB_POD_TIME,
+        any(Long::class),
         any(),
       )
     } returns Unit

@@ -28,6 +28,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.apache.commons.io.IOUtils;
@@ -91,14 +92,17 @@ class SlackNotificationClientTest {
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + "/bad"));
     SyncSummary summary = SyncSummary.builder()
-        .connectionInfo(ConnectionInfo.builder()
+        .connection(ConnectionInfo.builder()
             .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
-        .sourceInfo(SourceInfo.builder()
+        .source(SourceInfo.builder()
             .name(SOURCE_TEST).id(UUID.randomUUID()).url("http://source").build())
-        .destinationInfo(DestinationInfo.builder()
+        .destination(DestinationInfo.builder()
             .name(DESTINATION_TEST).id(UUID.randomUUID()).url("http://destination").build())
         .errorMessage("")
         .jobId(JOB_ID)
+        .isSuccess(true)
+        .startedAt(Instant.MIN)
+        .finishedAt(Instant.MAX)
         .build();
     assertThrows(IOException.class,
         () -> client.notifyJobFailure(summary, null));
@@ -109,11 +113,11 @@ class SlackNotificationClientTest {
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration());
     SyncSummary summary = SyncSummary.builder()
-        .connectionInfo(ConnectionInfo.builder()
+        .connection(ConnectionInfo.builder()
             .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
-        .sourceInfo(SourceInfo.builder()
+        .source(SourceInfo.builder()
             .name(SOURCE_TEST).id(UUID.randomUUID()).url("http://source").build())
-        .destinationInfo(DestinationInfo.builder()
+        .destination(DestinationInfo.builder()
             .name(DESTINATION_TEST).id(UUID.randomUUID()).url("http://destination").build())
         .errorMessage("Job timed out")
         .jobId(JOB_ID)
@@ -135,11 +139,11 @@ class SlackNotificationClientTest {
   void testNotifyJobFailure() throws IOException, InterruptedException {
     server.createContext(TEST_PATH, new ServerHandler(EXPECTED_FAIL_MESSAGE));
     SyncSummary summary = SyncSummary.builder()
-        .connectionInfo(ConnectionInfo.builder()
+        .connection(ConnectionInfo.builder()
             .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
-        .sourceInfo(SourceInfo.builder()
+        .source(SourceInfo.builder()
             .name(SOURCE_TEST).id(UUID.randomUUID()).url("http://source").build())
-        .destinationInfo(DestinationInfo.builder()
+        .destination(DestinationInfo.builder()
             .name(DESTINATION_TEST).id(UUID.randomUUID()).url("http://destination").build())
         .errorMessage(JOB_DESCRIPTION)
         .jobId(JOB_ID)
@@ -153,11 +157,11 @@ class SlackNotificationClientTest {
   void testNotifyJobSuccess() throws IOException, InterruptedException {
     server.createContext(TEST_PATH, new ServerHandler(EXPECTED_SUCCESS_MESSAGE));
     SyncSummary summary = SyncSummary.builder()
-        .connectionInfo(ConnectionInfo.builder()
+        .connection(ConnectionInfo.builder()
             .name(CONNECTION_NAME).id(UUID.randomUUID()).url(LOG_URL).build())
-        .sourceInfo(SourceInfo.builder()
+        .source(SourceInfo.builder()
             .name(SOURCE_TEST).id(UUID.randomUUID()).url("http://source").build())
-        .destinationInfo(DestinationInfo.builder()
+        .destination(DestinationInfo.builder()
             .name(DESTINATION_TEST).id(UUID.randomUUID()).url("http://destination").build())
         .errorMessage(JOB_DESCRIPTION)
         .jobId(JOB_ID)

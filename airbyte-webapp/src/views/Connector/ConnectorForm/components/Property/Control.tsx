@@ -2,8 +2,8 @@ import get from "lodash/get";
 import React, { useCallback } from "react";
 import { useController, useFormContext, useWatch } from "react-hook-form";
 
-import { DropDown } from "components/ui/DropDown";
 import { Input } from "components/ui/Input";
+import { ListBox } from "components/ui/ListBox";
 import { Multiselect } from "components/ui/Multiselect";
 import { TagInput } from "components/ui/TagInput/TagInput";
 import { TextArea } from "components/ui/TextArea";
@@ -97,17 +97,17 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
 
   if (property.enum) {
     return (
-      <DropDown
-        {...field}
+      <ListBox
         options={property.enum.map((dataItem) => ({
           label: dataItem?.toString() ?? "",
           value: dataItem?.toString() ?? "",
         }))}
-        onChange={(selectedItem) => selectedItem && field.onChange(selectedItem.value)}
-        value={fieldValue}
+        onSelect={(selectedItem) => selectedItem && field.onChange(selectedItem)}
+        selectedValue={fieldValue}
         isDisabled={disabled || property.readOnly}
         onFocus={() => setFocusedField?.(name)}
-        error={error}
+        hasError={error}
+        data-testid={field.name}
       />
     );
   } else if (property.multiline && !property.isSecret) {

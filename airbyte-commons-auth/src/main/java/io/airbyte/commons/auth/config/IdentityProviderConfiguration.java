@@ -22,7 +22,8 @@ import lombok.extern.slf4j.Slf4j;
 public class IdentityProviderConfiguration {
 
   public enum ProviderType {
-    OKTA
+    OKTA,
+    OIDC
   }
 
   ProviderType type;

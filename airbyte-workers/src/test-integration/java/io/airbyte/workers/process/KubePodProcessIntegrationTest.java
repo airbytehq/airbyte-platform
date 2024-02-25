@@ -7,7 +7,6 @@ package io.airbyte.workers.process;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -111,29 +110,6 @@ class KubePodProcessIntegrationTest {
 
     processFactory = new KubeProcessFactory(getWorkerConfigProviderStub(), new TestClient(), NAMESPACE, "airbyte-admin", fabricClient,
         heartbeatUrl, getHost());
-  }
-
-  @RetryingTest(3)
-  void testInitKubePortManagerSingletonTwice() throws Exception {
-    /*
-     * Test init KubePortManagerSingleton twice: 1. with same ports should succeed 2. with different
-     * port should fail
-     *
-     * Every test has been init once in BeforeAll with getOpenPorts(30)
-     */
-
-    final KubePortManagerSingleton originalKubePortManager = KubePortManagerSingleton.getInstance();
-
-    // init the second time with the same ports
-    KubePortManagerSingleton.init(new HashSet<>(openPorts.subList(1, openPorts.size() - 1)));
-    assertEquals(originalKubePortManager, KubePortManagerSingleton.getInstance());
-
-    // init the second time with different ports
-    final List<Integer> differentOpenPorts = new ArrayList<>(getOpenPorts(32));
-    final Exception exception = assertThrows(RuntimeException.class, () -> {
-      KubePortManagerSingleton.init(new HashSet<>(differentOpenPorts.subList(1, differentOpenPorts.size() - 1)));
-    });
-    assertTrue(exception.getMessage().contains("Cannot initialize twice with different ports!"));
   }
 
   /**

@@ -39,7 +39,7 @@ import io.airbyte.workers.Worker;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
-import io.airbyte.workers.orchestrator.OrchestratorNameGenerator;
+import io.airbyte.workers.orchestrator.PodNameGenerator;
 import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.sync.WorkloadApiWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
@@ -83,7 +83,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final WorkloadApi workloadApi;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final OrchestratorHandleFactory orchestratorHandleFactory;
-  private final OrchestratorNameGenerator orchestratorNameGenerator;
+  private final PodNameGenerator podNameGenerator;
   private final MetricClient metricClient;
   private final FeatureFlagClient featureFlagClient;
 
@@ -99,7 +99,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final WorkloadApi workloadApi,
                                  final WorkloadIdGenerator workloadIdGenerator,
                                  final OrchestratorHandleFactory orchestratorHandleFactory,
-                                 final OrchestratorNameGenerator orchestratorNameGenerator,
+                                 final PodNameGenerator podNameGenerator,
                                  final MetricClient metricClient,
                                  final FeatureFlagClient featureFlagClient) {
     this.secretsRepositoryReader = secretsRepositoryReader;
@@ -119,7 +119,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.workloadApi = workloadApi;
     this.workloadIdGenerator = workloadIdGenerator;
     this.orchestratorHandleFactory = orchestratorHandleFactory;
-    this.orchestratorNameGenerator = orchestratorNameGenerator;
+    this.podNameGenerator = podNameGenerator;
     this.metricClient = metricClient;
     this.featureFlagClient = featureFlagClient;
   }
@@ -164,7 +164,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
           // TODO: remove this once migration to workloads complete
           if (useWorkloadApi(replicationActivityInput)) {
-            worker = new WorkloadApiWorker(documentStoreClient, orchestratorNameGenerator, jobOutputDocStore, airbyteApiClient,
+            worker = new WorkloadApiWorker(documentStoreClient, podNameGenerator, jobOutputDocStore, airbyteApiClient,
                 workloadApi, workloadIdGenerator, replicationActivityInput, featureFlagClient);
           } else {
             final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =

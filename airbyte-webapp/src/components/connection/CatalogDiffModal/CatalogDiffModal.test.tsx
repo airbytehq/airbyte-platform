@@ -188,7 +188,7 @@ describe("catalog diff modal", () => {
     });
     expect(removedStreamRowWithSyncMode).toBeInTheDocument();
 
-    const updatedStreamsSection = screen.getByRole("list", { name: /table with changes/ });
+    const updatedStreamsSection = screen.getByRole("list", { name: /stream with changes/ });
     expect(updatedStreamsSection).toBeInTheDocument();
 
     const updatedStreamRowWithSyncMode = screen.queryByRole("row", {

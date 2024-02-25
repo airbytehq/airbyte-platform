@@ -86,11 +86,7 @@ class InstanceConfigurationHandlerTest {
   void testGetInstanceConfiguration(final boolean isPro, final boolean isInitialSetupComplete) throws IOException {
     stubGetDefaultUser();
     stubGetDefaultOrganization();
-
-    when(mWorkspacePersistence.getDefaultWorkspaceForOrganization(ORGANIZATION_ID)).thenReturn(
-        new StandardWorkspace()
-            .withWorkspaceId(WORKSPACE_ID)
-            .withInitialSetupComplete(isInitialSetupComplete));
+    when(mWorkspacePersistence.getInitialSetupComplete()).thenReturn(isInitialSetupComplete);
 
     instanceConfigurationHandler = getInstanceConfigurationHandler(isPro);
 
@@ -104,7 +100,6 @@ class InstanceConfigurationHandlerTest {
         .initialSetupComplete(isInitialSetupComplete)
         .defaultUserId(USER_ID)
         .defaultOrganizationId(ORGANIZATION_ID)
-        .defaultWorkspaceId(WORKSPACE_ID)
         .trackingStrategy(TrackingStrategyEnum.LOGGING);
 
     final InstanceConfigurationResponse actual = instanceConfigurationHandler.getInstanceConfiguration();
@@ -125,10 +120,7 @@ class InstanceConfigurationHandlerTest {
     stubGetDefaultUser();
     stubGetDefaultOrganization();
 
-    when(mWorkspacePersistence.getDefaultWorkspaceForOrganization(ORGANIZATION_ID)).thenReturn(
-        new StandardWorkspace()
-            .withWorkspaceId(WORKSPACE_ID)
-            .withInitialSetupComplete(true));
+    when(mWorkspacePersistence.getInitialSetupComplete()).thenReturn(true);
 
     final var handler = new InstanceConfigurationHandler(
         WEBAPP_URL,
@@ -185,6 +177,7 @@ class InstanceConfigurationHandlerTest {
             new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withInitialSetupComplete(false))
         .thenReturn(
             new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withInitialSetupComplete(true));
+    when(mWorkspacePersistence.getInitialSetupComplete()).thenReturn(true);
 
     instanceConfigurationHandler = getInstanceConfigurationHandler(true);
 
@@ -200,7 +193,6 @@ class InstanceConfigurationHandlerTest {
         .initialSetupComplete(true)
         .defaultUserId(USER_ID)
         .defaultOrganizationId(ORGANIZATION_ID)
-        .defaultWorkspaceId(WORKSPACE_ID)
         .trackingStrategy(TrackingStrategyEnum.LOGGING);
 
     final InstanceConfigurationSetupRequestBody requestBody = new InstanceConfigurationSetupRequestBody()

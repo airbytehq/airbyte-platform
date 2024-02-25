@@ -15,10 +15,10 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.HealthCheckServiceJooqImpl;
@@ -55,16 +55,18 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
+    final ConnectionService connectionService = mock(ConnectionService.class);
     configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(database),
         new CatalogServiceJooqImpl(database),
-        new ConnectionServiceJooqImpl(database),
+        connectionService,
         new ConnectorBuilderServiceJooqImpl(database),
         new DestinationServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
             secretsRepositoryWriter,
-            secretPersistenceConfigService),
+            secretPersistenceConfigService,
+            connectionService),
         new HealthCheckServiceJooqImpl(database),
         new OAuthServiceJooqImpl(database,
             featureFlagClient,
@@ -76,7 +78,8 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
             featureFlagClient,
             secretsRepositoryReader,
             secretsRepositoryWriter,
-            secretPersistenceConfigService),
+            secretPersistenceConfigService,
+            connectionService),
         new WorkspaceServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
@@ -149,6 +152,17 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     void deleteUserByIdTest() throws IOException {
       userPersistence.deleteUserById(MockData.CREATOR_USER_ID_1);
       Assertions.assertEquals(Optional.empty(), userPersistence.getUser(MockData.CREATOR_USER_ID_1));
+    }
+
+    @Test
+    void listAuthUserIdsForUserTest() throws IOException {
+      final var user1 = MockData.users().getFirst();
+      // set auth_user_id to a known value
+      final var expectedAuthUserId = UUID.randomUUID().toString();
+      userPersistence.writeAuthUser(user1.getUserId(), expectedAuthUserId, AuthProvider.GOOGLE_IDENTITY_PLATFORM);
+
+      final Set<String> actualAuthUserIds = new HashSet<>(userPersistence.listAuthUserIdsForUser(user1.getUserId()));
+      Assertions.assertEquals(Set.of(expectedAuthUserId, user1.getAuthUserId()), actualAuthUserIds);
     }
 
   }

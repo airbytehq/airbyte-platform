@@ -55,6 +55,8 @@ public interface ConnectionService {
 
   boolean getConnectionHasAlphaOrBetaConnector(UUID connectionId) throws IOException;
 
+  boolean actorSyncsAnyListedStream(UUID actorID, List<String> streamNames) throws IOException;
+
   Set<Long> listEarlySyncJobs(final int freeUsageInterval, final int jobsFetchRange) throws IOException;
 
   void disableConnectionsById(final List<UUID> connectionIds) throws IOException;

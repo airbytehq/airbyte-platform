@@ -4,6 +4,7 @@ import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
 import { WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
+import { FeatureItem, useFeature } from "core/services/features";
 
 import { ChangeRoleMenuItem } from "./ChangeRoleMenuItem";
 import { RemoveRoleMenuItem } from "./RemoveRoleMenuItem";
@@ -19,6 +20,10 @@ interface RoleManagementMenuBodyProps {
   close: () => void;
 }
 export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ user, resourceType, close }) => {
+  const areAllRbacRolesEnabled = useFeature(FeatureItem.AllowAllRBACRoles);
+  const rolesToAllow =
+    areAllRbacRolesEnabled || resourceType === "organization" ? permissionsByResourceType[resourceType] : [];
+
   return (
     <ul className={styles.roleManagementMenu__rolesList}>
       {resourceType === "workspace" &&
@@ -48,7 +53,7 @@ export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ 
             </Box>
           </li>
         )}
-      {permissionsByResourceType[resourceType].map((permissionOption) => {
+      {rolesToAllow.map((permissionOption) => {
         return (
           <li key={permissionOption} className={styles.roleManagementMenu__listItem}>
             <ChangeRoleMenuItem
@@ -60,7 +65,6 @@ export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ 
           </li>
         );
       })}
-
       {resourceType === "workspace" && (
         <li className={styles.roleManagementMenu__listItem}>
           <RemoveRoleMenuItem user={user} resourceType={resourceType} />

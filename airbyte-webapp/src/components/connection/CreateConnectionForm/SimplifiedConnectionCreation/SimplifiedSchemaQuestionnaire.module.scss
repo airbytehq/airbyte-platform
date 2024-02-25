@@ -1,0 +1,17 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.badgeAlignment {
+  vertical-align: middle;
+}
+
+.collapsedQuestion {
+  overflow: hidden;
+  height: 0;
+}
+
+.expandedQuestion {
+  overflow: hidden;
+  height: 171px;
+  transition: height variables.$transition-out;
+}

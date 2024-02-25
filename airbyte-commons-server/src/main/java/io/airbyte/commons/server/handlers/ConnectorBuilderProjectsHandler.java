@@ -334,9 +334,16 @@ public class ConnectorBuilderProjectsHandler {
           getHydratedTestingValues(project, secretPersistenceConfig.orElse(null)).orElse(Jsons.emptyObject());
 
       final StreamReadRequestBody streamReadRequestBody =
-          new StreamReadRequestBody(existingHydratedTestingValues, requestBody.getManifest(), requestBody.getStreamName(),
-              requestBody.getFormGeneratedManifest(), requestBody.getBuilderProjectId().toString(), requestBody.getRecordLimit(),
-              requestBody.getState(), requestBody.getWorkspaceId().toString());
+          new StreamReadRequestBody(existingHydratedTestingValues,
+              requestBody.getManifest(),
+              requestBody.getStreamName(),
+              requestBody.getFormGeneratedManifest(),
+              requestBody.getBuilderProjectId().toString(),
+              requestBody.getRecordLimit(),
+              requestBody.getPageLimit(),
+              requestBody.getSliceLimit(),
+              requestBody.getState(),
+              requestBody.getWorkspaceId().toString());
       final StreamRead streamRead = connectorBuilderServerApiClient.readStream(streamReadRequestBody);
 
       final ConnectorBuilderProjectStreamRead builderProjectStreamRead = convertStreamRead(streamRead);

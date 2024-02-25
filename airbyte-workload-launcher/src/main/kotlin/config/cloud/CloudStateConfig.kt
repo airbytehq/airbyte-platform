@@ -66,6 +66,7 @@ class CloudStateConfig {
       AWS_SECRET_ACCESS_KEY_ENV_VAR to s3Config.secretAccessKey,
     )
   }
+
   companion object {
     const val AWS_ACCESS_KEY_ID_ENV_VAR = "STATE_STORAGE_MINIO_ACCESS_KEY"
     const val AWS_SECRET_ACCESS_KEY_ENV_VAR = "STATE_STORAGE_AWS_SECRET_ACCESS_KEY"

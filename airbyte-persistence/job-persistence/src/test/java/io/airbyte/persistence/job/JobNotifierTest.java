@@ -39,6 +39,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -121,7 +122,8 @@ class JobNotifierTest {
 
   @Test
   void testFailJob() throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
-    jobNotifier.failJob("JobNotifierTest was running", job);
+    List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+    jobNotifier.failJob("JobNotifierTest was running", job, attemptStats);
     final DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL).withZone(ZoneId.systemDefault());
     SyncSummary summary = SyncSummary.builder().build();
     verify(notificationClient).notifyJobFailure(ArgumentMatchers.any(), ArgumentMatchers.eq(null));
@@ -136,21 +138,23 @@ class JobNotifierTest {
     metadata.put("connector_destination", "destination-test");
     metadata.put("connector_destination_version", TEST_DOCKER_TAG);
     metadata.put("connector_destination_docker_repository", actorDefinitionVersion.getDockerRepository());
-    metadata.put("notification_type", NotificationType.SLACK);
+    metadata.put("notification_type", List.of(NotificationType.SLACK.toString()));
     verify(trackingClient).track(WORKSPACE_ID, JobNotifier.FAILURE_NOTIFICATION, metadata.build());
   }
 
   @Test
   void testSuccessfulJobDoNotSendNotificationPerSettings()
       throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
-    jobNotifier.successJob(job);
+    List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+    jobNotifier.successJob(job, attemptStats);
     verify(notificationClient, never()).notifySuccess(ArgumentMatchers.any());
   }
 
   @Test
   void testSendOnSyncDisabledWarning()
       throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
-    jobNotifier.autoDisableConnectionWarning(job);
+    List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+    jobNotifier.autoDisableConnectionWarning(job, attemptStats);
     verify(notificationClient, never()).notifyConnectionDisableWarning(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
         ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
     verify(customerIoNotificationClient).notifyConnectionDisableWarning(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
@@ -160,11 +164,23 @@ class JobNotifierTest {
   @Test
   void testSendOnSyncDisabled()
       throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
-    jobNotifier.autoDisableConnection(job);
+    List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+    jobNotifier.autoDisableConnection(job, attemptStats);
     verify(notificationClient).notifyConnectionDisabled(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
         ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
     verify(customerIoNotificationClient).notifyConnectionDisabled(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
         ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
+  }
+
+  @Test
+  void testBuildNotificationMetadata() {
+    NotificationItem notificationItem = new NotificationItem()
+        .withNotificationType(List.of(NotificationType.SLACK, NotificationType.CUSTOMERIO))
+        .withSlackConfiguration(new SlackNotificationConfiguration().withWebhook("http://someurl"));
+    UUID connectionId = UUID.randomUUID();
+    var metadata = jobNotifier.buildNotificationMetadata(connectionId, notificationItem);
+    assert metadata.get("connection_id").toString().equals(connectionId.toString());
+    assert metadata.containsKey("notification_type");
   }
 
   private static StandardWorkspace getWorkspace() {

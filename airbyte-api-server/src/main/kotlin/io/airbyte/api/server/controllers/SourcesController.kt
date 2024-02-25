@@ -5,7 +5,6 @@
 package io.airbyte.api.server.controllers
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.airbyte_api.generated.SourcesApi
 import io.airbyte.airbyte_api.model.generated.InitiateOauthRequest
 import io.airbyte.airbyte_api.model.generated.SourceCreateRequest
 import io.airbyte.airbyte_api.model.generated.SourcePatchRequest
@@ -19,6 +18,7 @@ import io.airbyte.api.server.constants.PUT
 import io.airbyte.api.server.constants.SOURCES_PATH
 import io.airbyte.api.server.constants.SOURCES_WITH_ID_PATH
 import io.airbyte.api.server.constants.SOURCE_TYPE
+import io.airbyte.api.server.controllers.interfaces.SourcesApi
 import io.airbyte.api.server.helpers.getActorDefinitionIdFromActorName
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.helpers.removeSourceTypeNode
@@ -165,7 +165,7 @@ open class SourcesController(
   }
 
   override fun listSources(
-    workspaceIds: MutableList<UUID>?,
+    workspaceIds: List<UUID>?,
     includeDeleted: Boolean?,
     limit: Int?,
     offset: Int?,

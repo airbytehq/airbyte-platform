@@ -3,7 +3,6 @@ import { act, Queries, queries, render as rtlRender, RenderOptions, RenderResult
 import React, { Suspense } from "react";
 import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
-import { ThemeProvider } from "styled-components";
 
 import {
   ConnectionStatus,
@@ -19,10 +18,6 @@ import { ModalServiceProvider } from "hooks/services/Modal";
 import { NotificationService } from "hooks/services/Notification";
 import en from "locales/en.json";
 
-interface WrapperProps {
-  children?: React.ReactElement;
-}
-
 export async function render<
   Q extends Queries = typeof queries,
   Container extends Element | DocumentFragment = HTMLElement,
@@ -31,7 +26,7 @@ export async function render<
   renderOptions?: RenderOptions<Q, Container>,
   features?: FeatureItem[]
 ): Promise<RenderResult<Q, Container>> {
-  const Wrapper = ({ children }: WrapperProps) => {
+  const Wrapper: React.FC<React.PropsWithChildren> = ({ children }) => {
     return (
       <TestWrapper features={features}>
         <Suspense fallback={<div>testutils render fallback content</div>}>{children}</Suspense>
@@ -55,23 +50,21 @@ export const TestWrapper: React.FC<React.PropsWithChildren<TestWrapperOptions>> 
   children,
   features = defaultOssFeatures,
 }) => (
-  <ThemeProvider theme={{}}>
-    <IntlProvider locale="en" messages={en} onError={() => null}>
-      <ConfigContext.Provider value={{ config }}>
-        <NotificationService>
-          <FeatureService features={features}>
-            <ModalServiceProvider>
-              <ConfirmationModalService>
-                <QueryClientProvider client={new QueryClient()}>
-                  <MemoryRouter>{children}</MemoryRouter>
-                </QueryClientProvider>
-              </ConfirmationModalService>
-            </ModalServiceProvider>
-          </FeatureService>
-        </NotificationService>
-      </ConfigContext.Provider>
-    </IntlProvider>
-  </ThemeProvider>
+  <IntlProvider locale="en" messages={en} onError={() => null}>
+    <ConfigContext.Provider value={{ config }}>
+      <NotificationService>
+        <FeatureService features={features}>
+          <ModalServiceProvider>
+            <ConfirmationModalService>
+              <QueryClientProvider client={new QueryClient()}>
+                <MemoryRouter>{children}</MemoryRouter>
+              </QueryClientProvider>
+            </ConfirmationModalService>
+          </ModalServiceProvider>
+        </FeatureService>
+      </NotificationService>
+    </ConfigContext.Provider>
+  </IntlProvider>
 );
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

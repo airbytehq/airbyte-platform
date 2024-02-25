@@ -17,6 +17,14 @@ const createUseFeatureMock = (options: { visible?: boolean }) => (key: FeatureIt
   }
 };
 
+jest.mock("core/api", () => ({
+  useCurrentWorkspace: () => ({ workspaceId: "workspaceId" }),
+}));
+
+jest.mock("core/utils/rbac", () => ({
+  useIntent: jest.fn().mockReturnValue(true),
+}));
+
 describe("InviteUsersHint", () => {
   it("does not render by default", () => {
     const { queryByTestId } = render(<InviteUsersHint connectorType="source" />, { wrapper: TestWrapper });

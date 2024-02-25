@@ -39,16 +39,25 @@ public class ConfigurationMapService {
 
   public Map<String, String> setupProviderConfig(final IdentityProviderConfiguration provider, Map<String, String> configMap) {
     Map<String, String> config = new HashMap<>();
+
+    // Copy all keys from configMap to the result map
+    config.putAll(configMap);
+
+    // The refactor to use `.putAll` above caused the `validateSignature` key
+    // to be brought in to the IDP config unintentionally. This key is
+    // causing issues with Okta integrations, so we're removing it to
+    // restore the original behavior from before the refactor.
+    // TODO: investigate why setting this key causes issues with Okta.
+    config.remove("validateSignature");
+
+    // Explicitly set required keys
     config.put("clientId", provider.getClientId());
     config.put("clientSecret", provider.getClientSecret());
-    config.put("authorizationUrl", configMap.get("authorizationUrl"));
-    config.put("tokenUrl", configMap.get("tokenUrl"));
-    config.put("userInfoUrl", configMap.get("userInfoUrl"));
-    config.put("logoutUrl", configMap.get("logoutUrl"));
-    config.put("issuer", configMap.get("issuer"));
     config.put("defaultScope", "openid email profile");
     config.put("redirectUris", getProviderRedirectUrl(provider));
-    config.put("jwksUrl", configMap.get("jwksUrl"));
+    config.put("backchannelSupported", "true");
+    config.put("backchannel_logout_session_supported", "true");
+
     return config;
   }
 

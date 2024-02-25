@@ -11,6 +11,7 @@ dependencies {
 
     kapt(libs.bundles.micronaut.annotation.processor)
 
+    implementation(libs.bundles.keycloak.client)
     implementation(platform(libs.micronaut.bom))
     implementation(libs.bundles.micronaut)
     implementation(libs.failsafe.okhttp)

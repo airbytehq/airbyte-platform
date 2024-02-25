@@ -22,9 +22,9 @@ export const GeneralWorkspaceSettingsPage = () => {
 
   return (
     <FlexContainer direction="column" gap="xl">
-      <Box p="xl">
+      <Box>
         <Heading as="h2" size="md">
-          <FormattedMessage id="settings.generalSettings" />
+          <FormattedMessage id={updatedOrganizationsUI ? "settings.members" : "settings.generalSettings"} />
         </Heading>
       </Box>
       <Card>

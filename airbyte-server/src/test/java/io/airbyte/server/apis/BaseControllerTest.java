@@ -16,7 +16,6 @@ import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler;
 import io.airbyte.commons.server.handlers.DestinationHandler;
 import io.airbyte.commons.server.handlers.HealthCheckHandler;
 import io.airbyte.commons.server.handlers.JobHistoryHandler;
-import io.airbyte.commons.server.handlers.LogsHandler;
 import io.airbyte.commons.server.handlers.MatchSearchHandler;
 import io.airbyte.commons.server.handlers.NotificationsHandler;
 import io.airbyte.commons.server.handlers.OAuthHandler;
@@ -34,6 +33,7 @@ import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler;
 import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler;
 import io.airbyte.commons.server.handlers.WorkspacesHandler;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
+import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.db.Database;
@@ -154,14 +154,6 @@ abstract class BaseControllerTest {
   @Replaces(JobHistoryHandler.class)
   JobHistoryHandler mmJobHistoryHandler() {
     return jobHistoryHandler;
-  }
-
-  LogsHandler logsHandler = Mockito.mock(LogsHandler.class);
-
-  @MockBean(LogsHandler.class)
-  @Replaces(LogsHandler.class)
-  LogsHandler mmLogsHandler() {
-    return logsHandler;
   }
 
   NotificationsHandler notificationsHandler = Mockito.mock(NotificationsHandler.class);
@@ -334,6 +326,14 @@ abstract class BaseControllerTest {
   @Replaces(SecurityService.class)
   SecurityService mmSecurityService() {
     return Mockito.mock(SecurityService.class);
+  }
+
+  CurrentUserService currentUserService = Mockito.mock(CurrentUserService.class);
+
+  @MockBean(CurrentUserService.class)
+  @Replaces(CurrentUserService.class)
+  CurrentUserService mmCurrentUserService() {
+    return currentUserService;
   }
 
   @MockBean(JobNotifier.class)

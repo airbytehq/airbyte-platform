@@ -21,6 +21,7 @@ import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobStatusSummary;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
+import io.airbyte.persistence.job.models.JobsRecordsCommitted;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -317,6 +318,10 @@ public interface JobPersistence {
   List<AttemptWithJobInfo> listAttemptsForConnectionAfterTimestamp(UUID connectionId,
                                                                    ConfigType configType,
                                                                    Instant attemptEndedAtTimestamp)
+      throws IOException;
+
+  List<JobsRecordsCommitted> listRecordsCommittedForConnectionAfterTimestamp(UUID connectionId,
+                                                                             Instant attemptEndedAtTimestamp)
       throws IOException;
 
   /**

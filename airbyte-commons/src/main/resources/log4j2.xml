@@ -117,7 +117,7 @@
                 </Route>
                 <Route>
                     <Log4j2Appender name="${ctx:cloud_job_log_path}"
-                      verbose="true"
+                      verbose="false"
                       stagingBufferAge="1"
                       s3Bucket="${s3-bucket}" s3Path="job-logging${ctx:cloud_job_log_path}" s3Region="${s3-region}"
                       s3ServiceEndpoint="${s3-minio-endpoint}" s3PathStyleAccess="${s3-path-style-access}"
@@ -140,7 +140,7 @@
                 </Route>
                 <Route>
                     <Log4j2Appender name="${ctx:cloud_job_log_path}"
-                                    verbose="true"
+                                    verbose="false"
                                     stagingBufferAge="1"
                                     s3Bucket="${s3-bucket}" s3Path="job-logging${ctx:cloud_job_log_path}" s3Region="${s3-region}"
                                     s3ServiceEndpoint="${s3-minio-endpoint}" s3PathStyleAccess="${s3-path-style-access}"

@@ -7,9 +7,10 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspace, useListWorkspaceAccessUsers } from "core/api";
+import { useCurrentOrganizationInfo, useCurrentWorkspace, useListWorkspaceAccessUsers } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useIntent } from "core/utils/rbac";
+import { FirebaseInviteUserButton } from "packages/cloud/views/workspaces/WorkspaceSettingsView/components/FirebaseInviteUserButton";
 
 import { AddUserControl } from "./components/AddUserControl";
 import styles from "./WorkspaceAccessManagementSection.module.scss";
@@ -20,15 +21,19 @@ const SEARCH_PARAM = "search";
 const WorkspaceAccessManagementSection: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_WORKSPACE_ACCESS_MANAGEMENT);
   const workspace = useCurrentWorkspace();
-  const canViewOrgMembers = useIntent("ListOrganizationMembers", { organizationId: workspace.organizationId });
+  const organization = useCurrentOrganizationInfo();
+  const canViewOrgMembers = useIntent("ListOrganizationMembers", { organizationId: organization?.organizationId });
   const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId: workspace.workspaceId });
 
-  const { usersWithAccess } = useListWorkspaceAccessUsers(workspace.workspaceId);
+  const usersWithAccess = useListWorkspaceAccessUsers(workspace.workspaceId).usersWithAccess;
 
   const [searchParams, setSearchParams] = useSearchParams();
   const filterParam = searchParams.get("search");
   const [userFilter, setUserFilter] = React.useState(filterParam ?? "");
   const debouncedUserFilter = useDeferredValue(userFilter);
+
+  const isWorkspaceInOrg = organization?.sso && canUpdateWorkspacePermissions && canViewOrgMembers;
+  const showFirebaseInviteButton = !organization?.sso && canUpdateWorkspacePermissions;
 
   useEffect(() => {
     if (debouncedUserFilter) {
@@ -39,7 +44,7 @@ const WorkspaceAccessManagementSection: React.FC = () => {
     setSearchParams(searchParams);
   }, [debouncedUserFilter, searchParams, setSearchParams]);
 
-  const filteredUsersWithAccess = usersWithAccess.filter((user) => {
+  const filteredUsersWithAccess = (usersWithAccess ?? []).filter((user) => {
     return (
       user.userName?.toLowerCase().includes(filterParam?.toLowerCase() ?? "") ||
       user.userEmail?.toLowerCase().includes(filterParam?.toLowerCase() ?? "")
@@ -57,7 +62,8 @@ const WorkspaceAccessManagementSection: React.FC = () => {
         <FlexItem className={styles.searchInputWrapper}>
           <SearchInput value={userFilter} onChange={(e) => setUserFilter(e.target.value)} />
         </FlexItem>
-        {canViewOrgMembers && canUpdateWorkspacePermissions && <AddUserControl />}
+        {showFirebaseInviteButton && <FirebaseInviteUserButton />}
+        {isWorkspaceInOrg && <AddUserControl />}
       </FlexContainer>
       {filteredUsersWithAccess && filteredUsersWithAccess.length > 0 ? (
         <WorkspaceUsersTable users={filteredUsersWithAccess} />

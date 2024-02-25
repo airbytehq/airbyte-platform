@@ -263,7 +263,7 @@ const SessionTokenForm = () => {
         <BuilderField
           type="enum"
           path={authPath("login_requester.httpMethod")}
-          options={getOptionsByManifest("HttpRequester.properties.http_method.anyOf.1")}
+          options={getOptionsByManifest("HttpRequester.properties.http_method")}
           manifestPath="HttpRequester.properties.http_method"
         />
         <BuilderOneOf<BuilderFormAuthenticator>

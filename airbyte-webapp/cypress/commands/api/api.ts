@@ -25,9 +25,10 @@ const apiRequest = <T = void>(
   method: Cypress.HttpMethod,
   path: string,
   payload?: Cypress.RequestBody,
-  expectedStatus = 200
+  expectedStatus = 200,
+  requestTimeout = 30000
 ): Cypress.Chainable<T> =>
-  cy.request(method, getApiUrl(path), payload).then((response) => {
+  cy.request({ method, url: getApiUrl(path), body: payload, timeout: requestTimeout }).then((response) => {
     expect(response.status).to.eq(expectedStatus, "response status");
     return response.body;
   });
@@ -69,7 +70,7 @@ export const requestSourcesList = () =>
   });
 
 export const requestSourceDiscoverSchema = (body: SourceDiscoverSchemaRequestBody) =>
-  apiRequest<SourceDiscoverSchemaRead>("POST", "/sources/discover_schema", body);
+  apiRequest<SourceDiscoverSchemaRead>("POST", "/sources/discover_schema", body, 200, 60000);
 
 export const requestCreateSource = (body: SourceCreate) => apiRequest<SourceRead>("POST", "/sources/create", body);
 

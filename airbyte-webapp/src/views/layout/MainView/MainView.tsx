@@ -14,7 +14,7 @@ import styles from "./MainView.module.scss";
 import { HelpDropdown } from "../SideBar/components/HelpDropdown";
 import { SideBar } from "../SideBar/SideBar";
 
-const MainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
+const MainView: React.FC<React.PropsWithChildren> = (props) => {
   const { trackError } = useAppMonitoringService();
   const { hasNewVersions } = useGetConnectorsOutOfDate();
 

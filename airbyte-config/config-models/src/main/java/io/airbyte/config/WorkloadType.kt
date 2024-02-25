@@ -23,6 +23,10 @@ enum class WorkloadType(private val value: String) {
     return value
   }
 
+  fun toOperationName(): String {
+    return value.uppercase()
+  }
+
   companion object {
     @JvmStatic
     @JsonCreator

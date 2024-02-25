@@ -13,12 +13,12 @@ import { LastSyncCell } from "./components/LastSyncCell";
 import styles from "./ImplementationTable.module.scss";
 import { EntityTableDataItem } from "./types";
 
-interface IProps {
+interface ImplementationTableProps {
   data: EntityTableDataItem[];
   entity: "source" | "destination";
 }
 
-const ImplementationTable: React.FC<IProps> = ({ data, entity }) => {
+const ImplementationTable: React.FC<ImplementationTableProps> = ({ data, entity }) => {
   const columnHelper = createColumnHelper<EntityTableDataItem>();
 
   const columns = React.useMemo(
@@ -85,6 +85,7 @@ const ImplementationTable: React.FC<IProps> = ({ data, entity }) => {
         id: "status",
         meta: {
           noPadding: true,
+          tdClassName: styles.statusIcons,
         },
         cell: (props) => (
           <Link to={props.row.original.entityId} variant="primary" className={styles.cellContent}>
@@ -103,6 +104,7 @@ const ImplementationTable: React.FC<IProps> = ({ data, entity }) => {
       data={data}
       testId={`${entity}sTable`}
       initialSortBy={[{ id: "connectorName", desc: false }]}
+      variant="white"
     />
   );
 };

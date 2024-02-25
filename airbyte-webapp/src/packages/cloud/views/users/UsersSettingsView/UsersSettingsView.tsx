@@ -1,10 +1,9 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import React, { useMemo } from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
-import { Icon } from "components/ui/Icon";
 import { Table } from "components/ui/Table";
 
 import { useListUsers, useUserHook } from "core/api/cloud";
@@ -13,11 +12,10 @@ import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 import { useIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useModalService } from "hooks/services/Modal";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 
 import styles from "./UsersSettingsView.module.scss";
-import { InviteUsersModal } from "../InviteUsersModal";
+import { FirebaseInviteUserButton } from "../../workspaces/WorkspaceSettingsView/components/FirebaseInviteUserButton";
 
 const RemoveUserSection: React.VFC<{ workspaceId: string; email: string }> = ({ workspaceId, email }) => {
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
@@ -51,31 +49,12 @@ const RemoveUserSection: React.VFC<{ workspaceId: string; email: string }> = ({ 
 };
 
 const Header: React.VFC = () => {
-  const { openModal } = useModalService();
-  const { formatMessage } = useIntl();
-  const { workspaceId } = useCurrentWorkspace();
-  const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId });
-
-  const onOpenInviteUsersModal = () =>
-    openModal({
-      title: formatMessage({ id: "modals.addUser.title" }),
-      content: () => <InviteUsersModal invitedFrom="user.settings" />,
-      size: "md",
-    });
-
   return (
     <div className={styles.header}>
       <Heading as="h1" size="sm">
         <FormattedMessage id="userSettings.table.title" />
       </Heading>
-      <Button
-        onClick={onOpenInviteUsersModal}
-        icon={<Icon type="plus" />}
-        data-testid="userSettings.button.addNewUser"
-        disabled={!canUpdateWorkspacePermissions}
-      >
-        <FormattedMessage id="userSettings.button.addNewUser" />
-      </Button>
+      <FirebaseInviteUserButton />
     </div>
   );
 };
@@ -115,6 +94,11 @@ export const UsersTable: React.FC = () => {
   return <Table data={users ?? []} columns={columns} />;
 };
 
+/**
+ *
+ * @deprecated will be removed with rbac v2 rollout
+ *
+ */
 export const UsersSettingsView: React.VFC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_ACCESS_MANAGEMENT);
 

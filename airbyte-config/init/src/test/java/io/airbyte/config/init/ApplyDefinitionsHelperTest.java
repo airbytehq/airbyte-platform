@@ -62,25 +62,29 @@ class ApplyDefinitionsHelperTest {
 
   private MetricClient metricClient;
   private ApplyDefinitionsHelper applyDefinitionsHelper;
+  private static final String INITIAL_CONNECTOR_VERSION = "0.1.0";
+  private static final String UPDATED_CONNECTOR_VERSION = "0.2.0";
+  private static final String BREAKING_CHANGE_VERSION = "1.0.0";
 
   private static final String PROTOCOL_VERSION = "2.0.0";
 
   protected static final UUID POSTGRES_ID = UUID.fromString("decd338e-5647-4c0b-adf4-da0e75f5a750");
-  private static final BreakingChanges registryBreakingChanges = new BreakingChanges().withAdditionalProperty("1.0.0", new VersionBreakingChange()
-      .withMessage("Sample message").withUpgradeDeadline("2023-07-20").withMigrationDocumentationUrl("https://example.com"));
+  private static final BreakingChanges registryBreakingChanges =
+      new BreakingChanges().withAdditionalProperty(BREAKING_CHANGE_VERSION, new VersionBreakingChange()
+          .withMessage("Sample message").withUpgradeDeadline("2023-07-20").withMigrationDocumentationUrl("https://example.com"));
 
   protected static final ConnectorRegistrySourceDefinition SOURCE_POSTGRES = new ConnectorRegistrySourceDefinition()
       .withSourceDefinitionId(POSTGRES_ID)
       .withName("Postgres")
       .withDockerRepository("airbyte/source-postgres")
-      .withDockerImageTag("0.3.11")
+      .withDockerImageTag(INITIAL_CONNECTOR_VERSION)
       .withDocumentationUrl("https://docs.airbyte.io/integrations/sources/postgres")
       .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION));
   protected static final ConnectorRegistrySourceDefinition SOURCE_POSTGRES_2 = new ConnectorRegistrySourceDefinition()
       .withSourceDefinitionId(POSTGRES_ID)
       .withName("Postgres - Updated")
       .withDockerRepository("airbyte/source-postgres")
-      .withDockerImageTag("0.4.0")
+      .withDockerImageTag(UPDATED_CONNECTOR_VERSION)
       .withDocumentationUrl("https://docs.airbyte.io/integrations/sources/postgres/new")
       .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION))
       .withReleases(new ConnectorReleases().withBreakingChanges(registryBreakingChanges));
@@ -90,14 +94,14 @@ class ApplyDefinitionsHelperTest {
       .withName("S3")
       .withDestinationDefinitionId(S3_ID)
       .withDockerRepository("airbyte/destination-s3")
-      .withDockerImageTag("0.1.12")
+      .withDockerImageTag(INITIAL_CONNECTOR_VERSION)
       .withDocumentationUrl("https://docs.airbyte.io/integrations/destinations/s3")
       .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION));
   protected static final ConnectorRegistryDestinationDefinition DESTINATION_S3_2 = new ConnectorRegistryDestinationDefinition()
       .withName("S3 - Updated")
       .withDestinationDefinitionId(S3_ID)
       .withDockerRepository("airbyte/destination-s3")
-      .withDockerImageTag("0.2.0")
+      .withDockerImageTag(UPDATED_CONNECTOR_VERSION)
       .withDocumentationUrl("https://docs.airbyte.io/integrations/destinations/s3/new")
       .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION))
       .withReleases(new ConnectorReleases().withBreakingChanges(registryBreakingChanges));
@@ -157,7 +161,8 @@ class ApplyDefinitionsHelperTest {
             1,
             new MetricAttribute("status", "ok"),
             new MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()),
-            new MetricAttribute("docker_repository", dockerRepo)));
+            new MetricAttribute("docker_repository", dockerRepo),
+            new MetricAttribute("docker_image_tag", INITIAL_CONNECTOR_VERSION)));
     verify(supportStateUpdater).updateSupportStates();
 
     verifyNoMoreInteractions(actorDefinitionService, sourceService, destinationService, supportStateUpdater, metricClient);
@@ -191,7 +196,8 @@ class ApplyDefinitionsHelperTest {
             1,
             new MetricAttribute("status", "ok"),
             new MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED.toString()),
-            new MetricAttribute("docker_repository", dockerRepo)));
+            new MetricAttribute("docker_repository", dockerRepo),
+            new MetricAttribute("docker_image_tag", UPDATED_CONNECTOR_VERSION)));
     verify(supportStateUpdater).updateSupportStates();
 
     verifyNoMoreInteractions(actorDefinitionService, sourceService, destinationService, supportStateUpdater, metricClient);
@@ -225,7 +231,8 @@ class ApplyDefinitionsHelperTest {
               1,
               new MetricAttribute("status", "ok"),
               new MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.DEFAULT_VERSION_UPDATED.toString()),
-              new MetricAttribute("docker_repository", dockerRepo)));
+              new MetricAttribute("docker_repository", dockerRepo),
+              new MetricAttribute("docker_image_tag", UPDATED_CONNECTOR_VERSION)));
     } else {
       verify(sourceService).updateStandardSourceDefinition(ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2));
       verify(destinationService).updateStandardDestinationDefinition(ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2));
@@ -260,7 +267,8 @@ class ApplyDefinitionsHelperTest {
             1,
             new MetricAttribute("status", "failed"),
             new MetricAttribute("outcome", DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION.toString()),
-            new MetricAttribute("docker_repository", dockerRepo)));
+            new MetricAttribute("docker_repository", dockerRepo),
+            new MetricAttribute("docker_image_tag", INITIAL_CONNECTOR_VERSION)));
 
     verify(sourceService, never()).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardSourceDefinition(postgresWithOldProtocolVersion),
@@ -286,7 +294,8 @@ class ApplyDefinitionsHelperTest {
             1,
             new MetricAttribute("status", "ok"),
             new MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()),
-            new MetricAttribute("docker_repository", dockerRepo)));
+            new MetricAttribute("docker_repository", dockerRepo),
+            new MetricAttribute("docker_image_tag", UPDATED_CONNECTOR_VERSION)));
     verifyNoMoreInteractions(actorDefinitionService, sourceService, destinationService, supportStateUpdater, metricClient);
   }
 
@@ -319,7 +328,8 @@ class ApplyDefinitionsHelperTest {
             1,
             new MetricAttribute("status", "failed"),
             new MetricAttribute("outcome", DefinitionProcessingFailureReason.DEFINITION_CONVERSION_FAILED.toString()),
-            new MetricAttribute("docker_repository", dockerRepo)));
+            new MetricAttribute("docker_repository", dockerRepo),
+            new MetricAttribute("docker_image_tag", "a-non-semantic-version-for-example")));
 
     verify(sourceService).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES),
@@ -344,7 +354,8 @@ class ApplyDefinitionsHelperTest {
             1,
             new MetricAttribute("status", "ok"),
             new MetricAttribute("outcome", DefinitionProcessingSuccessOutcome.INITIAL_VERSION_ADDED.toString()),
-            new MetricAttribute("docker_repository", dockerRepo)));
+            new MetricAttribute("docker_repository", dockerRepo),
+            new MetricAttribute("docker_image_tag", INITIAL_CONNECTOR_VERSION)));
 
     // The malformed definitions should not have been written.
     verifyNoMoreInteractions(actorDefinitionService, sourceService, destinationService, supportStateUpdater, metricClient);

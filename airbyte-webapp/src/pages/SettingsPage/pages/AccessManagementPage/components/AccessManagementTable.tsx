@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Badge } from "components/ui/Badge";
-import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Table } from "components/ui/Table";
 
@@ -80,9 +79,5 @@ export const AccessManagementTable: React.FC<{
     [activeEditRow, columnHelper, pageResourceName, pageResourceType, tableResourceType, userId]
   );
 
-  return (
-    <Card>
-      <Table data={users} columns={columns} variant="white" />
-    </Card>
-  );
+  return <Table data={users} columns={columns} variant="white" />;
 };

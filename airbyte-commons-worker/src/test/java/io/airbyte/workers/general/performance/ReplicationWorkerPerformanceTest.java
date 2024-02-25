@@ -154,6 +154,7 @@ public abstract class ReplicationWorkerPerformanceTest {
         featureFlagClient,
         workspaceID,
         UUID.randomUUID(),
+        "docker image",
         new NotImplementedMetricClient());
     final StreamStatusTracker streamStatusTracker = new StreamStatusTracker(mock(AirbyteApiClient.class));
     final List<ApplicationEventListener<ReplicationAirbyteMessageEvent>> listeners = List.of(

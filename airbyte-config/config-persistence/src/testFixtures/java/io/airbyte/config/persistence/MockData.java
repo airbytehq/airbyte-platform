@@ -74,7 +74,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.Data;
 
@@ -127,7 +126,6 @@ public class MockData {
   private static final UUID ACTOR_CATALOG_FETCH_EVENT_ID_2 = UUID.randomUUID();
   private static final UUID ACTOR_CATALOG_FETCH_EVENT_ID_3 = UUID.randomUUID();
   public static final long DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES = 3600;
-  public static final Supplier<Long> MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER = () -> DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES;
   // User
   static final UUID CREATOR_USER_ID_1 = UUID.randomUUID();
   static final UUID CREATOR_USER_ID_2 = UUID.randomUUID();

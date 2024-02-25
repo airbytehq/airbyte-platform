@@ -75,6 +75,7 @@ import io.airbyte.api.model.generated.WebBackendWorkspaceState;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
@@ -91,6 +92,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.DestinationAndDefinition;
@@ -151,6 +153,7 @@ class WebBackendConnectionsHandlerTest {
   private EventRunner eventRunner;
   private ConfigRepository configRepository;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
 
   private static final String STREAM1 = "stream1";
   private static final String STREAM2 = "stream2";
@@ -171,6 +174,7 @@ class WebBackendConnectionsHandlerTest {
     schedulerHandler = mock(SchedulerHandler.class);
     eventRunner = mock(EventRunner.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
 
     final JsonSchemaValidator validator = mock(JsonSchemaValidator.class);
     final JsonSecretsProcessor secretsProcessor = mock(JsonSecretsProcessor.class);
@@ -197,7 +201,8 @@ class WebBackendConnectionsHandlerTest {
         oAuthConfigSupplier,
         actorDefinitionVersionHelper,
         destinationService,
-        featureFlagClient);
+        featureFlagClient,
+        actorDefinitionHandlerHelper);
 
     final SourceHandler sourceHandler = new SourceHandler(configRepository,
         secretsRepositoryReader,
@@ -207,7 +212,8 @@ class WebBackendConnectionsHandlerTest {
         secretsProcessor,
         configurationUpdate,
         oAuthConfigSupplier,
-        actorDefinitionVersionHelper, featureFlagClient, sourceService, workspaceService, secretPersistenceConfigService);
+        actorDefinitionVersionHelper, featureFlagClient, sourceService, workspaceService, secretPersistenceConfigService,
+        actorDefinitionHandlerHelper);
 
     wbHandler = new WebBackendConnectionsHandler(
         connectionsHandler,
@@ -261,6 +267,9 @@ class WebBackendConnectionsHandlerTest {
 
     final ConnectorSpecification mockSpec = mock(ConnectorSpecification.class);
     final ActorDefinitionVersion mockADV = new ActorDefinitionVersion().withSpec(mockSpec);
+    final ActorDefinitionVersionWithOverrideStatus mockADVWithOverrideStatus = new ActorDefinitionVersionWithOverrideStatus(mockADV, false);
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(any(), any(), any())).thenReturn(mockADVWithOverrideStatus);
+    when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(any(), any(), any())).thenReturn(mockADVWithOverrideStatus);
     when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(mockADV);
     when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any())).thenReturn(mockADV);
 

@@ -1,8 +1,16 @@
 package io.airbyte.workers.internal.bookkeeping
 
+import io.airbyte.analytics.DeploymentFetcher
+import io.airbyte.analytics.LoggingTrackingClient
+import io.airbyte.analytics.TrackingClient
+import io.airbyte.analytics.TrackingIdentityFetcher
+import io.airbyte.api.client.model.generated.DeploymentMetadataRead
+import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
@@ -25,6 +33,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.mockito.Mockito
+import java.util.UUID
 
 private val logger = KotlinLogging.logger { }
 
@@ -36,6 +45,10 @@ class ParallelStreamStatsTrackerTest {
 
     // This is based of the current size of a record from createRecord
     const val MESSAGE_SIZE = 16L
+
+    val CONNECTION_ID: UUID = UUID.randomUUID()
+    const val JOB_ID: Long = 123L
+    const val ATTEMPT_NUMBER: Int = 0
   }
 
   private val stream1 = AirbyteStreamNameNamespacePair(STREAM1_NAME, null)
@@ -49,12 +62,16 @@ class ParallelStreamStatsTrackerTest {
   private val stream2Message3 = createRecord(STREAM2_NAME, "s2m3")
 
   private lateinit var metricClient: MetricClient
+  private lateinit var trackingClient: TrackingClient
+  private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var statsTracker: ParallelStreamStatsTracker
 
   @BeforeEach
   fun beforeEach() {
     metricClient = Mockito.mock(MetricClient::class.java)
-    statsTracker = ParallelStreamStatsTracker(metricClient)
+    trackingClient = LoggingTrackingClient(DeploymentFetcher { DeploymentMetadataRead() }, TrackingIdentityFetcher { _ -> WorkspaceRead() })
+    featureFlagClient = TestClient(mapOf("platform.emit-state-stats-segment" to true))
+    statsTracker = ParallelStreamStatsTracker(metricClient, trackingClient, featureFlagClient, CONNECTION_ID, JOB_ID, ATTEMPT_NUMBER)
   }
 
   @Test

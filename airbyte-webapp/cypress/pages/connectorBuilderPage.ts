@@ -1,9 +1,11 @@
-const startFromScratchButton = "button[data-testid='start-from-scratch']";
+import { selectFromDropdown } from "@cy/commands/common";
+
+const startFromScratchButton = "[data-testid='start-from-scratch']";
 const nameInput = "input[name='name']";
 const urlBaseInput = "input[name='formValues.global.urlBase']";
-const addStreamButton = "button[data-testid='add-stream']";
+const addStreamButton = "[data-testid='add-stream']";
 const apiKeyInput = "input[name='connectionConfiguration.api_key']";
-const togglePaginationInput = "input[data-testid='toggle-formValues.streams.0.paginator']";
+const togglePaginationInput = "[data-testid='toggle-formValues.streams.0.paginator']";
 const toggleParameterizedRequestsInput = "input[data-testid='toggle-formValues.streams.0.parameterizedRequests']";
 const streamNameInput = "input[name='streamName']";
 const streamUrlPathFromModal = "input[name='urlPath']";
@@ -18,7 +20,7 @@ const injectOffsetInto = "[data-testid$='paginator.pageTokenOption.inject_into']
 const injectOffsetFieldName = "[name='formValues.streams.0.paginator.pageTokenOption.field_name']";
 const testPageItem = "[data-testid='test-pages'] li";
 const submit = "button[type='submit']";
-const testStreamButton = "button[data-testid='read-stream']";
+const testStreamButton = "[data-testid='read-stream']";
 const sliceDropdown = '[data-testid="tag-select-slice"]';
 
 export const goToConnectorBuilderCreatePage = () => {
@@ -30,7 +32,7 @@ export const goToConnectorBuilderProjectsPage = () => {
 };
 
 export const editProjectBuilder = (name: string) => {
-  cy.get(`button[data-testid='edit-project-button-${name}']`).click();
+  cy.get(`[data-testid='edit-project-button-${name}']`).click();
 };
 
 export const startFromScratch = () => {
@@ -49,12 +51,6 @@ export const enterUrlBase = (urlBase: string) => {
 export const enterRecordSelector = (recordSelector: string) => {
   cy.get(recordSelectorInput).first().type(recordSelector);
   cy.get(recordSelectorInput).first().type("{enter}");
-};
-
-export const selectFromDropdown = (selector: string, value: string) => {
-  cy.get(`${selector} .react-select__dropdown-indicator`).last().click();
-
-  cy.get(`.react-select__option`).contains(value).click();
 };
 
 export const selectAuthMethod = (value: string) => {

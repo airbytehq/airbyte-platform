@@ -11,7 +11,7 @@ data
 .classpath
 .project
 .settings
-.vscode
+/.vscode
 **/gmon.out
 static_checker_reports/
 

@@ -15,7 +15,7 @@ import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.models.ReplicationActivityInput
-import io.airbyte.workers.orchestrator.OrchestratorNameGenerator
+import io.airbyte.workers.orchestrator.PodNameGenerator
 import io.airbyte.workers.storage.DocumentStoreClient
 import io.airbyte.workers.sync.WorkloadApiWorker
 import io.airbyte.workers.workload.JobOutputDocStore
@@ -58,7 +58,7 @@ internal class WorkloadApiWorkerTest {
     workloadApiWorker =
       WorkloadApiWorker(
         documentStoreClient,
-        OrchestratorNameGenerator("testNs"),
+        PodNameGenerator("testNs"),
         jobOutputDocStore,
         apiClient,
         workloadApi,

@@ -19,7 +19,12 @@ public interface AirbyteCdkRequester {
   ResolveManifest resolveManifest(final JsonNode manifest)
       throws IOException, AirbyteCdkInvalidInputException, ConnectorBuilderException;
 
-  StreamRead readStream(final JsonNode manifest, final JsonNode config, final String stream, final Integer recordLimit)
+  StreamRead readStream(final JsonNode manifest,
+                        final JsonNode config,
+                        final String stream,
+                        final Integer recordLimit,
+                        final Integer pageLimit,
+                        final Integer sliceLimit)
       throws IOException, AirbyteCdkInvalidInputException, ConnectorBuilderException;
 
 }

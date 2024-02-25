@@ -38,6 +38,7 @@ import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.ConnectorJobOutput.OutputType;
 import io.airbyte.config.FailureReason;
+import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.AirbyteMessage;
@@ -251,6 +252,7 @@ class DefaultDiscoverCatalogWorkerTest {
     assertNull(output.getDiscoverCatalogId());
     final FailureReason failureReason = output.getFailureReason();
     assertEquals("some error from the connector", failureReason.getExternalMessage());
+    assertEquals(FailureOrigin.SOURCE, failureReason.getFailureOrigin());
 
     Assertions.assertTimeout(Duration.ofSeconds(5), () -> {
       while (process.getErrorStream().available() != 0) {
@@ -271,6 +273,7 @@ class DefaultDiscoverCatalogWorkerTest {
     assertNotNull(output.getDiscoverCatalogId());
     final FailureReason failureReason = output.getFailureReason();
     assertEquals("some error from the connector", failureReason.getExternalMessage());
+    assertEquals(FailureOrigin.SOURCE, failureReason.getFailureOrigin());
 
     Assertions.assertTimeout(Duration.ofSeconds(5), () -> {
       while (process.getErrorStream().available() != 0) {

@@ -22,6 +22,7 @@ public class JwtTokenParser {
   public static final String JWT_USER_EMAIL = "user_email";
   public static final String JWT_AUTH_PROVIDER = "auth_provider";
   public static final String JWT_AUTH_USER_ID = "auth_user_id";
+  public static final String JWT_FIREBASE = "firebase";
 
   private static final String ISS_FIELD = "iss";
   private static final String AUTH_REALM_VALUE = "auth/realms/";
@@ -68,6 +69,9 @@ public class JwtTokenParser {
       } else if (jwtNode.containsKey("user_id")) {
         // speakeasy generated jwt tokens contain the auth user id under the userId field
         jwtMap.put(JWT_AUTH_USER_ID, jwtNode.get("user_id"));
+      }
+      if (jwtNode.containsKey("firebase")) {
+        jwtMap.put(JWT_FIREBASE, jwtNode.get("firebase"));
       }
     }
 

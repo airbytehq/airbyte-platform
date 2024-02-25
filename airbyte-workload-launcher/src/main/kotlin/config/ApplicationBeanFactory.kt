@@ -17,12 +17,15 @@ import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricClientFactory
 import io.airbyte.metrics.lib.MetricEmittingApps
 import io.airbyte.workers.CheckConnectionInputHydrator
+import io.airbyte.workers.ConnectorSecretsHydrator
+import io.airbyte.workers.DiscoverCatalogInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
 import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import okhttp3.internal.http2.StreamResetException
 import java.net.SocketTimeoutException
 import java.time.Duration
 import java.util.Optional
@@ -56,12 +59,12 @@ class ApplicationBeanFactory {
   }
 
   @Singleton
-  fun checkInputHydrator(
+  fun baseInputHydrator(
     secretsPersistenceConfigApi: SecretsPersistenceConfigApi,
     secretsRepositoryReader: SecretsRepositoryReader,
     featureFlagClient: FeatureFlagClient,
-  ): CheckConnectionInputHydrator {
-    return CheckConnectionInputHydrator(
+  ): ConnectorSecretsHydrator {
+    return ConnectorSecretsHydrator(
       secretsRepositoryReader,
       secretsPersistenceConfigApi,
       featureFlagClient,
@@ -69,22 +72,49 @@ class ApplicationBeanFactory {
   }
 
   @Singleton
+  fun checkInputHydrator(connectorSecretsHydrator: ConnectorSecretsHydrator): CheckConnectionInputHydrator {
+    return CheckConnectionInputHydrator(connectorSecretsHydrator)
+  }
+
+  @Singleton
+  fun discoverCatalogInputHydrator(connectorSecretsHydrator: ConnectorSecretsHydrator): DiscoverCatalogInputHydrator {
+    return DiscoverCatalogInputHydrator(connectorSecretsHydrator)
+  }
+
+  @Singleton
+  @Named("kubeHttpErrorRetryPredicate")
+  fun kubeHttpErrorRetryPredicate(): (Throwable) -> Boolean {
+    return { e: Throwable ->
+      e.cause is SocketTimeoutException ||
+        e.cause?.cause is StreamResetException
+    }
+  }
+
+  @Singleton
   @Named("kubernetesClientRetryPolicy")
   fun kubernetesClientRetryPolicy(
     @Value("\${airbyte.kubernetes.client.retries.delay-seconds}") retryDelaySeconds: Long,
     @Value("\${airbyte.kubernetes.client.retries.max}") maxRetries: Int,
+    @Named("kubeHttpErrorRetryPredicate") predicate: (Throwable) -> Boolean,
     meterRegistry: Optional<MeterRegistry>,
   ): RetryPolicy<Any> {
-    val metricTags = arrayOf("max-retries", maxRetries.toString())
+    val metricTags = arrayOf("max_retries", maxRetries.toString())
 
     return RetryPolicy.builder<Any>()
-      .handleIf { e -> e.cause is SocketTimeoutException }
+      .handleIf(predicate)
       .onRetry { l ->
         meterRegistry.ifPresent { r ->
           r.counter(
             "kube_api_client.retry",
             *metricTags,
-            *arrayOf("retry-attempt", l.attemptCount.toString()),
+            *arrayOf(
+              "retry_attempt",
+              l.attemptCount.toString(),
+              "exception_message",
+              l.lastException.message,
+              "exception_type",
+              l.lastException.javaClass.name,
+            ),
           ).increment()
         }
       }
@@ -93,7 +123,7 @@ class ApplicationBeanFactory {
           r.counter(
             "kube_api_client.abort",
             *metricTags,
-            *arrayOf("retry-attempt", l.attemptCount.toString()),
+            *arrayOf("retry_attempt", l.attemptCount.toString()),
           ).increment()
         }
       }
@@ -102,7 +132,7 @@ class ApplicationBeanFactory {
           r.counter(
             "kube_api_client.failed",
             *metricTags,
-            *arrayOf("retry-attempt", l.attemptCount.toString()),
+            *arrayOf("retry_attempt", l.attemptCount.toString()),
           ).increment()
         }
       }
@@ -111,7 +141,7 @@ class ApplicationBeanFactory {
           r.counter(
             "kube_api_client.success",
             *metricTags,
-            *arrayOf("retry-attempt", l.attemptCount.toString()),
+            *arrayOf("retry_attempt", l.attemptCount.toString()),
           ).increment()
         }
       }

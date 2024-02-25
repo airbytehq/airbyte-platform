@@ -61,6 +61,8 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
 
   public record InvalidLineFailureConfiguration(boolean failTooLongRecords, boolean failMissingPks, boolean printLongRecordPks) {}
 
+  public static final String RECORD_TOO_LONG = "Record is too long, the size is: ";
+
   private static final Logger LOGGER = LoggerFactory.getLogger(VersionedAirbyteStreamFactory.class);
   private static final double MAX_SIZE_RATIO = 0.8;
   private static final long DEFAULT_MEMORY_LIMIT = Runtime.getRuntime().maxMemory();
@@ -410,7 +412,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
           if (exceptionClass.isPresent()) {
             throwExceptionClass("One record is too big and can't be processed, the sync will be failed");
           } else {
-            throw new IllegalStateException("Record is too long, the size is: " + line.length());
+            throw new IllegalStateException(RECORD_TOO_LONG + line.length());
           }
         }
       }

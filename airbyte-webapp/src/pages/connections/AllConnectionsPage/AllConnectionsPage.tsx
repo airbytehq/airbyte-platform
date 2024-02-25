@@ -3,150 +3,28 @@ import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { LoadingPage, MainPageWithScroll } from "components";
-import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { HeadTitle } from "components/common/HeadTitle";
 import { ConnectionOnboarding } from "components/connection/ConnectionOnboarding";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
-import { ClearFiltersButton } from "components/ui/ClearFiltersButton";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
-import { ListBox } from "components/ui/ListBox";
 import { PageHeader } from "components/ui/PageHeader";
-import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
 import { useConnectionList, useCurrentWorkspace, useFilters } from "core/api";
 import { JobStatus, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { naturalComparatorBy } from "core/utils/objects";
 import { useIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./AllConnectionsPage.module.scss";
+import { ConnectionsFilters, FilterValues } from "./ConnectionsFilters";
+import { ConnectionsSummary, SummaryKey } from "./ConnectionsSummary";
 import ConnectionsTable from "./ConnectionsTable";
 import { ConnectionRoutePaths } from "../../routePaths";
-
-type SummaryKey = "healthy" | "failed" | "paused" | "running";
-const connectionStatColors: Record<SummaryKey, React.ComponentPropsWithoutRef<typeof Text>["color"]> = {
-  healthy: "green600",
-  failed: "red",
-  paused: "grey",
-  running: "blue",
-};
-const ConnectionsSummary: React.FC<Record<SummaryKey, number>> = (props) => {
-  const keys = Object.keys(props) as SummaryKey[];
-  const parts: React.ReactNode[] = [];
-  const connectionsCount = keys.reduce((total, value) => total + props[value], 0);
-  let consumedConnections = 0;
-
-  for (const key of keys) {
-    const value = props[key];
-    if (value) {
-      consumedConnections += value;
-      parts.push(
-        <Text key={key} as="span" size="lg" color={connectionStatColors[key]} className={styles.lowercase}>
-          {value} <FormattedMessage id={`tables.connections.filters.status.${key}`} />
-        </Text>,
-        consumedConnections < connectionsCount && (
-          <Text key={`${key}-middot`} as="span" size="lg" bold color="grey">
-            &nbsp;&middot;&nbsp;
-          </Text>
-        )
-      );
-    }
-  }
-
-  return <>{parts}</>;
-};
-
-interface FilterOption {
-  label: React.ReactNode;
-  value: string | null;
-}
-
-type SortableFilterOption = FilterOption & { sortValue: string };
-
-const statusFilterOptions: FilterOption[] = [
-  {
-    label: (
-      <Text color="grey" bold>
-        <FormattedMessage id="tables.connections.filters.status.all" />
-      </Text>
-    ),
-    value: null,
-  },
-  {
-    label: (
-      <FlexContainer gap="sm" alignItems="center">
-        <FlexItem>
-          <Text color={connectionStatColors.healthy} as="span">
-            <Icon type="successFilled" size="md" />
-          </Text>
-        </FlexItem>
-        <FlexItem>
-          <Text color="grey" bold as="span">
-            &nbsp; <FormattedMessage id="tables.connections.filters.status.healthy" />
-          </Text>
-        </FlexItem>
-      </FlexContainer>
-    ),
-    value: "healthy",
-  },
-  {
-    label: (
-      <FlexContainer gap="sm" alignItems="center">
-        <FlexItem>
-          <Text color={connectionStatColors.failed} as="span">
-            <Icon type="errorFilled" size="md" />
-          </Text>
-        </FlexItem>
-        <FlexItem>
-          <Text color="grey" bold as="span">
-            &nbsp; <FormattedMessage id="tables.connections.filters.status.failed" />
-          </Text>
-        </FlexItem>
-      </FlexContainer>
-    ),
-    value: "failed",
-  },
-  {
-    label: (
-      <FlexContainer gap="sm" alignItems="center">
-        <FlexItem>
-          <Text color={connectionStatColors.running} as="span">
-            <Icon type="sync" size="md" />
-          </Text>
-        </FlexItem>
-        <FlexItem>
-          <Text color="grey" bold as="span">
-            &nbsp; <FormattedMessage id="tables.connections.filters.status.running" />
-          </Text>
-        </FlexItem>
-      </FlexContainer>
-    ),
-    value: "running",
-  },
-  {
-    label: (
-      <FlexContainer gap="sm" alignItems="center">
-        <FlexItem>
-          <Text color={connectionStatColors.paused} as="span">
-            <Icon type="pauseFilled" size="md" />
-          </Text>
-        </FlexItem>
-        <FlexItem>
-          <Text color="grey" bold as="span">
-            &nbsp; <FormattedMessage id="tables.connections.filters.status.paused" />
-          </Text>
-        </FlexItem>
-      </FlexContainer>
-    ),
-    value: "paused",
-  },
-];
 
 const isConnectionPaused = (
   connection: WebBackendConnectionListItem
@@ -175,19 +53,13 @@ export const AllConnectionsPage: React.FC = () => {
   const connectionList = useConnectionList();
   const connections = useMemo(() => connectionList?.connections ?? [], [connectionList?.connections]);
 
-  const availableSourceOptions = useMemo(() => getAvailableSourceOptions(connections), [connections]);
-  const availableDestinationOptions = useMemo(() => getAvailableDestinationOptions(connections), [connections]);
-
-  const [filterValues, setFilterValue, setFilters] = useFilters({
-    status: statusFilterOptions[0].value,
-    source: availableSourceOptions[0].value,
-    destination: availableDestinationOptions[0].value,
-  });
-
   const [searchFilter, setSearchFilter] = useState<string>("");
   const debouncedSearchFilter = useDeferredValue(searchFilter);
-  const hasAnyFilterSelected =
-    !!filterValues.status || !!filterValues.source || !!filterValues.destination || debouncedSearchFilter;
+  const [filterValues, setFilterValue, setFilters] = useFilters<FilterValues>({
+    status: null,
+    source: null,
+    destination: null,
+  });
 
   const filteredConnections = useMemo(() => {
     const statusFilter = filterValues.status;
@@ -310,60 +182,16 @@ export const AllConnectionsPage: React.FC = () => {
               />
             }
           >
-            <Card noPadding>
+            <Card noPadding className={styles.connections}>
               {isConnectionsSummaryEnabled && (
-                <Box pt="lg" pb="lg" pl="lg">
-                  <FlexContainer justifyContent="flex-start">
-                    <FlexItem>
-                      <ListBox
-                        buttonClassName={styles.filterButton}
-                        optionClassName={styles.filterOption}
-                        optionTextAs="span"
-                        options={statusFilterOptions}
-                        selectedValue={filterValues.status}
-                        onSelect={(value) => setFilterValue("status", value)}
-                      />
-                    </FlexItem>
-                    <FlexItem>
-                      <ListBox
-                        buttonClassName={styles.filterButton}
-                        optionsMenuClassName={styles.filterOptionsMenu}
-                        optionClassName={styles.filterOption}
-                        optionTextAs="span"
-                        options={availableSourceOptions}
-                        selectedValue={filterValues.source}
-                        onSelect={(value) => setFilterValue("source", value)}
-                      />
-                    </FlexItem>
-                    <FlexItem>
-                      <ListBox
-                        buttonClassName={styles.filterButton}
-                        optionClassName={styles.filterOption}
-                        optionTextAs="span"
-                        options={availableDestinationOptions}
-                        selectedValue={filterValues.destination}
-                        onSelect={(value) => setFilterValue("destination", value)}
-                      />
-                    </FlexItem>
-                    <FlexItem>
-                      <SearchInput value={searchFilter} onChange={(event) => setSearchFilter(event.target.value)} />
-                    </FlexItem>
-                    {hasAnyFilterSelected && (
-                      <FlexItem>
-                        <ClearFiltersButton
-                          onClick={() => {
-                            setFilters({
-                              status: null,
-                              source: null,
-                              destination: null,
-                            });
-                            setSearchFilter("");
-                          }}
-                        />
-                      </FlexItem>
-                    )}
-                  </FlexContainer>
-                </Box>
+                <ConnectionsFilters
+                  connections={connections}
+                  searchFilter={searchFilter}
+                  setSearchFilter={setSearchFilter}
+                  filterValues={filterValues}
+                  setFilterValue={setFilterValue}
+                  setFilters={setFilters}
+                />
               )}
               <ConnectionsTable
                 connections={filteredConnections}
@@ -385,93 +213,3 @@ export const AllConnectionsPage: React.FC = () => {
     </Suspense>
   );
 };
-
-function getAvailableSourceOptions(connections: WebBackendConnectionListItem[]) {
-  return connections
-    .reduce<{
-      foundSourceIds: Set<string>;
-      options: SortableFilterOption[];
-    }>(
-      (acc, connection) => {
-        const { sourceName, sourceDefinitionId, icon } = connection.source;
-        if (acc.foundSourceIds.has(sourceDefinitionId) === false) {
-          acc.foundSourceIds.add(sourceDefinitionId);
-          acc.options.push({
-            label: (
-              <FlexContainer gap="sm" alignItems="center" as="span">
-                <FlexItem>
-                  <ConnectorIcon icon={icon} />
-                </FlexItem>
-                <FlexItem>
-                  <Text size="sm">{sourceName}</Text>
-                </FlexItem>
-              </FlexContainer>
-            ),
-            value: sourceDefinitionId,
-            sortValue: sourceName,
-          });
-        }
-        return acc;
-      },
-      {
-        foundSourceIds: new Set(),
-        options: [
-          {
-            label: (
-              <Text bold color="grey">
-                <FormattedMessage id="tables.connections.filters.source.all" />
-              </Text>
-            ),
-            value: null,
-            sortValue: "",
-          },
-        ],
-      }
-    )
-    .options.sort(naturalComparatorBy((option) => option.sortValue));
-}
-
-function getAvailableDestinationOptions(connections: WebBackendConnectionListItem[]) {
-  return connections
-    .reduce<{
-      foundDestinationIds: Set<string>;
-      options: SortableFilterOption[];
-    }>(
-      (acc, connection) => {
-        const { destinationName, destinationDefinitionId, icon } = connection.destination;
-        if (acc.foundDestinationIds.has(destinationDefinitionId) === false) {
-          acc.foundDestinationIds.add(connection.destination.destinationDefinitionId);
-          acc.options.push({
-            label: (
-              <FlexContainer gap="sm" alignItems="center" as="span">
-                <FlexItem>
-                  <ConnectorIcon icon={icon} />
-                </FlexItem>
-                <FlexItem>
-                  <Text size="sm">{destinationName}</Text>
-                </FlexItem>
-              </FlexContainer>
-            ),
-            value: destinationDefinitionId,
-            sortValue: destinationName,
-          });
-        }
-        return acc;
-      },
-      {
-        foundDestinationIds: new Set(),
-        options: [
-          {
-            label: (
-              <Text bold color="grey">
-                <FormattedMessage id="tables.connections.filters.destination.all" />
-              </Text>
-            ),
-            value: null,
-            sortValue: "",
-          },
-        ],
-      }
-    )
-    .options.sort(naturalComparatorBy((option) => option.sortValue));
-}

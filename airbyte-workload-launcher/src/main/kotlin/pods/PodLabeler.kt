@@ -5,7 +5,6 @@ import io.airbyte.workers.process.Metadata.CHECK_JOB
 import io.airbyte.workers.process.Metadata.CHECK_STEP_KEY
 import io.airbyte.workers.process.Metadata.CONNECTOR_STEP
 import io.airbyte.workers.process.Metadata.JOB_TYPE_KEY
-import io.airbyte.workers.process.Metadata.ORCHESTRATOR_CHECK_STEP
 import io.airbyte.workers.process.Metadata.ORCHESTRATOR_REPLICATION_STEP
 import io.airbyte.workers.process.Metadata.READ_STEP
 import io.airbyte.workers.process.Metadata.SYNC_JOB
@@ -48,14 +47,6 @@ class PodLabeler(
       JOB_TYPE_KEY to CHECK_JOB,
       CHECK_STEP_KEY to CONNECTOR_STEP,
     )
-  }
-
-  fun getCheckOrchestratorLabels(): Map<String, String> {
-    return getImageLabels() +
-      mapOf(
-        JOB_TYPE_KEY to CHECK_JOB,
-        CHECK_STEP_KEY to ORCHESTRATOR_CHECK_STEP,
-      )
   }
 
   private fun getImageLabels(): Map<String, String> {
