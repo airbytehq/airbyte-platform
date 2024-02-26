@@ -8,7 +8,6 @@ import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace, useListUsersInOrganization } from "core/api";
-import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 
 import styles from "./OrganizationAccessManagementSection.module.scss";
 import { OrganizationUsersTable } from "./OrganizationUsersTable";
@@ -16,7 +15,6 @@ import { OrganizationUsersTable } from "./OrganizationUsersTable";
 const SEARCH_PARAM = "search";
 
 export const OrganizationAccessManagementSection: React.FC = () => {
-  useTrackPage(PageTrackingCodes.SETTINGS_WORKSPACE_ACCESS_MANAGEMENT);
   const workspace = useCurrentWorkspace();
   const organizationUsers = useListUsersInOrganization(workspace.organizationId ?? "").users;
   const [searchParams, setSearchParams] = useSearchParams();

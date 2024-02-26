@@ -9,7 +9,6 @@ import { UpdateWorkspaceNameForm } from "area/workspace/components/UpdateWorkspa
 import { useCurrentWorkspace } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { DeleteWorkspace } from "./components/DeleteWorkspace";
 import WorkspaceAccessManagementSection from "./pages/AccessManagementPage/WorkspaceAccessManagementSection";
@@ -17,21 +16,20 @@ import WorkspaceAccessManagementSection from "./pages/AccessManagementPage/Works
 export const GeneralWorkspaceSettingsPage = () => {
   const { workspaceId } = useCurrentWorkspace();
   const canDeleteWorkspace = useIntent("DeleteWorkspace", { workspaceId });
-  const updatedOrganizationsUI = useExperiment("settings.organizationsUpdates", false);
   const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
 
   return (
     <FlexContainer direction="column" gap="xl">
       <Box>
         <Heading as="h2" size="md">
-          <FormattedMessage id={updatedOrganizationsUI ? "settings.members" : "settings.generalSettings"} />
+          <FormattedMessage id="settings.members" />
         </Heading>
       </Box>
       <Card>
         <UpdateWorkspaceNameForm />
       </Card>
 
-      {isAccessManagementEnabled && updatedOrganizationsUI && (
+      {isAccessManagementEnabled && (
         <Card>
           <FlexContainer direction="column" gap="xl">
             <WorkspaceAccessManagementSection />

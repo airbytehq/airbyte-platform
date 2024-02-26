@@ -27,9 +27,7 @@ export const CloudSettingsPage: React.FC = () => {
   const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
   const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
   const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
-  const updatedOrganizationsUi = useExperiment("settings.organizationsUpdates", false);
   const organization = useCurrentOrganizationInfo();
-  const isSsoEnabled = organization?.sso;
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: organization?.organizationId });
 
   return (
@@ -70,8 +68,8 @@ export const CloudSettingsPage: React.FC = () => {
           </SettingsNavigationBlock>
           <SettingsNavigationBlock title={formatMessage({ id: "settings.workspaceSettings" })}>
             <SettingsLink
-              iconType={updatedOrganizationsUi ? "community" : "gear"}
-              name={formatMessage({ id: updatedOrganizationsUi ? "settings.members" : "settings.generalSettings" })}
+              iconType="community"
+              name={formatMessage({ id: "settings.members" })}
               to={CloudSettingsRoutePaths.Workspace}
             />
             {supportsDataResidency && (
@@ -98,13 +96,6 @@ export const CloudSettingsPage: React.FC = () => {
                 to={CloudSettingsRoutePaths.DbtCloud}
               />
             )}
-            {!updatedOrganizationsUi && (
-              <SettingsLink
-                iconType="community"
-                name={formatMessage({ id: "settings.accessManagement" })}
-                to={CloudSettingsRoutePaths.AccessManagement}
-              />
-            )}
             <SettingsLink
               iconType="bell"
               name={formatMessage({ id: "settings.notifications" })}
@@ -114,17 +105,10 @@ export const CloudSettingsPage: React.FC = () => {
           {organization && canViewOrgSettings && (
             <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
               <SettingsLink
-                iconType={updatedOrganizationsUi ? "community" : "gear"}
-                name={formatMessage({ id: updatedOrganizationsUi ? "settings.members" : "settings.generalSettings" })}
+                iconType="community"
+                name={formatMessage({ id: "settings.members" })}
                 to={CloudSettingsRoutePaths.Organization}
               />
-              {!updatedOrganizationsUi && isSsoEnabled && (
-                <SettingsLink
-                  iconType="community"
-                  name={formatMessage({ id: "settings.accessManagement" })}
-                  to={`${CloudSettingsRoutePaths.Organization}/${CloudSettingsRoutePaths.AccessManagement}`}
-                />
-              )}
             </SettingsNavigationBlock>
           )}
         </SettingsNavigation>

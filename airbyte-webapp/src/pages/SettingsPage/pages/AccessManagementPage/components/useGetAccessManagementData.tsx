@@ -1,4 +1,4 @@
-import { useCurrentWorkspace, useListUsersInOrganization, useListUsersInWorkspace } from "core/api";
+import { useCurrentWorkspace, useListUsersInOrganization } from "core/api";
 import {
   OrganizationUserRead,
   PermissionRead,
@@ -6,7 +6,6 @@ import {
   WorkspaceUserAccessInfoRead,
   WorkspaceUserRead,
 } from "core/api/types/AirbyteClient";
-import { useIntent } from "core/utils/rbac";
 import { RbacRole, RbacRoleHierarchy, partitionPermissionType } from "core/utils/rbac/rbacPermissionsQuery";
 export type ResourceType = "workspace" | "organization" | "instance";
 
@@ -36,11 +35,6 @@ export const permissionDescriptionDictionary: Record<PermissionType, PermissionD
   workspace_owner: { id: "role.admin.description", values: { resourceType: "workspace" } }, // is not and should not be referenced in code.  required by types but will be deprecated soon.
   workspace_editor: { id: "role.editor.description", values: { resourceType: "workspace" } },
   workspace_reader: { id: "role.reader.description", values: { resourceType: "workspace" } },
-};
-export const tableTitleDictionary: Record<ResourceType, string> = {
-  workspace: "settings.accessManagement.workspace",
-  organization: "settings.accessManagement.organization",
-  instance: "settings.accessManagement.instance",
 };
 export const permissionsByResourceType: Record<ResourceType, PermissionType[]> = {
   workspace: [
@@ -73,32 +67,6 @@ export interface AccessUsers {
 export interface NextAccessUsers {
   workspace?: { users: NextAccessUserRead[]; usersToAdd: OrganizationUserRead[] };
 }
-/**
- *
- * @deprecated this will be removed with RBAC UI v2.  For now, use useNextGetWorkspaceAccessUsers instead.  However, that will be, at least in part, replaced by a new endpoint instead.
- */
-export const useGetWorkspaceAccessUsers = (): AccessUsers => {
-  const workspace = useCurrentWorkspace();
-  const canListOrganizationUsers = useIntent("ListOrganizationMembers", { organizationId: workspace.organizationId });
-  const workspaceUsers: WorkspaceUserRead[] = useListUsersInWorkspace(workspace.workspaceId).users;
-  const organizationUsers =
-    useListUsersInOrganization(workspace.organizationId ?? "", canListOrganizationUsers)?.users ?? [];
-
-  return {
-    workspace: {
-      users: workspaceUsers,
-      usersToAdd: organizationUsers.filter(
-        (user) =>
-          user.permissionType === "organization_member" &&
-          !(workspaceUsers ?? []).find((workspaceUser) => workspaceUser.userId === user.userId)
-      ),
-    },
-    organization: {
-      users: organizationUsers.filter((user) => user.permissionType !== "organization_member"),
-      usersToAdd: [],
-    },
-  };
-};
 
 export const useGetOrganizationAccessUsers = (): AccessUsers => {
   const workspace = useCurrentWorkspace();

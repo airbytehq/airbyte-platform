@@ -20,7 +20,7 @@ export const GuestBadge: React.FC<{ userId: string; organizationId: string }> = 
         </Badge>
       }
     >
-      <FormattedMessage id="settings.accessManagement.noOrganizationPermission" />
+      <FormattedMessage id="settings.accessManagement.guestUser" />
     </Tooltip>
   );
 };

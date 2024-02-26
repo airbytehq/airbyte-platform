@@ -14,7 +14,6 @@ import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac/intent";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
-import { useExperiment } from "hooks/services/Experiment";
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
@@ -25,8 +24,6 @@ import MainView from "views/layout/MainView";
 import { RoutePaths, DestinationPaths, SourcePaths, SettingsRoutePaths } from "./routePaths";
 import { GeneralOrganizationSettingsPage } from "./SettingsPage/GeneralOrganizationSettingsPage";
 import { GeneralWorkspaceSettingsPage } from "./SettingsPage/GeneralWorkspaceSettingsPage";
-import { OrganizationAccessManagementPage } from "./SettingsPage/pages/AccessManagementPage/OrganizationAccessManagementPage";
-import { WorkspaceAccessManagementPage } from "./SettingsPage/pages/AccessManagementPage/WorkspaceAccessManagementPage";
 import { AccountPage } from "./SettingsPage/pages/AccountPage";
 import { DestinationsPage, SourcesPage } from "./SettingsPage/pages/ConnectorsPage";
 import { MetricsPage } from "./SettingsPage/pages/MetricsPage";
@@ -68,9 +65,7 @@ const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
 const MainViewRoutes: React.FC = () => {
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
-  const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
   const isTokenManagementEnabled = useFeature(FeatureItem.APITokenManagement);
-  const isUpdatedOrganizationsUi = useExperiment("settings.organizationsUpdates", false);
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
 
@@ -113,22 +108,8 @@ const MainViewRoutes: React.FC = () => {
             )}
             <Route path={SettingsRoutePaths.Notifications} element={<NotificationPage />} />
             <Route path={SettingsRoutePaths.Metrics} element={<MetricsPage />} />
-            {multiWorkspaceUI && isAccessManagementEnabled && !isUpdatedOrganizationsUi && (
-              <Route
-                path={`${SettingsRoutePaths.Workspace}/${SettingsRoutePaths.AccessManagement}`}
-                element={<WorkspaceAccessManagementPage />}
-              />
-            )}
             {multiWorkspaceUI && organizationId && canViewOrganizationSettings && (
-              <>
-                <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
-                {isAccessManagementEnabled && !isUpdatedOrganizationsUi && (
-                  <Route
-                    path={`${SettingsRoutePaths.Organization}/${SettingsRoutePaths.AccessManagement}`}
-                    element={<OrganizationAccessManagementPage />}
-                  />
-                )}
-              </>
+              <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
             )}
             <Route path="*" element={<Navigate to={SettingsRoutePaths.Account} replace />} />
           </Route>

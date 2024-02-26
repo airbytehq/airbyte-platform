@@ -8,7 +8,6 @@ import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationInfo, useCurrentWorkspace, useListWorkspaceAccessUsers } from "core/api";
-import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useIntent } from "core/utils/rbac";
 import { FirebaseInviteUserButton } from "packages/cloud/views/workspaces/WorkspaceSettingsView/components/FirebaseInviteUserButton";
 
@@ -19,7 +18,6 @@ import { WorkspaceUsersTable } from "./WorkspaceUsersTable";
 const SEARCH_PARAM = "search";
 
 const WorkspaceAccessManagementSection: React.FC = () => {
-  useTrackPage(PageTrackingCodes.SETTINGS_WORKSPACE_ACCESS_MANAGEMENT);
   const workspace = useCurrentWorkspace();
   const organization = useCurrentOrganizationInfo();
   const canViewOrgMembers = useIntent("ListOrganizationMembers", { organizationId: organization?.organizationId });

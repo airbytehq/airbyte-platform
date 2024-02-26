@@ -19,8 +19,6 @@ import { useQuery } from "hooks/useQuery";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths, DestinationPaths, SourcePaths } from "pages/routePaths";
 import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/GeneralOrganizationSettingsPage";
-import { OrganizationAccessManagementPage } from "pages/SettingsPage/pages/AccessManagementPage/OrganizationAccessManagementPage";
-import { WorkspaceAccessManagementPage } from "pages/SettingsPage/pages/AccessManagementPage/WorkspaceAccessManagementPage";
 import {
   SourcesPage as SettingsSourcesPage,
   DestinationsPage as SettingsDestinationsPage,
@@ -37,7 +35,6 @@ import { DbtCloudSettingsView } from "./views/settings/integrations/DbtCloudSett
 import { CloudSettingsRoutePaths } from "./views/settings/routePaths";
 import { AccountSettingsView } from "./views/users/AccountSettingsView";
 import { ApplicationSettingsView } from "./views/users/ApplicationSettingsView/ApplicationSettingsView";
-import { UsersSettingsView } from "./views/users/UsersSettingsView";
 import { DataResidencyView } from "./views/workspaces/DataResidencyView";
 import { WorkspaceSettingsView } from "./views/workspaces/WorkspaceSettingsView";
 
@@ -72,9 +69,7 @@ const CloudSettingsPage = React.lazy(() => import("./views/settings/CloudSetting
 const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
   const organization = useCurrentOrganizationInfo();
-  const isSsoEnabled = organization?.sso ?? false;
   const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
-  const isUpdatedOrganizationsUi = useExperiment("settings.organizationsUpdates", false);
   useExperimentContext("organization", organization?.organizationId);
 
   const analyticsContext = useMemo(
@@ -122,26 +117,12 @@ const MainRoutes: React.FC = () => {
           )}
           <Route path={CloudSettingsRoutePaths.Source} element={<SettingsSourcesPage />} />
           <Route path={CloudSettingsRoutePaths.Destination} element={<SettingsDestinationsPage />} />
-          {!isUpdatedOrganizationsUi && (
-            <Route
-              path={CloudSettingsRoutePaths.AccessManagement}
-              element={isSsoEnabled ? <WorkspaceAccessManagementPage /> : <UsersSettingsView />}
-            />
-          )}
           <Route path={CloudSettingsRoutePaths.Notifications} element={<NotificationPage />} />
           {supportsCloudDbtIntegration && (
             <Route path={CloudSettingsRoutePaths.DbtCloud} element={<DbtCloudSettingsView />} />
           )}
           {organization && (
-            <>
-              <Route path={CloudSettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
-              {isSsoEnabled && (
-                <Route
-                  path={`${CloudSettingsRoutePaths.Organization}/${CloudSettingsRoutePaths.AccessManagement}`}
-                  element={<OrganizationAccessManagementPage />}
-                />
-              )}
-            </>
+            <Route path={CloudSettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
           )}
           <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Account} replace />} />
         </Route>
