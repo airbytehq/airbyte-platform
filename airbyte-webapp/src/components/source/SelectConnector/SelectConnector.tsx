@@ -30,7 +30,7 @@ interface SelectConnectorProps {
   suggestedConnectorDefinitionIds: string[];
 }
 
-const SUPPORT_LEVELS: SupportLevel[] = ["certified", "community", "none"];
+const SUPPORT_LEVELS: SupportLevel[] = ["certified", "community", "archived", "none"];
 export const DEFAULT_SELECTED_SUPPORT_LEVELS: SupportLevel[] = ["certified", "community", "none"];
 
 export const SelectConnector: React.FC<SelectConnectorProps> = (props) => {

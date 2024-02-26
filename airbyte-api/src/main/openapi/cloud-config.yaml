@@ -1307,6 +1307,7 @@ components:
       enum:
         - community
         - certified
+        - archived
         - none
 
     ConnectionProto:
