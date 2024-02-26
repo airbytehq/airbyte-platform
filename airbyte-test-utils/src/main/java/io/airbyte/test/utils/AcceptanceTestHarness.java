@@ -1098,15 +1098,11 @@ public class AcceptanceTestHarness {
     assertEquals(JobStatus.SUCCEEDED, job.getStatus());
   }
 
-  public JobRead waitUntilTheNextJobIsStarted(final UUID connectionId) throws Exception {
-    final JobRead lastJob = getMostRecentSyncForConnection(connectionId);
-    if (lastJob.getStatus() != JobStatus.SUCCEEDED) {
-      return lastJob;
-    }
+  public JobRead waitUntilTheNextJobIsStarted(final UUID connectionId, Long previousJobId) throws Exception {
 
     JobRead mostRecentSyncJob = getMostRecentSyncForConnection(connectionId);
     int count = 0;
-    while (count < MAX_ALLOWED_SECOND_PER_RUN && mostRecentSyncJob.getId().equals(lastJob.getId())) {
+    while (count < MAX_ALLOWED_SECOND_PER_RUN && mostRecentSyncJob.getId().equals(previousJobId)) {
       Thread.sleep(Duration.ofSeconds(1).toMillis());
       mostRecentSyncJob = getMostRecentSyncForConnection(connectionId);
       ++count;

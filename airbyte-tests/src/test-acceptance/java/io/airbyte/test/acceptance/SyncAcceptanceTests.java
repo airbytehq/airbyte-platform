@@ -900,8 +900,8 @@ class SyncAcceptanceTests {
     testHarness.webBackendUpdateConnection(update);
 
     // Wait until the sync from the UpdateConnection is finished
-    JobRead syncFromTheUpdate = testHarness.waitUntilTheNextJobIsStarted(connection.getConnectionId());
-    testHarness.waitForSuccessfulJob(syncFromTheUpdate);
+    final JobRead syncFromTheUpdate1 = testHarness.waitUntilTheNextJobIsStarted(connection.getConnectionId(), syncRead.getJob().getId());
+    testHarness.waitForSuccessfulJob(syncFromTheUpdate1);
 
     // We do not check that the source and the dest are in sync here because removing a stream doesn't
     // remove that
@@ -929,8 +929,8 @@ class SyncAcceptanceTests {
     update = testHarness.getUpdateInput(connection, refreshedCatalog, operation);
     testHarness.webBackendUpdateConnection(update);
 
-    syncFromTheUpdate = testHarness.waitUntilTheNextJobIsStarted(connection.getConnectionId());
-    testHarness.waitForSuccessfulJob(syncFromTheUpdate);
+    final JobRead syncFromTheUpdate2 = testHarness.waitUntilTheNextJobIsStarted(connection.getConnectionId(), syncFromTheUpdate1.getId());
+    testHarness.waitForSuccessfulJob(syncFromTheUpdate2);
 
     // We do not check that the source and the dest are in sync here because removing a stream doesn't
     // remove that
@@ -963,8 +963,8 @@ class SyncAcceptanceTests {
     update = testHarness.getUpdateInput(connection, refreshedCatalog, operation);
     testHarness.webBackendUpdateConnection(update);
 
-    syncFromTheUpdate = testHarness.waitUntilTheNextJobIsStarted(connection.getConnectionId());
-    testHarness.waitForSuccessfulJob(syncFromTheUpdate);
+    final JobRead syncFromTheUpdate3 = testHarness.waitUntilTheNextJobIsStarted(connection.getConnectionId(), syncFromTheUpdate2.getId());
+    testHarness.waitForSuccessfulJob(syncFromTheUpdate3);
 
     // We do not check that the source and the dest are in sync here because removing a stream doesn't
     // remove that
