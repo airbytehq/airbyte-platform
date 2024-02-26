@@ -145,6 +145,14 @@ airbyte:
         cpu-request: ${DISCOVER_JOB_MAIN_CONTAINER_CPU_REQUEST:}
         memory-limit: ${DISCOVER_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
         memory-request: ${DISCOVER_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+      spec:
+        annotations: ${SPEC_JOB_KUBE_ANNOTATIONS:}
+        labels: ${SPEC_JOB_KUBE_LABELS:}
+        node-selectors: ${SPEC_JOB_KUBE_NODE_SELECTORS:}
+        cpu-limit: ${SPEC_JOB_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${SPEC_JOB_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${SPEC_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${SPEC_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
     connector-sidecar:
       resources:
         cpu-limit: ${SIDECAR_MAIN_CONTAINER_CPU_LIMIT:}

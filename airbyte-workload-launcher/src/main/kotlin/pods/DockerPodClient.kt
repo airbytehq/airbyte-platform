@@ -4,6 +4,7 @@ import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
+import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.orchestrator.PodNameGenerator
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess
 import io.airbyte.workers.process.KubeContainerInfo
@@ -62,6 +63,13 @@ class DockerPodClient(
 
   override fun launchDiscover(
     discoverCatalogInput: DiscoverCatalogInput,
+    launcherInput: LauncherInput,
+  ) {
+    TODO("Not yet implemented")
+  }
+
+  override fun launchSpec(
+    specInput: SpecInput,
     launcherInput: LauncherInput,
   ) {
     TODO("Not yet implemented")

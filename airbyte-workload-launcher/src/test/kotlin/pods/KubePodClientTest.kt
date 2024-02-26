@@ -9,6 +9,7 @@ import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
+import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workload.launcher.model.setDestinationLabels
 import io.airbyte.workload.launcher.model.setSourceLabels
@@ -21,6 +22,7 @@ import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.discoverLaun
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.replKubeInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.replLauncherInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.sharedLabels
+import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.specLauncherInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.workloadId
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.OrchestratorPodFactory
@@ -64,6 +66,9 @@ class KubePodClientTest {
   private lateinit var discoverPodFactory: ConnectorPodFactory
 
   @MockK
+  private lateinit var specPodFactory: ConnectorPodFactory
+
+  @MockK
   private lateinit var podFactory: ConnectorPodFactory
 
   private lateinit var client: KubePodClient
@@ -76,6 +81,8 @@ class KubePodClientTest {
 
   private lateinit var discoverInput: DiscoverCatalogInput
 
+  private lateinit var specInput: SpecInput
+
   @BeforeEach
   fun setup() {
     client =
@@ -87,6 +94,7 @@ class KubePodClientTest {
         orchestratorPodFactory,
         checkPodFactory,
         discoverPodFactory,
+        specPodFactory,
       )
 
     replInput =
@@ -103,10 +111,13 @@ class KubePodClientTest {
         .withConnectionId(UUID.randomUUID())
 
     checkInput =
-      CheckConnectionInput(JobRunConfig().withJobId("jobid").withAttemptId(1), IntegrationLauncherConfig().withDockerImage("dockerImage"), null)
+      CheckConnectionInput(JobRunConfig().withJobId("jobId").withAttemptId(1), IntegrationLauncherConfig().withDockerImage("dockerImage"), null)
 
     discoverInput =
-      DiscoverCatalogInput(JobRunConfig().withJobId("jobid").withAttemptId(1), IntegrationLauncherConfig().withDockerImage("dockerImage"), null)
+      DiscoverCatalogInput(JobRunConfig().withJobId("jobId").withAttemptId(1), IntegrationLauncherConfig().withDockerImage("dockerImage"), null)
+
+    specInput =
+      SpecInput(JobRunConfig().withJobId("jobId").withAttemptId(1), IntegrationLauncherConfig().withDockerImage("dockerImage"))
 
     every { labeler.getSharedLabels(any(), any(), any(), any()) } returns sharedLabels
 
@@ -114,6 +125,7 @@ class KubePodClientTest {
     every { mapper.toKubeInput(workloadId, resetInput, sharedLabels) } returns replKubeInput
     every { mapper.toKubeInput(workloadId, checkInput, sharedLabels) } returns connectorKubeInput
     every { mapper.toKubeInput(workloadId, discoverInput, sharedLabels) } returns connectorKubeInput
+    every { mapper.toKubeInput(workloadId, specInput, sharedLabels) } returns connectorKubeInput
 
     every {
       orchestratorPodFactory.create(
@@ -311,6 +323,25 @@ class KubePodClientTest {
   }
 
   @Test
+  fun `launchSpec delegates to launchConnectorWithSidecar`() {
+    client = spyk(client)
+
+    every {
+      specPodFactory.create(
+        connectorKubeInput.connectorLabels,
+        connectorKubeInput.nodeSelectors,
+        connectorKubeInput.kubePodInfo,
+        connectorKubeInput.annotations,
+        connectorKubeInput.extraEnv,
+      )
+    } returns pod
+
+    client.launchSpec(specInput, specLauncherInput)
+
+    verify { client.launchConnectorWithSidecar(connectorKubeInput, specPodFactory, "SPEC") }
+  }
+
+  @Test
   fun `launchConnectorWithSidecar starts a pod and waits on it`() {
     val connector =
       PodBuilder()
@@ -402,12 +433,23 @@ class KubePodClientTest {
     val sharedLabels = mapOf("arbitrary" to "label", "literally" to "anything")
 
     val replLauncherInput = RecordFixtures.launcherInput(workloadId = workloadId, labels = passThroughLabels)
-    val checkLauncherInput = RecordFixtures.launcherInput(workloadId = workloadId, labels = passThroughLabels, workloadType = WorkloadType.CHECK)
+    val checkLauncherInput =
+      RecordFixtures.launcherInput(
+        workloadId = workloadId,
+        labels = passThroughLabels,
+        workloadType = WorkloadType.CHECK,
+      )
     val discoverLauncherInput =
       RecordFixtures.launcherInput(
         workloadId = workloadId,
         labels = passThroughLabels,
         workloadType = WorkloadType.DISCOVER,
+      )
+    val specLauncherInput =
+      RecordFixtures.launcherInput(
+        workloadId = workloadId,
+        labels = passThroughLabels,
+        workloadType = WorkloadType.SPEC,
       )
   }
 }

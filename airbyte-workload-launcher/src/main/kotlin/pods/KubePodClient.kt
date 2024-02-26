@@ -10,6 +10,7 @@ import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
+import io.airbyte.workers.models.SpecInput
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_REPLICATION_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_DESTINATION_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WAIT_ORCHESTRATOR_OPERATION_NAME
@@ -42,6 +43,7 @@ class KubePodClient(
   private val orchestratorPodFactory: OrchestratorPodFactory,
   @Named("checkPodFactory") private val checkPodFactory: ConnectorPodFactory,
   @Named("discoverPodFactory") private val discoverPodFactory: ConnectorPodFactory,
+  @Named("specPodFactory") private val specPodFactory: ConnectorPodFactory,
 ) : PodClient {
   override fun podsExistForAutoId(autoId: UUID): Boolean {
     return kubePodLauncher.podsExist(labeler.getAutoIdLabels(autoId))
@@ -213,6 +215,24 @@ class KubePodClient(
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, discoverCatalogInput, sharedLabels)
 
     launchConnectorWithSidecar(kubeInput, discoverPodFactory, launcherInput.workloadType.toOperationName())
+  }
+
+  override fun launchSpec(
+    specInput: SpecInput,
+    launcherInput: LauncherInput,
+  ) {
+    // For spec the workload id is too long to be store as a kube label thus it is not added
+    val sharedLabels =
+      labeler.getSharedLabels(
+        workloadId = null,
+        mutexKey = launcherInput.mutexKey,
+        passThroughLabels = launcherInput.labels,
+        autoId = launcherInput.autoId,
+      )
+
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, specInput, sharedLabels)
+
+    launchConnectorWithSidecar(kubeInput, specPodFactory, launcherInput.workloadType.toOperationName())
   }
 
   @VisibleForTesting

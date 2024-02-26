@@ -14,6 +14,7 @@ import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SidecarInput.OperationType
+import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.orchestrator.PodNameGenerator
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
@@ -49,6 +50,7 @@ class PayloadKubeInputMapper(
   @Named("replicationWorkerConfigs") private val replicationWorkerConfigs: WorkerConfigs,
   @Named("checkWorkerConfigs") private val checkWorkerConfigs: WorkerConfigs,
   @Named("discoverWorkerConfigs") private val discoverWorkerConfigs: WorkerConfigs,
+  @Named("specWorkerConfigs") private val specWorkerConfigs: WorkerConfigs,
   private val featureFlagClient: FeatureFlagClient,
 ) {
   fun toKubeInput(
@@ -167,6 +169,40 @@ class PayloadKubeInputMapper(
     )
   }
 
+  fun toKubeInput(
+    workloadId: String,
+    input: SpecInput,
+    sharedLabels: Map<String, String>,
+  ): ConnectorKubeInput {
+    val jobId = input.getJobId()
+    val attemptId = input.getAttemptId()
+
+    val podName = podNameGenerator.getDiscoverPodName(input.launcherConfig.dockerImage, jobId, attemptId)
+
+    val connectorPodInfo =
+      KubePodInfo(
+        namespace,
+        podName,
+        KubeContainerInfo(
+          input.launcherConfig.dockerImage,
+          specWorkerConfigs.jobImagePullPolicy,
+        ),
+      )
+
+    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), specWorkerConfigs)
+
+    val fileMap = buildSpecFileMap(workloadId, input, input.jobRunConfig)
+
+    return ConnectorKubeInput(
+      labeler.getCheckConnectorLabels() + sharedLabels,
+      nodeSelectors,
+      connectorPodInfo,
+      fileMap,
+      specWorkerConfigs.workerKubeAnnotations,
+      listOf(),
+    )
+  }
+
   private fun resolveAwsAssumedRoleEnvVars(launcherConfig: IntegrationLauncherConfig): List<EnvVar> {
     // Only inject into connectors we own.
     if (launcherConfig.isCustomConnector) {
@@ -253,6 +289,27 @@ class PayloadKubeInputMapper(
               workloadId,
               input.launcherConfig,
               OperationType.DISCOVER,
+            ),
+          ),
+      )
+  }
+
+  private fun buildSpecFileMap(
+    workloadId: String,
+    input: SpecInput,
+    jobRunConfig: JobRunConfig,
+  ): Map<String, String> {
+    return sharedFileMap(jobRunConfig) +
+      mapOf(
+        OrchestratorConstants.SIDECAR_INPUT to
+          serializer.serialize(
+            SidecarInput(
+              null,
+              null,
+              workloadId,
+              input.launcherConfig,
+              // TODO: change to OperationType.SPEC once we add it to the sidecar
+              null,
             ),
           ),
       )

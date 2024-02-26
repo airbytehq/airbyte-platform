@@ -165,9 +165,9 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("checkEnvVars")
   fun checkEnvVars(
-    @Named("checkWorkerConfigs") checkWorkerConfigs: WorkerConfigs,
+    @Named("checkWorkerConfigs") workerConfigs: WorkerConfigs,
   ): List<EnvVar> {
-    return checkWorkerConfigs.envMap
+    return workerConfigs.envMap
       .map { EnvVar(it.key, it.value, null) }
       .toList()
   }
@@ -178,9 +178,22 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("discoverEnvVars")
   fun discoverEnvVars(
-    @Named("discoverWorkerConfigs") discoverWorkerConfigs: WorkerConfigs,
+    @Named("discoverWorkerConfigs") workerConfigs: WorkerConfigs,
   ): List<EnvVar> {
-    return discoverWorkerConfigs.envMap
+    return workerConfigs.envMap
+      .map { EnvVar(it.key, it.value, null) }
+      .toList()
+  }
+
+  /**
+   * The list of env vars to be passed to the connector container we are specifying.
+   */
+  @Singleton
+  @Named("specEnvVars")
+  fun specEnvVars(
+    @Named("specWorkerConfigs") workerConfigs: WorkerConfigs,
+  ): List<EnvVar> {
+    return workerConfigs.envMap
       .map { EnvVar(it.key, it.value, null) }
       .toList()
   }

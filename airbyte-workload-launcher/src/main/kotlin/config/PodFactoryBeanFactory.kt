@@ -72,4 +72,33 @@ class PodFactoryBeanFactory {
       volumeFactory,
     )
   }
+
+  @Singleton
+  @Named("specPodFactory")
+  fun specPodFactory(
+    featureFlagClient: FeatureFlagClient,
+    @Named("specConnectorReqs") connectorReqs: ResourceRequirements,
+    @Named("sidecarReqs") sidecarReqs: ResourceRequirements,
+    @Named("specPodTolerations") tolerations: List<Toleration>,
+    @Named("specImagePullSecrets") imagePullSecrets: List<LocalObjectReference>,
+    @Named("specEnvVars") connectorEnvVars: List<EnvVar>,
+    @Named("sideCarEnvVars") sideCarEnvVars: List<EnvVar>,
+    @Named("sidecarKubeContainerInfo") sidecarContainerInfo: KubeContainerInfo,
+    @Value("\${airbyte.worker.job.kube.serviceAccount}") serviceAccount: String?,
+    volumeFactory: VolumeFactory,
+  ): ConnectorPodFactory {
+    return ConnectorPodFactory(
+      "spec",
+      featureFlagClient,
+      connectorReqs,
+      sidecarReqs,
+      tolerations,
+      imagePullSecrets,
+      connectorEnvVars,
+      sideCarEnvVars,
+      sidecarContainerInfo,
+      serviceAccount,
+      volumeFactory,
+    )
+  }
 }

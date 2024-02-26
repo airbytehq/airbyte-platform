@@ -118,6 +118,12 @@ class ContainerConfigBeanFactory {
   }
 
   @Singleton
+  @Named("specWorkerConfigs")
+  fun specWorkerConfigs(workerConfigsProvider: WorkerConfigsProvider): WorkerConfigs {
+    return workerConfigsProvider.getConfig(WorkerConfigsProvider.ResourceType.SPEC)
+  }
+
+  @Singleton
   @Named("checkConnectorReqs")
   fun checkConnectorReqs(
     @Value("\${airbyte.worker.kube-job-configs.check.cpu-limit:2}") cpuLimit: String,
@@ -139,6 +145,21 @@ class ContainerConfigBeanFactory {
     @Value("\${airbyte.worker.kube-job-configs.discover.cpu-request:2}") cpuRequest: String,
     @Value("\${airbyte.worker.kube-job-configs.discover.memory-limit:500Mi}") memoryLimit: String,
     @Value("\${airbyte.worker.kube-job-configs.discover.memory-request:500Mi}") memoryRequest: String,
+  ): ResourceRequirements {
+    return ResourceRequirements()
+      .withCpuLimit(cpuLimit)
+      .withCpuRequest(cpuRequest)
+      .withMemoryLimit(memoryLimit)
+      .withMemoryRequest(memoryRequest)
+  }
+
+  @Singleton
+  @Named("specConnectorReqs")
+  fun specConnectorReqs(
+    @Value("\${airbyte.worker.kube-job-configs.spec.cpu-limit:1}") cpuLimit: String,
+    @Value("\${airbyte.worker.kube-job-configs.spec.cpu-request:1}") cpuRequest: String,
+    @Value("\${airbyte.worker.kube-job-configs.spec.memory-limit:200Mi}") memoryLimit: String,
+    @Value("\${airbyte.worker.kube-job-configs.spec.memory-request:200Mi}") memoryRequest: String,
   ): ResourceRequirements {
     return ResourceRequirements()
       .withCpuLimit(cpuLimit)
@@ -201,6 +222,25 @@ class ContainerConfigBeanFactory {
   }
 
   @Singleton
+  @Named("specPodTolerations")
+  fun specPodTolerations(
+    @Named("specWorkerConfigs") workerConfigs: WorkerConfigs,
+  ): List<Toleration> {
+    if (workerConfigs.workerKubeTolerations.isNullOrEmpty()) {
+      return listOf()
+    }
+    return workerConfigs.workerKubeTolerations
+      .map { t ->
+        TolerationBuilder()
+          .withKey(t.key)
+          .withEffect(t.effect)
+          .withOperator(t.operator)
+          .withValue(t.value)
+          .build()
+      }
+  }
+
+  @Singleton
   @Named("checkImagePullSecrets")
   fun checkImagePullSecrets(
     @Named("checkWorkerConfigs") workerConfigs: WorkerConfigs,
@@ -213,6 +253,15 @@ class ContainerConfigBeanFactory {
   @Named("discoverImagePullSecrets")
   fun discoverImagePullSecrets(
     @Named("discoverWorkerConfigs") workerConfigs: WorkerConfigs,
+  ): List<LocalObjectReference> {
+    return workerConfigs.jobImagePullSecrets
+      .map { imagePullSecret -> LocalObjectReference(imagePullSecret) }
+  }
+
+  @Singleton
+  @Named("specImagePullSecrets")
+  fun specImagePullSecrets(
+    @Named("specWorkerConfigs") workerConfigs: WorkerConfigs,
   ): List<LocalObjectReference> {
     return workerConfigs.jobImagePullSecrets
       .map { imagePullSecret -> LocalObjectReference(imagePullSecret) }

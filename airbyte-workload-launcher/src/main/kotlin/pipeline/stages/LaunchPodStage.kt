@@ -48,7 +48,7 @@ open class LaunchPodStage(
       is SyncPayload -> launcher.launchReplication(payload.input, input.msg)
       is CheckPayload -> launcher.launchCheck(payload.input, input.msg)
       is DiscoverCatalogPayload -> launcher.launchDiscover(payload.input, input.msg)
-      is SpecPayload -> logger.info { "${payload.javaClass.name} not supported yet." }
+      is SpecPayload -> launcher.launchSpec(payload.input, input.msg)
     }
 
     return input
