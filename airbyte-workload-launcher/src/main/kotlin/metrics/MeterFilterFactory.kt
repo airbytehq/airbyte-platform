@@ -38,7 +38,6 @@ class MeterFilterFactory(
     const val LAUNCH_PIPELINE_STAGE_OPERATION_NAME = "launch-pipeline-stage"
     const val LAUNCH_REPLICATION_OPERATION_NAME = "launch-replication"
     const val RESUME_CLAIMED_OPERATION_NAME = "resume_claimed"
-    const val KUBERNETES_RESOURCE_MONITOR_NAME = "kubernetes-resource-monitor"
     const val WAIT_DESTINATION_OPERATION_NAME = "wait-destination"
     const val WAIT_ORCHESTRATOR_OPERATION_NAME = "wait-orchestrator"
     const val WAIT_SOURCE_OPERATION_NAME = "wait-source"

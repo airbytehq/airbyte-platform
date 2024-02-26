@@ -8,14 +8,6 @@ enum class WorkloadLauncherMetricMetadata(
   private val metricName: String,
   private val description: String,
 ) : MetricsRegistry {
-  WORKLOAD_LAUNCHER_KUBERNETES_RESOURCE_MONITOR_START(
-    "workload_launcher_kubernetes_resource_monitor_start",
-    "increments when the Kube resource monitor starts",
-  ),
-  WORKLOAD_LAUNCHER_KUBERNETES_RESOURCE_MONITOR_RUN(
-    "workload_launcher_kubernetes_resource_monitor_run",
-    "increments when the Kube resource monitor ends",
-  ),
   WORKLOAD_LAUNCHER_POLLER_STATUS(
     "workload_launcher_poller_status",
     "tracks the status of the workload task poller",
@@ -71,14 +63,6 @@ enum class WorkloadLauncherMetricMetadata(
   PODS_DELETED_FOR_MUTEX_KEY(
     "workload_pods_deleted_for_mutex_key",
     "existing pods for the provided mutex key were found and deleted",
-  ),
-  TOTAL_PENDING_PODS(
-    "workload_pods_pending",
-    "number of pending pods started by the launcher",
-  ),
-  OLDEST_PENDING_JOB_POD_TIME(
-    "workload_pods_oldest_pending_time",
-    "the time of the oldest pending job (in seconds)",
   ),
   PRODUCER_TO_CONSUMER_LATENCY_MS(
     "producer_to_consumer_start_latency_ms",
