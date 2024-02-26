@@ -104,7 +104,7 @@ public class DiscoverCatalogActivityTest {
             .withActorDefinitionId(actorDefinitionId)));
     input.setLauncherConfig(new IntegrationLauncherConfig().withConnectionId(connectionId));
 
-    when(workloadIdGenerator.generateCheckWorkloadId(actorDefinitionId, jobId, attemptNumber)).thenReturn(workloadId);
+    when(workloadIdGenerator.generateDiscoverWorkloadId(actorDefinitionId, jobId, attemptNumber)).thenReturn(workloadId);
     doReturn(Geography.AUTO).when(discoverCatalogActivity).getGeography(any(), any());
     doReturn(true).when(discoverCatalogActivity).isWorkloadTerminal(any());
 

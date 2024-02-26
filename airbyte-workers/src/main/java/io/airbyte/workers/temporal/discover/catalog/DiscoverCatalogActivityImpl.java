@@ -214,7 +214,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     final String jobId = input.getJobRunConfig().getJobId();
     final int attemptNumber = input.getJobRunConfig().getAttemptId() == null ? 0 : Math.toIntExact(input.getJobRunConfig().getAttemptId());
     final String workloadId =
-        workloadIdGenerator.generateCheckWorkloadId(input.getDiscoverCatalogInput().getActorContext().getActorDefinitionId(), jobId,
+        workloadIdGenerator.generateDiscoverWorkloadId(input.getDiscoverCatalogInput().getActorContext().getActorDefinitionId(), jobId,
             attemptNumber);
     final String serializedInput = Jsons.serialize(input);
 

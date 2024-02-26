@@ -16,7 +16,7 @@ class WorkloadIdGeneratorTest {
   private val generator = WorkloadIdGenerator()
 
   @ParameterizedTest
-  @MethodSource("checkWorkloadIdArgsMatrix")
+  @MethodSource("workloadIdArgsMatrix")
   internal fun `test that the correct workload ID is generated for check`(
     actorId: UUID,
     jobId: String,
@@ -29,14 +29,16 @@ class WorkloadIdGeneratorTest {
     )
   }
 
-  @Test
-  internal fun `test that the correct workload ID is generated for discover`() {
-    val actorId = UUID.randomUUID()
-    val jobId = UUID.randomUUID()
-
-    val generatedWorkloadId = generator.generateDiscoverWorkloadId(actorId, jobId)
+  @ParameterizedTest
+  @MethodSource("workloadIdArgsMatrix")
+  internal fun `test that the correct workload ID is generated for discover`(
+    actorId: UUID,
+    jobId: String,
+    attemptNumber: Int,
+  ) {
+    val generatedWorkloadId = generator.generateDiscoverWorkloadId(actorId, jobId, attemptNumber)
     assertEquals(
-      "${actorId}_${jobId}_discover",
+      "${actorId}_${jobId}_${attemptNumber}_discover",
       generatedWorkloadId,
     )
   }
@@ -68,7 +70,7 @@ class WorkloadIdGeneratorTest {
 
   companion object {
     @JvmStatic
-    private fun checkWorkloadIdArgsMatrix(): Stream<Arguments> {
+    private fun workloadIdArgsMatrix(): Stream<Arguments> {
       return Stream.of(
         Arguments.of(UUID.randomUUID(), 12412431L.toString(), 1),
         Arguments.of(UUID.randomUUID(), "89127421", 2),

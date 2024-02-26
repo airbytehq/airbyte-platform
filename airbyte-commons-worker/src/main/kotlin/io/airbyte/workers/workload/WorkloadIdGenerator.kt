@@ -28,10 +28,11 @@ class WorkloadIdGenerator {
   }
 
   fun generateDiscoverWorkloadId(
-    actorId: UUID,
-    differentiator: UUID,
+    actorDefinitionId: UUID,
+    jobId: String,
+    attemptNumber: Int,
   ): String {
-    return "${actorId}_${differentiator}_discover"
+    return "${actorDefinitionId}_${jobId}_${attemptNumber}_discover"
   }
 
   fun generateSpeckWorkloadId(
