@@ -9,7 +9,8 @@ import java.util.UUID
 class ParallelStreamStatsTrackerFactory(private val applicationContext: ApplicationContext) {
   fun get(
     connectionId: UUID,
+    workspaceId: UUID,
     jobId: Long,
     attemptNumber: Int,
-  ): ParallelStreamStatsTracker = applicationContext.createBean(connectionId, jobId, attemptNumber)
+  ): ParallelStreamStatsTracker = applicationContext.createBean(connectionId, workspaceId, jobId, attemptNumber)
 }

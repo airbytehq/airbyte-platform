@@ -47,6 +47,7 @@ class ParallelStreamStatsTrackerTest {
     const val MESSAGE_SIZE = 16L
 
     val CONNECTION_ID: UUID = UUID.randomUUID()
+    val WORKSPACE_ID: UUID = UUID.randomUUID()
     const val JOB_ID: Long = 123L
     const val ATTEMPT_NUMBER: Int = 0
   }
@@ -71,7 +72,7 @@ class ParallelStreamStatsTrackerTest {
     metricClient = Mockito.mock(MetricClient::class.java)
     trackingClient = LoggingTrackingClient(DeploymentFetcher { DeploymentMetadataRead() }, TrackingIdentityFetcher { _ -> WorkspaceRead() })
     featureFlagClient = TestClient(mapOf("platform.emit-state-stats-segment" to true))
-    statsTracker = ParallelStreamStatsTracker(metricClient, trackingClient, featureFlagClient, CONNECTION_ID, JOB_ID, ATTEMPT_NUMBER)
+    statsTracker = ParallelStreamStatsTracker(metricClient, trackingClient, featureFlagClient, CONNECTION_ID, WORKSPACE_ID, JOB_ID, ATTEMPT_NUMBER)
   }
 
   @Test

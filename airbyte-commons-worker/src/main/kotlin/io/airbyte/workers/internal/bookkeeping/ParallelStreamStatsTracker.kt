@@ -42,6 +42,7 @@ class ParallelStreamStatsTracker(
   private val trackingClient: TrackingClient,
   private val featureFlagClient: FeatureFlagClient,
   @param:Parameter private val connectionId: UUID,
+  @param:Parameter private val workspaceId: UUID,
   @param:Parameter private val jobId: Long,
   @param:Parameter private val attemptNumber: Int,
 ) : SyncStatsTracker {
@@ -315,10 +316,10 @@ class ParallelStreamStatsTracker(
         payload["stream_namespace"] = nameNamespacePair.namespace
         payload["stream_name"] = nameNamespacePair.name
       } else {
-        payload["stream_namespace"] = null
+        payload["stream_namespace"] = ""
         payload["stream_name"] = ""
       }
-      trackingClient.track(connectionId, "State Stats Metrics", payload)
+      trackingClient.track(workspaceId, "State Checksum Metrics", payload)
     } catch (e: Exception) {
       logger.error(e) { "Exception while trying to emit state count metrics" }
     }

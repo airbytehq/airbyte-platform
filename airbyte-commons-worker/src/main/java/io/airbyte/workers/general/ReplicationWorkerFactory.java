@@ -426,7 +426,8 @@ public class ReplicationWorkerFactory {
   private static SyncPersistence createSyncPersistence(final SyncPersistenceFactory syncPersistenceFactory,
                                                        final ReplicationInput replicationInput,
                                                        final IntegrationLauncherConfig sourceLauncherConfig) {
-    return syncPersistenceFactory.get(replicationInput.getConnectionId(), Long.parseLong(sourceLauncherConfig.getJobId()),
+    return syncPersistenceFactory.get(replicationInput.getConnectionId(), replicationInput.getWorkspaceId(),
+        Long.parseLong(sourceLauncherConfig.getJobId()),
         sourceLauncherConfig.getAttemptId().intValue(), replicationInput.getCatalog());
   }
 

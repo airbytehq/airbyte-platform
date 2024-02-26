@@ -27,11 +27,12 @@ class SyncPersistenceFactory(
    */
   fun get(
     connectionId: UUID,
+    workspaceId: UUID,
     jobId: Long,
     attemptNumber: Int,
     catalog: ConfiguredAirbyteCatalog,
   ): SyncPersistence {
-    val statsTracker = parallelStreamStatsTrackerFactory.get(connectionId, jobId, attemptNumber)
-    return applicationContext.createBean(statsTracker, connectionId, jobId, attemptNumber, catalog)
+    val statsTracker = parallelStreamStatsTrackerFactory.get(connectionId, workspaceId, jobId, attemptNumber)
+    return applicationContext.createBean(statsTracker, connectionId, workspaceId, jobId, attemptNumber, catalog)
   }
 }
