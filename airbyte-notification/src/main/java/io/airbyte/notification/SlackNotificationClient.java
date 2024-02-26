@@ -122,35 +122,28 @@ public class SlackNotificationClient extends NotificationClient {
     title.setText(String.format("%s: %s", titleText, connectionLink));
     Section description = notification.addSection();
 
-    Field field = description.addField();
-    field.setType("mrkdwn");
-    field.setText("*Source:*");
-    field = description.addField();
+    final Field sourceLabel = description.addField();
+    sourceLabel.setType("mrkdwn");
+    sourceLabel.setText("*Source:*");
+    final Field sourceValue = description.addField();
+    sourceValue.setType("mrkdwn");
+    sourceValue.setText(Notification.createLink(summary.getSource().getName(), summary.getSource().getUrl()));
+
+    final Field destinationLabel = description.addField();
+    destinationLabel.setType("mrkdwn");
+    destinationLabel.setText("*Destination:*");
+    final Field destinationValue = description.addField();
+    destinationValue.setType("mrkdwn");
+    destinationValue.setText(Notification.createLink(summary.getDestination().getName(), summary.getDestination().getUrl()));
+
     if (summary.getStartedAt() != null && summary.getFinishedAt() != null) {
-      field.setType("mrkdwn");
-      field.setText("*Duration:*");
+      final Field durationLabel = description.addField();
+      durationLabel.setType("mrkdwn");
+      durationLabel.setText("*Duration:*");
+      final Field durationValue = description.addField();
+      durationValue.setType("mrkdwn");
+      durationValue.setText(formatDuration(summary.getStartedAt(), summary.getFinishedAt()));
     }
-
-    field = description.addField();
-    field.setType("mrkdwn");
-    field.setText(Notification.createLink(summary.getSource().getName(), summary.getSource().getUrl()));
-
-    if (summary.getStartedAt() != null && summary.getFinishedAt() != null) {
-      field = description.addField();
-      field.setType("mrkdwn");
-      field.setText(formatDuration(summary.getStartedAt(), summary.getFinishedAt()));
-    }
-
-    field = description.addField();
-    field.setType("mrkdwn");
-    field.setText("*Destination:*");
-    field = description.addField();
-    field.setType("mrkdwn");
-    field.setText(" ");
-
-    field = description.addField();
-    field.setType("mrkdwn");
-    field.setText(Notification.createLink(summary.getDestination().getName(), summary.getDestination().getUrl()));
 
     if (!summary.isSuccess() && summary.getErrorMessage() != null) {
       Section failureSection = notification.addSection();
@@ -344,10 +337,10 @@ public class SlackNotificationClient extends NotificationClient {
     field.setText("*Workspace*");
     field = section.addField();
     field.setType("mrkdwn");
-    field.setText("*Source*");
+    field.setText(Notification.createLink(workspaceName, workspaceUrl));
     field = section.addField();
     field.setType("mrkdwn");
-    field.setText(Notification.createLink(workspaceName, workspaceUrl));
+    field.setText("*Source*");
     field = section.addField();
     field.setType("mrkdwn");
     field.setText(Notification.createLink(sourceName, sourceUrl));
