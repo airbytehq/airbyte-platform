@@ -417,11 +417,13 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
         }
       }
 
-      if (line.toLowerCase().contains("\"record\"")) {
+      if (line.toLowerCase().replaceAll("\\s", "").contains("{\"type\":\"record\",\"record\":")) {
         // Connectors can sometimes log error messages from failing to parse an AirbyteRecordMessage.
         // Filter on record into debug to try and prevent such cases. Though this catches non-record
         // messages, this is ok as we rather be safe than sorry.
-        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1);
+        connectionId.ifPresentOrElse(c -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1,
+            new MetricAttribute(MetricTags.CONNECTION_ID, c.toString())),
+            () -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1));
         logger.debug(line);
       } else {
         MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_AIRBYTE_MESSAGE_LOG_LINE, 1);
