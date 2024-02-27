@@ -60,6 +60,9 @@ airbyte:
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   shutdown:
     delay_ms: 20000
+  notification:
+    customerio:
+      apikey: ${CUSTOMERIO_API_KEY:}
   cloud:
     storage:
       logs:

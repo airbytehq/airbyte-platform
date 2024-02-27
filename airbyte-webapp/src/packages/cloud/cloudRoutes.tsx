@@ -26,6 +26,7 @@ import {
 import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
 import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 
+import { AcceptInvitation } from "./AcceptInvitation";
 import { CloudRoutes } from "./cloudRoutePaths";
 import { LDExperimentServiceProvider } from "./services/thirdParty/launchdarkly";
 import { SSOBookmarkPage } from "./views/auth/SSOBookmarkPage";
@@ -147,6 +148,7 @@ const CloudMainViewRoutes = () => {
       <Route path={RoutePaths.SpeakeasyRedirect} element={<SpeakeasyRedirectPage />} />
       <Route path={RoutePaths.Workspaces} element={<CloudWorkspacesPage />} />
       <Route path={CloudRoutes.AuthFlow} element={<CompleteOauthRequest />} />
+      <Route path={CloudRoutes.AcceptInvitation} element={<AcceptInvitation />} />
       <Route
         path={`${RoutePaths.Workspaces}/:workspaceId/*`}
         element={

@@ -1,7 +1,7 @@
 export enum CloudRoutes {
   Root = "/",
   AuthFlow = "/auth_flow",
-
+  AcceptInvitation = "/accept-invite",
   Metrics = "metrics",
   Billing = "billing",
   UpcomingFeatures = "upcoming-features",
