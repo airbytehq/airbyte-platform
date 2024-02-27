@@ -34,7 +34,6 @@ import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DestinationService;
-import io.airbyte.data.services.HealthCheckService;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.OrganizationService;
@@ -148,7 +147,6 @@ public class ConfigRepository {
   private final ConnectionService connectionService;
   private final ConnectorBuilderService connectorBuilderService;
   private final DestinationService destinationService;
-  private final HealthCheckService healthCheckService;
   private final OAuthService oAuthService;
   private final OperationService operationService;
   private final OrganizationService organizationService;
@@ -162,7 +160,6 @@ public class ConfigRepository {
                           final ConnectionService connectionService,
                           final ConnectorBuilderService connectorBuilderService,
                           final DestinationService destinationService,
-                          final HealthCheckService healthCheckService,
                           final OAuthService oAuthService,
                           final OperationService operationService,
                           final OrganizationService organizationService,
@@ -173,23 +170,11 @@ public class ConfigRepository {
     this.connectionService = connectionService;
     this.connectorBuilderService = connectorBuilderService;
     this.destinationService = destinationService;
-    this.healthCheckService = healthCheckService;
     this.oAuthService = oAuthService;
     this.operationService = operationService;
     this.organizationService = organizationService;
     this.sourceService = sourceService;
     this.workspaceService = workspaceService;
-  }
-
-  /**
-   * Conduct a health check by attempting to read from the database. This query needs to be fast as
-   * this call can be made multiple times a second.
-   *
-   * @return true if read succeeds, even if the table is empty, and false if any error happens.
-   */
-  @Deprecated
-  public boolean healthCheck() {
-    return healthCheckService.healthCheck();
   }
 
   /**

@@ -12,7 +12,6 @@ import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DestinationService;
-import io.airbyte.data.services.HealthCheckService;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.OrganizationService;
@@ -94,7 +93,6 @@ public class DatabaseBeanFactory {
                                            final ConnectionService connectionService,
                                            final ConnectorBuilderService connectorBuilderService,
                                            final DestinationService destinationService,
-                                           final HealthCheckService healthCheckService,
                                            final OAuthService oauthService,
                                            final OperationService operationService,
                                            final OrganizationService organizationService,
@@ -106,7 +104,6 @@ public class DatabaseBeanFactory {
         connectionService,
         connectorBuilderService,
         destinationService,
-        healthCheckService,
         oauthService,
         operationService,
         organizationService,
