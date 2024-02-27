@@ -636,6 +636,7 @@
   "connection.overview.graph.uptimeStatus": "Streams",
   "connection.overview.graph.dataMoved": "Records",
   "connection.overview.graph.dataMoved.tooltipLabel": "{value, plural, one {<b>#</b> record} other {<b>#</b> records}} committed",
+  "connection.overview.graph.dataMoved.tooltipLabelExtra": "Click to see jobs from this day",
 
   "form.scheduleType": "Schedule type",
   "form.scheduleType.message": "Choose how syncs for this connection should be scheduled",

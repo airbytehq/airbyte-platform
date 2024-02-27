@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import React, { useState } from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -22,7 +22,7 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Text } from "components/ui/Text";
 
 import { useAttemptLink } from "area/connection/utils/attemptLink";
-import { useListJobs } from "core/api";
+import { useFilters, useListJobs } from "core/api";
 import { JobStatus } from "core/api/types/AirbyteClient";
 import {
   getFrequencyFromScheduleData,
@@ -43,12 +43,20 @@ const END_OF_TODAY = dayjs().endOf("day").toISOString();
 
 type JobStatusFilter = "all" | JobStatus;
 
+interface JobHistoryFilterValues {
+  jobStatus: JobStatusFilter;
+  startDate: string;
+  endDate: string;
+}
+
 export const ConnectionJobHistoryPage: React.FC = () => {
   const { connection } = useConnectionEditService();
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_STATUS);
-  const [jobStatusFilter, setJobStatusFilter] = useState<JobStatusFilter>("all");
-  const [startDateFilter, setStartDateFilter] = useState<string>("");
-  const [endDateFilter, setEndDateFilter] = useState<string>("");
+  const [filterValues, setFilterValue, setFilters] = useFilters<JobHistoryFilterValues>({
+    jobStatus: "all",
+    startDate: "",
+    endDate: "",
+  });
   const analyticsService = useAnalyticsService();
   const navigate = useNavigate();
   const { jobId: linkedJobId } = useAttemptLink();
@@ -59,9 +67,9 @@ export const ConnectionJobHistoryPage: React.FC = () => {
       configId: connection.connectionId,
       configTypes: ["sync", "reset_connection"],
       includingJobId: linkedJobId ? Number(linkedJobId) : undefined,
-      statuses: jobStatusFilter === "all" ? undefined : [jobStatusFilter],
-      updatedAtStart: startDateFilter !== "" ? startOfDay(startDateFilter) : undefined,
-      updatedAtEnd: endDateFilter !== "" ? endOfDay(endDateFilter) : undefined,
+      statuses: filterValues.jobStatus === "all" ? undefined : [filterValues.jobStatus],
+      updatedAtStart: filterValues.startDate !== "" ? startOfDay(filterValues.startDate) : undefined,
+      updatedAtEnd: filterValues.endDate !== "" ? endOfDay(filterValues.endDate) : undefined,
     },
     JOB_PAGE_SIZE_INCREMENT
   );
@@ -74,17 +82,17 @@ export const ConnectionJobHistoryPage: React.FC = () => {
 
   const updateJobStatusFilter = (status: JobStatus | "all") => {
     clearLinkedJob();
-    setJobStatusFilter(status);
+    setFilterValue("jobStatus", status);
   };
 
   const updateStartDateFilter = (date: string) => {
     clearLinkedJob();
-    setStartDateFilter(date);
+    setFilterValue("startDate", date);
   };
 
   const updateEndDateFilter = (date: string) => {
     clearLinkedJob();
-    setEndDateFilter(date);
+    setFilterValue("endDate", date);
   };
 
   const onLoadMoreJobs = () => {
@@ -103,14 +111,17 @@ export const ConnectionJobHistoryPage: React.FC = () => {
 
   const clearFilters = () => {
     clearLinkedJob();
-    setJobStatusFilter("all");
-    setStartDateFilter("");
-    setEndDateFilter("");
+    setFilters({
+      jobStatus: "all",
+      startDate: "",
+      endDate: "",
+    });
   };
 
   const linkedJobNotFound = linkedJobId && jobs.length === 0;
 
-  const areAnyFiltersActive = jobStatusFilter !== "all" || startDateFilter !== "" || endDateFilter !== "";
+  const areAnyFiltersActive =
+    filterValues.jobStatus !== "all" || filterValues.startDate !== "" || filterValues.endDate !== "";
 
   return (
     <PageContainer centered>
@@ -129,7 +140,7 @@ export const ConnectionJobHistoryPage: React.FC = () => {
                   className={styles.statusFilter}
                   options={statusFilterOptions}
                   onSelect={(value) => updateJobStatusFilter(value)}
-                  selectedValue={jobStatusFilter}
+                  selectedValue={filterValues.jobStatus}
                   id="job-history-status-filter"
                 />
                 <FlexContainer alignItems="center">
@@ -139,12 +150,12 @@ export const ConnectionJobHistoryPage: React.FC = () => {
                   />
                   <DatePicker
                     className={styles.dateFilter}
-                    value={startDateFilter}
+                    value={filterValues.startDate}
                     placeholder={formatMessage({ id: "jobHistory.dateFilter.start.placeholder" })}
-                    maxDate={endDateFilter === "" ? END_OF_TODAY : endDateFilter}
+                    maxDate={filterValues.endDate === "" ? END_OF_TODAY : filterValues.endDate}
                     onChange={updateStartDateFilter}
                     selectsStart
-                    endDate={endDateFilter === "" ? undefined : dayjs(endDateFilter).toDate()}
+                    endDate={filterValues.endDate === "" ? undefined : dayjs(filterValues.endDate).toDate()}
                   />
                 </FlexContainer>
                 <FlexContainer alignItems="center">
@@ -154,13 +165,13 @@ export const ConnectionJobHistoryPage: React.FC = () => {
                   />
                   <DatePicker
                     className={styles.dateFilter}
-                    value={endDateFilter}
+                    value={filterValues.endDate}
                     placeholder={formatMessage({ id: "jobHistory.dateFilter.end.placeholder" })}
-                    minDate={startDateFilter}
+                    minDate={filterValues.startDate}
                     maxDate={END_OF_TODAY}
                     onChange={updateEndDateFilter}
                     selectsEnd
-                    startDate={startDateFilter === "" ? undefined : dayjs(startDateFilter).toDate()}
+                    startDate={filterValues.startDate === "" ? undefined : dayjs(filterValues.startDate).toDate()}
                   />
                 </FlexContainer>
                 {areAnyFiltersActive && <ClearFiltersButton onClick={clearFilters} />}
