@@ -14,12 +14,14 @@ import io.airbyte.api.model.generated.ApplicationRead;
 import io.airbyte.api.model.generated.ApplicationReadList;
 import io.airbyte.api.model.generated.ApplicationTokenRequest;
 import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
+import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.Application;
 import io.airbyte.data.services.ApplicationService;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
+import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import java.time.OffsetDateTime;
@@ -49,6 +51,7 @@ public class ApplicationsController implements ApplicationsApi {
    */
   @Override
   @Secured(IS_ANONYMOUS)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   public AccessToken applicationTokenRequest(@Body ApplicationTokenRequest applicationTokenRequest) {
     final var token = applicationService.getToken(
         applicationTokenRequest.getClientId(),
@@ -67,6 +70,7 @@ public class ApplicationsController implements ApplicationsApi {
    */
   @Override
   @Secured(SecurityRule.IS_AUTHENTICATED)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   public ApplicationRead createApplication(@Body ApplicationCreate applicationCreate) {
     final var application = applicationService.createApplication(currentUserService.getCurrentUser(), applicationCreate.getName());
     return toApplicationRead(application);
@@ -79,6 +83,7 @@ public class ApplicationsController implements ApplicationsApi {
    */
   @Override
   @Secured(SecurityRule.IS_AUTHENTICATED)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   public void deleteApplication(@Body ApplicationIdRequestBody applicationIdRequestBody) {
     applicationService.deleteApplication(
         currentUserService.getCurrentUser(),
@@ -92,6 +97,7 @@ public class ApplicationsController implements ApplicationsApi {
    */
   @Override
   @Secured(SecurityRule.IS_AUTHENTICATED)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   public ApplicationReadList listApplications() {
     final var applications = applicationService.listApplicationsByUser(currentUserService.getCurrentUser())
         .stream()
