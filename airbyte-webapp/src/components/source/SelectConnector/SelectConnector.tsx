@@ -31,6 +31,7 @@ interface SelectConnectorProps {
 }
 
 const SUPPORT_LEVELS: SupportLevel[] = ["certified", "community", "archived", "none"];
+const HIDDEN_SUPPORT_LEVELS: SupportLevel[] = ["archived"];
 export const DEFAULT_SELECTED_SUPPORT_LEVELS: SupportLevel[] = ["certified", "community", "none"];
 
 export const SelectConnector: React.FC<SelectConnectorProps> = (props) => {
@@ -52,8 +53,8 @@ const SelectConnectorSupportLevel: React.FC<SelectConnectorProps> = ({
     "airbyte_connector-grid-support-level-filter",
     []
   );
-  const availableSupportLevels = SUPPORT_LEVELS.filter((stage) =>
-    connectorDefinitions.some((d) => d.supportLevel === stage)
+  const availableSupportLevels = SUPPORT_LEVELS.filter((stage) => !HIDDEN_SUPPORT_LEVELS.includes(stage)).filter(
+    (stage) => connectorDefinitions.some((d) => d.supportLevel === stage)
   );
   const selectedSupportLevels = supportLevelsInLocalStorage.filter((supportLevel) =>
     availableSupportLevels.includes(supportLevel)
