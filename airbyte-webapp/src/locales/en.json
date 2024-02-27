@@ -869,6 +869,8 @@
   "settings.accessManagement.guestUser": "This user is not a member of the organization and is a guest of this workspace.",
   "settings.accessManagement.cannotDemoteOrgAdmin": "You cannot demote an organization admin within a workspace.",
   "settings.accessManagement.cannotEditOwnPermissions": "You cannot edit your own permissions.",
+  "settings.accessManagement.ssoEnabled": "SSO enabled",
+  "settings.accessManagement.enableSso": "Interested in Single Sign-On (SSO)?",
 
   "settings.applications.token.new": "New access token",
   "settings.applications.token.warning": "You can only view this key once. Make sure you save this key in a safe place.",

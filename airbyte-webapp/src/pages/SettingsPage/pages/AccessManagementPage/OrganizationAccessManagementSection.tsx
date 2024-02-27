@@ -2,12 +2,16 @@ import React, { useDeferredValue, useEffect } from "react";
 import { FormattedMessage } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 
+import { Badge } from "components/ui/Badge";
 import { Box } from "components/ui/Box";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
+import { ExternalLink } from "components/ui/Link";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspace, useListUsersInOrganization } from "core/api";
+import { useCurrentOrganizationInfo, useCurrentWorkspace, useListUsersInOrganization } from "core/api";
+import { links } from "core/utils/links";
 
 import styles from "./OrganizationAccessManagementSection.module.scss";
 import { OrganizationUsersTable } from "./OrganizationUsersTable";
@@ -16,6 +20,7 @@ const SEARCH_PARAM = "search";
 
 export const OrganizationAccessManagementSection: React.FC = () => {
   const workspace = useCurrentWorkspace();
+  const organization = useCurrentOrganizationInfo();
   const organizationUsers = useListUsersInOrganization(workspace.organizationId ?? "").users;
   const [searchParams, setSearchParams] = useSearchParams();
   const filterParam = searchParams.get("search");
@@ -50,6 +55,22 @@ export const OrganizationAccessManagementSection: React.FC = () => {
         <FlexItem className={styles.searchInputWrapper}>
           <SearchInput value={userFilter} onChange={(e) => setUserFilter(e.target.value)} />
         </FlexItem>
+        <Text size="md">
+          {organization?.sso ? (
+            <Badge variant="blue">
+              <FlexContainer gap="xs" alignItems="center">
+                <Icon type="check" size="xs" />
+                <Text size="sm">
+                  <FormattedMessage id="settings.accessManagement.ssoEnabled" />
+                </Text>
+              </FlexContainer>
+            </Badge>
+          ) : (
+            <ExternalLink href={links.contactSales}>
+              <FormattedMessage id="settings.accessManagement.enableSso" />
+            </ExternalLink>
+          )}
+        </Text>
       </FlexContainer>
       {filteredUsersWithAccess && filteredUsersWithAccess.length > 0 ? (
         <OrganizationUsersTable users={filteredUsersWithAccess} />
