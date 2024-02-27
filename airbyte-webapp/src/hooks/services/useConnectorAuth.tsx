@@ -272,8 +272,12 @@ export function useResolveNavigate(): void {
   useEffectOnce(() => {
     const consentUrl = query.airbyte_consent_url;
     if (consentUrl) {
-      sessionStorage.setItem(OAUTH_POPUP_IDENTIFIER_KEY, window.name);
-      window.location.assign(consentUrl);
+      if (consentUrl.startsWith("http://") || consentUrl.startsWith("https://")) {
+        sessionStorage.setItem(OAUTH_POPUP_IDENTIFIER_KEY, window.name);
+        window.location.assign(consentUrl);
+      } else {
+        throw new Error("Did try to redirect to a non http/https URL.");
+      }
     } else {
       const bc = new BroadcastChannel(OAUTH_BROADCAST_CHANNEL_NAME);
       bc.postMessage({
