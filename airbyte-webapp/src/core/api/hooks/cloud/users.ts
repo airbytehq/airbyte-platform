@@ -10,9 +10,10 @@ import {
   webBackendListUsersByWorkspace,
   updateUser,
   webBackendRevokeUserSession,
+  createKeycloakUser,
 } from "../../generated/CloudApi";
 import { SCOPE_WORKSPACE } from "../../scopes";
-import { UserUpdate } from "../../types/CloudApi";
+import { CreateKeycloakUserRequestBody, UserUpdate } from "../../types/CloudApi";
 import { useRequestOptions } from "../../useRequestOptions";
 import { useSuspenseQuery } from "../../useSuspenseQuery";
 import { workspaceKeys } from "../workspaces";
@@ -157,5 +158,16 @@ export const useResendSigninLink = () => {
       // This is an unsecured endpoint, so we do not need to pass an access token
       { getAccessToken: () => Promise.resolve(null) }
     )
+  );
+};
+
+export const useCreateKeycloakUser = () => {
+  return useMutation(
+    ({
+      authUserId,
+      password,
+      getAccessToken,
+    }: CreateKeycloakUserRequestBody & { getAccessToken: () => Promise<string> }) =>
+      createKeycloakUser({ authUserId, password }, { getAccessToken })
   );
 };

@@ -29,6 +29,8 @@ export type KeycloakServiceContext = {
   changeRealmAndRedirectToSignin: (realm: string) => Promise<void>;
   // The access token is stored in a ref so we don't cause a re-render each time it changes. Instead, we can use the current ref value when we call the API.
   accessTokenRef: MutableRefObject<string | null>;
+  redirectToSignInWithGoogle: () => Promise<void>;
+  redirectToSignInWithGithub: () => Promise<void>;
 } & KeycloakAuthState;
 
 const keycloakServiceContext = createContext<KeycloakServiceContext | undefined>(undefined);
@@ -203,6 +205,16 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
     await newUserManager.signinRedirect({ extraQueryParams: { kc_idp_hint: KEYCLOAK_IDP_HINT } });
   }, []);
 
+  const redirectToSignInWithGoogle = useCallback(async () => {
+    const newUserManager = createUserManager(AIRBYTE_CLOUD_REALM);
+    await newUserManager.signinRedirect({ extraQueryParams: { kc_idp_hint: "google" } });
+  }, []);
+
+  const redirectToSignInWithGithub = useCallback(async () => {
+    const newUserManager = createUserManager(AIRBYTE_CLOUD_REALM);
+    await newUserManager.signinRedirect({ extraQueryParams: { kc_idp_hint: "github" } });
+  }, []);
+
   const contextValue = useMemo(() => {
     const value = {
       ...authState,
@@ -212,9 +224,11 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
       isAuthenticated: authState.isAuthenticated,
       changeRealmAndRedirectToSignin,
       accessTokenRef: keycloakAccessTokenRef,
+      redirectToSignInWithGoogle,
+      redirectToSignInWithGithub,
     };
     return value;
-  }, [userManager, changeRealmAndRedirectToSignin, authState]);
+  }, [authState, userManager, changeRealmAndRedirectToSignin, redirectToSignInWithGoogle, redirectToSignInWithGithub]);
 
   return <keycloakServiceContext.Provider value={contextValue}>{children}</keycloakServiceContext.Provider>;
 };
