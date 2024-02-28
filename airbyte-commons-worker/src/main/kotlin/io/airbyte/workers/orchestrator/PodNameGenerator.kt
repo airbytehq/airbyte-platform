@@ -47,6 +47,20 @@ class PodNameGenerator(
     )
   }
 
+  fun getSpecPodName(
+    image: String,
+    jobId: String,
+    attemptId: Long,
+  ): String {
+    return ProcessFactory.createProcessName(
+      image,
+      "spec",
+      jobId,
+      attemptId.toInt(),
+      KUBE_NAME_LEN_LIMIT,
+    )
+  }
+
   fun getOrchestratorOutputLocation(
     jobId: String,
     attemptId: Long,

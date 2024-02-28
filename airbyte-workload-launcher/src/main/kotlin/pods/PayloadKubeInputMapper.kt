@@ -177,7 +177,7 @@ class PayloadKubeInputMapper(
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
 
-    val podName = podNameGenerator.getDiscoverPodName(input.launcherConfig.dockerImage, jobId, attemptId)
+    val podName = podNameGenerator.getSpecPodName(input.launcherConfig.dockerImage, jobId, attemptId)
 
     val connectorPodInfo =
       KubePodInfo(

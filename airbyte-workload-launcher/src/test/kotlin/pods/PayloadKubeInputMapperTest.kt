@@ -338,11 +338,8 @@ class PayloadKubeInputMapperTest {
   }
 
   @ParameterizedTest
-  @MethodSource("connectorInputMatrix")
-  fun `builds a kube input from a spec payload`(
-    customConnector: Boolean,
-    _unusedAssumedRoleEnabled: Boolean,
-  ) {
+  @ValueSource(booleans = [true, false])
+  fun `builds a kube input from a spec payload`(customConnector: Boolean) {
     val ffClient =
       TestClient()
 
@@ -351,7 +348,7 @@ class PayloadKubeInputMapperTest {
     val namespace = "test-namespace"
     val podName = "check-pod"
     val podNameGenerator: PodNameGenerator = mockk()
-    every { podNameGenerator.getDiscoverPodName(any(), any(), any()) } returns podName
+    every { podNameGenerator.getSpecPodName(any(), any(), any()) } returns podName
     val orchestratorContainerInfo = KubeContainerInfo("img-name", "pull-policy")
     val orchestratorEnvMap: Map<String, String> = mapOf()
     val awsAssumedRoleEnv: List<EnvVar> = listOf(EnvVar("aws-assumed-role", "value", null))
