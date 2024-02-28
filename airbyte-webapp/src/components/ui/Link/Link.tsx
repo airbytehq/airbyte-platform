@@ -1,4 +1,4 @@
-import { PropsWithChildren, forwardRef } from "react";
+import { ComponentProps, PropsWithChildren, forwardRef } from "react";
 // eslint-disable-next-line no-restricted-imports
 import { Link as ReactRouterLink, To } from "react-router-dom";
 
@@ -8,6 +8,7 @@ export interface LinkProps {
   className?: string;
   opensInNewTab?: boolean;
   variant?: "default" | "primary";
+  onClick?: ComponentProps<typeof ReactRouterLink>["onClick"];
 }
 
 interface InternalLinkProps extends LinkProps {

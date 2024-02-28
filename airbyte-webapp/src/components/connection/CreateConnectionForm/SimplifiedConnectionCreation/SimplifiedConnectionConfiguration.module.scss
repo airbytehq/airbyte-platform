@@ -1,5 +1,49 @@
-@forward "src/components/ui/Button/Button.module.scss";
+@use "scss/colors";
+@use "scss/variables";
 
 .linkText {
+  // base "button"
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-decoration: none;
+  border-radius: variables.$border-radius-sm;
+  font-weight: 600;
+  cursor: pointer;
+  background-color: colors.$white;
+
+  // secondary
+  color: colors.$grey-400;
+  border: 1px solid colors.$grey-300;
+
+  // sizeXS
+  height: variables.$button-height-xs;
+  font-size: variables.$font-size-sm;
+  line-height: 15px;
+  padding: 10px;
+}
+
+.advancedSettings {
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  text-decoration: underline;
+  color: colors.$blue;
+  font-weight: 600;
+  padding: 0;
+}
+
+.hideOverflow {
+  // keep the hr under advanced settings from overflowing
+  overflow: hidden;
+}
+
+.hr {
+  border-width: 0;
+  border-top: 1px solid colors.$grey-100;
+  transform: scaleX(2); // expand out of its container to the card edge
+}
+
+.hidden {
+  display: none;
 }

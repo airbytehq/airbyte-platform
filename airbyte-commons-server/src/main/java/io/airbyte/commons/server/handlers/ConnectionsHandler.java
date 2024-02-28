@@ -324,8 +324,8 @@ public class ConnectionsHandler {
 
     final boolean warningPreviouslySentForMaxDays =
         warningPreviouslySentForMaxDays(numFailures, successTimestamp, maxDaysOfOnlyFailedJobsBeforeWarning, optionalFirstJob.get(), jobs);
-    List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
-    for (Attempt attempt : optionalLastJob.get().getAttempts()) {
+    final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+    for (final Attempt attempt : optionalLastJob.get().getAttempts()) {
       attemptStats.add(jobPersistence.getAttemptStats(optionalLastJob.get().getId(), attempt.getAttemptNumber()));
     }
     if (numFailures == 0) {
@@ -382,8 +382,8 @@ public class ConnectionsHandler {
     standardSync.setStatus(Status.INACTIVE);
     configRepository.writeStandardSync(standardSync);
 
-    List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
-    for (Attempt attempt : lastJob.getAttempts()) {
+    final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+    for (final Attempt attempt : lastJob.getAttempts()) {
       attemptStats.add(jobPersistence.getAttemptStats(lastJob.getId(), attempt.getAttemptNumber()));
     }
     jobNotifier.autoDisableConnection(lastJob, attemptStats);
@@ -474,6 +474,7 @@ public class ConnectionsHandler {
         .withSourceCatalogId(connectionCreate.getSourceCatalogId())
         .withGeography(getGeographyFromConnectionCreateOrWorkspace(connectionCreate))
         .withBreakingChange(false)
+        .withNotifySchemaChanges(connectionCreate.getNotifySchemaChanges())
         .withNonBreakingChangesPreference(
             ApiPojoConverters.toPersistenceNonBreakingChangesPreference(connectionCreate.getNonBreakingChangesPreference()))
         .withBackfillPreference(ApiPojoConverters.toPersistenceBackfillPreference(connectionCreate.getBackfillPreference()));

@@ -739,6 +739,7 @@ public class WebBackendConnectionsHandler {
     connectionCreate.resourceRequirements(webBackendConnectionCreate.getResourceRequirements());
     connectionCreate.sourceCatalogId(webBackendConnectionCreate.getSourceCatalogId());
     connectionCreate.geography(webBackendConnectionCreate.getGeography());
+    connectionCreate.notifySchemaChanges(webBackendConnectionCreate.getNotifySchemaChanges());
     connectionCreate.nonBreakingChangesPreference(webBackendConnectionCreate.getNonBreakingChangesPreference());
     connectionCreate.backfillPreference(webBackendConnectionCreate.getBackfillPreference());
 

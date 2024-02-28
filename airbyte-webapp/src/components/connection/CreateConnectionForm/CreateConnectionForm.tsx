@@ -1,4 +1,5 @@
 import React, { Suspense, useCallback, useEffect } from "react";
+import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { Form } from "components/forms";
@@ -8,6 +9,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCreateConnection, useDiscoverSchema } from "core/api";
+import { ConnectionScheduleType } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import {
   ConnectionFormServiceProvider,
@@ -15,6 +17,7 @@ import {
 } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
+import { useNotificationService } from "hooks/services/Notification";
 
 import { ConnectionNameCard } from "./ConnectionNameCard";
 import styles from "./CreateConnectionForm.module.scss";
@@ -29,6 +32,8 @@ import { OperationsSectionCard } from "../ConnectionForm/OperationsSectionCard";
 import { SyncCatalogCard } from "../ConnectionForm/SyncCatalogCard";
 import { mapFormValuesToOperations } from "../ConnectionForm/utils";
 
+export const CREATE_CONNECTION_FORM_ID = "create-connection-form";
+
 const CreateConnectionFormInner: React.FC = () => {
   const navigate = useNavigate();
   const workspaceId = useCurrentWorkspaceId();
@@ -36,9 +41,13 @@ const CreateConnectionFormInner: React.FC = () => {
   const { mutateAsync: createConnection } = useCreateConnection();
   const { connection, initialValues, setSubmitError } = useConnectionFormService();
   const canEditDataGeographies = useFeature(FeatureItem.AllowChangeDataGeographies);
+  const { registerNotification } = useNotificationService();
+  const { formatMessage } = useIntl();
   useExperimentContext("source-definition", connection.source?.sourceDefinitionId);
 
   const validationSchema = useConnectionValidationSchema();
+
+  const useSimpliedCreation = useExperiment("connection.simplifiedCreation", false);
 
   const onSubmit = useCallback(
     async ({ normalization, transformations, ...restFormValues }: FormConnectionFormValues) => {
@@ -65,6 +74,15 @@ const CreateConnectionFormInner: React.FC = () => {
         });
         clearAllFormChanges();
         navigate(`../../connections/${createdConnection.connectionId}`);
+
+        const willSyncAfterCreation = restFormValues.scheduleType === ConnectionScheduleType.basic;
+        if (useSimpliedCreation && willSyncAfterCreation) {
+          registerNotification({
+            id: "onboarding.firstSyncStarted",
+            text: formatMessage({ id: "onboarding.firstSyncStarted" }),
+            type: "success",
+          });
+        }
       } catch (e) {
         setSubmitError(e);
       }
@@ -78,10 +96,11 @@ const CreateConnectionFormInner: React.FC = () => {
       navigate,
       setSubmitError,
       workspaceId,
+      useSimpliedCreation,
+      registerNotification,
+      formatMessage,
     ]
   );
-
-  const useSimpliedCreation = useExperiment("connection.simplifiedCreation", false);
 
   return (
     <Suspense fallback={<LoadingSchema />}>
@@ -90,6 +109,7 @@ const CreateConnectionFormInner: React.FC = () => {
         schema={validationSchema}
         onSubmit={onSubmit}
         trackDirtyChanges
+        formTrackerId={CREATE_CONNECTION_FORM_ID}
       >
         <FlexContainer direction="column" className={styles.formContainer}>
           {useSimpliedCreation ? (

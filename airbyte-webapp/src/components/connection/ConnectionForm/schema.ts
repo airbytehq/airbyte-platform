@@ -14,6 +14,7 @@ import {
   NamespaceDefinitionType,
   NonBreakingChangesPreference,
   SyncMode,
+  SchemaChangeBackfillPreference,
 } from "core/api/types/AirbyteClient";
 import { ConnectionFormMode } from "hooks/services/ConnectionForm/ConnectionFormService";
 
@@ -204,5 +205,7 @@ export const createConnectionValidationSchema = (
       normalization: yup.mixed<NormalizationType>().oneOf(Object.values(NormalizationType)).optional(),
       transformations: yup.array().of(dbtOperationReadOrCreateSchema).optional(),
       syncCatalog: syncCatalogSchema,
+      notifySchemaChanges: yup.boolean().optional(),
+      backfillPreference: yup.mixed().oneOf(Object.values(SchemaChangeBackfillPreference)).optional(),
     })
     .noUnknown();

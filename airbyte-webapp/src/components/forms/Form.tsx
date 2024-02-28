@@ -39,6 +39,10 @@ interface FormProps<T extends FormValues> {
    */
   disabled?: boolean;
   dataTestId?: string;
+  /**
+   * A unique identifier for tracking changes to the form, integrates with the form change tracking service
+   */
+  formTrackerId?: string;
 }
 
 export const Form = <T extends FormValues>({
@@ -54,6 +58,7 @@ export const Form = <T extends FormValues>({
   reValidateMode,
   disabled = false,
   dataTestId,
+  formTrackerId,
 }: FormProps<T>) => {
   const methods = useForm<T>({
     defaultValues,
@@ -90,7 +95,7 @@ export const Form = <T extends FormValues>({
   return (
     <FormProvider {...methods}>
       <FormDevTools />
-      {trackDirtyChanges && <FormChangeTracker changed={methods.formState.isDirty} />}
+      {trackDirtyChanges && <FormChangeTracker formId={formTrackerId} changed={methods.formState.isDirty} />}
       <form onSubmit={methods.handleSubmit(processSubmission)} data-testid={dataTestId}>
         <fieldset disabled={disabled} className={styles.fieldset}>
           {children}

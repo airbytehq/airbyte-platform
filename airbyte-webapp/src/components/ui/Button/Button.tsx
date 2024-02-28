@@ -61,7 +61,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
       {icon &&
         iconPosition === "right" &&
         React.cloneElement(icon, {
-          className: classNames(styles.buttonIcon, {
+          className: classNames(icon.props.className, styles.buttonIcon, {
             [styles.positionRight]: true,
             [styles.isRegularIcon]: true,
             [styles.withLabel]: Boolean(children),

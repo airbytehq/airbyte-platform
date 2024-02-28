@@ -33,6 +33,7 @@ export const enum ConnectionRoutePaths {
   JobHistory = "job-history",
   ConnectionNew = "new-connection",
   Configure = "configure",
+  ConfigureContinued = "continued",
 }
 
 export enum SettingsRoutePaths {

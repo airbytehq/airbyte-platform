@@ -7877,6 +7877,8 @@ components:
           format: uuid
         geography:
           $ref: "#/components/schemas/Geography"
+        notifySchemaChanges:
+          type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
         backfillPreference:

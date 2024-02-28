@@ -26,6 +26,7 @@ export interface Experiments {
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
   "onboarding.speedyConnection": boolean;
+  "platform.auto-backfill-on-new-columns": boolean;
   "settings.breakingChangeNotifications": boolean;
   "upcomingFeaturesPage.url": string;
   "settings.token-management-ui": boolean;

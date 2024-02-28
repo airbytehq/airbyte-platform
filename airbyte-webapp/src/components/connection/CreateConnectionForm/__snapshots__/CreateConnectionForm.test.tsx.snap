@@ -37,7 +37,7 @@ exports[`CreateConnectionForm should render 1`] = `
                 >
                   <label
                     class="<removed-for-snapshot-test>"
-                    for="input-control-2"
+                    for="input-control-1"
                   >
                     <p
                       class="<removed-for-snapshot-test>"
@@ -73,7 +73,7 @@ exports[`CreateConnectionForm should render 1`] = `
                       <input
                         class="<removed-for-snapshot-test>"
                         data-testid="connectionName"
-                        id="input-control-2"
+                        id="input-control-1"
                         name="name"
                         placeholder="Name"
                       />
@@ -414,7 +414,7 @@ exports[`CreateConnectionForm should render 1`] = `
                   >
                     <label
                       class="<removed-for-snapshot-test>"
-                      for="input-control-3"
+                      for="input-control-2"
                     >
                       <p
                         class="<removed-for-snapshot-test>"

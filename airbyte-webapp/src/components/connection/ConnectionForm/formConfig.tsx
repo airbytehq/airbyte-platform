@@ -16,12 +16,14 @@ import {
   NamespaceDefinitionType,
   NonBreakingChangesPreference,
   OperationRead,
+  SchemaChangeBackfillPreference,
 } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import {
   ConnectionOrPartialConnection,
   useConnectionFormService,
 } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { analyzeSyncCatalogBreakingChanges } from "./calculateInitialCatalog";
 import { BASIC_FREQUENCY_DEFAULT_VALUE } from "./ScheduleFormField/useBasicFrequencyDropdownData";
@@ -43,6 +45,8 @@ export interface FormConnectionFormValues {
   normalization?: NormalizationType;
   transformations?: OperationRead[];
   syncCatalog: AirbyteCatalog;
+  notifySchemaChanges?: boolean;
+  backfillPreference?: SchemaChangeBackfillPreference;
 }
 
 /**
@@ -109,6 +113,7 @@ export const useInitialFormValues = (
 ): FormConnectionFormValues => {
   const workspace = useCurrentWorkspace();
   const { catalogDiff, syncCatalog, schemaChange } = connection;
+  const useSimpliedCreation = useExperiment("connection.simplifiedCreation", false);
 
   const defaultNonBreakingChangesPreference = NonBreakingChangesPreference.propagate_columns;
 
@@ -154,6 +159,8 @@ export const useInitialFormValues = (
         }),
         syncCatalog: analyzeSyncCatalogBreakingChanges(syncCatalog, catalogDiff, schemaChange),
       },
+      notifySchemaChanges: connection.notifySchemaChanges ?? useSimpliedCreation,
+      backfillPreference: connection.backfillPreference ?? SchemaChangeBackfillPreference.disabled,
     };
 
     return initialValues;
@@ -170,11 +177,14 @@ export const useInitialFormValues = (
     connection.nonBreakingChangesPreference,
     connection.geography,
     connection.operations,
+    connection.notifySchemaChanges,
+    connection.backfillPreference,
     defaultNonBreakingChangesPreference,
     workspace.defaultGeography,
     destDefinitionVersion.supportsDbt,
     syncCatalog,
     catalogDiff,
     schemaChange,
+    useSimpliedCreation,
   ]);
 };

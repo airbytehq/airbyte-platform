@@ -27,7 +27,7 @@ export const CRON_DEFAULT_VALUE: ConnectionScheduleDataCron = {
   cronExpression: "0 0 12 * * ?",
 };
 
-const cronTimeZones = availableCronTimeZones.map((zone: string) => ({ label: zone, value: zone }));
+export const cronTimeZones = availableCronTimeZones.map((zone: string) => ({ label: zone, value: zone }));
 
 export const CronScheduleFormControl: React.FC = () => {
   const [debouncedErrorMessage, setDebouncedErrorMessage] = useState("");

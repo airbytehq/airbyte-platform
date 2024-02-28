@@ -9,6 +9,7 @@ import { Geography } from "core/api/types/AirbyteClient";
 import styles from "./DataResidencyDropdown.module.scss";
 import { FormValues } from "./Form";
 import { FormControl } from "./FormControl";
+import { SelectWrapper } from "./SelectWrapper";
 
 interface DataResidencyFormControlProps<T extends FormValues> {
   labelId: string;
@@ -55,4 +56,26 @@ export const DataResidencyDropdown = <T extends FormValues>({
       disabled={disabled}
     />
   );
+};
+
+export const StandaloneDataResidencyDropdown = <T extends FormValues>({
+  name,
+}: Pick<DataResidencyFormControlProps<T>, "name">): JSX.Element => {
+  const { formatMessage } = useIntl();
+  const { geographies } = useAvailableGeographies();
+
+  const options = geographies.map((geography) => {
+    const Flag =
+      geography === "auto" ? Flags.US : Flags[geography.toUpperCase() as Uppercase<Exclude<Geography, "auto">>];
+    return {
+      label: formatMessage({
+        id: `connection.geography.${geography}`,
+        defaultMessage: geography.toUpperCase(),
+      }),
+      value: geography,
+      icon: <Flag className={styles.flag} />,
+    };
+  });
+
+  return <SelectWrapper name={name} options={options} />;
 };

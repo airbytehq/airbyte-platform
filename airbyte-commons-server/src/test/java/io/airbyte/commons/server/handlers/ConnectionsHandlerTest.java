@@ -946,9 +946,7 @@ class ConnectionsHandlerTest {
         assertEquals(expectedConnectionRead, actualConnectionRead);
 
         verify(configRepository).writeStandardSync(standardSync
-            .withNotifySchemaChanges(null)
-            .withNotifySchemaChangesByEmail(null)
-            .withBackfillPreference(StandardSync.BackfillPreference.ENABLED));
+            .withNotifySchemaChangesByEmail(null));
 
         // Use new schedule schema, verify that we get the same results.
         connectionCreate
@@ -956,9 +954,7 @@ class ConnectionsHandlerTest {
             .scheduleType(ConnectionScheduleType.BASIC)
             .scheduleData(ConnectionHelpers.generateBasicConnectionScheduleData());
         assertEquals(expectedConnectionRead
-            .notifySchemaChanges(null)
-            .notifySchemaChangesByEmail(null)
-            .backfillPreference(SchemaChangeBackfillPreference.ENABLED),
+            .notifySchemaChangesByEmail(null),
             connectionsHandler.createConnection(connectionCreate));
       }
 
@@ -998,7 +994,6 @@ class ConnectionsHandlerTest {
 
         assertEquals(expectedConnectionRead, actualConnectionRead);
         verify(configRepository).writeStandardSync(standardSync
-            .withNotifySchemaChanges(null)
             .withNotifySchemaChangesByEmail(null));
       }
 
@@ -1024,7 +1019,7 @@ class ConnectionsHandlerTest {
 
         standardSync.withFieldSelectionData(new FieldSelectionData().withAdditionalProperty(STREAM_SELECTION_DATA, true));
 
-        verify(configRepository).writeStandardSync(standardSync.withNotifySchemaChanges(null).withNotifySchemaChangesByEmail(null));
+        verify(configRepository).writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null));
       }
 
       @Test
@@ -1053,7 +1048,7 @@ class ConnectionsHandlerTest {
             .withFieldSelectionData(new FieldSelectionData().withAdditionalProperty(STREAM_SELECTION_DATA, true))
             .getCatalog().getStreams().get(0).withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH).withCursorField(null);
 
-        verify(configRepository).writeStandardSync(standardSync.withNotifySchemaChanges(null).withNotifySchemaChangesByEmail(null));
+        verify(configRepository).writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null));
       }
 
       @Test
