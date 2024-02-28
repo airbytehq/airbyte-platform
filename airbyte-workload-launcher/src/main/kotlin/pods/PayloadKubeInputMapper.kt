@@ -309,7 +309,7 @@ class PayloadKubeInputMapper(
               workloadId,
               input.launcherConfig,
               // TODO: change to OperationType.SPEC once we add it to the sidecar
-              null,
+              OperationType.SPEC,
             ),
           ),
       )

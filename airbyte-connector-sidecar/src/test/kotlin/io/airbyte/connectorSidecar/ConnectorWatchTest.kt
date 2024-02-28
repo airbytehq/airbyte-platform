@@ -150,10 +150,11 @@ class ConnectorWatchTest {
       when (operationType) {
         OperationType.CHECK -> connectorWatcher.getFailedOutput(checkInput, exception)
         OperationType.DISCOVER -> connectorWatcher.getFailedOutput(discoveryInput, exception)
+        OperationType.SPEC -> connectorWatcher.getFailedOutput("", exception)
       }
 
     every { connectorWatcher.readFile(OrchestratorConstants.SIDECAR_INPUT) } returns
-      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType))
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig().withDockerImage(""), operationType))
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } throws exception
 

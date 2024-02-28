@@ -18,6 +18,7 @@ import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteStream
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.protocol.models.Config
+import io.airbyte.protocol.models.ConnectorSpecification
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.models.SidecarInput
@@ -182,6 +183,36 @@ class ConnectorMessageProcessorTest {
     val missingConnection = ConnectorMessageProcessor.getConnectionStatus(messageByTypeMissingConnectionStatus)
 
     assert(missingConnection.catalog == null)
+  }
+
+  @Test
+  fun `test find specs`() {
+    val specsMessage =
+      AirbyteMessage().withType(AirbyteMessage.Type.SPEC)
+        .withSpec(
+          ConnectorSpecification()
+            .withProtocolVersion("test"),
+        )
+    val messageByTypeSuccessfullConnection =
+      mapOf(
+        AirbyteMessage.Type.SPEC to
+          listOf(specsMessage),
+        AirbyteMessage.Type.RECORD to listOf(AirbyteMessage().withType(AirbyteMessage.Type.RECORD).withAdditionalProperty("record", "two")),
+      )
+
+    val expectedSpecs = ConnectorMessageProcessor.getSpecResult(messageByTypeSuccessfullConnection)
+
+    assert(expectedSpecs.spec != null)
+    assertEquals(specsMessage.spec, expectedSpecs.spec)
+
+    val messageByTypeMissingConnectionStatus =
+      mapOf(
+        AirbyteMessage.Type.RECORD to listOf(AirbyteMessage().withType(AirbyteMessage.Type.RECORD).withAdditionalProperty("record", "two")),
+      )
+
+    val missingSpecs = ConnectorMessageProcessor.getSpecResult(messageByTypeMissingConnectionStatus)
+
+    assert(missingSpecs.spec == null)
   }
 
   data class ConnectorUpdateInput(
@@ -429,5 +460,36 @@ class ConnectorMessageProcessorTest {
       )
 
     assertEquals(discoveredCatalogId, output.discoverCatalogId)
+  }
+
+  @Test
+  fun `properly spec connector`() {
+    val specMessage =
+      AirbyteMessage().withType(AirbyteMessage.Type.SPEC)
+        .withSpec(
+          ConnectorSpecification()
+            .withProtocolVersion("test"),
+        )
+
+    every { streamFactory.create(any()) } returns
+      Stream.of(
+        specMessage,
+      )
+
+    val output =
+      connectorMessageProcessor.run(
+        InputStream.nullInputStream(),
+        streamFactory,
+        ConnectorMessageProcessor.OperationInput(
+          discoveryInput =
+            StandardDiscoverCatalogInput()
+              .withConnectionConfiguration(Jsons.emptyObject())
+              .withSourceId(UUID.randomUUID().toString()),
+        ),
+        0,
+        SidecarInput.OperationType.SPEC,
+      )
+
+    assertEquals(specMessage.spec, output.spec)
   }
 }

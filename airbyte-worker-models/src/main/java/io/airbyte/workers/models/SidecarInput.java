@@ -19,6 +19,7 @@ public class SidecarInput {
   public enum OperationType {
     CHECK,
     DISCOVER,
+    SPEC,
   }
 
   StandardCheckConnectionInput checkConnectionInput;

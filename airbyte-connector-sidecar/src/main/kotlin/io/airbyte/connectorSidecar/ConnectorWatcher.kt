@@ -87,7 +87,7 @@ class ConnectorWatcher(
                 checkConnectionConfiguration,
               ),
               exitCode,
-              SidecarInput.OperationType.CHECK,
+              input.operationType,
             )
           }
 
@@ -99,7 +99,17 @@ class ConnectorWatcher(
                 discoveryInput = discoverCatalogInput,
               ),
               exitCode,
-              SidecarInput.OperationType.DISCOVER,
+              input.operationType,
+            )
+          }
+
+          SidecarInput.OperationType.SPEC -> {
+            connectorMessageProcessor.run(
+              outputIS,
+              streamFactory,
+              ConnectorMessageProcessor.OperationInput(),
+              exitCode,
+              input.operationType,
             )
           }
         }
@@ -112,6 +122,7 @@ class ConnectorWatcher(
         when (input.operationType) {
           SidecarInput.OperationType.CHECK -> getFailedOutput(checkConnectionConfiguration, e)
           SidecarInput.OperationType.DISCOVER -> getFailedOutput(discoverCatalogInput, e)
+          SidecarInput.OperationType.SPEC -> getFailedOutput(input.integrationLauncherConfig.dockerImage, e)
         }
 
       jobOutputDocStore.write(workloadId, output)
@@ -205,6 +216,22 @@ class ConnectorWatcher(
         FailureReason()
           .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
           .withExternalMessage("The check connection failed because of an internal error for source: ${input.sourceId}")
+          .withInternalMessage(e.message)
+          .withStacktrace(e.toString()),
+      )
+  }
+
+  @VisibleForTesting
+  fun getFailedOutput(
+    dockerImage: String,
+    e: Exception,
+  ): ConnectorJobOutput {
+    return ConnectorJobOutput().withOutputType(ConnectorJobOutput.OutputType.SPEC)
+      .withDiscoverCatalogId(null)
+      .withFailureReason(
+        FailureReason()
+          .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
+          .withExternalMessage("The spec failed because of an internal error for connector: $dockerImage")
           .withInternalMessage(e.message)
           .withStacktrace(e.toString()),
       )

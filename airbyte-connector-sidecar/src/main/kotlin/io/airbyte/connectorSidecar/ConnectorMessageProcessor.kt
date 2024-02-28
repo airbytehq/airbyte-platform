@@ -8,6 +8,7 @@ import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.converters.ConnectorConfigUpdater
 import io.airbyte.commons.enums.Enums
 import io.airbyte.commons.io.IOs
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
@@ -18,6 +19,7 @@ import io.airbyte.protocol.models.AirbyteCatalog
 import io.airbyte.protocol.models.AirbyteConnectionStatus
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteTraceMessage
+import io.airbyte.protocol.models.ConnectorSpecification
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.helper.FailureHelper
@@ -31,6 +33,7 @@ import java.io.InputStream
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Collectors
+import javax.naming.OperationNotSupportedException
 
 private val logger = KotlinLogging.logger {}
 
@@ -42,6 +45,7 @@ class ConnectorMessageProcessor(
   data class OperationResult(
     val connectionStatus: AirbyteConnectionStatus? = null,
     val catalog: AirbyteCatalog? = null,
+    val spec: ConnectorSpecification? = null,
   )
 
   data class OperationInput(
@@ -67,14 +71,18 @@ class ConnectorMessageProcessor(
         when (operationType) {
           OperationType.CHECK -> getConnectionStatus(messagesByType)
           OperationType.DISCOVER -> getDiscoveryResult(messagesByType)
+          OperationType.SPEC -> getSpecResult(messagesByType)
         }
 
       val inputConfig =
         when (operationType) {
           OperationType.CHECK -> input.checkInput!!.connectionConfiguration
           OperationType.DISCOVER -> input.discoveryInput!!.connectionConfiguration
+          OperationType.SPEC -> Jsons.emptyObject()
         }
-      updateConfigFromControlMessagePerMessageType(operationType, input, messagesByType, inputConfig, jobOutput)
+      if (operationType != OperationType.SPEC) {
+        updateConfigFromControlMessagePerMessageType(operationType, input, messagesByType, inputConfig, jobOutput)
+      }
       val failureReason = getJobFailureReasonFromMessages(ConnectorJobOutput.OutputType.CHECK_CONNECTION, messagesByType)
       failureReason.ifPresent { failureReason: FailureReason? -> jobOutput.failureReason = failureReason }
 
@@ -94,6 +102,7 @@ class ConnectorMessageProcessor(
         when (operation) {
           OperationType.CHECK -> ConnectorJobOutput.OutputType.CHECK_CONNECTION
           OperationType.DISCOVER -> ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID
+          OperationType.SPEC -> ConnectorJobOutput.OutputType.SPEC
         },
       )
   }
@@ -122,6 +131,11 @@ class ConnectorMessageProcessor(
           inputConfig,
           jobOutput,
         )
+
+      else -> {
+        logger.error { "Updating the connector with the control message is not supported for the $operationType operation" }
+        throw OperationNotSupportedException("Updating the connector with the control message is not supported for the $operationType operation")
+      }
     }
   }
 
@@ -152,6 +166,11 @@ class ConnectorMessageProcessor(
           jobOutput.discoverCatalogId = apiResult.catalogId
         } else if (failureReason.isEmpty) {
           throw WorkerException("Error checking connection status: no status nor failure reason were outputted")
+        }
+
+      OperationType.SPEC ->
+        if (result.spec != null) {
+          jobOutput.spec = result.spec
         }
     }
   }
@@ -220,6 +239,17 @@ class ConnectorMessageProcessor(
           messagesByType
             .getOrDefault(AirbyteMessage.Type.CATALOG, ArrayList()).stream()
             .map { obj: AirbyteMessage -> obj.catalog }
+            .findFirst()
+            .orElse(null),
+      )
+    }
+
+    fun getSpecResult(messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>>): OperationResult {
+      return OperationResult(
+        spec =
+          messagesByType
+            .getOrDefault(AirbyteMessage.Type.SPEC, ArrayList()).stream()
+            .map { obj: AirbyteMessage -> obj.spec }
             .findFirst()
             .orElse(null),
       )
