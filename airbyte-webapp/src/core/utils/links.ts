@@ -51,6 +51,7 @@ export const links = {
   creditDescription: "https://airbyte.com/pricing#what-is-a-credit",
   usingCustomConnectors: `${BASE_DOCS_LINK}/operator-guides/using-custom-connectors/`,
   gettingSupport: `${BASE_DOCS_LINK}/community/getting-support`,
+  autoRechargeEnrollment: `${BASE_DOCS_LINK}/cloud/managing-airbyte-cloud/manage-credits#automatic-reload-of-credits-beta`,
 } as const;
 
 export type OutboundLinks = typeof links;
