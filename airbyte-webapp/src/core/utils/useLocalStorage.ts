@@ -20,7 +20,6 @@ interface AirbyteLocalStorage {
   "airbyte_connector-grid-show-suggested-connectors": boolean;
   "airbyte_show-dev-tools": boolean;
   "airbyte_workspace-in-title": boolean;
-  "airbyte_keycloak-social-logins": boolean;
 }
 
 /*

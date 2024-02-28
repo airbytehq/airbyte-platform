@@ -10,9 +10,7 @@ import { Link } from "components/ui/Link";
 import { Spinner } from "components/ui/Spinner";
 
 import { OAuthProviders, AuthOAuthLogin } from "core/services/auth";
-import { useLocalStorage } from "core/utils/useLocalStorage";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
-import { useKeycloakService } from "packages/cloud/services/auth/KeycloakService";
 
 import githubLogo from "./assets/github-logo.svg";
 import googleLogo from "./assets/google-logo.svg";
@@ -63,8 +61,6 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth }) => {
   const [searchParams] = useSearchParams();
   const loginRedirect = searchParams.get("loginRedirect");
   const navigate = useNavigate();
-  const [keycloakSocialLoginsEnabled] = useLocalStorage("airbyte_keycloak-social-logins", false);
-  const { redirectToSignInWithGithub, redirectToSignInWithGoogle } = useKeycloakService();
 
   useUnmount(() => {
     stateSubscription.current?.unsubscribe();
@@ -118,12 +114,8 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth }) => {
       )}
       {!isLoading && (
         <>
-          <GoogleButton
-            onClick={() => (keycloakSocialLoginsEnabled ? redirectToSignInWithGoogle() : login("google"))}
-          />
-          <GitHubButton
-            onClick={() => (keycloakSocialLoginsEnabled ? redirectToSignInWithGithub() : login("github"))}
-          />
+          <GoogleButton onClick={() => login("google")} />
+          <GitHubButton onClick={() => login("github")} />
           <SsoButton />
         </>
       )}
