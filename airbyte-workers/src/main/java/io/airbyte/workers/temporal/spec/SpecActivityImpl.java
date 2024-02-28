@@ -180,6 +180,7 @@ public class SpecActivityImpl implements SpecActivity {
         context);
   }
 
+  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public ConnectorJobOutput runWithWorkload(SpecInput input) throws WorkerException {
     final String jobId = input.getJobRunConfig().getJobId();
