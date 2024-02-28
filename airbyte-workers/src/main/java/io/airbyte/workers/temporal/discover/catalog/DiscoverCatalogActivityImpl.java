@@ -271,13 +271,19 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   }
 
   @Override
-  public void reportSuccess() {
-    metricClient.count(OssMetricsRegistry.CATALOG_DISCOVERY, 1, new MetricAttribute(MetricTags.STATUS, "success"));
+  public void reportSuccess(final Boolean workloadEnabled) {
+    final var workloadEnabledStr = workloadEnabled != null ? workloadEnabled.toString() : "unknown";
+    metricClient.count(OssMetricsRegistry.CATALOG_DISCOVERY, 1,
+        new MetricAttribute(MetricTags.STATUS, "success"),
+        new MetricAttribute("workload_enabled", workloadEnabledStr));
   }
 
   @Override
-  public void reportFailure() {
-    metricClient.count(OssMetricsRegistry.CATALOG_DISCOVERY, 1, new MetricAttribute(MetricTags.STATUS, "failed"));
+  public void reportFailure(final Boolean workloadEnabled) {
+    final var workloadEnabledStr = workloadEnabled != null ? workloadEnabled.toString() : "unknown";
+    metricClient.count(OssMetricsRegistry.CATALOG_DISCOVERY, 1,
+        new MetricAttribute(MetricTags.STATUS, "failed"),
+        new MetricAttribute("workload_enabled", workloadEnabledStr));
   }
 
   @VisibleForTesting

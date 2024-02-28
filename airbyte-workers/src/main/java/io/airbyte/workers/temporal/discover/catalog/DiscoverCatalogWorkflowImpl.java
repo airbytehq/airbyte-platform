@@ -41,14 +41,14 @@ public class DiscoverCatalogWorkflowImpl implements DiscoverCatalogWorkflow {
                                 final StandardDiscoverCatalogInput config) {
     ApmTraceUtils.addTagsToTrace(Map.of(ATTEMPT_NUMBER_KEY, jobRunConfig.getAttemptId(), JOB_ID_KEY, jobRunConfig.getJobId(), DOCKER_IMAGE_KEY,
         launcherConfig.getDockerImage()));
-    boolean shouldRunWithWorkload = checkUseWorkloadApiFlag(config.getActorContext().getWorkspaceId());
+    final boolean shouldRunWithWorkload = checkUseWorkloadApiFlag(config.getActorContext().getWorkspaceId());
     ConnectorJobOutput result;
     if (shouldRunWithWorkload) {
       try {
         result = activity.runWithWorkload(new DiscoverCatalogInput(
             jobRunConfig, launcherConfig, config));
       } catch (WorkerException e) {
-        activity.reportFailure();
+        activity.reportFailure(true);
         throw new RuntimeException(e);
       }
     } else {
@@ -56,9 +56,9 @@ public class DiscoverCatalogWorkflowImpl implements DiscoverCatalogWorkflow {
     }
 
     if (result.getDiscoverCatalogId() != null) {
-      activity.reportSuccess();
+      activity.reportSuccess(shouldRunWithWorkload);
     } else {
-      activity.reportFailure();
+      activity.reportFailure(shouldRunWithWorkload);
     }
 
     return result;

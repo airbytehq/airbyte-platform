@@ -32,9 +32,9 @@ public interface DiscoverCatalogActivity {
   boolean shouldUseWorkload(final UUID workspaceId);
 
   @ActivityMethod
-  void reportSuccess();
+  void reportSuccess(final Boolean workloadEnabled);
 
   @ActivityMethod
-  void reportFailure();
+  void reportFailure(final Boolean workloadEnabled);
 
 }
