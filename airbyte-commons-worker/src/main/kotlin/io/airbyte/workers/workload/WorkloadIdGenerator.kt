@@ -35,11 +35,8 @@ class WorkloadIdGenerator {
     return "${actorDefinitionId}_${jobId}_${attemptNumber}_discover"
   }
 
-  fun generateSpeckWorkloadId(
-    workspaceId: UUID,
-    differentiator: UUID,
-  ): String {
-    return "${workspaceId}_${differentiator}_spec"
+  fun generateSpecWorkloadId(differentiator: String): String {
+    return "${differentiator}_spec"
   }
 
   fun generateSyncWorkloadId(

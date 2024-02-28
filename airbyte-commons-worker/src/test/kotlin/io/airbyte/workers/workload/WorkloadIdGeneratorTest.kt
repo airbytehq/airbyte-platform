@@ -45,12 +45,11 @@ class WorkloadIdGeneratorTest {
 
   @Test
   internal fun `test that the correct workload ID is generated for specs`() {
-    val workspaceId = UUID.randomUUID()
     val jobId = UUID.randomUUID()
 
-    val generatedWorkloadId = generator.generateSpeckWorkloadId(workspaceId, jobId)
+    val generatedWorkloadId = generator.generateSpecWorkloadId(jobId.toString())
     assertEquals(
-      "${workspaceId}_${jobId}_spec",
+      "${jobId}_spec",
       generatedWorkloadId,
     )
   }

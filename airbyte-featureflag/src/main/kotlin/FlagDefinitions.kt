@@ -191,3 +191,5 @@ object HydrateAggregatedStats : Temporary<Boolean>(key = "platform.hydrate-aggre
 object BillingCronScopeChangeTimestamp : Permanent<String>(key = "platform.billing-cron-scope-change-timestamp", default = "1735711200")
 
 object UseWorkloadApiForDiscover : Temporary<Boolean>(key = "platform.use-workload-api-for-discover", default = false)
+
+object UseWorkloadApiForSpec : Temporary<Boolean>(key = "platform.use-workload-api-for-spec", default = false)

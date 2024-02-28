@@ -31,6 +31,7 @@ class ConnectorPodFactory(
   private val sidecarContainerInfo: KubeContainerInfo,
   private val serviceAccount: String?,
   private val volumeFactory: VolumeFactory,
+  private val connectorArgs: Map<String, String>,
 ) {
   fun create(
     allLabels: Map<String, String>,
@@ -131,11 +132,17 @@ class ConnectorPodFactory(
     containerInfo: KubeContainerInfo,
     extraEnvVars: List<EnvVar>,
   ): Container {
+    val configArg =
+      connectorArgs.map {
+          (k, v) ->
+        "--$k $v"
+      }.joinToString(prefix = " ", separator = " ")
+
     val mainCommand =
       """
       pwd
 
-      eval "${'$'}AIRBYTE_ENTRYPOINT $operationCommand --config ${KubePodProcess.CONFIG_DIR}/connectionConfiguration.json" > ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.JOB_OUTPUT_FILENAME}
+      eval "${'$'}AIRBYTE_ENTRYPOINT $operationCommand $configArg" > ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.JOB_OUTPUT_FILENAME}
       
       cat ${KubePodProcess.CONFIG_DIR}/${OrchestratorConstants.JOB_OUTPUT_FILENAME}
 
@@ -164,5 +171,11 @@ class ConnectorPodFactory(
       .withVolumeMounts(volumeMounts)
       .withResources(KubePodProcess.getResourceRequirementsBuilder(sidecarReqs).build())
       .build()
+  }
+
+  companion object {
+    val CHECK_OPERATION_NAME = "check"
+    val DISCOVER_OPERATION_NAME = "discover"
+    val SPEC_OPERATION_NAME = "spec"
   }
 }

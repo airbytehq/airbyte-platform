@@ -3,7 +3,11 @@ package io.airbyte.workload.launcher.config
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.workers.process.KubeContainerInfo
+import io.airbyte.workers.process.KubePodProcess
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
+import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion.CHECK_OPERATION_NAME
+import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion.DISCOVER_OPERATION_NAME
+import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion.SPEC_OPERATION_NAME
 import io.airbyte.workload.launcher.pods.factories.VolumeFactory
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.LocalObjectReference
@@ -30,7 +34,7 @@ class PodFactoryBeanFactory {
     volumeFactory: VolumeFactory,
   ): ConnectorPodFactory {
     return ConnectorPodFactory(
-      "check",
+      CHECK_OPERATION_NAME,
       featureFlagClient,
       connectorReqs,
       sidecarReqs,
@@ -41,6 +45,9 @@ class PodFactoryBeanFactory {
       sidecarContainerInfo,
       serviceAccount,
       volumeFactory,
+      mapOf(
+        "config" to "${KubePodProcess.CONFIG_DIR}/connectionConfiguration.json",
+      ),
     )
   }
 
@@ -59,7 +66,7 @@ class PodFactoryBeanFactory {
     volumeFactory: VolumeFactory,
   ): ConnectorPodFactory {
     return ConnectorPodFactory(
-      "discover",
+      DISCOVER_OPERATION_NAME,
       featureFlagClient,
       connectorReqs,
       sidecarReqs,
@@ -70,6 +77,9 @@ class PodFactoryBeanFactory {
       sidecarContainerInfo,
       serviceAccount,
       volumeFactory,
+      mapOf(
+        "config" to "${KubePodProcess.CONFIG_DIR}/connectionConfiguration.json",
+      ),
     )
   }
 
@@ -88,7 +98,7 @@ class PodFactoryBeanFactory {
     volumeFactory: VolumeFactory,
   ): ConnectorPodFactory {
     return ConnectorPodFactory(
-      "spec",
+      SPEC_OPERATION_NAME,
       featureFlagClient,
       connectorReqs,
       sidecarReqs,
@@ -99,6 +109,7 @@ class PodFactoryBeanFactory {
       sidecarContainerInfo,
       serviceAccount,
       volumeFactory,
+      mapOf(),
     )
   }
 }
