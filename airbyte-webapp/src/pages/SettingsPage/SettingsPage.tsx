@@ -93,34 +93,33 @@ export const SettingsPage: React.FC = () => {
               />
             </SettingsNavigationBlock>
           )}
-          {canViewOrganizationSettings ||
-            (canViewWorkspaceSettings && (
-              <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
-                {multiWorkspaceUI && canViewOrganizationSettings && (
+          {(canViewOrganizationSettings || canViewWorkspaceSettings) && (
+            <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
+              {multiWorkspaceUI && canViewOrganizationSettings && (
+                <SettingsLink
+                  iconType="community"
+                  name={formatMessage({ id: "settings.members" })}
+                  to={SettingsRoutePaths.Organization}
+                />
+              )}
+              {multiWorkspaceUI && canViewWorkspaceSettings && (
+                <>
                   <SettingsLink
-                    iconType="community"
-                    name={formatMessage({ id: "settings.members" })}
-                    to={SettingsRoutePaths.Organization}
+                    iconType="source"
+                    count={countNewSourceVersion}
+                    name={formatMessage({ id: "tables.sources" })}
+                    to={SettingsRoutePaths.Source}
                   />
-                )}
-                {multiWorkspaceUI && canViewWorkspaceSettings && (
-                  <>
-                    <SettingsLink
-                      iconType="source"
-                      count={countNewSourceVersion}
-                      name={formatMessage({ id: "tables.sources" })}
-                      to={SettingsRoutePaths.Source}
-                    />
-                    <SettingsLink
-                      iconType="destination"
-                      count={countNewDestinationVersion}
-                      name={formatMessage({ id: "tables.destinations" })}
-                      to={SettingsRoutePaths.Destination}
-                    />
-                  </>
-                )}
-              </SettingsNavigationBlock>
-            ))}
+                  <SettingsLink
+                    iconType="destination"
+                    count={countNewDestinationVersion}
+                    name={formatMessage({ id: "tables.destinations" })}
+                    to={SettingsRoutePaths.Destination}
+                  />
+                </>
+              )}
+            </SettingsNavigationBlock>
+          )}
         </SettingsNavigation>
         <FlexItem grow>
           <Suspense fallback={<LoadingPage />}>
