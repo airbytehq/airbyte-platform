@@ -301,7 +301,7 @@ public class CustomerioNotificationClient extends NotificationClient {
 
     node.put("disable_message_retention", false);
     node.put("send_to_unsubscribed", true);
-    node.put("tracked", false);
+    node.put("tracked", true);
     node.put("queue_draft", false);
     node.put("disable_css_preprocessing", true);
     return node;
