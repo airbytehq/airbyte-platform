@@ -53,10 +53,13 @@ function openWindow(url: string): void {
        or if such pointer exists but the window was closed */
 
     oauthPopupIdentifier = uuid();
+    // Hook does not add type safetiness as we have to dynamically craft the key from the identifier
+    // eslint-disable-next-line @airbyte/no-local-storage
+    localStorage.setItem(`airbyte_consent_url:${oauthPopupIdentifier}`, url);
     const strWindowFeatures = "toolbar=no,menubar=no,width=600,height=700,top=100,left=100";
     windowObjectReference = window.open(
-      `/auth_flow?airbyte_consent_url=${encodeURIComponent(url)}`,
-      oauthPopupIdentifier,
+      `/auth_flow?airbyte_oauth_popup_identifier=${oauthPopupIdentifier}`,
+      "",
       strWindowFeatures
     );
     /* then create it. The new window will be created and
@@ -267,13 +270,21 @@ export function useRunOauthFlow({
 }
 
 export function useResolveNavigate(): void {
-  const query = useQuery<{ airbyte_consent_url: string }>();
+  const query = useQuery<{ airbyte_oauth_popup_identifier: string }>();
 
   useEffectOnce(() => {
-    const consentUrl = query.airbyte_consent_url;
-    if (consentUrl) {
+    const airbyteOauthPopupIdentifier = query.airbyte_oauth_popup_identifier;
+    if (airbyteOauthPopupIdentifier) {
+      // Hook does not add type safetiness as we have to dynamically craft the key from the identifier
+      // eslint-disable-next-line @airbyte/no-local-storage
+      const consentUrl = localStorage.getItem(`airbyte_consent_url:${airbyteOauthPopupIdentifier}`);
+      if (!consentUrl) {
+        throw new Error("No consent URL found for the given oauth popup identifier.");
+      }
+      // eslint-disable-next-line @airbyte/no-local-storage
+      localStorage.removeItem(`airbyte_consent_url:${airbyteOauthPopupIdentifier}`);
       if (consentUrl.startsWith("http://") || consentUrl.startsWith("https://")) {
-        sessionStorage.setItem(OAUTH_POPUP_IDENTIFIER_KEY, window.name);
+        sessionStorage.setItem(OAUTH_POPUP_IDENTIFIER_KEY, airbyteOauthPopupIdentifier);
         window.location.assign(consentUrl);
       } else {
         throw new Error("Did try to redirect to a non http/https URL.");
