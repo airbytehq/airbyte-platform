@@ -47,6 +47,7 @@ const SelectSourcePage = React.lazy(() => import("./source/SelectSourcePage"));
 const SourceItemPage = React.lazy(() => import("./source/SourceItemPage"));
 const SourceSettingsPage = React.lazy(() => import("./source/SourceSettingsPage"));
 const SourceConnectionsPage = React.lazy(() => import("./source/SourceConnectionsPage"));
+const AdvancedSettingsPage = React.lazy(() => import("./SettingsPage/pages/AdvancedSettingsPage"));
 
 const WorkspacesPage = React.lazy(() => import("./workspaces/WorkspacesPage"));
 
@@ -111,6 +112,7 @@ const MainViewRoutes: React.FC = () => {
             {multiWorkspaceUI && organizationId && canViewOrganizationSettings && (
               <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
             )}
+            <Route path={SettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
             <Route path="*" element={<Navigate to={SettingsRoutePaths.Account} replace />} />
           </Route>
           <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />

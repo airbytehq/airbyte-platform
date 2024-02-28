@@ -66,6 +66,7 @@ const SourceConnectionsPage = React.lazy(() => import("pages/source/SourceConnec
 const SourceSettingsPage = React.lazy(() => import("pages/source/SourceSettingsPage"));
 const CloudDefaultView = React.lazy(() => import("./views/CloudDefaultView"));
 const CloudSettingsPage = React.lazy(() => import("./views/settings/CloudSettingsPage"));
+const AdvancedSettingsPage = React.lazy(() => import("pages/SettingsPage/pages/AdvancedSettingsPage"));
 
 const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
@@ -125,6 +126,7 @@ const MainRoutes: React.FC = () => {
           {organization && (
             <Route path={CloudSettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
           )}
+          <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
           <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Account} replace />} />
         </Route>
         <Route path={CloudRoutes.Billing} element={<BillingPage />} />

@@ -8,6 +8,7 @@ import { JobWithAttempts } from "area/connection/types/jobs";
 import { isJobPartialSuccess } from "area/connection/utils/jobs";
 import { AttemptRead, FailureReason } from "core/api/types/AirbyteClient";
 import { formatBytes } from "core/utils/numberHelper";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 
 import styles from "./JobStats.module.scss";
 
@@ -17,6 +18,8 @@ interface JobStatsProps {
 
 export const JobStats: React.FC<JobStatsProps> = ({ jobWithAttempts }) => {
   const { formatMessage } = useIntl();
+
+  const [showAttemptCount] = useLocalStorage("airbyte_attempts-count-in-list", false);
 
   const { job, attempts } = jobWithAttempts;
   const isPartialSuccess = isJobPartialSuccess(jobWithAttempts.attempts);
@@ -98,6 +101,16 @@ export const JobStats: React.FC<JobStatsProps> = ({ jobWithAttempts }) => {
               {hours || minutes ? <FormattedMessage id="sources.minute" values={{ minute: minutes }} /> : null}
               <FormattedMessage id="sources.second" values={{ second: seconds }} />
             </Text>
+            {showAttemptCount && (
+              <>
+                <Text as="span" color="grey" size="sm">
+                  |
+                </Text>
+                <Text as="span" color="grey" size="sm">
+                  <FormattedMessage id="jobs.attemptCount" values={{ count: attempts.length }} />
+                </Text>
+              </>
+            )}
           </>
         )}
       </FlexContainer>

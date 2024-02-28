@@ -29,6 +29,7 @@ export const CloudSettingsPage: React.FC = () => {
   const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
   const organization = useCurrentOrganizationInfo();
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: organization?.organizationId });
+  const showAdvancedSettings = useExperiment("settings.showAdvancedSettings", false);
 
   return (
     <MainPageWithScroll
@@ -63,6 +64,13 @@ export const CloudSettingsPage: React.FC = () => {
                 iconType="parameters"
                 onClick={() => showOsanoDrawer()}
                 name={formatMessage({ id: "settings.cookiePreferences" })}
+              />
+            )}
+            {showAdvancedSettings && (
+              <SettingsLink
+                iconType="gear"
+                name={formatMessage({ id: "settings.advanced" })}
+                to={CloudSettingsRoutePaths.Advanced}
               />
             )}
           </SettingsNavigationBlock>

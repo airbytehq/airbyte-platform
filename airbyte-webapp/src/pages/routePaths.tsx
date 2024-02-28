@@ -37,6 +37,7 @@ export const enum ConnectionRoutePaths {
 
 export enum SettingsRoutePaths {
   Account = "account",
+  Advanced = "advanced",
   Destination = "destination",
   Source = "source",
   Configuration = "configuration",
