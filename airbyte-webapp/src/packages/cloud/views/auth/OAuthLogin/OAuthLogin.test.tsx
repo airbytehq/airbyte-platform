@@ -8,6 +8,10 @@ import { OAuthLogin } from "./OAuthLogin";
 
 const mockLoginWithOAuth = jest.fn();
 
+jest.mock("packages/cloud/services/auth/KeycloakService", () => ({
+  useKeycloakService: () => ({ redirectToSignInWithGithub: jest.fn(), redirectToSignInWithGoogle: jest.fn() }),
+}));
+
 describe("OAuthLogin", () => {
   beforeEach(() => {
     mockLoginWithOAuth.mockReturnValue(EMPTY);

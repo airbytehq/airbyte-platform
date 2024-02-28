@@ -16,4 +16,5 @@ export enum AppActionCodes {
    * Zendesk chat was tried to open while Zendesk didn't load properly.
    */
   ZENDESK_OPEN_FAILURE = "ZENDESK_OPEN_FAILURE",
+  KEYCLOAK_USER_CREATION_FAILURE = "KEYCLOAK_USER_CREATION_FAULRE",
 }

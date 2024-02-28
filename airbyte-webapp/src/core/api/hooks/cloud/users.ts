@@ -2,6 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { trackAction } from "core/utils/datadog";
+import { AppActionCodes } from "hooks/services/AppMonitoringService";
 
 import {
   webBackendRevokeUserFromWorkspace,
@@ -10,9 +12,10 @@ import {
   webBackendListUsersByWorkspace,
   updateUser,
   webBackendRevokeUserSession,
+  createKeycloakUser,
 } from "../../generated/CloudApi";
 import { SCOPE_WORKSPACE } from "../../scopes";
-import { UserUpdate } from "../../types/CloudApi";
+import { CreateKeycloakUserRequestBody, UserUpdate } from "../../types/CloudApi";
 import { useRequestOptions } from "../../useRequestOptions";
 import { useSuspenseQuery } from "../../useSuspenseQuery";
 import { workspaceKeys } from "../workspaces";
@@ -157,5 +160,19 @@ export const useResendSigninLink = () => {
       // This is an unsecured endpoint, so we do not need to pass an access token
       { getAccessToken: () => Promise.resolve(null) }
     )
+  );
+};
+
+export const useCreateKeycloakUser = () => {
+  return useMutation(
+    ({
+      authUserId,
+      password,
+      getAccessToken,
+    }: CreateKeycloakUserRequestBody & { getAccessToken: () => Promise<string> }) =>
+      createKeycloakUser({ authUserId, password }, { getAccessToken }).catch(() => {
+        trackAction(AppActionCodes.KEYCLOAK_USER_CREATION_FAILURE, { authUserId });
+        console.warn("Failed to create keycloak user");
+      })
   );
 };
