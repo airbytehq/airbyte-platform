@@ -610,5 +610,6 @@ create index "user_invitation_scope_id_index" on "public"."user_invitation"("sco
 create index "user_invitation_scope_type_and_scope_id_index" on "public"."user_invitation"("scope_type" asc, "scope_id" asc);
 create index "workload_deadline_idx" on "public"."workload"("deadline" asc)
 where ((deadline IS NOT NULL));
+create index "workload_mutex_idx" on "public"."workload"("mutex_key" asc);
 create index "workload_status_idx" on "public"."workload"("status" asc);
 create index "workload_label_workload_id_idx" on "public"."workload_label"("workload_id" asc);
