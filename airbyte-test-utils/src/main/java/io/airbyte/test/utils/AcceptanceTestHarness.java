@@ -653,29 +653,36 @@ public class AcceptanceTestHarness {
   public void updateConnectionSchedule(
                                        final UUID connectionId,
                                        final ConnectionScheduleType newScheduleType,
-                                       final ConnectionScheduleData newScheduleData) {
-    AirbyteApiClient.retryWithJitter(() -> apiClient.getConnectionApi().updateConnection(
+                                       final ConnectionScheduleData newScheduleData)
+      throws Exception {
+    updateConnection(
         new ConnectionUpdate()
             .connectionId(connectionId)
             .scheduleType(newScheduleType)
-            .scheduleData(newScheduleData)),
-        "update connection", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+            .scheduleData(newScheduleData));
   }
 
-  public void updateConnectionCatalog(final UUID connectionId, final AirbyteCatalog catalog) {
-    AirbyteApiClient.retryWithJitter(() -> apiClient.getConnectionApi().updateConnection(
+  public void updateConnectionCatalog(final UUID connectionId, final AirbyteCatalog catalog) throws Exception {
+    updateConnection(new ConnectionUpdate()
+        .connectionId(connectionId)
+        .syncCatalog(catalog));
+  }
+
+  public ConnectionRead updateConnectionSourceCatalogId(final UUID connectionId, UUID sourceCatalogId) throws Exception {
+    return updateConnection(
         new ConnectionUpdate()
             .connectionId(connectionId)
-            .syncCatalog(catalog)),
+            .sourceCatalogId(sourceCatalogId));
+  }
+
+  private ConnectionRead updateConnection(final ConnectionUpdate request) throws Exception {
+    final var result = AirbyteApiClient.retryWithJitterThrows(() -> apiClient.getConnectionApi().updateConnection(request),
         "update connection catalog", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
-  }
-
-  public ConnectionRead updateConnectionSourceCatalogId(final UUID connectionId, UUID sourceCatalogId) {
-    return AirbyteApiClient.retryWithJitter(() -> apiClient.getConnectionApi().updateConnection(
-        new ConnectionUpdate()
-            .connectionId(connectionId)
-            .sourceCatalogId(sourceCatalogId)),
-        "update connection source catalog id", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+    // Attempting to sync immediately after updating the connection can run into a race condition in the
+    // connection manager workflow hangs. This should be fixed in the backend, but for now we try to
+    // tolerate it.
+    Thread.sleep(1000 * 5);
+    return result;
   }
 
   public JobInfoRead syncConnection(final UUID connectionId) {
@@ -959,10 +966,10 @@ public class AcceptanceTestHarness {
     }
   }
 
-  private void disableConnection(final UUID connectionId) throws ApiException {
+  private void disableConnection(final UUID connectionId) throws Exception {
     final ConnectionUpdate connectionUpdate =
         new ConnectionUpdate().connectionId(connectionId).status(ConnectionStatus.DEPRECATED);
-    apiClient.getConnectionApi().updateConnection(connectionUpdate);
+    updateConnection(connectionUpdate);
   }
 
   private void deleteSource(final UUID sourceId) {
@@ -1190,13 +1197,13 @@ public class AcceptanceTestHarness {
 
   public void updateSchemaChangePreference(final UUID connectionId,
                                            final NonBreakingChangesPreference nonBreakingChangesPreference,
-                                           final SchemaChangeBackfillPreference backfillPreference) {
-    AirbyteApiClient.retryWithJitter(() -> apiClient.getConnectionApi().updateConnection(
+                                           final SchemaChangeBackfillPreference backfillPreference)
+      throws Exception {
+    updateConnection(
         new ConnectionUpdate()
             .connectionId(connectionId)
             .nonBreakingChangesPreference(nonBreakingChangesPreference)
-            .backfillPreference(backfillPreference)),
-        "update connection non breaking change preference", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+            .backfillPreference(backfillPreference));
   }
 
   public WebBackendConnectionRead webBackendGetConnectionAndRefreshSchema(UUID connectionId) throws Exception {

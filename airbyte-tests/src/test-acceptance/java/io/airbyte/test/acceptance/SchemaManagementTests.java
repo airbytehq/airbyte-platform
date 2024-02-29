@@ -223,8 +223,6 @@ class SchemaManagementTests {
   void testBackfillDisabled() throws Exception {
     testHarness.updateSchemaChangePreference(createdConnection.getConnectionId(), NonBreakingChangesPreference.PROPAGATE_FULLY,
         SchemaChangeBackfillPreference.DISABLED);
-    // Avoid a race with the connection manager.
-    Thread.sleep(1000 * 5);
     // Run a sync with the initial data.
     final var jobRead = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
     testHarness.waitForSuccessfulSyncNoTimeout(jobRead);
@@ -251,10 +249,6 @@ class SchemaManagementTests {
   void testBackfillOnNewColumn() throws Exception {
     testHarness.updateSchemaChangePreference(createdConnection.getConnectionId(), NonBreakingChangesPreference.PROPAGATE_FULLY,
         SchemaChangeBackfillPreference.ENABLED);
-    // We sometimes get a race where the connection manager isn't ready, and this results in
-    // `syncConnection` simply
-    // hanging. This is a bug we should fix in the backend, but we tolerate it here for now.
-    Thread.sleep(1000 * 5);
     // Run a sync with the initial data.
     final var jobRead = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
     testHarness.waitForSuccessfulSyncNoTimeout(jobRead);
