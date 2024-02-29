@@ -1,3 +1,4 @@
+import isBoolean from "lodash/isBoolean";
 import React, { useCallback, useEffect } from "react";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -201,10 +202,10 @@ export const ConnectionReplicationPage: React.FC = () => {
             size: "md",
             content: (props) => <ResetWarningModal {...props} stateType={stateType} />,
           });
-          if (result.type !== "canceled") {
+          if (result.type === "closed" && isBoolean(result.reason)) {
             // Save the connection taking into account the correct skipReset value from the dialog choice.
             await saveConnection(values, {
-              skipReset: !result.reason,
+              skipReset: result.reason,
               catalogHasChanged,
             });
           } else {

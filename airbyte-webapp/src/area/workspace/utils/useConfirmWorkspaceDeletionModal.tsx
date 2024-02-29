@@ -70,9 +70,9 @@ export const useConfirmWorkspaceDeletionModal = (
       size: "md",
     });
 
-    // "closed" indicates a successful confirmation; "canceled" [sic] is its counterpart
+    // type "closed" and reason "confirm" indicates a successful confirmation; "canceled" [sic] is its counterpart
     // when the user backs out
-    if (result.type === "closed") {
+    if (result.type === "closed" && result.reason === "confirm") {
       try {
         await deleteWorkspace(workspace.workspaceId);
         registerNotification({
