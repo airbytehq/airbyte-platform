@@ -20,7 +20,6 @@ import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.Geography;
-import io.airbyte.config.Organization;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -36,7 +35,6 @@ import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.OperationService;
-import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.protocol.models.AirbyteCatalog;
@@ -149,7 +147,6 @@ public class ConfigRepository {
   private final DestinationService destinationService;
   private final OAuthService oAuthService;
   private final OperationService operationService;
-  private final OrganizationService organizationService;
   private final SourceService sourceService;
   private final WorkspaceService workspaceService;
 
@@ -162,7 +159,6 @@ public class ConfigRepository {
                           final DestinationService destinationService,
                           final OAuthService oAuthService,
                           final OperationService operationService,
-                          final OrganizationService organizationService,
                           final SourceService sourceService,
                           final WorkspaceService workspaceService) {
     this.actorDefinitionService = actorDefinitionService;
@@ -172,61 +168,8 @@ public class ConfigRepository {
     this.destinationService = destinationService;
     this.oAuthService = oAuthService;
     this.operationService = operationService;
-    this.organizationService = organizationService;
     this.sourceService = sourceService;
     this.workspaceService = workspaceService;
-  }
-
-  /**
-   * Get organization.
-   *
-   * @param organizationId id to use to find the organization
-   * @return organization, if present.
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public Optional<Organization> getOrganization(final UUID organizationId) throws IOException {
-    return organizationService.getOrganization(organizationId);
-  }
-
-  /**
-   * Write an Organization to the database.
-   *
-   * @param organization - The configuration of the organization
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public void writeOrganization(final Organization organization) throws IOException {
-    organizationService.writeOrganization(organization);
-  }
-
-  /**
-   * List organizations.
-   *
-   * @return organizations
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<Organization> listOrganizations() throws IOException {
-    return organizationService.listOrganizations();
-  }
-
-  /**
-   * List organizations (paginated).
-   *
-   * @param resourcesByOrganizationQueryPaginated - contains all the information we need to paginate
-   * @return A List of organizations objects
-   * @throws IOException you never know when you IO
-   */
-  @Deprecated
-  public List<Organization> listOrganizationsPaginated(final ResourcesByOrganizationQueryPaginated resourcesByOrganizationQueryPaginated)
-      throws IOException {
-    final var queryPaginated = new io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated(
-        resourcesByOrganizationQueryPaginated.organizationId(),
-        resourcesByOrganizationQueryPaginated.includeDeleted(),
-        resourcesByOrganizationQueryPaginated.pageSize(),
-        resourcesByOrganizationQueryPaginated.rowOffset());
-    return organizationService.listOrganizationsPaginated(queryPaginated);
   }
 
   /**

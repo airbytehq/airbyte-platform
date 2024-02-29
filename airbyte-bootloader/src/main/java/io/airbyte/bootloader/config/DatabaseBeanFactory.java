@@ -19,7 +19,6 @@ import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.OperationService;
-import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.db.Database;
@@ -123,7 +122,6 @@ public class DatabaseBeanFactory {
                                            final DestinationService destinationService,
                                            final OAuthService oauthService,
                                            final OperationService operationService,
-                                           final OrganizationService organizationService,
                                            final SourceService sourceService,
                                            final WorkspaceService workspaceService) {
     return new ConfigRepository(
@@ -134,7 +132,6 @@ public class DatabaseBeanFactory {
         destinationService,
         oauthService,
         operationService,
-        organizationService,
         sourceService,
         workspaceService);
   }

@@ -26,7 +26,6 @@ import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -78,7 +77,6 @@ class ActorPersistenceTest extends BaseConfigDatabaseTest {
                 secretsRepositoryReader,
                 secretPersistenceConfigService),
             new OperationServiceJooqImpl(database),
-            new OrganizationServiceJooqImpl(database),
             new SourceServiceJooqImpl(database,
                 featureFlagClient,
                 secretsRepositoryReader,
