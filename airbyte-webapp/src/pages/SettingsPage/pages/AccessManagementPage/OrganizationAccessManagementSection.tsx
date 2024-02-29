@@ -11,6 +11,7 @@ import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationInfo, useCurrentWorkspace, useListUsersInOrganization } from "core/api";
+import { isCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
 
 import styles from "./OrganizationAccessManagementSection.module.scss";
@@ -56,7 +57,7 @@ export const OrganizationAccessManagementSection: React.FC = () => {
           <SearchInput value={userFilter} onChange={(e) => setUserFilter(e.target.value)} />
         </FlexItem>
         <Text size="md">
-          {organization?.sso ? (
+          {organization?.sso && (
             <Badge variant="blue">
               <FlexContainer gap="xs" alignItems="center">
                 <Icon type="check" size="xs" />
@@ -65,7 +66,8 @@ export const OrganizationAccessManagementSection: React.FC = () => {
                 </Text>
               </FlexContainer>
             </Badge>
-          ) : (
+          )}
+          {!organization?.sso && isCloudApp() && (
             <ExternalLink href={links.contactSales}>
               <FormattedMessage id="settings.accessManagement.enableSso" />
             </ExternalLink>
