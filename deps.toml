@@ -54,7 +54,7 @@ apache-commons-collections = { module = "org.apache.commons:commons-collections4
 apache-commons-lang = { module = "org.apache.commons:commons-lang3", version = "3.11" }
 apache-commons-text = { module = "org.apache.commons:commons-text", version = "1.10.0" }
 apache-cxf-core = { module = "org.apache.cxf:cxf-core", version = "3.4.2" }
-appender-log4j2 = { module = "com.therealvan:appender-log4j2", version = "5.0.0" }
+appender-log4j2 = { module = "com.therealvan:appender-log4j2", version = "5.2.0" }
 assertj-core = { module = "org.assertj:assertj-core", version = "3.21.0" }
 aws-java-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version = "1.12.6" }
 aws-java-sdk-sts = {module = "com.amazonaws:aws-java-sdk-sts", version = "1.12.6"}
