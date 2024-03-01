@@ -22,6 +22,11 @@ private val logger = KotlinLogging.logger {}
 class WorkloadHandlerImpl(
   private val workloadRepository: WorkloadRepository,
 ) : WorkloadHandler {
+  companion object {
+    val ACTIVE_STATUSES: List<WorkloadStatus> =
+      listOf(WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING)
+  }
+
   override fun getWorkload(workloadId: String): ApiWorkload {
     return getDomainWorkload(workloadId).toApi()
   }
@@ -65,6 +70,15 @@ class WorkloadHandlerImpl(
     if (workloadAlreadyExists) {
       throw ConflictException("Workload with id: $workloadId already exists")
     }
+
+    if (mutexKey != null) {
+      val activeWorkloadsWithMutexKey = workloadRepository.searchByMutexKeyAndStatuses(mutexKey, statuses = ACTIVE_STATUSES)
+      if (activeWorkloadsWithMutexKey.isNotEmpty()) {
+        val workloadIds = activeWorkloadsWithMutexKey.joinToString(", ") { it.id }
+        throw ConflictException("Non-terminal Workload with mutexKey $mutexKey already exists ($workloadIds)")
+      }
+    }
+
     val domainWorkload =
       DomainWorkload(
         id = workloadId,

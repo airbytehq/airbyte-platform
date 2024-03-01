@@ -241,6 +241,28 @@ internal class WorkloadRepositoryTest {
   }
 
   @Test
+  fun `test mutex search`() {
+    val mutexKey = "mutex-search-test"
+    val workload1 =
+      Fixtures.workload(
+        id = "workload-mutex-search-1",
+        status = WorkloadStatus.PENDING,
+        mutexKey = mutexKey,
+      )
+    workloadRepo.save(workload1)
+
+    val match = workloadRepo.searchByMutexKeyAndStatuses(mutexKey, listOf(WorkloadStatus.PENDING, WorkloadStatus.RUNNING))
+    assertEquals(1, match.size)
+    assertEquals(workload1.id, match[0].id)
+
+    val emptyResult = workloadRepo.searchByMutexKeyAndStatuses(mutexKey, listOf(WorkloadStatus.CLAIMED, WorkloadStatus.RUNNING))
+    assertEquals(0, emptyResult.size)
+
+    val mutexMismatch = workloadRepo.searchByMutexKeyAndStatuses("mismatch", listOf(WorkloadStatus.PENDING, WorkloadStatus.RUNNING))
+    assertEquals(0, mutexMismatch.size)
+  }
+
+  @Test
   fun `test search`() {
     val workload1 =
       Fixtures.workload(

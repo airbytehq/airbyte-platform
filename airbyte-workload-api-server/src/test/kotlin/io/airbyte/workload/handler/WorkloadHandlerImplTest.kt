@@ -41,6 +41,17 @@ class WorkloadHandlerImplTest {
   }
 
   @Test
+  fun `test active statuses are complete`() {
+    assertEquals(
+      setOf(WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING),
+      WorkloadHandlerImpl.ACTIVE_STATUSES.toSet(),
+    )
+    assertFalse(WorkloadHandlerImpl.ACTIVE_STATUSES.contains(WorkloadStatus.CANCELLED))
+    assertFalse(WorkloadHandlerImpl.ACTIVE_STATUSES.contains(WorkloadStatus.FAILURE))
+    assertFalse(WorkloadHandlerImpl.ACTIVE_STATUSES.contains(WorkloadStatus.SUCCESS))
+  }
+
+  @Test
   fun `test get workload`() {
     val domainWorkload =
       Workload(
@@ -74,6 +85,7 @@ class WorkloadHandlerImplTest {
     val workloadLabels = mutableListOf(workloadLabel1, workloadLabel2)
 
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(false)
+    every { workloadRepository.searchByMutexKeyAndStatuses("mutex-this", WorkloadHandlerImpl.ACTIVE_STATUSES) }.returns(listOf())
     every { workloadRepository.save(any()) }.returns(
       Fixtures.workload(),
     )
@@ -113,6 +125,15 @@ class WorkloadHandlerImplTest {
   @Test
   fun `test create workload id conflict`() {
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(true)
+    assertThrows<ConflictException> {
+      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now)
+    }
+  }
+
+  @Test
+  fun `test create workload mutex conflict`() {
+    every { workloadRepository.existsById(WORKLOAD_ID) }.returns(false)
+    every { workloadRepository.searchByMutexKeyAndStatuses("mutex-this", WorkloadHandlerImpl.ACTIVE_STATUSES) }.returns(listOf(Fixtures.workload()))
     assertThrows<ConflictException> {
       workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now)
     }
