@@ -46,11 +46,11 @@ class ConfigurationMapServiceTest {
     when(realmResource.identityProviders()).thenReturn(identityProvidersResource);
 
     Map<String, Object> importFromMap = new HashMap<>();
-    importFromMap.put("providerId", "keycloak-oidc");
+    importFromMap.put("providerId", "oidc");
     importFromMap.put("fromUrl", "https://trial-577.okta.com/.well-known/openid-configuration");
 
     Map<String, String> expected = new HashMap<>();
-    expected.put("providerId", "keycloak-oidc");
+    expected.put("providerId", "oidc");
     expected.put("fromUrl", "https://trial-577.okta.com/.well-known/openid-configuration");
     expected.put("authorizationUrl", "https://trial-577.okta.com/oauth2/v1/authorize");
     expected.put("tokenUrl", "https://trial-577.okta.com/oauth2/v1/token");
@@ -62,7 +62,7 @@ class ConfigurationMapServiceTest {
     when(identityProvidersResource.importFrom(importFromMap)).thenReturn(expected);
 
     Map<String, String> actual =
-        configurationMapService.importProviderFrom(realmResource, identityProviderConfiguration, "keycloak-oidc");
+        configurationMapService.importProviderFrom(realmResource, identityProviderConfiguration, "oidc");
 
     assertEquals(expected, actual);
   }

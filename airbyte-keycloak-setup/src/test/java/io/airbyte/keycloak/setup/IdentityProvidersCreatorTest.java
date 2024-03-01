@@ -64,10 +64,10 @@ class IdentityProvidersCreatorTest {
     when(realmResource.identityProviders()).thenReturn(identityProvidersResource);
     when(identityProvidersResource.create(any(IdentityProviderRepresentation.class)))
         .thenReturn(Response.status(Response.Status.CREATED).build());
-    when(identityProviderConfiguration.getType()).thenReturn(IdentityProviderConfiguration.ProviderType.OKTA);
+    when(identityProviderConfiguration.getType()).thenReturn(IdentityProviderConfiguration.ProviderType.OIDC);
 
     Map<String, String> configMap = new HashMap<>();
-    when(configurationMapService.importProviderFrom(realmResource, identityProviderConfiguration, "keycloak-oidc"))
+    when(configurationMapService.importProviderFrom(realmResource, identityProviderConfiguration, "oidc"))
         .thenReturn(configMap);
     when(configurationMapService.setupProviderConfig(identityProviderConfiguration, configMap))
         .thenReturn(configMap);
@@ -83,10 +83,10 @@ class IdentityProvidersCreatorTest {
     when(realmResource.identityProviders()).thenReturn(identityProvidersResource);
     when(identityProvidersResource.create(any(IdentityProviderRepresentation.class)))
         .thenReturn(Response.status(Response.Status.BAD_REQUEST).build());
-    when(identityProviderConfiguration.getType()).thenReturn(IdentityProviderConfiguration.ProviderType.OKTA);
+    when(identityProviderConfiguration.getType()).thenReturn(IdentityProviderConfiguration.ProviderType.OIDC);
 
     Map<String, String> configMap = new HashMap<>();
-    when(configurationMapService.importProviderFrom(realmResource, identityProviderConfiguration, "keycloak-oidc"))
+    when(configurationMapService.importProviderFrom(realmResource, identityProviderConfiguration, "oidc"))
         .thenReturn(configMap);
     when(configurationMapService.setupProviderConfig(identityProviderConfiguration, configMap))
         .thenReturn(configMap);
