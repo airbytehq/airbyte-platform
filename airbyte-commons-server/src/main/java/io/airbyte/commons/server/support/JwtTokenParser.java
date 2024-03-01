@@ -23,6 +23,7 @@ public class JwtTokenParser {
   public static final String JWT_AUTH_PROVIDER = "auth_provider";
   public static final String JWT_AUTH_USER_ID = "auth_user_id";
   public static final String JWT_FIREBASE = "firebase";
+  public static final String JWT_EMAIL_VERIFIED = "email_verified";
 
   private static final String ISS_FIELD = "iss";
   private static final String AUTH_REALM_VALUE = "auth/realms/";
