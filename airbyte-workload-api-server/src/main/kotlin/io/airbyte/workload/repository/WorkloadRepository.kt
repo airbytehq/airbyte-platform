@@ -51,18 +51,6 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
   @Query(
     """
       SELECT * FROM workload
-      WHERE (:mutexKey) = mutex_key
-      AND ((:statuses) IS NULL OR status = ANY(CAST(ARRAY[:statuses] AS workload_status[])))
-    """,
-  )
-  fun searchByMutexKeyAndStatuses(
-    mutexKey: String,
-    @Expandable statuses: List<WorkloadStatus>?,
-  ): List<Workload>
-
-  @Query(
-    """
-      SELECT * FROM workload
       WHERE ((:dataplaneIds) IS NULL OR dataplane_id IN (:dataplaneIds))
       AND ((:statuses) IS NULL OR status = ANY(CAST(ARRAY[:statuses] AS workload_status[])))
       AND ((:types) IS NULL OR type = ANY(CAST(ARRAY[:types] AS workload_type[])))
