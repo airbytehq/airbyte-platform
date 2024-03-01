@@ -1,18 +1,17 @@
 import dayjs from "dayjs";
 import React from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { EmptyResourceBlock } from "components/common/EmptyResourceBlock";
 import { ConnectionSyncButtons } from "components/connection/ConnectionSync/ConnectionSyncButtons";
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
-import { FormLabel } from "components/forms/FormControl";
 import { PageContainer } from "components/PageContainer";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { ClearFiltersButton } from "components/ui/ClearFiltersButton";
-import { DatePicker } from "components/ui/DatePicker/DatePicker";
+import { RangeDatePicker } from "components/ui/DatePicker";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
@@ -60,7 +59,6 @@ export const ConnectionJobHistoryPage: React.FC = () => {
   const analyticsService = useAnalyticsService();
   const navigate = useNavigate();
   const { jobId: linkedJobId } = useAttemptLink();
-  const { formatMessage } = useIntl();
   const { pathname } = useLocation();
   const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useListJobs(
     {
@@ -85,14 +83,10 @@ export const ConnectionJobHistoryPage: React.FC = () => {
     setFilterValue("jobStatus", status);
   };
 
-  const updateStartDateFilter = (date: string) => {
+  const updateRangeDateFilter = (dates: [string, string]) => {
     clearLinkedJob();
-    setFilterValue("startDate", date);
-  };
-
-  const updateEndDateFilter = (date: string) => {
-    clearLinkedJob();
-    setFilterValue("endDate", date);
+    setFilterValue("startDate", dates[0]);
+    setFilterValue("endDate", dates[1]);
   };
 
   const onLoadMoreJobs = () => {
@@ -137,43 +131,18 @@ export const ConnectionJobHistoryPage: React.FC = () => {
               </FlexContainer>
               <FlexContainer alignItems="center">
                 <ListBox
-                  className={styles.statusFilter}
+                  buttonClassName={styles.statusFilter}
                   options={statusFilterOptions}
                   onSelect={(value) => updateJobStatusFilter(value)}
                   selectedValue={filterValues.jobStatus}
                   id="job-history-status-filter"
                 />
-                <FlexContainer alignItems="center">
-                  <FormLabel
-                    label={formatMessage({ id: "jobHistory.dateFilter.start.label" })}
-                    htmlFor="job-history-status-filter"
-                  />
-                  <DatePicker
-                    className={styles.dateFilter}
-                    value={filterValues.startDate}
-                    placeholder={formatMessage({ id: "jobHistory.dateFilter.start.placeholder" })}
-                    maxDate={filterValues.endDate === "" ? END_OF_TODAY : filterValues.endDate}
-                    onChange={updateStartDateFilter}
-                    selectsStart
-                    endDate={filterValues.endDate === "" ? undefined : dayjs(filterValues.endDate).toDate()}
-                  />
-                </FlexContainer>
-                <FlexContainer alignItems="center">
-                  <FormLabel
-                    label={formatMessage({ id: "jobHistory.dateFilter.end.label" })}
-                    htmlFor="job-history-status-filter"
-                  />
-                  <DatePicker
-                    className={styles.dateFilter}
-                    value={filterValues.endDate}
-                    placeholder={formatMessage({ id: "jobHistory.dateFilter.end.placeholder" })}
-                    minDate={filterValues.startDate}
-                    maxDate={END_OF_TODAY}
-                    onChange={updateEndDateFilter}
-                    selectsEnd
-                    startDate={filterValues.startDate === "" ? undefined : dayjs(filterValues.startDate).toDate()}
-                  />
-                </FlexContainer>
+                <RangeDatePicker
+                  value={[filterValues.startDate, filterValues.endDate]}
+                  onChange={updateRangeDateFilter}
+                  maxDate={END_OF_TODAY}
+                  buttonText="jobHistory.rangeDateFilter"
+                />
                 {areAnyFiltersActive && <ClearFiltersButton onClick={clearFilters} />}
                 <span className={styles.jobCount}>
                   {!isLoading && (
@@ -236,7 +205,11 @@ function endOfDay(date: string) {
 
 const statusFilterOptions: Array<Option<JobStatus | "all">> = [
   {
-    label: <FormattedMessage id="jobHistory.statusFilter.allJobs" />,
+    label: (
+      <Text color="grey" bold>
+        <FormattedMessage id="jobHistory.statusFilter.allJobs" />{" "}
+      </Text>
+    ),
     value: "all",
   },
   {
