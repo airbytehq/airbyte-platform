@@ -26,8 +26,6 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -88,31 +86,6 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   @NotNull
-  static String formatDuration(final Instant start, final Instant end) {
-    Duration duration = Duration.between(start, end);
-    if (duration.toMinutes() == 0) {
-      return String.format("%d sec", duration.toSecondsPart());
-    } else if (duration.toHours() == 0) {
-      return String.format("%d min %d sec", duration.toMinutesPart(), duration.toSecondsPart());
-    } else if (duration.toDays() == 0) {
-      return String.format("%d hours %d min", duration.toHoursPart(), duration.toMinutesPart());
-    }
-    return String.format("%d days %d hours", duration.toDays(), duration.toHoursPart());
-  }
-
-  @NotNull
-  static String formatVolume(final long bytes) {
-    long currentValue = bytes;
-    for (String unit : List.of("B", "kB", "MB", "GB")) {
-      if (currentValue < 1024) {
-        return String.format("%d %s", currentValue, unit);
-      }
-      currentValue = currentValue / 1024;
-    }
-    return String.format("%d TB", currentValue);
-  }
-
-  @NotNull
   static Notification buildJobCompletedNotification(final SyncSummary summary, final String text) {
     Notification notification = new Notification();
     notification.setText(text);
@@ -142,7 +115,7 @@ public class SlackNotificationClient extends NotificationClient {
       durationLabel.setText("*Duration:*");
       final Field durationValue = description.addField();
       durationValue.setType("mrkdwn");
-      durationValue.setText(formatDuration(summary.getStartedAt(), summary.getFinishedAt()));
+      durationValue.setText(summary.getDurationFormatted());
     }
 
     if (!summary.isSuccess() && summary.getErrorMessage() != null) {
@@ -162,7 +135,7 @@ public class SlackNotificationClient extends NotificationClient {
                                          %s loaded / %s extracted
                                          """,
         summary.getRecordsCommitted(), summary.getRecordsEmitted(),
-        formatVolume(summary.getBytesCommitted()), formatVolume(summary.getBytesEmitted())));
+        summary.getBytesCommittedFormatted(), summary.getBytesEmittedFormatted()));
 
     return notification;
   }
