@@ -248,7 +248,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(source).start(sourceConfig, jobRoot, replicationInput.getConnectionId());
+    verify(source).start(sourceConfig, jobRoot);
     verify(destination).start(destinationConfig, jobRoot);
     verify(onReplicationRunning).call();
     verify(destination).accept(RECORD_MESSAGE1);
@@ -290,7 +290,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(source).start(sourceConfig, jobRoot, replicationInput.getConnectionId());
+    verify(source).start(sourceConfig, jobRoot);
     verify(destination).start(destinationConfig, jobRoot);
     verify(destination).accept(RECORD_MESSAGE1);
     verify(destination).accept(RECORD_MESSAGE2);
@@ -321,7 +321,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(source).start(sourceConfig, jobRoot, replicationInput.getConnectionId());
+    verify(source).start(sourceConfig, jobRoot);
     verify(destination).start(destinationConfig, jobRoot);
     verify(destination).accept(RECORD_MESSAGE1);
     verify(destination).accept(RECORD_MESSAGE2);
@@ -353,7 +353,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(source).start(sourceConfig, jobRoot, replicationInput.getConnectionId());
+    verify(source).start(sourceConfig, jobRoot);
     verify(destination).start(destinationConfig, jobRoot);
     verify(destination).accept(RECORD_MESSAGE1);
     verify(destination).accept(RECORD_MESSAGE2);
@@ -384,7 +384,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(source).start(sourceConfig, jobRoot, replicationInput.getConnectionId());
+    verify(source).start(sourceConfig, jobRoot);
     verify(destination).start(destinationConfig, jobRoot);
     verify(source, atLeastOnce()).close();
     verify(destination).close();
@@ -406,7 +406,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(source).start(sourceConfig, jobRoot, replicationInput.getConnectionId());
+    verify(source).start(sourceConfig, jobRoot);
     verify(destination).start(destinationConfig, jobRoot);
     verify(destination).accept(RECORD_MESSAGE1);
     verify(destination).accept(RECORD_MESSAGE2);
@@ -435,7 +435,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(source).start(sourceConfig, jobRoot, replicationInput.getConnectionId());
+    verify(source).start(sourceConfig, jobRoot);
     verify(destination).start(destinationConfig, jobRoot);
     verify(destination).accept(RECORD_MESSAGE1);
     verify(destination).accept(RECORD_MESSAGE2);
@@ -476,7 +476,7 @@ abstract class ReplicationWorkerTest {
     final ReplicationWorker worker = getDefaultReplicationWorker();
     worker.run(replicationInput, jobRoot);
 
-    verify(source).start(sourceConfig, jobRoot, replicationInput.getConnectionId());
+    verify(source).start(sourceConfig, jobRoot);
     verify(destination).start(destinationConfig, jobRoot);
     verify(destination).accept(RECORD_MESSAGE1);
     verify(destination).accept(RECORD_MESSAGE2);
@@ -641,7 +641,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(source).start(sourceConfig, jobRoot, replicationInput.getConnectionId());
+    verify(source).start(sourceConfig, jobRoot);
     verify(destination).start(destinationConfig, jobRoot);
     verify(destination).accept(RECORD_MESSAGE1);
     verify(destination).accept(RECORD_MESSAGE2);

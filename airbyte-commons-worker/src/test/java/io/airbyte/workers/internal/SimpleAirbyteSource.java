@@ -13,7 +13,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
-import java.util.UUID;
 
 /**
  * Simple in memory implementation of an AirbyteSource for testing purpose.
@@ -42,7 +41,7 @@ public class SimpleAirbyteSource implements AirbyteSource {
   }
 
   @Override
-  public void start(WorkerSourceConfig sourceConfig, Path jobRoot, UUID connectionId) throws Exception {
+  public void start(WorkerSourceConfig sourceConfig, Path jobRoot) throws Exception {
 
   }
 

@@ -22,10 +22,6 @@ import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.logging.MdcScope.Builder;
 import io.airbyte.commons.protocol.ProtocolSerializer;
 import io.airbyte.config.WorkerSourceConfig;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.workers.WorkerUtils;
@@ -38,7 +34,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,35 +59,27 @@ public class DefaultAirbyteSource implements AirbyteSource {
   private final AirbyteStreamFactory streamFactory;
   private final ProtocolSerializer protocolSerializer;
   private final HeartbeatMonitor heartbeatMonitor;
-  private final MetricClient metricClient;
 
   private Process sourceProcess = null;
   private Iterator<AirbyteMessage> messageIterator = null;
   private Integer exitValue = null;
   private final boolean featureFlagLogConnectorMsgs;
-  private MetricAttribute connectionAttribute = null;
 
   public DefaultAirbyteSource(final IntegrationLauncher integrationLauncher,
                               final AirbyteStreamFactory streamFactory,
                               final HeartbeatMonitor heartbeatMonitor,
                               final ProtocolSerializer protocolSerializer,
-                              final FeatureFlags featureFlags,
-                              final MetricClient metricClient) {
+                              final FeatureFlags featureFlags) {
     this.integrationLauncher = integrationLauncher;
     this.streamFactory = streamFactory;
     this.protocolSerializer = protocolSerializer;
     this.heartbeatMonitor = heartbeatMonitor;
     this.featureFlagLogConnectorMsgs = featureFlags.logConnectorMessages();
-    this.metricClient = metricClient;
   }
 
   @Override
-  public void start(final WorkerSourceConfig sourceConfig, final Path jobRoot, final UUID connectionId) throws Exception {
+  public void start(final WorkerSourceConfig sourceConfig, final Path jobRoot) throws Exception {
     Preconditions.checkState(sourceProcess == null);
-
-    if (connectionId != null) {
-      connectionAttribute = new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString());
-    }
 
     sourceProcess = integrationLauncher.read(jobRoot,
         WorkerConstants.SOURCE_CONFIG_JSON_FILENAME,
@@ -150,11 +137,7 @@ public class DefaultAirbyteSource implements AirbyteSource {
   public Optional<AirbyteMessage> attemptRead() {
     Preconditions.checkState(sourceProcess != null);
 
-    final Optional<AirbyteMessage> m = Optional.ofNullable(messageIterator.hasNext() ? messageIterator.next() : null);
-    if (m.isPresent()) {
-      metricClient.count(OssMetricsRegistry.WORKER_SOURCE_MESSAGE_READ, 1, connectionAttribute);
-    }
-    return m;
+    return Optional.ofNullable(messageIterator.hasNext() ? messageIterator.next() : null);
   }
 
   @Override

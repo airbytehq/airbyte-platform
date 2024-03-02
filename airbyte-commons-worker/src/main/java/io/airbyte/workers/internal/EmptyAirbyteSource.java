@@ -29,7 +29,6 @@ import java.util.LinkedList;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -55,7 +54,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
 
   @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
-  public void start(final WorkerSourceConfig workerSourceConfig, final Path jobRoot, final UUID connectionId) throws Exception {
+  public void start(final WorkerSourceConfig workerSourceConfig, final Path jobRoot) throws Exception {
     if (workerSourceConfig != null && workerSourceConfig.getSourceConnectionConfiguration() != null) {
       final ResetSourceConfiguration resetSourceConfiguration = parseResetSourceConfigurationAndLogError(workerSourceConfig);
       streamsToReset.addAll(resetSourceConfiguration.getStreamsToReset());

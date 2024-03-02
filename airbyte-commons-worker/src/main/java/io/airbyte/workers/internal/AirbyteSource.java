@@ -8,7 +8,6 @@ import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.protocol.models.AirbyteMessage;
 import java.nio.file.Path;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * This interface provides a java interface over all interactions with a Source from the POV of the
@@ -22,10 +21,9 @@ public interface AirbyteSource extends AutoCloseable {
    * @param sourceConfig - contains the arguments that must be passed to the read method of the
    *        Source.
    * @param jobRoot - directory where the job can write data.
-   * @param connectionId - connectionId if applicable
    * @throws Exception - throws if there is any failure in startup.
    */
-  void start(WorkerSourceConfig sourceConfig, Path jobRoot, UUID connectionId) throws Exception;
+  void start(WorkerSourceConfig sourceConfig, Path jobRoot) throws Exception;
 
   /**
    * Means no more data will be emitted by the Source. This may be because all data has already been

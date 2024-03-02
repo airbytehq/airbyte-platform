@@ -100,7 +100,6 @@ class ReplicationWorkerHelper(
   private var destinationConfig: WorkerDestinationConfig? = null
   private var currentDestinationStream: StreamDescriptor? = null
   private var ctx: ReplicationContext? = null
-  private var readWriteMetricsAttribute: MetricAttribute? = null
   private lateinit var replicationFeatureFlags: ReplicationFeatureFlags
 
   fun markCancelled(): Unit = _cancelled.set(true)
@@ -169,7 +168,6 @@ class ReplicationWorkerHelper(
     timeTracker.trackReplicationStartTime()
 
     this.ctx = ctx
-    this.readWriteMetricsAttribute = MetricAttribute(MetricTags.CONNECTION_ID, ctx.connectionId.toString())
     this.replicationFeatureFlags = replicationFeatureFlags
 
     analyticsMessageTracker.ctx = ctx
@@ -211,7 +209,7 @@ class ReplicationWorkerHelper(
         .also { fieldSelector.populateFields(it.catalog) }
 
     try {
-      source.start(sourceConfig, jobRoot, ctx?.connectionId)
+      source.start(sourceConfig, jobRoot)
     } catch (e: Exception) {
       throw RuntimeException(e)
     }
@@ -281,7 +279,6 @@ class ReplicationWorkerHelper(
   }
 
   fun processMessageFromDestination(destinationRawMessage: AirbyteMessage) {
-    metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_MESSAGE_READ, 1, readWriteMetricsAttribute)
     val message = mapper.revertMap(destinationRawMessage)
     internalProcessMessageFromDestination(message)
   }
@@ -418,7 +415,6 @@ class ReplicationWorkerHelper(
     // internally we always want to deal with the state message we got from the
     // source, so we only modify the state message after processing it, right before we send it to the
     // destination
-    metricClient.count(OssMetricsRegistry.WORKER_SOURCE_MESSAGE_READ, 1, readWriteMetricsAttribute)
     return internalProcessMessageFromSource(sourceRawMessage)
       .let { mapper.mapMessage(it) }
       .let { Optional.of(it) }
