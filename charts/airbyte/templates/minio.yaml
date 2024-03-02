@@ -106,4 +106,15 @@ spec:
           value: {{ .Values.minio.auth.rootPassword }}
         - name: MINIO_ENDPOINT
           value: {{ .Values.minio.endpoint }}
+  nodeSelector:
+    {{- toYaml . | nindent 8 }}
+  {{- end }}
+  {{- with .Values.minio.affinity }}
+  affinity:
+    {{- toYaml . | nindent 8 }}
+  {{- end }}
+  {{- with .Values.minio.tolerations }}
+  tolerations:
+    {{- toYaml . | nindent 8 }}
+  {{- end }}
 {{ end }}
