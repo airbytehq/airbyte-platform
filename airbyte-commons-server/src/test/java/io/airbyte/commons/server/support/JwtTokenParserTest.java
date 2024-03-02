@@ -21,6 +21,7 @@ class JwtTokenParserTest {
             "{"
                 + "\"name\": \"test-user-name\", "
                 + "\"email\": \"test-user-email\", "
+                + "\"email_verified\": true, "
                 + "\"firebase\": \"someFirebaseField\", "
                 + "\"authUserId\": \"test-user-auth-id\""
                 + "}");
@@ -28,6 +29,7 @@ class JwtTokenParserTest {
 
     assertEquals(resolvedJwtMap.get(JwtTokenParser.JWT_USER_NAME), "test-user-name");
     assertEquals(resolvedJwtMap.get(JwtTokenParser.JWT_USER_EMAIL), "test-user-email");
+    assertEquals(resolvedJwtMap.get(JwtTokenParser.JWT_USER_EMAIL_VERIFIED), true);
     assertEquals(resolvedJwtMap.get(JwtTokenParser.JWT_AUTH_PROVIDER), AuthProvider.GOOGLE_IDENTITY_PLATFORM);
     assertEquals(resolvedJwtMap.get(JwtTokenParser.JWT_AUTH_USER_ID), "test-user-auth-id");
   }
@@ -38,6 +40,7 @@ class JwtTokenParserTest {
         new ObjectMapper().readTree("{"
             + "\"name\": \"test-user-name\", "
             + "\"email\": \"test-user-email\", "
+            + "\"email_verified\": false, "
             + "\"iss\": \"http://localhost:8000/auth/realms/airbyte\", "
             + "\"sub\": \"test-user-auth-id\""
             + "}");
@@ -46,6 +49,7 @@ class JwtTokenParserTest {
     assertEquals(resolvedJwtMap.get(JwtTokenParser.JWT_SSO_REALM), "airbyte");
     assertEquals(resolvedJwtMap.get(JwtTokenParser.JWT_USER_NAME), "test-user-name");
     assertEquals(resolvedJwtMap.get(JwtTokenParser.JWT_USER_EMAIL), "test-user-email");
+    assertEquals(resolvedJwtMap.get(JwtTokenParser.JWT_USER_EMAIL_VERIFIED), false);
     assertEquals(resolvedJwtMap.get(JwtTokenParser.JWT_AUTH_PROVIDER), AuthProvider.KEYCLOAK);
     assertEquals(resolvedJwtMap.get(JwtTokenParser.JWT_AUTH_USER_ID), "test-user-auth-id");
   }
