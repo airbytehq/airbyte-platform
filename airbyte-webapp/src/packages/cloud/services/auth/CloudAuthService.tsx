@@ -359,9 +359,13 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
 
         try {
           ({ user: firebaseUser } = await signInWithEmailLink(firebaseAuth, email));
-          await updatePassword(firebaseUser, password);
-          // Store the password in a ref so that we can use it to create a keycloak user after the firebase user is created
-          passwordRef.current = password;
+          await updatePassword(firebaseUser, password).then(() => {
+            createKeycloakUser({
+              authUserId: firebaseUser.uid,
+              getAccessToken: () => firebaseUser.getIdToken(),
+              password,
+            });
+          });
         } catch (e) {
           await firebaseAuth.signOut();
           if (e.message === EmailLinkErrorCodes.LINK_EXPIRED) {
