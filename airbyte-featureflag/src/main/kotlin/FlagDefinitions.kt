@@ -174,8 +174,6 @@ object AddInitialCreditsForWorkspace : Temporary<Int>(key = "add-credits-at-work
 
 object WorkloadApiRouting : Permanent<String>(key = "workload-api-routing", default = "workload_default")
 
-object FailMissingPks : Temporary<Boolean>(key = "platform.fail-missing-pks", default = false)
-
 object PrintLongRecordPks : Temporary<Boolean>(key = "platform.print-long-record-pks", default = false)
 
 object InjectAwsSecretsToConnectorPods : Temporary<Boolean>(key = "platform.inject-aws-secrets-to-connector-pods", default = false)

@@ -378,7 +378,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
           launcherConfig.getProtocolVersion() != null ? launcherConfig.getProtocolVersion() : AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION;
       final AirbyteStreamFactory streamFactory =
           new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(), Optional.empty(), Optional.empty(),
-              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
+              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false),
               gsonPksExtractor);
 
       return new DefaultCheckConnectionWorker(integrationLauncher, connectorConfigUpdater, streamFactory);

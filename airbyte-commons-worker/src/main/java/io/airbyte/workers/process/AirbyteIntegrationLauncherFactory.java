@@ -11,7 +11,6 @@ import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.protocol.VersionedProtocolSerializer;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.featureflag.Connection;
-import io.airbyte.featureflag.FailMissingPks;
 import io.airbyte.featureflag.FailSyncIfTooBig;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
@@ -109,11 +108,6 @@ public class AirbyteIntegrationLauncherFactory {
             new Connection(sourceLauncherConfig.getConnectionId()),
             new Workspace(sourceLauncherConfig.getWorkspaceId()))));
 
-    final boolean failMissingPks = featureFlagClient.boolVariation(FailMissingPks.INSTANCE,
-        new Multi(List.of(
-            new Connection(sourceLauncherConfig.getConnectionId()),
-            new Workspace(sourceLauncherConfig.getWorkspaceId()))));
-
     final boolean printLongRecordPks = featureFlagClient.boolVariation(PrintLongRecordPks.INSTANCE,
         new Multi(List.of(
             new Connection(sourceLauncherConfig.getConnectionId()),
@@ -123,7 +117,6 @@ public class AirbyteIntegrationLauncherFactory {
         getStreamFactory(sourceLauncherConfig, configuredAirbyteCatalog, SourceException.class, DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER,
             new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(
                 failTooLongRecords,
-                failMissingPks,
                 printLongRecordPks)),
         heartbeatMonitor,
         getProtocolSerializer(sourceLauncherConfig),
@@ -148,7 +141,7 @@ public class AirbyteIntegrationLauncherFactory {
             configuredAirbyteCatalog,
             DestinationException.class,
             DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER,
-            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false)),
+            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false)),
         new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
             Optional.of(configuredAirbyteCatalog)),
         getProtocolSerializer(destinationLauncherConfig), destinationTimeoutMonitor);

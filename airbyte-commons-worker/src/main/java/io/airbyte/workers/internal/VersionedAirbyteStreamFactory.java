@@ -59,7 +59,7 @@ import org.slf4j.LoggerFactory;
 @SuppressWarnings("PMD.MoreThanOneLogger")
 public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
 
-  public record InvalidLineFailureConfiguration(boolean failTooLongRecords, boolean failMissingPks, boolean printLongRecordPks) {}
+  public record InvalidLineFailureConfiguration(boolean failTooLongRecords, boolean printLongRecordPks) {}
 
   public static final String RECORD_TOO_LONG = "Record is too long, the size is: ";
 
@@ -110,7 +110,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   @VisibleForTesting
   public static VersionedAirbyteStreamFactory noMigrationVersionedAirbyteStreamFactory(final boolean failTooLongRecords) {
     return noMigrationVersionedAirbyteStreamFactory(LOGGER, MdcScope.DEFAULT_BUILDER, Optional.empty(), Runtime.getRuntime().maxMemory(),
-        new InvalidLineFailureConfiguration(failTooLongRecords, false, false), new GsonPksExtractor());
+        new InvalidLineFailureConfiguration(failTooLongRecords, false), new GsonPksExtractor());
   }
 
   /**
@@ -369,7 +369,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     Optional<AirbyteMessage> m = deserializer.deserializeExact(line);
 
     if (m.isPresent()) {
-      m = BasicAirbyteMessageValidator.validate(m.get(), configuredAirbyteCatalog, invalidLineFailureConfiguration.failMissingPks);
+      m = BasicAirbyteMessageValidator.validate(m.get(), configuredAirbyteCatalog);
 
       if (m.isEmpty()) {
         logger.error("Validation failed: {}", Jsons.serialize(line));
