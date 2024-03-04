@@ -19,7 +19,7 @@ interface JobStatsProps {
 export const JobStats: React.FC<JobStatsProps> = ({ jobWithAttempts }) => {
   const { formatMessage } = useIntl();
 
-  const [showAttemptCount] = useLocalStorage("airbyte_attempts-count-in-list", false);
+  const [showExtendedStats] = useLocalStorage("airbyte_extended-attempts-stats", false);
 
   const { job, attempts } = jobWithAttempts;
   const isPartialSuccess = isJobPartialSuccess(jobWithAttempts.attempts);
@@ -91,18 +91,18 @@ export const JobStats: React.FC<JobStatsProps> = ({ jobWithAttempts }) => {
               |
             </Text>
             <Text as="span" color="grey" size="sm">
-              <FormattedMessage id="jobs.jobId" values={{ id: job.id }} />
-            </Text>
-            <Text as="span" color="grey" size="sm">
-              |
-            </Text>
-            <Text as="span" color="grey" size="sm">
               {hours ? <FormattedMessage id="sources.hour" values={{ hour: hours }} /> : null}
               {hours || minutes ? <FormattedMessage id="sources.minute" values={{ minute: minutes }} /> : null}
               <FormattedMessage id="sources.second" values={{ second: seconds }} />
             </Text>
-            {showAttemptCount && (
+            {showExtendedStats && (
               <>
+                <Text as="span" color="grey" size="sm">
+                  |
+                </Text>
+                <Text as="span" color="grey" size="sm">
+                  <FormattedMessage id="jobs.jobId" values={{ id: job.id }} />
+                </Text>
                 <Text as="span" color="grey" size="sm">
                   |
                 </Text>

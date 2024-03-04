@@ -35,7 +35,7 @@ const SwitchSetting: React.FC<SwitchSettingProps> = ({ id, onCheckedChange, chec
 export const AdvancedSettingsPage: React.FC = () => {
   const { formatMessage } = useIntl();
   const [workspaceInTitle, setWorkspaceInTitle] = useLocalStorage("airbyte_workspace-in-title", false);
-  const [attemptsCount, setAttemptsCount] = useLocalStorage("airbyte_attempts-count-in-list", false);
+  const [attemptsStats, setAttemptsStats] = useLocalStorage("airbyte_extended-attempts-stats", false);
 
   return (
     <Card title={formatMessage({ id: "settings.advancedSettings.title" })}>
@@ -50,10 +50,10 @@ export const AdvancedSettingsPage: React.FC = () => {
         />
         <SwitchSetting
           id="attempts-count-in-list"
-          checked={attemptsCount}
-          onCheckedChange={(checked) => setAttemptsCount(checked)}
-          label={formatMessage({ id: "settings.advancedSettings.attemptCount" })}
-          description={formatMessage({ id: "settings.advancedSettings.attemptCountDescription" })}
+          checked={attemptsStats}
+          onCheckedChange={(checked) => setAttemptsStats(checked)}
+          label={formatMessage({ id: "settings.advancedSettings.attemptStats" })}
+          description={formatMessage({ id: "settings.advancedSettings.attemptStatsDescription" })}
         />
       </FlexContainer>
     </Card>

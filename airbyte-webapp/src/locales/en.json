@@ -906,8 +906,8 @@
   "settings.advancedSettings.description": "Advanced settings only apply for you and don't change any workspace settings.",
   "settings.advancedSettings.workspaceInTitle": "Workspace in title",
   "settings.advancedSettings.workspaceInTitleDescription": "Prefix the tab name with the current workspace name. This will require a page reload to take effect.",
-  "settings.advancedSettings.attemptCount": "Show attempt count",
-  "settings.advancedSettings.attemptCountDescription": "Show attempt count in job history page.",
+  "settings.advancedSettings.attemptStats": "Show extended attempt details",
+  "settings.advancedSettings.attemptStatsDescription": "Show additional details on attempts in the job history page like job ID and attempt count.",
 
   "settings.applications.token.new": "New access token",
   "settings.applications.token.warning": "You can only view this key once. Make sure you save this key in a safe place.",

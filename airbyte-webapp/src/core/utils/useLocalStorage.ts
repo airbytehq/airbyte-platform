@@ -21,7 +21,7 @@ interface AirbyteLocalStorage {
   "airbyte_show-dev-tools": boolean;
   "airbyte_workspace-in-title": boolean;
   "airbyte_keycloak-social-logins": boolean;
-  "airbyte_attempts-count-in-list": boolean;
+  "airbyte_extended-attempts-stats": boolean;
 }
 
 /*
