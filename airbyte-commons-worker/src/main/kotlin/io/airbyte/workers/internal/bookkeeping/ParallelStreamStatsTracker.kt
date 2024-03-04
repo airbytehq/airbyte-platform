@@ -7,6 +7,8 @@ import io.airbyte.config.SyncStats
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EmitStateStatsToSegment
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
@@ -50,6 +52,10 @@ class ParallelStreamStatsTracker(
   private val syncStatsCounters = SyncStatsCounters()
   private var expectedEstimateType: Type? = null
   private var replicationFeatureFlags: ReplicationFeatureFlags? = null
+  private val emitStatsCounterFlag: Boolean by lazy {
+    val connectionContext = Multi(listOf(Connection(connectionId), Workspace(workspaceId)))
+    featureFlagClient.boolVariation(EmitStateStatsToSegment, connectionContext)
+  }
 
   @Volatile
   private var hasEstimatesErrors = false
@@ -284,8 +290,7 @@ class ParallelStreamStatsTracker(
   }
 
   private fun shouldEmitStateStatsToSegment(stateMessage: AirbyteStateMessage): Boolean {
-    val connectionContext = Connection(connectionId)
-    return featureFlagClient.boolVariation(EmitStateStatsToSegment, connectionContext) &&
+    return emitStatsCounterFlag &&
       (
         stateMessage.type == AirbyteStateMessage.AirbyteStateType.STREAM ||
           stateMessage.type == AirbyteStateMessage.AirbyteStateType.GLOBAL
@@ -313,7 +318,9 @@ class ParallelStreamStatsTracker(
       payload["state_hash"] = stateMessage.getStateHashCode(Hashing.murmur3_32_fixed()).toString()
       if (stateMessage.type == AirbyteStateMessage.AirbyteStateType.STREAM) {
         val nameNamespacePair = getNameNamespacePair(stateMessage)
-        payload["stream_namespace"] = nameNamespacePair.namespace
+        if (nameNamespacePair.namespace != null) {
+          payload["stream_namespace"] = nameNamespacePair.namespace
+        }
         payload["stream_name"] = nameNamespacePair.name
       } else {
         payload["stream_namespace"] = ""
