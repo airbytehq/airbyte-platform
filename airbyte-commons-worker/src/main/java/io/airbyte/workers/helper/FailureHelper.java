@@ -413,6 +413,20 @@ public class FailureHelper {
         .withExternalMessage(externalMessage);
   }
 
+  /**
+   * Create generic platform failure.
+   *
+   * @param t throwable that cause the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
+  public static FailureReason platformFailure(final Throwable t, final Long jobId, final Integer attemptNumber, final String externalMessage) {
+    return genericFailure(t, jobId, attemptNumber)
+        .withFailureOrigin(FailureOrigin.AIRBYTE_PLATFORM)
+        .withExternalMessage(externalMessage);
+  }
+
   private static Metadata jobAndAttemptMetadata(final Long jobId, final Integer attemptNumber) {
     return new Metadata()
         .withAdditionalProperty(JOB_ID_METADATA_KEY, jobId)

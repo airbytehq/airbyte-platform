@@ -34,6 +34,7 @@ import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.context.ReplicationFeatureFlags
+import io.airbyte.workers.exception.WorkloadHeartbeatException
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor
 import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.internal.AirbyteDestination
@@ -150,7 +151,8 @@ class ReplicationWorkerHelper(
               return@Runnable
             } else if (Duration.between(lastSuccessfulHeartbeat, Instant.now()) > heartbeatTimeoutDuration) {
               logger.warn(e) { "Have not been able to update heartbeat for more than the timeout duration, shutting down heartbeat" }
-              markCancelled()
+              markFailed()
+              trackFailure(WorkloadHeartbeatException("Workload Heartbeat Error", e))
               return@Runnable
             }
             logger.warn(e) { "Error while trying to heartbeat, re-trying" }
@@ -471,6 +473,7 @@ class ReplicationWorkerHelper(
         is DestinationException -> FailureHelper.destinationFailure(ex, jobId, attempt)
         is HeartbeatTimeoutChaperone.HeartbeatTimeoutException -> FailureHelper.sourceHeartbeatFailure(ex, jobId, attempt)
         is DestinationTimeoutMonitor.TimeoutException -> FailureHelper.destinationTimeoutFailure(ex, jobId, attempt)
+        is WorkloadHeartbeatException -> FailureHelper.platformFailure(ex, jobId, attempt, ex.message)
         else -> FailureHelper.replicationFailure(ex, jobId, attempt)
       }
   }
