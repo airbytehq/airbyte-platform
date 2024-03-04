@@ -306,7 +306,6 @@ describe("Connector form", () => {
         renderFooter={() => <button type="submit">Submit</button>}
         selectedConnectorDefinition={connectorDefinition}
         selectedConnectorDefinitionSpecification={
-          // @ts-expect-error Partial objects for testing
           {
             sourceDefinitionId: "test-service-type",
             documentationUrl: "",
@@ -318,7 +317,7 @@ describe("Connector form", () => {
               },
             },
             ...specificationOverride,
-          } as DestinationDefinitionSpecificationRead
+          } as unknown as DestinationDefinitionSpecificationRead
         }
       />,
       undefined,
