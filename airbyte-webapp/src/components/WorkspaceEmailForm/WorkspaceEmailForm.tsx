@@ -6,6 +6,7 @@ import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 
 import { useCurrentWorkspace, useInvalidateWorkspace, useUpdateWorkspace } from "core/api";
+import { useIntent } from "core/utils/rbac";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -24,6 +25,7 @@ export const WorkspaceEmailForm = () => {
   const { trackError } = useAppMonitoringService();
   const { workspaceId, name, email } = useCurrentWorkspace();
   const invalidateWorkspace = useInvalidateWorkspace(workspaceId);
+  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId });
 
   const onSubmit = async ({ email }: WorkspaceEmailFormValues) => {
     await updateWorkspace({
@@ -61,6 +63,7 @@ export const WorkspaceEmailForm = () => {
       onSubmit={onSubmit}
       onSuccess={onSuccess}
       onError={onError}
+      disabled={!canUpdateWorkspace}
     >
       <FormControl<WorkspaceEmailFormValues>
         name="email"

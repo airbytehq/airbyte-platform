@@ -6,14 +6,15 @@ import { FormattedMessage } from "react-intl";
 import { useToggle } from "react-use";
 
 import { StreamStatusIndicator } from "components/connection/StreamStatusIndicator";
-import { TimeIcon } from "components/icons/TimeIcon";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 
-import { ConnectionStatus } from "core/request/AirbyteClient";
+import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import { StreamActionsMenu } from "./StreamActionsMenu";
@@ -81,7 +82,7 @@ export const StreamsList = () => {
         header: () => (
           <button onClick={setShowRelativeTime} className={styles.clickableHeader}>
             <FormattedMessage id={`connection.stream.status.table.lastRecord${showRelativeTime ? "" : "At"}`} />
-            <TimeIcon />
+            <Icon type="clockOutline" size="sm" className={styles.icon} />
           </button>
         ),
         cell: (props) => (
@@ -105,14 +106,15 @@ export const StreamsList = () => {
   const showTable = connection.status !== ConnectionStatus.inactive;
 
   return (
-    <Card
-      title={
+    <Card noPadding>
+      <Box p="xl" className={styles.cardHeader}>
         <FlexContainer justifyContent="space-between" alignItems="center">
-          <FormattedMessage id="connection.stream.status.title" />
+          <Heading as="h5" size="sm">
+            <FormattedMessage id="connection.stream.status.title" />
+          </Heading>
           <StreamSearchFiltering className={styles.search} />
         </FlexContainer>
-      }
-    >
+      </Box>
       <FlexContainer direction="column" gap="sm">
         <div className={styles.tableContainer} data-survey="streamcentric">
           {showTable && (
@@ -120,7 +122,6 @@ export const StreamsList = () => {
               columns={columns}
               data={streamEntries}
               variant="inBlock"
-              className={styles.table}
               getRowClassName={(data) => classNames({ [styles.syncing]: data.state?.isRunning })}
               sorting={false}
             />

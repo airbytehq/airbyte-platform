@@ -4,15 +4,13 @@ global:
   credVolumeOverride: ""
   secretName: ""
   extraContainers: []
-  ## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+  ## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
   extraSelectorLabels: {}
   ## extraLabels [object] - use to specify own additional labels for deployment
   extraLabels: {}
   database:
     secretName: ""
     secretValue: ""
-    host: "example.com"
-    port: "5432"
   logs:
     ##  logs.accessKey.password Logs Access Key
     ##  logs.accessKey.existingSecret
@@ -389,10 +387,15 @@ secrets: {}
 env_vars:
   CONTAINER_ORCHESTRATOR_ENABLED: true
 
-## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
 extraSelectorLabels: {}
 ## extraLabels [object] - use to specify own additional labels for deployment
 extraLabels: {}
+
+## workloadApi:
+##   bearerTokenSecretName: workload-api-bearer-token-name kubernetes secret name where bearer token is stored
+##   bearerTokenSecretKey: workload-api-bearer-token-key kubernetes secret key where bearer token is stored
+workloadApi: {}
 
 debug:
   enabled: false

@@ -29,3 +29,9 @@
 .draghandle::after {
   transform: translate(7px, 0) rotate(-45deg);
 }
+
+.switchLabel {
+  label {
+    padding-bottom: 0;
+  }
+}

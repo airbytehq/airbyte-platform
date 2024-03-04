@@ -5,15 +5,13 @@ global:
   secretName: ""
   credVolumeOverride: ""
   extraContainers: []
-  ## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+  ## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
   extraSelectorLabels: {}
   ## extraLabels [object] - use to specify own additional labels for deployment
   extraLabels: {}
   database:
     secretName: ""
     secretValue: ""
-    host: "example.com"
-    port: "5432"
   logs:
     ##  logs.accessKey.password Logs Access Key
     ##  logs.accessKey.existingSecret
@@ -62,15 +60,15 @@ global:
       # If credentialsJson is set then credentials auto resolves (to /secrets/gcs-log-creds/gcp.json)
       credentialsJson: ""
 
-enabled: true
+enabled: false
 ##  replicaCount Number of server replicas
 replicaCount: 1
 
-##  image.repository The repository to use for the airbyte server image.
-##  image.pullPolicy the pull policy to use for the airbyte server image
-##  image.tag The airbyte server image tag. Defaults to the chart's AppVersion
+##  image.repository The repository to use for the airbyte workload api server image.
+##  image.pullPolicy the pull policy to use for the airbyte workload api server image
+##  image.tag The airbyte workload api server image tag. Defaults to the chart's AppVersion
 image:
-  repository: airbyte/airbyte-workload-api-server
+  repository: airbyte/workload-api-server
   pullPolicy: IfNotPresent
 
 ##  podAnnotations [object] Add extra annotations to the server pod
@@ -430,7 +428,7 @@ secrets: {}
 env_vars: {}
 
 
-## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
 extraSelectorLabels: {}
 ## extraLabels [object] - use to specify own additional labels for deployment
 extraLabels: {}
@@ -439,6 +437,11 @@ extraLabels: {}
 ## deploymentStrategyType [string] - deployment strategy type for airbyte-server deployment.
 ## Defaults to Recreate since the pod is using pvc
 deploymentStrategyType: Recreate
+
+## workloadApi:
+##   bearerTokenSecretName: workload-api-bearer-token-name kubernetes secret name where bearer token is stored
+##   bearerTokenSecretKey: workload-api-bearer-token-key kubernetes secret key where bearer token is stored
+workloadApi: {}
 
 debug:
   enabled: false

@@ -4,8 +4,8 @@ import React, { useCallback, useMemo } from "react";
 import { get, useFormContext, useFormState, useWatch } from "react-hook-form";
 
 import GroupControls from "components/GroupControls";
-import { DropDown, DropDownOptionDataItem } from "components/ui/DropDown";
 import { FlexContainer } from "components/ui/Flex";
+import { ListBox } from "components/ui/ListBox";
 import { RadioButton } from "components/ui/RadioButton";
 import { Text } from "components/ui/Text";
 import { TextWithHTML } from "components/ui/TextWithHTML";
@@ -43,8 +43,8 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
   }
 
   const onOptionChange = useCallback(
-    (selectedItem: DropDownOptionDataItem) => {
-      const newSelectedFormBlock = conditions[selectedItem.value];
+    (selectedItem: number) => {
+      const newSelectedFormBlock = conditions[selectedItem];
 
       const conditionValues = value
         ? pick(
@@ -52,11 +52,11 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
             newSelectedFormBlock.properties.map((property) => property.fieldKey)
           )
         : {};
-      conditionValues[formField.selectionKey] = selectionConstValues[selectedItem.value];
+      conditionValues[formField.selectionKey] = selectionConstValues[selectedItem];
       setDefaultValues(newSelectedFormBlock, conditionValues, { respectExistingValues: true });
       // do not validate the new oneOf part of the form as the user didn't have a chance to fill it out yet.
       setValue(path, conditionValues, { shouldDirty: true, shouldTouch: true });
-      setFocusedField?.(`${path}[${selectionConstValues[selectedItem.value]}]`);
+      setFocusedField?.(`${path}[${selectionConstValues[selectedItem]}]`);
       clearErrors(path);
     },
     [conditions, value, formField.selectionKey, selectionConstValues, setValue, path, setFocusedField, clearErrors]
@@ -81,13 +81,13 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
         label={<GroupLabel formField={formField} />}
         control={
           formField.display_type === "radio" ? undefined : (
-            <DropDown
+            <ListBox<number>
               options={options}
-              onChange={onOptionChange}
-              value={currentlySelectedCondition}
-              name={path}
+              onSelect={onOptionChange}
+              selectedValue={currentlySelectedCondition}
               isDisabled={disabled || formField.readOnly}
-              error={error !== undefined}
+              hasError={error !== undefined}
+              data-testid={path}
             />
           )
         }
@@ -113,7 +113,7 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
                   key={option.value}
                   disabled={disabled || formField.readOnly}
                   checked={option.value === currentlySelectedCondition}
-                  onChange={() => onOptionChange({ value: option.value })}
+                  onChange={() => onOptionChange(option.value)}
                 />
                 <FlexContainer direction="column">
                   <Text size="lg">{option.label}</Text>

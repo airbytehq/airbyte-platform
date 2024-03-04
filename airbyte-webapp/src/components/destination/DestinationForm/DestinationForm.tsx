@@ -7,10 +7,9 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { ConnectionConfiguration } from "area/connector/types";
-import { useGetDestinationDefinitionSpecificationAsync } from "core/api";
+import { useGetDestinationDefinitionSpecificationAsync, LogsRequestError } from "core/api";
 import { DestinationDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector } from "core/domain/connector";
-import { LogsRequestError } from "core/request/LogsRequestError";
 import { FormError } from "core/utils/errorStatusMessage";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm";

@@ -1,0 +1,8 @@
+---
+"$schema": http://json-schema.org/draft-07/schema#
+"$id": https://github.com/airbytehq/airbyte-platform/blob/main/airbyte-config/config-models/src/main/resources/types/ConfigOriginType.yaml
+title: ConfigOriginType
+description: ScopedConfiguration origin types
+type: string
+enum:
+  - user

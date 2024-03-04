@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
@@ -16,6 +16,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
@@ -35,10 +36,12 @@ import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
+import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.micronaut.http.uri.UriBuilder;
 import java.io.IOException;
 import java.net.URI;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -55,6 +58,7 @@ class ActorDefinitionHandlerHelperTest {
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private ActorDefinitionVersionResolver actorDefinitionVersionResolver;
   private RemoteDefinitionsProvider remoteDefinitionsProvider;
+  private ActorDefinitionService actorDefinitionService;
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID ACTOR_DEFINITION_ID = UUID.randomUUID();
   private static final String DOCKER_REPOSITORY = "source-test";
@@ -64,6 +68,8 @@ class ActorDefinitionHandlerHelperTest {
   private static final URI DOCUMENTATION_URL = UriBuilder.of("").scheme("https").host("docs.com").build();
 
   private static final String LATEST = "latest";
+  private static final String DEV = "dev";
+  private static final String SPEC_KEY = "Something";
 
   private static final ConnectorRegistrySourceDefinition connectorRegistrySourceDefinition =
       new ConnectorRegistrySourceDefinition()
@@ -89,8 +95,9 @@ class ActorDefinitionHandlerHelperTest {
     final AirbyteProtocolVersionRange protocolVersionRange = new AirbyteProtocolVersionRange(new Version("0.0.0"), new Version("0.3.0"));
     actorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
     remoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
-    actorDefinitionHandlerHelper =
-        new ActorDefinitionHandlerHelper(synchronousSchedulerClient, protocolVersionRange, actorDefinitionVersionResolver, remoteDefinitionsProvider);
+    actorDefinitionService = mock(ActorDefinitionService.class);
+    actorDefinitionHandlerHelper = new ActorDefinitionHandlerHelper(
+        synchronousSchedulerClient, protocolVersionRange, actorDefinitionVersionResolver, remoteDefinitionsProvider, actorDefinitionService);
 
   }
 
@@ -160,7 +167,7 @@ class ActorDefinitionHandlerHelperTest {
       final String newValidProtocolVersion = "0.2.0";
       final String newDockerImage = getDockerImageForTag(newDockerImageTag);
       final ConnectorSpecification newSpec =
-          new ConnectorSpecification().withProtocolVersion(newValidProtocolVersion).withAdditionalProperty("Something", "new");
+          new ConnectorSpecification().withProtocolVersion(newValidProtocolVersion).withAdditionalProperty(SPEC_KEY, "new");
 
       when(synchronousSchedulerClient.createGetSpecJob(newDockerImage, isCustomConnector, null)).thenReturn(new SynchronousResponse<>(
           newSpec, SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
@@ -187,9 +194,15 @@ class ActorDefinitionHandlerHelperTest {
     void testDefaultDefinitionVersionFromUpdateSameVersion(final boolean isCustomConnector) throws IOException {
       final ActorDefinitionVersion previousDefaultVersion = actorDefinitionVersion;
       final String newDockerImageTag = previousDefaultVersion.getDockerImageTag();
+
+      when(actorDefinitionVersionResolver.resolveVersionForTag(previousDefaultVersion.getActorDefinitionId(), ActorType.SOURCE,
+          previousDefaultVersion.getDockerRepository(), newDockerImageTag))
+              .thenReturn(Optional.of(previousDefaultVersion));
+
       final ActorDefinitionVersion newVersion =
           actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(previousDefaultVersion, ActorType.SOURCE, newDockerImageTag,
               isCustomConnector);
+
       verify(actorDefinitionVersionResolver).resolveVersionForTag(previousDefaultVersion.getActorDefinitionId(),
           ActorType.SOURCE, previousDefaultVersion.getDockerRepository(), newDockerImageTag);
 
@@ -203,13 +216,13 @@ class ActorDefinitionHandlerHelperTest {
     @ValueSource(booleans = {true, false})
     @DisplayName("Always fetch specs for dev versions")
     void testDefaultDefinitionVersionFromUpdateSameDevVersion(final boolean isCustomConnector) throws IOException {
-      final ActorDefinitionVersion previousDefaultVersion = Jsons.clone(actorDefinitionVersion).withDockerImageTag("dev");
-      final String newDockerImageTag = "dev";
+      final ActorDefinitionVersion previousDefaultVersion = Jsons.clone(actorDefinitionVersion).withDockerImageTag(DEV);
+      final String newDockerImageTag = DEV;
       final String newDockerImage = getDockerImageForTag(newDockerImageTag);
       final String newValidProtocolVersion = "0.2.0";
 
       final ConnectorSpecification newSpec =
-          new ConnectorSpecification().withProtocolVersion(newValidProtocolVersion).withAdditionalProperty("Something", "new");
+          new ConnectorSpecification().withProtocolVersion(newValidProtocolVersion).withAdditionalProperty(SPEC_KEY, "new");
       when(synchronousSchedulerClient.createGetSpecJob(newDockerImage, isCustomConnector, null)).thenReturn(new SynchronousResponse<>(
           newSpec, SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
 
@@ -251,12 +264,12 @@ class ActorDefinitionHandlerHelperTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     @DisplayName("Creating an ActorDefinitionVersion from update should return an already existing one from db/remote before creating a new one")
-    void testDefaultDefinitionVersioFromUpdateVersionResolved(final boolean isCustomConnector) throws IOException {
+    void testDefaultDefinitionVersionFromUpdateVersionResolved(final boolean isCustomConnector) throws IOException {
       final ActorDefinitionVersion previousDefaultVersion = actorDefinitionVersion;
 
       final String newDockerImageTag = "newTagButPreviouslyUsed";
       final ActorDefinitionVersion oldExistingADV = Jsons.clone(actorDefinitionVersion).withDockerImageTag(newDockerImageTag)
-          .withSpec(new ConnectorSpecification().withProtocolVersion(VALID_PROTOCOL_VERSION).withAdditionalProperty("Something", "existing"));
+          .withSpec(new ConnectorSpecification().withProtocolVersion(VALID_PROTOCOL_VERSION).withAdditionalProperty(SPEC_KEY, "existing"));
 
       when(actorDefinitionVersionResolver.resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, newDockerImageTag))
           .thenReturn(Optional.of(oldExistingADV));
@@ -271,6 +284,37 @@ class ActorDefinitionHandlerHelperTest {
 
       verifyNoMoreInteractions(actorDefinitionVersionResolver);
       verifyNoInteractions(synchronousSchedulerClient, remoteDefinitionsProvider);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    @DisplayName("Re-fetch spec for dev versions resolved from the db")
+    void testUpdateVersionResolvedDevVersion(final boolean isCustomConnector) throws IOException {
+      final ActorDefinitionVersion previousDefaultVersion = Jsons.clone(actorDefinitionVersion).withDockerImageTag(DEV);
+      final String dockerImage = getDockerImageForTag(DEV);
+
+      final ConnectorSpecification newSpec =
+          new ConnectorSpecification().withProtocolVersion(VALID_PROTOCOL_VERSION).withAdditionalProperty(SPEC_KEY, "new");
+      when(synchronousSchedulerClient.createGetSpecJob(dockerImage, isCustomConnector, null)).thenReturn(new SynchronousResponse<>(
+          newSpec, SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
+
+      final ActorDefinitionVersion oldExistingADV = Jsons.clone(actorDefinitionVersion)
+          .withSpec(new ConnectorSpecification().withProtocolVersion(VALID_PROTOCOL_VERSION).withAdditionalProperty(SPEC_KEY, "existing"));
+
+      when(actorDefinitionVersionResolver.resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, DEV))
+          .thenReturn(Optional.of(oldExistingADV));
+
+      final ActorDefinitionVersion newVersion =
+          actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(previousDefaultVersion, ActorType.SOURCE, DEV,
+              isCustomConnector);
+      verify(actorDefinitionVersionResolver).resolveVersionForTag(previousDefaultVersion.getActorDefinitionId(),
+          ActorType.SOURCE, previousDefaultVersion.getDockerRepository(), DEV);
+      verify(synchronousSchedulerClient).createGetSpecJob(dockerImage, isCustomConnector, null);
+
+      assertEquals(oldExistingADV.withSpec(newSpec), newVersion);
+
+      verifyNoMoreInteractions(actorDefinitionVersionResolver, synchronousSchedulerClient);
+      verifyNoInteractions(remoteDefinitionsProvider);
     }
 
   }
@@ -297,6 +341,55 @@ class ActorDefinitionHandlerHelperTest {
 
       verifyNoMoreInteractions(remoteDefinitionsProvider);
       verifyNoInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver);
+    }
+
+  }
+
+  @Nested
+  class TestGetVersionBreakingChanges {
+
+    @Test
+    void testGetVersionBreakingChanges() throws IOException {
+      final List<ActorDefinitionBreakingChange> breakingChangeList = List.of(
+          new ActorDefinitionBreakingChange()
+              .withActorDefinitionId(ACTOR_DEFINITION_ID)
+              .withMigrationDocumentationUrl("https://docs.airbyte.io/2")
+              .withVersion(new Version("2.0.0"))
+              .withUpgradeDeadline("2023-01-01")
+              .withMessage("This is a breaking change"),
+          new ActorDefinitionBreakingChange()
+              .withActorDefinitionId(ACTOR_DEFINITION_ID)
+              .withMigrationDocumentationUrl("https://docs.airbyte.io/3")
+              .withVersion(new Version("3.0.0"))
+              .withUpgradeDeadline("2023-05-01")
+              .withMessage("This is another breaking change"));
+
+      when(actorDefinitionService.listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion)).thenReturn(breakingChangeList);
+
+      final ActorDefinitionVersionBreakingChanges expected = new ActorDefinitionVersionBreakingChanges()
+          .minUpgradeDeadline(LocalDate.parse("2023-01-01"))
+          .upcomingBreakingChanges(List.of(
+              new io.airbyte.api.model.generated.ActorDefinitionBreakingChange()
+                  .migrationDocumentationUrl("https://docs.airbyte.io/2")
+                  .version("2.0.0")
+                  .upgradeDeadline(LocalDate.parse(("2023-01-01")))
+                  .message("This is a breaking change"),
+              new io.airbyte.api.model.generated.ActorDefinitionBreakingChange()
+                  .migrationDocumentationUrl("https://docs.airbyte.io/3")
+                  .version("3.0.0")
+                  .upgradeDeadline(LocalDate.parse("2023-05-01"))
+                  .message("This is another breaking change")));
+
+      final Optional<ActorDefinitionVersionBreakingChanges> actual = actorDefinitionHandlerHelper.getVersionBreakingChanges(actorDefinitionVersion);
+      assertEquals(expected, actual.orElseThrow());
+    }
+
+    @Test
+    void testGetVersionBreakingChangesNoBreakingChanges() throws IOException {
+      when(actorDefinitionService.listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion)).thenReturn(List.of());
+
+      final Optional<ActorDefinitionVersionBreakingChanges> actual = actorDefinitionHandlerHelper.getVersionBreakingChanges(actorDefinitionVersion);
+      assertEquals(Optional.empty(), actual);
     }
 
   }

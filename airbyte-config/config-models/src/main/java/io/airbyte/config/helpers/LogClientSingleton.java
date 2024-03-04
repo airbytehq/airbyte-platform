@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.helpers;
@@ -96,49 +96,6 @@ public class LogClientSingleton {
   }
 
   /**
-   * Get server log file.
-   *
-   * @param workspaceRoot workspace root dir
-   * @param workerEnvironment worker type
-   * @param logConfigs log configs
-   * @return server log
-   */
-  public File getServerLogFile(final Path workspaceRoot, final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs) {
-    if (shouldUseLocalLogs(workerEnvironment)) {
-      return getServerLogsRoot(workspaceRoot).resolve(LOG_FILENAME).toFile();
-    }
-    final var cloudLogPath = sanitisePath(APP_LOGGING_CLOUD_PREFIX, getServerLogsRoot(workspaceRoot));
-    try {
-      createCloudClientIfNull(logConfigs);
-      return logClient.downloadCloudLog(logConfigs, cloudLogPath);
-    } catch (final IOException e) {
-      throw new RuntimeException("Error retrieving log file: " + cloudLogPath + " from S3", e);
-    }
-  }
-
-  /**
-   * Get scheduler log file.
-   *
-   * @param workspaceRoot root dir of workspace
-   * @param workerEnvironment worker type
-   * @param logConfigs configuration of logs
-   * @return scheduler log file
-   */
-  public File getSchedulerLogFile(final Path workspaceRoot, final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs) {
-    if (shouldUseLocalLogs(workerEnvironment)) {
-      return getSchedulerLogsRoot(workspaceRoot).resolve(LOG_FILENAME).toFile();
-    }
-
-    final var cloudLogPath = APP_LOGGING_CLOUD_PREFIX + getSchedulerLogsRoot(workspaceRoot);
-    try {
-      createCloudClientIfNull(logConfigs);
-      return logClient.downloadCloudLog(logConfigs, cloudLogPath);
-    } catch (final IOException e) {
-      throw new RuntimeException("Error retrieving log file: " + cloudLogPath + " from S3", e);
-    }
-  }
-
-  /**
    * Tail log file.
    *
    * @param workerEnvironment environment of worker.
@@ -189,7 +146,7 @@ public class LogClientSingleton {
     if (shouldUseLocalLogs(workerEnvironment)) {
       LOGGER.debug("Setting docker job mdc");
       if (path != null) {
-        final String resolvedPath = path.resolve(LogClientSingleton.LOG_FILENAME).toString();
+        final String resolvedPath = fullLogPath(path);
         MDC.put(LogClientSingleton.JOB_LOG_PATH_MDC_KEY, resolvedPath);
       } else {
         MDC.remove(LogClientSingleton.JOB_LOG_PATH_MDC_KEY);
@@ -198,7 +155,7 @@ public class LogClientSingleton {
       LOGGER.debug("Setting kube job mdc");
       createCloudClientIfNull(logConfigs);
       if (path != null) {
-        MDC.put(LogClientSingleton.CLOUD_JOB_LOG_PATH_MDC_KEY, path.resolve(LogClientSingleton.LOG_FILENAME).toString());
+        MDC.put(LogClientSingleton.CLOUD_JOB_LOG_PATH_MDC_KEY, fullLogPath(path));
       } else {
         MDC.remove(LogClientSingleton.CLOUD_JOB_LOG_PATH_MDC_KEY);
       }
@@ -223,9 +180,13 @@ public class LogClientSingleton {
     }
   }
 
+  public static String fullLogPath(final Path rootPath) {
+    return rootPath.resolve(LogClientSingleton.LOG_FILENAME).toString();
+  }
+
   // This method should cease to exist here and become a property on the enum instead
   // TODO handle this as part of refactor https://github.com/airbytehq/airbyte/issues/7545
-  private static boolean shouldUseLocalLogs(final WorkerEnvironment workerEnvironment) {
+  public static boolean shouldUseLocalLogs(final WorkerEnvironment workerEnvironment) {
     return workerEnvironment.equals(WorkerEnvironment.DOCKER);
   }
 

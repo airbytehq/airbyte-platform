@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -14,20 +14,19 @@ import io.airbyte.config.User;
 import io.airbyte.config.UserPermission;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.HealthCheckServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
@@ -59,28 +58,29 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
+    final ConnectionService connectionService = mock(ConnectionService.class);
     final ConfigRepository configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(database),
         new CatalogServiceJooqImpl(database),
-        new ConnectionServiceJooqImpl(database),
+        connectionService,
         new ConnectorBuilderServiceJooqImpl(database),
         new DestinationServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
             secretsRepositoryWriter,
-            secretPersistenceConfigService),
-        new HealthCheckServiceJooqImpl(database),
+            secretPersistenceConfigService,
+            connectionService),
         new OAuthServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
             secretPersistenceConfigService),
         new OperationServiceJooqImpl(database),
-        new OrganizationServiceJooqImpl(database),
         new SourceServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
             secretsRepositoryWriter,
-            secretPersistenceConfigService),
+            secretPersistenceConfigService,
+            connectionService),
         new WorkspaceServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
@@ -198,6 +198,32 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
           .anyMatch(expectedPermission -> expectedPermission.getPermissionId().equals(actualPermission.getPermission().getPermissionId())
               && actualPermission.getUser().getUserId().equals(expectedPermission.getUserId())));
     }
+  }
+
+  @Test
+  void isUserInstanceAdmin() throws IOException {
+    final User user1 = MockData.users().get(0);
+    Assertions.assertEquals(user1.getUserId(), MockData.permission1.getUserId());
+    Assertions.assertEquals(MockData.permission1.getPermissionType(), PermissionType.INSTANCE_ADMIN);
+    Assertions.assertTrue(permissionPersistence.isUserInstanceAdmin(user1.getUserId()));
+
+    final User user2 = MockData.users().get(1);
+    Assertions.assertEquals(user2.getUserId(), MockData.permission2.getUserId());
+    Assertions.assertNotEquals(MockData.permission2.getPermissionType(), PermissionType.INSTANCE_ADMIN);
+    Assertions.assertFalse(permissionPersistence.isUserInstanceAdmin(user2.getUserId()));
+  }
+
+  @Test
+  void isAuthUserInstanceAdmin() throws IOException {
+    final User user1 = MockData.users().get(0);
+    Assertions.assertEquals(user1.getUserId(), MockData.permission1.getUserId());
+    Assertions.assertEquals(MockData.permission1.getPermissionType(), PermissionType.INSTANCE_ADMIN);
+    Assertions.assertTrue(permissionPersistence.isAuthUserInstanceAdmin(user1.getAuthUserId()));
+
+    final User user2 = MockData.users().get(1);
+    Assertions.assertEquals(user2.getUserId(), MockData.permission2.getUserId());
+    Assertions.assertNotEquals(MockData.permission2.getPermissionType(), PermissionType.INSTANCE_ADMIN);
+    Assertions.assertFalse(permissionPersistence.isAuthUserInstanceAdmin(user2.getAuthUserId()));
   }
 
   @Nested
@@ -349,7 +375,7 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
       final DataAccessException thrown =
           Assertions.assertThrows(DataAccessException.class, () -> permissionPersistence.deletePermissionById(orgAdmin2.getPermissionId()));
 
-      Assertions.assertTrue(thrown.getCause() instanceof SQLOperationNotAllowedException);
+      Assertions.assertInstanceOf(SQLOperationNotAllowedException.class, thrown.getCause());
 
       // make sure the last org-admin permission is still present in the DB
       Assertions.assertEquals(orgAdmin2, permissionPersistence.getPermission(orgAdmin2.getPermissionId()).orElseThrow());
@@ -380,7 +406,7 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
       final DataAccessException thrown = Assertions.assertThrows(DataAccessException.class,
           () -> permissionPersistence.writePermission(demotionUpdate));
 
-      Assertions.assertTrue(thrown.getCause() instanceof SQLOperationNotAllowedException);
+      Assertions.assertInstanceOf(SQLOperationNotAllowedException.class, thrown.getCause());
 
       // make sure the last org-admin is still an org-admin, ie the update did not persist
       Assertions.assertEquals(
@@ -413,7 +439,7 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
       final DataAccessException thrown = Assertions.assertThrows(DataAccessException.class,
           () -> permissionPersistence.writePermission(demotionUpdate));
 
-      Assertions.assertTrue(thrown.getCause() instanceof SQLOperationNotAllowedException);
+      Assertions.assertInstanceOf(SQLOperationNotAllowedException.class, thrown.getCause());
 
       // make sure the last org-admin is still in the original org, ie the update did not persist
       Assertions.assertEquals(

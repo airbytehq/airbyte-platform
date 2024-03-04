@@ -1,12 +1,9 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
 
 import { ConnectionTable } from "components/EntityTable";
-import { ConnectionTableDataItem } from "components/EntityTable/types";
 import { getConnectionTableData } from "components/EntityTable/utils";
 
-import { WebBackendConnectionListItem } from "core/request/AirbyteClient";
-import { RoutePaths } from "pages/routePaths";
+import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 
 import styles from "./SourceConnectionTable.module.scss";
 
@@ -15,16 +12,11 @@ interface IProps {
 }
 
 const SourceConnectionTable: React.FC<IProps> = ({ connections }) => {
-  const navigate = useNavigate();
-
   const data = getConnectionTableData(connections, "source");
-
-  const clickRow = (source: ConnectionTableDataItem) =>
-    navigate(`../../../${RoutePaths.Connections}/${source.connectionId}`);
 
   return (
     <div className={styles.content}>
-      <ConnectionTable data={data} onClickRow={clickRow} entity="source" />
+      <ConnectionTable data={data} entity="source" />
     </div>
   );
 };

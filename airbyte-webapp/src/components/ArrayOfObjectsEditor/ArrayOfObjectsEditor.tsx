@@ -1,98 +1,93 @@
+import { closestCenter, DndContext, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import React from "react";
-import { FormattedMessage } from "react-intl";
+import { FieldArrayWithId } from "react-hook-form";
 
+import { KeyboardSensor, PointerSensor } from "components/connectorBuilder/Builder/dndSensors";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
-import { Modal, ModalProps } from "components/ui/Modal";
-
-import { ConnectionFormMode } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import styles from "./ArrayOfObjectsEditor.module.scss";
 import { EditorHeader } from "./components/EditorHeader";
 import { EditorRow } from "./components/EditorRow";
 
-interface ItemBase {
-  name?: string;
-  description?: string;
-}
-
-export interface ArrayOfObjectsEditorProps<T extends ItemBase> {
-  items: T[];
-  editableItemIndex?: number | string | null;
+export interface ArrayOfObjectsEditorProps<T> {
+  fields: T[];
   mainTitle?: React.ReactNode;
   addButtonText?: React.ReactNode;
   renderItemName?: (item: T, index: number) => React.ReactNode | undefined;
   renderItemDescription?: (item: T, index: number) => React.ReactNode | undefined;
-  renderItemEditorForm: (item?: T) => React.ReactNode;
+  onAddItem: () => void;
   onStartEdit: (n: number) => void;
   onRemove: (index: number) => void;
-  onCancel?: () => void;
-  mode?: ConnectionFormMode;
-  disabled?: boolean;
-  editModalSize?: ModalProps["size"];
+  onMove: (source: number, destination: number) => void;
 }
 
-export const ArrayOfObjectsEditor = <T extends ItemBase = ItemBase>({
-  onStartEdit,
-  onRemove,
-  onCancel,
-  renderItemName = (item) => item.name,
-  renderItemDescription = (item) => item.description,
-  renderItemEditorForm,
-  items,
-  editableItemIndex,
+/**
+ * The component is used to render a list of react-hook-form FieldArray items with the ability to add, edit and remove items.
+ * @param fields
+ * @param mainTitle
+ * @param addButtonText
+ * @param onAddItem
+ * @param renderItemName
+ * @param renderItemDescription
+ * @param onStartEdit
+ * @param onRemove
+ * @param mode
+ */
+export const ArrayOfObjectsEditor = <T extends FieldArrayWithId>({
+  fields,
   mainTitle,
   addButtonText,
-  mode,
-  disabled,
-  editModalSize,
-}: ArrayOfObjectsEditorProps<T>): JSX.Element => {
-  const onAddItem = React.useCallback(() => onStartEdit(items.length), [onStartEdit, items]);
-  const isEditable = editableItemIndex !== null && editableItemIndex !== undefined;
+  onAddItem,
+  renderItemName,
+  renderItemDescription,
+  onStartEdit,
+  onRemove,
+  onMove,
+}: ArrayOfObjectsEditorProps<T>) => {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
-  const renderEditModal = () => {
-    const item = typeof editableItemIndex === "number" ? items[editableItemIndex] : undefined;
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-    return (
-      <Modal
-        title={<FormattedMessage id={item ? "form.edit" : "form.add"} />}
-        size={editModalSize}
-        testId="arrayOfObjects-editModal"
-        onClose={onCancel}
-      >
-        {renderItemEditorForm(item)}
-      </Modal>
-    );
+    if (active.id !== over?.id) {
+      const oldIndex = fields.findIndex((item) => item.id === active.id);
+      const newIndex = fields.findIndex((item) => item.id === over?.id);
+      return onMove(oldIndex, newIndex);
+    }
   };
 
   return (
-    <>
-      <Box mb="xl">
-        <EditorHeader
-          itemsCount={items.length}
-          onAddItem={onAddItem}
-          mainTitle={mainTitle}
-          addButtonText={addButtonText}
-          mode={mode}
-          disabled={disabled}
-        />
-        {items.length ? (
+    <Box pb="xl">
+      <EditorHeader
+        mainTitle={mainTitle}
+        itemsCount={fields.length}
+        addButtonText={addButtonText}
+        onAddItem={onAddItem}
+      />
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={fields} strategy={verticalListSortingStrategy}>
           <FlexContainer direction="column" gap="xs" className={styles.list}>
-            {items.map((item, index) => (
+            {fields.map((field, index) => (
               <EditorRow
-                key={`form-item-${index}`}
-                name={renderItemName(item, index)}
-                description={renderItemDescription(item, index)}
-                id={index}
+                key={field.id}
+                id={field.id}
+                index={index}
+                name={renderItemName?.(field, index)}
+                description={renderItemDescription?.(field, index)}
                 onEdit={onStartEdit}
                 onRemove={onRemove}
-                disabled={disabled}
               />
             ))}
           </FlexContainer>
-        ) : null}
-      </Box>
-      {mode !== "readonly" && isEditable && renderEditModal()}
-    </>
+        </SortableContext>
+      </DndContext>
+    </Box>
   );
 };

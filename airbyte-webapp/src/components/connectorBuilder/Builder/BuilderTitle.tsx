@@ -5,6 +5,8 @@ import { FormattedMessage } from "react-intl";
 import { Input } from "components/ui/Input";
 import { Text } from "components/ui/Text";
 
+import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+
 import styles from "./BuilderTitle.module.scss";
 
 interface BuilderTitleProps {
@@ -15,6 +17,7 @@ interface BuilderTitleProps {
 }
 
 export const BuilderTitle: React.FC<BuilderTitleProps> = ({ path, label, size }) => {
+  const { permission } = useConnectorBuilderFormState();
   const {
     field,
     fieldState: { error },
@@ -27,6 +30,7 @@ export const BuilderTitle: React.FC<BuilderTitleProps> = ({ path, label, size })
         {label}
       </Text>
       <Input
+        disabled={permission === "readOnly"}
         containerClassName={classNames(styles.inputContainer, {
           [styles.md]: size === "md",
           [styles.lg]: size === "lg",

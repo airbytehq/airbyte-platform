@@ -1,4 +1,4 @@
-import { AirbyteStreamConfiguration } from "core/request/AirbyteClient";
+import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 
 export const mockStreamConfiguration: AirbyteStreamConfiguration = {
   fieldSelectionEnabled: false,

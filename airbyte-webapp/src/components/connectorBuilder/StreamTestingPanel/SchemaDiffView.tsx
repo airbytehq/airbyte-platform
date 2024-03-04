@@ -13,8 +13,7 @@ import { Pre } from "components/ui/Pre";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { StreamReadInferredSchema } from "core/api/types/ConnectorBuilderClient";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./SchemaDiffView.module.scss";
@@ -99,7 +98,7 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
                   <Button
                     full
                     type="button"
-                    variant="dark"
+                    variant="primaryDark"
                     disabled={value === formattedSchema}
                     onClick={() => {
                       setValue(path, formattedSchema);
@@ -124,7 +123,7 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
                       control={
                         <Button
                           full
-                          variant="dark"
+                          variant="primaryDark"
                           type="button"
                           onClick={() => {
                             setValue(path, schemaDiff.mergedSchema);

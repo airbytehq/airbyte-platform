@@ -1,5 +1,4 @@
-import { useCallback } from "react";
-import React from "react";
+import React, { useCallback } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
@@ -7,8 +6,8 @@ import { Icon } from "components/ui/Icon";
 import { Switch } from "components/ui/Switch";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { SyncMode, DestinationSyncMode } from "core/api/types/AirbyteClient";
 import { SyncSchemaField, SyncSchemaFieldObject } from "core/domain/catalog";
-import { SyncMode, DestinationSyncMode } from "core/request/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 interface SyncFieldCellProps {

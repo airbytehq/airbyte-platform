@@ -1,8 +1,8 @@
 import { useCallback } from "react";
 
+import { SchemaError } from "core/api";
 import { DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { SchemaError } from "hooks/services/useSourceHook";
 
 /**
  * track discover schema failure action

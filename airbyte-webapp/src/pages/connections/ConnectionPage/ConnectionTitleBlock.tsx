@@ -11,7 +11,7 @@ import { Message } from "components/ui/Message";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
-import { ConnectionStatus, SupportLevel } from "core/request/AirbyteClient";
+import { ConnectionStatus, SupportLevel } from "core/api/types/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -48,6 +48,7 @@ const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, support
 
 export const ConnectionTitleBlock = () => {
   const { connection } = useConnectionEditService();
+  const { mode } = useConnectionFormService();
   const { name, source, destination, schemaChange, status } = connection;
   const { sourceDefinition, sourceDefinitionVersion, destDefinition, destDefinitionVersion } =
     useConnectionFormService();
@@ -59,7 +60,7 @@ export const ConnectionTitleBlock = () => {
         <Heading as="h1" size="md">
           {name}
         </Heading>
-        <EnabledControl disabled={hasBreakingSchemaChange || status === ConnectionStatus.deprecated} />
+        <EnabledControl disabled={hasBreakingSchemaChange || mode === "readonly"} />
       </FlexContainer>
       <FlexContainer>
         <FlexContainer alignItems="center" gap="sm">

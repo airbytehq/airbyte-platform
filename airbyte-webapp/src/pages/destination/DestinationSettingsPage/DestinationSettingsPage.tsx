@@ -1,26 +1,29 @@
 import React, { useCallback, useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
 import { useGetDestinationFromParams } from "area/connector/utils";
-import { useConnectionList, useDestinationDefinitionVersion, useGetDestinationDefinitionSpecification } from "core/api";
-import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 import {
+  useConnectionList,
+  useDestinationDefinitionVersion,
+  useGetDestinationDefinitionSpecification,
+  useDestinationDefinition,
   useDeleteDestination,
   useInvalidateDestination,
   useUpdateDestination,
-} from "hooks/services/useDestinationHook";
+} from "core/api";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 import { useDeleteModal } from "hooks/useDeleteModal";
-import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
 
 import styles from "./DestinationSettings.module.scss";
 
 export const DestinationSettingsPage: React.FC = () => {
+  const { formatMessage } = useIntl();
   const destination = useGetDestinationFromParams();
   const connectionList = useConnectionList({ destinationId: [destination.destinationId] });
   const connectionsWithDestination = useMemo(() => connectionList?.connections ?? [], [connectionList]);
@@ -80,7 +83,7 @@ export const DestinationSettingsPage: React.FC = () => {
     <div className={styles.content}>
       <ConnectorCard
         formType="destination"
-        title={<FormattedMessage id="destination.destinationSettings" />}
+        title={formatMessage({ id: "destination.destinationSettings" })}
         isEditMode
         formId={formId}
         availableConnectorDefinitions={[destinationDefinition]}

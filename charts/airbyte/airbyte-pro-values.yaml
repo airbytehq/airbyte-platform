@@ -5,6 +5,7 @@ global:
 
 keycloak:
   enabled: true
+  bypassInit: false
 
 keycloak-setup:
   enabled: true

@@ -14,6 +14,8 @@ import io.airbyte.metrics.lib.MetricEmittingApps
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Property
 import io.temporal.client.WorkflowClient
+import io.temporal.client.WorkflowClientOptions
+import io.temporal.opentracing.OpenTracingClientInterceptor
 import io.temporal.serviceclient.WorkflowServiceStubs
 import jakarta.inject.Singleton
 import java.time.Duration
@@ -83,7 +85,12 @@ class TemporalQueueBeanFactory {
     @Property(name = "temporal.cloud.enabled", defaultValue = "false") temporalCloudEnabled: Boolean,
   ): WorkflowClient {
     val namespace = if (temporalCloudEnabled) temporalCloudConfig.namespace else temporalSelfHostedConfig.namespace
-    return WorkflowClientFactory().createWorkflowClient(workflowServiceStub, namespace.orEmpty())
+    val workflowClientOptions =
+      WorkflowClientOptions.newBuilder()
+        .setNamespace(namespace.orEmpty())
+        .setInterceptors(OpenTracingClientInterceptor())
+        .build()
+    return WorkflowClientFactory().createWorkflowClient(workflowServiceStub, workflowClientOptions)
   }
 
   @Singleton

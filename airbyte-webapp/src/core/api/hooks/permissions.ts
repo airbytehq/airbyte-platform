@@ -2,13 +2,17 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useIntl } from "react-intl";
 
 import { useNotificationService } from "hooks/services/Notification";
-import { SCOPE_USER } from "services/Scope";
 
 import { organizationKeys } from "./organizations";
 import { workspaceKeys } from "./workspaces";
-import { createPermission, listPermissionsByUser } from "../generated/AirbyteClient";
-import { deletePermission, updatePermission } from "../generated/AirbyteClient";
+import {
+  createPermission,
+  listPermissionsByUser,
+  deletePermission,
+  updatePermission,
+} from "../generated/AirbyteClient";
 import { PermissionCreate, PermissionRead, PermissionUpdate } from "../generated/AirbyteClient.schemas";
+import { SCOPE_USER } from "../scopes";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -53,6 +57,7 @@ export const useUpdatePermissions = () => {
         if (data.workspaceId) {
           queryClient.invalidateQueries(workspaceKeys.listUsers(data.workspaceId));
         }
+        queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
       },
       onError: () => {
         registerNotification({
@@ -89,6 +94,7 @@ export const useCreatePermission = () => {
         if (data.workspaceId) {
           queryClient.invalidateQueries(workspaceKeys.listUsers(data.workspaceId));
         }
+        queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
       },
       onError: () => {
         registerNotification({
@@ -118,6 +124,7 @@ export const useDeletePermissions = () => {
       });
       queryClient.invalidateQueries(organizationKeys.allListUsers);
       queryClient.invalidateQueries(workspaceKeys.allListUsers);
+      queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
     },
     onError: () => {
       registerNotification({

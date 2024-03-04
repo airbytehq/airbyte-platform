@@ -9,8 +9,6 @@ import {
 } from "core/api";
 import { useCurrentUser } from "core/services/auth";
 
-import { getListCloudWorkspacesAsyncQueryKey, useListCloudWorkspacesAsyncQuery } from "./cloudWorkspaces";
-import { getListUsersQueryKey, useListUsersQuery } from "./users";
 import {
   getCurrentWorkspaceStateQueryKey,
   getWorkspaceQueryKey,
@@ -42,18 +40,6 @@ export const usePrefetchCloudWorkspaceData = () => {
       {
         queryKey: getCurrentWorkspaceStateQueryKey(workspaceId),
         queryFn: useGetCurrentWorkspaceStateQuery(workspaceId),
-        suspense: true,
-        staleTime: 10000,
-      },
-      {
-        queryKey: getListUsersQueryKey(workspaceId),
-        queryFn: useListUsersQuery(workspaceId),
-        suspense: true,
-        staleTime: 10000,
-      },
-      {
-        queryKey: getListCloudWorkspacesAsyncQueryKey(),
-        queryFn: useListCloudWorkspacesAsyncQuery(user.userId),
         suspense: true,
         staleTime: 10000,
       },

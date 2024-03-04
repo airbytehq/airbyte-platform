@@ -1,4 +1,4 @@
-import { StreamStatusJobType, StreamStatusRead, StreamStatusRunState } from "core/request/AirbyteClient";
+import { StreamStatusJobType, StreamStatusRead, StreamStatusRunState } from "core/api/types/AirbyteClient";
 
 export const mockStreamStatusRead: StreamStatusRead = {
   id: "123",

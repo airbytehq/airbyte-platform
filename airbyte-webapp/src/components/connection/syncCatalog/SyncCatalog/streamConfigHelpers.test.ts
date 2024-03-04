@@ -1,7 +1,7 @@
 import { mockStreamConfiguration } from "test-utils/mock-data/mockAirbyteStreamConfiguration";
 
+import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaField } from "core/domain/catalog";
-import { AirbyteStreamConfiguration } from "core/request/AirbyteClient";
 
 import {
   mergeFieldPathArrays,

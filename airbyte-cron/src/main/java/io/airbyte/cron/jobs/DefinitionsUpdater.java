@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.cron.jobs;
@@ -50,7 +50,7 @@ public class DefinitionsUpdater {
   @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
   @Scheduled(fixedRate = "30s",
              initialDelay = "1m")
-  void updateDefinitions() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void updateDefinitions() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     log.info("Updating definitions...");
     metricClient.count(OssMetricsRegistry.CRON_JOB_RUN_BY_CRON_TYPE, 1, new MetricAttribute(MetricTags.CRON_TYPE, "definitions_updater"));
     applyDefinitionsHelper.apply(deploymentMode == DeploymentMode.CLOUD);

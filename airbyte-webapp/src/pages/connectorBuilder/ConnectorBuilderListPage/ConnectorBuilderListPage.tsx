@@ -1,5 +1,3 @@
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormattedMessage } from "react-intl";
 import { Navigate, useNavigate } from "react-router-dom";
 
@@ -8,15 +6,19 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { ConnectorBuilderProjectTable } from "components/ConnectorBuilderProjectTable";
 import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
 import { PageHeader } from "components/ui/PageHeader";
 
-import { useListBuilderProjects } from "core/api";
+import { useCurrentWorkspace, useListBuilderProjects } from "core/api";
+import { useIntent } from "core/utils/rbac";
 
 import { ConnectorBuilderRoutePaths } from "../ConnectorBuilderRoutes";
 
 export const ConnectorBuilderListPage: React.FC = () => {
   const navigate = useNavigate();
   const projects = useListBuilderProjects();
+  const { workspaceId } = useCurrentWorkspace();
+  const canCreateConnector = useIntent("CreateCustomConnector", { workspaceId });
 
   return projects.length ? (
     <MainPageWithScroll
@@ -30,7 +32,8 @@ export const ConnectorBuilderListPage: React.FC = () => {
           }
           endComponent={
             <Button
-              icon={<FontAwesomeIcon icon={faPlus} />}
+              disabled={!canCreateConnector}
+              icon={<Icon type="plus" />}
               onClick={() => navigate(ConnectorBuilderRoutePaths.Create)}
               size="sm"
               data-testid="new-custom-connector"

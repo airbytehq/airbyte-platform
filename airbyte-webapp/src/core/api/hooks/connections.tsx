@@ -1,23 +1,23 @@
-import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Updater, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { SyncSchema } from "core/domain/catalog";
-import { getFrequencyFromScheduleData } from "core/services/analytics";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { getFrequencyFromScheduleData, useAnalyticsService, Action, Namespace } from "core/services/analytics";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { RoutePaths } from "pages/routePaths";
-import { SCOPE_WORKSPACE } from "services/Scope";
 
+import { jobsKeys } from "./jobs";
 import { useCurrentWorkspace, useInvalidateWorkspaceStateQuery } from "./workspaces";
-import { useAppMonitoringService } from "../../../hooks/services/AppMonitoringService";
-import { useNotificationService } from "../../../hooks/services/Notification";
 import {
+  getConnectionStatuses,
   createOrUpdateStateSafe,
   deleteConnection,
+  getConnectionDataHistory,
+  getConnectionUptimeHistory,
   getState,
   getStateType,
   resetConnection,
@@ -28,12 +28,19 @@ import {
   webBackendListConnectionsForWorkspace,
   webBackendUpdateConnection,
 } from "../generated/AirbyteClient";
+import { SCOPE_WORKSPACE } from "../scopes";
 import {
+  AirbyteCatalog,
   ConnectionScheduleData,
   ConnectionScheduleType,
   ConnectionStateCreateOrUpdate,
+  ConnectionStatusesRead,
   ConnectionStream,
   DestinationRead,
+  JobConfigType,
+  JobReadList,
+  JobStatus,
+  JobWithAttemptsRead,
   NamespaceDefinitionType,
   OperationCreate,
   SourceDefinitionRead,
@@ -52,7 +59,10 @@ const connectionsKeys = {
   all: [SCOPE_WORKSPACE, "connections"] as const,
   lists: (sourceOrDestinationIds: string[] = []) => [...connectionsKeys.all, "list", ...sourceOrDestinationIds],
   detail: (connectionId: string) => [...connectionsKeys.all, "details", connectionId] as const,
+  dataHistory: (connectionId: string) => [...connectionsKeys.all, "dataHistory", connectionId] as const,
+  uptimeHistory: (connectionId: string) => [...connectionsKeys.all, "uptimeHistory", connectionId] as const,
   getState: (connectionId: string) => [...connectionsKeys.all, "getState", connectionId] as const,
+  statuses: (connectionIds: string[]) => [...connectionsKeys.all, "status", connectionIds],
 };
 
 export interface ConnectionValues {
@@ -62,11 +72,7 @@ export interface ConnectionValues {
   prefix?: string;
   namespaceDefinition: NamespaceDefinitionType;
   namespaceFormat?: string;
-  /**
-   * TOD0: change to AirbyteCatalog after migration on react-hook form since we don't use custom id field anymore
-   * https://github.com/airbytehq/airbyte-platform-internal/issues/8639
-   */
-  syncCatalog: SyncSchema;
+  syncCatalog: AirbyteCatalog;
   operations?: OperationCreate[];
 }
 
@@ -87,9 +93,10 @@ export const useSyncConnection = () => {
   const { registerNotification } = useNotificationService();
   const workspaceId = useCurrentWorkspaceId();
   const { formatMessage } = useIntl();
+  const setConnectionRunState = useSetConnectionRunState();
 
   return useMutation(
-    (connection: WebBackendConnectionRead | WebBackendConnectionListItem) => {
+    async (connection: WebBackendConnectionRead | WebBackendConnectionListItem) => {
       analyticsService.track(Namespace.CONNECTION, Action.SYNC, {
         actionDescription: "Manual triggered sync",
         connector_source: connection.source?.sourceName,
@@ -99,7 +106,13 @@ export const useSyncConnection = () => {
         frequency: getFrequencyFromScheduleData(connection.scheduleData),
       });
 
-      return syncConnection({ connectionId: connection.connectionId }, requestOptions);
+      await syncConnection({ connectionId: connection.connectionId }, requestOptions);
+      setConnectionRunState(connection.connectionId, true);
+      queryClient.setQueriesData<JobReadList>(
+        jobsKeys.useListJobsForConnectionStatus(connection.connectionId),
+        (prevJobList) => prependArtificialJobToStatus({ configType: "sync", status: JobStatus.running }, prevJobList)
+      );
+      queryClient.invalidateQueries(jobsKeys.all(connection.connectionId));
     },
     {
       onError: (error: Error) => {
@@ -119,18 +132,66 @@ export const useSyncConnection = () => {
   );
 };
 
+/**
+ * This function exists because we do not have a proper status API for a connection yet. Instead, we rely on the job list endpoint to determine the current status of a connection.
+ * When a sync or reset job is started, we prepend a job to the list to immediately update the conneciton status to running (or cancelled), while re-fetching the actual job list in the background.
+ */
+export function prependArtificialJobToStatus(
+  {
+    status,
+    configType,
+  }: {
+    status: JobStatus;
+    configType: JobConfigType;
+  },
+  jobReadList?: JobReadList
+): JobReadList {
+  const jobs = structuredClone(jobReadList?.jobs ?? []);
+
+  const artificialJob: JobWithAttemptsRead = {
+    attempts: [],
+    job: {
+      id: 999999999,
+      status,
+      configType: configType ?? "sync",
+      createdAt: Math.floor(new Date().getTime() / 1000),
+      updatedAt: Math.floor(new Date().getTime() / 1000),
+      configId: "fake-config-id",
+    },
+  };
+
+  return {
+    jobs: [artificialJob, ...jobs],
+    totalJobCount: jobs.length + 1,
+  };
+}
+
 export const useResetConnection = () => {
   const requestOptions = useRequestOptions();
-  const mutation = useMutation(["useResetConnection"], (connectionId: string) =>
-    resetConnection({ connectionId }, requestOptions)
-  );
+  const queryClient = useQueryClient();
+  const setConnectionRunState = useSetConnectionRunState();
+  const mutation = useMutation(["useResetConnection"], async (connectionId: string) => {
+    await resetConnection({ connectionId }, requestOptions);
+    setConnectionRunState(connectionId, true);
+    queryClient.setQueriesData<JobReadList>(jobsKeys.useListJobsForConnectionStatus(connectionId), (prevJobList) =>
+      prependArtificialJobToStatus({ status: JobStatus.running, configType: "reset_connection" }, prevJobList)
+    );
+  });
   const activeMutationsCount = useIsMutating(["useResetConnection"]);
   return { ...mutation, isLoading: activeMutationsCount > 0 };
 };
 
 export const useResetConnectionStream = (connectionId: string) => {
   const requestOptions = useRequestOptions();
-  return useMutation((streams: ConnectionStream[]) => resetConnectionStream({ connectionId, streams }, requestOptions));
+  const queryClient = useQueryClient();
+  const setConnectionRunState = useSetConnectionRunState();
+  return useMutation(async (streams: ConnectionStream[]) => {
+    await resetConnectionStream({ connectionId, streams }, requestOptions);
+    setConnectionRunState(connectionId, true);
+    queryClient.setQueriesData<JobReadList>(jobsKeys.useListJobsForConnectionStatus(connectionId), (prevJobList) =>
+      prependArtificialJobToStatus({ status: JobStatus.running, configType: "reset_connection" }, prevJobList)
+    );
+  });
 };
 
 export const useGetConnectionQuery = () => {
@@ -398,4 +459,65 @@ export const useCreateOrUpdateState = () => {
       },
     }
   );
+};
+
+export const useGetConnectionDataHistory = (connectionId: string) => {
+  const options = useRequestOptions();
+
+  return useSuspenseQuery(connectionsKeys.dataHistory(connectionId), () =>
+    getConnectionDataHistory(
+      {
+        connectionId,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+      options
+    )
+  );
+};
+
+export const useGetConnectionUptimeHistory = (connectionId: string) => {
+  const options = useRequestOptions();
+
+  return useSuspenseQuery(connectionsKeys.uptimeHistory(connectionId), () =>
+    getConnectionUptimeHistory(
+      {
+        connectionId,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+      options
+    )
+  );
+};
+
+export const useListConnectionsStatuses = (connectionIds: string[]) => {
+  const requestOptions = useRequestOptions();
+  const queryKey = connectionsKeys.statuses(connectionIds);
+
+  return useSuspenseQuery(queryKey, () => getConnectionStatuses({ connectionIds }, requestOptions), {
+    refetchInterval: (data) => {
+      // when any of the polled connections is running, refresh 2.5s instead of 10s
+      return data?.some(({ isRunning }) => isRunning) ? 2500 : 10000;
+    },
+  });
+};
+
+export const useSetConnectionRunState = () => {
+  const queryClient = useQueryClient();
+
+  return (connectionId: string, isRunning: boolean) => {
+    queryClient.setQueriesData([SCOPE_WORKSPACE, "connections", "status"], ((data) => {
+      if (data) {
+        data = data.map((connectionStatus) => {
+          if (connectionStatus.connectionId === connectionId) {
+            const nextConnectionStatus = structuredClone(connectionStatus); // don't mutate existing object
+            nextConnectionStatus.isRunning = isRunning; // set run state
+            delete nextConnectionStatus.failureReason; // new runs reset failure state
+            return nextConnectionStatus;
+          }
+          return connectionStatus;
+        });
+      }
+      return data;
+    }) as Updater<ConnectionStatusesRead | undefined, ConnectionStatusesRead>);
+  };
 };

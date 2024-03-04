@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.keycloak.setup;
@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -74,6 +75,15 @@ class UserCreatorTest {
   }
 
   @Test
+  void testCreateUserAlreadyExists() {
+    when(usersResource.search(anyString())).thenReturn(Collections.singletonList(new UserRepresentation()));
+
+    userCreator.createUser(realmResource);
+
+    verify(usersResource, never()).create(any());
+  }
+
+  @Test
   void testCreateUserRepresentation() {
     when(initialUserConfiguration.getUsername()).thenReturn(USERNAME);
     when(initialUserConfiguration.getEmail()).thenReturn(EMAIL);
@@ -97,21 +107,6 @@ class UserCreatorTest {
     assertFalse(credentialRepresentation.isTemporary());
     assertEquals(CredentialRepresentation.PASSWORD, credentialRepresentation.getType());
     assertEquals(PASSWORD, credentialRepresentation.getValue());
-  }
-
-  @Test
-  void testResetUser() {
-    UserRepresentation userRepresentation = new UserRepresentation();
-    userRepresentation.setId("id1");
-    when(usersResource.list()).thenReturn(Collections.singletonList(userRepresentation));
-
-    when(response.getStatus()).thenReturn(201);
-
-    userCreator.resetUser(realmResource);
-
-    verify(usersResource).list();
-    verify(usersResource).delete("id1");
-    verify(usersResource).create(any(UserRepresentation.class));
   }
 
 }

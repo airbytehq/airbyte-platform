@@ -1,13 +1,14 @@
 $base: 0;
 $bulkEdit: 1000;
 $sidebar: 9999;
+$deployPreviewMessage: $sidebar + 6;
 $workspacePicker: $sidebar + 5;
 $tooltip: $sidebar + 4;
 $notification: $sidebar + 3;
 $datepicker: $sidebar + 2;
 $mainPageWithScrollEdge: 1;
 $modal: $sidebar + 1;
-$overlay: 2;
+$overlay: $sidebar + 1;
 $pageHeader: 2;
 $schemaChangesBackdropContent: 4;
 $schemaChangesBackdrop: 3;

@@ -5,9 +5,10 @@ import { FormattedMessage } from "react-intl";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { LoadingSpinner } from "components/ui/LoadingSpinner";
 
+import { WorkspaceRead } from "core/api/types/AirbyteClient";
 import { CloudWorkspaceRead } from "core/api/types/CloudApi";
-import { WorkspaceRead } from "core/request/AirbyteClient";
 
 import { WorkspaceItem } from "./WorkspaceItem";
 
@@ -15,8 +16,14 @@ interface WorkspacesListProps {
   workspaces: WorkspaceRead[] | CloudWorkspaceRead[];
   fetchNextPage: () => void;
   hasNextPage?: boolean;
+  isLoading?: boolean;
 }
-export const WorkspacesList: React.FC<WorkspacesListProps> = ({ workspaces, fetchNextPage, hasNextPage }) => {
+export const WorkspacesList: React.FC<WorkspacesListProps> = ({
+  workspaces,
+  fetchNextPage,
+  hasNextPage,
+  isLoading,
+}) => {
   const { ref, inView } = useInView();
 
   useEffect(() => {
@@ -24,6 +31,16 @@ export const WorkspacesList: React.FC<WorkspacesListProps> = ({ workspaces, fetc
       fetchNextPage();
     }
   }, [inView, fetchNextPage, hasNextPage]);
+
+  if (isLoading) {
+    return (
+      <Box py="2xl">
+        <FlexContainer justifyContent="center">
+          <LoadingSpinner />
+        </FlexContainer>
+      </Box>
+    );
+  }
 
   return (
     <FlexContainer direction="column">

@@ -1,7 +1,7 @@
-import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import React from "react";
+
+import { Icon } from "components/ui/Icon";
 
 import styles from "./Button.module.scss";
 import { ButtonProps } from "./types";
@@ -32,7 +32,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
     [styles.typeLight]: variant === "light",
     [styles.typePrimary]: variant === "primary",
     [styles.typeSecondary]: variant === "secondary",
-    [styles.typeDark]: variant === "dark",
+    [styles.typePrimaryDark]: variant === "primaryDark",
+    [styles.typeSecondaryDark]: variant === "secondaryDark",
     [styles.link]: variant === "link",
   };
 
@@ -46,14 +47,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
       disabled={disabled || isLoading}
       {...buttonProps}
     >
-      {isLoading && (
-        <FontAwesomeIcon
-          className={classNames(styles.buttonIcon, {
-            [styles.isSpinnerIcon]: true,
-          })}
-          icon={faCircleNotch}
-        />
-      )}
+      {isLoading && <Icon type="loading" className={classNames(styles.buttonIcon, styles.loadingIcon)} />}
       {icon &&
         iconPosition === "left" &&
         React.cloneElement(icon, {
@@ -67,7 +61,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
       {icon &&
         iconPosition === "right" &&
         React.cloneElement(icon, {
-          className: classNames(styles.buttonIcon, {
+          className: classNames(icon.props.className, styles.buttonIcon, {
             [styles.positionRight]: true,
             [styles.isRegularIcon]: true,
             [styles.withLabel]: Boolean(children),

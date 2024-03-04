@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.keycloak.setup;
@@ -41,11 +41,13 @@ class KeycloakServerTest {
   @Mock
   private AccountClientUpdater accountClientUpdater;
   @Mock
+  private ClientScopeCreator clientScopeCreator;
+  @Mock
   private Keycloak keycloakAdminClient;
   @Mock
   private RealmsResource realmsResource;
   @Mock
-  private RealmResource realmResource;
+  private RealmResource airbyteRealm;
   private KeycloakServer keycloakServer;
 
   @BeforeEach
@@ -59,14 +61,15 @@ class KeycloakServerTest {
     when(keycloakAdminClientProvider.createKeycloakAdminClient(anyString())).thenReturn(keycloakAdminClient);
     when(keycloakAdminClient.realms()).thenReturn(realmsResource);
     when(realmsResource.findAll()).thenReturn(Collections.emptyList());
-    when(keycloakAdminClient.realm(anyString())).thenReturn(realmResource);
+    when(keycloakAdminClient.realm(anyString())).thenReturn(airbyteRealm);
 
     keycloakServer = new KeycloakServer(keycloakAdminClientProvider,
         keycloakConfiguration,
         userCreator,
         webClientCreator,
         identityProvidersCreator,
-        accountClientUpdater);
+        accountClientUpdater,
+        clientScopeCreator);
   }
 
   @Test
@@ -75,10 +78,10 @@ class KeycloakServerTest {
 
     verify(realmsResource, times(1)).findAll();
     verify(realmsResource, times(1)).create(any());
-    verify(userCreator, times(1)).createUser(realmResource);
-    verify(webClientCreator, times(1)).createWebClient(realmResource);
-    verify(identityProvidersCreator, times(1)).createIdps(realmResource);
-    verify(accountClientUpdater, times(1)).updateAccountClientHomeUrl(realmResource);
+    verify(userCreator, times(1)).createUser(airbyteRealm);
+    verify(webClientCreator, times(1)).createWebClient(airbyteRealm);
+    verify(identityProvidersCreator, times(1)).createIdps(airbyteRealm);
+    verify(accountClientUpdater, times(1)).updateAccountClientHomeUrl(airbyteRealm);
   }
 
   @Test
@@ -113,20 +116,34 @@ class KeycloakServerTest {
   }
 
   @Test
-  void testCreateAirbyteRealmWhenRealmAlreadyExistsAndResetUserIsTrue() {
+  void testRecreateAirbyteRealm() {
     final RealmRepresentation existingRealm = new RealmRepresentation();
     existingRealm.setRealm(REALM_NAME);
-
     when(realmsResource.findAll()).thenReturn(Collections.singletonList(existingRealm));
-    when(keycloakConfiguration.getAirbyteRealm()).thenReturn(REALM_NAME);
-    when(keycloakConfiguration.getResetRealm()).thenReturn(true);
 
-    keycloakServer.createAirbyteRealm();
+    keycloakServer.recreateAirbyteRealm();
 
-    verify(realmsResource, times(1)).findAll();
-    verify(realmsResource, times(0)).create(any());
-    verify(userCreator, times(1)).resetUser(any());
-    verify(identityProvidersCreator, times(1)).resetIdentityProviders(any());
+    verify(airbyteRealm, times(1)).remove();
+    verify(realmsResource, times(1)).create(any());
+    verify(userCreator, times(1)).createUser(airbyteRealm);
+    verify(webClientCreator, times(1)).createWebClient(airbyteRealm);
+    verify(identityProvidersCreator, times(1)).createIdps(airbyteRealm);
+    verify(accountClientUpdater, times(1)).updateAccountClientHomeUrl(airbyteRealm);
+  }
+
+  @Test
+  void testRecreateAirbyteRealmWhenRealmDoesNotExist() {
+    when(realmsResource.findAll()).thenReturn(Collections.emptyList());
+
+    keycloakServer.recreateAirbyteRealm();
+
+    // should behave the same as createAirbyteRealm in this case.
+    verify(airbyteRealm, times(0)).remove();
+    verify(realmsResource, times(1)).create(any());
+    verify(userCreator, times(1)).createUser(airbyteRealm);
+    verify(webClientCreator, times(1)).createWebClient(airbyteRealm);
+    verify(identityProvidersCreator, times(1)).createIdps(airbyteRealm);
+    verify(accountClientUpdater, times(1)).updateAccountClientHomeUrl(airbyteRealm);
   }
 
 }

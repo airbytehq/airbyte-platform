@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.converters;
 
 import io.airbyte.api.model.generated.ActorDefinitionBreakingChange;
 import io.airbyte.api.model.generated.ActorDefinitionResourceRequirements;
+import io.airbyte.api.model.generated.ActorType;
 import io.airbyte.api.model.generated.AttemptSyncConfig;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionSchedule;
@@ -22,6 +23,7 @@ import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.NormalizationDestinationDefinitionConfig;
 import io.airbyte.api.model.generated.ReleaseStage;
 import io.airbyte.api.model.generated.ResourceRequirements;
+import io.airbyte.api.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.api.model.generated.SupportLevel;
 import io.airbyte.api.model.generated.SupportState;
 import io.airbyte.commons.converters.StateConverter;
@@ -162,7 +164,9 @@ public class ApiPojoConverters {
         .breakingChange(standardSync.getBreakingChange())
         .geography(Enums.convertTo(standardSync.getGeography(), Geography.class))
         .nonBreakingChangesPreference(Enums.convertTo(standardSync.getNonBreakingChangesPreference(), NonBreakingChangesPreference.class))
+        .backfillPreference(Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class))
         .notifySchemaChanges(standardSync.getNotifySchemaChanges())
+        .createdAt(standardSync.getCreatedAt())
         .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail());
 
     if (standardSync.getResourceRequirements() != null) {
@@ -180,6 +184,10 @@ public class ApiPojoConverters {
 
   public static io.airbyte.config.JobTypeResourceLimit.JobType toInternalJobType(final JobType jobType) {
     return Enums.convertTo(jobType, io.airbyte.config.JobTypeResourceLimit.JobType.class);
+  }
+
+  public static io.airbyte.config.ActorType toInternalActorType(final ActorType actorType) {
+    return Enums.convertTo(actorType, io.airbyte.config.ActorType.class);
   }
 
   // TODO(https://github.com/airbytehq/airbyte/issues/11432): remove these helpers.
@@ -201,6 +209,10 @@ public class ApiPojoConverters {
 
   public static StandardSync.NonBreakingChangesPreference toPersistenceNonBreakingChangesPreference(final NonBreakingChangesPreference preference) {
     return Enums.convertTo(preference, StandardSync.NonBreakingChangesPreference.class);
+  }
+
+  public static StandardSync.BackfillPreference toPersistenceBackfillPreference(final SchemaChangeBackfillPreference preference) {
+    return Enums.convertTo(preference, StandardSync.BackfillPreference.class);
   }
 
   public static Geography toApiGeography(final io.airbyte.config.Geography geography) {

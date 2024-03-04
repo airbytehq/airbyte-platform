@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.config;
@@ -13,7 +13,6 @@ import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
-import io.airbyte.config.Configs.TrackingStrategy;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -35,14 +34,11 @@ import io.airbyte.validation.json.JsonSchemaValidator;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Value;
-import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.http.HttpClient;
 import java.nio.file.Path;
-import java.util.Locale;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -53,6 +49,7 @@ public class ApplicationBeanFactory {
 
   @SuppressWarnings("AbbreviationAsWordInName")
   @Singleton
+  @Named("uuidGenerator")
   public Supplier<UUID> randomUUIDSupplier() {
     return () -> UUID.randomUUID();
   }
@@ -63,17 +60,13 @@ public class ApplicationBeanFactory {
   }
 
   @Singleton
-  public TrackingStrategy trackingStrategy(@Value("${airbyte.tracking-strategy}") final String trackingStrategy) {
-    return convertToEnum(trackingStrategy, TrackingStrategy::valueOf, TrackingStrategy.LOGGING);
-  }
-
-  @Singleton
   public JobTracker jobTracker(
                                final ConfigRepository configRepository,
                                final JobPersistence jobPersistence,
                                final TrackingClient trackingClient,
-                               final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
-    return new JobTracker(configRepository, jobPersistence, trackingClient, actorDefinitionVersionHelper);
+                               final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                               final FeatureFlagClient featureFlagClient) {
+    return new JobTracker(configRepository, jobPersistence, trackingClient, actorDefinitionVersionHelper, featureFlagClient);
   }
 
   @Singleton
@@ -168,10 +161,6 @@ public class ApplicationBeanFactory {
   @Named("oauthHttpClient")
   public HttpClient httpClient() {
     return HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
-  }
-
-  private <T> T convertToEnum(final String value, final Function<String, T> creatorFunction, final T defaultValue) {
-    return StringUtils.isNotEmpty(value) ? creatorFunction.apply(value.toUpperCase(Locale.ROOT)) : defaultValue;
   }
 
 }

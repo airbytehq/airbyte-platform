@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -20,6 +20,7 @@ import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfigWithMetadata;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.helpers.ScheduleHelpers;
+import io.airbyte.data.services.impls.jooq.DbConverter;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
@@ -291,9 +292,9 @@ public class StandardSyncPersistence {
   static boolean getNotificationEnabled(final StandardSync standardSync, final NotificationType notificationType) {
     switch (notificationType) {
       case webhook:
-        return standardSync.getNotifySchemaChanges() == null ? false : standardSync.getNotifySchemaChanges();
+        return standardSync.getNotifySchemaChanges() != null && standardSync.getNotifySchemaChanges();
       case email:
-        return standardSync.getNotifySchemaChangesByEmail() == null ? false : standardSync.getNotifySchemaChangesByEmail();
+        return standardSync.getNotifySchemaChangesByEmail() != null && standardSync.getNotifySchemaChangesByEmail();
       default:
         throw new IllegalStateException("Notification type unsupported");
     }
@@ -323,7 +324,7 @@ public class StandardSyncPersistence {
   private List<ConfigWithMetadata<StandardSync>> listStandardSyncWithMetadata(final Optional<UUID> configId) throws IOException {
     final Result<Record> result = database.query(ctx -> {
       final SelectJoinStep<Record> query = ctx.select(CONNECTION.asterisk(),
-          SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
+          SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
           .from(CONNECTION)
           // The schema management can be non-existent for a connection id, thus we need to do a left join
           .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -41,9 +41,10 @@ import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.RunSupportStateUpdater;
+import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
@@ -76,7 +77,7 @@ public class DestinationDefinitionsHandler {
 
   @VisibleForTesting
   public DestinationDefinitionsHandler(final ConfigRepository configRepository,
-                                       final Supplier<UUID> uuidSupplier,
+                                       @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
                                        final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
                                        final RemoteDefinitionsProvider remoteDefinitionsProvider,
                                        final DestinationHandler destinationHandler,
@@ -92,17 +93,17 @@ public class DestinationDefinitionsHandler {
   }
 
   @VisibleForTesting
-  static DestinationDefinitionRead buildDestinationDefinitionRead(final StandardDestinationDefinition standardDestinationDefinition,
-                                                                  final ActorDefinitionVersion destinationVersion) {
+  DestinationDefinitionRead buildDestinationDefinitionRead(final StandardDestinationDefinition standardDestinationDefinition,
+                                                           final ActorDefinitionVersion destinationVersion) {
     try {
-
+      final boolean iconUrlFeatureFlag = featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS));
       return new DestinationDefinitionRead()
           .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
           .name(standardDestinationDefinition.getName())
           .dockerRepository(destinationVersion.getDockerRepository())
           .dockerImageTag(destinationVersion.getDockerImageTag())
           .documentationUrl(new URI(destinationVersion.getDocumentationUrl()))
-          .icon(loadIcon(standardDestinationDefinition.getIcon()))
+          .icon(iconUrlFeatureFlag ? standardDestinationDefinition.getIconUrl() : loadIcon(standardDestinationDefinition.getIcon()))
           .protocolVersion(destinationVersion.getProtocolVersion())
           .supportLevel(ApiPojoConverters.toApiSupportLevel(destinationVersion.getSupportLevel()))
           .releaseStage(ApiPojoConverters.toApiReleaseStage(destinationVersion.getReleaseStage()))
@@ -123,8 +124,8 @@ public class DestinationDefinitionsHandler {
     return toDestinationDefinitionReadList(standardDestinationDefinitions, destinationDefinitionVersionMap);
   }
 
-  private static DestinationDefinitionReadList toDestinationDefinitionReadList(final List<StandardDestinationDefinition> defs,
-                                                                               final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
+  private DestinationDefinitionReadList toDestinationDefinitionReadList(final List<StandardDestinationDefinition> defs,
+                                                                        final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
     final List<DestinationDefinitionRead> reads = defs.stream()
         .map(d -> buildDestinationDefinitionRead(d, defIdToVersionMap.get(d.getDestinationDefinitionId())))
         .collect(Collectors.toList());
@@ -188,9 +189,9 @@ public class DestinationDefinitionsHandler {
     return toPrivateDestinationDefinitionReadList(standardDestinationDefinitionBooleanMap, destinationDefinitionVersionMap);
   }
 
-  private static PrivateDestinationDefinitionReadList toPrivateDestinationDefinitionReadList(
-                                                                                             final List<Entry<StandardDestinationDefinition, Boolean>> defs,
-                                                                                             final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
+  private PrivateDestinationDefinitionReadList toPrivateDestinationDefinitionReadList(
+                                                                                      final List<Entry<StandardDestinationDefinition, Boolean>> defs,
+                                                                                      final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
     final List<PrivateDestinationDefinitionRead> reads = defs.stream()
         .map(entry -> new PrivateDestinationDefinitionRead()
             .destinationDefinition(buildDestinationDefinitionRead(entry.getKey(), defIdToVersionMap.get(entry.getKey().getDestinationDefinitionId())))
@@ -262,7 +263,7 @@ public class DestinationDefinitionsHandler {
   }
 
   public DestinationDefinitionRead updateDestinationDefinition(final DestinationDefinitionUpdate destinationDefinitionUpdate)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final StandardDestinationDefinition currentDestination = configRepository
         .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());
     final ActorDefinitionVersion currentVersion = configRepository.getActorDefinitionVersion(currentDestination.getDefaultVersionId());
@@ -275,6 +276,7 @@ public class DestinationDefinitionsHandler {
         .withDestinationDefinitionId(currentDestination.getDestinationDefinitionId())
         .withName(currentDestination.getName())
         .withIcon(currentDestination.getIcon())
+        .withIconUrl(currentDestination.getIconUrl())
         .withTombstone(currentDestination.getTombstone())
         .withPublic(currentDestination.getPublic())
         .withCustom(currentDestination.getCustom())
@@ -287,11 +289,9 @@ public class DestinationDefinitionsHandler {
         actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.DESTINATION);
     configRepository.writeConnectorMetadata(newDestination, newVersion, breakingChangesForDef);
 
-    if (featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))) {
-      final StandardDestinationDefinition updatedDestinationDefinition = configRepository
-          .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());
-      supportStateUpdater.updateSupportStatesForDestinationDefinition(updatedDestinationDefinition);
-    }
+    final StandardDestinationDefinition updatedDestinationDefinition = configRepository
+        .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());
+    supportStateUpdater.updateSupportStatesForDestinationDefinition(updatedDestinationDefinition);
     return buildDestinationDefinitionRead(newDestination, newVersion);
   }
 

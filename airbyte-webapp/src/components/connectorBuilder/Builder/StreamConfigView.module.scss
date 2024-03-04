@@ -29,6 +29,10 @@ $controlButtonWidth: 24px;
 }
 
 .deleteButton {
+  &:disabled {
+    cursor: not-allowed;
+  }
+
   &:hover {
     background-color: colors.$red;
   }
@@ -75,8 +79,25 @@ $controlButtonWidth: 24px;
 .autoSchemaContainer {
   overflow-y: auto;
   flex: 1 1 0;
+  font-size: variables.$font-size-md;
 }
 
 .multiStreams {
   padding: 0 50px;
+}
+
+.fieldset {
+  all: unset;
+  width: inherit;
+  display: inherit;
+  flex-direction: inherit;
+  gap: inherit;
+  height: inherit;
+  min-height: inherit;
+
+  &[disabled] {
+    *:hover {
+      cursor: default;
+    }
+  }
 }

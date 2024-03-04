@@ -1,5 +1,3 @@
-import { faIdCardClip } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useRef, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { createSearchParams, useNavigate, useSearchParams } from "react-router-dom";
@@ -7,11 +5,14 @@ import { useUnmount } from "react-use";
 import { Subscription } from "rxjs";
 
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { Spinner } from "components/ui/Spinner";
 
 import { OAuthProviders, AuthOAuthLogin } from "core/services/auth";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
+import { useKeycloakService } from "packages/cloud/services/auth/KeycloakService";
 
 import githubLogo from "./assets/github-logo.svg";
 import googleLogo from "./assets/google-logo.svg";
@@ -44,7 +45,7 @@ const SsoButton: React.FC = () => {
 
   return (
     <Link className={styles.sso} to={linkLocation}>
-      <FontAwesomeIcon icon={faIdCardClip} />
+      <Icon type="idCard" />
       <FormattedMessage id="login.sso.continueWithSSO" tagName="span" />
     </Link>
   );
@@ -62,6 +63,8 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth }) => {
   const [searchParams] = useSearchParams();
   const loginRedirect = searchParams.get("loginRedirect");
   const navigate = useNavigate();
+  const [keycloakSocialLoginsEnabled] = useLocalStorage("airbyte_keycloak-social-logins", false);
+  const { redirectToSignInWithGithub, redirectToSignInWithGoogle } = useKeycloakService();
 
   useUnmount(() => {
     stateSubscription.current?.unsubscribe();
@@ -115,8 +118,12 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth }) => {
       )}
       {!isLoading && (
         <>
-          <GoogleButton onClick={() => login("google")} />
-          <GitHubButton onClick={() => login("github")} />
+          <GoogleButton
+            onClick={() => (keycloakSocialLoginsEnabled ? redirectToSignInWithGoogle() : login("google"))}
+          />
+          <GitHubButton
+            onClick={() => (keycloakSocialLoginsEnabled ? redirectToSignInWithGithub() : login("github"))}
+          />
           <SsoButton />
         </>
       )}

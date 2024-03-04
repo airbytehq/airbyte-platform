@@ -1,17 +1,15 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config;
 
 import io.airbyte.commons.version.AirbyteVersion;
-import io.airbyte.commons.version.Version;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.storage.CloudStorageConfigs;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * This interface defines the general variables for configuring Airbyte.
@@ -42,23 +40,7 @@ public interface Configs {
    */
   AirbyteVersion getAirbyteVersion();
 
-  /**
-   * Defines the max supported Airbyte Protocol Version.
-   */
-  Version getAirbyteProtocolVersionMax();
-
-  /**
-   * Defines the min supported Airbyte Protocol Version.
-   */
-  Version getAirbyteProtocolVersionMin();
-
   String getAirbyteVersionOrWarning();
-
-  /**
-   * Defines the bucket for caching specs. This immensely speeds up spec operations. This is updated
-   * when new versions are published.
-   */
-  String getSpecCacheBucket();
 
   /**
    * Distinguishes internal Airbyte deployments. Internal-use only.
@@ -105,49 +87,11 @@ public interface Configs {
   // Secrets
 
   /**
-   * Defines the GCP Project to store secrets in. Alpha support.
-   */
-  String getSecretStoreGcpProjectId();
-
-  /**
-   * Define the JSON credentials used to read/write Airbyte Configuration to Google Secret Manager.
-   * These credentials must have Secret Manager Read/Write access. Alpha support.
-   */
-  String getSecretStoreGcpCredentials();
-
-  /**
    * Defines the Secret Persistence type. None by default. Set to GOOGLE_SECRET_MANAGER to use Google
    * Secret Manager. Set to TESTING_CONFIG_DB_TABLE to use the database as a test. Set to VAULT to use
    * Hashicorp Vault. Alpha support. Undefined behavior will result if this is turned on and then off.
    */
   SecretPersistenceType getSecretPersistenceType();
-
-  /**
-   * Define the vault address to read/write Airbyte Configuration to Hashicorp Vault. Alpha Support.
-   */
-  String getVaultAddress();
-
-  /**
-   * Define the vault path prefix to read/write Airbyte Configuration to Hashicorp Vault. Empty by
-   * default. Alpha Support.
-   */
-  String getVaultPrefix();
-
-  /**
-   * Define the vault token to read/write Airbyte Configuration to Hashicorp Vault. Empty by default.
-   * Alpha Support.
-   */
-  String getVaultToken();
-
-  /**
-   * Defines thw aws_access_key configuration to use AWSSecretManager.
-   */
-  String getAwsAccessKey();
-
-  /**
-   * Defines aws_secret_access_key to use for AWSSecretManager.
-   */
-  String getAwsSecretAccessKey();
 
   // Database
 
@@ -169,119 +113,9 @@ public interface Configs {
   String getDatabaseUrl();
 
   /**
-   * Define the minimum flyway migration version the Jobs Database must be at. If this is not
-   * satisfied, applications will not successfully connect. Internal-use only.
-   */
-  String getJobsDatabaseMinimumFlywayMigrationVersion();
-
-  /**
-   * Define the total time to wait for the Jobs Database to be initialized. This includes migrations.
-   */
-  long getJobsDatabaseInitializationTimeoutMs();
-
-  /**
-   * Define the Configs Database user. Defaults to the Jobs Database user if empty.
-   */
-  String getConfigDatabaseUser();
-
-  /**
-   * Define the Configs Database password. Defaults to the Jobs Database password if empty.
-   */
-  String getConfigDatabasePassword();
-
-  /**
-   * Define the Configs Database url in the form of
-   * jdbc:postgresql://${DATABASE_HOST}:${DATABASE_PORT/${DATABASE_DB}. Defaults to the Jobs Database
-   * url if empty.
-   */
-  String getConfigDatabaseUrl();
-
-  /**
-   * Define the minimum flyway migration version the Configs Database must be at. If this is not
-   * satisfied, applications will not successfully connect. Internal-use only.
-   */
-  String getConfigsDatabaseMinimumFlywayMigrationVersion();
-
-  /**
-   * Define the total time to wait for the Configs Database to be initialized. This includes
-   * migrations.
-   */
-  long getConfigsDatabaseInitializationTimeoutMs();
-
-  /**
-   * Define if the Bootloader should run migrations on start up.
-   */
-  boolean runDatabaseMigrationOnStartup();
-
-  // Temporal Cloud - Internal-Use Only
-
-  /**
-   * Define if Temporal Cloud should be used. Internal-use only.
-   */
-  boolean temporalCloudEnabled();
-
-  /**
-   * Temporal Cloud target endpoint, usually with form ${namespace}.tmprl.cloud:7233. Internal-use
-   * only.
-   */
-  String getTemporalCloudHost();
-
-  /**
-   * Temporal Cloud namespace. Internal-use only.
-   */
-  String getTemporalCloudNamespace();
-
-  /**
-   * Temporal Cloud client cert for SSL. Internal-use only.
-   */
-  String getTemporalCloudClientCert();
-
-  /**
-   * Temporal Cloud client key for SSL. Internal-use only.
-   */
-  String getTemporalCloudClientKey();
-
-  // Airbyte Services
-
-  /**
-   * Define the url where Temporal is hosted at. Please include the port. Airbyte services use this
-   * information.
-   */
-  String getTemporalHost();
-
-  /**
    * Define the number of retention days for the temporal history.
    */
   int getTemporalRetentionInDays();
-
-  /**
-   * Define the url where the Airbyte Server is hosted at. Airbyte services use this information.
-   * Manipulates the `INTERNAL_API_HOST` variable.
-   */
-  String getAirbyteApiHost();
-
-  /**
-   * Define the port where the Airbyte Server is hosted at. Airbyte services use this information.
-   * Manipulates the `INTERNAL_API_HOST` variable.
-   */
-  int getAirbyteApiPort();
-
-  /**
-   * Define the url the Airbyte Webapp is hosted at. Airbyte services use this information.
-   */
-  String getWebappUrl();
-
-  // Jobs
-
-  /**
-   * Define the number of attempts a sync will attempt before failing.
-   */
-  int getSyncJobMaxAttempts();
-
-  /**
-   * Define the number of days a sync job will execute for before timing out.
-   */
-  int getSyncJobMaxTimeoutDays();
 
   /**
    * Define the number of minutes a retry job will attempt to run before timing out.
@@ -327,18 +161,6 @@ public interface Configs {
    */
   Map<String, String> getJobDefaultEnvMap();
 
-  /**
-   * Defines the number of consecutive job failures required before a connection is auto-disabled if
-   * the AUTO_DISABLE_FAILING_CONNECTIONS flag is set to true.
-   */
-  int getMaxFailedJobsInARowBeforeConnectionDisable();
-
-  /**
-   * Defines the required number of days with only failed jobs before a connection is auto-disabled if
-   * the AUTO_DISABLE_FAILING_CONNECTIONS flag is set to true.
-   */
-  int getMaxDaysOfOnlyFailedJobsBeforeConnectionDisable();
-
   // Jobs - Kube only
 
   /**
@@ -383,21 +205,6 @@ public interface Configs {
    * and as fallback in case job specific (spec, check, discover) annotations are not defined.
    */
   Map<String, String> getJobKubeAnnotations();
-
-  /**
-   * Define annotations for Spec job pods specifically. Each kv-pair is separated by a `,`.
-   */
-  Map<String, String> getSpecJobKubeAnnotations();
-
-  /**
-   * Define annotations for Check job pods specifically. Each kv-pair is separated by a `,`.
-   */
-  Map<String, String> getCheckJobKubeAnnotations();
-
-  /**
-   * Define annotations for Discover job pods specifically. Each kv-pair is separated by a `,`.
-   */
-  Map<String, String> getDiscoverJobKubeAnnotations();
 
   /**
    * Define one or more Job pod labels. Each kv-pair is separated by a `,`. Used for the sync job and
@@ -513,11 +320,6 @@ public interface Configs {
   List<String> getDDConstantTags();
 
   /**
-   * Define whether to publish tracking events to Segment or log-only. Airbyte internal use.
-   */
-  TrackingStrategy getTrackingStrategy();
-
-  /**
    * Define whether to send job failure events to Sentry or log-only. Airbyte internal use.
    */
   JobErrorReportingStrategy getJobErrorReportingStrategy();
@@ -532,163 +334,6 @@ public interface Configs {
   // Worker
 
   /**
-   * Define the header name used to authenticate from an Airbyte Worker to the Airbyte API.
-   */
-  String getAirbyteApiAuthHeaderName();
-
-  /**
-   * Define the header value used to authenticate from an Airbyte Worker to the Airbyte API.
-   */
-  String getAirbyteApiAuthHeaderValue();
-
-  /**
-   * Define the maximum number of workers each Airbyte Worker container supports. Multiple variables
-   * are involved here. Please see {@link MaxWorkersConfig} for more info.
-   */
-  MaxWorkersConfig getMaxWorkers();
-
-  /**
-   * Define if the worker should run get spec workflows. Defaults to true. Internal-use only.
-   */
-  boolean shouldRunGetSpecWorkflows();
-
-  /**
-   * Define if the worker should run check connection workflows. Defaults to true. Internal-use only.
-   */
-  boolean shouldRunCheckConnectionWorkflows();
-
-  /**
-   * Define if the worker should run discover workflows. Defaults to true. Internal-use only.
-   */
-  boolean shouldRunDiscoverWorkflows();
-
-  /**
-   * Define if the worker should run sync workflows. Defaults to true. Internal-use only.
-   */
-  boolean shouldRunSyncWorkflows();
-
-  /**
-   * Define if the worker should run connection manager workflows. Defaults to true. Internal-use
-   * only.
-   */
-  boolean shouldRunConnectionManagerWorkflows();
-
-  /**
-   * Define if the worker should run notification workflows. Defaults to true. Internal-use only.
-   */
-  public boolean shouldRunNotifyWorkflows();
-
-  // Worker - Data Plane configs
-
-  /**
-   * Define a set of Temporal Task Queue names for which the worker should register handlers for to
-   * process tasks related to syncing data. - For workers within Airbyte's Control Plane, this returns
-   * the Control Plane's default task queue. - For workers within a Data Plane, this returns only task
-   * queue names specific to that Data Plane. Internal-use only.
-   */
-  Set<String> getDataSyncTaskQueues();
-
-  /**
-   * Return the Control Plane endpoint that workers in a Data Plane will hit for authentication. This
-   * is separate from the actual endpoint being hit for application logic. Internal-use only.
-   */
-  String getControlPlaneAuthEndpoint();
-
-  /**
-   * Return the service account a data plane uses to authenticate with a control plane. Internal-use
-   * only.
-   */
-  String getDataPlaneServiceAccountCredentialsPath();
-
-  /**
-   * Return the service account email a data plane uses to authenticate with a control plane.
-   * Internal-use only.
-   */
-  String getDataPlaneServiceAccountEmail();
-
-  // Worker - Kube only
-
-  /**
-   * Define the local ports the Airbyte Worker pod uses to connect to the various Job pods.
-   */
-  Set<Integer> getTemporalWorkerPorts();
-
-  // Container Orchestrator
-
-  /**
-   * Define if Airbyte should use the container orchestrator. Internal-use only. Should always be set
-   * to true - otherwise causes syncs to be run on workers instead.
-   */
-  boolean getContainerOrchestratorEnabled();
-
-  /**
-   * Get the name of the container orchestrator secret. Internal-use only.
-   */
-  String getContainerOrchestratorSecretName();
-
-  /**
-   * Get the mount path for a secret that should be loaded onto container orchestrator pods.
-   * Internal-use only.
-   */
-  String getContainerOrchestratorSecretMountPath();
-
-  /**
-   * Define the image to use for the container orchestrator. Defaults to the Airbyte version.
-   */
-  String getContainerOrchestratorImage();
-
-  /**
-   * Define the replication orchestrator's minimum CPU usage. Defaults to none.
-   */
-  String getReplicationOrchestratorCpuRequest();
-
-  /**
-   * Define the replication orchestrator's maximum CPU usage. Defaults to none.
-   */
-  String getReplicationOrchestratorCpuLimit();
-
-  /**
-   * Define the replication orchestrator's minimum RAM usage. Defaults to none.
-   */
-  String getReplicationOrchestratorMemoryRequest();
-
-  /**
-   * Define the replication orchestrator's maximum RAM usage. Defaults to none.
-   */
-  String getReplicationOrchestratorMemoryLimit();
-
-  /**
-   * Get the longest duration of non long running activity.
-   */
-  int getMaxActivityTimeoutSecond();
-
-  /**
-   * Get initial delay in seconds between two activity attempts.
-   */
-  int getInitialDelayBetweenActivityAttemptsSeconds();
-
-  /**
-   * Get maximum delay in seconds between two activity attempts.
-   */
-  int getMaxDelayBetweenActivityAttemptsSeconds();
-
-  /**
-   * Get the delay in seconds between an activity failing and the workflow being restarted.
-   */
-  int getWorkflowFailureRestartDelaySeconds();
-
-  /**
-   * Get number of attempts of the non long running activities.
-   */
-  int getActivityNumberOfAttempt();
-
-  boolean getAutoDetectSchema();
-
-  boolean getApplyFieldSelection();
-
-  String getFieldSelectionWorkspaces();
-
-  /**
    * Connector Builder configs.
    */
   String getCdkPython();
@@ -696,14 +341,6 @@ public interface Configs {
   String getCdkEntrypoint();
 
   String getCustomerIoKey();
-
-  /**
-   * Tracking strategy.
-   */
-  enum TrackingStrategy {
-    SEGMENT,
-    LOGGING
-  }
 
   /**
    * Job error reporting strategy.

@@ -1,0 +1,36 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/z-indices";
+
+.deployPreviewMessage {
+  position: fixed;
+  z-index: z-indices.$deployPreviewMessage;
+  text-align: center;
+  top: 0;
+  right: variables.$spacing-lg;
+  font-size: variables.$font-size-sm;
+  background-color: colors.$yellow-400;
+  color: colors.$black;
+  box-shadow: variables.$box-shadow-popup;
+  height: 25px;
+
+  & a {
+    color: inherit;
+  }
+
+  &__button {
+    width: 25px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    svg {
+      transform: translateY(-1px);
+    }
+  }
+}

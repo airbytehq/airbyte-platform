@@ -1,0 +1,17 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.currentMonthYearContainer {
+  margin: 0 0.4rem 0.4rem; // same as native react-datepicker__month
+
+  .navArrowBtn {
+    border: variables.$border-thin solid colors.$grey-300;
+    border-radius: variables.$border-radius-xs;
+  }
+}
+
+.dropdown {
+  background-color: transparent;
+  border: variables.$border-thin solid colors.$grey-300;
+  border-radius: variables.$border-radius-xs;
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.auth.config;
@@ -28,6 +28,7 @@ public class AirbyteKeycloakConfiguration {
   String basePath;
   String airbyteRealm;
   String realm;
+  String clientRealm;
   String clientId;
   String redirectUri;
   String webClientId;
@@ -41,6 +42,13 @@ public class AirbyteKeycloakConfiguration {
     final String basePathWithLeadingSlash = basePath.startsWith("/") ? basePath : "/" + basePath;
     final String keycloakUserInfoURI = "/protocol/openid-connect/userinfo";
     return protocol + "://" + hostWithoutTrailingSlash + basePathWithLeadingSlash + "/realms/" + airbyteRealm + keycloakUserInfoURI;
+  }
+
+  public String getServerUrl() {
+    return getProtocol()
+        + "://"
+        + getHost()
+        + getBasePath();
   }
 
 }

@@ -9,7 +9,7 @@ import { links } from "core/utils/links";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderList } from "./BuilderList";
-import { InjectIntoFields } from "./InjectIntoFields";
+import { BuilderRequestInjection } from "./BuilderRequestInjection";
 import { StreamReferenceField } from "./StreamReferenceField";
 import { ToggleGroupField } from "./ToggleGroupField";
 import { StreamPathFn, BuilderParentStream } from "../types";
@@ -31,8 +31,8 @@ export const ParentStreamsSection: React.FC<ParentStreamsSectionProps> = ({ stre
   return (
     <BuilderCard
       docLink={links.connectorBuilderParentStream}
-      label="Parent Stream"
-      tooltip="Configure another stream to be the parent of this stream. This means that for each record in the parent stream, a separate request will be made for the current stream with the parent record's data accessible for injection or interpolation."
+      label={formatMessage({ id: "connectorBuilder.parentStreams.label" })}
+      tooltip={formatMessage({ id: "connectorBuilder.parentStreams.tooltip" })}
       toggleConfig={{
         path: streamFieldPath("parentStreams"),
         defaultValue: [EMPTY_PARENT_STREAM],
@@ -54,8 +54,8 @@ export const ParentStreamsSection: React.FC<ParentStreamsSectionProps> = ({ stre
             <StreamReferenceField
               currentStreamIndex={currentStreamIndex}
               path={buildPath("parentStreamReference")}
-              label="Parent Stream"
-              tooltip="The stream to read records from. Make sure there are no cyclic dependencies between streams"
+              label={formatMessage({ id: "connectorBuilder.parentStreams.label" })}
+              tooltip={formatMessage({ id: "connectorBuilder.parentStreams.parentStream.tooltip" })}
             />
             <BuilderFieldWithInputs
               type="string"
@@ -68,15 +68,13 @@ export const ParentStreamsSection: React.FC<ParentStreamsSectionProps> = ({ stre
               manifestPath="ParentStreamConfig.properties.partition_field"
               tooltip={
                 <ReactMarkdown>
-                  {
-                    "The identifier that should be used for referencing the parent key value in interpolation. For example, if this field is set to `parent_id`, then the parent key value can be referenced in interpolation as `{{ stream_partition.parent_id }}`"
-                  }
+                  {formatMessage({ id: "connectorBuilder.parentStreams.parentStream.partitionField.tooltip" })}
                 </ReactMarkdown>
               }
             />
             <ToggleGroupField<RequestOption>
-              label="Inject Parent Key into outgoing HTTP Request"
-              tooltip="Optionally configures how the parent key will be sent in requests to the source API"
+              label={formatMessage({ id: "connectorBuilder.parentStreams.parentStream.requestOption.label" })}
+              tooltip={formatMessage({ id: "connectorBuilder.parentStreams.parentStream.requestOption.tooltip" })}
               fieldPath={buildPath("request_option")}
               initialValues={{
                 inject_into: "request_parameter",
@@ -84,7 +82,13 @@ export const ParentStreamsSection: React.FC<ParentStreamsSectionProps> = ({ stre
                 field_name: "",
               }}
             >
-              <InjectIntoFields path={buildPath("request_option")} descriptor="parent key" excludeValues={["path"]} />
+              <BuilderRequestInjection
+                path={buildPath("request_option")}
+                descriptor={formatMessage({
+                  id: "connectorBuilder.parentStreams.parentStream.requestOption.descriptor",
+                })}
+                excludeValues={["path"]}
+              />
             </ToggleGroupField>
           </GroupControls>
         )}

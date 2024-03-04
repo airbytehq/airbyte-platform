@@ -1,13 +1,14 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
 
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -37,14 +38,17 @@ import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.ConnectorJobOutput.OutputType;
 import io.airbyte.config.FailureReason;
+import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
+import io.airbyte.protocol.models.AirbyteStream;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.Config;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.process.IntegrationLauncher;
@@ -54,6 +58,8 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
@@ -246,6 +252,7 @@ class DefaultDiscoverCatalogWorkerTest {
     assertNull(output.getDiscoverCatalogId());
     final FailureReason failureReason = output.getFailureReason();
     assertEquals("some error from the connector", failureReason.getExternalMessage());
+    assertEquals(FailureOrigin.SOURCE, failureReason.getFailureOrigin());
 
     Assertions.assertTimeout(Duration.ofSeconds(5), () -> {
       while (process.getErrorStream().available() != 0) {
@@ -266,6 +273,7 @@ class DefaultDiscoverCatalogWorkerTest {
     assertNotNull(output.getDiscoverCatalogId());
     final FailureReason failureReason = output.getFailureReason();
     assertEquals("some error from the connector", failureReason.getExternalMessage());
+    assertEquals(FailureOrigin.SOURCE, failureReason.getFailureOrigin());
 
     Assertions.assertTimeout(Duration.ofSeconds(5), () -> {
       while (process.getErrorStream().available() != 0) {
@@ -284,6 +292,100 @@ class DefaultDiscoverCatalogWorkerTest {
     final DefaultDiscoverCatalogWorker worker =
         new DefaultDiscoverCatalogWorker(mAirbyteApiClient, integrationLauncher, connectorConfigUpdater, validCatalogStreamFactory);
     assertThrows(WorkerException.class, () -> worker.run(INPUT, jobRoot));
+  }
+
+  @Test
+  void testDiscoverSchemaValidation() {
+    final var catalog = getAirbyteCatalogWithBadStreams();
+    validCatalogStreamFactory = noop -> Lists.newArrayList(new AirbyteMessage().withType(Type.CATALOG).withCatalog(catalog))
+        .stream();
+    final DefaultDiscoverCatalogWorker worker =
+        new DefaultDiscoverCatalogWorker(mAirbyteApiClient, integrationLauncher, connectorConfigUpdater, validCatalogStreamFactory);
+    final WorkerException workerException = assertThrows(WorkerException.class, () -> worker.run(INPUT, jobRoot));
+    final String exceptionMsg = workerException.getMessage();
+    assertTrue(exceptionMsg.contains("Source defined cursor validation failed for stream: stream-1."));
+    assertTrue(exceptionMsg.contains("Source defined primary key validation failed for stream: stream-2."));
+    assertFalse(exceptionMsg.contains("Source defined primary key validation failed for stream: stream-3."));
+  }
+
+  @Test
+  void discoverSchemaValidationHandlesNullOptionalKeys() {
+    final var catalog = getAirbyteCatalogWithNullKeyPaths();
+    validCatalogStreamFactory = noop -> Lists.newArrayList(new AirbyteMessage().withType(Type.CATALOG).withCatalog(catalog))
+        .stream();
+    final DefaultDiscoverCatalogWorker worker =
+        new DefaultDiscoverCatalogWorker(mAirbyteApiClient, integrationLauncher, connectorConfigUpdater, validCatalogStreamFactory);
+    assertDoesNotThrow(() -> worker.run(INPUT, jobRoot));
+  }
+
+  private static AirbyteCatalog getAirbyteCatalogWithBadStreams() {
+    final AirbyteStream cursorFieldNotPresentInSchema = new AirbyteStream()
+        .withNamespace("namespace-1")
+        .withName("stream-1")
+        .withDefaultCursorField(Collections.singletonList("cursor-field-not-present-in-schema"))
+        .withJsonSchema(CatalogHelpers.fieldsToJsonSchema(
+            Field.of("id", JsonSchemaType.STRING),
+            Field.of("id2", JsonSchemaType.STRING)))
+        .withSourceDefinedPrimaryKey(Collections.singletonList(Collections.singletonList("id")))
+        .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
+
+    final AirbyteStream primaryKeyNotPresentInSchema = new AirbyteStream()
+        .withNamespace("namespace-2")
+        .withName("stream-2")
+        .withDefaultCursorField(Collections.singletonList("id"))
+        .withJsonSchema(CatalogHelpers.fieldsToJsonSchema(
+            Field.of("id", JsonSchemaType.STRING),
+            Field.of("id2", JsonSchemaType.STRING)))
+        .withSourceDefinedPrimaryKey(Collections.singletonList(Collections.singletonList("primary-key-not-present-in-schema")))
+        .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
+
+    final AirbyteStream goodStream = new AirbyteStream()
+        .withNamespace("namespace-3")
+        .withName("stream-3")
+        .withDefaultCursorField(Collections.singletonList("id"))
+        .withJsonSchema(CatalogHelpers.fieldsToJsonSchema(
+            Field.of("id", JsonSchemaType.STRING),
+            Field.of("id2", JsonSchemaType.STRING)))
+        .withSourceDefinedPrimaryKey(Collections.singletonList(Collections.singletonList("id2")))
+        .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
+
+    return new AirbyteCatalog().withStreams(
+        List.of(cursorFieldNotPresentInSchema, primaryKeyNotPresentInSchema, goodStream));
+  }
+
+  private static AirbyteCatalog getAirbyteCatalogWithNullKeyPaths() {
+    final AirbyteStream cursorFieldNotPresentInSchema = new AirbyteStream()
+        .withNamespace("namespace-1")
+        .withName("stream-1")
+        .withDefaultCursorField(null)
+        .withJsonSchema(CatalogHelpers.fieldsToJsonSchema(
+            Field.of("id", JsonSchemaType.STRING),
+            Field.of("id2", JsonSchemaType.STRING)))
+        .withSourceDefinedPrimaryKey(Collections.singletonList(Collections.singletonList("id")))
+        .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
+
+    final AirbyteStream primaryKeyNotPresentInSchema = new AirbyteStream()
+        .withNamespace("namespace-2")
+        .withName("stream-2")
+        .withDefaultCursorField(Collections.singletonList("id"))
+        .withJsonSchema(CatalogHelpers.fieldsToJsonSchema(
+            Field.of("id", JsonSchemaType.STRING),
+            Field.of("id2", JsonSchemaType.STRING)))
+        .withSourceDefinedPrimaryKey(null)
+        .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
+
+    final AirbyteStream goodStream = new AirbyteStream()
+        .withNamespace("namespace-3")
+        .withName("stream-3")
+        .withDefaultCursorField(null)
+        .withJsonSchema(CatalogHelpers.fieldsToJsonSchema(
+            Field.of("id", JsonSchemaType.STRING),
+            Field.of("id2", JsonSchemaType.STRING)))
+        .withSourceDefinedPrimaryKey(null)
+        .withSupportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
+
+    return new AirbyteCatalog().withStreams(
+        List.of(cursorFieldNotPresentInSchema, primaryKeyNotPresentInSchema, goodStream));
   }
 
   @Test

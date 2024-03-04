@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.config.cloud
@@ -49,10 +49,10 @@ class CloudStateConfig {
     val minioConfig = minioCloudConfig.build()
     return mapOf(
       WORKER_STATE_STORAGE_TYPE_ENV_VAR to StateType.MINIO.name,
-      AWS_ACCESS_KEY_ID_ENV_VAR to minioConfig.accessKey,
-      S3_STATE_BUCKET_ENV_VAR to minioConfig.bucket,
-      S3_MINIO_ENDPOINT_ENV_VAR to minioConfig.endpoint,
-      AWS_SECRET_ACCESS_KEY_ENV_VAR to minioConfig.secretAccessKey,
+      MINIO_ACCESS_KEY_ENV_VAR to minioConfig.accessKey,
+      MINIO_BUCKET_NAME_ENV_VAR to minioConfig.bucket,
+      MINIO_ENDPOINT_ENV_VAR to minioConfig.endpoint,
+      MINIO_SECRET_ACCESS_KEY_ENV_VAR to minioConfig.secretAccessKey,
     )
   }
 
@@ -66,14 +66,18 @@ class CloudStateConfig {
       AWS_SECRET_ACCESS_KEY_ENV_VAR to s3Config.secretAccessKey,
     )
   }
+
   companion object {
     const val AWS_ACCESS_KEY_ID_ENV_VAR = "STATE_STORAGE_MINIO_ACCESS_KEY"
     const val AWS_SECRET_ACCESS_KEY_ENV_VAR = "STATE_STORAGE_AWS_SECRET_ACCESS_KEY"
     const val GCS_STATE_BUCKET_ENV_VAR = "STATE_STORAGE_GCS_BUCKET_NAME"
     const val GOOGLE_APPLICATION_CREDENTIALS_ENV_VAR = "STATE_STORAGE_GCS_APPLICATION_CREDENTIALS"
+    const val MINIO_ENDPOINT_ENV_VAR = "STATE_STORAGE_MINIO_ENDPOINT"
+    const val MINIO_BUCKET_NAME_ENV_VAR = "STATE_STORAGE_MINIO_BUCKET_NAME"
+    const val MINIO_ACCESS_KEY_ENV_VAR = "STATE_STORAGE_MINIO_ACCESS_KEY"
+    const val MINIO_SECRET_ACCESS_KEY_ENV_VAR = "STATE_STORAGE_MINIO_SECRET_ACCESS_KEY"
     const val S3_STATE_BUCKET_ENV_VAR = "STATE_STORAGE_S3_LOG_BUCKET"
     const val S3_STATE_BUCKET_REGION_ENV_VAR = "STATE_STORAGE_S3_LOG_BUCKET_REGION"
-    const val S3_MINIO_ENDPOINT_ENV_VAR = "STATE_STORAGE_S3_MINIO_ENDPOINT"
     const val WORKER_STATE_STORAGE_TYPE_ENV_VAR = "WORKER_STATE_STORAGE_TYPE"
   }
 }

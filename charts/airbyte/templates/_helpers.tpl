@@ -188,6 +188,19 @@ Add environment variables to configure database values
 {{- end -}}
 
 {{/*
+Create JDBC URL specifically for Keycloak with a custom schema
+*/}}
+{{- define "keycloak.database.url" -}}
+{{- if .Values.externalDatabase.jdbcUrl -}}
+{{- printf "%s?currentSchema=keycloak" .Values.externalDatabase.jdbcUrl -}}
+{{- else -}}
+{{- $baseURL := include "airbyte.database.url" . -}}
+{{- printf "%s?currentSchema=keycloak" $baseURL -}}
+{{- end -}}
+{{- end -}}
+
+
+{{/*
 Create a default fully qualified minio name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}

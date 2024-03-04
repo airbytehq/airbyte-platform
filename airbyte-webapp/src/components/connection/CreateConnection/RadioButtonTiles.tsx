@@ -1,5 +1,6 @@
 import classNames from "classnames";
-import { useIntl } from "react-intl";
+import { ComponentProps } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
@@ -11,7 +12,9 @@ import { SelectedIndicatorDot } from "./SelectedIndicatorDot";
 interface RadioButtonTilesOption<T> {
   value: T;
   label: string;
+  labelValues?: ComponentProps<typeof FormattedMessage>["values"];
   description: string;
+  extra?: React.ReactNode;
   disabled?: boolean;
 }
 
@@ -20,6 +23,7 @@ interface RadioButtonTilesProps<T> {
   selectedValue: string;
   onSelectRadioButton: (value: T) => void;
   name: string;
+  direction?: ComponentProps<typeof FlexContainer>["direction"];
 }
 
 export const RadioButtonTiles = <T extends string>({
@@ -27,10 +31,11 @@ export const RadioButtonTiles = <T extends string>({
   onSelectRadioButton,
   selectedValue,
   name,
+  direction,
 }: RadioButtonTilesProps<T>) => {
   const { formatMessage } = useIntl();
   return (
-    <FlexContainer>
+    <FlexContainer direction={direction}>
       {options.map((option) => (
         <FlexItem className={styles.radioButtonTiles__tile} key={option.value}>
           <input
@@ -56,12 +61,13 @@ export const RadioButtonTiles = <T extends string>({
             <div>
               <Box mb="sm">
                 <Text size="lg" color={option.disabled ? "grey" : "darkBlue"}>
-                  {formatMessage({ id: option.label })}
+                  {formatMessage({ id: option.label }, option.labelValues)}
                 </Text>
               </Box>
               <Text size="sm" color={option.disabled ? "grey" : "darkBlue"}>
                 {formatMessage({ id: option.description })}
               </Text>
+              {option.extra && <Box mt="sm">{option.extra}</Box>}
             </div>
           </label>
         </FlexItem>

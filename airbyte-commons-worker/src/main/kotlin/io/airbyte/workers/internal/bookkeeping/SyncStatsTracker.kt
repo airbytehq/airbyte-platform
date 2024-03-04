@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 package io.airbyte.workers.internal.bookkeeping
 
@@ -7,6 +7,7 @@ import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair
+import io.airbyte.workers.context.ReplicationFeatureFlags
 
 /**
  * Track stats during a sync.
@@ -20,7 +21,6 @@ interface SyncStatsTracker {
   /**
    * There are several assumptions here:
    *
-   *f
    * - Assume the estimate is a whole number and not a sum i.e. each estimate replaces the previous
    * estimate.
    *
@@ -151,4 +151,6 @@ interface SyncStatsTracker {
   fun getMeanSecondsBetweenStateMessageEmittedAndCommitted(): Long?
 
   fun getUnreliableStateTimingMetrics(): Boolean
+
+  fun setReplicationFeatureFlags(replicationFeatureFlags: ReplicationFeatureFlags?): Unit
 }

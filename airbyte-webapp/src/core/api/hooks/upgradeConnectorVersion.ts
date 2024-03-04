@@ -1,9 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { destinationsKeys, sourcesKeys } from "core/api";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { destinationsKeys } from "hooks/services/useDestinationHook";
-import { sourcesKeys } from "hooks/services/useSourceHook";
 
 import { definitionKeys } from "./actorDefinitionVersions";
 import {

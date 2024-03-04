@@ -6,7 +6,7 @@ import { Icon } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
 import { ListBox } from "components/ui/ListBox";
 
-import { PermissionType } from "core/request/AirbyteClient";
+import { PermissionType } from "core/api/types/AirbyteClient";
 
 import {
   RbacQuery,
@@ -81,7 +81,8 @@ const PermissionQueryResult: React.FC<PermissionQueryResultProps> = ({
   role,
   permissions,
 }) => {
-  const query = resourceType === "INSTANCE" ? { resourceType, role } : { resourceType, role, resourceId };
+  const query =
+    resourceType === "INSTANCE" ? { resourceType, role, resourceId: "" } : { resourceType, role, resourceId };
 
   const hasMatchingPermissions = useRbacPermissionsQuery(
     permissions.map(({ resourceType, role, resourceId }) => {
@@ -178,7 +179,10 @@ const PermisisonTestViewInner = () => {
             variant="secondary"
             icon={<Icon type="plus" />}
             onClick={() => {
-              setPermissions([...permissions, { resourceType: RbacResourceHierarchy[0], role: RbacRoleHierarchy[0] }]);
+              setPermissions([
+                ...permissions,
+                { resourceType: RbacResourceHierarchy[0], role: RbacRoleHierarchy[0], resourceId: "" },
+              ]);
             }}
           />
         </strong>

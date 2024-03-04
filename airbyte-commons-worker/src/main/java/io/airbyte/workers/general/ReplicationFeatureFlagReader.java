@@ -1,13 +1,15 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
 
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.DestinationTimeoutEnabled;
+import io.airbyte.featureflag.FailSyncOnInvalidChecksum;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.WorkloadHeartbeatRate;
+import io.airbyte.featureflag.WorkloadHeartbeatTimeout;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
 
 /**
@@ -29,15 +31,24 @@ public class ReplicationFeatureFlagReader {
    * @return The flags.
    */
   public ReplicationFeatureFlags readReplicationFeatureFlags() {
-    return new ReplicationFeatureFlags(isDestinationTimeoutEnabled(), getWorkloadHeartbeatRate());
+    return new ReplicationFeatureFlags(isDestinationTimeoutEnabled(), getWorkloadHeartbeatRate(), getWorkloadHeartbeatTimeout(),
+        failOnInvalidChecksum());
   }
 
   private int getWorkloadHeartbeatRate() {
     return featureFlagClient.intVariation(WorkloadHeartbeatRate.INSTANCE, flagContext);
   }
 
+  private int getWorkloadHeartbeatTimeout() {
+    return featureFlagClient.intVariation(WorkloadHeartbeatTimeout.INSTANCE, flagContext);
+  }
+
   private boolean isDestinationTimeoutEnabled() {
     return featureFlagClient.boolVariation(DestinationTimeoutEnabled.INSTANCE, flagContext);
+  }
+
+  private boolean failOnInvalidChecksum() {
+    return featureFlagClient.boolVariation(FailSyncOnInvalidChecksum.INSTANCE, flagContext);
   }
 
 }

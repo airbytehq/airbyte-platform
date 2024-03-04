@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal.syncpersistence;
@@ -65,6 +65,7 @@ class SyncPersistenceImplTest {
   private ArgumentCaptor<Runnable> actualFlushMethod;
 
   private UUID connectionId;
+  private UUID workspaceId;
   private Long jobId;
   private Integer attemptNumber;
   private ConfiguredAirbyteCatalog catalog;
@@ -72,6 +73,7 @@ class SyncPersistenceImplTest {
   @BeforeEach
   void beforeEach() {
     connectionId = UUID.randomUUID();
+    workspaceId = UUID.randomUUID();
     jobId = (long) (Math.random() * Long.MAX_VALUE);
     attemptNumber = (int) (Math.random() * Integer.MAX_VALUE);
     catalog = mock(ConfiguredAirbyteCatalog.class);
@@ -92,7 +94,7 @@ class SyncPersistenceImplTest {
     attemptApi = mock(AttemptApi.class);
     syncPersistence = new SyncPersistenceImpl(stateApi, attemptApi, new StateAggregatorFactory(), syncStatsTracker, executorService,
         flushPeriod, new RetryWithJitterConfig(1, 1, 4),
-        connectionId, jobId, attemptNumber, catalog);
+        connectionId, workspaceId, jobId, attemptNumber, catalog);
   }
 
   @AfterEach

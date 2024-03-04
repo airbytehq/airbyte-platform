@@ -11,11 +11,10 @@ import { StepsTypes } from "components/ConnectorBlocks";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { useGetDestinationFromParams } from "area/connector/utils";
-import { useDestinationDefinitionVersion } from "core/api";
+import { useDestinationDefinitionVersion, useDestinationDefinition } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { RoutePaths } from "pages/routePaths";
-import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";

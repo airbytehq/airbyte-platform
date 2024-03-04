@@ -1,28 +1,143 @@
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import React, { Suspense } from "react";
+import React, { Suspense, useDeferredValue, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { LoadingPage, MainPageWithScroll } from "components";
 import { HeadTitle } from "components/common/HeadTitle";
 import { ConnectionOnboarding } from "components/connection/ConnectionOnboarding";
+import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
+import { Card } from "components/ui/Card";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
 import { PageHeader } from "components/ui/PageHeader";
+import { Text } from "components/ui/Text";
 
-import { useConnectionList } from "core/api";
+import { useConnectionList, useCurrentWorkspace, useFilters } from "core/api";
+import { JobStatus, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useIntent } from "core/utils/rbac";
+import { useExperiment } from "hooks/services/Experiment";
 
+import styles from "./AllConnectionsPage.module.scss";
+import { ConnectionsFilters, FilterValues } from "./ConnectionsFilters";
+import { ConnectionsSummary, SummaryKey } from "./ConnectionsSummary";
 import ConnectionsTable from "./ConnectionsTable";
 import { ConnectionRoutePaths } from "../../routePaths";
+
+const isConnectionPaused = (
+  connection: WebBackendConnectionListItem
+): connection is WebBackendConnectionListItem & { status: "inactive" } => connection.status === "inactive";
+
+const isConnectionRunning = (
+  connection: WebBackendConnectionListItem
+): connection is WebBackendConnectionListItem & { isSyncing: true } => connection.isSyncing;
+
+const isConnectionFailed = (
+  connection: WebBackendConnectionListItem
+): connection is WebBackendConnectionListItem & { latestSyncJobStatus: "failed" } =>
+  connection.latestSyncJobStatus === JobStatus.failed ||
+  connection.latestSyncJobStatus === JobStatus.cancelled ||
+  connection.latestSyncJobStatus === JobStatus.incomplete;
 
 export const AllConnectionsPage: React.FC = () => {
   const navigate = useNavigate();
 
   useTrackPage(PageTrackingCodes.CONNECTIONS_LIST);
+  const isConnectionsSummaryEnabled = useExperiment("connections.summaryView", false);
+
+  const { workspaceId } = useCurrentWorkspace();
+  const canCreateConnection = useIntent("CreateConnection", { workspaceId });
+
   const connectionList = useConnectionList();
-  const connections = connectionList?.connections ?? [];
+  const connections = useMemo(() => connectionList?.connections ?? [], [connectionList?.connections]);
+
+  const [searchFilter, setSearchFilter] = useState<string>("");
+  const debouncedSearchFilter = useDeferredValue(searchFilter);
+  const [filterValues, setFilterValue, setFilters] = useFilters<FilterValues>({
+    status: null,
+    source: null,
+    destination: null,
+  });
+
+  const filteredConnections = useMemo(() => {
+    const statusFilter = filterValues.status;
+    const sourceFilter = filterValues.source;
+    const destinationFilter = filterValues.destination;
+
+    return connections.filter((connection) => {
+      if (statusFilter) {
+        const isPaused = isConnectionPaused(connection);
+        const isRunning = isConnectionRunning(connection);
+        const isFailed = isConnectionFailed(connection);
+        if (statusFilter === "paused" && !isPaused) {
+          return false;
+        } else if (statusFilter === "running" && (!isRunning || isPaused)) {
+          return false;
+        } else if (statusFilter === "failed" && (!isFailed || isRunning || isPaused)) {
+          return false;
+        } else if (statusFilter === "healthy" && (isRunning || isPaused || isFailed)) {
+          return false;
+        }
+      }
+
+      if (sourceFilter && sourceFilter !== connection.source.sourceDefinitionId) {
+        return false;
+      }
+
+      if (destinationFilter && destinationFilter !== connection.destination.destinationDefinitionId) {
+        return false;
+      }
+
+      if (debouncedSearchFilter) {
+        const searchValue = debouncedSearchFilter.toLowerCase();
+
+        const sourceName = connection.source.sourceName.toLowerCase();
+        const destinationName = connection.destination.destinationName.toLowerCase();
+        const connectionName = connection.name.toLowerCase();
+        const sourceDefinitionName = connection.source.name.toLowerCase();
+        const destinationDefinitionName = connection.destination.name.toLowerCase();
+        if (
+          !sourceName.includes(searchValue) &&
+          !destinationName.includes(searchValue) &&
+          !connectionName.includes(searchValue) &&
+          !sourceDefinitionName.includes(searchValue) &&
+          !destinationDefinitionName.includes(searchValue)
+        ) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [connections, debouncedSearchFilter, filterValues]);
+
+  const connectionsSummary = connections.reduce<Record<SummaryKey, number>>(
+    (acc, connection) => {
+      let status: SummaryKey;
+
+      if (isConnectionPaused(connection)) {
+        status = "paused";
+      } else if (isConnectionRunning(connection)) {
+        status = "running";
+      } else if (isConnectionFailed(connection)) {
+        status = "failed";
+      } else {
+        status = "healthy";
+      }
+
+      acc[status] += 1;
+      return acc;
+    },
+    {
+      // order here governs render order
+      running: 0,
+      healthy: 0,
+      failed: 0,
+      paused: 0,
+    }
+  );
 
   const onCreateClick = (sourceDefinitionId?: string) =>
     navigate(`${ConnectionRoutePaths.ConnectionNew}`, { state: { sourceDefinitionId } });
@@ -37,25 +152,59 @@ export const AllConnectionsPage: React.FC = () => {
             pageTitle={
               <PageHeader
                 leftComponent={
-                  <Heading as="h1" size="lg">
-                    <FormattedMessage id="sidebar.connections" />
-                  </Heading>
+                  <FlexContainer direction="column">
+                    <FlexItem>
+                      <Heading as="h1" size="lg">
+                        <FormattedMessage id="sidebar.connections" />
+                      </Heading>
+                    </FlexItem>
+                    {isConnectionsSummaryEnabled && (
+                      <FlexItem>
+                        <ConnectionsSummary {...connectionsSummary} />
+                      </FlexItem>
+                    )}
+                  </FlexContainer>
                 }
                 endComponent={
-                  <Button
-                    icon={<FontAwesomeIcon icon={faPlus} />}
-                    variant="primary"
-                    size="sm"
-                    onClick={() => onCreateClick()}
-                    data-testid="new-connection-button"
-                  >
-                    <FormattedMessage id="connection.newConnection" />
-                  </Button>
+                  <FlexItem className={styles.alignSelfStart}>
+                    <Button
+                      disabled={!canCreateConnection}
+                      icon={<Icon type="plus" />}
+                      variant="primary"
+                      size="sm"
+                      onClick={() => onCreateClick()}
+                      data-testid="new-connection-button"
+                    >
+                      <FormattedMessage id="connection.newConnection" />
+                    </Button>
+                  </FlexItem>
                 }
               />
             }
           >
-            <ConnectionsTable connections={connections} />
+            <Card noPadding className={styles.connections}>
+              {isConnectionsSummaryEnabled && (
+                <ConnectionsFilters
+                  connections={connections}
+                  searchFilter={searchFilter}
+                  setSearchFilter={setSearchFilter}
+                  filterValues={filterValues}
+                  setFilterValue={setFilterValue}
+                  setFilters={setFilters}
+                />
+              )}
+              <ConnectionsTable
+                connections={filteredConnections}
+                variant={isConnectionsSummaryEnabled ? "white" : "default"}
+              />
+              {filteredConnections.length === 0 && (
+                <Box pt="xl" pb="lg">
+                  <Text bold color="grey" align="center">
+                    <FormattedMessage id="tables.connections.filters.empty" />
+                  </Text>
+                </Box>
+              )}
+            </Card>
           </MainPageWithScroll>
         ) : (
           <ConnectionOnboarding onCreate={onCreateClick} />

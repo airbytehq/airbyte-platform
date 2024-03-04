@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
@@ -7,17 +7,12 @@ package io.airbyte.workers.internal;
 import static java.lang.Thread.sleep;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.featureflag.Connection;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import java.time.Duration;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -48,38 +43,38 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DestinationTimeoutMonitor.class);
   private static final Duration POLL_INTERVAL = Duration.ofMinutes(1);
-  private static final Duration TIMEOUT = Duration.ofHours(2);
 
   private final AtomicReference<Long> currentAcceptCallStartTime = new AtomicReference<>(null);
   private final AtomicReference<Long> currentNotifyEndOfInputCallStartTime = new AtomicReference<>(null);
-  private final FeatureFlagClient featureFlagClient;
   private final UUID workspaceId;
   private ExecutorService lazyExecutorService;
   private final UUID connectionId;
   private final MetricClient metricClient;
   private final Duration pollInterval;
   private final Duration timeout;
+  private final boolean throwExceptionOnTimeout;
 
   @VisibleForTesting
-  public DestinationTimeoutMonitor(final FeatureFlagClient featureFlagClient,
-                                   final UUID workspaceId,
+  public DestinationTimeoutMonitor(final UUID workspaceId,
                                    final UUID connectionId,
                                    final MetricClient metricClient,
-                                   final Duration pollInterval,
-                                   final Duration timeout) {
-    this.featureFlagClient = featureFlagClient;
+                                   final Duration timeout,
+                                   final boolean throwExceptionOnTimeout,
+                                   final Duration pollInterval) {
     this.workspaceId = workspaceId;
     this.connectionId = connectionId;
     this.metricClient = metricClient;
-    this.pollInterval = pollInterval;
     this.timeout = timeout;
+    this.throwExceptionOnTimeout = throwExceptionOnTimeout;
+    this.pollInterval = pollInterval;
   }
 
-  public DestinationTimeoutMonitor(final FeatureFlagClient featureFlagClient,
-                                   final UUID workspaceId,
+  public DestinationTimeoutMonitor(final UUID workspaceId,
                                    final UUID connectionId,
-                                   final MetricClient metricClient) {
-    this(featureFlagClient, workspaceId, connectionId, metricClient, POLL_INTERVAL, TIMEOUT);
+                                   final MetricClient metricClient,
+                                   final Duration timeout,
+                                   final boolean throwExceptionOnTimeout) {
+    this(workspaceId, connectionId, metricClient, timeout, throwExceptionOnTimeout, POLL_INTERVAL);
   }
 
   /**
@@ -190,8 +185,7 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
   }
 
   private void onTimeout(final CompletableFuture<Void> runnableFuture) {
-    if (featureFlagClient.boolVariation(ShouldFailSyncOnDestinationTimeout.INSTANCE,
-        new Multi(List.of(new Workspace(workspaceId), new Connection(connectionId))))) {
+    if (throwExceptionOnTimeout) {
       runnableFuture.cancel(true);
 
       throw new TimeoutException("Destination has timed out");

@@ -1,10 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-
 import { render as tlr, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React, { Suspense } from "react";
-import selectEvent from "react-select-event";
 import { VirtuosoMockContext } from "react-virtuoso";
 
 import { mockConnection } from "test-utils/mock-data/mockConnection";
@@ -30,14 +26,6 @@ import { ConnectionEditServiceProvider } from "hooks/services/ConnectionEdit/Con
 
 import { ConnectionReplicationPage } from "./ConnectionReplicationPage";
 
-jest.mock("services/connector/SourceDefinitionService", () => ({
-  useSourceDefinition: () => mockSourceDefinition,
-}));
-
-jest.mock("services/connector/DestinationDefinitionService", () => ({
-  useDestinationDefinition: () => mockDestinationDefinition,
-}));
-
 jest.setTimeout(40000);
 
 jest.mock("area/workspace/utils", () => ({
@@ -57,6 +45,13 @@ jest.mock("core/api", () => ({
   useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
   useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
+  useSourceDefinition: () => mockSourceDefinition,
+  useDestinationDefinition: () => mockDestinationDefinition,
+  LogsRequestError: jest.requireActual("core/api/errors").LogsRequestError,
+}));
+
+jest.mock("core/utils/rbac", () => ({
+  useIntent: () => true,
 }));
 
 jest.mock("hooks/theme/useAirbyteTheme", () => ({
@@ -139,14 +134,15 @@ describe("ConnectionReplicationPage", () => {
 
       await userEvent.click(renderResult.getByTestId("configuration-card-expand-arrow"));
 
-      await selectEvent.select(renderResult.getByTestId("scheduleData"), /cron/i);
+      await userEvent.click(renderResult.getByTestId("schedule-type-listbox-button"));
+      await userEvent.click(renderResult.getByTestId("cron-option"));
 
       const cronExpressionInput = renderResult.getByTestId("cronExpression");
 
       await userEvent.clear(cronExpressionInput);
       await userEvent.type(cronExpressionInput, INVALID_CRON_EXPRESSION, { delay: 1 });
 
-      const errorMessage = renderResult.getByText(/must contain at least 6 fields/);
+      const errorMessage = await renderResult.findByText(/invalid cron expression/i);
 
       expect(errorMessage).toBeInTheDocument();
     });
@@ -158,7 +154,8 @@ describe("ConnectionReplicationPage", () => {
 
       await userEvent.click(renderResult.getByTestId("configuration-card-expand-arrow"));
 
-      await selectEvent.select(renderResult.getByTestId("scheduleData"), /cron/i);
+      await userEvent.click(renderResult.getByTestId("schedule-type-listbox-button"));
+      await userEvent.click(renderResult.getByTestId("cron-option"));
 
       const cronExpressionField = renderResult.getByTestId("cronExpression");
 
@@ -185,14 +182,15 @@ describe("ConnectionReplicationPage", () => {
 
       await userEvent.click(container.getByTestId("configuration-card-expand-arrow"));
 
-      await selectEvent.select(container.getByTestId("scheduleData"), /cron/i);
+      await userEvent.click(container.getByTestId("schedule-type-listbox-button"));
+      await userEvent.click(container.getByTestId("cron-option"));
 
       const cronExpressionField = container.getByTestId("cronExpression");
 
       await userEvent.clear(cronExpressionField);
       await userEvent.type(cronExpressionField, CRON_EXPRESSION_EVERY_MINUTE, { delay: 1 });
 
-      const errorMessage = container.getByTestId("cronExpressionError");
+      const errorMessage = await container.findByTestId("cronExpressionError");
 
       expect(errorMessage).toBeInTheDocument();
     });

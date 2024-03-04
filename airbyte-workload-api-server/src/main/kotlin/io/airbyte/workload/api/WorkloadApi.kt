@@ -1,26 +1,36 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.api
 
+import io.airbyte.config.WorkloadType
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.workload.api.domain.ClaimResponse
+import io.airbyte.workload.api.domain.ExpiredDeadlineWorkloadListRequest
+import io.airbyte.workload.api.domain.KnownExceptionInfo
+import io.airbyte.workload.api.domain.LongRunningWorkloadRequest
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
 import io.airbyte.workload.api.domain.WorkloadClaimRequest
 import io.airbyte.workload.api.domain.WorkloadCreateRequest
 import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
+import io.airbyte.workload.api.domain.WorkloadLaunchedRequest
 import io.airbyte.workload.api.domain.WorkloadListRequest
 import io.airbyte.workload.api.domain.WorkloadListResponse
 import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.airbyte.workload.api.domain.WorkloadSuccessRequest
+import io.airbyte.workload.handler.DefaultDeadlineValues
 import io.airbyte.workload.handler.WorkloadHandler
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.DATA_PLANE_ID_TAG
+import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.GEOGRAPHY_TAG
+import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.MUTEX_KEY_TAG
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_CANCEL_REASON_TAG
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_CANCEL_SOURCE_TAG
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_ID_TAG
+import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_TYPE_TAG
+import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Status
@@ -34,6 +44,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.parameters.RequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import java.util.UUID
 import javax.ws.rs.Consumes
 import javax.ws.rs.GET
 import javax.ws.rs.POST
@@ -48,6 +59,7 @@ import javax.ws.rs.Produces
 open class WorkloadApi(
   private val workloadHandler: WorkloadHandler,
   private val workloadService: WorkloadService,
+  private val defaultDeadlineValues: DefaultDeadlineValues,
 ) {
   @POST
   @Path("/create")
@@ -62,7 +74,7 @@ open class WorkloadApi(
         description = "Successfully created workload",
       ),
       ApiResponse(
-        responseCode = "304",
+        responseCode = "200",
         description = "Workload with given workload id already exists.",
       ),
     ],
@@ -73,22 +85,43 @@ open class WorkloadApi(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadCreateRequest::class))],
     ) workloadCreateRequest: WorkloadCreateRequest,
-  ) {
+  ): HttpResponse<Any> {
     ApmTraceUtils.addTagsToTrace(
-      mutableMapOf(WORKLOAD_ID_TAG to workloadCreateRequest.workloadId) as Map<String, Any>?,
+      mutableMapOf(
+        GEOGRAPHY_TAG to workloadCreateRequest.geography,
+        MUTEX_KEY_TAG to workloadCreateRequest.mutexKey,
+        WORKLOAD_ID_TAG to workloadCreateRequest.workloadId,
+        WORKLOAD_TYPE_TAG to workloadCreateRequest.type,
+      ) as Map<String, Any>?,
     )
+    if (workloadHandler.workloadAlreadyExists(workloadCreateRequest.workloadId)) {
+      return HttpResponse.status(HttpStatus.OK)
+    }
+
+    val autoId = UUID.randomUUID()
+
     workloadHandler.createWorkload(
       workloadCreateRequest.workloadId,
       workloadCreateRequest.labels,
       workloadCreateRequest.workloadInput,
       workloadCreateRequest.logPath,
+      workloadCreateRequest.geography,
+      workloadCreateRequest.mutexKey,
+      workloadCreateRequest.type,
+      autoId,
+      workloadCreateRequest.deadline ?: defaultDeadlineValues.createStepDeadline(),
     )
     workloadService.create(
       workloadId = workloadCreateRequest.workloadId,
       workloadInput = workloadCreateRequest.workloadInput,
       workloadCreateRequest.labels.associate { it.key to it.value },
       workloadCreateRequest.logPath,
+      workloadCreateRequest.geography,
+      workloadCreateRequest.mutexKey,
+      workloadCreateRequest.type,
+      autoId,
     )
+    return HttpResponse.status(HttpStatus.NO_CONTENT)
   }
 
   @PUT
@@ -96,7 +129,7 @@ open class WorkloadApi(
   @Status(HttpStatus.NO_CONTENT)
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Set workload status to 'failure'", tags = ["workload"])
+  @Operation(summary = "Sets workload status to 'failure'.", tags = ["workload"])
   @ApiResponses(
     value = [
       ApiResponse(
@@ -106,10 +139,12 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
       ApiResponse(
         responseCode = "410",
         description = "Workload is not in an active state, it cannot be failed.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
   )
@@ -119,7 +154,7 @@ open class WorkloadApi(
     ) workloadFailureRequest: WorkloadFailureRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadFailureRequest.workloadId) as Map<String, Any>?)
-    workloadHandler.failWorkload(workloadFailureRequest.workloadId)
+    workloadHandler.failWorkload(workloadFailureRequest.workloadId, workloadFailureRequest.source, workloadFailureRequest.reason)
   }
 
   @PUT
@@ -127,7 +162,7 @@ open class WorkloadApi(
   @Status(HttpStatus.NO_CONTENT)
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Set workload status to 'success'", tags = ["workload"])
+  @Operation(summary = "Sets workload status to 'success'.", tags = ["workload"])
   @ApiResponses(
     value = [
       ApiResponse(
@@ -137,10 +172,12 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
       ApiResponse(
         responseCode = "410",
         description = "Workload is not in an active state, it cannot be succeeded.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
   )
@@ -158,7 +195,7 @@ open class WorkloadApi(
   @Status(HttpStatus.NO_CONTENT)
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Set workload status to 'running'", tags = ["workload"])
+  @Operation(summary = "Sets workload status to 'running'.", tags = ["workload"])
   @ApiResponses(
     value = [
       ApiResponse(
@@ -168,10 +205,12 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
       ApiResponse(
         responseCode = "410",
-        description = "Workload is not in pending status, it can't be set to running.",
+        description = "Workload is not in pending state, it cannot be set to running.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
   )
@@ -181,7 +220,10 @@ open class WorkloadApi(
     ) workloadRunningRequest: WorkloadRunningRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadRunningRequest.workloadId) as Map<String, Any>?)
-    workloadHandler.setWorkloadStatusToRunning(workloadRunningRequest.workloadId)
+    workloadHandler.setWorkloadStatusToRunning(
+      workloadRunningRequest.workloadId,
+      workloadRunningRequest.deadline ?: defaultDeadlineValues.runningStepDeadline(),
+    )
   }
 
   @PUT
@@ -199,10 +241,12 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
       ApiResponse(
         responseCode = "410",
         description = "Workload is in terminal state, it cannot be cancelled.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
   )
@@ -218,7 +262,7 @@ open class WorkloadApi(
         WORKLOAD_CANCEL_SOURCE_TAG to workloadCancelRequest.source,
       ) as Map<String, Any>?,
     )
-    workloadHandler.cancelWorkload(workloadCancelRequest.workloadId)
+    workloadHandler.cancelWorkload(workloadCancelRequest.workloadId, workloadCancelRequest.source, workloadCancelRequest.reason)
   }
 
   @PUT
@@ -238,10 +282,12 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
       ApiResponse(
         responseCode = "410",
-        description = "Workload is in terminal state, it cannot be claimed.",
+        description = "Workload is in terminal state. It cannot be claimed.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
   )
@@ -256,8 +302,49 @@ open class WorkloadApi(
         DATA_PLANE_ID_TAG to workloadClaimRequest.dataplaneId,
       ) as Map<String, Any>?,
     )
-    val claimed = workloadHandler.claimWorkload(workloadClaimRequest.workloadId, workloadClaimRequest.dataplaneId)
+    val claimed =
+      workloadHandler.claimWorkload(
+        workloadClaimRequest.workloadId,
+        workloadClaimRequest.dataplaneId,
+        workloadClaimRequest.deadline ?: defaultDeadlineValues.claimStepDeadline(),
+      )
     return ClaimResponse(claimed)
+  }
+
+  @PUT
+  @Path("/launched")
+  @Status(HttpStatus.NO_CONTENT)
+  @Consumes("application/json")
+  @Produces("application/json")
+  @Operation(summary = "Sets workload status to 'launched'.", tags = ["workload"])
+  @ApiResponses(
+    value = [
+      ApiResponse(
+        responseCode = "204",
+        description = "Success",
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
+      ),
+      ApiResponse(
+        responseCode = "410",
+        description = "Workload is not in claimed state. It cannot be set to launched.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
+      ),
+    ],
+  )
+  open fun workloadLaunched(
+    @RequestBody(
+      content = [Content(schema = Schema(implementation = WorkloadLaunchedRequest::class))],
+    ) workloadLaunchedRequest: WorkloadLaunchedRequest,
+  ) {
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadLaunchedRequest.workloadId) as Map<String, Any>?)
+    workloadHandler.setWorkloadStatusToLaunched(
+      workloadLaunchedRequest.workloadId,
+      workloadLaunchedRequest.deadline ?: defaultDeadlineValues.launchStepDeadline(),
+    )
   }
 
   @GET
@@ -274,6 +361,7 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
   )
@@ -299,10 +387,12 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
       ApiResponse(
         responseCode = "410",
         description = "Workload should stop because it is no longer expected to be running.",
+        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
       ),
     ],
   )
@@ -312,7 +402,7 @@ open class WorkloadApi(
     ) workloadHeartbeatRequest: WorkloadHeartbeatRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadHeartbeatRequest.workloadId) as Map<String, Any>?)
-    workloadHandler.heartbeat(workloadHeartbeatRequest.workloadId)
+    workloadHandler.heartbeat(workloadHeartbeatRequest.workloadId, workloadHeartbeatRequest.deadline ?: defaultDeadlineValues.heartbeatDeadline())
   }
 
   @POST
@@ -339,6 +429,90 @@ open class WorkloadApi(
         workloadListRequest.dataplane,
         workloadListRequest.status,
         workloadListRequest.updatedBefore,
+      ),
+    )
+  }
+
+  @POST
+  @Path("/expired_deadline_list")
+  @Consumes("application/json")
+  @Produces("application/json")
+  @Operation(summary = "Get workloads according to the filters.", tags = ["workload"])
+  @ApiResponses(
+    value = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Success",
+        content = [Content(schema = Schema(implementation = WorkloadListResponse::class))],
+      ),
+    ],
+  )
+  open fun workloadListWithExpiredDeadline(
+    @RequestBody(
+      content = [Content(schema = Schema(implementation = ExpiredDeadlineWorkloadListRequest::class))],
+    ) expiredDeadlineWorkloadListRequest: ExpiredDeadlineWorkloadListRequest,
+  ): WorkloadListResponse {
+    return WorkloadListResponse(
+      workloadHandler.getWorkloadsWithExpiredDeadline(
+        expiredDeadlineWorkloadListRequest.dataplane,
+        expiredDeadlineWorkloadListRequest.status,
+        expiredDeadlineWorkloadListRequest.deadline,
+      ),
+    )
+  }
+
+  @POST
+  @Path("/list_long_running_non_sync")
+  @Consumes("application/json")
+  @Produces("application/json")
+  @Operation(summary = "Get workloads according to the filters.", tags = ["workload"])
+  @ApiResponses(
+    value = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Success",
+        content = [Content(schema = Schema(implementation = WorkloadListResponse::class))],
+      ),
+    ],
+  )
+  open fun workloadListOldNonSync(
+    @RequestBody(
+      content = [Content(schema = Schema(implementation = LongRunningWorkloadRequest::class))],
+    ) longRunningWorkloadRequest: LongRunningWorkloadRequest,
+  ): WorkloadListResponse {
+    return WorkloadListResponse(
+      workloadHandler.getWorkloadsRunningCreatedBefore(
+        longRunningWorkloadRequest.dataplane,
+        listOf(WorkloadType.CHECK, WorkloadType.DISCOVER, WorkloadType.SPEC),
+        longRunningWorkloadRequest.createdBefore,
+      ),
+    )
+  }
+
+  @POST
+  @Path("/list_long_running_sync")
+  @Consumes("application/json")
+  @Produces("application/json")
+  @Operation(summary = "Get workloads according to the filters.", tags = ["workload"])
+  @ApiResponses(
+    value = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Success",
+        content = [Content(schema = Schema(implementation = WorkloadListResponse::class))],
+      ),
+    ],
+  )
+  open fun workloadListOldSync(
+    @RequestBody(
+      content = [Content(schema = Schema(implementation = LongRunningWorkloadRequest::class))],
+    ) longRunningWorkloadRequest: LongRunningWorkloadRequest,
+  ): WorkloadListResponse {
+    return WorkloadListResponse(
+      workloadHandler.getWorkloadsRunningCreatedBefore(
+        longRunningWorkloadRequest.dataplane,
+        listOf(WorkloadType.SYNC),
+        longRunningWorkloadRequest.createdBefore,
       ),
     )
   }

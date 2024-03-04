@@ -11,8 +11,7 @@ import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
 
 import { useListBuilderProjectVersions } from "core/api";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 

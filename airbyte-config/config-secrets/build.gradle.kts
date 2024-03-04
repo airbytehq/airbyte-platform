@@ -1,7 +1,7 @@
 plugins {
     id("io.airbyte.gradle.jvm.lib")
     id("io.airbyte.gradle.publish")
-    id("java-test-fixtures")
+    `java-test-fixtures`
     kotlin("jvm")
     kotlin("kapt")
 }
@@ -23,6 +23,7 @@ dependencies {
     api(libs.airbyte.protocol)
     api(libs.jakarta.transaction.api)
     api(libs.micronaut.data.tx)
+    api(libs.aws.java.sdk.sts)
     api(project(":airbyte-commons"))
 
     /*

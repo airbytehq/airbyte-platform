@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets.persistence
@@ -10,7 +10,9 @@ import com.amazonaws.services.secretsmanager.model.CreateSecretResult
 import com.amazonaws.services.secretsmanager.model.DescribeSecretResult
 import com.amazonaws.services.secretsmanager.model.GetSecretValueResult
 import com.amazonaws.services.secretsmanager.model.ResourceNotFoundException
+import com.amazonaws.services.secretsmanager.model.Tag
 import com.amazonaws.services.secretsmanager.model.UpdateSecretResult
+import io.airbyte.config.AwsRoleSecretPersistenceConfig
 import io.airbyte.config.secrets.SecretCoordinate
 import io.mockk.every
 import io.mockk.mockk
@@ -83,10 +85,72 @@ class AwsSecretManagerPersistenceTest {
     every { mockAwsClient.createSecret(any()) } returns mockk<CreateSecretResult>()
     every { mockCache.cache } returns mockAwsCache
     every { mockClient.client } returns mockAwsClient
+    every { mockClient.serializedConfig } returns null
+    every { mockClient.kmsKeyArn } returns null
+    every { mockClient.tags } returns emptyMap()
 
     persistence.write(coordinate, secret)
 
     verify { mockAwsClient.createSecret(any()) }
+  }
+
+  @Test
+  fun `test writing a secret with tags via the client creates the secret`() {
+    val secret = "secret value"
+    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val mockClient: AwsClient = mockk()
+    val mockCache: AwsCache = mockk()
+    val mockAwsCache: SecretCache = mockk()
+    val mockAwsClient: AWSSecretsManager = mockk()
+    val persistence = AwsSecretManagerPersistence(mockClient, mockCache)
+    every { mockAwsCache.getSecretString(any()) } throws ResourceNotFoundException("test")
+    every { mockAwsClient.createSecret(any()) } returns mockk<CreateSecretResult>()
+    every { mockCache.cache } returns mockAwsCache
+    every { mockClient.client } returns mockAwsClient
+    every { mockClient.serializedConfig } returns null
+    every { mockClient.kmsKeyArn } returns "testKms"
+    every { mockClient.tags } returns mapOf("key1" to "value1", "key2" to "value2")
+
+    persistence.write(coordinate, secret)
+
+    verify {
+      mockAwsClient.createSecret(
+        withArg {
+          assert(it.kmsKeyId.equals("testKms"))
+          val expectedTags = listOf<Tag>(Tag().withKey("key1").withValue("value1"), Tag().withKey("key2").withValue("value2"))
+          assert(it.tags.containsAll(expectedTags))
+        },
+      )
+    }
+  }
+
+  @Test
+  fun `test writing a secret via the client with serialized config creates the secret`() {
+    val secret = "secret value"
+    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val mockClient: AwsClient = mockk()
+    val mockCache: AwsCache = mockk()
+    val mockAwsCache: SecretCache = mockk()
+    val mockAwsClient: AWSSecretsManager = mockk()
+    val persistence = AwsSecretManagerPersistence(mockClient, mockCache)
+    every { mockAwsCache.getSecretString(any()) } throws ResourceNotFoundException("test")
+    every { mockAwsClient.createSecret(any()) } returns mockk<CreateSecretResult>()
+    every { mockCache.cache } returns mockAwsCache
+    every { mockClient.client } returns mockAwsClient
+    every { mockClient.serializedConfig } returns AwsRoleSecretPersistenceConfig().withKmsKeyArn("testKms").withTagKey("testTag")
+    every { mockClient.kmsKeyArn } returns "testKms"
+    every { mockClient.tags } returns emptyMap()
+
+    persistence.write(coordinate, secret)
+
+    verify {
+      mockAwsClient.createSecret(
+        withArg {
+          assert(it.kmsKeyId.equals("testKms"))
+          assert(it.tags.contains(Tag().withKey("testTag").withValue("true")))
+        },
+      )
+    }
   }
 
   @Test
@@ -102,6 +166,9 @@ class AwsSecretManagerPersistenceTest {
     every { mockAwsClient.updateSecret(any()) } returns mockk<UpdateSecretResult>()
     every { mockCache.cache } returns mockAwsCache
     every { mockClient.client } returns mockAwsClient
+    every { mockClient.serializedConfig } returns null
+    every { mockClient.kmsKeyArn } returns null
+    every { mockClient.tags } returns emptyMap()
 
     persistence.write(coordinate, secret)
 

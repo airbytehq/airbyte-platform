@@ -1,27 +1,29 @@
-import { faRefresh } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormattedMessage } from "react-intl";
 
 import { JobFailure } from "components/JobFailure";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 
-import { LogsRequestError } from "core/request/LogsRequestError";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { SchemaError as SchemaErrorType } from "hooks/services/useSourceHook";
+import { SchemaError as SchemaErrorType, LogsRequestError } from "core/api";
 
 import styles from "./SchemaError.module.scss";
 
-export const SchemaError = ({ schemaError }: { schemaError: Exclude<SchemaErrorType, null> }) => {
+export const SchemaError = ({
+  schemaError,
+  refreshSchema,
+}: {
+  schemaError: Exclude<SchemaErrorType, null>;
+  refreshSchema: () => Promise<void>;
+}) => {
   const job = LogsRequestError.extractJobInfo(schemaError);
-  const { refreshSchema } = useConnectionFormService();
 
   return (
     <Card className={styles.card}>
       <FlexContainer direction="column">
         <FlexContainer justifyContent="flex-end">
-          <Button type="button" onClick={refreshSchema} variant="secondary" icon={<FontAwesomeIcon icon={faRefresh} />}>
+          <Button type="button" onClick={refreshSchema} variant="secondary" icon={<Icon type="reset" />}>
             <FormattedMessage id="form.tryAgain" />
           </Button>
         </FlexContainer>

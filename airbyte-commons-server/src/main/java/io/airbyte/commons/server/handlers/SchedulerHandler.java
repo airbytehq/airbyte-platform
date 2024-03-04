@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -96,6 +96,10 @@ import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.notification.CustomerioNotificationClient;
 import io.airbyte.notification.SlackNotificationClient;
+import io.airbyte.notification.messages.ConnectionInfo;
+import io.airbyte.notification.messages.SchemaUpdateNotification;
+import io.airbyte.notification.messages.SourceInfo;
+import io.airbyte.notification.messages.WorkspaceInfo;
 import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -434,7 +438,6 @@ public class SchedulerHandler {
 
       if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diff, connectionRead)) {
         final UpdateSchemaResult result = applySchemaChange(updateObject.getConnectionId(),
-            sourceAutoPropagateChange.getWorkspaceId(),
             updateObject,
             syncCatalog,
             sourceAutoPropagateChange.getCatalog(),
@@ -448,8 +451,12 @@ public class SchedulerHandler {
             connectionRead.getConnectionId(), sourceAutoPropagateChange.getCatalogId());
         final boolean newNotificationsEnabled = featureFlagClient.boolVariation(
             UseNewSchemaUpdateNotification.INSTANCE, new Workspace(sourceAutoPropagateChange.getWorkspaceId()));
-        if (notificationSettings != null && newNotificationsEnabled && notificationSettings.getSendOnConnectionUpdate() != null) {
-          notifySchemaPropagated(notificationSettings, diff, connectionRead.getConnectionId(), source,
+        if (notificationSettings != null
+            && newNotificationsEnabled
+            && notificationSettings.getSendOnConnectionUpdate() != null
+            && !result.appliedDiff().getTransforms().isEmpty()
+            && (Boolean.TRUE == connectionRead.getNotifySchemaChanges())) {
+          notifySchemaPropagated(notificationSettings, diff, workspace, connectionRead, source,
               workspace.getEmail(), result);
         }
       } else {
@@ -461,13 +468,26 @@ public class SchedulerHandler {
 
   public void notifySchemaPropagated(final NotificationSettings notificationSettings,
                                      final CatalogDiff diff,
-                                     final UUID connectionId,
+                                     final StandardWorkspace workspace,
+                                     final ConnectionRead connection,
                                      final SourceConnection source,
                                      final String email,
                                      final UpdateSchemaResult result)
       throws IOException {
     final NotificationItem item;
+
+    final String connectionUrl = webUrlHelper.getConnectionUrl(workspace.getWorkspaceId(), connection.getConnectionId());
+    final String workspaceUrl = webUrlHelper.getWorkspaceUrl(workspace.getWorkspaceId());
+    final String sourceUrl = webUrlHelper.getSourceUrl(workspace.getWorkspaceId(), source.getSourceId());
     final boolean isBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
+
+    SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
+        .sourceInfo(SourceInfo.builder().name(source.getName()).id(source.getSourceId()).url(sourceUrl).build())
+        .connectionInfo(ConnectionInfo.builder().name(connection.getName()).id(connection.getConnectionId()).url(connectionUrl).build())
+        .workspace(WorkspaceInfo.builder().name(workspace.getName()).id(workspace.getWorkspaceId()).url(workspaceUrl).build())
+        .catalogDiff(diff)
+        .isBreakingChange(isBreakingChange)
+        .build();
     if (isBreakingChange) {
       item = notificationSettings.getSendOnConnectionUpdateActionRequired();
     } else {
@@ -478,30 +498,18 @@ public class SchedulerHandler {
         switch (type) {
           case SLACK -> {
             final SlackNotificationClient slackNotificationClient = new SlackNotificationClient(item.getSlackConfiguration());
-            slackNotificationClient.notifySchemaPropagated(
-                connectionId,
-                source.getName(),
-                result.changeDescription(),
-                item.getSlackConfiguration().getWebhook(),
-                List.of(email),
-                isBreakingChange);
+            slackNotificationClient.notifySchemaPropagated(notification, email);
           }
           case CUSTOMERIO -> {
             final CustomerioNotificationClient emailNotificationClient = new CustomerioNotificationClient();
-            emailNotificationClient.notifySchemaPropagated(
-                connectionId,
-                source.getName(),
-                result.changeDescription(),
-                item.getSlackConfiguration().getWebhook(),
-                List.of(email),
-                isBreakingChange);
+            emailNotificationClient.notifySchemaPropagated(notification, email);
           }
           default -> {
             LOGGER.warn("Notification type {} not supported", type);
           }
         }
       } catch (final InterruptedException e) {
-        LOGGER.error("Failed to send notification for connectionId: '{}'", connectionId, e);
+        LOGGER.error("Failed to send notification for connectionId: '{}'", connection.getConnectionId(), e);
       }
     }
   }
@@ -692,7 +700,6 @@ public class SchedulerHandler {
   }
 
   private UpdateSchemaResult applySchemaChange(final UUID connectionId,
-                                               final UUID workspaceId,
                                                final ConnectionUpdate updateObject,
                                                final io.airbyte.api.model.generated.AirbyteCatalog currentSyncCatalog,
                                                final io.airbyte.api.model.generated.AirbyteCatalog newCatalog,
@@ -707,8 +714,7 @@ public class SchedulerHandler {
         newCatalog,
         transformations,
         nonBreakingChangesPreference,
-        supportedDestinationSyncModes,
-        featureFlagClient, workspaceId);
+        supportedDestinationSyncModes);
     updateObject.setSyncCatalog(updateSchemaResult.catalog());
     updateObject.setSourceCatalogId(sourceCatalogId);
     return updateSchemaResult;

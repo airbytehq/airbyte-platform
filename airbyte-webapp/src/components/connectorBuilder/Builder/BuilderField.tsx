@@ -1,7 +1,7 @@
 import isEqual from "lodash/isEqual";
 import toPath from "lodash/toPath";
 import { ReactNode, useEffect, useRef } from "react";
-import { useController } from "react-hook-form";
+import { useController, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import { Rnd } from "react-rnd";
 
@@ -10,13 +10,12 @@ import { LabeledSwitch } from "components/LabeledSwitch";
 import { CodeEditor } from "components/ui/CodeEditor";
 import { ComboBox, MultiComboBox, Option } from "components/ui/ComboBox";
 import DatePicker from "components/ui/DatePicker";
-import { DropDown } from "components/ui/DropDown";
 import { Input } from "components/ui/Input";
+import { ListBox } from "components/ui/ListBox";
 import { TagInput } from "components/ui/TagInput";
 import { Text } from "components/ui/Text";
 import { TextArea } from "components/ui/TextArea";
 import { Tooltip } from "components/ui/Tooltip";
-import { InfoTooltip } from "components/ui/Tooltip/InfoTooltip";
 
 import { FORM_PATTERN_ERROR } from "core/form/types";
 import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
@@ -38,6 +37,7 @@ interface ArrayFieldProps {
   error: boolean;
   itemType?: string;
   directionalStyle?: boolean;
+  uniqueValues?: boolean;
 }
 
 interface BaseFieldProps {
@@ -64,7 +64,13 @@ export type BuilderFieldProps = BaseFieldProps &
       }
     | { type: "date" | "date-time"; onChange?: (newValue: string) => void }
     | { type: "boolean"; onChange?: (newValue: boolean) => void; disabled?: boolean; disabledTooltip?: string }
-    | { type: "array"; onChange?: (newValue: string[]) => void; itemType?: string; directionalStyle?: boolean }
+    | {
+        type: "array";
+        onChange?: (newValue: string[]) => void;
+        itemType?: string;
+        directionalStyle?: boolean;
+        uniqueValues?: boolean;
+      }
     | { type: "textarea"; onChange?: (newValue: string[]) => void }
     | { type: "jsoneditor"; onChange?: (newValue: string[]) => void }
     | {
@@ -78,7 +84,7 @@ export type BuilderFieldProps = BaseFieldProps &
 
 const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, ...props }) => {
   return (
-    <DropDown
+    <ListBox
       {...props}
       options={
         typeof options[0] === "string"
@@ -87,14 +93,22 @@ const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, 
             })
           : (options as Array<{ label: string; value: string }>)
       }
-      onChange={(selected) => selected && setValue(selected.value)}
-      value={value}
-      error={error}
+      onSelect={(selected) => selected && setValue(selected)}
+      selectedValue={value}
+      hasError={error}
     />
   );
 };
 
-const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, itemType, directionalStyle }) => {
+const ArrayField: React.FC<ArrayFieldProps> = ({
+  name,
+  value,
+  setValue,
+  error,
+  itemType,
+  directionalStyle,
+  uniqueValues,
+}) => {
   return (
     <TagInput
       name={name}
@@ -103,6 +117,7 @@ const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, i
       itemType={itemType}
       error={error}
       directionalStyle={directionalStyle}
+      uniqueValues={uniqueValues}
     />
   );
 };
@@ -135,6 +150,9 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   ...props
 }) => {
   const { field, fieldState } = useController({ name: path });
+  // Must use useWatch instead of field.value from useController because the latter is not updated
+  // when setValue is called on a parent path in a way that changes the value of this field.
+  const fieldValue = useWatch({ name: path });
   const hasError = !!fieldState.error;
 
   const { label, tooltip } = getLabelAndTooltip(
@@ -155,19 +173,25 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   }, [path, scrollToField, setScrollToField]);
 
   if (props.type === "boolean") {
+    const switchId = `switch-${path}`;
     const labeledSwitch = (
       <LabeledSwitch
         {...field}
+        id={switchId}
         ref={(ref) => {
           elementRef.current = ref;
           // Call handler in here to make sure it handles new refs
           handleScrollToField(elementRef, path, scrollToField, setScrollToField);
         }}
-        checked={field.value as boolean}
+        checked={fieldValue as boolean}
         label={
-          <>
-            {label} {tooltip && <InfoTooltip placement="top-start">{tooltip}</InfoTooltip>}
-          </>
+          <ControlLabels
+            className={styles.switchLabel}
+            label={label}
+            infoTooltipContent={tooltip}
+            optional={optional}
+            htmlFor={switchId}
+          />
         }
         disabled={props.disabled}
       />
@@ -207,7 +231,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           }}
           className={props.className}
           type={props.type}
-          value={(field.value as string | number | undefined) ?? ""}
+          value={(fieldValue as string | number | undefined) ?? ""}
           error={hasError}
           readOnly={readOnly}
           adornment={adornment}
@@ -223,7 +247,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           error={hasError}
           withTime={props.type === "date-time"}
           onChange={setValue}
-          value={(field.value as string) ?? ""}
+          value={(fieldValue as string) ?? ""}
           onBlur={field.onBlur}
         />
       )}
@@ -234,7 +258,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
             setValue(e.target.value);
           }}
           className={props.className}
-          value={(field.value as string) ?? ""}
+          value={(fieldValue as string) ?? ""}
           error={hasError}
           readOnly={readOnly}
           onBlur={field.onBlur}
@@ -266,7 +290,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
             <CodeEditor
               key={path}
               automaticLayout
-              value={field.value || ""}
+              value={fieldValue || ""}
               language="json"
               onChange={(val: string | undefined) => {
                 setValue(val);
@@ -279,18 +303,19 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
         <div data-testid={`tag-input-${path}`}>
           <ArrayField
             name={path}
-            value={(field.value as string[] | undefined) ?? []}
+            value={(fieldValue as string[] | undefined) ?? []}
             itemType={props.itemType}
             setValue={setValue}
             error={hasError}
             directionalStyle={props.directionalStyle ?? true}
+            uniqueValues={props.uniqueValues}
           />
         </div>
       )}
       {props.type === "enum" && (
         <EnumField
           options={props.options}
-          value={field.value as string}
+          value={fieldValue as string}
           setValue={setValue}
           error={hasError}
           data-testid={path}
@@ -299,7 +324,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       {props.type === "combobox" && (
         <ComboBox
           options={props.options}
-          value={field.value as string}
+          value={fieldValue as string}
           onChange={setValue}
           error={hasError}
           adornment={adornment}
@@ -318,7 +343,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
         <MultiComboBox
           name={path}
           options={props.options}
-          value={field.value as string[]}
+          value={fieldValue as string[]}
           onChange={setValue}
           error={hasError}
           data-testid={path}

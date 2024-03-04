@@ -1,8 +1,7 @@
-import { QueryObserverResult, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
 import { useCurrentUser } from "core/services/auth";
-import { SCOPE_USER } from "services/Scope";
 
 import {
   deleteCloudWorkspace,
@@ -13,6 +12,7 @@ import {
   webBackendListWorkspacesByUser,
   webBackendListWorkspacesByUserPaginated,
 } from "../../generated/CloudApi";
+import { SCOPE_USER } from "../../scopes";
 import {
   CloudWorkspaceRead,
   CloudWorkspaceReadList,
@@ -39,24 +39,6 @@ export function useListCloudWorkspaces() {
   return useSuspenseQuery(workspaceKeys.lists(), () =>
     webBackendListWorkspacesByUser({ userId: user.userId }, requestOptions)
   );
-}
-
-export const getListCloudWorkspacesAsyncQueryKey = () => {
-  return workspaceKeys.lists();
-};
-
-export const useListCloudWorkspacesAsyncQuery = (userId: string) => {
-  const requestOptions = useRequestOptions();
-
-  return () => webBackendListWorkspacesByUser({ userId }, requestOptions);
-};
-
-export function useListCloudWorkspacesAsync(): QueryObserverResult<CloudWorkspaceReadList> {
-  const user = useCurrentUser();
-  const queryKey = getListCloudWorkspacesAsyncQueryKey();
-  const queryFn = useListCloudWorkspacesAsyncQuery(user.userId);
-
-  return useQuery(queryKey, queryFn);
 }
 
 export function useCreateCloudWorkspace() {

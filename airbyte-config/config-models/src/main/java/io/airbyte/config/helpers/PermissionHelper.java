@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.helpers;
@@ -87,7 +87,7 @@ public class PermissionHelper {
    */
   public static Set<PermissionType> getPermissionTypesThatGrantTargetPermission(final PermissionType targetPermission) {
     final Set<PermissionType> grantingPermissionTypes = new HashSet<>();
-    for (Map.Entry<PermissionType, Set<PermissionType>> entry : GRANTED_PERMISSION_TYPES_BY_DEFINED_PERMISSION_TYPE.entrySet()) {
+    for (final Map.Entry<PermissionType, Set<PermissionType>> entry : GRANTED_PERMISSION_TYPES_BY_DEFINED_PERMISSION_TYPE.entrySet()) {
       if (entry.getValue().contains(targetPermission)) {
         grantingPermissionTypes.add(entry.getKey());
       }

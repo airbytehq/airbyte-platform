@@ -12,6 +12,8 @@ import { Pre } from "components/ui/Pre";
 import { Spinner } from "components/ui/Spinner";
 
 import { useAirbyteCloudIps } from "area/connector/utils/useAirbyteCloudIps";
+import { LogsRequestError } from "core/api";
+import { DestinationRead, SourceRead, SupportLevel, SynchronousJobRead } from "core/api/types/AirbyteClient";
 import {
   Connector,
   ConnectorDefinition,
@@ -19,8 +21,6 @@ import {
   ConnectorSpecification,
   ConnectorT,
 } from "core/domain/connector";
-import { DestinationRead, SourceRead, SupportLevel, SynchronousJobRead } from "core/request/AirbyteClient";
-import { LogsRequestError } from "core/request/LogsRequestError";
 import { isCloudApp } from "core/utils/app";
 import { generateMessageFromError } from "core/utils/errorStatusMessage";
 import { links } from "core/utils/links";
@@ -38,7 +38,7 @@ import { WarningMessage } from "../ConnectorForm/components/WarningMessage";
 // since some of props are used in both components, and some of them used just as a prop-drill
 // https://github.com/airbytehq/airbyte/issues/18553
 interface ConnectorCardBaseProps {
-  title?: React.ReactNode;
+  title?: string;
   headerBlock?: React.ReactNode;
   description?: React.ReactNode;
   full?: boolean;

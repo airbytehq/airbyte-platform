@@ -1,5 +1,3 @@
-import { faCopy } from "@fortawesome/free-regular-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import { useRef, useState } from "react";
 import { useIntl } from "react-intl";
@@ -14,7 +12,12 @@ interface CopyButtonProps {
   title?: string;
 }
 
-export const CopyButton: React.FC<CopyButtonProps> = ({ className, content, title }) => {
+export const CopyButton: React.FC<React.PropsWithChildren<CopyButtonProps>> = ({
+  className,
+  content,
+  title,
+  children,
+}) => {
   const { formatMessage } = useIntl();
   const [copied, setCopied] = useState(false);
 
@@ -39,11 +42,13 @@ export const CopyButton: React.FC<CopyButtonProps> = ({ className, content, titl
       title={title || formatMessage({ id: "copyButton.title" })}
       icon={
         <div>
-          <FontAwesomeIcon icon={faCopy} />
-          {copied && <Icon className={styles.success} type="success" color="success" />}
+          <Icon type="copy" />
+          {copied && <Icon className={styles.success} type="successFilled" color="success" />}
         </div>
       }
       onClick={handleClick}
-    />
+    >
+      {children}
+    </Button>
   );
 };

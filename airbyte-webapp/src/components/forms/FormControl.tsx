@@ -1,7 +1,6 @@
 import classNames from "classnames";
 import uniqueId from "lodash/uniqueId";
-import { HTMLInputTypeAttribute, ReactNode, useState } from "react";
-import React from "react";
+import React, { HTMLInputTypeAttribute, ReactNode, useState } from "react";
 import { FieldError, Path, get, useFormState } from "react-hook-form";
 import { useIntl } from "react-intl";
 

@@ -1,10 +1,9 @@
-import { faTable } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
@@ -40,6 +39,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
   const {
     streamRead,
     schemaWarnings: { incompatibleSchemaErrors, schemaDifferences },
+    testReadLimits: { recordLimit, pageLimit, sliceLimit },
   } = useConnectorBuilderTestRead();
 
   const autoImportSchema = useAutoImportSchema(testStreamIndex);
@@ -55,7 +55,10 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
           {`${formatMessage({ id: "connectorBuilder.recordsTab" })} (${page.records.length})`}
           {!streamRead.isFetching && streamRead.data && streamRead.data.test_read_limit_reached && (
             <InfoTooltip>
-              <FormattedMessage id="connectorBuilder.streamTestLimitReached" />
+              <FormattedMessage
+                id="connectorBuilder.streamTestLimitReached"
+                values={{ recordLimit, pageLimit, sliceLimit }}
+              />
             </InfoTooltip>
           )}
         </>
@@ -129,7 +132,7 @@ const RecordDisplay = ({ records }: { records: StreamReadSlicesItemPagesItemReco
                   setRecordViewMode("table");
                 }}
               >
-                <FontAwesomeIcon icon={faTable} />
+                <Icon type="table" />
               </Button>
             }
           >

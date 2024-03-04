@@ -1,86 +1,77 @@
 import React from "react";
-import { FormattedMessage } from "react-intl";
-import styled from "styled-components";
+import { useIntl } from "react-intl";
+import { SchemaOf } from "yup";
+import * as yup from "yup";
 
-import Label from "components/Label";
-import { LabeledSwitch } from "components/LabeledSwitch";
+import { Form, FormControl } from "components/forms";
+import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 
-import { links } from "core/utils/links";
+import { useCurrentWorkspace, useUpdateWorkspace } from "core/api";
+import { useIntent } from "core/utils/rbac";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { useNotificationService } from "hooks/services/Notification";
 
-import FeedbackBlock from "../../../components/FeedbackBlock";
-
-export interface MetricsFormProps {
-  onChange: (data: { anonymousDataCollection: boolean }) => void;
-  anonymousDataCollection?: boolean;
-  successMessage?: React.ReactNode;
-  errorMessage?: React.ReactNode;
-  isLoading?: boolean;
+interface MetricsFormValues {
+  anonymousDataCollection: boolean;
 }
 
-const FormItem = styled.div`
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  min-height: 33px;
-  margin-bottom: 10px;
-`;
+const ValidationSchema: SchemaOf<MetricsFormValues> = yup.object().shape({
+  anonymousDataCollection: yup.boolean().required(),
+});
 
-const DocsLink = styled.a`
-  text-decoration: none;
-  color: ${({ theme }) => theme.primaryColor};
-  cursor: pointer;
-`;
+export const MetricsForm: React.FC = () => {
+  const { formatMessage } = useIntl();
+  const { workspaceId, anonymousDataCollection } = useCurrentWorkspace();
+  const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
+  const { registerNotification } = useNotificationService();
+  const { trackError } = useAppMonitoringService();
+  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId });
 
-const Subtitle = styled(Label)`
-  padding-bottom: 9px;
-`;
+  const onSubmit = async ({ anonymousDataCollection }: MetricsFormValues) => {
+    await updateWorkspace({
+      workspaceId,
+      anonymousDataCollection,
+    });
+  };
 
-const Text = styled.div`
-  font-style: normal;
-  font-weight: normal;
-  font-size: 13px;
-  line-height: 150%;
-  padding-bottom: 9px;
-`;
+  const onSuccess = () => {
+    registerNotification({
+      id: "workspace_settings_update_success",
+      text: formatMessage({ id: "settings.workspaceSettings.update.success" }),
+      type: "success",
+    });
+  };
 
-const MetricsForm: React.FC<MetricsFormProps> = ({
-  onChange,
-  anonymousDataCollection,
-  successMessage,
-  errorMessage,
-  isLoading,
-}) => {
+  const onError = (e: Error, { anonymousDataCollection }: MetricsFormValues) => {
+    trackError(e, { anonymousDataCollection });
+
+    registerNotification({
+      id: "workspace_settings_update_error",
+      text: formatMessage({ id: "settings.workspaceSettings.update.error" }),
+      type: "error",
+    });
+  };
+
   return (
-    <>
-      <Subtitle>
-        <FormattedMessage id="preferences.anonymizeUsage" />
-      </Subtitle>
-      <Text>
-        <FormattedMessage
-          id="preferences.collectData"
-          values={{
-            docs: (docs: React.ReactNode) => (
-              <DocsLink target="_blank" href={links.docsLink}>
-                {docs}
-              </DocsLink>
-            ),
-          }}
-        />
-      </Text>
-      <FormItem>
-        <LabeledSwitch
-          checked={anonymousDataCollection}
-          disabled={isLoading}
-          label={<FormattedMessage id="preferences.anonymizeData" />}
-          onChange={(event) => {
-            onChange({ anonymousDataCollection: event.target.checked });
-          }}
-          loading={isLoading}
-        />
-        <FeedbackBlock errorMessage={errorMessage} successMessage={successMessage} isLoading={isLoading} />
-      </FormItem>
-    </>
+    <Form<MetricsFormValues>
+      defaultValues={{
+        anonymousDataCollection,
+      }}
+      schema={ValidationSchema}
+      onSubmit={onSubmit}
+      onSuccess={onSuccess}
+      onError={onError}
+      disabled={!canUpdateWorkspace}
+    >
+      <FormControl<MetricsFormValues>
+        name="anonymousDataCollection"
+        fieldType="switch"
+        inline
+        label={formatMessage({ id: "preferences.anonymizeUsage" })}
+        description={formatMessage({ id: "preferences.collectData" })}
+      />
+
+      <FormSubmissionButtons submitKey="form.saveChanges" />
+    </Form>
   );
 };
-
-export default MetricsForm;

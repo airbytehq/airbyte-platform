@@ -11,7 +11,7 @@ import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { useCreateOrUpdateState, useGetConnectionState } from "core/api";
-import { AirbyteCatalog, ConnectionState, StreamState } from "core/request/AirbyteClient";
+import { AirbyteCatalog, ConnectionState, StreamState } from "core/api/types/AirbyteClient";
 import { haveSameShape } from "core/utils/objects";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
@@ -20,6 +20,7 @@ import styles from "./StateBlock.module.scss";
 interface StateBlockProps {
   connectionId: string;
   syncCatalog: AirbyteCatalog;
+  disabled?: boolean;
 }
 
 function convertStateToString(state: ConnectionState): string {
@@ -36,7 +37,7 @@ function convertStateToString(state: ConnectionState): string {
   }
 }
 
-export const StateBlock: React.FC<StateBlockProps> = ({ connectionId, syncCatalog }) => {
+export const StateBlock: React.FC<StateBlockProps> = ({ connectionId, syncCatalog, disabled }) => {
   const { formatMessage } = useIntl();
   const existingState = useGetConnectionState(connectionId);
   const { mutateAsync: updateState, isLoading } = useCreateOrUpdateState();
@@ -112,7 +113,7 @@ export const StateBlock: React.FC<StateBlockProps> = ({ connectionId, syncCatalo
   );
 
   return (
-    <Card withPadding>
+    <Card>
       <FlexContainer direction="column">
         {!hasIncrementalStream ? (
           <>
@@ -131,17 +132,18 @@ export const StateBlock: React.FC<StateBlockProps> = ({ connectionId, syncCatalo
               />
             </FlexContainer>
 
-            <div className={styles.stateEditor}>
-              <CodeEditor
-                value={stateDraft ?? existingStateString}
-                language="json"
-                automaticLayout
-                showSuggestions={false}
-                onChange={(value) => {
-                  setStateDraft(value ?? "");
-                }}
-              />
-            </div>
+            <CodeEditor
+              value={stateDraft ?? existingStateString}
+              height={styles.stateEditorHeight}
+              language="json"
+              automaticLayout
+              showSuggestions={false}
+              onChange={(value) => {
+                setStateDraft(value ?? "");
+              }}
+              readOnly={disabled}
+            />
+
             <FlexContainer direction="column">
               {errorMessage ? (
                 <Message type="error" text={errorMessage} />
@@ -158,14 +160,19 @@ export const StateBlock: React.FC<StateBlockProps> = ({ connectionId, syncCatalo
                 <Button
                   variant="secondary"
                   onClick={() => setStateDraft(existingStateString)}
-                  disabled={stateDraft === existingStateString}
+                  disabled={disabled || stateDraft === existingStateString}
                 >
                   <FormattedMessage id="connection.state.revert" />
                 </Button>
                 <Button
                   onClick={handleStateUpdate}
                   isLoading={isLoading}
-                  disabled={stateDraft === existingStateString || newState === undefined || errorMessage !== undefined}
+                  disabled={
+                    disabled ||
+                    stateDraft === existingStateString ||
+                    newState === undefined ||
+                    errorMessage !== undefined
+                  }
                 >
                   <FormattedMessage id="connection.state.update" />
                 </Button>

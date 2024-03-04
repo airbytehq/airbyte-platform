@@ -1,7 +1,7 @@
 import isEqual from "lodash/isEqual";
 
+import { AirbyteStreamConfiguration, SelectedFieldInfo } from "core/api/types/AirbyteClient";
 import { SyncSchemaField } from "core/domain/catalog";
-import { AirbyteStreamConfiguration, SelectedFieldInfo } from "core/request/AirbyteClient";
 
 /**
  * Merges arrays of SelectedFieldInfo, ensuring there are no duplicates

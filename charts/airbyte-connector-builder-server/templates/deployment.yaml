@@ -65,6 +65,36 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: AIRBYTE_VERSION
+        - name: MICROMETER_METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_ENABLED
+        - name: MICROMETER_METRICS_STATSD_FLAVOR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STATSD_FLAVOR
+        - name: SEGMENT_WRITE_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: SEGMENT_WRITE_KEY
+        - name: STATSD_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_HOST
+        - name: STATSD_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_PORT
+        - name: TRACKING_STRATEGY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: TRACKING_STRATEGY
         {{- end }}
 
         # Values from secret

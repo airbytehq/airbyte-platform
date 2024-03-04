@@ -1,6 +1,6 @@
 import { FormattedMessage } from "react-intl";
 
-import { SupportLevel } from "core/request/AirbyteClient";
+import { SupportLevel } from "core/api/types/AirbyteClient";
 
 import { Badge } from "../Badge";
 import { Tooltip } from "../Tooltip";
@@ -28,7 +28,9 @@ export const SupportLevelBadge: React.FC<SupportLevelBadgeProps> = ({
             ? "connector.supportLevel.custom"
             : supportLevel === "certified"
             ? "connector.supportLevel.certified"
-            : "connector.supportLevel.community"
+            : supportLevel === "community"
+            ? "connector.supportLevel.community"
+            : "connector.supportLevel.archived"
         }
       />
     </Badge>
@@ -42,7 +44,9 @@ export const SupportLevelBadge: React.FC<SupportLevelBadgeProps> = ({
             ? "connector.supportLevel.custom.description"
             : supportLevel === "certified"
             ? "connector.supportLevel.certified.description"
-            : "connector.supportLevel.community.description"
+            : supportLevel === "community"
+            ? "connector.supportLevel.community.description"
+            : "connector.supportLevel.archived.description"
         }
       />
     </Tooltip>

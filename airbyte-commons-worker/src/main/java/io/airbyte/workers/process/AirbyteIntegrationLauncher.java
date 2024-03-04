@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.process;
@@ -9,6 +9,8 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ROOT_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 import static io.airbyte.workers.process.Metadata.CHECK_JOB;
+import static io.airbyte.workers.process.Metadata.CHECK_STEP_KEY;
+import static io.airbyte.workers.process.Metadata.CONNECTOR_STEP;
 import static io.airbyte.workers.process.Metadata.DISCOVER_JOB;
 import static io.airbyte.workers.process.Metadata.JOB_TYPE_KEY;
 import static io.airbyte.workers.process.Metadata.READ_STEP;
@@ -158,7 +160,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         null,
         buildGenericConnectorResourceRequirements(resourceRequirement),
         allowedHosts,
-        Map.of(JOB_TYPE_KEY, CHECK_JOB),
+        getLabels(Map.of(JOB_TYPE_KEY, CHECK_JOB, CHECK_STEP_KEY, CONNECTOR_STEP)),
         getWorkerMetadata(),
         Collections.emptyMap(),
         additionalEnvironmentVariables,
@@ -236,6 +238,9 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         null,
         buildSourceConnectorResourceRequirements(resourceRequirement, syncResourceRequirements),
         allowedHosts,
+        // IMPORTANT: Do NOT change these labels until https://github.com/airbytehq/airbyte/issues/34061 is
+        // closed. If these labels need to be changed please also update PodLabeler#getSourceLabels and
+        // contact Move.
         getLabels(Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, READ_STEP)),
         getWorkerMetadata(),
         Collections.emptyMap(),
@@ -271,6 +276,9 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         null,
         buildDestinationConnectorResourceRequirements(resourceRequirement, syncResourceRequirements),
         allowedHosts,
+        // IMPORTANT: Do NOT change these labels until https://github.com/airbytehq/airbyte/issues/34061 is
+        // closed. If these labels need to be changed please also update PodLabeler#getDestinationLabels and
+        // contact Move.
         getLabels(Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, WRITE_STEP)),
         getWorkerMetadata(),
         Collections.emptyMap(),

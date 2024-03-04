@@ -5,7 +5,7 @@ import { Box } from "components/ui/Box";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
-import { NamespaceDefinitionType } from "core/request/AirbyteClient";
+import { NamespaceDefinitionType } from "core/api/types/AirbyteClient";
 import { links } from "core/utils/links";
 
 import { DestinationNamespaceFormValues } from "./DestinationNamespaceModal";

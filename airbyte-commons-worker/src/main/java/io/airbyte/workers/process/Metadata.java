@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.process;
@@ -15,12 +15,13 @@ public final class Metadata {
    */
   public static final String JOB_LABEL_KEY = "job_id";
   public static final String ATTEMPT_LABEL_KEY = "attempt_id";
-  static final String WORKSPACE_LABEL_KEY = "workspace_id";
-  static final String WORKER_POD_LABEL_KEY = "airbyte";
-  static final String WORKER_POD_LABEL_VALUE = "job-pod";
+  public static final String WORKSPACE_LABEL_KEY = "workspace_id";
+  public static final String WORKER_POD_LABEL_KEY = "airbyte";
+  public static final String WORKER_POD_LABEL_VALUE = "job-pod";
   public static final String CONNECTION_ID_LABEL_KEY = "connection_id";
-  static final String IMAGE_NAME = "image_name";
-  static final String IMAGE_VERSION = "image_version";
+  public static final String IMAGE_NAME = "image_name";
+  public static final String IMAGE_VERSION = "image_version";
+  public static final String ACTOR_TYPE = "actor_type";
 
   /**
    * These are more readable forms of {@link io.airbyte.config.JobTypeResourceLimit.JobType}.
@@ -43,5 +44,12 @@ public final class Metadata {
   public static final String ORCHESTRATOR_NORMALIZATION_STEP = "orchestrator-normalization";
   public static final String ORCHESTRATOR_DBT_NORMALIZATION_STEP = "orchestrator-dbt-normalization";
   public static final String ORCHESTRATOR_REPLICATION_STEP = "orchestrator-replication";
+  public static final String AWS_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID";
+  public static final String AWS_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY";
+  public static final String AWS_ASSUME_ROLE_SECRET_NAME = "AWS_ASSUME_ROLE_SECRET_NAME";
+  public static final String AWS_ASSUME_ROLE_EXTERNAL_ID = "AWS_ASSUME_ROLE_EXTERNAL_ID";
+
+  public static final String CHECK_STEP_KEY = "check_step";
+  public static final String CONNECTOR_STEP = "connector";
 
 }

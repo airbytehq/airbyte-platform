@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal;
@@ -224,6 +224,18 @@ public class TemporalUtils {
     return workspaceRoot
         .resolve(String.valueOf(jobId))
         .resolve(String.valueOf(attemptId));
+  }
+
+  /**
+   * Get an attempt root director from workspace and workloadId.
+   *
+   * @param workspaceRoot workspace root
+   * @param workloadId workload id
+   * @return working directory
+   */
+  public static Path getJobRoot(final Path workspaceRoot, final String workloadId) {
+    return workspaceRoot
+        .resolve(String.valueOf(workloadId));
   }
 
 }

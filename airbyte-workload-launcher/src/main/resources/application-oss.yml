@@ -1,3 +1,7 @@
+micrometer:
+  metrics:
+    enabled: false
+
 airbyte:
   secret:
     persistence: TESTING_CONFIG_DB_TABLE

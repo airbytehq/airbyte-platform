@@ -12,7 +12,7 @@ global:
     tag: dev
 
   env_vars: {}
-  ##  database [object] -- Object used to overrite database configuration(to use external DB)
+  ##  database [object] -- Object used to override database configuration(to use external DB)
   ##  database.secretName -- secret name where DB creds are stored
   ##  database.secretValue -- secret value for database password
   ##  database.host -- Database host override
@@ -1740,7 +1740,7 @@ airbyte-api-server:
   service:
     port: 80
 
-workload-api:
+workload-api-server:
   enabled: false
   ##  airbyte-api-server.replicaCount Number of airbyte-api-server replicas
   replicaCount: 1

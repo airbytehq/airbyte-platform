@@ -24,7 +24,6 @@ export interface TableProps<T> {
   columns: TableColumns<T>;
   data: T[];
   variant?: "default" | "light" | "white" | "inBlock";
-  onClickRow?: (data: T) => void;
   getRowCanExpand?: (data: Row<T>) => boolean;
   getIsRowExpanded?: (data: Row<T>) => boolean;
   expandedRow?: (props: { row: Row<T> }) => React.ReactElement;
@@ -32,7 +31,7 @@ export interface TableProps<T> {
   columnVisibility?: VisibilityState;
   sorting?: boolean;
   getRowClassName?: (data: T) => string | undefined;
-  initialSortBy?: [{ id: string; desc: boolean }];
+  initialSortBy?: Array<{ id: string; desc: boolean }>;
   /**
    * If true, the table will be rendered using react-virtuoso. Defaults to false.
    */
@@ -52,7 +51,6 @@ export const Table = <T,>({
   columns,
   data,
   variant = "default",
-  onClickRow,
   getRowCanExpand,
   getIsRowExpanded,
   expandedRow,
@@ -99,15 +97,8 @@ export const Table = <T,>({
     return (
       <>
         <tr
-          className={classNames(
-            styles.tr,
-            {
-              [styles["tr--clickable"]]: !!onClickRow,
-            },
-            getRowClassName?.(row.original)
-          )}
+          className={classNames(styles.tr, getRowClassName?.(row.original))}
           data-testid={`table-row-${row.id}`}
-          onClick={() => onClickRow?.(row.original)}
           {...(virtualized && { ...restRowProps })}
         >
           {row.getVisibleCells().map((cell) => {
@@ -116,6 +107,7 @@ export const Table = <T,>({
               <td
                 className={classNames(styles.td, meta?.tdClassName, {
                   [styles["td--responsive"]]: meta?.responsive,
+                  [styles["td--noPadding"]]: meta?.noPadding,
                 })}
                 key={`table-cell-${row.id}-${cell.id}`}
                 data-testid={`table-cell-${row.id}-${cell.id}`}
@@ -148,6 +140,23 @@ export const Table = <T,>({
         {headerGroup.headers.map((header) => {
           const meta = header.column.columnDef.meta as ColumnMeta | undefined;
           const isSorted = header.column.getIsSorted();
+
+          const customSortToggle = () => {
+            const currentSorting = table.getState().sorting;
+
+            // if table is unsorted, or if we are sorting by another column, or if we are sorting by the same column but desc, toggle sorting to asc
+            if (
+              currentSorting === undefined ||
+              currentSorting.some((sort) => sort.id === header.column.id && sort.desc === true) ||
+              !currentSorting.some((sort) => sort.id === header.column.id)
+            ) {
+              // the first arg of toggleSorting() from react-table is desc: boolean
+              header.column.toggleSorting(false);
+            } else {
+              header.column.toggleSorting(true);
+            }
+          };
+
           return (
             <th
               colSpan={header.colSpan}
@@ -166,9 +175,9 @@ export const Table = <T,>({
             >
               {header.column.getCanSort() === true ? (
                 <SortableTableHeader
-                  onClick={() => header.column.toggleSorting()}
-                  isActive={header.column.getIsSorted() !== false}
-                  isAscending={header.column.getIsSorted() === "asc"}
+                  onClick={() => customSortToggle()}
+                  isActive={isSorted !== false}
+                  isAscending={isSorted === "asc"}
                 >
                   {flexRender(header.column.columnDef.header, header.getContext())}
                 </SortableTableHeader>

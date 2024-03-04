@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.bootloader;
@@ -15,7 +15,6 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.init.PostLoadExecutor;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
-import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.db.init.DatabaseInitializationException;
 import io.airbyte.db.init.DatabaseInitializer;
@@ -209,8 +208,13 @@ public class Bootloader {
     final UUID workspaceId = UUID.randomUUID();
     final StandardWorkspace workspace = new StandardWorkspace()
         .withWorkspaceId(workspaceId)
-        // attach this new workspace to the default User which should always exist at this point.
-        .withCustomerId(UserPersistence.DEFAULT_USER_ID)
+        // NOTE: we made a change to set this to the default User ID. It was reverted back to a random UUID
+        // because we discovered that our Segment Tracking Client uses distinct customer IDs to track the
+        // number of OSS instances deployed. this is flawed because now, a single OSS instance can have
+        // multiple workspaces. The long term fix is to update our analytics stack to use an instance-level
+        // identifier, like deploymentId, instead of a workspace-level identifier. For a quick fix though,
+        // we're reverting back to a randomized customer ID for the default workspace.
+        .withCustomerId(UUID.randomUUID())
         .withName(WorkspacePersistence.DEFAULT_WORKSPACE_NAME)
         .withSlug(workspaceId.toString())
         .withInitialSetupComplete(false)

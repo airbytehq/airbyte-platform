@@ -8,7 +8,7 @@ import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
 
 import { useSuggestedSources } from "area/connector/utils";
-import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
+import { useSourceDefinitionList } from "core/api";
 
 export const SelectSourcePage: React.FC = () => {
   const navigate = useNavigate();

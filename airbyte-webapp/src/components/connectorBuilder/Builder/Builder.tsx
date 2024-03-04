@@ -1,6 +1,5 @@
 import debounce from "lodash/debounce";
-import { useEffect, useMemo } from "react";
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 
 import { removeEmptyProperties } from "core/utils/form";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
@@ -82,7 +81,7 @@ export const Builder: React.FC<BuilderProps> = ({ hasMultipleStreams }) => {
   return useMemo(
     () => (
       <div className={styles.container}>
-        <BuilderSidebar className={styles.sidebar} />
+        <BuilderSidebar />
         <div className={styles.builderView}>{getView(selectedView, hasMultipleStreams)}</div>
       </div>
     ),

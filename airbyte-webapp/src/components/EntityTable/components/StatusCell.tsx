@@ -1,7 +1,10 @@
 import React from "react";
 
-import { SchemaChange, WebBackendConnectionListItem } from "core/request/AirbyteClient";
+import { Link } from "components/ui/Link";
+
+import { SchemaChange, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
+import { ConnectionRoutePaths } from "pages/routePaths";
 
 import { ChangesStatusIcon } from "./ChangesStatusIcon";
 import styles from "./StatusCell.module.scss";
@@ -38,7 +41,11 @@ export const StatusCell: React.FC<StatusCellProps> = ({
         hasBreakingChange={hasBreakingChange}
         connection={connection}
       />
-      {allowAutoDetectSchema && hasBreakingChange && <ChangesStatusIcon schemaChange={schemaChange} />}
+      {allowAutoDetectSchema && hasBreakingChange && (
+        <Link to={`${id}/${ConnectionRoutePaths.Replication}`}>
+          <ChangesStatusIcon schemaChange={schemaChange} />
+        </Link>
+      )}
     </div>
   );
 };

@@ -3,8 +3,8 @@
 
 .table {
   td {
-    padding-top: variables.$spacing-sm;
-    padding-bottom: variables.$spacing-sm;
+    padding-top: 0;
+    padding-bottom: 0;
   }
 }
 
@@ -14,6 +14,7 @@
 
 .draftInProgress {
   padding: 0 variables.$spacing-md;
+  white-space: nowrap;
 }
 
 .versionItem {
@@ -41,4 +42,28 @@
   border-radius: variables.$border-radius-sm;
   padding: variables.$spacing-sm;
   text-transform: uppercase;
+}
+
+.nameCell {
+  width: 100%;
+  padding: 0;
+
+  // This height is ignored due to this being inside of a `display: table-row` element.
+  // But a concrete value is necessary to allow the child div to take up the full height of this cell.
+  height: 1px;
+
+  .nameLink {
+    text-decoration: none;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: variables.$spacing-md;
+    padding: variables.$spacing-md variables.$spacing-lg;
+
+    svg {
+      flex-shrink: 0;
+    }
+  }
 }

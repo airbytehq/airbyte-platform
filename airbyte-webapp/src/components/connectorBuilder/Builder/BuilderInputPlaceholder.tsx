@@ -1,9 +1,8 @@
-import { faUser } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
 
@@ -19,7 +18,7 @@ export interface BuilderFieldProps {
 }
 
 export const BuilderInputPlaceholder = (props: BuilderFieldProps) => {
-  const { setTestInputOpen } = useConnectorBuilderFormManagementState();
+  const { setTestingValuesInputOpen } = useConnectorBuilderFormManagementState();
   const { label, tooltip } = getLabelAndTooltip(props.label, props.tooltip, props.manifestPath, "", true, true);
   return (
     <FlexContainer alignItems="center">
@@ -29,14 +28,14 @@ export const BuilderInputPlaceholder = (props: BuilderFieldProps) => {
           {tooltip && <InfoTooltip placement="top-start">{tooltip}</InfoTooltip>}
         </FlexContainer>
       </FlexItem>
-      <Tooltip control={<FontAwesomeIcon icon={faUser} className={styles.tooltipTrigger} />}>
+      <Tooltip control={<Icon type="user" className={styles.tooltipTrigger} />}>
         <FormattedMessage id="connectorBuilder.placeholder.label" />
         <br />
         <Button
           variant="link"
           type="button"
           onClick={() => {
-            setTestInputOpen(true);
+            setTestingValuesInputOpen(true);
           }}
         >
           <FormattedMessage id="connectorBuilder.placeholder.button" />

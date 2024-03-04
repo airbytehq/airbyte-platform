@@ -2,11 +2,9 @@ flags:
   - name: performance.backgroundJsonSchemaValidation
     serve: false
   - name: heartbeat.failSync
-    serve: true
+    serve: false
   - name: connectors.versionOverridesEnabled
     serve: true
-  - name: billing.newTrialPolicy
-    serve: false
   - name: heartbeat-max-seconds-between-messages
     serve: "10800"
   - name: use-new-notification-workflow
@@ -23,5 +21,47 @@ flags:
     serve: false
   - name: connectors.apm-enabled
     serve: false
+  - name: connectors.useIconUrlInApiResponse
+    serve: true
   - name: platform.use-new-schema-update-notification
+    serve: true
+  # whether the platform will track destination timeouts. If set to 'true', then the platform will monitor if there has been
+  # a call to a destination that has taken more than the threshold defined in 'destination-timeout.maxSeconds', and if so,
+  # the platform will consider the destination to have timed out.
+  - name: destination-timeout-enabled
+    serve: true
+  # If set to 'true' and the platform detects a destination timeout, it will fail the sync. Otherwise, it will
+  # log a message and the sync will proceed.
+  - name: destination-timeout.failSync
+    serve: true
+  # the time the platform waits before it decides that a destination has timed out.
+  - name: destination-timeout.seconds
+    serve: 86400
+  - name: platform.inject-aws-secrets-to-connector-pods
     serve: false
+  - name: platform.use-workload-api
+    serve: false
+    # Override used in order to run an acceptance test
+    context:
+      - type: "workspace"
+        include:
+          - "3d2985a0-a412-45f4-9124-e15800b739be"
+        serve: true
+  - name: platform.fail-sync-on-invalid-checksum
+    serve: false
+  - name: platform.use-workload-api-for-check
+    serve: false
+    # Override used in order to run an acceptance test
+    context:
+      - type: "workspace"
+        include:
+          - "1bdcfb61-219b-4290-be4f-12f9ac5461be"
+        serve: true
+  - name: platform.use-workload-api-for-discover
+    serve: false
+    # Override used in order to run an acceptance test
+    context:
+      - type: "workspace"
+        include:
+          - "3851861d-ac0b-440c-bd60-408cf9e7fc0e"
+        serve: true

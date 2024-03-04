@@ -1,9 +1,10 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.AUTH_USER;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.PERMISSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.USER;
 import static org.jooq.impl.DSL.asterisk;
@@ -34,7 +35,9 @@ import org.jooq.impl.DSL;
  *
  * Handle persisting Permission to the Config Database and perform all SQL queries.
  *
+ * @deprecated to be replaced by {@link io.airbyte.data.repositories.PermissionRepository}
  */
+@Deprecated
 public class PermissionPersistence {
 
   private final ExceptionWrappingDatabase database;
@@ -84,7 +87,7 @@ public class PermissionPersistence {
     final Permission priorPermission;
     try {
       priorPermission = getPermission(updatedPermission.getPermissionId()).orElseThrow();
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new SQLException(e);
     }
 
@@ -235,6 +238,10 @@ public class PermissionPersistence {
     return this.database.query(ctx -> listPermissionsForWorkspace(ctx, workspaceId));
   }
 
+  public List<UserPermission> listUserPermissionsGrantingWorkspaceAccess(final UUID workspaceId) throws IOException {
+    return this.database.query(ctx -> listPermissionsForWorkspace(ctx, workspaceId));
+  }
+
   public List<UserPermission> listInstanceAdminUsers() throws IOException {
     return this.database.query(ctx -> listInstanceAdminPermissions(ctx));
   }
@@ -244,7 +251,7 @@ public class PermissionPersistence {
   }
 
   private List<UserPermission> listInstanceAdminPermissions(final DSLContext ctx) {
-    var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
+    final var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))
@@ -254,30 +261,30 @@ public class PermissionPersistence {
     return records.stream().map(record -> buildUserPermissionFromRecord(record)).collect(Collectors.toList());
   }
 
-  private UserPermission getUserInstanceAdminPermission(final DSLContext ctx, final UUID userId) {
-    var record = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
+  public Boolean isUserInstanceAdmin(final UUID userId) throws IOException {
+    return this.database.query(ctx -> isUserInstanceAdmin(ctx, userId));
+  }
+
+  private Boolean isUserInstanceAdmin(final DSLContext ctx, final UUID userId) {
+    return ctx.fetchExists(select()
+        .from(PERMISSION)
+        .where(PERMISSION.PERMISSION_TYPE.eq(io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.instance_admin))
+        .and(PERMISSION.USER_ID.eq(userId)));
+  }
+
+  public Boolean isAuthUserInstanceAdmin(final String authUserId) throws IOException {
+    return this.database.query(ctx -> isAuthUserInstanceAdmin(ctx, authUserId));
+  }
+
+  private Boolean isAuthUserInstanceAdmin(final DSLContext ctx, final String authUserId) {
+    return ctx.fetchExists(select()
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))
+        .join(AUTH_USER)
+        .on(USER.ID.eq(AUTH_USER.USER_ID))
         .where(PERMISSION.PERMISSION_TYPE.eq(io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.instance_admin))
-        .and(PERMISSION.USER_ID.eq(userId))
-        .fetchOne();
-    if (record == null) {
-      return null;
-    }
-    return buildUserPermissionFromRecord(record);
-  }
-
-  /**
-   * Check and get instance_admin permission for a user.
-   *
-   * @param userId user id
-   * @return UserPermission User details with instance_admin permission, null if user does not have
-   *         instance_admin role.
-   * @throws IOException if there is an issue while interacting with the db.
-   */
-  public UserPermission getUserInstanceAdminPermission(final UUID userId) throws IOException {
-    return this.database.query(ctx -> getUserInstanceAdminPermission(ctx, userId));
+        .and(AUTH_USER.AUTH_USER_ID.eq(authUserId)));
   }
 
   public PermissionType findPermissionTypeForUserAndWorkspace(final UUID workspaceId, final String authUserId)
@@ -288,12 +295,14 @@ public class PermissionPersistence {
   private PermissionType findPermissionTypeForUserAndWorkspace(final DSLContext ctx,
                                                                final UUID workspaceId,
                                                                final String authUserId) {
-    var record = ctx.select(PERMISSION.PERMISSION_TYPE)
+    final var record = ctx.select(PERMISSION.PERMISSION_TYPE)
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))
+        .join(AUTH_USER)
+        .on(USER.ID.eq(AUTH_USER.USER_ID))
         .where(PERMISSION.WORKSPACE_ID.eq(workspaceId))
-        .and(USER.AUTH_USER_ID.eq(authUserId))
+        .and(AUTH_USER.AUTH_USER_ID.eq(authUserId))
         .fetchOne();
     if (record == null) {
       return null;
@@ -312,12 +321,14 @@ public class PermissionPersistence {
   private PermissionType findPermissionTypeForUserAndOrganization(final DSLContext ctx,
                                                                   final UUID organizationId,
                                                                   final String authUserId) {
-    var record = ctx.select(PERMISSION.PERMISSION_TYPE)
+    final var record = ctx.select(PERMISSION.PERMISSION_TYPE)
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))
+        .join(AUTH_USER)
+        .on(USER.ID.eq(AUTH_USER.USER_ID))
         .where(PERMISSION.ORGANIZATION_ID.eq(organizationId))
-        .and(USER.AUTH_USER_ID.eq(authUserId))
+        .and(AUTH_USER.AUTH_USER_ID.eq(authUserId))
         .fetchOne();
 
     if (record == null) {
@@ -329,7 +340,7 @@ public class PermissionPersistence {
   }
 
   private List<UserPermission> listPermissionsForWorkspace(final DSLContext ctx, final UUID workspaceId) {
-    var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
+    final var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))
@@ -347,7 +358,7 @@ public class PermissionPersistence {
   }
 
   private List<UserPermission> listPermissionsForOrganization(final DSLContext ctx, final UUID organizationId) {
-    var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
+    final var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))

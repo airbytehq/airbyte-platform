@@ -1,19 +1,15 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.check.connection;
 
 import io.airbyte.config.ConnectorJobOutput;
-import io.airbyte.config.StandardCheckConnectionInput;
-import io.airbyte.config.StandardCheckConnectionOutput;
-import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
-import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.models.CheckConnectionInput;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import java.util.UUID;
 
 /**
  * Check connection activity temporal interface.
@@ -21,24 +17,12 @@ import lombok.NoArgsConstructor;
 @ActivityInterface
 public interface CheckConnectionActivity {
 
-  /**
-   * CheckConnectionInput.
-   */
-  @Data
-  @NoArgsConstructor
-  @AllArgsConstructor
-  class CheckConnectionInput {
-
-    private JobRunConfig jobRunConfig;
-    private IntegrationLauncherConfig launcherConfig;
-    private StandardCheckConnectionInput connectionConfiguration;
-
-  }
-
   @ActivityMethod
   ConnectorJobOutput runWithJobOutput(CheckConnectionInput input);
 
   @ActivityMethod
-  StandardCheckConnectionOutput run(CheckConnectionInput input);
+  ConnectorJobOutput runWithWorkload(CheckConnectionInput input) throws WorkerException;
+
+  boolean shouldUseWorkload(UUID workspaceId);
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.process;
@@ -18,6 +18,7 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.storage.S3DocumentStoreClient;
 import io.airbyte.workers.sync.OrchestratorConstants;
+import io.airbyte.workers.workload.JobOutputDocStore;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -41,8 +42,9 @@ import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 @Disabled
 class AsyncOrchestratorPodProcessIntegrationTest {
 
-  private static KubernetesClient kubernetesClient;
   private static DocumentStoreClient documentStoreClient;
+  private static KubernetesClient kubernetesClient;
+  private static MetricClient metricClient;
   private static Process portForwardProcess;
 
   @BeforeAll
@@ -97,6 +99,8 @@ class AsyncOrchestratorPodProcessIntegrationTest {
     documentStoreClient = S3DocumentStoreClient.minio(
         minioConfig,
         Path.of("/"));
+
+    metricClient = mock(MetricClient.class);
   }
 
   @ValueSource(strings = {"IfNotPresent", " Always"})
@@ -123,8 +127,10 @@ class AsyncOrchestratorPodProcessIntegrationTest {
         serverPort,
         "airbyte-admin",
         null,
-        mock(MetricClient.class),
-        "test");
+        metricClient,
+        "test",
+        new JobOutputDocStore(documentStoreClient, metricClient),
+        "workload_id");
 
     final Map<Integer, Integer> portMap = Map.of(
         serverPort, serverPort,
@@ -141,7 +147,8 @@ class AsyncOrchestratorPodProcessIntegrationTest {
 
     asyncProcess.create(Map.of(), new WorkerConfigs(new EnvConfigs()).getResourceRequirements(), Map.of(
         OrchestratorConstants.INIT_FILE_APPLICATION, AsyncOrchestratorPodProcess.NO_OP,
-        OrchestratorConstants.INIT_FILE_ENV_MAP, Jsons.serialize(envMap)), portMap, workerConfigs.getworkerKubeNodeSelectors());
+        OrchestratorConstants.INIT_FILE_ENV_MAP, Jsons.serialize(envMap)), portMap, workerConfigs.getworkerKubeNodeSelectors(),
+        workerConfigs.getWorkerKubeTolerations());
 
     // a final activity waits until there is output from the kube pod process
     asyncProcess.waitFor(10, TimeUnit.SECONDS);
@@ -152,7 +159,64 @@ class AsyncOrchestratorPodProcessIntegrationTest {
     assertEquals(0, exitValue);
     assertTrue(output.isPresent());
     assertEquals("expected output", output.get());
+  }
 
+  @ValueSource(strings = {"IfNotPresent", " Always"})
+  @ParameterizedTest
+  void testAsyncOrchestratorPodProcessWithEmptySecrets(final String pullPolicy) throws InterruptedException {
+    final var serverPort = 8080;
+    final var podName = "test-async-" + RandomStringUtils.randomAlphabetic(10).toLowerCase();
+    final var mainContainerInfo = new KubeContainerInfo("airbyte/container-orchestrator:dev", pullPolicy);
+    // make kubepodinfo
+    final var kubePodInfo = new KubePodInfo("default", podName, mainContainerInfo);
+
+    // another activity issues the request to create the pod process -> here we'll just create it
+    final var asyncProcess = new AsyncOrchestratorPodProcess(
+        kubePodInfo,
+        documentStoreClient,
+        kubernetesClient,
+        "",
+        "",
+        "",
+        "",
+        null,
+        Map.of(EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA, "true"),
+        Map.of("k8s.io/example", "true"),
+        serverPort,
+        "airbyte-admin",
+        null,
+        metricClient,
+        "test",
+        new JobOutputDocStore(documentStoreClient, metricClient),
+        "workload_id");
+
+    final Map<Integer, Integer> portMap = Map.of(
+        serverPort, serverPort,
+        OrchestratorConstants.PORT1, OrchestratorConstants.PORT1,
+        OrchestratorConstants.PORT2, OrchestratorConstants.PORT2,
+        OrchestratorConstants.PORT3, OrchestratorConstants.PORT3,
+        OrchestratorConstants.PORT4, OrchestratorConstants.PORT4);
+
+    final Map<String, String> envMap = System.getenv().entrySet().stream()
+        .filter(entry -> OrchestratorConstants.ENV_VARS_TO_TRANSFER.contains(entry.getKey()))
+        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+    final WorkerConfigs workerConfigs = new WorkerConfigs(new EnvConfigs());
+
+    asyncProcess.create(Map.of(), new WorkerConfigs(new EnvConfigs()).getResourceRequirements(), Map.of(
+        OrchestratorConstants.INIT_FILE_APPLICATION, AsyncOrchestratorPodProcess.NO_OP,
+        OrchestratorConstants.INIT_FILE_ENV_MAP, Jsons.serialize(envMap)), portMap, workerConfigs.getworkerKubeNodeSelectors(),
+        workerConfigs.getWorkerKubeTolerations());
+
+    // a final activity waits until there is output from the kube pod process
+    asyncProcess.waitFor(10, TimeUnit.SECONDS);
+
+    final var exitValue = asyncProcess.exitValue();
+    final var output = asyncProcess.getOutput();
+
+    assertEquals(0, exitValue);
+    assertTrue(output.isPresent());
+    assertEquals("expected output", output.get());
   }
 
   @AfterAll

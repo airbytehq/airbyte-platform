@@ -6,7 +6,7 @@ import {
   SourceRead,
   SourceSnippetRead,
   WebBackendConnectionListItem,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
 import { EntityTableDataItem, ConnectionTableDataItem, Status as ConnectionSyncStatus } from "./types";
 
@@ -80,14 +80,8 @@ export const getConnectionTableData = (
   return connections.map((connection) => ({
     connectionId: connection.connectionId,
     name: connection.name,
-    entityName:
-      type === "connection"
-        ? `${connection.source?.sourceName} - ${connection.source?.name}`
-        : connection[connectType]?.name || "",
-    connectorName:
-      type === "connection"
-        ? `${connection.destination?.destinationName} - ${connection.destination?.name}`
-        : getConnectorTypeName(connection[connectType]),
+    entityName: type === "connection" ? connection.source?.name : connection[connectType]?.name || "",
+    connectorName: type === "connection" ? connection.destination?.name : getConnectorTypeName(connection[connectType]),
     lastSync: connection.latestSyncJobCreatedAt,
     enabled: connection.status === ConnectionStatus.active,
     schemaChange: connection.schemaChange,
@@ -129,3 +123,15 @@ export const getConnectionSyncStatus = (
       return ConnectionSyncStatus.EMPTY;
   }
 };
+
+/**
+ * Filter entity table data by entityName(name defined by user) and connectorName
+ * @param searchFilter
+ * @param data
+ */
+export const filterBySearchEntityTableData = (searchFilter: string, data: EntityTableDataItem[]) =>
+  data.filter(({ entityName, connectorName }) =>
+    [entityName, connectorName]
+      .map((value) => value.toLowerCase())
+      .some((value) => value.includes(searchFilter.toLowerCase()))
+  );

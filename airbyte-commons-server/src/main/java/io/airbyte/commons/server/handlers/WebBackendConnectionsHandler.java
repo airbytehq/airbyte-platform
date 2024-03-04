@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -23,6 +23,7 @@ import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSnippetRead;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.JobRead;
+import io.airbyte.api.model.generated.JobStatus;
 import io.airbyte.api.model.generated.OperationCreate;
 import io.airbyte.api.model.generated.OperationReadList;
 import io.airbyte.api.model.generated.OperationUpdate;
@@ -62,6 +63,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
+import io.airbyte.persistence.job.models.JobStatusSummary;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
@@ -157,7 +159,7 @@ public class WebBackendConnectionsHandler {
     // Fetching all the related objects we need for the final output
     final Map<UUID, SourceSnippetRead> sourceReadById = getSourceSnippetReadById(sourceIds);
     final Map<UUID, DestinationSnippetRead> destinationReadById = getDestinationSnippetReadById(destinationIds);
-    final Map<UUID, JobRead> latestJobByConnectionId = getLatestJobByConnectionId(connectionIds);
+    final Map<UUID, JobStatusSummary> latestJobByConnectionId = getLatestJobByConnectionId(connectionIds);
     // This call could be removed, running jobs should be a subset of latest jobs, need to expose the
     // right status filtering for this.
     final Map<UUID, JobRead> runningJobByConnectionId = getRunningJobByConnectionId(connectionIds);
@@ -180,9 +182,9 @@ public class WebBackendConnectionsHandler {
     return new WebBackendConnectionReadList().connections(connectionItems);
   }
 
-  private Map<UUID, JobRead> getLatestJobByConnectionId(final List<UUID> connectionIds) throws IOException {
+  private Map<UUID, JobStatusSummary> getLatestJobByConnectionId(final List<UUID> connectionIds) throws IOException {
     return jobHistoryHandler.getLatestSyncJobsForConnections(connectionIds).stream()
-        .collect(Collectors.toMap(j -> UUID.fromString(j.getConfigId()), Function.identity()));
+        .collect(Collectors.toMap(JobStatusSummary::connectionId, Function.identity()));
   }
 
   private Map<UUID, JobRead> getRunningJobByConnectionId(final List<UUID> connectionIds) throws IOException {
@@ -193,14 +195,14 @@ public class WebBackendConnectionsHandler {
   private Map<UUID, SourceSnippetRead> getSourceSnippetReadById(final List<UUID> sourceIds) throws IOException {
     return configRepositoryDoNotUse.getSourceAndDefinitionsFromSourceIds(sourceIds)
         .stream()
-        .map(sourceAndDefinition -> SourceHandler.toSourceSnippetRead(sourceAndDefinition.source(), sourceAndDefinition.definition()))
+        .map(sourceAndDefinition -> sourceHandler.toSourceSnippetRead(sourceAndDefinition.source(), sourceAndDefinition.definition()))
         .collect(Collectors.toMap(SourceSnippetRead::getSourceId, Function.identity()));
   }
 
   private Map<UUID, DestinationSnippetRead> getDestinationSnippetReadById(final List<UUID> destinationIds) throws IOException {
     return configRepositoryDoNotUse.getDestinationAndDefinitionsFromDestinationIds(destinationIds)
         .stream()
-        .map(destinationAndDefinition -> DestinationHandler.toDestinationSnippetRead(destinationAndDefinition.destination(),
+        .map(destinationAndDefinition -> destinationHandler.toDestinationSnippetRead(destinationAndDefinition.destination(),
             destinationAndDefinition.definition()))
         .collect(Collectors.toMap(DestinationSnippetRead::getDestinationId, Function.identity()));
   }
@@ -237,13 +239,13 @@ public class WebBackendConnectionsHandler {
                                                                                 final StandardSync standardSync,
                                                                                 final Map<UUID, SourceSnippetRead> sourceReadById,
                                                                                 final Map<UUID, DestinationSnippetRead> destinationReadById,
-                                                                                final Map<UUID, JobRead> latestJobByConnectionId,
+                                                                                final Map<UUID, JobStatusSummary> latestJobByConnectionId,
                                                                                 final Map<UUID, JobRead> runningJobByConnectionId,
                                                                                 final Optional<ActorCatalogFetchEvent> latestFetchEvent) {
 
     final SourceSnippetRead source = sourceReadById.get(standardSync.getSourceId());
     final DestinationSnippetRead destination = destinationReadById.get(standardSync.getDestinationId());
-    final Optional<JobRead> latestSyncJob = Optional.ofNullable(latestJobByConnectionId.get(standardSync.getConnectionId()));
+    final Optional<JobStatusSummary> latestSyncJob = Optional.ofNullable(latestJobByConnectionId.get(standardSync.getConnectionId()));
     final Optional<JobRead> latestRunningSyncJob = Optional.ofNullable(runningJobByConnectionId.get(standardSync.getConnectionId()));
     final ConnectionRead connectionRead = ApiPojoConverters.internalToConnectionRead(standardSync);
     final Optional<UUID> currentCatalogId = connectionRead == null ? Optional.empty() : Optional.ofNullable(connectionRead.getSourceCatalogId());
@@ -262,8 +264,8 @@ public class WebBackendConnectionsHandler {
         .schemaChange(schemaChange);
 
     latestSyncJob.ifPresent(job -> {
-      listItem.setLatestSyncJobCreatedAt(job.getCreatedAt());
-      listItem.setLatestSyncJobStatus(job.getStatus());
+      listItem.setLatestSyncJobCreatedAt(job.createdAt());
+      listItem.setLatestSyncJobStatus(JobStatus.valueOf(job.status().name()));
     });
 
     return listItem;
@@ -339,7 +341,9 @@ public class WebBackendConnectionsHandler {
         .geography(connectionRead.getGeography())
         .notifySchemaChanges(connectionRead.getNotifySchemaChanges())
         .notifySchemaChangesByEmail(connectionRead.getNotifySchemaChangesByEmail())
-        .nonBreakingChangesPreference(connectionRead.getNonBreakingChangesPreference());
+        .createdAt(connectionRead.getCreatedAt())
+        .nonBreakingChangesPreference(connectionRead.getNonBreakingChangesPreference())
+        .backfillPreference(connectionRead.getBackfillPreference());
   }
 
   // todo (cgardens) - This logic is a headache to follow it stems from the internal data model not
@@ -735,7 +739,9 @@ public class WebBackendConnectionsHandler {
     connectionCreate.resourceRequirements(webBackendConnectionCreate.getResourceRequirements());
     connectionCreate.sourceCatalogId(webBackendConnectionCreate.getSourceCatalogId());
     connectionCreate.geography(webBackendConnectionCreate.getGeography());
+    connectionCreate.notifySchemaChanges(webBackendConnectionCreate.getNotifySchemaChanges());
     connectionCreate.nonBreakingChangesPreference(webBackendConnectionCreate.getNonBreakingChangesPreference());
+    connectionCreate.backfillPreference(webBackendConnectionCreate.getBackfillPreference());
 
     return connectionCreate;
   }
@@ -770,6 +776,7 @@ public class WebBackendConnectionsHandler {
     connectionPatch.notifySchemaChanges(webBackendConnectionPatch.getNotifySchemaChanges());
     connectionPatch.notifySchemaChangesByEmail(webBackendConnectionPatch.getNotifySchemaChangesByEmail());
     connectionPatch.nonBreakingChangesPreference(webBackendConnectionPatch.getNonBreakingChangesPreference());
+    connectionPatch.backfillPreference(webBackendConnectionPatch.getBackfillPreference());
     connectionPatch.breakingChange(breakingChange);
 
     connectionPatch.operationIds(finalOperationIds);

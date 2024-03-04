@@ -1,6 +1,10 @@
+/* eslint-disable check-file/filename-blocklist */
+// temporary disable eslint rule for this file during cleanup
 import { act, renderHook } from "@testing-library/react";
 import React from "react";
+import { FieldErrors } from "react-hook-form";
 
+import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
   mockDestinationDefinition,
@@ -23,20 +27,14 @@ import {
   useConnectionFormService,
 } from "./ConnectionFormService";
 
-jest.mock("services/connector/SourceDefinitionService", () => ({
-  useSourceDefinition: () => mockSourceDefinition,
-}));
-
-jest.mock("services/connector/DestinationDefinitionService", () => ({
-  useDestinationDefinition: () => mockDestinationDefinition,
-}));
-
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
   useSourceDefinitionVersion: () => mockSourceDefinitionVersion,
   useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
   useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
+  useSourceDefinition: () => mockSourceDefinition,
+  useDestinationDefinition: () => mockDestinationDefinition,
 }));
 
 describe("ConnectionFormService", () => {
@@ -154,9 +152,11 @@ describe("ConnectionFormService", () => {
         ),
       });
 
-      const errors = {
+      const errors: FieldErrors<FormConnectionFormValues> = {
         syncCatalog: {
-          streams: "connectionForm.streams.required",
+          streams: {
+            message: "connectionForm.streams.required",
+          },
         },
       };
 
@@ -172,9 +172,11 @@ describe("ConnectionFormService", () => {
         ),
       });
 
-      const errors = {
+      const errors: FieldErrors<FormConnectionFormValues> = {
         syncCatalog: {
-          streams: "There's an error",
+          streams: {
+            message: "There's an error",
+          },
         },
       };
 

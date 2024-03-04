@@ -1,9 +1,9 @@
 import React from "react";
+import { useIntl } from "react-intl";
 
 import { HeadTitle } from "components/common/HeadTitle";
 import { NotificationSettingsForm } from "components/NotificationSettingsForm";
 import { PageContainer } from "components/PageContainer";
-import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { WorkspaceEmailForm } from "components/WorkspaceEmailForm";
@@ -12,6 +12,7 @@ import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 
 export const NotificationPage: React.FC = () => {
+  const { formatMessage } = useIntl();
   useTrackPage(PageTrackingCodes.SETTINGS_NOTIFICATION);
   const emailNotificationsFeatureEnabled = useFeature(FeatureItem.EmailNotifications);
 
@@ -21,15 +22,11 @@ export const NotificationPage: React.FC = () => {
       <FlexContainer direction="column" gap="lg">
         {emailNotificationsFeatureEnabled && (
           <Card>
-            <Box p="xl">
-              <WorkspaceEmailForm />
-            </Box>
+            <WorkspaceEmailForm />
           </Card>
         )}
-        <Card title="Notification settings">
-          <Box p="xl">
-            <NotificationSettingsForm />
-          </Box>
+        <Card title={formatMessage({ id: "settings.notificationSettings" })} titleWithBottomBorder>
+          <NotificationSettingsForm />
         </Card>
       </FlexContainer>
     </PageContainer>

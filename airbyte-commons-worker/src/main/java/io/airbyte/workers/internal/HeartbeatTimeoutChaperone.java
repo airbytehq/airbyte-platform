@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
@@ -52,6 +52,7 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
   private ExecutorService lazyExecutorService;
   private final Optional<Runnable> customMonitor;
   private final UUID connectionId;
+  private final String sourceDockerImage;
   private final MetricClient metricClient;
 
   public HeartbeatTimeoutChaperone(final HeartbeatMonitor heartbeatMonitor,
@@ -59,12 +60,14 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
                                    final FeatureFlagClient featureFlagClient,
                                    final UUID workspaceId,
                                    final UUID connectionId,
+                                   final String sourceDockerImage,
                                    final MetricClient metricClient) {
     this.timeoutCheckDuration = timeoutCheckDuration;
     this.heartbeatMonitor = heartbeatMonitor;
     this.featureFlagClient = featureFlagClient;
     this.workspaceId = workspaceId;
     this.connectionId = connectionId;
+    this.sourceDockerImage = sourceDockerImage;
     this.metricClient = metricClient;
     this.customMonitor = Optional.empty();
   }
@@ -84,6 +87,7 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
     this.workspaceId = workspaceId;
     this.customMonitor = customMonitor;
     this.connectionId = connectionId;
+    this.sourceDockerImage = "docker image";
     this.metricClient = metricClient;
   }
 
@@ -118,12 +122,20 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
       if (featureFlagClient.boolVariation(ShouldFailSyncIfHeartbeatFailure.INSTANCE,
           new Multi(List.of(new Workspace(workspaceId), new Connection(connectionId))))) {
         runnableFuture.cancel(true);
+        metricClient.count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
+            new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+            new MetricAttribute(MetricTags.KILLED, "true"),
+            new MetricAttribute(MetricTags.SOURCE_IMAGE, sourceDockerImage));
         throw new HeartbeatTimeoutException(
             String.format("Heartbeat has stopped. Heartbeat freshness threshold: %s secs Actual heartbeat age: %s secs",
                 heartbeatMonitor.getHeartbeatFreshnessThreshold().getSeconds(),
                 heartbeatMonitor.getTimeSinceLastBeat().orElse(Duration.ZERO).getSeconds()));
       } else {
-        LOGGER.info("Do not return because the feature flag is disable");
+        LOGGER.info("Do not terminate as feature flag is disable");
+        metricClient.count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
+            new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+            new MetricAttribute(MetricTags.KILLED, "false"),
+            new MetricAttribute(MetricTags.SOURCE_IMAGE, sourceDockerImage));
         return;
       }
     }
@@ -144,12 +156,11 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
 
       heartbeatMonitor.getTimeSinceLastBeat()
           .ifPresent(duration -> metricClient.distribution(OssMetricsRegistry.SOURCE_TIME_SINCE_LAST_HEARTBEAT_MILLIS, duration.toMillis(),
-              new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString())));
+              new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+              new MetricAttribute(MetricTags.SOURCE_IMAGE, sourceDockerImage)));
 
       // if not beating, return. otherwise, if it is beating or heartbeat hasn't started, continue.
       if (!heartbeatMonitor.isBeating().orElse(true)) {
-        metricClient.count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
-            new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
         LOGGER.error("Source has stopped heart beating.");
         return;
       }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -20,13 +20,13 @@ import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Permission;
-import io.airbyte.config.UserPermission;
 import io.airbyte.config.helpers.PermissionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.SQLOperationNotAllowedException;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Comparator;
@@ -54,7 +54,7 @@ public class PermissionHandler {
   public PermissionHandler(
                            final PermissionPersistence permissionPersistence,
                            final WorkspaceService workspaceService,
-                           final Supplier<UUID> uuidGenerator) {
+                           @Named("uuidGenerator") final Supplier<UUID> uuidGenerator) {
     this.uuidGenerator = uuidGenerator;
     this.permissionPersistence = permissionPersistence;
     this.workspaceService = workspaceService;
@@ -309,6 +309,10 @@ public class PermissionHandler {
       } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
+      // If the workspace is not in any organization, return true
+      if (requestedWorkspaceOrganizationId == null) {
+        return true;
+      }
       return !requestedWorkspaceOrganizationId.equals(userPermission.getOrganizationId());
     }
 
@@ -353,16 +357,12 @@ public class PermissionHandler {
         : new PermissionCheckRead().status(StatusEnum.FAILED);
   }
 
-  /**
-   * Check and get instance_admin permission for a user.
-   *
-   * @param userId user id
-   * @return UserPermission User details with instance_admin permission, null if user does not have
-   *         instance_admin role.
-   * @throws IOException if there is an issue while interacting with the db.
-   */
-  public UserPermission getUserInstanceAdminPermission(final UUID userId) throws IOException {
-    return permissionPersistence.getUserInstanceAdminPermission(userId);
+  public Boolean isUserInstanceAdmin(final UUID userId) throws IOException {
+    return permissionPersistence.isUserInstanceAdmin(userId);
+  }
+
+  public Boolean isAuthUserInstanceAdmin(final String authUserId) throws IOException {
+    return permissionPersistence.isAuthUserInstanceAdmin(authUserId);
   }
 
   /**

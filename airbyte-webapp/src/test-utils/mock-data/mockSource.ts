@@ -3,7 +3,7 @@ import {
   SourceDefinitionRead,
   SourceDefinitionSpecificationRead,
   SupportState,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
 import { ConnectorIds } from "../../area/connector/utils";
 
@@ -27,7 +27,7 @@ export const mockSourceDefinitionVersion: ActorDefinitionVersionRead = {
   normalizationConfig: {
     supported: false,
   },
-  isOverrideApplied: false,
+  isVersionOverrideApplied: false,
   supportState: SupportState.supported,
   supportLevel: "certified",
 };

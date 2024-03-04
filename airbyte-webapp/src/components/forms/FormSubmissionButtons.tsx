@@ -9,6 +9,7 @@ interface FormSubmissionButtonsProps {
   cancelKey?: string;
   allowNonDirtyCancel?: boolean;
   onCancelClickCallback?: () => void;
+  justify?: "flex-start" | "flex-end";
 }
 
 export const FormSubmissionButtons: React.FC<FormSubmissionButtonsProps> = ({
@@ -16,6 +17,7 @@ export const FormSubmissionButtons: React.FC<FormSubmissionButtonsProps> = ({
   cancelKey = "form.cancel",
   allowNonDirtyCancel = false,
   onCancelClickCallback,
+  justify = "flex-end",
 }) => {
   // get isSubmitting from useFormState to avoid re-rendering of whole form if they change
   // reset is a stable function so it's fine to get it from useFormContext
@@ -23,7 +25,7 @@ export const FormSubmissionButtons: React.FC<FormSubmissionButtonsProps> = ({
   const { isDirty, isSubmitting } = useFormState();
 
   return (
-    <FlexContainer justifyContent="flex-end">
+    <FlexContainer justifyContent={justify}>
       <Button
         type="button"
         variant="secondary"

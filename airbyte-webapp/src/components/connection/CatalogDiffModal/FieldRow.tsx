@@ -1,13 +1,10 @@
-import { faMinus, faPlus, faExclamationCircle } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classnames from "classnames";
 import { FormattedMessage } from "react-intl";
 
-import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
-import { ModificationIcon } from "components/icons/ModificationIcon";
+import { Icon } from "components/ui/Icon";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { FieldTransform } from "core/request/AirbyteClient";
+import { FieldTransform } from "core/api/types/AirbyteClient";
 
 import styles from "./FieldRow.module.scss";
 
@@ -50,12 +47,12 @@ export const FieldRow: React.FC<FieldRowProps> = ({ transform }) => {
       <td className={contentStyle}>
         <div className={styles.iconContainer}>
           {diffType === "add" ? (
-            <FontAwesomeIcon icon={faPlus} size="1x" className={iconStyle} />
+            <Icon type="plus" className={iconStyle} />
           ) : diffType === "remove" ? (
-            <FontAwesomeIcon icon={faMinus} size="1x" className={iconStyle} />
+            <Icon type="minus" className={iconStyle} />
           ) : (
             <div className={iconStyle}>
-              <ModificationIcon />
+              <Icon type="modification" />
             </div>
           )}
         </div>
@@ -65,12 +62,7 @@ export const FieldRow: React.FC<FieldRowProps> = ({ transform }) => {
             <div className={styles.breakingSchemaChange}>
               <Tooltip
                 placement="left"
-                control={
-                  <FontAwesomeIcon
-                    icon={faExclamationCircle}
-                    className={classnames(styles.icon, styles.breakingChange)}
-                  />
-                }
+                control={<Icon type="warningOutline" className={classnames(styles.icon, styles.breakingChange)} />}
               >
                 <FormattedMessage id="connection.schemaChange.breaking" />
               </Tooltip>
@@ -82,7 +74,7 @@ export const FieldRow: React.FC<FieldRowProps> = ({ transform }) => {
         <td className={contentStyle}>
           <div className={updateCellStyle}>
             <span className={styles.dataType}>
-              {oldType} <ArrowRightIcon /> {newType}
+              {oldType} <Icon type="arrowRight" /> {newType}
             </span>
           </div>
         </td>

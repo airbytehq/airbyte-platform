@@ -6,15 +6,13 @@ global:
   secretName: ""
   credVolumeOverride: ""
   extraContainers: []
-  ## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+  ## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
   extraSelectorLabels: {}
   ## extraLabels [object] - use to specify own additional labels for deployment
   extraLabels: {}
   database:
     secretName: ""
     secretValue: ""
-    host: "example.com"
-    port: "5432"
   logs:
     ##  logs.accessKey.password Logs Access Key
     ##  logs.accessKey.existingSecret
@@ -407,7 +405,7 @@ secrets: {}
 env_vars: {}
 
 
-## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
 extraSelectorLabels: {}
 ## extraLabels [object] - use to specify own additional labels for deployment
 extraLabels: {}

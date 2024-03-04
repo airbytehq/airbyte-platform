@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync;
@@ -35,6 +35,8 @@ import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.storage.DocumentStoreClient;
+import io.airbyte.workers.workload.JobOutputDocStore;
+import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.temporal.testing.TestActivityEnvironment;
 import java.nio.file.Path;
@@ -65,9 +67,10 @@ class NormalizationActivityImplTest {
   private static AirbyteApiClient mAirbyteApiClient;
   private static ConnectionApi mConnectionApi;
   private static FeatureFlagClient mFeatureFlagClient;
+  private static JobOutputDocStore mJobOutputDocStore;
   private static NormalizationActivityImpl normalizationActivityImpl;
   private static NormalizationActivity normalizationActivity;
-  private static final JobRunConfig JOB_RUN_CONFIG = new JobRunConfig().withJobId("unused").withAttemptId(0L);
+  private static final JobRunConfig JOB_RUN_CONFIG = new JobRunConfig().withJobId("1").withAttemptId(0L);
   private static final IntegrationLauncherConfig DESTINATION_CONFIG = new IntegrationLauncherConfig()
       .withDockerImage("unused")
       .withNormalizationDockerImage("unused:unused");
@@ -81,11 +84,14 @@ class NormalizationActivityImplTest {
     mContainerOrchestratorConfig = mock(ContainerOrchestratorConfig.class);
     mDocumentStoreClient = mock(DocumentStoreClient.class);
     mKubernetesClient = mock(KubernetesClient.class);
+    mJobOutputDocStore = mock(JobOutputDocStore.class);
     when(mContainerOrchestratorConfig.workerEnvironment()).thenReturn(Configs.WorkerEnvironment.KUBERNETES);
     when(mContainerOrchestratorConfig.containerOrchestratorImage()).thenReturn("gcr.io/my-project/image-name:v2");
     when(mContainerOrchestratorConfig.containerOrchestratorImagePullPolicy()).thenReturn("Always");
     when(mContainerOrchestratorConfig.documentStoreClient()).thenReturn(mDocumentStoreClient);
     when(mDocumentStoreClient.read(argThat(key -> key.contains(AsyncKubePodStatus.SUCCEEDED.name())))).thenReturn(Optional.of(""));
+    when(mContainerOrchestratorConfig.jobOutputDocStore()).thenReturn(mJobOutputDocStore);
+    when(mJobOutputDocStore.readSyncOutput(any())).thenReturn(Optional.empty());
     when(mContainerOrchestratorConfig.kubernetesClient()).thenReturn(mKubernetesClient);
     mWorkerConfigsProvider = mock(WorkerConfigsProvider.class);
     mWorkerConfigs = mock(WorkerConfigs.class);
@@ -115,7 +121,8 @@ class NormalizationActivityImplTest {
         mAirbyteConfigValidator,
         mAirbyteApiClient,
         mFeatureFlagClient,
-        mock(MetricClient.class));
+        mock(MetricClient.class),
+        new WorkloadIdGenerator());
     testEnv.registerActivitiesImplementations(normalizationActivityImpl);
     normalizationActivity = testEnv.newActivityStub(NormalizationActivity.class);
   }

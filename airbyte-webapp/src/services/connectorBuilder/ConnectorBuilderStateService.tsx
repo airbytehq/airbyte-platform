@@ -1,5 +1,6 @@
-import { UseQueryResult } from "@tanstack/react-query";
+import { UseMutateAsyncFunction, UseQueryResult } from "@tanstack/react-query";
 import { dump } from "js-yaml";
+import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext, UseFormReturn } from "react-hook-form";
@@ -24,30 +25,37 @@ import {
   BuilderProject,
   BuilderProjectPublishBody,
   BuilderProjectWithManifest,
+  CommonRequestError,
   NewVersionBody,
   useBuilderProject,
   usePublishBuilderProject,
-  useBuilderReadStream,
   useReleaseNewBuilderProjectVersion,
   useUpdateBuilderProject,
   useBuilderResolvedManifest,
   useBuilderResolvedManifestSuspense,
+  useCurrentWorkspace,
+  useBuilderProjectReadStream,
+  useBuilderProjectUpdateTestingValues,
 } from "core/api";
 import { useIsForeignWorkspace } from "core/api/cloud";
-import { ConnectorConfig, KnownExceptionInfo, StreamRead } from "core/api/types/ConnectorBuilderClient";
+import {
+  ConnectorBuilderProjectTestingValues,
+  ConnectorBuilderProjectTestingValuesUpdate,
+  SourceDefinitionIdBody,
+} from "core/api/types/AirbyteClient";
+import { KnownExceptionInfo, StreamRead } from "core/api/types/ConnectorBuilderClient";
 import { ConnectorManifest, DeclarativeComponentSchema, Spec } from "core/api/types/ConnectorManifest";
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { FormGroupItem } from "core/form/types";
-import { SourceDefinitionIdBody } from "core/request/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Blocker, useBlocker } from "core/services/navigation";
 import { removeEmptyProperties } from "core/utils/form";
+import { useIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { setDefaultValues } from "views/Connector/ConnectorForm/useBuildForm";
 
 import { useConnectorBuilderLocalStorage } from "./ConnectorBuilderLocalStorageService";
-import { useConnectorBuilderTestInputState } from "./ConnectorBuilderTestInputService";
 import { IncomingData, OutgoingData } from "./SchemaWorker";
 import SchemaWorker from "./SchemaWorker?worker";
 
@@ -57,11 +65,14 @@ export type BuilderView = "global" | "inputs" | number;
 
 export type SavingState = "loading" | "invalid" | "saved" | "error" | "readonly";
 
+export type ConnectorBuilderPermission = "write" | "readOnly" | "adminReadOnly";
+
 interface FormStateContext {
   jsonManifest: DeclarativeComponentSchema;
   yamlEditorIsMounted: boolean;
   yamlIsValid: boolean;
   savingState: SavingState;
+  permission: ConnectorBuilderPermission;
   blockedOnInvalidState: boolean;
   projectId: string;
   currentProject: BuilderProject;
@@ -77,17 +88,35 @@ interface FormStateContext {
   releaseNewVersion: (options: NewVersionBody) => Promise<void>;
   toggleUI: (newMode: BuilderState["mode"]) => Promise<void>;
   setFormValuesValid: (value: boolean) => void;
+  updateTestingValues: UseMutateAsyncFunction<
+    ConnectorBuilderProjectTestingValues,
+    Error,
+    Omit<ConnectorBuilderProjectTestingValuesUpdate, "builderProjectId" | "workspaceId">,
+    unknown
+  >;
 }
 
-interface TestReadContext {
+interface TestReadLimits {
+  recordLimit: number;
+  pageLimit: number;
+  sliceLimit: number;
+}
+
+export interface TestReadContext {
   resolvedManifest: ConnectorManifest;
   resolveErrorMessage: string | undefined;
-  resolveError: Error | KnownExceptionInfo | null;
+  resolveError: CommonRequestError<KnownExceptionInfo> | null;
   streamRead: UseQueryResult<StreamRead, unknown>;
+  testReadLimits: {
+    recordLimit: number;
+    setRecordLimit: (newRecordLimit: number) => void;
+    pageLimit: number;
+    setPageLimit: (newPageLimit: number) => void;
+    sliceLimit: number;
+    setSliceLimit: (newSliceLimit: number) => void;
+    defaultLimits: TestReadLimits;
+  };
   isResolving: boolean;
-  testInputJson: ConnectorConfig;
-  testInputJsonDirty: boolean;
-  setTestInputJson: (value: TestReadContext["testInputJson"] | undefined) => void;
   schemaWarnings: {
     schemaDifferences: boolean;
     incompatibleSchemaErrors: string[] | undefined;
@@ -95,8 +124,10 @@ interface TestReadContext {
 }
 
 interface FormManagementStateContext {
-  isTestInputOpen: boolean;
-  setTestInputOpen: (open: boolean) => void;
+  isTestingValuesInputOpen: boolean;
+  setTestingValuesInputOpen: (open: boolean) => void;
+  isTestReadSettingsOpen: boolean;
+  setTestReadSettingsOpen: (open: boolean) => void;
   scrollToField: string | undefined;
   setScrollToField: (field: string | undefined) => void;
   stateKey: number;
@@ -110,22 +141,17 @@ export const ConnectorBuilderMainRHFContext = React.createContext<UseFormReturn<
 
 export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const restrictAdminInForeignWorkspace = useFeature(FeatureItem.RestrictAdminInForeignWorkspace);
-  if (restrictAdminInForeignWorkspace) {
-    return <RestrictedConnectorBuilderFormStateProvider>{children}</RestrictedConnectorBuilderFormStateProvider>;
-  }
-  return (
-    <InternalConnectorBuilderFormStateProvider readOnlyMode={false}>
-      {children}
-    </InternalConnectorBuilderFormStateProvider>
-  );
-};
-
-export const RestrictedConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({
-  children,
-}) => {
+  const { workspaceId } = useCurrentWorkspace();
+  const canUpdateConnector = useIntent("UpdateCustomConnector", { workspaceId });
   const isForeignWorkspace = useIsForeignWorkspace();
+
+  let permission: ConnectorBuilderPermission = "readOnly";
+  if (canUpdateConnector) {
+    permission = restrictAdminInForeignWorkspace && isForeignWorkspace ? "adminReadOnly" : "write";
+  }
+
   return (
-    <InternalConnectorBuilderFormStateProvider readOnlyMode={isForeignWorkspace}>
+    <InternalConnectorBuilderFormStateProvider permission={permission}>
       {children}
     </InternalConnectorBuilderFormStateProvider>
   );
@@ -138,8 +164,8 @@ function convertJsonToYaml(json: object): string {
 }
 
 export const InternalConnectorBuilderFormStateProvider: React.FC<
-  React.PropsWithChildren<{ readOnlyMode: boolean }>
-> = ({ children, readOnlyMode }) => {
+  React.PropsWithChildren<{ permission: ConnectorBuilderPermission }>
+> = ({ children, permission }) => {
   const { projectId, builderProject, updateProject, updateError } = useInitializedBuilderProject();
 
   const currentProject: BuilderProject = useMemo(
@@ -336,13 +362,13 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     persistedState,
     displayedVersion,
     updateError,
-    readOnlyMode
+    permission
   );
 
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const triggerUpdate = useCallback(async () => {
-    if (readOnlyMode) {
+    if (permission !== "write") {
       // do not save the project if the user is not a member of the workspace to allow testing with connectors without changing them
       return;
     }
@@ -357,7 +383,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     const newProject: BuilderProjectWithManifest = { name, manifest: jsonManifest };
     await updateProject(newProject);
     setPersistedState(newProject);
-  }, [readOnlyMode, name, formValuesValid, jsonManifest, updateProject]);
+  }, [permission, name, formValuesValid, jsonManifest, updateProject]);
 
   useDebounce(
     () => {
@@ -377,11 +403,18 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
 
   const { pendingBlocker, blockedOnInvalidState } = useBlockOnSavingState(savingState);
 
+  const { mutateAsync: updateTestingValues } = useBuilderProjectUpdateTestingValues(projectId, (result) =>
+    setValue("testingValues", result)
+  );
+
+  useUpdateTestingValuesOnSpecChange(jsonManifest.spec, updateTestingValues);
+
   const ctx: FormStateContext = {
     jsonManifest,
     yamlEditorIsMounted,
     yamlIsValid,
     savingState,
+    permission,
     blockedOnInvalidState,
     projectId,
     currentProject,
@@ -397,6 +430,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     releaseNewVersion,
     toggleUI,
     setFormValuesValid,
+    updateTestingValues,
   };
 
   return (
@@ -409,31 +443,44 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
 
 const EMPTY_SCHEMA = {};
 
-function useTestInputDefaultValues(testInputJson: ConnectorConfig | undefined, spec?: Spec) {
-  const currentSpec = useRef<Spec | undefined>(undefined);
-  return useMemo(() => {
-    if (testInputJson) {
-      if (!spec) {
-        // don't have a spec, keep the current input
-        return testInputJson;
-      }
-      if (isEqual(currentSpec.current, spec)) {
-        // spec is the same as before, keep existing input
-        return testInputJson;
+const useUpdateTestingValuesOnSpecChange = (
+  spec: Spec | undefined,
+  updateTestingValues: FormStateContext["updateTestingValues"]
+) => {
+  const testingValues = useBuilderWatch("testingValues");
+  const specRef = useRef<Spec | undefined>(spec);
+
+  useEffect(() => {
+    if (!isEqual(specRef.current?.connection_specification, spec?.connection_specification)) {
+      // clone testingValues because applyTestingValuesDefaults mutates the object
+      const testingValuesWithDefaults = applyTestingValuesDefaults(cloneDeep(testingValues), spec);
+      if (!isEqual(testingValues, testingValuesWithDefaults)) {
+        updateTestingValues({
+          spec: spec?.connection_specification ?? {},
+          testingValues: testingValuesWithDefaults ?? {},
+        });
       }
     }
-    // spec changed, set default values
-    currentSpec.current = spec;
-    const testInputToUpdate = testInputJson || {};
-    try {
-      const jsonSchema = spec && spec.connection_specification ? spec.connection_specification : EMPTY_SCHEMA;
-      const formFields = jsonSchemaToFormBlock(jsonSchema);
-      setDefaultValues(formFields as FormGroupItem, testInputToUpdate, { respectExistingValues: true });
-    } catch {
-      // spec is user supplied so it might not be valid - prevent crashing the application by just skipping trying to set default values
-    }
-    return testInputToUpdate;
-  }, [spec, testInputJson]);
+    specRef.current = spec;
+  }, [spec, testingValues, updateTestingValues]);
+};
+
+export function applyTestingValuesDefaults(
+  testingValues: ConnectorBuilderProjectTestingValues | undefined,
+  spec?: Spec
+) {
+  const testingValuesToUpdate = testingValues || {};
+  try {
+    const jsonSchema = spec && spec.connection_specification ? spec.connection_specification : EMPTY_SCHEMA;
+    const formFields = jsonSchemaToFormBlock(jsonSchema);
+    setDefaultValues(formFields as FormGroupItem, testingValuesToUpdate, { respectExistingValues: true });
+  } catch {
+    // spec is user supplied so it might not be valid - prevent crashing the application by just skipping trying to set default values
+  }
+
+  return testingValues === undefined && Object.keys(testingValuesToUpdate).length === 0
+    ? undefined
+    : testingValuesToUpdate;
 }
 
 export function useInitializedBuilderProject() {
@@ -521,7 +568,7 @@ function getSavingState(
   persistedState: { name: string; manifest?: DeclarativeComponentSchema },
   displayedVersion: number | undefined,
   updateError: Error | null,
-  readOnlyMode: boolean
+  permission: ConnectorBuilderPermission
 ): SavingState {
   if (updateError) {
     return "error";
@@ -535,7 +582,7 @@ function getSavingState(
   if (mode === "yaml" && !yamlIsValid) {
     return "invalid";
   }
-  if (readOnlyMode) {
+  if (permission !== "write") {
     return "readonly";
   }
   const currentStateIsPersistedState = persistedState.manifest === currentJsonManifest && persistedState.name === name;
@@ -558,12 +605,6 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
 
   const manifest = jsonManifest ?? DEFAULT_JSON_MANIFEST_VALUES;
 
-  // config
-  const { testInputJson, setTestInputJson } = useConnectorBuilderTestInputState();
-
-  const testInputWithDefaults = useTestInputDefaultValues(testInputJson, manifest.spec);
-
-  // streams
   const {
     data,
     isError: isResolveError,
@@ -600,20 +641,43 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     streams: [testStream],
   };
   const streamName = testStream?.name ?? "";
-  const streamRead = useBuilderReadStream(
-    projectId,
-    {
-      manifest: filteredManifest,
-      stream: streamName,
-      config: testInputWithDefaults,
-      record_limit: 1000,
-      workspace_id: workspaceId,
-      project_id: projectId,
-      form_generated_manifest: mode === "ui",
+
+  const DEFAULT_PAGE_LIMIT = 5;
+  const DEFAULT_SLICE_LIMIT = 5;
+  const DEFAULT_RECORD_LIMIT = 1000;
+
+  const [pageLimit, setPageLimit] = useState(DEFAULT_PAGE_LIMIT);
+  const [sliceLimit, setSliceLimit] = useState(DEFAULT_SLICE_LIMIT);
+  const [recordLimit, setRecordLimit] = useState(DEFAULT_RECORD_LIMIT);
+
+  const testReadLimits = {
+    pageLimit,
+    setPageLimit,
+    sliceLimit,
+    setSliceLimit,
+    recordLimit,
+    setRecordLimit,
+    defaultLimits: {
+      recordLimit: DEFAULT_RECORD_LIMIT,
+      pageLimit: DEFAULT_PAGE_LIMIT,
+      sliceLimit: DEFAULT_SLICE_LIMIT,
     },
-    (data) => {
-      if (data.latest_config_update) {
-        setTestInputJson(data.latest_config_update);
+  };
+
+  const streamRead = useBuilderProjectReadStream(
+    {
+      builderProjectId: projectId,
+      manifest: filteredManifest,
+      streamName,
+      recordLimit,
+      pageLimit,
+      sliceLimit,
+      workspaceId,
+      formGeneratedManifest: mode === "ui",
+    },
+    (result) => {
+      if (result.latest_config_update) {
+        setValue("testingValues", result.latest_config_update);
       }
     }
   );
@@ -625,10 +689,8 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     resolveErrorMessage,
     resolveError,
     streamRead,
+    testReadLimits,
     isResolving,
-    testInputJson: testInputWithDefaults,
-    testInputJsonDirty: Boolean(testInputJson),
-    setTestInputJson,
     schemaWarnings,
   };
 
@@ -736,20 +798,23 @@ export const useSelectedPageAndSlice = () => {
 export const ConnectorBuilderFormManagementStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({
   children,
 }) => {
-  const [isTestInputOpen, setTestInputOpen] = useState(false);
+  const [isTestingValuesInputOpen, setTestingValuesInputOpen] = useState(false);
+  const [isTestReadSettingsOpen, setTestReadSettingsOpen] = useState(false);
   const [scrollToField, setScrollToField] = useState<string | undefined>(undefined);
   const [stateKey, setStateKey] = useState(0);
 
   const ctx = useMemo(
     () => ({
-      isTestInputOpen,
-      setTestInputOpen,
+      isTestingValuesInputOpen,
+      setTestingValuesInputOpen,
+      isTestReadSettingsOpen,
+      setTestReadSettingsOpen,
       scrollToField,
       setScrollToField,
       stateKey,
       setStateKey,
     }),
-    [isTestInputOpen, scrollToField, stateKey]
+    [isTestingValuesInputOpen, isTestReadSettingsOpen, scrollToField, stateKey]
   );
 
   return (

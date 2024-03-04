@@ -1,13 +1,12 @@
-import { faDatabase, faDiagramNext } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { JobWithAttempts } from "components/JobItem/types";
-import { getJobStatus } from "components/JobItem/utils";
+import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
-import { AttemptRead, AttemptStatus, SynchronousJobRead } from "core/request/AirbyteClient";
+import { JobWithAttempts } from "area/connection/types/jobs";
+import { getJobStatus } from "area/connection/utils/jobs";
+import { AttemptRead, AttemptStatus, SynchronousJobRead } from "core/api/types/AirbyteClient";
 import { formatBytes } from "core/utils/numberHelper";
 
 import styles from "./JobProgress.module.scss";
@@ -80,7 +79,7 @@ export const JobProgress: React.FC<ProgressBarProps> = ({ job, expanded }) => {
               {denominatorRecords > 0 && denominatorBytes > 0 && (
                 <div className={styles.estimationDetails}>
                   <span>
-                    <FontAwesomeIcon icon={faDiagramNext} className={styles.icon} />
+                    <Icon type="table" className={styles.icon} />
                     <FormattedMessage
                       id="connection.progress.recordsSynced"
                       values={{
@@ -91,7 +90,7 @@ export const JobProgress: React.FC<ProgressBarProps> = ({ job, expanded }) => {
                     />
                   </span>
                   <span>
-                    <FontAwesomeIcon icon={faDatabase} className={styles.icon} />
+                    <Icon type="database" className={styles.icon} />
                     <FormattedMessage
                       id="connection.progress.bytesSynced"
                       values={{

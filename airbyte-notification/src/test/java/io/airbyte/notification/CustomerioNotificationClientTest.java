@@ -1,18 +1,32 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.airbyte.api.model.generated.CatalogDiff;
+import io.airbyte.api.model.generated.StreamDescriptor;
+import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.notification.messages.ConnectionInfo;
+import io.airbyte.notification.messages.DestinationInfo;
+import io.airbyte.notification.messages.SchemaUpdateNotification;
+import io.airbyte.notification.messages.SourceInfo;
+import io.airbyte.notification.messages.SyncSummary;
+import io.airbyte.notification.messages.WorkspaceInfo;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -167,6 +181,85 @@ class CustomerioNotificationClientTest {
     final RecordedRequest recordedRequest = mockWebServer.takeRequest();
     assertEquals("/v1/send/email", recordedRequest.getPath());
     assertEquals("Bearer " + API_KEY, recordedRequest.getHeader(HttpHeaders.AUTHORIZATION));
+  }
+
+  @Test
+  void testBuildSchemaNotificationMessageData() {
+    UUID workspaceId = UUID.randomUUID();
+    String workspaceName = "test_workspace";
+    UUID connectionId = UUID.randomUUID();
+    String connectionName = "connection foo";
+    UUID sourceId = UUID.randomUUID();
+    String sourceName = "facebook marketing";
+    CatalogDiff diff = new CatalogDiff()
+        .addTransformsItem(
+            new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM).streamDescriptor(new StreamDescriptor().name("foo")))
+        .addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
+            .streamDescriptor(new StreamDescriptor().name("removed")));
+    String recipient = "airbyte@airbyte.io";
+    String transactionMessageId = "455";
+    SchemaUpdateNotification notification = SchemaUpdateNotification.builder()
+        .workspace(WorkspaceInfo.builder().id(workspaceId).name(workspaceName).build())
+        .connectionInfo(ConnectionInfo.builder().id(connectionId).name(connectionName).build())
+        .sourceInfo(SourceInfo.builder().id(sourceId).name(sourceName).build())
+        .catalogDiff(diff)
+        .build();
+    ObjectNode node =
+        CustomerioNotificationClient.buildSchemaPropagationJson(notification, recipient, transactionMessageId);
+
+    assertEquals(transactionMessageId, node.get("transactional_message_id").asText());
+    assertEquals(recipient, node.get("to").asText());
+    assertEquals(sourceName, node.get("message_data").get("source_name").asText());
+    assertEquals(connectionName, node.get("message_data").get("connection_name").asText());
+
+    assertTrue(node.get("message_data").get("changes").get("new_streams").isArray());
+    assertTrue(node.get("message_data").get("changes").get("deleted_streams").isArray());
+    assertTrue(node.get("message_data").get("changes").get("modified_streams").isObject());
+  }
+
+  @Test
+  void testBuildJobSuccessNotificationMessageData() throws IOException {
+    UUID workspaceId = UUID.fromString("a39591af-6872-41e3-836d-984e35554324");
+    String workspaceName = "workspace-name";
+    UUID sourceId = UUID.fromString("6d006cc5-d050-4f1b-9c22-ebd6b7d54b25");
+    String sourceName = "source";
+    UUID destinationId = UUID.fromString("26548b2d-78d3-4e4c-a824-3f7d0bb45a0e");
+    String destinationName = "destination";
+    UUID connectionId = UUID.fromString("a2e110d4-f196-4fa5-a866-b18ad90e81aa");
+    String connectionName = "connection";
+    Instant startedAt = Instant.ofEpochSecond(1000000);
+    Instant finishedAt = Instant.ofEpochSecond(1070000);
+
+    SyncSummary syncSummary = SyncSummary.builder()
+        .workspace(WorkspaceInfo.builder().id(workspaceId).name(workspaceName).url("http://workspace").build())
+        .source(SourceInfo.builder().id(sourceId).name(sourceName).url("http://source").build())
+        .destination(DestinationInfo.builder().id(destinationId).name(destinationName).url("http://source").build())
+        .connection(ConnectionInfo.builder().id(connectionId).name(connectionName).url("http://connection").build())
+        .jobId(100L)
+        .isSuccess(false)
+        .errorMessage("Connection to the source failed")
+        .startedAt(startedAt)
+        .finishedAt(finishedAt)
+        .bytesEmitted(1000L)
+        .bytesCommitted(9000L)
+        .recordsEmitted(50)
+        .recordsCommitted(48)
+        .build();
+    String email = "joe@foobar.com";
+    String transactionId = "201";
+
+    String jsonContent = MoreResources.readResource("customerio/job_failure_notification.json");
+    ObjectMapper mapper = new ObjectMapper();
+    /*
+     * SyncSummary contains Long fields, jackson serialize them into LongNode. A default mapper
+     * deserializes any number in the json text into IntNode and somehow IntNode(5) != LongNode(5).
+     * Forcing the use of long here ensures that the test works properly
+     */
+    mapper.enable(DeserializationFeature.USE_LONG_FOR_INTS);
+    JsonNode expected = mapper.readTree(jsonContent);
+    ObjectNode node = CustomerioNotificationClient.buildSyncCompletedJson(syncSummary, email, transactionId);
+    assertEquals(expected.get("message_data").get("bytesEmitted"), node.get("message_data").get("bytesEmitted"));
+    assertEquals(expected, node);
   }
 
 }

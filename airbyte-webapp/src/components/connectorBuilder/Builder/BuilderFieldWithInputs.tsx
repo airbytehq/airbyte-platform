@@ -1,11 +1,9 @@
-import { faPlus, faUser } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useContext, useMemo, useState } from "react";
-import React from "react";
+import React, { useContext, useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps, Option } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
@@ -84,7 +82,7 @@ const InnerUserInputHelper = React.memo(
             >
               <Text as="div">
                 <FlexContainer alignItems="center">
-                  <FontAwesomeIcon icon={faPlus} />
+                  <Icon type="plus" />
                   <FormattedMessage id="connectorBuilder.inputModal.newTitle" />
                 </FlexContainer>
               </Text>
@@ -119,7 +117,7 @@ const UserInputHelperControlButton: React.FC<ListBoxControlButtonProps<string | 
       control={
         <div className={styles.buttonContent}>
           {"{{"}
-          <FontAwesomeIcon icon={faUser} />
+          <Icon type="user" />
           {"}}"}
         </div>
       }

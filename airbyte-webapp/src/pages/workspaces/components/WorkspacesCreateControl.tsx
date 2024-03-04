@@ -1,14 +1,9 @@
 /**
- * As written, this workspace create control can ONLY be used in environments
- * where the configdb Permissions table is in use.
- *
- * That is to say -- it should currently only be used in OSS/Enterprise.
- *
- * May be migrated to Cloud when:
- * - Cloud leverages the configdb Permissions table
- * - Cloud has a concept of organizations
- * - CloudWorkspaceCreate accepts an organizationId
- *
+ * This should not be used in cloud until:
+ * - all cloud users have an org
+ * - all cloud users have permissions in configdb
+ * - we are able to use the oss create workspace endpoint in cloud
+
  */
 
 import { UseMutateAsyncFunction } from "@tanstack/react-query";
@@ -27,7 +22,7 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { useListWorkspaces } from "core/api";
-import { OrganizationRead, WorkspaceCreate, WorkspaceRead } from "core/request/AirbyteClient";
+import { OrganizationRead, WorkspaceCreate, WorkspaceRead } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -89,7 +84,7 @@ export const WorkspacesCreateControl: React.FC<OrganizationWorkspacesCreateContr
   return (
     <>
       {isEditMode ? (
-        <Card withPadding className={styles.animate}>
+        <Card className={styles.animate}>
           <Form<CreateWorkspaceFormValues>
             defaultValues={{
               name: "",

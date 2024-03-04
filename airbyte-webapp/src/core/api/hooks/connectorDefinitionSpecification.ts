@@ -1,18 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { useSuspenseQuery } from "core/api";
-import { useCurrentWorkspace } from "core/api";
 import { isDefined } from "core/utils/common";
 
-import { SCOPE_WORKSPACE } from "../../../services/Scope";
+import { useCurrentWorkspace } from "./workspaces";
 import {
   getDestinationDefinitionSpecification,
   getSourceDefinitionSpecification,
   getSpecificationForDestinationId,
   getSpecificationForSourceId,
 } from "../generated/AirbyteClient";
+import { SCOPE_WORKSPACE } from "../scopes";
 import { DestinationDefinitionSpecificationRead } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
+import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const destinationDefinitionSpecificationKeys = {
   all: [SCOPE_WORKSPACE, "destinationDefinitionSpecification"] as const,

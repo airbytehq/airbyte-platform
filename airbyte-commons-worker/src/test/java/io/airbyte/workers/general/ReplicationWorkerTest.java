@@ -1,11 +1,13 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
 
 import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT;
 import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT;
+import static io.airbyte.workers.test_utils.TestConfigHelpers.DESTINATION_IMAGE;
+import static io.airbyte.workers.test_utils.TestConfigHelpers.SOURCE_IMAGE;
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -50,9 +52,6 @@ import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.featureflag.Context;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
@@ -76,6 +75,7 @@ import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.AnalyticsMessageTracker;
 import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.DestinationTimeoutMonitor.TimeoutException;
 import io.airbyte.workers.internal.HeartbeatMonitor;
@@ -167,7 +167,6 @@ abstract class ReplicationWorkerTest {
   protected ConnectorConfigUpdater connectorConfigUpdater;
   protected HeartbeatTimeoutChaperone heartbeatTimeoutChaperone;
   protected ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
-  protected FeatureFlagClient featureFlagClient;
   protected AirbyteMessageDataExtractor airbyteMessageDataExtractor;
   protected ReplicationFeatureFlagReader replicationFeatureFlagReader;
   protected DestinationTimeoutMonitor destinationTimeoutMonitor;
@@ -176,6 +175,8 @@ abstract class ReplicationWorkerTest {
 
   protected ReplicationWorkerHelper replicationWorkerHelper;
   protected WorkloadApi workloadApi;
+
+  protected AnalyticsMessageTracker analyticsMessageTracker;
 
   ReplicationWorker getDefaultReplicationWorker() {
     return getDefaultReplicationWorker(false);
@@ -215,11 +216,13 @@ abstract class ReplicationWorkerTest {
     replicationFeatureFlagReader = mock(ReplicationFeatureFlagReader.class);
 
     final HeartbeatMonitor heartbeatMonitor = mock(HeartbeatMonitor.class);
-    heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMinutes(5), null, null, null, metricClient);
+    heartbeatTimeoutChaperone =
+        new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMinutes(5), null, null, null, "docker image", metricClient);
     destinationTimeoutMonitor = mock(DestinationTimeoutMonitor.class);
     replicationAirbyteMessageEventPublishingHelper = mock(ReplicationAirbyteMessageEventPublishingHelper.class);
-    featureFlagClient = mock(TestClient.class);
     workloadApi = mock(WorkloadApi.class);
+
+    analyticsMessageTracker = mock(AnalyticsMessageTracker.class);
 
     when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
 
@@ -230,7 +233,7 @@ abstract class ReplicationWorkerTest {
     when(mapper.mapMessage(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
     when(mapper.revertMap(STATE_MESSAGE)).thenReturn(STATE_MESSAGE);
     when(mapper.revertMap(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
-    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 60));
+    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 60, 4, false));
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true));
   }
 
@@ -488,7 +491,10 @@ abstract class ReplicationWorkerTest {
     // Since the thread was left to hang after the first call, we expect 1, not 2, calls to
     // validateInitializedSchema by the time the replication worker is done and shuts down the
     // validation thread. We therefore expect the metricReporter to only report on the first record.
-    verify(jsonSchemaValidator, Mockito.times(1)).validateInitializedSchema(any(), any());
+    // NOTE: we use atMost because validateInitializedSchema is called async, and isn't guaranteed to be
+    // invoked at all. The test still verifies that we shut it down without validating the second
+    // record.
+    verify(jsonSchemaValidator, Mockito.atMost(1)).validateInitializedSchema(any(), any());
   }
 
   @Test
@@ -526,7 +532,7 @@ abstract class ReplicationWorkerTest {
     verify(replicationAirbyteMessageEventPublishingHelper).publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE,
         CONFIG_MESSAGE,
         new ReplicationContext(false, replicationInput.getConnectionId(), replicationInput.getSourceId(), replicationInput.getDestinationId(),
-            Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId())));
+            Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE)));
   }
 
   @Test
@@ -539,7 +545,7 @@ abstract class ReplicationWorkerTest {
         .publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE,
             CONFIG_MESSAGE,
             new ReplicationContext(false, replicationInput.getConnectionId(), replicationInput.getSourceId(), replicationInput.getDestinationId(),
-                Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId())));
+                Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE)));
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
@@ -560,7 +566,7 @@ abstract class ReplicationWorkerTest {
     verify(replicationAirbyteMessageEventPublishingHelper).publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION,
         CONFIG_MESSAGE,
         new ReplicationContext(false, replicationInput.getConnectionId(), replicationInput.getSourceId(), replicationInput.getDestinationId(),
-            Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId())));
+            Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE)));
   }
 
   @Test
@@ -574,7 +580,7 @@ abstract class ReplicationWorkerTest {
         .publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION,
             CONFIG_MESSAGE,
             new ReplicationContext(false, replicationInput.getConnectionId(), replicationInput.getSourceId(), replicationInput.getDestinationId(),
-                Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId())));
+                Long.valueOf(JOB_ID), JOB_ATTEMPT, replicationInput.getWorkspaceId(), SOURCE_IMAGE, DESTINATION_IMAGE)));
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
@@ -963,7 +969,7 @@ abstract class ReplicationWorkerTest {
     final MetricClient mMetricClient = mock(MetricClient.class);
     heartbeatTimeoutChaperone =
         new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMillis(1), new TestClient(Map.of("heartbeat.failSync", true)), UUID.randomUUID(),
-            connectionId, mMetricClient);
+            connectionId, "docker image", mMetricClient);
     sourceStub.setInfiniteSourceWithMessages(RECORD_MESSAGE1);
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
@@ -971,7 +977,9 @@ abstract class ReplicationWorkerTest {
     final ReplicationOutput actual = worker.run(replicationInput, jobRoot);
 
     verify(mMetricClient).count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
-        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+        new MetricAttribute(MetricTags.KILLED, "true"),
+        new MetricAttribute(MetricTags.SOURCE_IMAGE, "docker image"));
     assertEquals(1, actual.getFailures().size());
     assertEquals(FailureOrigin.SOURCE, actual.getFailures().get(0).getFailureOrigin());
     assertEquals(FailureReason.FailureType.HEARTBEAT_TIMEOUT, actual.getFailures().get(0).getFailureType());
@@ -980,14 +988,14 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationAcceptTimeout() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0));
+        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
-        featureFlagClient,
         UUID.randomUUID(),
         UUID.randomUUID(),
         metricClient,
         Duration.ofSeconds(1),
+        true,
         Duration.ofSeconds(1)));
 
     destination = new SimpleTimeoutMonitoredDestination(destinationTimeoutMonitor);
@@ -1000,8 +1008,6 @@ abstract class ReplicationWorkerTest {
       }
       return null;
     }).when(destinationTimeoutMonitor).resetAcceptTimer();
-
-    when(featureFlagClient.boolVariation(eq(ShouldFailSyncOnDestinationTimeout.INSTANCE), any(Context.class))).thenReturn(true);
 
     doAnswer(invocation -> {
       try {
@@ -1030,14 +1036,14 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationNotifyEndOfInputTimeout() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0));
+        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
-        featureFlagClient,
         UUID.randomUUID(),
         UUID.randomUUID(),
         metricClient,
         Duration.ofSeconds(1),
+        true,
         Duration.ofSeconds(1)));
 
     destination = new SimpleTimeoutMonitoredDestination(destinationTimeoutMonitor);
@@ -1050,8 +1056,6 @@ abstract class ReplicationWorkerTest {
       }
       return null;
     }).when(destinationTimeoutMonitor).resetNotifyEndOfInputTimer();
-
-    when(featureFlagClient.boolVariation(eq(ShouldFailSyncOnDestinationTimeout.INSTANCE), any(Context.class))).thenReturn(true);
 
     doAnswer(invocation -> {
       try {
@@ -1078,14 +1082,14 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationTimeoutWithCloseFailure() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0));
+        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
-        featureFlagClient,
         UUID.randomUUID(),
         UUID.randomUUID(),
         metricClient,
         Duration.ofSeconds(1),
+        true,
         Duration.ofSeconds(1)));
 
     destination = spy(new SimpleTimeoutMonitoredDestination(destinationTimeoutMonitor));
@@ -1103,8 +1107,6 @@ abstract class ReplicationWorkerTest {
       }
       return null;
     }).when(destinationTimeoutMonitor).resetNotifyEndOfInputTimer();
-
-    when(featureFlagClient.boolVariation(eq(ShouldFailSyncOnDestinationTimeout.INSTANCE), any(Context.class))).thenReturn(true);
 
     doAnswer(invocation -> {
       try {
@@ -1154,7 +1156,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(replicationWorkerHelper, times(0)).getWorkloadStatusHeartbeat();
+    verify(replicationWorkerHelper, times(0)).getWorkloadStatusHeartbeat(any());
   }
 
   @Test
@@ -1166,7 +1168,7 @@ abstract class ReplicationWorkerTest {
 
     worker.run(replicationInput, jobRoot);
 
-    verify(replicationWorkerHelper).getWorkloadStatusHeartbeat();
+    verify(replicationWorkerHelper).getWorkloadStatusHeartbeat(any());
   }
 
   private ReplicationContext simpleContext(final boolean isReset) {
@@ -1177,7 +1179,9 @@ abstract class ReplicationWorkerTest {
         replicationInput.getDestinationId(),
         Long.valueOf(JOB_ID),
         JOB_ATTEMPT,
-        replicationInput.getWorkspaceId());
+        replicationInput.getWorkspaceId(),
+        SOURCE_IMAGE,
+        DESTINATION_IMAGE);
   }
 
 }

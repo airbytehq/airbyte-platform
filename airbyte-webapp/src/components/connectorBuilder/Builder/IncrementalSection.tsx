@@ -17,7 +17,7 @@ import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderInputPlaceholder } from "./BuilderInputPlaceholder";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderOptional } from "./BuilderOptional";
-import { InjectIntoFields } from "./InjectIntoFields";
+import { BuilderRequestInjection } from "./BuilderRequestInjection";
 import { ToggleGroupField } from "./ToggleGroupField";
 import {
   BuilderIncrementalSync,
@@ -40,8 +40,8 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
   return (
     <BuilderCard
       docLink={links.connectorBuilderIncrementalSync}
-      label="Incremental Sync"
-      tooltip="Configure how to fetch data incrementally based on a time field in your data"
+      label={formatMessage({ id: "connectorBuilder.incremental.label" })}
+      tooltip={formatMessage({ id: "connectorBuilder.incremental.tooltip" })}
       toggleConfig={{
         path: streamFieldPath("incrementalSync"),
         defaultValue: {
@@ -77,30 +77,31 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
       <BuilderField
         type="enum"
         options={[
-          { value: "range", label: "Range" },
-          { value: "start", label: "Start" },
-          { value: "no_filter", label: "No filter (data feed)" },
+          { value: "range", label: formatMessage({ id: "connectorBuilder.incremental.filterMode.range.label" }) },
+          { value: "start", label: formatMessage({ id: "connectorBuilder.incremental.filterMode.start.label" }) },
+          {
+            value: "no_filter",
+            label: formatMessage({ id: "connectorBuilder.incremental.filterMode.noFilter.label" }),
+          },
         ]}
         path={streamFieldPath("incrementalSync.filter_mode")}
-        label="API Time Filtering Capabilities"
+        label={formatMessage({ id: "connectorBuilder.incremental.filterMode.label" })}
         tooltip={
           <LabelInfo
             label=""
-            description="The capabilities of the API to filter data based on the cursor field."
+            description={formatMessage({ id: "connectorBuilder.incremental.filterMode.tooltip" })}
             options={[
               {
-                title: "Range",
-                description: "The API can filter data based on a range (start and end datetime) of the cursor field.",
+                title: formatMessage({ id: "connectorBuilder.incremental.filterMode.range.label" }),
+                description: formatMessage({ id: "connectorBuilder.incremental.filterMode.range.tooltip" }),
               },
               {
-                title: "Start",
-                description:
-                  "The API can filter data based on the start datetime, but will always include all data from the start date up to now",
+                title: formatMessage({ id: "connectorBuilder.incremental.filterMode.start.label" }),
+                description: formatMessage({ id: "connectorBuilder.incremental.filterMode.start.tooltip" }),
               },
               {
-                title: "No filter (data feed)",
-                description:
-                  "The API can't filter by the cursor field. When choosing this option, make sure the data is ordered descending on the cursor field (newest to oldest)",
+                title: formatMessage({ id: "connectorBuilder.incremental.filterMode.noFilter.label" }),
+                description: formatMessage({ id: "connectorBuilder.incremental.filterMode.noFilter.tooltip" }),
               },
             ]}
           />
@@ -109,30 +110,40 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
       {filterMode === "no_filter" && (
         <Message
           type="warning"
-          text="The data must be returned in descending order for the cursor field across pages in order for incremental sync to work properly with no time filtering. If the data is returned in ascending order, you should not configure incremental syncs for this API."
+          text={formatMessage({ id: "connectorBuilder.incremental.filterMode.noFilter.warning" })}
         />
       )}
       <BuilderOneOf<BuilderIncrementalSync["start_datetime"]>
         path={streamFieldPath("incrementalSync.start_datetime")}
-        label={filterMode === "no_filter" ? "Earliest datetime cutoff" : undefined}
+        label={
+          filterMode === "no_filter"
+            ? formatMessage({ id: "connectorBuilder.incremental.startDatetime.noFilterLabel" })
+            : undefined
+        }
         manifestPath="DatetimeBasedCursor.properties.start_datetime"
         options={[
           {
-            label: "User input",
+            label: formatMessage({ id: "connectorBuilder.incremental.userInput" }),
             default: { type: "user_input" },
             children: (
               <BuilderInputPlaceholder
-                label="Start date user input"
-                tooltip={
-                  filterMode === "no_filter"
-                    ? "The cutoff time as a user input. Fill it in in the testing values"
-                    : "The time to start syncing as a user input. Fill it in in the testing values"
-                }
+                label={formatMessage({
+                  id:
+                    filterMode === "no_filter"
+                      ? "connectorBuilder.incremental.userInput.startDatetime.label.noFilter"
+                      : "connectorBuilder.incremental.userInput.startDatetime.label.default",
+                })}
+                tooltip={formatMessage({
+                  id:
+                    filterMode === "no_filter"
+                      ? "connectorBuilder.incremental.userInput.startDatetime.tooltip.noFilter"
+                      : "connectorBuilder.incremental.userInput.startDatetime.tooltip.default",
+                })}
               />
             ),
           },
           {
-            label: "Custom",
+            label: formatMessage({ id: "connectorBuilder.incremental.custom" }),
             default: {
               type: "custom",
               value: "",
@@ -143,16 +154,26 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
                 <BuilderFieldWithInputs
                   type="string"
                   path={streamFieldPath("incrementalSync.start_datetime.value")}
-                  label="Value"
-                  tooltip="The time to start syncing"
+                  label={formatMessage({ id: "connectorBuilder.incremental.custom.value.label" })}
+                  tooltip={formatMessage({
+                    id:
+                      filterMode === "no_filter"
+                        ? "connectorBuilder.incremental.custom.value.startDatetime.tooltip.noFilter"
+                        : "connectorBuilder.incremental.custom.value.startDatetime.tooltip.default",
+                  })}
                 />
                 <BuilderFieldWithInputs
                   type="combobox"
                   options={DATETIME_FORMAT_OPTIONS}
                   path={streamFieldPath("incrementalSync.start_datetime.format")}
-                  label="Format"
+                  label={formatMessage({ id: "connectorBuilder.incremental.custom.format.label" })}
+                  tooltip={formatMessage({
+                    id:
+                      filterMode === "no_filter"
+                        ? "connectorBuilder.incremental.custom.format.startDatetime.tooltip.noFilter"
+                        : "connectorBuilder.incremental.custom.format.startDatetime.tooltip.default",
+                  })}
                   optional
-                  tooltip="The format of the provided start date. If not specified, the format of the format of the cursor value is used"
                 />
               </>
             ),
@@ -165,21 +186,21 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
           manifestPath="DatetimeBasedCursor.properties.end_datetime"
           options={[
             {
-              label: "User input",
+              label: formatMessage({ id: "connectorBuilder.incremental.userInput" }),
               default: { type: "user_input" },
               children: (
                 <BuilderInputPlaceholder
-                  label="End date user input"
-                  tooltip="The time up to which to sync a user input. Fill it in in the testing values"
+                  label={formatMessage({ id: "connectorBuilder.incremental.userInput.endDatetime.label" })}
+                  tooltip={formatMessage({ id: "connectorBuilder.incremental.userInput.endDatetime.tooltip" })}
                 />
               ),
             },
             {
-              label: "Now",
+              label: formatMessage({ id: "connectorBuilder.incremental.now" }),
               default: { type: "now" },
             },
             {
-              label: "Custom",
+              label: formatMessage({ id: "connectorBuilder.incremental.custom" }),
               default: {
                 type: "custom",
                 value: "",
@@ -190,16 +211,16 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
                   <BuilderFieldWithInputs
                     type="string"
                     path={streamFieldPath("incrementalSync.end_datetime.value")}
-                    label="Value"
-                    tooltip="The time up to which to sync"
+                    label={formatMessage({ id: "connectorBuilder.incremental.custom.value.label" })}
+                    tooltip={formatMessage({ id: "connectorBuilder.incremental.custom.value.endDatetime.tooltip" })}
                   />
                   <BuilderFieldWithInputs
                     type="combobox"
                     path={streamFieldPath("incrementalSync.end_datetime.format")}
-                    label="Format"
+                    label={formatMessage({ id: "connectorBuilder.incremental.custom.format.label" })}
+                    tooltip={formatMessage({ id: "connectorBuilder.incremental.custom.format.endDatetime.tooltip" })}
                     options={DATETIME_FORMAT_OPTIONS}
                     optional
-                    tooltip="The format of the provided end date. If not specified, the format of the cursor value is used"
                   />
                 </>
               ),
@@ -209,8 +230,8 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
       )}
       {filterMode !== "no_filter" && (
         <ToggleGroupField<RequestOption>
-          label="Inject Start Time into outgoing HTTP Request"
-          tooltip="Optionally configures how the start datetime will be sent in requests to the source API"
+          label={formatMessage({ id: "connectorBuilder.incremental.startTimeInjectInto.label" })}
+          tooltip={formatMessage({ id: "connectorBuilder.incremental.startTimeInjectInto.tooltip" })}
           fieldPath={streamFieldPath("incrementalSync.start_time_option")}
           initialValues={{
             inject_into: "request_parameter",
@@ -218,17 +239,17 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
             field_name: "",
           }}
         >
-          <InjectIntoFields
+          <BuilderRequestInjection
             path={streamFieldPath("incrementalSync.start_time_option")}
-            descriptor="start datetime"
+            descriptor={formatMessage({ id: "connectorBuilder.incremental.startTimeInjectInto.descriptor" })}
             excludeValues={["path"]}
           />
         </ToggleGroupField>
       )}
       {filterMode === "range" && (
         <ToggleGroupField<RequestOption>
-          label="Inject End Time into outgoing HTTP Request"
-          tooltip="Optionally configures how the end datetime will be sent in requests to the source API"
+          label={formatMessage({ id: "connectorBuilder.incremental.endTimeInjectInto.label" })}
+          tooltip={formatMessage({ id: "connectorBuilder.incremental.endTimeInjectInto.tooltip" })}
           fieldPath={streamFieldPath("incrementalSync.end_time_option")}
           initialValues={{
             inject_into: "request_parameter",
@@ -236,32 +257,32 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
             field_name: "",
           }}
         >
-          <InjectIntoFields
+          <BuilderRequestInjection
             path={streamFieldPath("incrementalSync.end_time_option")}
-            descriptor="end datetime"
+            descriptor={formatMessage({ id: "connectorBuilder.incremental.endTimeInjectInto.descriptor" })}
             excludeValues={["path"]}
           />
         </ToggleGroupField>
       )}
+      <BuilderFieldWithInputs
+        type="combobox"
+        path={streamFieldPath("incrementalSync.datetime_format")}
+        manifestPath="DatetimeBasedCursor.properties.datetime_format"
+        options={DATETIME_FORMAT_OPTIONS}
+        optional
+        label={formatMessage({ id: "connectorBuilder.incremental.outgoingDatetimeFormat.label" })}
+        tooltip={
+          <>
+            {formatMessage({ id: "connectorBuilder.incremental.outgoingDatetimeFormat.tooltip" })}
+            <ReactMarkdown>{formatMessage({ id: "connectorBuilder.incremental.formatPlaceholders" })}</ReactMarkdown>
+          </>
+        }
+      />
       <BuilderOptional label={formatMessage({ id: "connectorBuilder.advancedFields" })}>
-        <BuilderFieldWithInputs
-          type="combobox"
-          path={streamFieldPath("incrementalSync.datetime_format")}
-          manifestPath="DatetimeBasedCursor.properties.datetime_format"
-          options={DATETIME_FORMAT_OPTIONS}
-          optional
-          tooltip={
-            <>
-              The datetime format used to format the datetime values that are sent in outgoing requests to the API. If
-              not provided, the first format in Cursor Datetime Formats will be used.
-              <ReactMarkdown>{formatMessage({ id: "connectorBuilder.incremental.formatPlaceholders" })}</ReactMarkdown>
-            </>
-          }
-        />
         {filterMode !== "no_filter" && (
           <ToggleGroupField<BuilderIncrementalSync["slicer"]>
-            label="Split Up Interval"
-            tooltip="Optionally split up the interval into smaller chunks to reduce the amount of data fetched in a single request and to make the sync more resilient to failures"
+            label={formatMessage({ id: "connectorBuilder.incremental.splitUpInterval.label" })}
+            tooltip={formatMessage({ id: "connectorBuilder.incremental.splitUpInterval.tooltip" })}
             fieldPath={streamFieldPath("incrementalSync.slicer")}
             initialValues={{
               step: "",
@@ -358,11 +379,10 @@ const CursorDatetimeFormatField = ({ streamFieldPath }: { streamFieldPath: Strea
         // explicitly using a different manifest path here in order to pull in the examples from the manifest
         manifestPath="DatetimeBasedCursor.properties.datetime_format"
         options={DATETIME_FORMAT_OPTIONS}
-        label="Cursor Datetime Formats"
+        label={formatMessage({ id: "connectorBuilder.incremental.cursorDatetimeFormat.label" })}
         tooltip={
           <>
-            The possible formats for the cursor field, in order of preference. The first format that matches the cursor
-            field value will be used to parse it.
+            {formatMessage({ id: "connectorBuilder.incremental.cursorDatetimeFormat.tooltip" })}
             <ReactMarkdown>{formatMessage({ id: "connectorBuilder.incremental.formatPlaceholders" })}</ReactMarkdown>
           </>
         }

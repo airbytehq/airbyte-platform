@@ -1,5 +1,3 @@
-// @Suppress can be removed when KTIJ-19369 has been fixed, or when we upgrade to gradle 8.1
-@Suppress("DSL_SCOPE_VIOLATION")
 plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")

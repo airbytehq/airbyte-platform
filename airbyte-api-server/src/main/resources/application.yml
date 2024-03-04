@@ -5,6 +5,23 @@ micronaut:
     health:
       type: fixed
       n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:10}
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    binders:
+      netty:
+        bytebuf-allocators:
+          enabled: true
+        channels:
+          enabled: true
+        queues:
+          enabled: true
+    export:
+      statsd:
+        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        host: ${STATSD_HOST:localhost}
+        port: ${STATSD_PORT:8125}
   security:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
@@ -47,6 +64,7 @@ airbyte:
       aws:
         access-key: ${AWS_ACCESS_KEY:}
         secret-key: ${AWS_SECRET_ACCESS_KEY:}
+        region: ${AWS_REGION:}
       gcp:
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
@@ -54,7 +72,9 @@ airbyte:
         address: ${VAULT_ADDRESS:}
         prefix: ${VAULT_PREFIX:}
   role: ${AIRBYTE_ROLE:dev}
-  tracking-strategy: ${TRACKING_STRATEGY:LOGGING}
+  tracking:
+    strategy: ${TRACKING_STRATEGY:LOGGING}
+    write-key: ${SEGMENT_WRITE_KEY:}
   protocol:
     min-version: ${AIRBYTE_PROTOCOL_VERSION_MIN:0.0.0}
     max-version: ${AIRBYTE_PROTOCOL_VERSION_MAX:0.3.0}
@@ -83,6 +103,9 @@ endpoints:
     sensitive: true
   loggers:
     enabled: true
+    sensitive: false
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
     sensitive: false
   refresh:
     enabled: false

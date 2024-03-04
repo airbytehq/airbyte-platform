@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.repositories;
@@ -17,6 +17,7 @@ import io.micronaut.data.model.query.builder.sql.Dialect;
 import io.micronaut.data.repository.PageableRepository;
 import io.micronaut.data.repository.jpa.JpaSpecificationExecutor;
 import io.micronaut.data.repository.jpa.criteria.PredicateSpecification;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import lombok.Builder;
@@ -78,10 +79,25 @@ public interface StreamStatusesRepository extends PageableRepository<StreamStatu
   List<StreamStatus> findAllPerRunStateByConnectionId(final UUID connectionId);
 
   /**
+   * Returns the latest terminal stream status per stream per day for a connection after a given
+   * timestamp. Filters for complete and incomplete so we don't report an effectively unknown overview
+   * status
+   */
+  @Query("SELECT DISTINCT ON (stream_name, stream_namespace, 1) DATE_TRUNC('day', transitioned_at, :timezone), * "
+      + "FROM stream_statuses WHERE connection_id = :connectionId AND transitioned_at >= :timestamp "
+      + "AND run_state IN ('complete', 'incomplete') "
+      + "ORDER BY stream_name, stream_namespace, 1, transitioned_at DESC")
+  List<StreamStatus> findLatestTerminalStatusPerStreamByConnectionIdAndDayAfterTimestamp(final UUID connectionId,
+                                                                                         final OffsetDateTime timestamp,
+                                                                                         final String timezone);
+
+  /**
    * Pagination params.
    */
   record Pagination(int offset,
-                    int size) {}
+                    int size) {
+
+  }
 
   /**
    * Params for filtering our list functionality.
@@ -94,7 +110,9 @@ public interface StreamStatusesRepository extends PageableRepository<StreamStatu
                       String streamName,
                       Integer attemptNumber,
                       JobStreamStatusJobType jobType,
-                      Pagination pagination) {}
+                      Pagination pagination) {
+
+  }
 
   /**
    * Predicates for dynamic query building. Portable.

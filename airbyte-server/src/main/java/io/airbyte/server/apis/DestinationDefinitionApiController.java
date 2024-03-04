@@ -1,15 +1,13 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
-import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
-import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
@@ -25,9 +23,9 @@ import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList;
 import io.airbyte.api.model.generated.ScopeType;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
+import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Controller;
@@ -43,14 +41,16 @@ import io.micronaut.security.rules.SecurityRule;
 public class DestinationDefinitionApiController implements DestinationDefinitionApi {
 
   private final DestinationDefinitionsHandler destinationDefinitionsHandler;
+  private final ActorDefinitionAccessValidator accessValidator;
 
-  public DestinationDefinitionApiController(final DestinationDefinitionsHandler destinationDefinitionsHandler) {
+  public DestinationDefinitionApiController(final DestinationDefinitionsHandler destinationDefinitionsHandler,
+                                            final ActorDefinitionAccessValidator accessValidator) {
     this.destinationDefinitionsHandler = destinationDefinitionsHandler;
+    this.accessValidator = accessValidator;
   }
 
   @Post(uri = "/create_custom")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionRead createCustomDestinationDefinition(final CustomDestinationDefinitionCreate customDestinationDefinitionCreate) {
@@ -63,11 +63,13 @@ public class DestinationDefinitionApiController implements DestinationDefinition
   }
 
   @Post(uri = "/delete")
-  @Secured({ADMIN})
+  // the accessValidator will provide additional authorization checks, depending on Airbyte edition.
+  @Secured({AUTHENTICATED_USER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
   public void deleteDestinationDefinition(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody) {
+    accessValidator.validateWriteAccess(destinationDefinitionIdRequestBody.getDestinationDefinitionId());
     ApiHelper.execute(() -> {
       destinationDefinitionsHandler.deleteDestinationDefinition(destinationDefinitionIdRequestBody);
       return null;
@@ -83,8 +85,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
   }
 
   @Post("/get_for_scope")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionRead getDestinationDefinitionForScope(final ActorDefinitionIdWithScope actorDefinitionIdWithScope) {
@@ -93,8 +94,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
 
   @SuppressWarnings("LineLength")
   @Post(uri = "/get_for_workspace")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionRead getDestinationDefinitionForWorkspace(
@@ -120,8 +120,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
   }
 
   @Post(uri = "/list_for_workspace")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionReadList listDestinationDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) {
@@ -156,10 +155,12 @@ public class DestinationDefinitionApiController implements DestinationDefinition
   }
 
   @Post(uri = "/update")
+  // the accessValidator will provide additional authorization checks, depending on Airbyte edition.
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionRead updateDestinationDefinition(final DestinationDefinitionUpdate destinationDefinitionUpdate) {
+    accessValidator.validateWriteAccess(destinationDefinitionUpdate.getDestinationDefinitionId());
     return ApiHelper.execute(() -> destinationDefinitionsHandler.updateDestinationDefinition(destinationDefinitionUpdate));
   }
 

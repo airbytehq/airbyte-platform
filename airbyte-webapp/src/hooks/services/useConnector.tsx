@@ -2,26 +2,16 @@ import { useMutation } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { ConnectionConfiguration } from "area/connector/types";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useConfig } from "config";
-import { useGetOutOfDateConnectorsCount } from "core/api";
-import { CheckConnectionRead } from "core/api/types/AirbyteClient";
-// eslint-disable-next-line import/no-restricted-paths
-import { useRequestOptions } from "core/api/useRequestOptions";
-import { DestinationService } from "core/domain/connector/DestinationService";
-import { SourceService } from "core/domain/connector/SourceService";
 import {
+  useGetOutOfDateConnectorsCount,
   useDestinationDefinitionList,
   useLatestDestinationDefinitionList,
   useUpdateDestinationDefinition,
-} from "services/connector/DestinationDefinitionService";
-import {
   useLatestSourceDefinitionList,
   useSourceDefinitionList,
   useUpdateSourceDefinition,
-} from "services/connector/SourceDefinitionService";
-import { useInitService } from "services/useInitService";
+} from "core/api";
 
 import { useAppMonitoringService } from "./AppMonitoringService";
 import { useNotificationService } from "./Notification";
@@ -165,79 +155,4 @@ export const useGetConnectorsOutOfDate = () => {
     countNewDestinationVersion: outOfDateConnectors.destinationDefinitions,
     outOfDateConnectors,
   };
-};
-
-function useGetDestinationService(): DestinationService {
-  const { apiUrl } = useConfig();
-  const requestOptions = useRequestOptions();
-
-  return useInitService(() => new DestinationService(requestOptions), [apiUrl, requestOptions]);
-}
-
-function useGetSourceService(): SourceService {
-  const { apiUrl } = useConfig();
-  const requestOptions = useRequestOptions();
-
-  return useInitService(() => new SourceService(requestOptions), [apiUrl, requestOptions]);
-}
-
-export type CheckConnectorParams = { signal: AbortSignal } & (
-  | { selectedConnectorId: string }
-  | {
-      selectedConnectorId: string;
-      name: string;
-      connectionConfiguration: ConnectionConfiguration;
-    }
-  | {
-      selectedConnectorDefinitionId: string;
-      connectionConfiguration: ConnectionConfiguration;
-      workspaceId: string;
-    }
-);
-
-export const useCheckConnector = (formType: "source" | "destination") => {
-  const destinationService = useGetDestinationService();
-  const sourceService = useGetSourceService();
-
-  return useMutation<CheckConnectionRead, Error, CheckConnectorParams>(async (params: CheckConnectorParams) => {
-    const payload: Record<string, unknown> = {};
-
-    if ("connectionConfiguration" in params) {
-      payload.connectionConfiguration = params.connectionConfiguration;
-    }
-
-    if ("name" in params) {
-      payload.name = params.name;
-    }
-
-    if ("workspaceId" in params) {
-      payload.workspaceId = params.workspaceId;
-    }
-
-    if (formType === "destination") {
-      if ("selectedConnectorId" in params) {
-        payload.destinationId = params.selectedConnectorId;
-      }
-
-      if ("selectedConnectorDefinitionId" in params) {
-        payload.destinationDefinitionId = params.selectedConnectorDefinitionId;
-      }
-
-      return await destinationService.check_connection(payload, {
-        signal: params.signal,
-      });
-    }
-
-    if ("selectedConnectorId" in params) {
-      payload.sourceId = params.selectedConnectorId;
-    }
-
-    if ("selectedConnectorDefinitionId" in params) {
-      payload.sourceDefinitionId = params.selectedConnectorDefinitionId;
-    }
-
-    return await sourceService.check_connection(payload, {
-      signal: params.signal,
-    });
-  });
 };

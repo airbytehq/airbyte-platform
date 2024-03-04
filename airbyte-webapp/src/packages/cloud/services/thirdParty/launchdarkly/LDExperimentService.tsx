@@ -7,7 +7,7 @@ import { finalize, Subject } from "rxjs";
 import { LoadingPage } from "components";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useConfig } from "config";
+import { useConfig } from "core/config";
 import { useAnalyticsService } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 import { FeatureSet, FeatureItem, useFeatureService } from "core/services/features";
@@ -71,6 +71,7 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
   const { setMessageOverwrite } = useI18nContext();
   const { trackAction } = useAppMonitoringService();
   const workspaceId = useCurrentWorkspaceId();
+
   const [contextState, dispatchContextUpdate] = useReducer(contextReducer, {
     context: createMultiContext(
       createUserContext(user, locale),
@@ -88,9 +89,11 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
   useEffect(() => {
     if (workspaceId) {
       const workspaceContext = createLDContext("workspace", workspaceId);
+
       dispatchContextUpdate({ type: "add", context: workspaceContext });
     } else {
       dispatchContextUpdate({ type: "remove", kind: "workspace" });
+      dispatchContextUpdate({ type: "remove", kind: "organization" });
     }
   }, [workspaceId]);
 
@@ -102,7 +105,7 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
     dispatchContextUpdate({ type: "remove", kind });
   }, []);
 
-  // With any change of contexts, we need to re-identiy with the launch darkly
+  // With any change of contexts, we need to re-identify with the launch darkly
   useEffect(() => {
     ldClient.current?.identify(contextState.context, undefined, debugFlags);
   }, [contextState, ldClient]);

@@ -13,6 +13,12 @@ const localDocMiddleware = (docsPath: string): Plugin => {
       // Serve the docs used in the sidebar. During building Gradle will copy those into the docker image
       // Relavant gradle task :airbyte-webapp:copyDocs
       server.middlewares.use("/docs/integrations", express.static(docsPath) as Connect.NextHandleFunction);
+      // Don't fallback to default handling (serve index.html) for not found files, but make sure they 404 out properly
+      // so trying to load the `.inapp.md` files will properly function and fail if the doc doesn't exist.
+      server.middlewares.use("/docs/integrations", (req, res) => {
+        res.statusCode = 404;
+        res.end(`404 - ${docsPath}${req.url} not found`);
+      });
       // Server assets that can be used during. Related gradle task: :airbyte-webapp:copyDocAssets
       server.middlewares.use("/docs/.gitbook", express.static(`${docsPath}/../.gitbook`) as Connect.NextHandleFunction);
     },

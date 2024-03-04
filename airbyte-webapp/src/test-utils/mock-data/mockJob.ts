@@ -1,4 +1,4 @@
-import { JobConfigType, JobRead, JobStatus } from "core/request/AirbyteClient";
+import { JobConfigType, JobRead, JobStatus } from "core/api/types/AirbyteClient";
 
 export const mockJob: JobRead = {
   id: 1,

@@ -1,10 +1,6 @@
 import classNames from "classnames";
 import React from "react";
 
-import { ClockIcon } from "components/icons/ClockIcon";
-import { SimpleCircleIcon } from "components/icons/SimpleCircleIcon";
-import { SuccessIcon } from "components/icons/SuccessIcon";
-import { WarningCircleIcon } from "components/icons/WarningCircleIcon";
 import { Icon } from "components/ui/Icon";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 
@@ -21,13 +17,13 @@ export enum ConnectionStatusIndicatorStatus {
 }
 
 const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Element>> = {
-  onTime: <SuccessIcon />,
-  onTrack: <SuccessIcon />,
-  error: <WarningCircleIcon />,
-  disabled: <Icon type="pause" />,
-  pending: <SimpleCircleIcon viewBox="2 2 20 20" />,
-  late: <ClockIcon />,
-  actionRequired: <Icon type="cross" withBackground size="sm" />,
+  onTime: <Icon type="statusSuccess" size="lg" />,
+  onTrack: <Icon type="statusSuccess" size="lg" />,
+  error: <Icon type="statusWarning" size="lg" />,
+  disabled: <Icon type="statusInactive" size="lg" />,
+  pending: <Icon type="statusInactive" size="lg" />,
+  late: <Icon type="clockFilled" size="lg" />,
+  actionRequired: <Icon type="statusError" size="lg" />,
 };
 
 const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
@@ -57,7 +53,10 @@ interface ConnectionStatusIndicatorProps {
 }
 
 export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({ status, loading, withBox }) => (
-  <div className={classNames(styles.status, STYLE_BY_STATUS[status], { [BOX_STYLE_BY_STATUS[status]]: withBox })}>
+  <div
+    className={classNames(styles.status, STYLE_BY_STATUS[status], { [BOX_STYLE_BY_STATUS[status]]: withBox })}
+    data-loading={loading}
+  >
     <div className={styles.icon}>{ICON_BY_STATUS[status]}</div>
     {loading && <LoadingSpinner className={styles.spinner} />}
   </div>

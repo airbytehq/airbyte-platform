@@ -7,19 +7,19 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { faGear, faPlus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
+import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
+
+import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderConfigView } from "./BuilderConfigView";
 import { KeyboardSensor, PointerSensor } from "./dndSensors";
-import DragHandleIcon from "./drag-handle.svg?react";
 import { InputForm, InputInEditing, newInputInEditing } from "./InputsForm";
 import styles from "./InputsView.module.scss";
 import { BuilderFormInput, orderInputs, useBuilderWatch } from "../types";
@@ -32,6 +32,7 @@ export const InputsView: React.FC = () => {
   const inputs = useBuilderWatch("formValues.inputs");
   const storedInputOrder = useBuilderWatch("formValues.inputOrder");
   const { setValue } = useFormContext();
+  const { permission } = useConnectorBuilderFormState();
   const [inputInEditing, setInputInEditing] = useState<InputInEditing | undefined>(undefined);
   const inferredInputs = useInferredInputs();
   const sensors = useSensors(
@@ -58,42 +59,44 @@ export const InputsView: React.FC = () => {
   };
 
   return (
-    <BuilderConfigView heading={formatMessage({ id: "connectorBuilder.inputsTitle" })}>
-      <Text align="center" className={styles.inputsDescription}>
-        <FormattedMessage id="connectorBuilder.inputsDescription" />
-      </Text>
+    <fieldset className={styles.fieldset} disabled={permission === "readOnly"}>
+      <BuilderConfigView heading={formatMessage({ id: "connectorBuilder.inputsTitle" })}>
+        <Text align="center" className={styles.inputsDescription}>
+          <FormattedMessage id="connectorBuilder.inputsDescription" />
+        </Text>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={orderedInputs} strategy={verticalListSortingStrategy}>
-          {orderedInputs.map((input) => (
-            <SortableInput key={input.id} {...input} setInputInEditing={setInputInEditing} />
-          ))}
-        </SortableContext>
-      </DndContext>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={orderedInputs} strategy={verticalListSortingStrategy}>
+            {orderedInputs.map((input) => (
+              <SortableInput key={input.id} {...input} setInputInEditing={setInputInEditing} />
+            ))}
+          </SortableContext>
+        </DndContext>
 
-      <Button
-        className={styles.addInputButton}
-        onClick={() => {
-          setInputInEditing(newInputInEditing());
-        }}
-        icon={<FontAwesomeIcon icon={faPlus} />}
-        iconPosition="left"
-        variant="secondary"
-        type="button"
-        data-no-dnd="true"
-      >
-        <FormattedMessage id="connectorBuilder.addInputButton" />
-      </Button>
-
-      {inputInEditing && (
-        <InputForm
-          inputInEditing={inputInEditing}
-          onClose={() => {
-            setInputInEditing(undefined);
+        <Button
+          className={styles.addInputButton}
+          onClick={() => {
+            setInputInEditing(newInputInEditing());
           }}
-        />
-      )}
-    </BuilderConfigView>
+          icon={<Icon type="plus" />}
+          iconPosition="left"
+          variant="secondary"
+          type="button"
+          data-no-dnd="true"
+        >
+          <FormattedMessage id="connectorBuilder.addInputButton" />
+        </Button>
+
+        {inputInEditing && (
+          <InputForm
+            inputInEditing={inputInEditing}
+            onClose={() => {
+              setInputInEditing(undefined);
+            }}
+          />
+        )}
+      </BuilderConfigView>
+    </fieldset>
   );
 };
 
@@ -137,6 +140,8 @@ interface SortableInputProps {
 
 const SortableInput: React.FC<SortableInputProps> = ({ input, isInferred, id, setInputInEditing }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const { permission } = useConnectorBuilderFormState();
+  const canEdit = permission !== "readOnly";
 
   const style = {
     // set x transform to 0 so that the inputs only move up and down
@@ -147,8 +152,8 @@ const SortableInput: React.FC<SortableInputProps> = ({ input, isInferred, id, se
 
   return (
     <div ref={setNodeRef} style={style}>
-      <Card className={styles.inputCard} {...attributes} {...listeners}>
-        <DragHandleIcon className={styles.dragHandle} />
+      <Card bodyClassName={styles.inputCard} {...(canEdit ? attributes : {})} {...(canEdit ? listeners : {})}>
+        {canEdit && <Icon type="drag" color="action" />}
         <Text size="lg" className={styles.itemLabel}>
           {input.definition.title || input.key}
         </Text>
@@ -163,7 +168,7 @@ const SortableInput: React.FC<SortableInputProps> = ({ input, isInferred, id, se
           }}
           data-no-dnd="true"
         >
-          <FontAwesomeIcon className={styles.icon} icon={faGear} />
+          <Icon type="gear" color="action" />
         </Button>
       </Card>
     </div>

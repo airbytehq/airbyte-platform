@@ -1,9 +1,8 @@
-import { faEdit } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Meta, StoryFn } from "@storybook/react";
 import { useState } from "react";
 
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 
 import { ListBox, ListBoxProps } from "./ListBox";
 
@@ -40,7 +39,7 @@ const options = [
   {
     label: "one",
     value: 1,
-    icon: <FontAwesomeIcon icon={faEdit} />,
+    icon: <Icon type="pencil" />,
   },
   {
     label: "two",
@@ -75,6 +74,23 @@ Placement.decorators = [
   ),
 ];
 
+export const TextWrap = Template.bind({});
+TextWrap.args = {
+  options: [...options, { label: "This is a very long label that should wrap", value: 4 }],
+  adaptiveWidth: false,
+};
+TextWrap.decorators = [
+  (Story: StoryFn) => (
+    <FlexContainer
+      alignItems="center"
+      justifyContent="center"
+      style={{ width: 500, height: 500, border: "1px solid #494961" }}
+    >
+      <Story />
+    </FlexContainer>
+  ),
+];
+
 export const ValueAsObject = Template.bind({});
 ValueAsObject.args = {
   options: [
@@ -93,3 +109,37 @@ ValueAsObject.args = {
   ],
   selectedValue: { scheduleType: "basic" },
 };
+
+export const Virtualized = Template.bind({});
+Virtualized.args = {
+  options: Array.from({ length: 1000 }, (_, i) => ({ label: `Option ${i}`, value: i })),
+  adaptiveWidth: false,
+};
+Virtualized.decorators = [
+  (Story: StoryFn) => (
+    <FlexContainer
+      alignItems="center"
+      justifyContent="center"
+      style={{ width: 500, height: 500, border: "1px solid #494961" }}
+    >
+      <Story />
+    </FlexContainer>
+  ),
+];
+
+export const NotVirtualized = Template.bind({});
+NotVirtualized.args = {
+  options: Array.from({ length: 30 }, (_, i) => ({ label: `Option ${i}`, value: i })),
+  adaptiveWidth: false,
+};
+NotVirtualized.decorators = [
+  (Story: StoryFn) => (
+    <FlexContainer
+      alignItems="center"
+      justifyContent="center"
+      style={{ width: 500, height: 500, border: "1px solid #494961" }}
+    >
+      <Story />
+    </FlexContainer>
+  ),
+];

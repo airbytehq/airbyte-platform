@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector_builder.handlers;
@@ -46,7 +46,9 @@ public class StreamHandler {
           streamReadRequestBody.getManifest(),
           streamReadRequestBody.getConfig(),
           streamReadRequestBody.getStream(),
-          streamReadRequestBody.getRecordLimit());
+          streamReadRequestBody.getRecordLimit(),
+          streamReadRequestBody.getPageLimit(),
+          streamReadRequestBody.getSliceLimit());
     } catch (final IOException exc) {
       LOGGER.error("Error handling test_read request.", exc);
       throw new ConnectorBuilderException("Error handling test_read request.", exc);

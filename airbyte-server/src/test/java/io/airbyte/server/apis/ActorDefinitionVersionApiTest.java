@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -23,7 +23,8 @@ import org.mockito.Mockito;
 class ActorDefinitionVersionApiTest extends BaseControllerTest {
 
   @Test
-  void testGetActorDefinitionForSource() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetActorDefinitionForSource()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(actorDefinitionVersionHandler.getActorDefinitionVersionForSourceId(Mockito.any()))
         .thenReturn(new ActorDefinitionVersionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -37,7 +38,8 @@ class ActorDefinitionVersionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testGetActorDefinitionForDestination() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetActorDefinitionForDestination()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(Mockito.any()))
         .thenReturn(new ActorDefinitionVersionRead())
         .thenThrow(new ConfigNotFoundException("", ""));

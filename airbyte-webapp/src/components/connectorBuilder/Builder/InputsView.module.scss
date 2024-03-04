@@ -40,8 +40,13 @@
   }
 }
 
-.dragHandle {
-  color: colors.$grey-500;
-  width: 13px;
-  height: 13px;
+.fieldset {
+  all: unset;
+  width: 100%;
+
+  &[disabled] {
+    *:hover {
+      cursor: default;
+    }
+  }
 }

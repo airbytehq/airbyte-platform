@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
@@ -14,7 +14,8 @@ import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.workers.internal.FieldSelector;
-import io.airbyte.workers.workload.WorkloadIdGenerator;
+import java.util.Optional;
+import java.util.OptionalInt;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -27,8 +28,8 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
   ReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled) {
     final var fieldSelector = new FieldSelector(recordSchemaValidator, workerMetricReporter, fieldSelectionEnabled, false);
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
-        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApi,
-        new WorkloadIdGenerator(), false));
+        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApi, false, analyticsMessageTracker,
+        Optional.empty()));
     return new BufferedReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,
@@ -39,7 +40,13 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
         heartbeatTimeoutChaperone,
         replicationFeatureFlagReader,
         replicationWorkerHelper,
-        destinationTimeoutMonitor);
+        destinationTimeoutMonitor,
+        getQueueType(),
+        OptionalInt.of(1));
+  }
+
+  public BufferedReplicationWorkerType getQueueType() {
+    return BufferedReplicationWorkerType.BUFFERED_WITH_LINKED_BLOCKING_QUEUE;
   }
 
   // BufferedReplicationWorkerTests.

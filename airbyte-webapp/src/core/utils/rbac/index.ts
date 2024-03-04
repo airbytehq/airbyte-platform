@@ -1,2 +1,2 @@
-export * from "./rbac";
+export { useRbac } from "./rbac";
 export { useIntent } from "./intent";

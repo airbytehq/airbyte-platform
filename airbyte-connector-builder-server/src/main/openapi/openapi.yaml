@@ -18,6 +18,8 @@ servers:
 paths:
   /v1/stream/read:
     post:
+      tags:
+        - connectorBuilderServer
       summary: Reads a specific stream in the source. TODO in a later phase - only read a single slice of data.
       operationId: readStream
       requestBody:
@@ -39,6 +41,8 @@ paths:
           $ref: "#/components/responses/InvalidInputResponse"
   /v1/manifest/resolve:
     post:
+      tags:
+        - connectorBuilderServer
       summary: Given a JSON manifest, returns a JSON manifest with all of the $refs and $parameters resolved and flattened
       operationId: resolveManifest
       requestBody:
@@ -181,8 +185,18 @@ components:
         record_limit:
           type: integer
           minimum: 1
-          maximum: 1000
-          description: Number of records that will be returned to the client from the connector builder (max of 1000)
+          maximum: 10000
+          description: Maximum number of records that will be returned to the client from the connector builder
+        page_limit:
+          type: integer
+          minimum: 1
+          maximum: 20
+          description: Maximum number of pages that will be returned to the client from the connector builder
+        slice_limit:
+          type: integer
+          minimum: 1
+          maximum: 20
+          description: Maximum number of slices that will be returned to the client from the connector builder
         state:
           type: object
           description: The AirbyteStateMessage object to use as the starting state for this read

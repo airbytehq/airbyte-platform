@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.config.cloud
@@ -8,7 +8,10 @@ import io.airbyte.workload.launcher.config.cloud.CloudStateConfig.Companion.AWS_
 import io.airbyte.workload.launcher.config.cloud.CloudStateConfig.Companion.AWS_SECRET_ACCESS_KEY_ENV_VAR
 import io.airbyte.workload.launcher.config.cloud.CloudStateConfig.Companion.GCS_STATE_BUCKET_ENV_VAR
 import io.airbyte.workload.launcher.config.cloud.CloudStateConfig.Companion.GOOGLE_APPLICATION_CREDENTIALS_ENV_VAR
-import io.airbyte.workload.launcher.config.cloud.CloudStateConfig.Companion.S3_MINIO_ENDPOINT_ENV_VAR
+import io.airbyte.workload.launcher.config.cloud.CloudStateConfig.Companion.MINIO_ACCESS_KEY_ENV_VAR
+import io.airbyte.workload.launcher.config.cloud.CloudStateConfig.Companion.MINIO_BUCKET_NAME_ENV_VAR
+import io.airbyte.workload.launcher.config.cloud.CloudStateConfig.Companion.MINIO_ENDPOINT_ENV_VAR
+import io.airbyte.workload.launcher.config.cloud.CloudStateConfig.Companion.MINIO_SECRET_ACCESS_KEY_ENV_VAR
 import io.airbyte.workload.launcher.config.cloud.CloudStateConfig.Companion.S3_STATE_BUCKET_ENV_VAR
 import io.airbyte.workload.launcher.config.cloud.CloudStateConfig.Companion.S3_STATE_BUCKET_REGION_ENV_VAR
 import io.airbyte.workload.launcher.config.cloud.CloudStateConfig.Companion.WORKER_STATE_STORAGE_TYPE_ENV_VAR
@@ -45,11 +48,12 @@ class CloudStateConfigTest {
 
     val envVars = config.toEnvVarMap()
     assertEquals(5, envVars.size)
+
     assertEquals(type, envVars[WORKER_STATE_STORAGE_TYPE_ENV_VAR])
-    assertEquals(accessKey, envVars[AWS_ACCESS_KEY_ID_ENV_VAR])
-    assertEquals(bucket, envVars[S3_STATE_BUCKET_ENV_VAR])
-    assertEquals(endpoint, envVars[S3_MINIO_ENDPOINT_ENV_VAR])
-    assertEquals(secretAccessKey, envVars[AWS_SECRET_ACCESS_KEY_ENV_VAR])
+    assertEquals(accessKey, envVars[MINIO_ACCESS_KEY_ENV_VAR])
+    assertEquals(bucket, envVars[MINIO_BUCKET_NAME_ENV_VAR])
+    assertEquals(endpoint, envVars[MINIO_ENDPOINT_ENV_VAR])
+    assertEquals(secretAccessKey, envVars[MINIO_SECRET_ACCESS_KEY_ENV_VAR])
   }
 
   @Test

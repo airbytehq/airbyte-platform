@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -112,7 +112,7 @@ class ConnectionApiTest extends BaseControllerTest {
 
   @Test
   void testSearchConnections() throws JsonValidationException, ConfigNotFoundException, IOException {
-    Mockito.when(connectionsHandler.searchConnections(Mockito.any()))
+    Mockito.when(matchSearchHandler.searchConnections(Mockito.any()))
         .thenReturn(new ConnectionReadList())
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/connections/search";

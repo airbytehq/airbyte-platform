@@ -2,7 +2,7 @@
 "$schema": http://json-schema.org/draft-07/schema#
 "$id": https://github.com/airbytehq/airbyte/blob/master/airbyte-config/models/src/main/resources/types/ConnectorReleaseBreakingChange.yaml
 title: ConnectorReleaseBreakingChange
-description: Contains information about a breaking change, including the deadline to upgrade, a link to the migration documentation, and a message detailing the change.
+description: Contains information about a breaking change, including the deadline to upgrade, a link to the migration documentation, a message detailing the change and an optional impact scope.
 type: object
 additionalProperties: true
 required:
@@ -20,3 +20,9 @@ properties:
   migrationDocumentationUrl:
     description: (Header-specific) URL to documentation on how to migrate to this version.
     type: string
+  scopedImpact:
+    description: List of scopes that are impacted by the breaking change. If not specified, the breaking change cannot be scoped to reduce impact via the supported scope types.
+    type: array
+    minItems: 1
+    items:
+      $ref: BreakingChangeScope.yaml

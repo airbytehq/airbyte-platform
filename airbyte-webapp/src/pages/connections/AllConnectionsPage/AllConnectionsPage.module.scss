@@ -1,10 +1,8 @@
-@use "scss/colors";
+.alignSelfStart {
+  align-self: flex-start;
+}
 
-.link {
-  color: colors.$dark-blue;
-
-  &:hover,
-  &:focus {
-    color: colors.$blue-400;
-  }
+.connections {
+  min-width: 100%;
+  width: fit-content;
 }

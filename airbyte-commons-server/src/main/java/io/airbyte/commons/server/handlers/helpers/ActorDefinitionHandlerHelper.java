@@ -1,10 +1,12 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
 
+import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
 import io.airbyte.commons.server.ServerConstants;
+import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.SpecFetcher;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
@@ -20,10 +22,12 @@ import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
+import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,15 +46,18 @@ public class ActorDefinitionHandlerHelper {
   private final AirbyteProtocolVersionRange protocolVersionRange;
   private final ActorDefinitionVersionResolver actorDefinitionVersionResolver;
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
+  private final ActorDefinitionService actorDefinitionService;
 
   public ActorDefinitionHandlerHelper(final SynchronousSchedulerClient synchronousSchedulerClient,
                                       final AirbyteProtocolVersionRange airbyteProtocolVersionRange,
                                       final ActorDefinitionVersionResolver actorDefinitionVersionResolver,
-                                      final RemoteDefinitionsProvider remoteDefinitionsProvider) {
+                                      final RemoteDefinitionsProvider remoteDefinitionsProvider,
+                                      final ActorDefinitionService actorDefinitionService) {
     this.synchronousSchedulerClient = synchronousSchedulerClient;
     this.protocolVersionRange = airbyteProtocolVersionRange;
     this.actorDefinitionVersionResolver = actorDefinitionVersionResolver;
     this.remoteDefinitionsProvider = remoteDefinitionsProvider;
+    this.actorDefinitionService = actorDefinitionService;
   }
 
   /**
@@ -106,21 +113,25 @@ public class ActorDefinitionHandlerHelper {
     final Optional<ActorDefinitionVersion> newVersionFromDbOrRemote = actorDefinitionVersionResolver.resolveVersionForTag(
         currentVersion.getActorDefinitionId(), actorType, currentVersion.getDockerRepository(), newDockerImageTag);
 
+    final boolean isDev = ServerConstants.DEV_IMAGE_TAG.equals(newDockerImageTag);
+
+    // The version already exists in the database or in our registry
     if (newVersionFromDbOrRemote.isPresent()) {
-      // TODO (ella): based on the existing behavior, the new version from the db will exist for `dev`,
-      // so we would want to re-run the spec below for `dev` images as well. However, there is an existing
-      // bug(?) that would stop us from persisting that new spec since the ADV already exists for
-      // (<actor def id>, 'dev').
-      return newVersionFromDbOrRemote.get();
+      final ActorDefinitionVersion newVersion = newVersionFromDbOrRemote.get();
+
+      if (isDev) {
+        // re-fetch spec for dev images to allow for easier iteration
+        final ConnectorSpecification refreshedSpec =
+            getSpecForImage(currentVersion.getDockerRepository(), newDockerImageTag, isCustomConnector, null);
+        newVersion.setSpec(refreshedSpec);
+        newVersion.setProtocolVersion(getAndValidateProtocolVersionFromSpec(refreshedSpec));
+      }
+
+      return newVersion;
     }
 
-    // specs are re-fetched from the container if the image tag has changed, or if the tag is "dev",
-    // to allow for easier iteration of dev images
-    final boolean specNeedsUpdate = !currentVersion.getDockerImageTag().equals(newDockerImageTag)
-        || ServerConstants.DEV_IMAGE_TAG.equals(newDockerImageTag);
-    final ConnectorSpecification spec = specNeedsUpdate
-        ? getSpecForImage(currentVersion.getDockerRepository(), newDockerImageTag, isCustomConnector, null)
-        : currentVersion.getSpec();
+    // We've never seen this version
+    final ConnectorSpecification spec = getSpecForImage(currentVersion.getDockerRepository(), newDockerImageTag, isCustomConnector, null);
     final String protocolVersion = getAndValidateProtocolVersionFromSpec(spec);
 
     return new ActorDefinitionVersion()
@@ -188,6 +199,29 @@ public class ActorDefinitionHandlerHelper {
     }
 
     return breakingChanges.orElse(List.of());
+  }
+
+  private LocalDate getMinBreakingChangeUpgradeDeadline(final List<ActorDefinitionBreakingChange> breakingChanges) {
+    return breakingChanges.stream()
+        .map(ActorDefinitionBreakingChange::getUpgradeDeadline)
+        .map(LocalDate::parse)
+        .min(LocalDate::compareTo)
+        .orElse(null);
+  }
+
+  public Optional<ActorDefinitionVersionBreakingChanges> getVersionBreakingChanges(final ActorDefinitionVersion actorDefinitionVersion)
+      throws IOException {
+    final List<ActorDefinitionBreakingChange> breakingChanges =
+        actorDefinitionService.listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion);
+
+    if (!breakingChanges.isEmpty()) {
+      final LocalDate minUpgradeDeadline = getMinBreakingChangeUpgradeDeadline(breakingChanges);
+      return Optional.of(new ActorDefinitionVersionBreakingChanges()
+          .upcomingBreakingChanges(breakingChanges.stream().map(ApiPojoConverters::toApiBreakingChange).toList())
+          .minUpgradeDeadline(minUpgradeDeadline));
+    } else {
+      return Optional.empty();
+    }
   }
 
 }

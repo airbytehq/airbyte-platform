@@ -1,23 +1,22 @@
-import { faGear } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { setIn, useFormikContext } from "formik";
+import set from "lodash/set";
 import React from "react";
+import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
-import { FormikConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 
-import { SyncSchemaStream } from "core/domain/catalog";
-import { NamespaceDefinitionType } from "core/request/AirbyteClient";
+import { AirbyteStreamAndConfiguration, NamespaceDefinitionType } from "core/api/types/AirbyteClient";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./StreamsConfigTableHeader.module.scss";
+import { FormConnectionFormValues } from "../../ConnectionForm/formConfig";
 import { DestinationNamespaceModal, DestinationNamespaceFormValues } from "../../DestinationNamespaceModal";
 import {
   DestinationStreamNamesModal,
@@ -34,9 +33,10 @@ const HeaderCell: React.FC<React.PropsWithChildren<CellTextProps>> = ({ children
   </CellText>
 );
 
-interface StreamsConfigTableHeaderProps {
-  streams: SyncSchemaStream[];
-  onStreamsChanged: (streams: SyncSchemaStream[]) => void;
+interface StreamsConfigTableHeaderProps
+  extends Pick<FormConnectionFormValues, "namespaceDefinition" | "namespaceFormat" | "prefix"> {
+  streams: AirbyteStreamAndConfiguration[];
+  onStreamsChanged: (streams: AirbyteStreamAndConfiguration[]) => void;
   syncSwitchDisabled?: boolean;
 }
 
@@ -44,30 +44,32 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
   streams,
   onStreamsChanged,
   syncSwitchDisabled,
+  namespaceDefinition,
+  namespaceFormat,
+  prefix,
 }) => {
   const { mode } = useConnectionFormService();
   const { openModal, closeModal } = useModalService();
-  const formikProps = useFormikContext<FormikConnectionFormValues>();
+  const { setValue } = useFormContext<FormConnectionFormValues>();
 
-  const destinationNamespaceHookFormChange = (value: DestinationNamespaceFormValues) => {
-    formikProps.setFieldValue("namespaceDefinition", value.namespaceDefinition);
+  const destinationNamespaceChange = (value: DestinationNamespaceFormValues) => {
+    setValue("namespaceDefinition", value.namespaceDefinition, { shouldDirty: true });
 
     if (value.namespaceDefinition === NamespaceDefinitionType.customformat) {
-      formikProps.setFieldValue("namespaceFormat", value.namespaceFormat);
+      setValue("namespaceFormat", value.namespaceFormat);
     }
   };
 
-  const destinationStreamNameHookFormChange = (value: DestinationStreamNamesFormValues) => {
-    formikProps.setFieldValue(
-      "prefix",
-      value.streamNameDefinition === StreamNameDefinitionValueType.Prefix ? value.prefix : ""
-    );
+  const destinationStreamNameChange = (value: DestinationStreamNamesFormValues) => {
+    setValue("prefix", value.streamNameDefinition === StreamNameDefinitionValueType.Prefix ? value.prefix : "", {
+      shouldDirty: true,
+    });
   };
 
   const onToggleAllStreamsSyncSwitch = ({ target: { checked } }: React.ChangeEvent<HTMLInputElement>) =>
     onStreamsChanged(
       streams.map((stream) =>
-        setIn(stream, "config", {
+        set(stream, "config", {
           ...stream.config,
           selected: checked,
         })
@@ -112,17 +114,17 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
               content: () => (
                 <DestinationNamespaceModal
                   initialValues={{
-                    namespaceDefinition: formikProps.values.namespaceDefinition,
-                    namespaceFormat: formikProps.values.namespaceFormat,
+                    namespaceDefinition,
+                    namespaceFormat,
                   }}
                   onCloseModal={closeModal}
-                  onSubmit={destinationNamespaceHookFormChange}
+                  onSubmit={destinationNamespaceChange}
                 />
               ),
             })
           }
         >
-          <FontAwesomeIcon icon={faGear} />
+          <Icon type="gear" size="sm" />
         </Button>
       </HeaderCell>
       <HeaderCell>
@@ -138,16 +140,16 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
               content: () => (
                 <DestinationStreamNamesModal
                   initialValues={{
-                    prefix: formikProps.values.prefix,
+                    prefix,
                   }}
                   onCloseModal={closeModal}
-                  onSubmit={destinationStreamNameHookFormChange}
+                  onSubmit={destinationStreamNameChange}
                 />
               ),
             })
           }
         >
-          <FontAwesomeIcon icon={faGear} />
+          <Icon type="gear" size="sm" />
         </Button>
       </HeaderCell>
       <HeaderCell className={styles.syncModeCell}>

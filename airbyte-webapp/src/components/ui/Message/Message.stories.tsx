@@ -1,6 +1,7 @@
 import { ComponentStory, ComponentMeta } from "@storybook/react";
 
 import { Message } from "./Message";
+import { FlexContainer, FlexItem } from "../Flex";
 
 export default {
   title: "UI/Message",
@@ -81,4 +82,19 @@ WithSecondaryText.args = {
   secondaryText: "This is a secondary text",
   onClose: () => console.log("Closed!"),
   type: "info",
+};
+
+export const WithChildren = Template.bind({});
+WithChildren.args = {
+  text: "This is an error with more details.",
+  secondaryText: "This is a secondary text",
+  onClose: () => console.log("Closed!"),
+  type: "error",
+  children: (
+    <FlexContainer direction="column" gap="sm">
+      <FlexItem>Learn More</FlexItem>
+      <FlexItem>Stacktrace</FlexItem>
+      <FlexItem>Logs</FlexItem>
+    </FlexContainer>
+  ),
 };

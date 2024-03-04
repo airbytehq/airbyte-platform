@@ -12,7 +12,7 @@ To release a new version of this base image, use the following steps:
 3. Run the following to build and push a new version of this image (replace `<new_version>` with a new version!) :
    ```
    docker buildx build --push \
-     --tag airbyte/airbyte-base-java-image:<new_version> \
+     --tag airbyte/airbyte-base-java-worker:<new_version> \
      --platform linux/amd64,linux/arm64 .
    ```
    To see existing versions, [view the image on Dockerhub](https://hub.docker.com/r/airbyte/airbyte-base-java-image).

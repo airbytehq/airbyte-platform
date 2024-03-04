@@ -1,5 +1,3 @@
-import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import React, { useState } from "react";
 import { FieldPath, useFormContext, useWatch } from "react-hook-form";
@@ -47,7 +45,7 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
   const { formatMessage } = useIntl();
 
   return (
-    <Card className={classNames(className, styles.card)}>
+    <Card className={className} bodyClassName={classNames(styles.card)}>
       {(toggleConfig || label) && (
         <FlexContainer alignItems="center">
           <FlexItem grow>
@@ -69,7 +67,7 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
               rel="noreferrer"
               className={styles.docLink}
             >
-              <Icon type="docs" size="lg" />
+              <Icon type="docs" />
             </a>
           )}
         </FlexContainer>
@@ -134,7 +132,7 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
         onClick={() => {
           setCopyFromOpen(true);
         }}
-        icon={<FontAwesomeIcon icon={faArrowUpRightFromSquare} rotation={180} />}
+        icon={<Icon type="import" />}
       />
       {currentRelevantConfig && (
         <Button
@@ -143,7 +141,7 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
           onClick={() => {
             setCopyToOpen(true);
           }}
-          icon={<FontAwesomeIcon icon={faArrowUpRightFromSquare} />}
+          icon={<Icon type="share" />}
         />
       )}
       {isCopyToOpen && (

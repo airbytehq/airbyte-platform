@@ -61,9 +61,11 @@ describe("validateCronExpression", () => {
     ${"0 45 6 * * ?"}                                        | ${true}  | ${undefined}
     ${"0 5 0 ? * 7"}                                         | ${true}  | ${undefined}
     ${"40 4,16 * * * ?"}                                     | ${true}  | ${undefined}
+    ${"* * * * * * *"}                                       | ${true}  | ${undefined}
     ${"wildly invalid"}                                      | ${false} | ${'Cron expression "wildly invalid" must contain at least 6 fields (2 fields found)'}
     ${"* * * * *"}                                           | ${false} | ${'Cron expression "* * * * *" must contain at least 6 fields (5 fields found)'}
     ${"0 0 0 0 0 0"}                                         | ${false} | ${'"0" did not match regex at index 3'}
+    ${"* * * * * * ?"}                                       | ${false} | ${'"?" did not match regex at index 6'}
   `("'$expression' is valid: $isValid", ({ expression, isValid, message }) => {
     expect(validateCronExpression(expression).isValid).toEqual(isValid);
     expect(validateCronExpression(expression).message).toEqual(message);

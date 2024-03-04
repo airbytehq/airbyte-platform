@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
@@ -823,12 +823,7 @@ class DefaultJobCreatorTest {
         new ConfiguredAirbyteStream()
             .withStream(CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
             .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE),
-        // this stream is not being reset, so it should have APPEND destination sync mode
-        new ConfiguredAirbyteStream()
-            .withStream(CatalogHelpers.createAirbyteStream(STREAM3_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.APPEND)));
+            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE)));
 
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
         .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
@@ -890,12 +885,7 @@ class DefaultJobCreatorTest {
         new ConfiguredAirbyteStream()
             .withStream(CatalogHelpers.createAirbyteStream(STREAM2_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
             .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE),
-        // this stream is not being reset, so it should have APPEND destination sync mode
-        new ConfiguredAirbyteStream()
-            .withStream(CatalogHelpers.createAirbyteStream(STREAM3_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
-            .withSyncMode(SyncMode.FULL_REFRESH)
-            .withDestinationSyncMode(DestinationSyncMode.APPEND)));
+            .withDestinationSyncMode(DestinationSyncMode.OVERWRITE)));
 
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
         .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))

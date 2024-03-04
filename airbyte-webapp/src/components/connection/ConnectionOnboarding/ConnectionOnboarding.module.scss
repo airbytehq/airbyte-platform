@@ -1,6 +1,5 @@
 @use "scss/colors";
 @use "scss/variables";
-@use "scss/mixins";
 @forward "src/components/ui/Button/Button.module.scss";
 
 .container {
@@ -57,33 +56,13 @@
   margin-top: variables.$spacing-2xl;
 }
 
-.connectorButton {
-  @include mixins.shadow;
-
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  border: none;
-  padding: 18px;
-  cursor: pointer;
-  background: colors.$foreground;
-  border-radius: variables.$border-radius-2xl;
-  transition: box-shadow variables.$transition ease;
-
-  &:hover,
-  &:focus-visible {
-    box-shadow: variables.$box-shadow-raised;
-  }
-}
-
-.connectorIcon,
-.moreIcon {
+.moreIcon,
+.connectorIcon {
   width: 38px;
   height: 38px;
 }
 
 .moreIcon {
-  width: 28px;
-  height: 28px;
   color: colors.$blue;
 }
 

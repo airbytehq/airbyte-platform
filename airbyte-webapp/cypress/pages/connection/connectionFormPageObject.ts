@@ -2,12 +2,14 @@ import { getTestId } from "utils/selectors";
 
 const connectionNameInput = getTestId("connectionName");
 const expandConfigurationIcon = getTestId("configuration-card-expand-arrow");
-export const scheduleDropdown = getTestId("scheduleData");
+export const scheduleTypeDropdown = getTestId("schedule-type-listbox-button");
+export const basicScheduleDataDropdown = getTestId("basic-schedule-listbox-button");
+export const getListBoxDropdownOption = (option: string) => `${getTestId(`${option.toLowerCase()}-option`)}`;
 
 export const destinationPrefixEditButton = getTestId("destination-stream-prefix-edit-button");
 const destinationPrefixApplyButton = getTestId("destination-stream-names-apply-button");
 // const destinationPrefixCancelButton = getTestId("destination-stream-names-cancel-button");
-// const destinationMirror = getTestId("destination-stream-names-mirror-radio");
+const destinationMirror = getTestId("destination-stream-names-mirror-radio");
 const destinationPrefix = getTestId("destination-stream-names-prefix-radio");
 const destinationPrefixInput = getTestId("destination-stream-names-prefix-input");
 
@@ -22,10 +24,22 @@ const destinationNamespaceCustomInput = getTestId("namespace-definition-custom-f
 export const enterConnectionName = (name: string) => {
   cy.get(connectionNameInput).type(name);
 };
-
-export const selectSchedule = (value: string) => {
-  cy.get(scheduleDropdown).click();
-  cy.get(getTestId(value)).click();
+/**
+ * Select schedule type from dropdown: Schedule, Manual, Cron
+ * @param value
+ */
+export const selectScheduleType = (value: "Scheduled" | "Manual" | "Cron") => {
+  cy.get(scheduleTypeDropdown).click();
+  cy.get(getListBoxDropdownOption(value)).click();
+};
+/**
+ * Select schedule data from dropdown: Hourly
+ * @param value
+ */
+export const selectBasicScheduleData = (value: string) => {
+  cy.get(basicScheduleDataDropdown).click();
+  // example: frequency-1-hours-option
+  cy.get(getTestId(`frequency-${value.toLowerCase()}-option`)).click();
 };
 
 export const expandConfigurationSection = () => {
@@ -38,6 +52,12 @@ export const fillOutDestinationPrefix = (value: string) => {
   cy.get(destinationPrefixInput).clear();
   cy.get(destinationPrefixInput).type(value);
   cy.get(destinationPrefixInput).should("have.value", value);
+  cy.get(destinationPrefixApplyButton).click();
+};
+
+export const removeDestinationPrefix = () => {
+  cy.get(destinationPrefixEditButton).click();
+  cy.get(destinationMirror).click({ force: true });
   cy.get(destinationPrefixApplyButton).click();
 };
 

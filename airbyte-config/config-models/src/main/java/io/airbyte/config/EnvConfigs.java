@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config;
@@ -11,7 +11,6 @@ import io.airbyte.commons.constants.AirbyteCatalogConstants;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.commons.version.AirbyteVersion;
-import io.airbyte.commons.version.Version;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.storage.CloudStorageConfigs;
@@ -20,7 +19,6 @@ import io.airbyte.config.storage.CloudStorageConfigs.MinioConfig;
 import io.airbyte.config.storage.CloudStorageConfigs.S3Config;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -46,32 +44,25 @@ public class EnvConfigs implements Configs {
   public static final String AIRBYTE_ROLE = "AIRBYTE_ROLE";
   public static final String AIRBYTE_VERSION = "AIRBYTE_VERSION";
   public static final String INTERNAL_API_HOST = "INTERNAL_API_HOST";
-  public static final String AIRBYTE_API_AUTH_HEADER_NAME = "AIRBYTE_API_AUTH_HEADER_NAME";
   public static final String AIRBYTE_API_AUTH_HEADER_VALUE = "AIRBYTE_API_AUTH_HEADER_VALUE";
   public static final String WORKER_ENVIRONMENT = "WORKER_ENVIRONMENT";
-  public static final String SPEC_CACHE_BUCKET = "SPEC_CACHE_BUCKET";
   public static final String LOCAL_CONNECTOR_CATALOG_PATH = "LOCAL_CONNECTOR_CATALOG_PATH";
-  public static final String GITHUB_STORE_BRANCH = "GITHUB_STORE_BRANCH";
   public static final String WORKSPACE_ROOT = "WORKSPACE_ROOT";
   public static final String WORKSPACE_DOCKER_MOUNT = "WORKSPACE_DOCKER_MOUNT";
   public static final String LOCAL_ROOT = "LOCAL_ROOT";
   public static final String LOCAL_DOCKER_MOUNT = "LOCAL_DOCKER_MOUNT";
+  public static final String LOG4J_CONFIGURATION_FILE = "LOG4J_CONFIGURATION_FILE";
   public static final String CONFIG_ROOT = "CONFIG_ROOT";
   public static final String DOCKER_NETWORK = "DOCKER_NETWORK";
-  public static final String TRACKING_STRATEGY = "TRACKING_STRATEGY";
   public static final String JOB_ERROR_REPORTING_STRATEGY = "JOB_ERROR_REPORTING_STRATEGY";
   public static final String JOB_ERROR_REPORTING_SENTRY_DSN = "JOB_ERROR_REPORTING_SENTRY_DSN";
   public static final String DEPLOYMENT_MODE = "DEPLOYMENT_MODE";
   public static final String DATABASE_USER = "DATABASE_USER";
   public static final String DATABASE_PASSWORD = "DATABASE_PASSWORD";
   public static final String DATABASE_URL = "DATABASE_URL";
-  public static final String CONFIG_DATABASE_USER = "CONFIG_DATABASE_USER";
-  public static final String CONFIG_DATABASE_PASSWORD = "CONFIG_DATABASE_PASSWORD";
-  public static final String CONFIG_DATABASE_URL = "CONFIG_DATABASE_URL";
-  public static final String RUN_DATABASE_MIGRATION_ON_STARTUP = "RUN_DATABASE_MIGRATION_ON_STARTUP";
-  public static final String WEBAPP_URL = "WEBAPP_URL";
   public static final String JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY = "JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY";
   public static final String JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY = "JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY";
+  public static final String JOB_KUBE_SERVICEACCOUNT = "JOB_KUBE_SERVICEACCOUNT";
   public static final String JOB_KUBE_TOLERATIONS = "JOB_KUBE_TOLERATIONS";
   public static final String JOB_KUBE_NODE_SELECTORS = "JOB_KUBE_NODE_SELECTORS";
   public static final String JOB_ISOLATED_KUBE_NODE_SELECTORS = "JOB_ISOLATED_KUBE_NODE_SELECTORS";
@@ -97,17 +88,8 @@ public class EnvConfigs implements Configs {
   public static final String SOCAT_KUBE_CPU_REQUEST = "SOCAT_KUBE_CPU_REQUEST";
   public static final String JOB_KUBE_BUSYBOX_IMAGE = "JOB_KUBE_BUSYBOX_IMAGE";
   public static final String JOB_KUBE_CURL_IMAGE = "JOB_KUBE_CURL_IMAGE";
-  public static final String SYNC_JOB_MAX_ATTEMPTS = "SYNC_JOB_MAX_ATTEMPTS";
-  public static final String SYNC_JOB_MAX_TIMEOUT_DAYS = "SYNC_JOB_MAX_TIMEOUT_DAYS";
   public static final String SYNC_JOB_INIT_RETRY_TIMEOUT_MINUTES = "SYNC_JOB_INIT_RETRY_TIMEOUT_MINUTES";
   private static final String CONNECTOR_SPECIFIC_RESOURCE_DEFAULTS_ENABLED = "CONNECTOR_SPECIFIC_RESOURCE_DEFAULTS_ENABLED";
-  public static final String MAX_SPEC_WORKERS = "MAX_SPEC_WORKERS";
-  public static final String MAX_CHECK_WORKERS = "MAX_CHECK_WORKERS";
-  public static final String MAX_DISCOVER_WORKERS = "MAX_DISCOVER_WORKERS";
-  public static final String MAX_SYNC_WORKERS = "MAX_SYNC_WORKERS";
-  public static final String MAX_NOTIFY_WORKERS = "MAX_NOTIFY_WORKERS";
-  private static final String TEMPORAL_HOST = "TEMPORAL_HOST";
-  private static final String TEMPORAL_WORKER_PORTS = "TEMPORAL_WORKER_PORTS";
   private static final String TEMPORAL_HISTORY_RETENTION_IN_DAYS = "TEMPORAL_HISTORY_RETENTION_IN_DAYS";
   public static final String JOB_KUBE_NAMESPACE = "JOB_KUBE_NAMESPACE";
   public static final String JOB_MAIN_CONTAINER_CPU_REQUEST = "JOB_MAIN_CONTAINER_CPU_REQUEST";
@@ -121,14 +103,6 @@ public class EnvConfigs implements Configs {
   public static final String PUBLISH_METRICS = "PUBLISH_METRICS";
   public static final String DD_AGENT_HOST = "DD_AGENT_HOST";
   public static final String DD_DOGSTATSD_PORT = "DD_DOGSTATSD_PORT";
-  private static final String CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION = "CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION";
-  private static final String CONFIGS_DATABASE_INITIALIZATION_TIMEOUT_MS = "CONFIGS_DATABASE_INITIALIZATION_TIMEOUT_MS";
-  private static final String JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION = "JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION";
-  private static final String JOBS_DATABASE_INITIALIZATION_TIMEOUT_MS = "JOBS_DATABASE_INITIALIZATION_TIMEOUT_MS";
-  private static final String CONTAINER_ORCHESTRATOR_ENABLED = "CONTAINER_ORCHESTRATOR_ENABLED";
-  private static final String CONTAINER_ORCHESTRATOR_SECRET_NAME = "CONTAINER_ORCHESTRATOR_SECRET_NAME";
-  private static final String CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH = "CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH";
-  private static final String CONTAINER_ORCHESTRATOR_IMAGE = "CONTAINER_ORCHESTRATOR_IMAGE";
   public static final String DD_CONSTANT_TAGS = "DD_CONSTANT_TAGS";
   public static final String STATE_STORAGE_S3_BUCKET_NAME = "STATE_STORAGE_S3_BUCKET_NAME";
   public static final String STATE_STORAGE_S3_REGION = "STATE_STORAGE_S3_REGION";
@@ -141,37 +115,6 @@ public class EnvConfigs implements Configs {
   public static final String STATE_STORAGE_GCS_BUCKET_NAME = "STATE_STORAGE_GCS_BUCKET_NAME";
   public static final String STATE_STORAGE_GCS_APPLICATION_CREDENTIALS = "STATE_STORAGE_GCS_APPLICATION_CREDENTIALS";
 
-  private static final String TEMPORAL_CLOUD_ENABLED = "TEMPORAL_CLOUD_ENABLED";
-  private static final String TEMPORAL_CLOUD_HOST = "TEMPORAL_CLOUD_HOST";
-  private static final String TEMPORAL_CLOUD_NAMESPACE = "TEMPORAL_CLOUD_NAMESPACE";
-  private static final String TEMPORAL_CLOUD_CLIENT_CERT = "TEMPORAL_CLOUD_CLIENT_CERT";
-  private static final String TEMPORAL_CLOUD_CLIENT_KEY = "TEMPORAL_CLOUD_CLIENT_KEY";
-
-  public static final String ACTIVITY_MAX_TIMEOUT_SECOND = "ACTIVITY_MAX_TIMEOUT_SECOND";
-  public static final String ACTIVITY_MAX_ATTEMPT = "ACTIVITY_MAX_ATTEMPT";
-  public static final String ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS = "ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS";
-  public static final String ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS = "ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS";
-  public static final String WORKFLOW_FAILURE_RESTART_DELAY_SECONDS = "WORKFLOW_FAILURE_RESTART_DELAY_SECONDS";
-
-  private static final String SHOULD_RUN_GET_SPEC_WORKFLOWS = "SHOULD_RUN_GET_SPEC_WORKFLOWS";
-  private static final String SHOULD_RUN_CHECK_CONNECTION_WORKFLOWS = "SHOULD_RUN_CHECK_CONNECTION_WORKFLOWS";
-  private static final String SHOULD_RUN_DISCOVER_WORKFLOWS = "SHOULD_RUN_DISCOVER_WORKFLOWS";
-  private static final String SHOULD_RUN_SYNC_WORKFLOWS = "SHOULD_RUN_SYNC_WORKFLOWS";
-  private static final String SHOULD_RUN_CONNECTION_MANAGER_WORKFLOWS = "SHOULD_RUN_CONNECTION_MANAGER_WORKFLOWS";
-  private static final String SHOULD_RUN_NOTIFY_WORKFLOWS = "SHOULD_RUN_NOTIFY_WORKFLOWS";
-
-  // Worker - Control plane configs
-  private static final String DEFAULT_DATA_SYNC_TASK_QUEUES = "SYNC"; // should match TemporalJobType.SYNC.name()
-
-  // Worker - Data Plane configs
-  private static final String DATA_SYNC_TASK_QUEUES = "DATA_SYNC_TASK_QUEUES";
-  private static final String CONTROL_PLANE_AUTH_ENDPOINT = "CONTROL_PLANE_AUTH_ENDPOINT";
-  private static final String DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH = "DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH";
-  private static final String DATA_PLANE_SERVICE_ACCOUNT_EMAIL = "DATA_PLANE_SERVICE_ACCOUNT_EMAIL";
-
-  private static final String MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE = "MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE";
-  private static final String MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE = "MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE";
-
   public static final String METRIC_CLIENT = "METRIC_CLIENT";
   public static final String OTEL_COLLECTOR_ENDPOINT = "OTEL_COLLECTOR_ENDPOINT";
 
@@ -179,46 +122,17 @@ public class EnvConfigs implements Configs {
   public static final String SPEC_JOB_KUBE_NODE_SELECTORS = "SPEC_JOB_KUBE_NODE_SELECTORS";
   public static final String CHECK_JOB_KUBE_NODE_SELECTORS = "CHECK_JOB_KUBE_NODE_SELECTORS";
   public static final String DISCOVER_JOB_KUBE_NODE_SELECTORS = "DISCOVER_JOB_KUBE_NODE_SELECTORS";
-  public static final String SPEC_JOB_KUBE_ANNOTATIONS = "SPEC_JOB_KUBE_ANNOTATIONS";
-  public static final String CHECK_JOB_KUBE_ANNOTATIONS = "CHECK_JOB_KUBE_ANNOTATIONS";
-  public static final String DISCOVER_JOB_KUBE_ANNOTATIONS = "DISCOVER_JOB_KUBE_ANNOTATIONS";
 
-  private static final String REPLICATION_ORCHESTRATOR_CPU_REQUEST = "REPLICATION_ORCHESTRATOR_CPU_REQUEST";
-  private static final String REPLICATION_ORCHESTRATOR_CPU_LIMIT = "REPLICATION_ORCHESTRATOR_CPU_LIMIT";
-  private static final String REPLICATION_ORCHESTRATOR_MEMORY_REQUEST = "REPLICATION_ORCHESTRATOR_MEMORY_REQUEST";
-  private static final String REPLICATION_ORCHESTRATOR_MEMORY_LIMIT = "REPLICATION_ORCHESTRATOR_MEMORY_LIMIT";
+  public static final String WORKER_LOGS_STORAGE_TYPE = "WORKER_LOGS_STORAGE_TYPE";
+  public static final String WORKER_STATE_STORAGE_TYPE = "WORKER_STATE_STORAGE_TYPE";
 
-  private static final String VAULT_ADDRESS = "VAULT_ADDRESS";
-  private static final String VAULT_PREFIX = "VAULT_PREFIX";
-  private static final String VAULT_AUTH_TOKEN = "VAULT_AUTH_TOKEN";
-
-  // defaults
-  private static final String DEFAULT_SPEC_CACHE_BUCKET = "io-airbyte-cloud-spec-cache";
-  private static final String DEFAULT_GITHUB_STORE_BRANCH = "master";
   private static final String DEFAULT_JOB_KUBE_NAMESPACE = "default";
-  private static final String DEFAULT_JOB_CPU_REQUIREMENT = null;
-  private static final String DEFAULT_JOB_MEMORY_REQUIREMENT = null;
   private static final String DEFAULT_JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY = "IfNotPresent";
   private static final String DEFAULT_JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY = "IfNotPresent";
-  private static final String SECRET_STORE_GCP_PROJECT_ID = "SECRET_STORE_GCP_PROJECT_ID";
-  private static final String SECRET_STORE_GCP_CREDENTIALS = "SECRET_STORE_GCP_CREDENTIALS";
-  private static final String AWS_ACCESS_KEY = "AWS_ACCESS_KEY";
-  private static final String AWS_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY";
   private static final String DEFAULT_JOB_KUBE_SOCAT_IMAGE = "alpine/socat:1.7.4.4-r0";
   private static final String DEFAULT_JOB_KUBE_BUSYBOX_IMAGE = "busybox:1.35";
   private static final String DEFAULT_JOB_KUBE_CURL_IMAGE = "curlimages/curl:7.87.0";
-  private static final int DEFAULT_DATABASE_INITIALIZATION_TIMEOUT_MS = 60 * 1000;
-  private static final long DEFAULT_MAX_SPEC_WORKERS = 5;
-  private static final long DEFAULT_MAX_CHECK_WORKERS = 5;
-  private static final long DEFAULT_MAX_DISCOVER_WORKERS = 5;
-  private static final long DEFAULT_MAX_SYNC_WORKERS = 5;
-  private static final long DEFAULT_MAX_NOTIFY_WORKERS = 5;
   private static final String DEFAULT_NETWORK = "host";
-  private static final Version DEFAULT_AIRBYTE_PROTOCOL_VERSION_MAX = new Version("0.3.0");
-  private static final Version DEFAULT_AIRBYTE_PROTOCOL_VERSION_MIN = new Version("0.0.0");
-  private static final String AUTO_DETECT_SCHEMA = "AUTO_DETECT_SCHEMA";
-  private static final String APPLY_FIELD_SELECTION = "APPLY_FIELD_SELECTION";
-  private static final String FIELD_SELECTION_WORKSPACES = "FIELD_SELECTION_WORKSPACES";
 
   public static final Map<String, Function<EnvConfigs, String>> JOB_SHARED_ENVS = Map.of(
       AIRBYTE_VERSION, (instance) -> instance.getAirbyteVersion().serialize(),
@@ -317,27 +231,8 @@ public class EnvConfigs implements Configs {
   }
 
   @Override
-  public Version getAirbyteProtocolVersionMax() {
-    return DEFAULT_AIRBYTE_PROTOCOL_VERSION_MAX;
-  }
-
-  @Override
-  public Version getAirbyteProtocolVersionMin() {
-    return DEFAULT_AIRBYTE_PROTOCOL_VERSION_MIN;
-  }
-
-  @Override
   public String getAirbyteVersionOrWarning() {
     return Optional.ofNullable(getEnv(AIRBYTE_VERSION)).orElse("version not set");
-  }
-
-  public String getGithubStoreBranch() {
-    return getEnvOrDefault(GITHUB_STORE_BRANCH, DEFAULT_GITHUB_STORE_BRANCH);
-  }
-
-  @Override
-  public String getSpecCacheBucket() {
-    return getEnvOrDefault(SPEC_CACHE_BUCKET, DEFAULT_SPEC_CACHE_BUCKET);
   }
 
   public String getLocalCatalogPath() {
@@ -393,45 +288,11 @@ public class EnvConfigs implements Configs {
   }
 
   // Secrets
-  @Override
-  public String getSecretStoreGcpCredentials() {
-    return getEnv(SECRET_STORE_GCP_CREDENTIALS);
-  }
-
-  @Override
-  public String getSecretStoreGcpProjectId() {
-    return getEnv(SECRET_STORE_GCP_PROJECT_ID);
-  }
 
   @Override
   public SecretPersistenceType getSecretPersistenceType() {
     final var secretPersistenceStr = getEnvOrDefault(SECRET_PERSISTENCE, SecretPersistenceType.TESTING_CONFIG_DB_TABLE.name());
     return SecretPersistenceType.valueOf(secretPersistenceStr);
-  }
-
-  @Override
-  public String getVaultAddress() {
-    return getEnv(VAULT_ADDRESS);
-  }
-
-  @Override
-  public String getVaultPrefix() {
-    return getEnvOrDefault(VAULT_PREFIX, "");
-  }
-
-  @Override
-  public String getVaultToken() {
-    return getEnv(VAULT_AUTH_TOKEN);
-  }
-
-  @Override
-  public String getAwsAccessKey() {
-    return getEnv(AWS_ACCESS_KEY);
-  }
-
-  @Override
-  public String getAwsSecretAccessKey() {
-    return getEnv(AWS_SECRET_ACCESS_KEY);
   }
 
   // Database
@@ -451,119 +312,8 @@ public class EnvConfigs implements Configs {
   }
 
   @Override
-  public String getJobsDatabaseMinimumFlywayMigrationVersion() {
-    return getEnsureEnv(JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION);
-  }
-
-  @Override
-  public long getJobsDatabaseInitializationTimeoutMs() {
-    return getEnvOrDefault(JOBS_DATABASE_INITIALIZATION_TIMEOUT_MS, DEFAULT_DATABASE_INITIALIZATION_TIMEOUT_MS);
-  }
-
-  @Override
-  public String getConfigDatabaseUser() {
-    // Default to reuse the job database
-    return getEnvOrDefault(CONFIG_DATABASE_USER, getDatabaseUser());
-  }
-
-  @Override
-  public String getConfigDatabasePassword() {
-    // Default to reuse the job database
-    return getEnvOrDefault(CONFIG_DATABASE_PASSWORD, getDatabasePassword(), true);
-  }
-
-  @Override
-  public String getConfigDatabaseUrl() {
-    // Default to reuse the job database
-    return getEnvOrDefault(CONFIG_DATABASE_URL, getDatabaseUrl());
-  }
-
-  @Override
-  public String getConfigsDatabaseMinimumFlywayMigrationVersion() {
-    return getEnsureEnv(CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION);
-  }
-
-  @Override
-  public long getConfigsDatabaseInitializationTimeoutMs() {
-    return getEnvOrDefault(CONFIGS_DATABASE_INITIALIZATION_TIMEOUT_MS, DEFAULT_DATABASE_INITIALIZATION_TIMEOUT_MS);
-  }
-
-  @Override
-  public boolean runDatabaseMigrationOnStartup() {
-    return getEnvOrDefault(RUN_DATABASE_MIGRATION_ON_STARTUP, true);
-  }
-
-  // Temporal Cloud
-  @Override
-  public boolean temporalCloudEnabled() {
-    return getEnvOrDefault(TEMPORAL_CLOUD_ENABLED, false);
-  }
-
-  @Override
-  public String getTemporalCloudHost() {
-    return getEnvOrDefault(TEMPORAL_CLOUD_HOST, "");
-  }
-
-  @Override
-  public String getTemporalCloudNamespace() {
-    return getEnvOrDefault(TEMPORAL_CLOUD_NAMESPACE, "");
-  }
-
-  @Override
-  public String getTemporalCloudClientCert() {
-    return getEnvOrDefault(TEMPORAL_CLOUD_CLIENT_CERT, "");
-  }
-
-  @Override
-  public String getTemporalCloudClientKey() {
-    return getEnvOrDefault(TEMPORAL_CLOUD_CLIENT_KEY, "");
-  }
-
-  // Airbyte Services
-  @Override
-  public String getTemporalHost() {
-    return getEnvOrDefault(TEMPORAL_HOST, "airbyte-temporal:7233");
-  }
-
-  @Override
   public int getTemporalRetentionInDays() {
     return getEnvOrDefault(TEMPORAL_HISTORY_RETENTION_IN_DAYS, DEFAULT_TEMPORAL_HISTORY_RETENTION_IN_DAYS);
-  }
-
-  @Override
-  public String getAirbyteApiHost() {
-    return getEnsureEnv(INTERNAL_API_HOST).split(":")[0];
-  }
-
-  @Override
-  public int getAirbyteApiPort() {
-    return Integer.parseInt(getEnsureEnv(INTERNAL_API_HOST).split(":")[1]);
-  }
-
-  @Override
-  public String getAirbyteApiAuthHeaderName() {
-    return getEnvOrDefault(AIRBYTE_API_AUTH_HEADER_NAME, "");
-  }
-
-  @Override
-  public String getAirbyteApiAuthHeaderValue() {
-    return getEnvOrDefault(AIRBYTE_API_AUTH_HEADER_VALUE, "");
-  }
-
-  @Override
-  public String getWebappUrl() {
-    return getEnsureEnv(WEBAPP_URL);
-  }
-
-  // Jobs
-  @Override
-  public int getSyncJobMaxAttempts() {
-    return Integer.parseInt(getEnvOrDefault(SYNC_JOB_MAX_ATTEMPTS, "3"));
-  }
-
-  @Override
-  public int getSyncJobMaxTimeoutDays() {
-    return Integer.parseInt(getEnvOrDefault(SYNC_JOB_MAX_TIMEOUT_DAYS, "3"));
   }
 
   @Override
@@ -691,36 +441,6 @@ public class EnvConfigs implements Configs {
   @Override
   public Map<String, String> getJobKubeAnnotations() {
     return splitKVPairsFromEnvString(getEnvOrDefault(JOB_KUBE_ANNOTATIONS, ""));
-  }
-
-  /**
-   * Returns a map of node selectors for Spec job pods specifically.
-   *
-   * @return map containing kv pairs of node selectors, or empty optional if none present.
-   */
-  @Override
-  public Map<String, String> getSpecJobKubeAnnotations() {
-    return splitKVPairsFromEnvString(getEnvOrDefault(SPEC_JOB_KUBE_ANNOTATIONS, ""));
-  }
-
-  /**
-   * Returns a map of node selectors for Check job pods specifically.
-   *
-   * @return map containing kv pairs of node selectors, or empty optional if none present.
-   */
-  @Override
-  public Map<String, String> getCheckJobKubeAnnotations() {
-    return splitKVPairsFromEnvString(getEnvOrDefault(CHECK_JOB_KUBE_ANNOTATIONS, ""));
-  }
-
-  /**
-   * Returns a map of node selectors for Discover job pods specifically.
-   *
-   * @return map containing kv pairs of node selectors, or empty optional if none present.
-   */
-  @Override
-  public Map<String, String> getDiscoverJobKubeAnnotations() {
-    return splitKVPairsFromEnvString(getEnvOrDefault(DISCOVER_JOB_KUBE_ANNOTATIONS, ""));
   }
 
   @Override
@@ -866,16 +586,6 @@ public class EnvConfigs implements Configs {
   }
 
   @Override
-  public int getMaxFailedJobsInARowBeforeConnectionDisable() {
-    return getEnvOrDefault(MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE, DEFAULT_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE);
-  }
-
-  @Override
-  public int getMaxDaysOfOnlyFailedJobsBeforeConnectionDisable() {
-    return getEnvOrDefault(MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE, DEFAULT_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE);
-  }
-
-  @Override
   public LogConfigs getLogConfigs() {
     return logConfigs;
   }
@@ -915,18 +625,6 @@ public class EnvConfigs implements Configs {
   }
 
   @Override
-  public TrackingStrategy getTrackingStrategy() {
-    return getEnvOrDefault(TRACKING_STRATEGY, TrackingStrategy.LOGGING, s -> {
-      try {
-        return TrackingStrategy.valueOf(s.toUpperCase());
-      } catch (final IllegalArgumentException e) {
-        LOGGER.info(s + " not recognized, defaulting to " + TrackingStrategy.LOGGING);
-        return TrackingStrategy.LOGGING;
-      }
-    });
-  }
-
-  @Override
   public JobErrorReportingStrategy getJobErrorReportingStrategy() {
     return getEnvOrDefault(JOB_ERROR_REPORTING_STRATEGY, JobErrorReportingStrategy.LOGGING, s -> {
       try {
@@ -945,160 +643,6 @@ public class EnvConfigs implements Configs {
 
   // APPLICATIONS
   // Worker
-  @Override
-  public MaxWorkersConfig getMaxWorkers() {
-    return new MaxWorkersConfig(
-        Math.toIntExact(getEnvOrDefault(MAX_SPEC_WORKERS, DEFAULT_MAX_SPEC_WORKERS)),
-        Math.toIntExact(getEnvOrDefault(MAX_CHECK_WORKERS, DEFAULT_MAX_CHECK_WORKERS)),
-        Math.toIntExact(getEnvOrDefault(MAX_DISCOVER_WORKERS, DEFAULT_MAX_DISCOVER_WORKERS)),
-        Math.toIntExact(getEnvOrDefault(MAX_SYNC_WORKERS, DEFAULT_MAX_SYNC_WORKERS)),
-        Math.toIntExact(getEnvOrDefault(MAX_NOTIFY_WORKERS, DEFAULT_MAX_NOTIFY_WORKERS)));
-  }
-
-  @Override
-  public boolean shouldRunGetSpecWorkflows() {
-    return getEnvOrDefault(SHOULD_RUN_GET_SPEC_WORKFLOWS, true);
-  }
-
-  @Override
-  public boolean shouldRunCheckConnectionWorkflows() {
-    return getEnvOrDefault(SHOULD_RUN_CHECK_CONNECTION_WORKFLOWS, true);
-  }
-
-  @Override
-  public boolean shouldRunDiscoverWorkflows() {
-    return getEnvOrDefault(SHOULD_RUN_DISCOVER_WORKFLOWS, true);
-  }
-
-  @Override
-  public boolean shouldRunSyncWorkflows() {
-    return getEnvOrDefault(SHOULD_RUN_SYNC_WORKFLOWS, true);
-  }
-
-  @Override
-  public boolean shouldRunConnectionManagerWorkflows() {
-    return getEnvOrDefault(SHOULD_RUN_CONNECTION_MANAGER_WORKFLOWS, true);
-  }
-
-  @Override
-  public boolean shouldRunNotifyWorkflows() {
-    return getEnvOrDefault(SHOULD_RUN_NOTIFY_WORKFLOWS, true);
-  }
-
-  // Worker - Data plane
-
-  @Override
-  public Set<String> getDataSyncTaskQueues() {
-    final var taskQueues = getEnvOrDefault(DATA_SYNC_TASK_QUEUES, DEFAULT_DATA_SYNC_TASK_QUEUES);
-    if (taskQueues.isEmpty()) {
-      return new HashSet<>();
-    }
-    return Arrays.stream(taskQueues.split(",")).collect(Collectors.toSet());
-  }
-
-  @Override
-  public String getControlPlaneAuthEndpoint() {
-    return getEnvOrDefault(CONTROL_PLANE_AUTH_ENDPOINT, "");
-  }
-
-  @Override
-  public String getDataPlaneServiceAccountCredentialsPath() {
-    return getEnvOrDefault(DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH, "");
-  }
-
-  @Override
-  public String getDataPlaneServiceAccountEmail() {
-    return getEnvOrDefault(DATA_PLANE_SERVICE_ACCOUNT_EMAIL, "");
-  }
-
-  @Override
-  public Set<Integer> getTemporalWorkerPorts() {
-    final var ports = getEnvOrDefault(TEMPORAL_WORKER_PORTS, "");
-    if (ports.isEmpty()) {
-      return new HashSet<>();
-    }
-    return Arrays.stream(ports.split(",")).map(Integer::valueOf).collect(Collectors.toSet());
-  }
-
-  @Override
-  public boolean getContainerOrchestratorEnabled() {
-    return getEnvOrDefault(CONTAINER_ORCHESTRATOR_ENABLED, false, Boolean::valueOf);
-  }
-
-  @Override
-  public String getContainerOrchestratorSecretName() {
-    return getEnvOrDefault(CONTAINER_ORCHESTRATOR_SECRET_NAME, null);
-  }
-
-  @Override
-  public String getContainerOrchestratorSecretMountPath() {
-    return getEnvOrDefault(CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH, null);
-  }
-
-  @Override
-  public String getContainerOrchestratorImage() {
-    return getEnvOrDefault(CONTAINER_ORCHESTRATOR_IMAGE, "airbyte/container-orchestrator:" + getAirbyteVersion().serialize());
-  }
-
-  @Override
-  public String getReplicationOrchestratorCpuRequest() {
-    return getEnvOrDefault(REPLICATION_ORCHESTRATOR_CPU_REQUEST, null);
-  }
-
-  @Override
-  public String getReplicationOrchestratorCpuLimit() {
-    return getEnvOrDefault(REPLICATION_ORCHESTRATOR_CPU_LIMIT, null);
-  }
-
-  @Override
-  public String getReplicationOrchestratorMemoryRequest() {
-    return getEnvOrDefault(REPLICATION_ORCHESTRATOR_MEMORY_REQUEST, null);
-  }
-
-  @Override
-  public String getReplicationOrchestratorMemoryLimit() {
-    return getEnvOrDefault(REPLICATION_ORCHESTRATOR_MEMORY_LIMIT, null);
-  }
-
-  @Override
-  public int getMaxActivityTimeoutSecond() {
-    return Integer.parseInt(getEnvOrDefault(ACTIVITY_MAX_TIMEOUT_SECOND, "120"));
-  }
-
-  @Override
-  public int getInitialDelayBetweenActivityAttemptsSeconds() {
-    return Integer.parseInt(getEnvOrDefault(ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS, "30"));
-  }
-
-  @Override
-  public int getMaxDelayBetweenActivityAttemptsSeconds() {
-    return Integer.parseInt(getEnvOrDefault(ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS, String.valueOf(10 * 60)));
-  }
-
-  @Override
-  public int getWorkflowFailureRestartDelaySeconds() {
-    return Integer.parseInt(getEnvOrDefault(WORKFLOW_FAILURE_RESTART_DELAY_SECONDS, String.valueOf(10 * 60)));
-  }
-
-  @Override
-  public boolean getAutoDetectSchema() {
-    return getEnvOrDefault(AUTO_DETECT_SCHEMA, true);
-  }
-
-  @Override
-  public boolean getApplyFieldSelection() {
-    return getEnvOrDefault(APPLY_FIELD_SELECTION, false);
-  }
-
-  @Override
-  public String getFieldSelectionWorkspaces() {
-    return getEnvOrDefault(FIELD_SELECTION_WORKSPACES, "");
-  }
-
-  @Override
-  public int getActivityNumberOfAttempt() {
-    return Integer.parseInt(getEnvOrDefault(ACTIVITY_MAX_ATTEMPT, "5"));
-  }
 
   @Override
   public String getCdkPython() {
@@ -1118,14 +662,6 @@ public class EnvConfigs implements Configs {
   // Helpers
   public String getEnvOrDefault(final String key, final String defaultValue) {
     return getEnvOrDefault(key, defaultValue, Function.identity(), false);
-  }
-
-  public String getEnvOrDefault(final String key, final String defaultValue, final boolean isSecret) {
-    return getEnvOrDefault(key, defaultValue, Function.identity(), isSecret);
-  }
-
-  public long getEnvOrDefault(final String key, final long defaultValue) {
-    return getEnvOrDefault(key, defaultValue, Long::parseLong, false);
   }
 
   public int getEnvOrDefault(final String key, final int defaultValue) {

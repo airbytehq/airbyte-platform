@@ -4,7 +4,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { Button } from "components/ui/Button";
 
 import { useTryNotificationWebhook } from "core/api";
-import { NotificationReadStatus, NotificationSettings } from "core/request/AirbyteClient";
+import { NotificationReadStatus, NotificationSettings } from "core/api/types/AirbyteClient";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { notificationTriggerMap } from "./NotificationSettingsForm";

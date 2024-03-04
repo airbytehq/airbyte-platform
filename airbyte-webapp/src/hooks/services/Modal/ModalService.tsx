@@ -5,8 +5,6 @@ import { Modal } from "components/ui/Modal";
 
 import { ModalOptions, ModalResult, ModalServiceContext } from "./types";
 
-export class ModalCancel extends Error {}
-
 const modalServiceContext = React.createContext<ModalServiceContext | undefined>(undefined);
 
 export const ModalServiceProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
@@ -46,7 +44,8 @@ export const ModalServiceProvider: React.FC<React.PropsWithChildren<unknown>> = 
           title={modalOptions.title}
           size={modalOptions.size}
           testId={modalOptions.testId}
-          onClose={modalOptions.preventCancel ? undefined : () => resultSubjectRef.current?.next({ type: "canceled" })}
+          onCancel={modalOptions.preventCancel ? undefined : () => resultSubjectRef.current?.next({ type: "canceled" })}
+          onClose={(reason) => resultSubjectRef.current?.next({ type: "closed", reason })}
         >
           <modalOptions.content
             onCancel={() => resultSubjectRef.current?.next({ type: "canceled" })}

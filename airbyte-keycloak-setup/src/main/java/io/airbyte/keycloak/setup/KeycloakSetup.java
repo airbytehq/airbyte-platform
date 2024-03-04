@@ -1,9 +1,10 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.keycloak.setup;
 
+import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.client.HttpClient;
@@ -21,12 +22,15 @@ public class KeycloakSetup {
 
   private final HttpClient httpClient;
   private final KeycloakServer keycloakServer;
+  private final AirbyteKeycloakConfiguration keycloakConfiguration;
 
   public KeycloakSetup(
                        final HttpClient httpClient,
-                       final KeycloakServer keycloakServer) {
+                       final KeycloakServer keycloakServer,
+                       final AirbyteKeycloakConfiguration keycloakConfiguration) {
     this.httpClient = httpClient;
     this.keycloakServer = keycloakServer;
+    this.keycloakConfiguration = keycloakConfiguration;
   }
 
   public void run() {
@@ -38,7 +42,11 @@ public class KeycloakSetup {
       log.info("Keycloak server response: {}", response.getStatus());
       log.info("Starting admin Keycloak client with url: {}", keycloakUrl);
 
-      keycloakServer.createAirbyteRealm();
+      if (keycloakConfiguration.getResetRealm()) {
+        keycloakServer.recreateAirbyteRealm();
+      } else {
+        keycloakServer.createAirbyteRealm();
+      }
     } finally {
       keycloakServer.closeKeycloakAdminClient();
     }

@@ -98,6 +98,31 @@ spec:
             secretKeyRef:
               name: {{ .Release.Name }}-airbyte-secrets
               key: DATABASE_USER
+        - name: MICROMETER_METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_ENABLED
+        - name: MICROMETER_METRICS_STATSD_FLAVOR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STATSD_FLAVOR
+        - name: SEGMENT_WRITE_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: SEGMENT_WRITE_KEY
+        - name: STATSD_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_HOST
+        - name: STATSD_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_PORT
         - name: TRACKING_STRATEGY
           valueFrom:
             configMapKeyRef:
@@ -244,6 +269,15 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: KEYCLOAK_INTERNAL_HOST
+        - name: CONNECTOR_BUILDER_SERVER_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONNECTOR_BUILDER_SERVER_API_HOST
+        - name: AIRBYTE_API_AUTH_HEADER_NAME
+          value: "X-Airbyte-Auth"
+        - name: AIRBYTE_API_AUTH_HEADER_VALUE
+          value: "Internal server"
         {{- end }}
         # Values from secret
         {{- if .Values.secrets }}

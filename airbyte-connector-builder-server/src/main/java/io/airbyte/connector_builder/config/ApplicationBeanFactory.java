@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector_builder.config;
@@ -43,7 +43,7 @@ public class ApplicationBeanFactory {
     return new SynchronousPythonCdkCommandRunner(
         new AirbyteFileWriterImpl(),
         // This should eventually be constructed via DI.
-        VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(false),
+        VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(true),
         this.getPython(),
         this.getCdkEntrypoint());
   }

@@ -1,0 +1,23 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.changeRoleMenuItem {
+  &__button {
+    width: 100%;
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+
+    &:disabled {
+      cursor: default;
+    }
+
+    &:not(:disabled):hover {
+      background-color: colors.$blue-30;
+    }
+
+    &--active {
+      background-color: colors.$blue-50;
+    }
+  }
+}

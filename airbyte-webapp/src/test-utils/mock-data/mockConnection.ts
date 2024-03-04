@@ -1,6 +1,6 @@
 /* eslint-disable no-template-curly-in-string */
 import { ConnectorIds } from "area/connector/utils";
-import { WebBackendConnectionRead } from "core/request/AirbyteClient";
+import { WebBackendConnectionRead } from "core/api/types/AirbyteClient";
 
 export const mockConnection: WebBackendConnectionRead = {
   connectionId: "a9c8e4b5-349d-4a17-bdff-5ad2f6fbd611",
@@ -294,7 +294,7 @@ export const mockConnection: WebBackendConnectionRead = {
         config: {
           syncMode: "full_refresh",
           cursorField: [],
-          destinationSyncMode: "append",
+          destinationSyncMode: "overwrite",
           primaryKey: [],
           aliasName: "pokemon",
           selected: true,
@@ -581,7 +581,7 @@ export const mockConnection: WebBackendConnectionRead = {
         config: {
           syncMode: "full_refresh",
           cursorField: [],
-          destinationSyncMode: "append",
+          destinationSyncMode: "overwrite",
           primaryKey: [],
           aliasName: "pokemon",
           selected: false,
@@ -868,7 +868,7 @@ export const mockConnection: WebBackendConnectionRead = {
         config: {
           syncMode: "full_refresh",
           cursorField: [],
-          destinationSyncMode: "append",
+          destinationSyncMode: "overwrite",
           primaryKey: [],
           aliasName: "pokemon",
           selected: true,

@@ -1,13 +1,17 @@
 import { screen } from "@testing-library/react";
 
-import { render } from "test-utils";
+import { mocked, render } from "test-utils";
 
+import { trackError } from "core/utils/datadog";
 import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
-import * as useAppMonitoringService from "hooks/services/AppMonitoringService/AppMonitoringService";
 
 import { ApiErrorBoundary } from "./ApiErrorBoundary";
 
 const mockError = new Error("oh no!");
+
+jest.mock("core/utils/datadog", () => ({
+  trackError: jest.fn(),
+}));
 
 const ChildThatThrowsError = () => {
   throw mockError;
@@ -54,19 +58,13 @@ describe(`${ApiErrorBoundary.name}`, () => {
   });
 
   it("should log the error when it throws", async () => {
-    const mockTrackError = jest.fn();
-
-    jest.spyOn(useAppMonitoringService, "useAppMonitoringService").mockImplementation(() => ({
-      trackError: mockTrackError,
-      trackAction: jest.fn(),
-    }));
+    const mockTrackError = mocked(trackError);
+    mockTrackError.mockClear();
 
     await render(
-      <AppMonitoringServiceProvider>
-        <ApiErrorBoundary>
-          <ChildThatThrowsError />
-        </ApiErrorBoundary>
-      </AppMonitoringServiceProvider>
+      <ApiErrorBoundary>
+        <ChildThatThrowsError />
+      </ApiErrorBoundary>
     );
 
     expect(mockTrackError).toHaveBeenCalledTimes(1);

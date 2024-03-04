@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.config;
@@ -11,6 +11,7 @@ import com.google.auth.oauth2.ServiceAccountCredentials;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.generated.ConnectionApi;
+import io.airbyte.api.client.generated.DeploymentMetadataApi;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.JobRetryStatesApi;
 import io.airbyte.api.client.generated.JobsApi;
@@ -62,7 +63,6 @@ public class ApiClientBeanFactory {
         .setHost(parseHostName(airbyteApiHost))
         .setPort(parsePort(airbyteApiHost))
         .setBasePath("/api")
-        .setHttpClientBuilder(HttpClient.newBuilder().version(Version.HTTP_1_1))
         .setConnectTimeout(Duration.ofSeconds(30))
         .setReadTimeout(Duration.ofSeconds(300))
         .setRequestInterceptor(builder -> {
@@ -88,6 +88,11 @@ public class ApiClientBeanFactory {
   @Singleton
   public JobsApi jobsApi(@Named("apiClient") final ApiClient apiClient) {
     return new JobsApi(apiClient);
+  }
+
+  @Singleton
+  public DeploymentMetadataApi deploymentMetadataApi(final ApiClient apiClient) {
+    return new DeploymentMetadataApi(apiClient);
   }
 
   @Singleton

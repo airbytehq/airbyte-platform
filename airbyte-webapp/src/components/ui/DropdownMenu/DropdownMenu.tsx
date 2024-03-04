@@ -77,6 +77,13 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
               if (item.as === "separator") {
                 return <div role="presentation" className={styles.separator} key={index} />;
               }
+              if (item.as === "div") {
+                return (
+                  <div className={item.className} key={index}>
+                    {item.children}
+                  </div>
+                );
+              }
               return (
                 <Menu.Item key={index} disabled={item.disabled}>
                   {({ active }) =>

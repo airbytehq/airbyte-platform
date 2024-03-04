@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.config;
@@ -9,7 +9,6 @@ import static org.mockito.Mockito.mock;
 
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.config.secrets.persistence.SecretPersistence;
-import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
 import io.airbyte.workers.temporal.sync.DbtTransformationActivity;
@@ -40,6 +39,12 @@ import org.junit.jupiter.api.Test;
           value = "/tmp/local")
 @Property(name = "airbyte.workspace.root",
           value = "/tmp/workspace")
+@Property(name = "airbyte.cloud.storage.logs.type",
+          value = "local")
+@Property(name = "airbyte.cloud.storage.state.type",
+          value = "local")
+@Property(name = "airbyte.cloud.storage.workload-outputs.type",
+          value = "local")
 class DataPlaneActivityInitializationMicronautTest {
 
   // Ideally this should be broken down into different tests to get a clearer view of which bean
@@ -50,10 +55,6 @@ class DataPlaneActivityInitializationMicronautTest {
   @Bean
   @Replaces(SecretPersistence.class)
   SecretPersistence secretPersistence = mock(SecretPersistence.class);
-
-  @Bean
-  @Replaces(DocumentStoreClient.class)
-  DocumentStoreClient documentStoreClient = mock(DocumentStoreClient.class);
 
   @Inject
   ConfigFetchActivity configFetchActivity;

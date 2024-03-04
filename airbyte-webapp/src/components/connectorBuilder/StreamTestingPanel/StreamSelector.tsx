@@ -8,8 +8,7 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./StreamSelector.module.scss";

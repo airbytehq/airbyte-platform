@@ -1,12 +1,6 @@
 @use "scss/variables";
 
-.connectionFormContainer {
+.formContainer {
   width: 100%;
   min-width: variables.$min-width-wide-table-container;
-
-  > form {
-    display: flex;
-    flex-direction: column;
-    gap: variables.$spacing-md;
-  }
 }

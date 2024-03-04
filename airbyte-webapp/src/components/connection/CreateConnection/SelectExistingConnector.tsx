@@ -1,7 +1,7 @@
 import { Card } from "components/ui/Card";
 
+import { DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
 import { isSource } from "core/domain/connector/source";
-import { DestinationRead, SourceRead } from "core/request/AirbyteClient";
 
 import { ExistingConnectorButton } from "./ExistingConnectorButton";
 import styles from "./SelectExistingConnector.module.scss";
@@ -16,7 +16,7 @@ export const SelectExistingConnector = <T extends SourceRead | DestinationRead>(
   selectConnector,
 }: SelectExistingConnectorProps<T>) => {
   return (
-    <Card>
+    <Card noPadding>
       <ul className={styles.existingConnectors}>
         {connectors.map((connector) => {
           const key = isSource(connector) ? connector.sourceId : connector.destinationId;

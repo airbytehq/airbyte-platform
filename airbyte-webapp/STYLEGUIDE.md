@@ -4,18 +4,11 @@ This serves as a living document regarding conventions we have agreed upon as a 
 
 ## General Code Style and Formatting
 
-- Where possible, we rely on automated systems to maintain consistency in code style
-- We use eslint, Prettier, and VSCode settings to automate these choices. The configuration files for these are checked into our repository, so no individual setup should be required beyond ensuring your VSCode settings include:
-
-```
-"editor.codeActionsOnSave": {
-  "source.fixAll.eslint": true,
-}
-```
+ Where possible, we rely on automated systems (ESLint, prettier, stylelint) to maintain consistency in code style. The configuration files including VSCode workspace settings and recommended extensions are checked into our repository, so no individual setup should be required - just open the `airbyte-webapp` folder in your VSCode.
 
 - Don’t use single-character names. Using meaningful name for function parameters is a way of making the code self-documented and we always should do it. Example:
-  - .filter(([key, value]) => isDefined(value.default) ✅
-  - .filter(([k, v]) => isDefined(v.default) ❌
+  - `.filter(([key, value]) => isDefined(value.default))` ✅
+  - `.filter(([k, v]) => isDefined(v.default))` ❌
 
 ## Spacing and Layout
 
@@ -119,8 +112,8 @@ const MyComponent = ({ isHighlighted, hasError }) => {
 ## Exporting
 
 - Export at declaration, not at the bottom. For example:
-  - export const myVar ✅
-  - const myVar; export { myVar }; ❌
+  - `export const myVar` ✅
+  - `const myVar; export { myVar };` ❌
 
 ## Component Props
 

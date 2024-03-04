@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.keycloak.setup;
@@ -10,7 +10,6 @@ import java.util.Arrays;
 import javax.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.resource.RealmResource;
-import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 
@@ -30,6 +29,12 @@ public class UserCreator {
   }
 
   public void createUser(final RealmResource keycloakRealm) {
+    final boolean userAlreadyExists = !keycloakRealm.users().search(initialUserConfiguration.getUsername()).isEmpty();
+    if (userAlreadyExists) {
+      log.info("User {} already exists, nothing to be done.", initialUserConfiguration.getUsername());
+      return;
+    }
+
     final UserRepresentation user = createUserRepresentation();
     final Response response = keycloakRealm.users().create(user);
 
@@ -57,17 +62,6 @@ public class UserCreator {
     password.setType(CredentialRepresentation.PASSWORD);
     password.setValue(initialUserConfiguration.getPassword());
     return password;
-  }
-
-  /**
-   * This method resets the user by deleting all users and re-creating them.
-   */
-  public void resetUser(final RealmResource realmResource) {
-    UsersResource usersResource = realmResource.users();
-
-    usersResource.list().forEach(user -> usersResource.delete(user.getId()));
-
-    createUser(realmResource);
   }
 
 }

@@ -27,15 +27,6 @@ server {
         location ~ ^/(?!(assets/.*)) {
             try_files $uri $uri/ /index.html;
         }
-
-        # (Developer Note): Please only add new properties to this, if they really need to be configurable
-        #                   by a user at runtime i.e. without rebuilding the docker images. General webapp config
-        #                   belongs in an environment file.
-        sub_filter </head>
-                '<script data-script="config-overwrites">
-                window.TRACKING_STRATEGY = "$TRACKING_STRATEGY";
-                </script></head>';
-        sub_filter_once on;
     }
 
     error_page   500 502 503 504  /50x.html;

@@ -125,6 +125,7 @@ properties:
     "$ref": Geography.yaml
   breakingChange:
     type: boolean
+  # TODO: reduce clutter by grouping these preferences into some logical structure
   notifySchemaChanges:
     type: boolean
   notifySchemaChangesByEmail:
@@ -136,3 +137,14 @@ properties:
       - disable # disable the connection, pausing the sync
       - propagate_columns # Auto propagate schema change for existing streams
       - propagate_fully # Auto propagate schema change for all streams including the new ones
+  backfillPreference:
+    # TODO: document the details of the behaviour and link to the documentation
+    # NOTE: backfill is currently only implemented when auto-propagation is enabled for non-breaking changes, but in the future it may be supported for manual review as well.
+    description: Whether a backfill should be done for certain types of column changes
+    type: string
+    enum:
+      - enabled
+      - disabled
+  createdAt:
+    type: integer
+    format: int64

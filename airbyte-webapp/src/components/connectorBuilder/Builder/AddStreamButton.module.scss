@@ -21,9 +21,13 @@ $buttonWidth: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 9px !important;
+  padding: 5px !important;
   z-index: 3;
   position: relative;
+}
+
+.disableable:disabled {
+  cursor: not-allowed !important;
 }
 
 $animation-length: 3s;

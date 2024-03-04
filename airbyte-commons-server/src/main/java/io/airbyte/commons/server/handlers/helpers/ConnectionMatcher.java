@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
@@ -50,6 +50,7 @@ public class ConnectionMatcher implements Matchable<ConnectionRead> {
     fromSearch.breakingChange(query.getBreakingChange());
     fromSearch.notifySchemaChanges(query.getNotifySchemaChanges());
     fromSearch.notifySchemaChangesByEmail(query.getNotifySchemaChangesByEmail());
+    fromSearch.backfillPreference(query.getBackfillPreference());
 
     return fromSearch;
   }

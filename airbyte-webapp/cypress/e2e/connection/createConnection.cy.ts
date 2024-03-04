@@ -3,11 +3,9 @@ import {
   createPostgresDestinationViaApi,
   createPostgresSourceViaApi,
 } from "@cy/commands/connection";
-import { fillLocalJsonForm } from "@cy/commands/connector";
-import { fillPokeAPIForm } from "@cy/commands/connector";
+import { fillLocalJsonForm, fillPokeAPIForm } from "@cy/commands/connector";
 import { goToDestinationPage, openDestinationConnectionsPage } from "@cy/pages/destinationPage";
-import { openSourceConnectionsPage } from "@cy/pages/sourcePage";
-import { goToSourcePage } from "@cy/pages/sourcePage";
+import { openSourceConnectionsPage, goToSourcePage } from "@cy/pages/sourcePage";
 import { WebBackendConnectionRead, DestinationRead, SourceRead } from "@src/core/api/types/AirbyteClient";
 import { RoutePaths, ConnectionRoutePaths } from "@src/pages/routePaths";
 import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "commands/api";
@@ -195,7 +193,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
         `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}?sourceId=${source.sourceId}&destinationId=${destination.destinationId}`
       );
       waitForDiscoverSchemaRequest();
-      connectionConfigurationForm.selectSchedule("Manual");
+      connectionConfigurationForm.selectScheduleType("Manual");
     });
   });
 

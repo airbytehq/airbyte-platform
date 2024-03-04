@@ -1,155 +1,133 @@
-import React, { useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import React, { Suspense } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
+import { Outlet } from "react-router-dom";
+
+import { LoadingPage, MainPageWithScroll } from "components";
+import { HeadTitle } from "components/common/HeadTitle";
+import {
+  SettingsButton,
+  SettingsLink,
+  SettingsNavigation,
+  SettingsNavigationBlock,
+} from "components/settings/SettingsNavigation";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
+import { PageHeader } from "components/ui/PageHeader";
 
 import { useCurrentOrganizationInfo } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { isOsanoActive, showOsanoDrawer } from "core/utils/dataPrivacy";
 import { useIntent } from "core/utils/rbac";
-import { DbtCloudSettingsView } from "packages/cloud/views/settings/integrations/DbtCloudSettingsView";
-import { AccountSettingsView } from "packages/cloud/views/users/AccountSettingsView";
-import { UsersSettingsView } from "packages/cloud/views/users/UsersSettingsView";
-import { DataResidencyView } from "packages/cloud/views/workspaces/DataResidencyView";
-import { WorkspaceSettingsView } from "packages/cloud/views/workspaces/WorkspaceSettingsView";
-import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/GeneralOrganizationSettingsPage";
-import { OrganizationAccessManagementPage } from "pages/SettingsPage/pages/AccessManagementPage/OrganizationAccessManagementPage";
-import { WorkspaceAccessManagementPage } from "pages/SettingsPage/pages/AccessManagementPage/WorkspaceAccessManagementPage";
-import {
-  DestinationsPage as SettingsDestinationPage,
-  SourcesPage as SettingsSourcesPage,
-} from "pages/SettingsPage/pages/ConnectorsPage";
-import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
-import { PageConfig, SettingsPageBase } from "pages/SettingsPage/SettingsPageBase";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { CloudSettingsRoutePaths } from "./routePaths";
 
-const CloudSettingsPage: React.FC = () => {
-  const organization = useCurrentOrganizationInfo();
-  const isSsoEnabled = organization?.sso;
-  const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: organization?.organizationId });
+export const CloudSettingsPage: React.FC = () => {
+  const { formatMessage } = useIntl();
   const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
   const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
+  const isTokenManagementEnabled = useExperiment("settings.token-management-ui", false);
+  const organization = useCurrentOrganizationInfo();
+  const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: organization?.organizationId });
+  const showAdvancedSettings = useExperiment("settings.showAdvancedSettings", false);
 
-  const ssoPageConfig = useMemo<PageConfig>(
-    () => ({
-      menuConfig: [
-        {
-          category: <FormattedMessage id="settings.userSettings" />,
-          routes: [
-            {
-              path: CloudSettingsRoutePaths.Account,
-              name: <FormattedMessage id="settings.account" />,
-              component: AccountSettingsView,
-            },
-            ...(isOsanoActive()
-              ? [
-                  {
-                    name: <FormattedMessage id="settings.cookiePreferences" />,
-                    path: "__COOKIE_PREFERENCES__", // Special path with no meaning, since the onClick will be triggered
-                    onClick: () => showOsanoDrawer(),
-                  },
-                ]
-              : []),
-          ],
-        },
-        {
-          category: <FormattedMessage id="settings.workspaceSettings" />,
-          routes: [
-            {
-              path: CloudSettingsRoutePaths.Workspace,
-              name: <FormattedMessage id="settings.generalSettings" />,
-              component: WorkspaceSettingsView,
-              id: "workspaceSettings.generalSettings",
-            },
-            ...(supportsDataResidency
-              ? [
-                  {
-                    path: CloudSettingsRoutePaths.DataResidency,
-                    name: <FormattedMessage id="settings.dataResidency" />,
-                    component: DataResidencyView,
-                  },
-                ]
-              : []),
-            {
-              path: CloudSettingsRoutePaths.Source,
-              name: <FormattedMessage id="tables.sources" />,
-              // indicatorCount: countNewSourceVersion,
-              component: SettingsSourcesPage,
-            },
-            {
-              path: CloudSettingsRoutePaths.Destination,
-              name: <FormattedMessage id="tables.destinations" />,
-              // indicatorCount: countNewDestinationVersion,
-              component: SettingsDestinationPage,
-            },
-            ...(isSsoEnabled
-              ? [
-                  {
-                    path: `${CloudSettingsRoutePaths.Workspace}/${CloudSettingsRoutePaths.AccessManagement}`,
-                    name: <FormattedMessage id="settings.accessManagementSettings" />,
-                    component: WorkspaceAccessManagementPage,
-                    id: "workspaceSettings.accessManagementSettings",
-                  },
-                ]
-              : [
-                  {
-                    path: `${CloudSettingsRoutePaths.Workspace}/${CloudSettingsRoutePaths.AccessManagement}`,
-                    name: <FormattedMessage id="settings.accessManagementSettings" />,
-                    component: UsersSettingsView,
-                    id: "workspaceSettings.accessManagementSettings",
-                  },
-                ]),
-            {
-              path: CloudSettingsRoutePaths.Notifications,
-              name: <FormattedMessage id="settings.notifications" />,
-              component: NotificationPage,
-            },
-          ],
-        },
-        ...(canViewOrgSettings
-          ? [
-              {
-                category: <FormattedMessage id="settings.organizationSettings" />,
-                routes: [
-                  {
-                    path: `${CloudSettingsRoutePaths.Organization}`,
-                    name: <FormattedMessage id="settings.generalSettings" />,
-                    component: GeneralOrganizationSettingsPage,
-                  },
-                  ...(isSsoEnabled
-                    ? [
-                        {
-                          path: `${CloudSettingsRoutePaths.Organization}/${CloudSettingsRoutePaths.AccessManagement}`,
-                          name: <FormattedMessage id="settings.accessManagementSettings" />,
-                          component: OrganizationAccessManagementPage,
-                          id: "organizationSettings.accessManagementSettings",
-                        },
-                      ]
-                    : []),
-                ],
-              },
-            ]
-          : []),
-        ...(supportsCloudDbtIntegration
-          ? [
-              {
-                category: <FormattedMessage id="settings.integrationSettings" />,
-                routes: [
-                  {
-                    path: CloudSettingsRoutePaths.DbtCloud,
-                    name: <FormattedMessage id="settings.integrationSettings.dbtCloudSettings" />,
-                    component: DbtCloudSettingsView,
-                    id: "integrationSettings.dbtCloudSettings",
-                  },
-                ],
-              },
-            ]
-          : []),
-      ],
-    }),
-    [canViewOrgSettings, isSsoEnabled, supportsCloudDbtIntegration, supportsDataResidency]
+  return (
+    <MainPageWithScroll
+      headTitle={<HeadTitle titles={[{ id: "sidebar.settings" }]} />}
+      pageTitle={
+        <PageHeader
+          leftComponent={
+            <Heading as="h1" size="lg">
+              <FormattedMessage id="sidebar.settings" />
+            </Heading>
+          }
+        />
+      }
+    >
+      <FlexContainer direction="row" gap="2xl">
+        <SettingsNavigation>
+          <SettingsNavigationBlock title={formatMessage({ id: "settings.userSettings" })}>
+            <SettingsLink
+              iconType="user"
+              name={formatMessage({ id: "settings.account" })}
+              to={CloudSettingsRoutePaths.Account}
+            />
+            {isTokenManagementEnabled && (
+              <SettingsLink
+                iconType="grid"
+                name={formatMessage({ id: "settings.applications" })}
+                to={CloudSettingsRoutePaths.Applications}
+              />
+            )}
+            {isOsanoActive() && (
+              <SettingsButton
+                iconType="parameters"
+                onClick={() => showOsanoDrawer()}
+                name={formatMessage({ id: "settings.cookiePreferences" })}
+              />
+            )}
+            {showAdvancedSettings && (
+              <SettingsLink
+                iconType="gear"
+                name={formatMessage({ id: "settings.advanced" })}
+                to={CloudSettingsRoutePaths.Advanced}
+              />
+            )}
+          </SettingsNavigationBlock>
+          <SettingsNavigationBlock title={formatMessage({ id: "settings.workspaceSettings" })}>
+            <SettingsLink
+              iconType="community"
+              name={formatMessage({ id: "settings.members" })}
+              to={CloudSettingsRoutePaths.Workspace}
+            />
+            {supportsDataResidency && (
+              <SettingsLink
+                iconType="globe"
+                name={formatMessage({ id: "settings.dataResidency" })}
+                to={CloudSettingsRoutePaths.DataResidency}
+              />
+            )}
+            <SettingsLink
+              iconType="source"
+              name={formatMessage({ id: "tables.sources" })}
+              to={CloudSettingsRoutePaths.Source}
+            />
+            <SettingsLink
+              iconType="destination"
+              name={formatMessage({ id: "tables.destinations" })}
+              to={CloudSettingsRoutePaths.Destination}
+            />
+            {supportsCloudDbtIntegration && (
+              <SettingsLink
+                iconType="integrations"
+                name={formatMessage({ id: "settings.integrationSettings" })}
+                to={CloudSettingsRoutePaths.DbtCloud}
+              />
+            )}
+            <SettingsLink
+              iconType="bell"
+              name={formatMessage({ id: "settings.notifications" })}
+              to={CloudSettingsRoutePaths.Notifications}
+            />
+          </SettingsNavigationBlock>
+          {organization && canViewOrgSettings && (
+            <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
+              <SettingsLink
+                iconType="community"
+                name={formatMessage({ id: "settings.members" })}
+                to={CloudSettingsRoutePaths.Organization}
+              />
+            </SettingsNavigationBlock>
+          )}
+        </SettingsNavigation>
+        <FlexItem grow>
+          <Suspense fallback={<LoadingPage />}>
+            <Outlet />
+          </Suspense>
+        </FlexItem>
+      </FlexContainer>
+    </MainPageWithScroll>
   );
-
-  return <SettingsPageBase pageConfig={ssoPageConfig} />;
 };
 
 export default CloudSettingsPage;

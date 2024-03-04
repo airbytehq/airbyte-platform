@@ -1,0 +1,48 @@
+@use "scss/variables";
+@use "scss/colors";
+@use "scss/mixins";
+@use "./builderVariables.scss";
+
+.container {
+  @include mixins.shadow;
+
+  padding: variables.$spacing-lg;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: builderVariables.$sideBarWidth;
+  flex: 0 0 auto;
+  background-color: colors.$foreground;
+  border-left: 1px solid colors.$grey-100;
+}
+
+.connectorName {
+  overflow-x: auto;
+  text-align: center;
+  max-width: 100%;
+}
+
+.slackLink {
+  color: colors.$dark-blue;
+
+  &:hover {
+    color: colors.$blue;
+  }
+
+  & a {
+    text-decoration: none;
+    color: inherit;
+  }
+}
+
+.slackIcon {
+  height: 14px;
+  width: 14px;
+}
+
+.modeSpecificContent {
+  flex-grow: 1;
+  width: 100%;
+  min-height: 0;
+}

@@ -5,9 +5,9 @@ import { useConnectionFormService } from "hooks/services/ConnectionForm/Connecti
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 
 export const useRefreshSourceSchemaWithConfirmationOnDirty = (dirty: boolean) => {
-  const { clearFormChange } = useFormChangeTrackerService();
+  const { clearAllFormChanges } = useFormChangeTrackerService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-  const { formId, refreshSchema } = useConnectionFormService();
+  const { refreshSchema } = useConnectionFormService();
 
   return useCallback(() => {
     if (dirty) {
@@ -17,12 +17,12 @@ export const useRefreshSourceSchemaWithConfirmationOnDirty = (dirty: boolean) =>
         submitButtonText: "connection.updateSchema.formChanged.confirm",
         onSubmit: () => {
           closeConfirmationModal();
-          clearFormChange(formId);
+          clearAllFormChanges();
           refreshSchema();
         },
       });
     } else {
       refreshSchema();
     }
-  }, [clearFormChange, closeConfirmationModal, dirty, formId, openConfirmationModal, refreshSchema]);
+  }, [clearAllFormChanges, closeConfirmationModal, dirty, openConfirmationModal, refreshSchema]);
 };

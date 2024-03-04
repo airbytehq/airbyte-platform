@@ -1,9 +1,8 @@
-import { faBan } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
+import { Icon } from "components/ui/Icon";
 
 import { ConnectorDefinitionSpecification } from "core/domain/connector";
 
@@ -38,7 +37,7 @@ export const RevokeButton: React.FC<RevokeButtonProps> = ({ sourceId, selectedCo
         type="button"
         data-id="oauth-revoke-button"
         onClick={run}
-        icon={<FontAwesomeIcon icon={faBan} />}
+        icon={<Icon type="disabled" />}
         size="sm"
       >
         {buttonLabel}

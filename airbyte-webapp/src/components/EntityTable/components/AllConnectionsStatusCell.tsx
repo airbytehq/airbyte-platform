@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { useIntl } from "react-intl";
 
-import { StatusIcon } from "components/ui/StatusIcon";
+import { StatusIcon, StatusIconProps } from "components/ui/StatusIcon";
 import { StatusIconStatus } from "components/ui/StatusIcon/StatusIcon";
 
 import { Status } from "../types";
@@ -27,26 +27,34 @@ interface AllConnectionsStatusCellProps {
 const AllConnectionsStatusCell: React.FC<AllConnectionsStatusCellProps> = ({ connectEntities }) => {
   const { formatMessage } = useIntl();
 
-  const statusIconProps = useMemo(() => {
-    if (connectEntities.length) {
-      for (const { status, statusIconStatus, titleId } of _statusConfig) {
-        const filteredEntities = connectEntities.filter((entity) => entity.lastSyncStatus === status);
-        if (filteredEntities.length) {
-          return {
-            status: statusIconStatus,
-            value: filteredEntities.length,
-            title: titleId,
-          };
-        }
+  const propsForStatusIcons: StatusIconProps[] = useMemo(() => {
+    const allIconProps: StatusIconProps[] = [];
+    for (const { status, statusIconStatus, titleId } of _statusConfig) {
+      const filteredEntities = connectEntities.filter((entity) => entity.lastSyncStatus === status);
+      if (filteredEntities.length) {
+        allIconProps.push({
+          status: statusIconStatus,
+          value: filteredEntities.length,
+          title: titleId,
+        });
       }
     }
 
-    return undefined;
+    return allIconProps;
   }, [connectEntities]);
 
-  return statusIconProps ? (
-    <StatusIcon {...statusIconProps} title={formatMessage({ id: statusIconProps.title })} />
-  ) : null;
+  return (
+    <>
+      {propsForStatusIcons.map((statusIconProps) => (
+        <StatusIcon
+          key={statusIconProps.title}
+          {...statusIconProps}
+          title={formatMessage({ id: statusIconProps.title })}
+          size="sm"
+        />
+      ))}
+    </>
+  );
 };
 
 export default AllConnectionsStatusCell;

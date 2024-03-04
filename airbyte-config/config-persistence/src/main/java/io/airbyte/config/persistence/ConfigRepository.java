@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -20,7 +20,6 @@ import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.Geography;
-import io.airbyte.config.Organization;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -34,10 +33,8 @@ import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DestinationService;
-import io.airbyte.data.services.HealthCheckService;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.OperationService;
-import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.protocol.models.AirbyteCatalog;
@@ -148,10 +145,8 @@ public class ConfigRepository {
   private final ConnectionService connectionService;
   private final ConnectorBuilderService connectorBuilderService;
   private final DestinationService destinationService;
-  private final HealthCheckService healthCheckService;
   private final OAuthService oAuthService;
   private final OperationService operationService;
-  private final OrganizationService organizationService;
   private final SourceService sourceService;
   private final WorkspaceService workspaceService;
 
@@ -162,10 +157,8 @@ public class ConfigRepository {
                           final ConnectionService connectionService,
                           final ConnectorBuilderService connectorBuilderService,
                           final DestinationService destinationService,
-                          final HealthCheckService healthCheckService,
                           final OAuthService oAuthService,
                           final OperationService operationService,
-                          final OrganizationService organizationService,
                           final SourceService sourceService,
                           final WorkspaceService workspaceService) {
     this.actorDefinitionService = actorDefinitionService;
@@ -173,75 +166,10 @@ public class ConfigRepository {
     this.connectionService = connectionService;
     this.connectorBuilderService = connectorBuilderService;
     this.destinationService = destinationService;
-    this.healthCheckService = healthCheckService;
     this.oAuthService = oAuthService;
     this.operationService = operationService;
-    this.organizationService = organizationService;
     this.sourceService = sourceService;
     this.workspaceService = workspaceService;
-  }
-
-  /**
-   * Conduct a health check by attempting to read from the database. This query needs to be fast as
-   * this call can be made multiple times a second.
-   *
-   * @return true if read succeeds, even if the table is empty, and false if any error happens.
-   */
-  @Deprecated
-  public boolean healthCheck() {
-    return healthCheckService.healthCheck();
-  }
-
-  /**
-   * Get organization.
-   *
-   * @param organizationId id to use to find the organization
-   * @return organization, if present.
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public Optional<Organization> getOrganization(final UUID organizationId) throws IOException {
-    return organizationService.getOrganization(organizationId);
-  }
-
-  /**
-   * Write an Organization to the database.
-   *
-   * @param organization - The configuration of the organization
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public void writeOrganization(final Organization organization) throws IOException {
-    organizationService.writeOrganization(organization);
-  }
-
-  /**
-   * List organizations.
-   *
-   * @return organizations
-   * @throws IOException - you never know when you IO
-   */
-  @Deprecated
-  public List<Organization> listOrganizations() throws IOException {
-    return organizationService.listOrganizations();
-  }
-
-  /**
-   * List organizations (paginated).
-   *
-   * @param resourcesByOrganizationQueryPaginated - contains all the information we need to paginate
-   * @return A List of organizations objects
-   * @throws IOException you never know when you IO
-   */
-  @Deprecated
-  public List<Organization> listOrganizationsPaginated(final ResourcesByOrganizationQueryPaginated resourcesByOrganizationQueryPaginated)
-      throws IOException {
-    final var queryPaginated = new io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated(
-        resourcesByOrganizationQueryPaginated.organizationId(),
-        resourcesByOrganizationQueryPaginated.includeDeleted(),
-        resourcesByOrganizationQueryPaginated.pageSize(),
-        resourcesByOrganizationQueryPaginated.rowOffset());
-    return organizationService.listOrganizationsPaginated(queryPaginated);
   }
 
   /**
@@ -2092,27 +2020,6 @@ public class ConfigRepository {
       throws IOException {
     return actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, dockerImageTag);
   }
-
-  // /**
-  // * Get the actor definition version associated with an actor definition and a docker image tag.
-  // *
-  // * @param actorDefinitionId - actor definition id
-  // * @param dockerImageTag - docker image tag
-  // * @param ctx database context
-  // * @return actor definition version if there is an entry in the DB already for this version,
-  // * otherwise an empty optional
-  // * @throws IOException - you never know when you io
-  // */
-  // public Optional<ActorDefinitionVersion> getActorDefinitionVersion(final UUID actorDefinitionId,
-  // final String dockerImageTag, final DSLContext ctx) {
-  // return ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION)
-  // .where(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
-  // .and(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.eq(dockerImageTag)))
-  // .fetch()
-  // .stream()
-  // .findFirst()
-  // .map(DbConverter::buildActorDefinitionVersion);
-  // }
 
   /**
    * Get an actor definition version by ID.

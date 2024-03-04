@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -25,6 +25,7 @@ public final class AuthenticationHttpHeaders {
    * HTTP header that contains the connection ID for authorization purposes.
    */
   public static final String CONNECTION_ID_HEADER = AIRBYTE_HEADER_PREFIX + "Connection-Id";
+  public static final String CONNECTION_IDS_HEADER = AIRBYTE_HEADER_PREFIX + "Connection-Ids";
 
   /**
    * HTTP header that contains the destination ID for authorization purposes.
@@ -81,6 +82,20 @@ public final class AuthenticationHttpHeaders {
 
   public static final String ORGANIZATION_ID_HEADER = AIRBYTE_HEADER_PREFIX + "Organization-Id";
   public static final String PERMISSION_ID_HEADER = AIRBYTE_HEADER_PREFIX + "Permission-Id";
+  public static final String IS_PUBLIC_API_HEADER = AIRBYTE_HEADER_PREFIX + "Is-Public-Api";
+
+  public static final String AIRBYTE_AUTH_USER_ID_HEADER = AIRBYTE_HEADER_PREFIX + "Auth-User-Id";
+
+  /**
+   * HTTP header that contains the scope type (ie 'workspace' or 'organization') for authorization
+   * purposes.
+   */
+  public static final String SCOPE_TYPE_HEADER = AIRBYTE_HEADER_PREFIX + "Scope-Type";
+
+  /**
+   * HTTP header that contains the scope ID for authorization purposes.
+   */
+  public static final String SCOPE_ID_HEADER = AIRBYTE_HEADER_PREFIX + "Scope-Id";
 
   private AuthenticationHttpHeaders() {}
 

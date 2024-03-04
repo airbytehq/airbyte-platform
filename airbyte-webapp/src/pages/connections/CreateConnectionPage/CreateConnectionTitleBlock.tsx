@@ -10,13 +10,17 @@ import { NumberBadge } from "components/ui/NumberBadge";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspace, useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
-import { SupportLevel } from "core/request/AirbyteClient";
-import { useGetDestination } from "hooks/services/useDestinationHook";
-import { useGetSource } from "hooks/services/useSourceHook";
+import {
+  useCurrentWorkspace,
+  useDestinationDefinitionVersion,
+  useSourceDefinitionVersion,
+  useSourceDefinition,
+  useDestinationDefinition,
+  useGetDestination,
+  useGetSource,
+} from "core/api";
+import { SupportLevel } from "core/api/types/AirbyteClient";
 import { RoutePaths } from "pages/routePaths";
-import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
-import { useSourceDefinition } from "services/connector/SourceDefinitionService";
 
 import styles from "./CreateConnectionTitleBlock.module.scss";
 
@@ -82,7 +86,7 @@ const StepItem: React.FC<{ state: StepStatus; step: keyof ConnectionSteps; value
   return (
     <FlexContainer alignItems="center" gap="sm">
       <NumberBadge value={value} outline={state !== ACTIVE} color={color} />
-      <Text color={color} size="lg">
+      <Text color={color} size="sm">
         <FormattedMessage id={messageId} />
       </Text>
     </FlexContainer>
@@ -183,17 +187,17 @@ export const CreateConnectionTitleBlock: React.FC = () => {
       <FlexContainer direction="column" gap="xl">
         {(sourceId || destinationId) && (
           <FlexContainer alignItems="center">
-            {sourceId ? <SourceBlock sourceId={sourceId} /> : <ConnectorPlaceholder />}
+            {sourceId && <SourceBlock sourceId={sourceId} />}
             <Icon type="arrowRight" />
-            {destinationId ? <DestinationBlock destinationId={destinationId} /> : <ConnectorPlaceholder />}
+            {destinationId && <DestinationBlock destinationId={destinationId} />}
           </FlexContainer>
         )}
-        <FlexContainer gap="lg" alignItems="center">
+        <FlexContainer gap="sm" alignItems="center">
           {(Object.keys(stepStatuses) as Array<keyof ConnectionSteps>).map((step, idx) => {
             return (
               <Fragment key={step}>
                 <StepItem state={stepStatuses[step]} step={step} value={idx + 1} />
-                {idx !== Object.keys(stepStatuses).length - 1 && <Icon type="chevronRight" size="lg" />}
+                {idx !== Object.keys(stepStatuses).length - 1 && <Icon type="chevronRight" color="disabled" />}
               </Fragment>
             );
           })}

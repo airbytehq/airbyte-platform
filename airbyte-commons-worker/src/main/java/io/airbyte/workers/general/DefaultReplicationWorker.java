@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
@@ -131,11 +131,11 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           .stream()
           .collect(Collectors.toMap(s -> s.getStream().getNamespace() + "." + s.getStream().getName(),
               s -> String.format("%s - %s", s.getSyncMode(), s.getDestinationSyncMode()))));
-
       final ReplicationContext replicationContext =
           new ReplicationContext(replicationInput.getIsReset(), replicationInput.getConnectionId(), replicationInput.getSourceId(),
               replicationInput.getDestinationId(), Long.parseLong(jobId),
-              attempt, replicationInput.getWorkspaceId());
+              attempt, replicationInput.getWorkspaceId(), replicationInput.getSourceLauncherConfig().getDockerImage(),
+              replicationInput.getDestinationLauncherConfig().getDockerImage());
 
       final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags();
       replicationWorkerHelper.initialize(replicationContext, flags, jobRoot);
@@ -166,7 +166,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
 
       if (replicationWorkerHelper.isWorkerV2TestEnabled()) {
         CompletableFuture.runAsync(
-            replicationWorkerHelper.getWorkloadStatusHeartbeat(),
+            replicationWorkerHelper.getWorkloadStatusHeartbeat(mdc),
             executors);
       }
 

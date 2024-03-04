@@ -11,7 +11,7 @@ data
 .classpath
 .project
 .settings
-.vscode
+/.vscode
 **/gmon.out
 static_checker_reports/
 
@@ -23,6 +23,9 @@ secrets
 !airbyte-config/config-secrets/src/main/kotlin/secrets
 updated_configurations
 !airbyte-integrations/connector-templates/**/secrets
+
+# include airbyte-data
+!airbyte-data/src/**/data
 
 # Test logs
 acceptance_tests_logs

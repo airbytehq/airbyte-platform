@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -13,7 +13,6 @@ import static org.jooq.impl.DSL.asterisk;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.enums.Enums;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
@@ -27,18 +26,14 @@ import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
-import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
-import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -47,7 +42,6 @@ import java.util.stream.Stream;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.InsertSetMoreStep;
-import org.jooq.JSONB;
 import org.jooq.JoinType;
 import org.jooq.Record;
 import org.jooq.Record1;
@@ -126,8 +120,8 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @throws IOException - you never know when you IO
    */
   @Override
-  public int updateActorDefinitionsDockerImageTag(List<UUID> actorDefinitionIds,
-                                                  String targetImageTag)
+  public int updateActorDefinitionsDockerImageTag(final List<UUID> actorDefinitionIds,
+                                                  final String targetImageTag)
       throws IOException {
     return database.transaction(ctx -> writeSourceDefinitionImageTag(actorDefinitionIds, targetImageTag, ctx));
   }
@@ -141,9 +135,9 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @throws IOException - you never know when you IO
    */
   @Override
-  public void writeActorDefinitionWorkspaceGrant(UUID actorDefinitionId,
-                                                 UUID scopeId,
-                                                 ScopeType scopeType)
+  public void writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId,
+                                                 final UUID scopeId,
+                                                 final ScopeType scopeType)
       throws IOException {
     database.query(ctx -> writeActorDefinitionWorkspaceGrant(actorDefinitionId, scopeId,
         io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType.valueOf(scopeType.value()), ctx));
@@ -159,9 +153,9 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @throws IOException - you never know when you IO
    */
   @Override
-  public boolean actorDefinitionWorkspaceGrantExists(UUID actorDefinitionId,
-                                                     UUID scopeId,
-                                                     ScopeType scopeType)
+  public boolean actorDefinitionWorkspaceGrantExists(final UUID actorDefinitionId,
+                                                     final UUID scopeId,
+                                                     final ScopeType scopeType)
       throws IOException {
     final Integer count = database.query(ctx -> ctx.fetchCount(
         DSL.selectFrom(ACTOR_DEFINITION_WORKSPACE_GRANT)
@@ -181,9 +175,9 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @throws IOException - you never know when you IO
    */
   @Override
-  public void deleteActorDefinitionWorkspaceGrant(UUID actorDefinitionId,
-                                                  UUID scopeId,
-                                                  ScopeType scopeType)
+  public void deleteActorDefinitionWorkspaceGrant(final UUID actorDefinitionId,
+                                                  final UUID scopeId,
+                                                  final ScopeType scopeType)
       throws IOException {
     database.query(ctx -> ctx.deleteFrom(ACTOR_DEFINITION_WORKSPACE_GRANT)
         .where(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
@@ -203,7 +197,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    */
   @Override
   public ActorDefinitionVersion writeActorDefinitionVersion(
-                                                            ActorDefinitionVersion actorDefinitionVersion)
+                                                            final ActorDefinitionVersion actorDefinitionVersion)
       throws IOException {
     return database.transaction(ctx -> writeActorDefinitionVersion(actorDefinitionVersion, ctx));
   }
@@ -218,8 +212,8 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @throws IOException - you never know when you io
    */
   @Override
-  public Optional<ActorDefinitionVersion> getActorDefinitionVersion(UUID actorDefinitionId,
-                                                                    String dockerImageTag)
+  public Optional<ActorDefinitionVersion> getActorDefinitionVersion(final UUID actorDefinitionId,
+                                                                    final String dockerImageTag)
       throws IOException {
     return database.query(ctx -> getActorDefinitionVersion(actorDefinitionId, dockerImageTag, ctx));
   }
@@ -234,7 +228,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @throws IOException - you never know when you io
    */
   @Override
-  public ActorDefinitionVersion getActorDefinitionVersion(UUID actorDefinitionVersionId)
+  public ActorDefinitionVersion getActorDefinitionVersion(final UUID actorDefinitionVersionId)
       throws IOException, ConfigNotFoundException {
     return getActorDefinitionVersions(List.of(actorDefinitionVersionId))
         .stream()
@@ -251,7 +245,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    */
   @Override
   public List<ActorDefinitionVersion> listActorDefinitionVersionsForDefinition(
-                                                                               UUID actorDefinitionId)
+                                                                               final UUID actorDefinitionId)
       throws IOException {
     return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION)
         .where(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
@@ -270,7 +264,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    */
   @Override
   public List<ActorDefinitionVersion> getActorDefinitionVersions(
-                                                                 List<UUID> actorDefinitionVersionIds)
+                                                                 final List<UUID> actorDefinitionVersionIds)
       throws IOException {
     return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION))
         .where(Tables.ACTOR_DEFINITION_VERSION.ID.in(actorDefinitionVersionIds))
@@ -287,7 +281,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @param actorDefinitionVersionId - actor definition version id
    */
   @Override
-  public void setActorDefaultVersion(UUID actorId, UUID actorDefinitionVersionId)
+  public void setActorDefaultVersion(final UUID actorId, final UUID actorDefinitionVersionId)
       throws IOException {
     database.query(ctx -> ctx.update(Tables.ACTOR)
         .set(Tables.ACTOR.DEFAULT_VERSION_ID, actorDefinitionVersionId)
@@ -305,7 +299,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    */
   @Override
   public List<ActorDefinitionBreakingChange> listBreakingChangesForActorDefinition(
-                                                                                   UUID actorDefinitionId)
+                                                                                   final UUID actorDefinitionId)
       throws IOException {
     return database.query(ctx -> listBreakingChangesForActorDefinition(actorDefinitionId, ctx));
   }
@@ -318,8 +312,8 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @throws IOException - you never know when you io
    */
   @Override
-  public void setActorDefinitionVersionSupportStates(List<UUID> actorDefinitionVersionIds,
-                                                     SupportState supportState)
+  public void setActorDefinitionVersionSupportStates(final List<UUID> actorDefinitionVersionIds,
+                                                     final SupportState supportState)
       throws IOException {
     database.query(ctx -> ctx.update(Tables.ACTOR_DEFINITION_VERSION)
         .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
@@ -341,7 +335,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    */
   @Override
   public List<ActorDefinitionBreakingChange> listBreakingChangesForActorDefinitionVersion(
-                                                                                          ActorDefinitionVersion actorDefinitionVersion)
+                                                                                          final ActorDefinitionVersion actorDefinitionVersion)
       throws IOException {
     final List<ActorDefinitionBreakingChange> breakingChanges = listBreakingChangesForActorDefinition(actorDefinitionVersion.getActorDefinitionId());
     if (breakingChanges.isEmpty()) {
@@ -384,9 +378,9 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * @throws IOException - you never know when you IO
    */
   @Override
-  public boolean scopeCanUseDefinition(UUID actorDefinitionId,
-                                       UUID scopeId,
-                                       String scopeType)
+  public boolean scopeCanUseDefinition(final UUID actorDefinitionId,
+                                       final UUID scopeId,
+                                       final String scopeType)
       throws IOException {
     final Result<Record> records = actorDefinitionsJoinedWithGrants(
         scopeId,
@@ -513,52 +507,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    *          field from the DB.
    */
   private ActorDefinitionVersion writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion, final DSLContext ctx) {
-    final OffsetDateTime timestamp = OffsetDateTime.now();
-    // Generate a new UUID if one is not provided. Passing an ID is useful for mocks.
-    final UUID versionId = actorDefinitionVersion.getVersionId() != null ? actorDefinitionVersion.getVersionId() : UUID.randomUUID();
-
-    ctx.insertInto(Tables.ACTOR_DEFINITION_VERSION)
-        .set(Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
-        .set(ACTOR_DEFINITION_VERSION.CREATED_AT, timestamp)
-        .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
-        .set(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, actorDefinitionVersion.getActorDefinitionId())
-        .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, actorDefinitionVersion.getDockerRepository())
-        .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, actorDefinitionVersion.getDockerImageTag())
-        .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSpec())))
-        .set(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL, actorDefinitionVersion.getDocumentationUrl())
-        .set(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION, actorDefinitionVersion.getProtocolVersion())
-        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL, actorDefinitionVersion.getSupportLevel() == null ? null
-            : Enums.toEnum(actorDefinitionVersion.getSupportLevel().value(),
-                SupportLevel.class).orElseThrow())
-        .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE, actorDefinitionVersion.getReleaseStage() == null ? null
-            : Enums.toEnum(actorDefinitionVersion.getReleaseStage().value(),
-                ReleaseStage.class).orElseThrow())
-        .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE, actorDefinitionVersion.getReleaseDate() == null ? null
-            : LocalDate.parse(actorDefinitionVersion.getReleaseDate()))
-        .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY,
-            Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                ? actorDefinitionVersion.getNormalizationConfig().getNormalizationRepository()
-                : null)
-        .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG,
-            Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                ? actorDefinitionVersion.getNormalizationConfig().getNormalizationTag()
-                : null)
-        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT, actorDefinitionVersion.getSupportsDbt())
-        .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE,
-            Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                ? actorDefinitionVersion.getNormalizationConfig().getNormalizationIntegrationType()
-                : null)
-        .set(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS, actorDefinitionVersion.getAllowedHosts() == null ? null
-            : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getAllowedHosts())))
-        .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
-            actorDefinitionVersion.getSuggestedStreams() == null ? null
-                : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSuggestedStreams())))
-        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
-            Enums.toEnum(actorDefinitionVersion.getSupportState().value(), io.airbyte.db.instance.configs.jooq.generated.enums.SupportState.class)
-                .orElseThrow())
-        .execute();
-
-    return actorDefinitionVersion.withVersionId(versionId);
+    return ConnectorMetadataJooqHelper.writeActorDefinitionVersion(actorDefinitionVersion, ctx);
   }
 
   /**

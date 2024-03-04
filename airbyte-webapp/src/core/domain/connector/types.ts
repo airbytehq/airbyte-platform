@@ -5,7 +5,7 @@ import {
   SourceDefinitionRead,
   SourceDefinitionSpecificationRead,
   SourceRead,
-} from "../../request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
 export type ConnectorDefinition = SourceDefinitionRead | DestinationDefinitionRead;
 

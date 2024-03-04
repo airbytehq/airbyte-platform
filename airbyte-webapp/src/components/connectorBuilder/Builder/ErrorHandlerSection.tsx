@@ -31,7 +31,7 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
     buildPath: (path: string) => string
   ): Array<OneOfOption<DefaultErrorHandlerBackoffStrategiesItem>> => [
     {
-      label: "Constant",
+      label: formatMessage({ id: "connectorBuilder.errorHandler.backoffStrategy.strategy.constant" }),
       default: {
         type: "ConstantBackoffStrategy",
         backoff_time_in_seconds: 5,
@@ -45,7 +45,7 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
       ),
     },
     {
-      label: "Exponential",
+      label: formatMessage({ id: "connectorBuilder.errorHandler.backoffStrategy.strategy.exponential" }),
       default: {
         type: "ExponentialBackoffStrategy",
         factor: "",
@@ -60,7 +60,7 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
       ),
     },
     {
-      label: "Wait time from header",
+      label: formatMessage({ id: "connectorBuilder.errorHandler.backoffStrategy.strategy.waitTimeFromHeader" }),
       default: {
         type: "WaitTimeFromHeader",
         header: "",
@@ -83,7 +83,7 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
       ),
     },
     {
-      label: "Wait until time from header",
+      label: formatMessage({ id: "connectorBuilder.errorHandler.backoffStrategy.strategy.waitUntilTimeFromHeader" }),
       default: {
         type: "WaitUntilTimeFromHeader",
         header: "",
@@ -124,13 +124,13 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
           type: "DefaultErrorHandler",
           response_filters: [],
         }}
-        addButtonLabel="Add error handler"
+        addButtonLabel={formatMessage({ id: "connectorBuilder.errorHandler.addButton" })}
       >
         {({ buildPath }) => (
           <FlexContainer direction="column">
             <ToggleGroupField<DefaultErrorHandlerBackoffStrategiesItem>
-              label="Backoff Strategy"
-              tooltip="Optionally configures how to retry a request multiple times"
+              label={formatMessage({ id: "connectorBuilder.errorHandler.backoffStrategy.label" })}
+              tooltip={formatMessage({ id: "connectorBuilder.errorHandler.backoffStrategy.tooltip" })}
               fieldPath={buildPath("backoff_strategy")}
               initialValues={{
                 type: "ConstantBackoffStrategy",
@@ -139,8 +139,8 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
             >
               <BuilderOneOf<DefaultErrorHandlerBackoffStrategiesItem>
                 path={buildPath("backoff_strategy")}
-                label="Strategy"
-                tooltip="The strategy to use to decide when to retry a request"
+                label={formatMessage({ id: "connectorBuilder.errorHandler.backoffStrategy.strategy.label" })}
+                tooltip={formatMessage({ id: "connectorBuilder.errorHandler.backoffStrategy.strategy.tooltip" })}
                 manifestOptionPaths={[
                   "ConstantBackoffStrategy",
                   "ExponentialBackoffStrategy",
@@ -151,8 +151,8 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
               />
             </ToggleGroupField>
             <ToggleGroupField<HttpResponseFilter>
-              label="Response Filter"
-              tooltip="Specify a filter to specify how to handle certain requests"
+              label={formatMessage({ id: "connectorBuilder.errorHandler.responseFilter.label" })}
+              tooltip={formatMessage({ id: "connectorBuilder.errorHandler.responseFilter.tooltip" })}
               fieldPath={buildPath("response_filter")}
               initialValues={{
                 type: "HttpResponseFilter",
@@ -170,7 +170,7 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
                   type="string"
                   path={buildPath("response_filter.predicate")}
                   optional
-                  pattern="{{ predicate logic }}"
+                  pattern={formatMessage({ id: "connectorBuilder.errorHandler.responseFilter.predicate.pattern" })}
                   manifestPath="HttpResponseFilter.properties.predicate"
                 />
                 <BuilderField
@@ -207,7 +207,7 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
   ) : (
     <BuilderCard
       docLink={links.connectorBuilderErrorHandler}
-      label="Error Handler"
+      label={formatMessage({ id: "connectorBuilder.errorHandler.label" })}
       tooltip={getDescriptionByManifest("DefaultErrorHandler")}
       toggleConfig={{
         path: props.basePath,

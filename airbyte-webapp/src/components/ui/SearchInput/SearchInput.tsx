@@ -20,7 +20,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({ value, onChange, place
     // eslint-disable-next-line jsx-a11y/label-has-associated-control
     <label className={styles.searchInput}>
       <div className={styles.searchInput__iconWrapper}>
-        <Icon type="lens" color="action" size="lg" />
+        <Icon type="lens" color="action" />
       </div>
       <Input
         type="search"

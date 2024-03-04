@@ -1,5 +1,3 @@
-import { faComments, faLightbulb } from "@fortawesome/free-regular-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ReactNode } from "react";
 import { useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -11,6 +9,7 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
@@ -66,7 +65,7 @@ export const SSOIdentifierPage = () => {
         </Box>
         <FlexContainer gap="md">
           <FlexItem grow={false}>
-            <FontAwesomeIcon icon={faComments} size="xs" />
+            <Icon type="comments" />
           </FlexItem>
           <Text>
             <FormattedMessage
@@ -106,7 +105,7 @@ const BookmarkableUrl = () => {
   return (
     <FlexContainer gap="md">
       <FlexItem grow={false}>
-        <FontAwesomeIcon icon={faLightbulb} size="xs" />
+        <Icon type="lightbulb" />
       </FlexItem>
       <Text>
         <FormattedMessage

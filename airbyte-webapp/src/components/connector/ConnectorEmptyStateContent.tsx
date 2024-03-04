@@ -25,7 +25,7 @@ interface ConnectorEmptyStateContentProps {
 
 const ConnectorCard = ({ icon }: { icon?: string }) => {
   return (
-    <Card className={styles.card}>
+    <Card className={styles.card} noPadding>
       <ConnectorIcon icon={icon} className={styles.icon} />
     </Card>
   );

@@ -17,6 +17,12 @@
   }
 }
 
+.recentCreditUsage {
+  margin-top: variables.$spacing-md;
+  max-width: 150px;
+  white-space: normal;
+}
+
 :export {
   white: colors.$foreground;
   green: colors.$green;

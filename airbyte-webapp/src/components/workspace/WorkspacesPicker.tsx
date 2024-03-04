@@ -39,10 +39,10 @@ export const WorkspacesPicker: React.FC<{ useFetchWorkspaces: WorkspaceFetcher }
         <>
           <Popover.Button ref={reference} as={WorkspaceButton}>
             <span className={styles.workspacesPicker__buttonContent}>
-              <Text color="grey" bold className={styles.workspacesPicker__buttonText} align="center">
+              <Text size="sm" className={styles.workspacesPicker__buttonText}>
                 {currentWorkspace.name}
               </Text>
-              <Icon type="chevronDown" color="disabled" />
+              <Icon type="chevronUpDown" size="xs" color="disabled" />
             </span>
           </Popover.Button>
           <Popover.Panel

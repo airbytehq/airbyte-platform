@@ -9,12 +9,11 @@ import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 
-import { NamespaceDefinitionType } from "core/request/AirbyteClient";
+import { NamespaceDefinitionType } from "core/api/types/AirbyteClient";
 
 import { DestinationNamespaceDescription } from "./DestinationNamespaceDescription";
 import styles from "./DestinationNamespaceModal.module.scss";
-import { FormikConnectionFormValues } from "../ConnectionForm/formConfig";
-import { HookFormConnectionFormValues } from "../ConnectionForm/hookFormConfig";
+import { FormConnectionFormValues } from "../ConnectionForm/formConfig";
 import { LabeledRadioButtonFormControl } from "../ConnectionForm/LabeledRadioButtonFormControl";
 import { namespaceDefinitionSchema, namespaceFormatSchema } from "../ConnectionForm/schema";
 
@@ -52,15 +51,7 @@ const destinationNamespaceValidationSchema = yup.object().shape({
 });
 
 interface DestinationNamespaceModalProps {
-  /**
-   * temporary extend this interface since we use modal in Formik and react-hook-form forms
-   *TODO: remove FormikConnectionFormValues after successful CreateConnectionForm migration
-   *https://github.com/airbytehq/airbyte-platform-internal/issues/8639
-   */
-  initialValues: Pick<
-    FormikConnectionFormValues | HookFormConnectionFormValues,
-    "namespaceDefinition" | "namespaceFormat"
-  >;
+  initialValues: Pick<FormConnectionFormValues, "namespaceDefinition" | "namespaceFormat">;
   onCloseModal: () => void;
   onSubmit: (values: DestinationNamespaceFormValues) => void;
 }

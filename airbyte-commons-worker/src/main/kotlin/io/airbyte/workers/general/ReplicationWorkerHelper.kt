@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.general
 
 import com.fasterxml.jackson.core.JsonProcessingException
@@ -16,12 +20,15 @@ import io.airbyte.config.SyncStats
 import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricClientFactory
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteMessage.Type
+import io.airbyte.protocol.models.AirbyteStateMessage
+import io.airbyte.protocol.models.AirbyteStateStats
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.WorkerUtils
@@ -32,6 +39,7 @@ import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.internal.AirbyteDestination
 import io.airbyte.workers.internal.AirbyteMapper
 import io.airbyte.workers.internal.AirbyteSource
+import io.airbyte.workers.internal.AnalyticsMessageTracker
 import io.airbyte.workers.internal.DestinationTimeoutMonitor
 import io.airbyte.workers.internal.FieldSelector
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone
@@ -44,14 +52,16 @@ import io.airbyte.workers.internal.bookkeeping.getTotalStats
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
-import io.airbyte.workers.workload.WorkloadIdGenerator
-import io.airbyte.workers.workload.WorkloadType
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.http.HttpStatus
 import org.apache.commons.io.FileUtils
+import org.openapitools.client.infrastructure.ClientException
+import org.slf4j.MDC
 import java.nio.file.Path
 import java.time.Duration
+import java.time.Instant
 import java.util.Collections
 import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
@@ -68,8 +78,9 @@ class ReplicationWorkerHelper(
   private val timeTracker: ThreadedTimeTracker,
   private val onReplicationRunning: VoidCallable,
   private val workloadApi: WorkloadApi,
-  private val workloadIdGenerator: WorkloadIdGenerator,
   private val workloadEnabled: Boolean,
+  private val analyticsMessageTracker: AnalyticsMessageTracker,
+  private val workloadId: Optional<String>,
 ) {
   private val metricClient = MetricClientFactory.getMetricClient()
   private val metricAttrs: MutableList<MetricAttribute> = mutableListOf()
@@ -101,31 +112,48 @@ class ReplicationWorkerHelper(
     onReplicationRunning.call()
   }
 
-  fun getWorkloadStatusHeartbeat(): Runnable {
-    return getWorkloadStatusHeartbeat(Duration.ofSeconds(replicationFeatureFlags.workloadHeartbeatRate.toLong()))
+  fun getWorkloadStatusHeartbeat(mdc: Map<String, String>): Runnable {
+    return getWorkloadStatusHeartbeat(Duration.ofSeconds(replicationFeatureFlags.workloadHeartbeatRate.toLong()), workloadId, mdc)
   }
 
-  fun getWorkloadStatusHeartbeat(heartbeatInterval: Duration): Runnable {
+  private fun getWorkloadStatusHeartbeat(
+    heartbeatInterval: Duration,
+    workloadId: Optional<String>,
+    mdc: Map<String, String>,
+  ): Runnable {
     return Runnable {
+      MDC.setContextMap(mdc)
       logger.info { "Starting workload heartbeat" }
+      var lastSuccessfulHeartbeat: Instant = Instant.now()
+      val heartbeatTimeoutDuration: Duration = Duration.ofMinutes(replicationFeatureFlags.workloadHeartbeatTimeoutInMinutes)
       do {
         Thread.sleep(heartbeatInterval.toMillis())
         ctx?.let {
           try {
+            if (workloadId.isEmpty) {
+              throw RuntimeException("workloadId should always be present")
+            }
+            logger.info { "Sending workload heartbeat" }
             workloadApi.workloadHeartbeat(
-              WorkloadHeartbeatRequest(
-                workloadIdGenerator.generate(
-                  it.connectionId,
-                  it.jobId,
-                  it.attempt,
-                  WorkloadType.SYNC,
-                ),
-              ),
+              WorkloadHeartbeatRequest(workloadId.get()),
             )
+            lastSuccessfulHeartbeat = Instant.now()
           } catch (e: Exception) {
-            logger.error(e) { "Heartbeat failed" }
-            markCancelled()
-            return@Runnable
+            /**
+             * The WorkloadApi returns responseCode "410" from the heartbeat endpoint if
+             * Workload should stop because it is no longer expected to be running.
+             * See [io.airbyte.workload.api.WorkloadApi.workloadHeartbeat]
+             */
+            if (e is ClientException && e.statusCode == HttpStatus.GONE.code) {
+              logger.warn(e) { "Received kill response from API, shutting down heartbeat" }
+              markCancelled()
+              return@Runnable
+            } else if (Duration.between(lastSuccessfulHeartbeat, Instant.now()) > heartbeatTimeoutDuration) {
+              logger.warn(e) { "Have not been able to update heartbeat for more than the timeout duration, shutting down heartbeat" }
+              markCancelled()
+              return@Runnable
+            }
+            logger.warn(e) { "Error while trying to heartbeat, re-trying" }
           }
         }
       } while (true)
@@ -141,6 +169,8 @@ class ReplicationWorkerHelper(
 
     this.ctx = ctx
     this.replicationFeatureFlags = replicationFeatureFlags
+
+    analyticsMessageTracker.ctx = ctx
 
     with(metricAttrs) {
       clear()
@@ -210,6 +240,7 @@ class ReplicationWorkerHelper(
     }
 
     timeTracker.trackReplicationEndTime()
+    analyticsMessageTracker.flush()
   }
 
   fun endOfSource() {
@@ -278,7 +309,7 @@ class ReplicationWorkerHelper(
         .withBytesSynced(messageTracker.syncStatsTracker.getTotalBytesCommitted())
         .withTotalStats(totalSyncStats)
         .withStreamStats(streamSyncStats)
-        .withStartTime(timeTracker.getReplicationStartTime())
+        .withStartTime(timeTracker.replicationStartTime)
         .withEndTime(System.currentTimeMillis())
         .withPerformanceMetrics(performanceMetrics)
 
@@ -293,6 +324,12 @@ class ReplicationWorkerHelper(
       logger.info { "sync summary: ${mapper.writerWithDefaultPrettyPrinter().writeValueAsString(summary)}" }
       logger.info { "failures: ${mapper.writerWithDefaultPrettyPrinter().writeValueAsString(failures)}" }
     }
+
+    // Metric to help investigating https://github.com/airbytehq/airbyte/issues/34567
+    if (failures.any { f -> f.failureOrigin.equals("destination") && f.internalMessage.contains("Unable to deserialize PartialAirbyteMessage") }) {
+      metricClient.count(OssMetricsRegistry.DESTINATION_DESERIALIZATION_ERROR, 1, *metricAttrs.toTypedArray())
+    }
+
     LineGobbler.endSection("REPLICATION")
     return output
   }
@@ -304,6 +341,9 @@ class ReplicationWorkerHelper(
     fieldSelector.filterSelectedFields(sourceRawMessage)
     fieldSelector.validateSchema(sourceRawMessage)
     messageTracker.acceptFromSource(sourceRawMessage)
+    if (isAnalyticsMessage(sourceRawMessage)) {
+      analyticsMessageTracker.addMessage(sourceRawMessage, AirbyteMessageOrigin.SOURCE)
+    }
 
     if (shouldPublishMessage(sourceRawMessage)) {
       replicationAirbyteMessageEventPublishingHelper
@@ -320,6 +360,7 @@ class ReplicationWorkerHelper(
 
     if (sourceRawMessage.type == Type.STATE) {
       metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_SOURCE, 1, *metricAttrs.toTypedArray())
+      recordStateStatsMetrics(metricClient, sourceRawMessage.state, AirbyteMessageOrigin.SOURCE, ctx!!)
     }
 
     return sourceRawMessage
@@ -348,10 +389,14 @@ class ReplicationWorkerHelper(
         }
 
     messageTracker.acceptFromDestination(destinationRawMessage)
+    if (isAnalyticsMessage(destinationRawMessage)) {
+      analyticsMessageTracker.addMessage(destinationRawMessage, AirbyteMessageOrigin.DESTINATION)
+    }
 
     if (destinationRawMessage.type == Type.STATE) {
+      val airbyteStateMessage = destinationRawMessage.state
+      recordStateStatsMetrics(metricClient, airbyteStateMessage, AirbyteMessageOrigin.DESTINATION, ctx!!)
       syncPersistence.persist(context.connectionId, destinationRawMessage.state)
-
       metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_DESTINATION, 1, *metricAttrs.toTypedArray())
     }
 
@@ -444,6 +489,8 @@ private fun shouldPublishMessage(msg: AirbyteMessage): Boolean =
     else -> false
   }
 
+private fun isAnalyticsMessage(msg: AirbyteMessage): Boolean = msg.type == Type.TRACE && msg.trace.type == AirbyteTraceMessage.Type.ANALYTICS
+
 private fun toConnectionAttrs(ctx: ReplicationContext?): List<MetricAttribute> {
   if (ctx == null) {
     return listOf()
@@ -454,4 +501,53 @@ private fun toConnectionAttrs(ctx: ReplicationContext?): List<MetricAttribute> {
     ctx.jobId?.let { add(MetricAttribute(MetricTags.JOB_ID, it.toString())) }
     ctx.attempt?.let { add(MetricAttribute(MetricTags.ATTEMPT_NUMBER, it.toString())) }
   }
+}
+
+private fun extractStateRecordCount(stats: AirbyteStateStats?): Double {
+  return stats?.recordCount ?: 0.0
+}
+
+private fun recordStateStatsMetrics(
+  metricClient: MetricClient,
+  stateMessage: AirbyteStateMessage,
+  messageOrigin: AirbyteMessageOrigin,
+  ctx: ReplicationContext,
+) {
+  // Only record the destination stats for state messages coming from the destination.
+  // The destination stats will always be blank for state messages coming from the source
+  if (messageOrigin == AirbyteMessageOrigin.DESTINATION && stateMessage.destinationStats != null) {
+    recordStateStatsMetric(
+      metricClient,
+      stateMessage.destinationStats,
+      messageOrigin,
+      AirbyteMessageOrigin.DESTINATION,
+      ctx,
+    )
+  }
+
+  if (stateMessage.sourceStats != null) {
+    recordStateStatsMetric(metricClient, stateMessage.sourceStats, messageOrigin, AirbyteMessageOrigin.SOURCE, ctx)
+  }
+}
+
+private fun recordStateStatsMetric(
+  metricClient: MetricClient,
+  stats: AirbyteStateStats,
+  messageOrigin: AirbyteMessageOrigin,
+  statsType: AirbyteMessageOrigin,
+  ctx: ReplicationContext,
+) {
+  metricClient.gauge(
+    OssMetricsRegistry.SYNC_STATE_RECORD_COUNT,
+    extractStateRecordCount(stats),
+    *toConnectionAttrs(ctx).toTypedArray(),
+    *buildList {
+      ctx.sourceImage?.let { add(MetricAttribute(MetricTags.SOURCE_IMAGE, it)) }
+      ctx.destinationImage?.let {
+        add(MetricAttribute(MetricTags.DESTINATION_IMAGE, it))
+        add(MetricAttribute(MetricTags.AIRBYTE_MESSAGE_ORIGIN, messageOrigin.name))
+      }
+      add(MetricAttribute(MetricTags.RECORD_COUNT_TYPE, statsType.name))
+    }.toTypedArray(),
+  )
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
@@ -9,7 +9,7 @@ import static org.mockito.Mockito.spy;
 
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.workers.internal.FieldSelector;
-import io.airbyte.workers.workload.WorkloadIdGenerator;
+import java.util.Optional;
 
 /**
  * DefaultReplicationWorkerTests. Tests in this class should be implementation specific, general
@@ -21,8 +21,8 @@ class DefaultReplicationWorkerTest extends ReplicationWorkerTest {
   ReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled) {
     final var fieldSelector = new FieldSelector(recordSchemaValidator, workerMetricReporter, fieldSelectionEnabled, false);
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
-        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApi,
-        new WorkloadIdGenerator(), false));
+        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApi, false, analyticsMessageTracker,
+        Optional.empty()));
     return new DefaultReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,

@@ -4,15 +4,15 @@ import isEqual from "lodash/isEqual";
 import React, { useCallback, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Switch } from "components/ui/Switch";
 import { Table } from "components/ui/Table";
 import { TextWithOverflowTooltip } from "components/ui/Text";
 
 import { getDataType } from "area/connection/utils";
+import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaField, SyncSchemaFieldObject } from "core/domain/catalog";
-import { AirbyteStreamConfiguration } from "core/request/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 
@@ -34,7 +34,7 @@ export interface TableStream {
 }
 
 export interface StreamFieldsTableProps {
-  config?: AirbyteStreamConfiguration;
+  config: AirbyteStreamConfiguration;
   handleFieldToggle: (fieldPath: string[], isSelected: boolean) => void;
   onCursorSelect: (cursorPath: string[]) => void;
   onPkSelect: (pkPath: string[]) => void;
@@ -191,6 +191,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
             isCursor={checkIsCursor}
             isCursorDefinitionSupported={isCursorDefinitionSupported}
             onCursorSelect={onCursorSelect}
+            disabled={mode === "readonly"}
             {...props}
           />
         ),
@@ -207,6 +208,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
             isPKDefinitionSupported={isPKDefinitionSupported}
             isPrimaryKey={checkIsPrimaryKey}
             onPkSelect={onPkSelect}
+            disabled={mode === "readonly"}
             {...props}
           />
         ),
@@ -273,11 +275,11 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
       }),
       columnHelper.group({
         id: "arrow",
-        header: () => <ArrowRightIcon />,
+        header: () => <Icon type="arrowRight" />,
         columns: [
           {
             id: "_", // leave the column name empty
-            cell: () => <ArrowRightIcon />,
+            cell: () => <Icon type="arrowRight" />,
             meta: {
               thClassName: styles.headerCell,
               tdClassName: styles.arrowCell,

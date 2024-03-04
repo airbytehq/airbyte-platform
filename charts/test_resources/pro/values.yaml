@@ -11,16 +11,12 @@ global:
   edition: "pro"
 
   env_vars: {}
-  ##  database [object] -- Object used to overrite database configuration(to use external DB)
+  ##  database [object] -- Object used to override database configuration(to use external DB)
   ##  database.secretName -- secret name where DB creds are stored
   ##  database.secretValue -- secret value for database password
-  ##  database.host -- Database host override
-  ##  database.port -- Database port override
   database:
     secretName: ""
     secretValue: ""
-    host: "example.com"
-    port: "5432"
   state:
     ## state.storage.type Determines which state storage will be utilized.  One of "MINIO", "S3" or "GCS"
     storage:
@@ -422,7 +418,7 @@ pod-sweeper:
   image:
     repository: bitnami/kubectl
     pullPolicy: IfNotPresent
-    tag: latest
+    tag: 1.28.4
 
   ##  podSweeper.podAnnotations [object] Add extra annotations to the podSweeper pod
   ##
@@ -1301,7 +1297,7 @@ minio:
   ## image.tag Minio tag image
   image:
     repository: minio/minio
-    tag: latest
+    tag: RELEASE.2023-11-20T22-40-07Z
 
   auth:
     rootUser: minio

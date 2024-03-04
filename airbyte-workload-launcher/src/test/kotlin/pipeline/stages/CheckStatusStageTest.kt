@@ -1,45 +1,66 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.pipeline.stages
 
-import io.airbyte.workload.launcher.client.StatusUpdater
-import io.airbyte.workload.launcher.pipeline.LaunchStageIO
-import io.airbyte.workload.launcher.pipeline.LauncherInput
+import fixtures.RecordFixtures
+import io.airbyte.config.WorkloadType
+import io.airbyte.workload.launcher.fixtures.SharedMocks.Companion.metricPublisher
+import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pods.KubePodClient
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import pipeline.SharedMocks.Companion.metricPublisher
-import javax.ws.rs.ClientErrorException
+import java.util.UUID
 
 class CheckStatusStageTest {
   @Test
   fun `sets skip flag to true for running pods`() {
     val workloadId = "1"
+    val autoId = UUID.randomUUID()
 
-    val statusUpdater: StatusUpdater = mockk()
     val kubernetesClient: KubePodClient = mockk()
 
     every {
-      statusUpdater.updateStatusToRunning(
-        workloadId,
-      )
-    } returns Unit
-
-    every {
-      kubernetesClient.podsExistForWorkload(workloadId)
+      kubernetesClient.podsExistForAutoId(autoId)
     } returns true
 
-    val checkStatusStage = CheckStatusStage(statusUpdater, kubernetesClient, metricPublisher)
+    val checkStatusStage = CheckStatusStage(kubernetesClient, metricPublisher, "dataplane-id")
 
-    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
+    val originalInput =
+      LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path", autoId = autoId))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
 
-    verify { statusUpdater.updateStatusToRunning(workloadId) }
+    assert(outputFromCheckStatusStage.skip) { "Skip Launch flag should be true but it's false" }
+  }
+
+  @Test
+  fun `sets skip flag to true for running pods for check`() {
+    val workloadId = "1"
+    val autoId = UUID.randomUUID()
+
+    val kubernetesClient: KubePodClient = mockk()
+
+    every {
+      kubernetesClient.podsExistForAutoId(autoId)
+    } returns true
+
+    val checkStatusStage = CheckStatusStage(kubernetesClient, metricPublisher, "dataplane-id")
+
+    val originalInput =
+      LaunchStageIO(
+        RecordFixtures.launcherInput(
+          workloadId,
+          "{}",
+          mapOf("label_key" to "label_value"),
+          "/log/path",
+          workloadType = WorkloadType.CHECK,
+          autoId = autoId,
+        ),
+      )
+    val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
 
     assert(outputFromCheckStatusStage.skip) { "Skip Launch flag should be true but it's false" }
   }
@@ -47,45 +68,39 @@ class CheckStatusStageTest {
   @Test
   fun `sets skip flag to false for non-running pods`() {
     val workloadId = "1"
+    val autoId = UUID.randomUUID()
 
-    val statusUpdater: StatusUpdater = mockk()
     val kubernetesClient: KubePodClient = mockk()
 
     every {
-      kubernetesClient.podsExistForWorkload(workloadId)
+      kubernetesClient.podsExistForAutoId(autoId)
     } returns false
 
-    val checkStatusStage = CheckStatusStage(statusUpdater, kubernetesClient, metricPublisher)
+    val checkStatusStage = CheckStatusStage(kubernetesClient, metricPublisher, "dataplane-id")
 
-    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
+    val originalInput =
+      LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path", autoId = autoId))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
-
-    verify(exactly = 0) { statusUpdater.updateStatusToRunning(workloadId) }
 
     assert(!outputFromCheckStatusStage.skip) { "Skip Launch flag should be false but it's true" }
   }
 
   @Test
-  fun `error is propagated in case of workload-api error`() {
+  fun `error is propagated in case of kube-api error`() {
     val workloadId = "1"
+    val autoId = UUID.randomUUID()
 
-    val statusUpdater: StatusUpdater = mockk()
     val kubernetesClient: KubePodClient = mockk()
 
     every {
-      statusUpdater.updateStatusToRunning(
-        workloadId,
-      )
-    } throws ClientErrorException(400)
+      kubernetesClient.podsExistForAutoId(autoId)
+    } throws Exception("Bang!")
 
-    every {
-      kubernetesClient.podsExistForWorkload(workloadId)
-    } returns true
+    val checkStatusStage = CheckStatusStage(kubernetesClient, metricPublisher, "dataplane-id")
 
-    val checkStatusStage = CheckStatusStage(statusUpdater, kubernetesClient, metricPublisher)
+    val originalInput =
+      LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path", autoId = autoId))
 
-    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
-
-    assertThrows<ClientErrorException> { checkStatusStage.applyStage(originalInput) }
+    assertThrows<Exception> { checkStatusStage.applyStage(originalInput) }
   }
 }

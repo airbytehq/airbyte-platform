@@ -1,0 +1,19 @@
+---
+"$schema": http://json-schema.org/draft-07/schema#
+"$id": https://github.com/airbytehq/airbyte/blob/master/airbyte-config/models/src/main/resources/types/StreamBreakingChangeScope.yaml
+title: BreakingChangeScope
+description: A scope that can be used to limit the impact of a breaking change
+type: object
+additionalProperties: true
+required:
+  - scopeType
+  - impactedScopes
+properties:
+  scopeType:
+    type: string
+    enum:
+      - stream
+  impactedScopes:
+    description: List of scope values (e.g. stream names) that are impacted by the breaking change. Type of the array values is polymorphic based on the scope type.
+    type: array
+    minItems: 1

@@ -1,5 +1,5 @@
 import { useGetWorkspace } from "core/api";
-import { PermissionRead } from "core/request/AirbyteClient";
+import { PermissionRead } from "core/api/types/AirbyteClient";
 
 export const RbacResourceHierarchy = ["INSTANCE", "ORGANIZATION", "WORKSPACE"] as const;
 export const RbacRoleHierarchy = ["ADMIN", "EDITOR", "READER", "MEMBER"] as const;
@@ -11,7 +11,7 @@ export interface RbacQuery {
   resourceId?: string;
   role: RbacRole;
 }
-export type RbacQueryWithoutResourceId = Omit<RbacQuery, "resourceId">; // to allow optionally reading `resourceId` from React context
+export type RbacQueryWithoutResourceId = Omit<RbacQuery, "resourceId">;
 
 // allows for easier object creation as we want to align with PermissionRead but have no use for permissionId or userId when processing permissions
 export type RbacPermission = Omit<PermissionRead, "permissionId" | "userId">;
@@ -34,6 +34,9 @@ export const partitionPermissionType = (permissionType: RbacPermission["permissi
   return [rbacResource, rbacRole];
 };
 
+/**
+ * Don't call this outside of `core/utils/rbac`. Always use the `useRbac()` or (better) `useIntent()` hook instead.
+ */
 export const useRbacPermissionsQuery = (permissions: RbacPermission[], query: RbacQuery) => {
   const queryRoleHierarchy = RbacRoleHierarchy.indexOf(query.role);
   const queryResourceHierarchy = RbacResourceHierarchy.indexOf(query.resourceType);

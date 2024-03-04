@@ -1,6 +1,6 @@
-import { faTimes } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ComponentStory, ComponentMeta } from "@storybook/react";
+
+import { Icon } from "components/ui/Icon";
 
 import { Button } from "./Button";
 
@@ -18,7 +18,7 @@ export const Primary = Template.bind({});
 Primary.args = {
   variant: "primary",
   children: "Primary",
-  icon: <FontAwesomeIcon icon={faTimes} />,
+  icon: <Icon type="cross" />,
   iconPosition: "left",
   disabled: false,
 };
@@ -34,7 +34,7 @@ LoadingButton.args = {
 export const ButtonWithIcon = Template.bind({});
 ButtonWithIcon.args = {
   variant: "primary",
-  icon: <FontAwesomeIcon icon={faTimes} />,
+  icon: <Icon type="cross" />,
   iconPosition: "left",
   disabled: false,
 };
@@ -42,7 +42,7 @@ ButtonWithIcon.args = {
 export const ButtonWithTextAndIconLeft = Template.bind({});
 ButtonWithTextAndIconLeft.args = {
   variant: "primary",
-  icon: <FontAwesomeIcon icon={faTimes} />,
+  icon: <Icon type="cross" />,
   iconPosition: "left",
   children: "Icon Left",
   disabled: false,
@@ -51,7 +51,7 @@ ButtonWithTextAndIconLeft.args = {
 export const ButtonWithTextAndIconRight = Template.bind({});
 ButtonWithTextAndIconRight.args = {
   variant: "primary",
-  icon: <FontAwesomeIcon icon={faTimes} />,
+  icon: <Icon type="cross" />,
   iconPosition: "right",
   children: "Icon Right",
   disabled: false,
@@ -85,9 +85,16 @@ Clear.args = {
   disabled: false,
 };
 
-export const Dark = Template.bind({});
-Dark.args = {
-  variant: "dark",
-  children: "Dark",
+export const PrimaryDark = Template.bind({});
+PrimaryDark.args = {
+  variant: "primaryDark",
+  children: "primaryDark",
+  disabled: false,
+};
+
+export const SecondaryDark = Template.bind({});
+SecondaryDark.args = {
+  variant: "primaryDark",
+  children: "primaryDark",
   disabled: false,
 };

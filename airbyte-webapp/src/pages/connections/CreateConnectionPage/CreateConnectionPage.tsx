@@ -9,11 +9,10 @@ import { SelectSource } from "components/connection/CreateConnection/SelectSourc
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useGetDestination, useGetSource } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { trackAction } from "core/utils/datadog";
 import { AppActionCodes } from "hooks/services/AppMonitoringService";
-import { useGetDestination } from "hooks/services/useDestinationHook";
-import { useGetSource } from "hooks/services/useSourceHook";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 

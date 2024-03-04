@@ -1,5 +1,5 @@
-import { PropsWithChildren, useCallback, useMemo, useRef } from "react";
-import { FormattedMessage } from "react-intl";
+import { PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { AuthProvider, useAuth } from "react-oidc-context";
 
 import LoadingPage from "components/LoadingPage";
@@ -7,7 +7,9 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { useGetDefaultUser, useGetInstanceConfiguration } from "core/api";
+import { useGetInstanceConfiguration, useGetOrCreateUser } from "core/api";
+import { UserRead } from "core/api/types/AirbyteClient";
+import { useNotificationService } from "hooks/services/Notification";
 import { createUriWithoutSsoParams } from "packages/cloud/services/auth/KeycloakService";
 
 import { AuthContext } from "./AuthContext";
@@ -81,24 +83,56 @@ const LoginRedirectCheck: React.FC<PropsWithChildren<unknown>> = ({ children }) 
 
 const AuthServiceProvider: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
   const keycloakAuth = useAuth();
-
+  const { mutateAsync: getAirbyteUser } = useGetOrCreateUser();
+  const [airbyteUser, setAirbyteUser] = useState<UserRead | null>(null);
+  const [inited, setInited] = useState(false);
+  const fetchingAirbyteUser = useRef(false);
+  const { formatMessage } = useIntl();
+  const { registerNotification } = useNotificationService();
   // Allows us to get the access token as a callback, instead of re-rendering every time a new access token arrives
-  const keycloakAccessTokenRef = useRef<string | null>(keycloakAuth.user?.access_token ?? null);
-  keycloakAccessTokenRef.current = keycloakAuth.user?.access_token ?? null;
-  const getAccessToken = useCallback(() => Promise.resolve(keycloakAccessTokenRef.current), []);
+  const keycloakAccessTokenRef = useRef<string | undefined>(keycloakAuth.user?.access_token);
+  keycloakAccessTokenRef.current = keycloakAuth.user?.access_token;
 
-  const defaultUser = useGetDefaultUser({ getAccessToken });
+  const getAccessToken = useCallback(() => {
+    return keycloakAccessTokenRef.current ? Promise.resolve(keycloakAccessTokenRef.current) : Promise.reject();
+  }, []);
 
+  useEffect(() => {
+    if (fetchingAirbyteUser.current) {
+      return;
+    }
+    fetchingAirbyteUser.current = true;
+    (async () => {
+      try {
+        if (keycloakAuth.user) {
+          const user = await getAirbyteUser({
+            authUserId: keycloakAuth.user.profile.sub,
+            getAccessToken: () => Promise.resolve(keycloakAuth.user?.access_token ?? ""),
+          });
+          setAirbyteUser(user);
+        }
+      } catch {
+        registerNotification({
+          id: "login.sso.unknownError",
+          text: formatMessage({ id: "login.sso.unknownError" }),
+          type: "error",
+        });
+      } finally {
+        setInited(true);
+      }
+    })();
+  }, [formatMessage, getAirbyteUser, keycloakAuth.user, registerNotification]);
   const contextValue = useMemo(() => {
     return {
-      user: defaultUser,
-      inited: true,
+      user: airbyteUser,
+      inited,
       emailVerified: false,
       providers: [],
       loggedOut: false,
+      logout: keycloakAuth.signoutRedirect,
       getAccessToken,
     };
-  }, [defaultUser, getAccessToken]);
+  }, [airbyteUser, getAccessToken, inited, keycloakAuth.signoutRedirect]);
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 };

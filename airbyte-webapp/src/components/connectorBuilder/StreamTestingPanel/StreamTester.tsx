@@ -12,10 +12,7 @@ import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
-import { KnownExceptionInfo } from "core/api/types/ConnectorBuilderClient";
-import { CommonRequestError } from "core/request/CommonRequestError";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
@@ -31,9 +28,9 @@ import { useAutoImportSchema } from "../useAutoImportSchema";
 import { formatJson } from "../utils";
 
 export const StreamTester: React.FC<{
-  hasTestInputJsonErrors: boolean;
-  setTestInputOpen: (open: boolean) => void;
-}> = ({ hasTestInputJsonErrors, setTestInputOpen }) => {
+  hasTestingValuesErrors: boolean;
+  setTestingValuesInputOpen: (open: boolean) => void;
+}> = ({ hasTestingValuesErrors, setTestingValuesInputOpen }) => {
   const { formatMessage } = useIntl();
   const {
     resolvedManifest,
@@ -50,6 +47,7 @@ export const StreamTester: React.FC<{
       dataUpdatedAt,
       errorUpdatedAt,
     },
+    testReadLimits: { recordLimit, pageLimit, sliceLimit },
   } = useConnectorBuilderTestRead();
   const [showLimitWarning, setShowLimitWarning] = useLocalStorage("connectorBuilderLimitWarning", true);
   const mode = useBuilderWatch("mode");
@@ -63,6 +61,8 @@ export const StreamTester: React.FC<{
 
   const analyticsService = useAnalyticsService();
 
+  const requestErrorStatus = resolveError?.status;
+
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const errorMessage = isError
     ? error instanceof Error
@@ -70,7 +70,7 @@ export const StreamTester: React.FC<{
       : unknownErrorMessage
     : undefined;
 
-  const errorExceptionStack = (resolveError as CommonRequestError<KnownExceptionInfo>)?.payload?.exceptionStack;
+  const errorExceptionStack = resolveError?.payload?.exceptionStack;
 
   const [errorLogs, nonErrorLogs] = useMemo(
     () =>
@@ -84,8 +84,9 @@ export const StreamTester: React.FC<{
   const hasRegularRequests =
     streamReadData !== undefined && !isError && streamReadData.slices && streamReadData.slices.length > 0;
 
-  const logsFlex = isError || errorLogs.length > 0 ? 0.75 : 0;
-  const auxiliaryRequestsFlex = hasAuxiliaryRequests && !hasRegularRequests ? 0.75 : 0;
+  const SECONDARY_PANEL_SIZE = 0.5;
+  const logsFlex = isError || errorLogs.length > 0 ? SECONDARY_PANEL_SIZE : 0;
+  const auxiliaryRequestsFlex = hasAuxiliaryRequests && !hasRegularRequests ? SECONDARY_PANEL_SIZE : 0;
 
   useEffect(() => {
     // This will only be true if the data was manually refetched by the user clicking the Test button,
@@ -135,8 +136,8 @@ export const StreamTester: React.FC<{
             stream_name: streamName,
           });
         }}
-        hasTestInputJsonErrors={hasTestInputJsonErrors}
-        setTestInputOpen={setTestInputOpen}
+        hasTestingValuesErrors={hasTestingValuesErrors}
+        setTestingValuesInputOpen={setTestingValuesInputOpen}
         isResolving={isResolving}
         hasResolveErrors={Boolean(resolveErrorMessage)}
       />
@@ -153,16 +154,29 @@ export const StreamTester: React.FC<{
             </Collapsible>
           )}
           <Text>
-            <FormattedMessage
-              id="connectorBuilder.ensureProperYaml"
-              values={{
-                a: (node: React.ReactNode) => (
-                  <a href={links.lowCodeYamlDescription} target="_blank" rel="noreferrer">
-                    {node}
-                  </a>
-                ),
-              }}
-            />
+            {[400, 422].includes(requestErrorStatus as number) ? (
+              <FormattedMessage
+                id="connectorBuilder.ensureProperYaml"
+                values={{
+                  a: (node: React.ReactNode) => (
+                    <a href={links.lowCodeYamlDescription} target="_blank" rel="noreferrer">
+                      {node}
+                    </a>
+                  ),
+                }}
+              />
+            ) : (
+              <FormattedMessage
+                id="connectorBuilder.contactSupport"
+                values={{
+                  a: (node: React.ReactNode) => (
+                    <a href={links.supportPortal} target="_blank" rel="noreferrer">
+                      {node}
+                    </a>
+                  ),
+                }}
+              />
+            )}
           </Text>
         </div>
       )}
@@ -174,7 +188,12 @@ export const StreamTester: React.FC<{
       {!isFetching && streamReadData && streamReadData.test_read_limit_reached && showLimitWarning && (
         <Message
           type="warning"
-          text={<FormattedMessage id="connectorBuilder.streamTestLimitReached" />}
+          text={
+            <FormattedMessage
+              id="connectorBuilder.streamTestLimitReached"
+              values={{ recordLimit, pageLimit, sliceLimit }}
+            />
+          }
           onClose={() => {
             setShowLimitWarning(false);
           }}
@@ -202,7 +221,13 @@ export const StreamTester: React.FC<{
                     children: <LogsDisplay logs={streamReadData?.logs ?? []} error={errorMessage} />,
                     minWidth: 0,
                     flex: logsFlex,
-                    splitter: <Splitter label="Connector Logs" num={nonErrorLogs.length} errorNum={errorLogs.length} />,
+                    splitter: (
+                      <Splitter
+                        label={formatMessage({ id: "connectorBuilder.connectorLogs" })}
+                        num={nonErrorLogs.length}
+                        errorNum={errorLogs.length}
+                      />
+                    ),
                     className: styles.secondaryPanel,
                   },
                 ]

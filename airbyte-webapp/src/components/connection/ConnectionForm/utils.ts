@@ -1,7 +1,7 @@
 import { NormalizationType } from "area/connection/types";
-import { AirbyteStreamAndConfiguration, OperationCreate, OperatorType } from "core/request/AirbyteClient";
+import { AirbyteStreamAndConfiguration, OperationCreate, OperatorType } from "core/api/types/AirbyteClient";
 
-import { HookFormConnectionFormValues } from "./hookFormConfig";
+import { FormConnectionFormValues } from "./formConfig";
 
 /**
  * since AirbyteStreamAndConfiguration don't have a unique identifier
@@ -49,8 +49,8 @@ const mapNormalizationOptionToOperation = (
  */
 export const mapFormValuesToOperations = (
   workspaceId: string,
-  normalization: HookFormConnectionFormValues["normalization"],
-  transformations: HookFormConnectionFormValues["transformations"]
+  normalization: FormConnectionFormValues["normalization"],
+  transformations: FormConnectionFormValues["transformations"]
 ): OperationCreate[] => {
   const normalizationOperation = mapNormalizationOptionToOperation(workspaceId, normalization);
 

@@ -1,5 +1,3 @@
-import { faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Disclosure } from "@headlessui/react";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -13,14 +11,16 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
 import { Spinner } from "components/ui/Spinner";
 
-import { useDeleteConnection } from "core/api";
-import { Geography, WebBackendConnectionUpdate } from "core/request/AirbyteClient";
+import { useCurrentWorkspace, useDeleteConnection } from "core/api";
+import { Geography, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 import { links } from "core/utils/links";
+import { useIntent } from "core/utils/rbac";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -69,6 +69,9 @@ export const ConnectionSettingsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_SETTINGS);
   const onDelete = () => deleteConnection(connection);
 
+  const { workspaceId } = useCurrentWorkspace();
+  const canEditConnection = useIntent("EditConnection", { workspaceId });
+
   const onSuccess = () => {
     registerNotification({
       id: "connection_settings_change_success",
@@ -102,12 +105,13 @@ export const ConnectionSettingsPage: React.FC = () => {
   return (
     <div className={styles.container}>
       <FlexContainer direction="column" justifyContent="flex-start">
-        <Card withPadding>
+        <Card>
           <Heading as="h2" size="sm" className={styles.heading}>
             <FormattedMessage id="connectionForm.connectionSettings" />
           </Heading>
           <Form<ConnectionSettingsFormValues>
             trackDirtyChanges
+            disabled={!canEditConnection}
             onSubmit={({ connectionName, geography, notifySchemaChanges }) => {
               const connectionUpdates: WebBackendConnectionUpdate = {
                 name: connectionName,
@@ -150,14 +154,18 @@ export const ConnectionSettingsPage: React.FC = () => {
             <Disclosure.Button
               as={Button}
               variant="clear"
-              icon={<FontAwesomeIcon icon={open ? faChevronDown : faChevronRight} />}
+              icon={<Icon type={open ? "chevronDown" : "chevronRight"} />}
               className={styles.advancedButton}
             >
               <FormattedMessage id="connectionForm.settings.advancedButton" />
             </Disclosure.Button>
             <Disclosure.Panel className={styles.advancedPanel}>
               <React.Suspense fallback={<Spinner />}>
-                <StateBlock connectionId={connection.connectionId} syncCatalog={connection.syncCatalog} />
+                <StateBlock
+                  connectionId={connection.connectionId}
+                  syncCatalog={connection.syncCatalog}
+                  disabled={mode === "readonly"}
+                />
               </React.Suspense>
             </Disclosure.Panel>
           </>

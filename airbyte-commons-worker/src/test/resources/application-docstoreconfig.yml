@@ -1,0 +1,19 @@
+airbyte:
+  cloud:
+    storage:
+      state:
+        gcs:
+          application-credentials: gcs-app-creds
+          bucket: gcs-bucket
+        minio:
+          access-key: minio-access-key
+          bucket: minio-bucket
+          endpoint: minio-endpoint
+          secret-access-key: minio-secret
+        s3:
+          access-key: s3-key
+          bucket: s3-bucket
+          region: s3-region
+          secret-access-key: s3-secret
+        local:
+          root: local-root

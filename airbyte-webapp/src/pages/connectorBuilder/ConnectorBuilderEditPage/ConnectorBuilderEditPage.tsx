@@ -34,6 +34,7 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     initialYaml,
     builderProject: {
       builderProject: { name },
+      testingValues: initialTestingValues,
     },
   } = useInitializedBuilderProject();
   const { storedMode } = useConnectorBuilderLocalStorage();
@@ -44,6 +45,7 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     name,
     view: "global" as const,
     testStreamIndex: 0,
+    testingValues: initialTestingValues,
   };
   const initialValues = useRef(values);
   initialValues.current = values;

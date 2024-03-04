@@ -1,0 +1,10 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.header {
+  border-bottom: colors.$grey-100 variables.$border-thin solid;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}

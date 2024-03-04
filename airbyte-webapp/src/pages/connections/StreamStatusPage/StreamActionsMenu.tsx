@@ -1,5 +1,3 @@
-import { faEllipsisV } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -8,7 +6,9 @@ import { useConnectionSyncContext } from "components/connection/ConnectionSync/C
 import { StreamWithStatus } from "components/connection/StreamStatus/streamStatusUtils";
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
+import { Icon } from "components/ui/Icon";
 
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { ConnectionRoutePaths } from "pages/routePaths";
 
 interface StreamActionsMenuProps {
@@ -20,12 +20,13 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
   const navigate = useNavigate();
 
   const { syncStarting, jobSyncRunning, resetStarting, jobResetRunning, resetStreams } = useConnectionSyncContext();
+  const { mode } = useConnectionFormService();
 
   const options: DropdownMenuOptionType[] = [
     {
       displayName: formatMessage({ id: "connection.stream.actions.resetThisStream" }),
       value: "resetThisStream",
-      disabled: syncStarting || jobSyncRunning || resetStarting || jobResetRunning,
+      disabled: syncStarting || jobSyncRunning || resetStarting || jobResetRunning || mode === "readonly",
     },
     {
       displayName: formatMessage({ id: "connection.stream.actions.showInReplicationTable" }),
@@ -51,7 +52,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
 
   return (
     <DropdownMenu placement="bottom-end" options={options} onChange={onOptionClick}>
-      {() => <Button variant="clear" icon={<FontAwesomeIcon icon={faEllipsisV} />} />}
+      {() => <Button variant="clear" icon={<Icon type="options" />} />}
     </DropdownMenu>
   );
 };

@@ -23,12 +23,7 @@ properties:
     description: The userId from the Auth provider
     type: string
   authProvider:
-    type: string
-    default: airbyte
-    enum:
-      - airbyte
-      - google_identity_platform
-      - keycloak
+    "$ref": AuthProvider.yaml
   defaultWorkspaceId:
     description: The workspace a user will go to by default when they login
     type: string

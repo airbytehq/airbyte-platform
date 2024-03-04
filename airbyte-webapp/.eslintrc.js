@@ -133,6 +133,7 @@ module.exports = {
     "prefer-template": "warn",
     "spaced-comment": ["warn", "always", { markers: ["/"] }],
     yoda: "warn",
+    "import/no-duplicates": ["warn", { considerQueryString: true }],
     "import/order": [
       "warn",
       {
@@ -145,7 +146,7 @@ module.exports = {
             group: "internal",
           },
           {
-            pattern: "+(area|config|core|hooks|locales|packages|pages|services|types|views){/**,}",
+            pattern: "+(area|core|hooks|locales|packages|pages|services|types|views){/**,}",
             group: "internal",
             position: "after",
           },
@@ -415,9 +416,9 @@ module.exports = {
               {
                 target: ".",
                 from: "./core/api",
-                except: ["index.ts", "cloud.ts", "types/", "errors/index.ts"],
+                except: ["index.ts", "cloud.ts", "types/"],
                 message:
-                  "Only import from `core/api`, `core/api/cloud`, `core/api/errors`, or `core/api/types/*`. See also `core/api/README.md`.",
+                  "Only import from `core/api`, `core/api/cloud`, or `core/api/types/*`. See also `core/api/README.md`.",
               },
             ],
           },

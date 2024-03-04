@@ -1,11 +1,7 @@
-import { faCheck, faExclamationTriangle, faMinus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import React from "react";
 
-import { CrossIcon } from "components/icons/CrossIcon";
-import { MoonIcon } from "components/icons/MoonIcon";
-import { PauseIcon } from "components/icons/PauseIcon";
+import { Icon } from "components/ui/Icon";
 
 import { CircleLoader } from "./CircleLoader";
 import styles from "./StatusIcon.module.scss";
@@ -16,7 +12,7 @@ import { Tooltip } from "../Tooltip";
 export type StatusIconStatus = "sleep" | "inactive" | "success" | "warning" | "loading" | "error" | "cancelled";
 type Size = "sm" | "md" | "lg";
 
-interface StatusIconProps {
+export interface StatusIconProps {
   className?: string;
   status?: StatusIconStatus;
   title?: string;
@@ -41,9 +37,12 @@ const colorStyles: Record<StatusIconStatus, string> = {
 };
 
 const _iconByStatus = {
-  success: faCheck,
-  warning: faExclamationTriangle,
-  cancelled: faMinus,
+  success: "statusSuccess",
+  warning: "statusWarning",
+  cancelled: "statusCancelled",
+  inactive: "statusInactive",
+  sleep: "statusSleep",
+  error: "statusError",
 } as const;
 
 export const StatusIcon: React.FC<StatusIconProps> = ({ title, status = "error", size = "md", value }) => {
@@ -62,16 +61,10 @@ export const StatusIcon: React.FC<StatusIconProps> = ({ title, status = "error",
           gap="none"
         >
           <FlexContainer className={classNames(styles.icon)} justifyContent="center" alignItems="center" gap="none">
-            {status === "inactive" ? (
-              <PauseIcon title={title} />
-            ) : status === "sleep" ? (
-              <MoonIcon title={title} />
-            ) : status === "error" ? (
-              <CrossIcon title={title} />
-            ) : status === "loading" ? (
+            {status === "loading" ? (
               <CircleLoader title={title} />
             ) : (
-              <FontAwesomeIcon icon={_iconByStatus[status]} title={title} />
+              <Icon type={_iconByStatus[status]} title={title} />
             )}
           </FlexContainer>
           {value !== undefined && (

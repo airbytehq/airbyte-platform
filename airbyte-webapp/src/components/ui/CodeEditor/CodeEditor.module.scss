@@ -1,4 +1,5 @@
 @use "scss/colors";
+@use "scss/variables";
 
 // Export colors to be used in monaco editor
 :export {
@@ -15,4 +16,5 @@
   cursor: colors.$inverse;
   selection: colors.$dark-blue-50;
   inactiveSelection: colors.$dark-blue-40;
+  paddingTop: variables.$spacing-lg;
 }

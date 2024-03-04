@@ -1,21 +1,22 @@
-import { faTrashCan, faCopy } from "@fortawesome/free-regular-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
-import { useCallback, useMemo, useState } from "react";
-import React from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { get, useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import Indicator from "components/Indicator";
 import { Button } from "components/ui/Button";
 import { CodeEditor } from "components/ui/CodeEditor";
+import { Icon } from "components/ui/Icon";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { BuilderView, useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
+import {
+  BuilderView,
+  useConnectorBuilderFormState,
+  useConnectorBuilderTestRead,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
 import { BuilderCard } from "./BuilderCard";
@@ -44,6 +45,7 @@ interface StreamConfigViewProps {
 
 export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ streamNum, hasMultipleStreams }) => {
   const { formatMessage } = useIntl();
+  const { permission } = useConnectorBuilderFormState();
 
   const [selectedTab, setSelectedTab] = useState<"configuration" | "schema">("configuration");
   const streamPath = `formValues.streams.${streamNum}` as const;
@@ -58,7 +60,11 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
       className={hasMultipleStreams ? styles.multiStreams : undefined}
     >
       {/* Not using intl for the labels and tooltips in this component in order to keep maintainence simple */}
-      <BuilderTitle path={streamFieldPath("name")} label="Stream Name" size="md" />
+      <BuilderTitle
+        path={streamFieldPath("name")}
+        label={formatMessage({ id: "connectorBuilder.streamConfigView.name" })}
+        size="md"
+      />
       <StreamControls
         streamNum={streamNum}
         selectedTab={selectedTab}
@@ -66,7 +72,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
         streamFieldPath={streamFieldPath}
       />
       {selectedTab === "configuration" ? (
-        <>
+        <fieldset disabled={permission === "readOnly"} className={styles.fieldset}>
           <BuilderCard>
             <BuilderFieldWithInputs
               type="string"
@@ -76,21 +82,21 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             <BuilderField
               type="enum"
               path={streamFieldPath("httpMethod")}
-              options={getOptionsByManifest("HttpRequester.properties.http_method.anyOf.1")}
+              options={getOptionsByManifest("HttpRequester.properties.http_method")}
               manifestPath="HttpRequester.properties.http_method"
             />
             <BuilderField
               type="array"
               path={streamFieldPath("fieldPointer")}
-              label="Record Selector"
+              label={formatMessage({ id: "connectorBuilder.streamConfigView.fieldPointer" })}
               manifestPath="DpathExtractor.properties.field_path"
               optional
             />
             <BuilderField
               type="array"
               path={streamFieldPath("primaryKey")}
-              label="Primary Key"
-              tooltip="The field to be used to distinguish unique records. Can either be a single field or a list of fields representing a composite key."
+              label={formatMessage({ id: "connectorBuilder.streamConfigView.primaryKey.label" })}
+              tooltip={formatMessage({ id: "connectorBuilder.streamConfigView.primaryKey.tooltip" })}
               directionalStyle={false}
               optional
             />
@@ -110,7 +116,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             currentStreamIndex={streamNum}
           />
           <TransformationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
-        </>
+        </fieldset>
       ) : (
         <BuilderCard className={styles.schemaEditor}>
           <SchemaEditor streamFieldPath={streamFieldPath} />
@@ -145,6 +151,7 @@ const StreamControls = ({
   const error = get(errors, streamFieldPath("schema"));
   const hasSchemaErrors = Boolean(error);
   const autoImportSchema = useAutoImportSchema(streamNum);
+  const { permission } = useConnectorBuilderFormState();
 
   const handleDelete = () => {
     openConfirmationModal({
@@ -189,14 +196,19 @@ const StreamControls = ({
         }}
         initialValues={streams[streamNum]}
         button={
-          <button className={styles.controlButton} type="button">
-            <FontAwesomeIcon icon={faCopy} />
+          <button className={styles.controlButton} type="button" disabled={permission === "readOnly"}>
+            <Icon type="copy" />
           </button>
         }
         modalTitle={formatMessage({ id: "connectorBuilder.copyStreamModal.title" }, { name: streams[streamNum].name })}
       />
-      <button className={classNames(styles.deleteButton, styles.controlButton)} type="button" onClick={handleDelete}>
-        <FontAwesomeIcon icon={faTrashCan} />
+      <button
+        className={classNames(styles.deleteButton, styles.controlButton)}
+        type="button"
+        onClick={handleDelete}
+        disabled={permission === "readOnly"}
+      >
+        <Icon type="trash" />
       </button>
     </div>
   );
@@ -234,6 +246,7 @@ const StreamTab = ({
 const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => {
   const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
+  const { permission } = useConnectorBuilderFormState();
   const autoImportSchemaFieldPath = streamFieldPath("autoImportSchema");
   const autoImportSchema = useBuilderWatch(autoImportSchemaFieldPath);
   const schemaFieldPath = streamFieldPath("schema");
@@ -260,12 +273,16 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
   return (
     <>
       <BuilderField
-        label="Automatically import detected schema"
+        label={formatMessage({ id: "connectorBuilder.autoImportSchema.label" })}
         path={autoImportSchemaFieldPath}
         type="boolean"
         tooltip={<FormattedMessage id="connectorBuilder.autoImportSchema.tooltip" values={{ br: () => <br /> }} />}
-        disabled={error && !streamRead.data?.inferred_schema}
-        disabledTooltip={formatMessage({ id: "connectorBuilder.autoImportSchema.disabledTooltip" })}
+        disabled={(error && !streamRead.data?.inferred_schema) || permission === "readOnly"}
+        disabledTooltip={
+          permission === "readOnly"
+            ? undefined
+            : formatMessage({ id: "connectorBuilder.autoImportSchema.disabledTooltip" })
+        }
       />
       {showImportButton && (
         <Button
@@ -291,6 +308,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
       ) : (
         <div className={styles.editorContainer}>
           <CodeEditor
+            readOnly={permission === "readOnly"}
             key={schemaFieldPath}
             value={schema || ""}
             language="json"

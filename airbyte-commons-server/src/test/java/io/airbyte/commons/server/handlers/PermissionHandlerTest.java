@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.jooq.exception.DataAccessException;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -61,6 +62,17 @@ class PermissionHandlerTest {
     uuidSupplier = mock(Supplier.class);
     workspaceService = mock(WorkspaceService.class);
     permissionHandler = new PermissionHandler(permissionPersistence, workspaceService, uuidSupplier);
+  }
+
+  @Test
+  void isUserInstanceAdmin() throws IOException {
+    final UUID userId = UUID.randomUUID();
+
+    when(permissionPersistence.isUserInstanceAdmin(userId)).thenReturn(true);
+    Assertions.assertTrue(permissionHandler.isUserInstanceAdmin(userId));
+
+    when(permissionPersistence.isUserInstanceAdmin(userId)).thenReturn(false);
+    Assertions.assertFalse(permissionHandler.isUserInstanceAdmin(userId));
   }
 
   @Nested
@@ -631,6 +643,52 @@ class PermissionHandlerTest {
       // covered, you can add it to the `coveredPermissionTypes` list above in order to make this
       // assertion pass.
       assertEquals(coveredPermissionTypes, Set.of(PermissionType.values()));
+    }
+
+    @Test
+    void ensureNoExceptionOnOrgPermissionCheckForWorkspaceOutsideTheOrg() throws IOException, JsonValidationException, ConfigNotFoundException {
+      // Ensure that when we check permissions for a workspace that's not in an organization against an
+      // org permission, we don't throw an exception.
+      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(new Permission()
+          .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
+          .withOrganizationId(ORGANIZATION_ID)
+          .withUserId(USER_ID),
+          new Permission()
+              .withPermissionType(PermissionType.WORKSPACE_ADMIN)
+              .withWorkspaceId(WORKSPACE_ID)
+              .withUserId(USER_ID)));
+
+      when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, false))
+          .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID));
+
+      assertEquals(StatusEnum.SUCCEEDED, permissionHandler.checkPermissions(new PermissionCheckRequest()
+          .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_ADMIN)
+          .workspaceId(WORKSPACE_ID)
+          .userId(USER_ID)).getStatus());
+
+    }
+
+    @Test
+    void ensureFailedPermissionCheckForWorkspaceOutsideTheOrg() throws IOException, JsonValidationException, ConfigNotFoundException {
+      // Ensure that when we check permissions for a workspace that's not in an organization against an
+      // org permission, we fail the check if the workspace has no org ID set
+      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(new Permission()
+          .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
+          .withOrganizationId(ORGANIZATION_ID)
+          .withUserId(USER_ID),
+          new Permission()
+              .withPermissionType(PermissionType.WORKSPACE_ADMIN)
+              .withWorkspaceId(WORKSPACE_ID)
+              .withUserId(USER_ID)));
+
+      when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, false))
+          .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID));
+
+      assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(new PermissionCheckRequest()
+          .permissionType(io.airbyte.api.model.generated.PermissionType.ORGANIZATION_ADMIN)
+          .workspaceId(WORKSPACE_ID)
+          .userId(USER_ID)).getStatus());
+
     }
 
     private PermissionCheckRequest getWorkspacePermissionCheck(final PermissionType targetPermissionType) {

@@ -1,8 +1,7 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { sourceDefinitionKeys } from "services/connector/SourceDefinitionService";
-import { SCOPE_WORKSPACE } from "services/Scope";
+import { sourceDefinitionKeys } from "core/api";
 
 import { useBuilderResolveManifestQuery } from "./connectorBuilderApi";
 import {
@@ -13,14 +12,21 @@ import {
   listConnectorBuilderProjects,
   listDeclarativeManifests,
   publishConnectorBuilderProject,
+  readConnectorBuilderProjectStream,
   updateConnectorBuilderProject,
+  updateConnectorBuilderProjectTestingValues,
   updateDeclarativeManifestVersion,
 } from "../generated/AirbyteClient";
+import { SCOPE_WORKSPACE } from "../scopes";
 import {
   ConnectorBuilderProjectIdWithWorkspaceId,
   DeclarativeManifestVersionRead,
   ConnectorBuilderProjectRead,
   SourceDefinitionIdBody,
+  ConnectorBuilderProjectStreamReadRequestBody,
+  ConnectorBuilderProjectStreamRead,
+  ConnectorBuilderProjectTestingValuesUpdate,
+  ConnectorBuilderProjectTestingValues,
 } from "../types/AirbyteClient";
 import { DeclarativeComponentSchema } from "../types/ConnectorManifest";
 import { useRequestOptions } from "../useRequestOptions";
@@ -33,6 +39,8 @@ const connectorBuilderProjectsKeys = {
     [...connectorBuilderProjectsKeys.all, "version", projectId, version] as const,
   versions: (projectId?: string) => [...connectorBuilderProjectsKeys.all, "versions", projectId] as const,
   list: (workspaceId: string) => [...connectorBuilderProjectsKeys.all, "list", workspaceId] as const,
+  read: (projectId?: string, streamName?: string) =>
+    [...connectorBuilderProjectsKeys.all, "read", projectId, streamName] as const,
 };
 
 export interface BuilderProject {
@@ -388,6 +396,46 @@ export const useChangeBuilderProjectVersion = () => {
           }
         );
       },
+    }
+  );
+};
+
+export const useBuilderProjectReadStream = (
+  params: ConnectorBuilderProjectStreamReadRequestBody,
+  onSuccess: (data: ConnectorBuilderProjectStreamRead) => void
+) => {
+  const requestOptions = useRequestOptions();
+
+  return useQuery(
+    connectorBuilderProjectsKeys.read(params.builderProjectId, params.streamName),
+    () => readConnectorBuilderProjectStream(params, requestOptions),
+    {
+      refetchOnWindowFocus: false,
+      enabled: false,
+      onSuccess,
+    }
+  );
+};
+
+export const useBuilderProjectUpdateTestingValues = (
+  builderProjectId: string,
+  onSuccess: (data: ConnectorBuilderProjectTestingValues) => void
+) => {
+  const requestOptions = useRequestOptions();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useMutation<
+    ConnectorBuilderProjectTestingValues,
+    Error,
+    Omit<ConnectorBuilderProjectTestingValuesUpdate, "builderProjectId" | "workspaceId">
+  >(
+    ({ spec, testingValues }) =>
+      updateConnectorBuilderProjectTestingValues(
+        { workspaceId, builderProjectId, spec, testingValues },
+        requestOptions
+      ),
+    {
+      onSuccess,
     }
   );
 };

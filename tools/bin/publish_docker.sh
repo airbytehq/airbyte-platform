@@ -5,6 +5,7 @@ set -e
 projectDir=(
   "bootloader"
   "config/init"
+  "connector-sidecar"
   "container-orchestrator"
   "cron"
   "connector-builder-server"
