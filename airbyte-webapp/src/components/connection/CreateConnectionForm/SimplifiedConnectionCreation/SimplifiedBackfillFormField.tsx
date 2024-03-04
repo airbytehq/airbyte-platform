@@ -11,6 +11,7 @@ import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
 import { SchemaChangeBackfillPreference } from "core/api/types/AirbyteClient";
+import { isCloudApp } from "core/utils/app";
 
 export const SimplifiedBackfillFormField = () => {
   const { control } = useFormContext<FormConnectionFormValues>();
@@ -25,12 +26,18 @@ export const SimplifiedBackfillFormField = () => {
           <ControlLabels
             htmlFor={controlId}
             label={
-              <FlexContainer direction="column">
+              <FlexContainer direction="column" gap="sm">
                 <Text bold>
-                  <FormattedMessage id="connection.backfillColumns.title" />
+                  <FormattedMessage id="connectionForm.backfillColumns.title" />
                 </Text>
                 <Text size="sm" color="grey">
-                  <FormattedMessage id="connection.backfillColumns.description" />
+                  <FormattedMessage
+                    id={
+                      isCloudApp()
+                        ? "connectionForm.backfillColumns.descriptionCloud"
+                        : "connectionForm.backfillColumns.description"
+                    }
+                  />
                 </Text>
               </FlexContainer>
             }

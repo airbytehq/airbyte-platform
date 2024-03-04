@@ -23,7 +23,7 @@ export const CreateConnectionFormControls: React.FC = () => {
   const { trigger } = useFormContext<FormConnectionFormValues>();
   const { getErrorMessage } = useConnectionFormService();
   const errorMessage = getErrorMessage(isValid, errors);
-  const useSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
 
   const watchedScheduleType = useWatch<FormConnectionFormValues>({ name: "scheduleType" });
   const willSyncAfterCreation = watchedScheduleType === ConnectionScheduleType.basic;
@@ -44,7 +44,7 @@ export const CreateConnectionFormControls: React.FC = () => {
         <Button type="submit" isLoading={isSubmitting} disabled={isSubmitting || !isValid}>
           <FormattedMessage
             id={
-              useSimplifiedCreation && willSyncAfterCreation
+              isSimplifiedCreation && willSyncAfterCreation
                 ? "onboarding.setUpConnectionNext"
                 : "onboarding.setUpConnection"
             }

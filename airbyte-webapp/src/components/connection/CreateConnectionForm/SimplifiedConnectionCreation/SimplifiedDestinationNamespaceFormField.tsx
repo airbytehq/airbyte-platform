@@ -1,6 +1,6 @@
 import { ComponentProps, useEffect } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 
 import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 import { FormFieldLayout } from "components/connection/ConnectionForm/FormFieldLayout";
@@ -10,10 +10,11 @@ import { ControlLabels } from "components/LabeledControl";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
+import { useGetSourceFromSearchParams } from "area/connector/utils";
 import { NamespaceDefinitionType } from "core/api/types/AirbyteClient";
 
 export const SimplifiedDestinationNamespaceFormField = () => {
-  const { formatMessage } = useIntl();
+  const source = useGetSourceFromSearchParams();
   const { trigger, setValue, control, watch } = useFormContext<FormConnectionFormValues>();
   const namespaceDefinition = useWatch({ name: "namespaceDefinition", control });
 
@@ -26,29 +27,27 @@ export const SimplifiedDestinationNamespaceFormField = () => {
     {
       value: NamespaceDefinitionType.customformat,
       label: "connectionForm.customFormat",
-      description: "connectionForm.customFormatDescription",
+      description: "connectionForm.customFormatDescriptionNext",
       extra:
         namespaceDefinition === NamespaceDefinitionType.customformat ? (
           <FormControl
             name="namespaceFormat"
             fieldType="input"
             type="text"
-            placeholder={formatMessage({
-              id: "connectionForm.modal.destinationNamespace.input.placeholder",
-            })}
+            placeholder={source.sourceName.toLowerCase().replace(/[^a-z0-9]+/g, "_")}
             data-testid="namespace-definition-custom-format-input"
           />
         ) : null,
     },
     {
       value: NamespaceDefinitionType.destination,
-      label: "connectionForm.destinationFormat",
-      description: "connectionForm.destinationFormatDescription",
+      label: "connectionForm.destinationFormatNext",
+      description: "connectionForm.destinationFormatDescriptionNext",
     },
     {
       value: NamespaceDefinitionType.source,
-      label: "connectionForm.sourceFormat",
-      description: "connectionForm.sourceFormatDescription",
+      label: "connectionForm.sourceFormatNext",
+      description: "connectionForm.sourceFormatDescriptionNext",
     },
   ];
 
@@ -60,7 +59,7 @@ export const SimplifiedDestinationNamespaceFormField = () => {
         <FormFieldLayout alignItems="flex-start" nextSizing>
           <ControlLabels
             label={
-              <FlexContainer direction="column">
+              <FlexContainer direction="column" gap="sm">
                 <Text bold>
                   <FormattedMessage id="connectionForm.namespaceDefinition.title" />
                 </Text>

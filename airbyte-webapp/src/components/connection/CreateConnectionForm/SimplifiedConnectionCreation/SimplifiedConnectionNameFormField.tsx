@@ -26,9 +26,12 @@ export const SimplifiedConnectionNameFormField = () => {
           <ControlLabels
             htmlFor={controlId}
             label={
-              <FlexContainer direction="column">
+              <FlexContainer direction="column" gap="sm">
                 <Text bold>
                   <FormattedMessage id="form.connectionName" />
+                </Text>
+                <Text size="sm" color="grey">
+                  <FormattedMessage id="form.connectionName.subtitle" />
                 </Text>
               </FlexContainer>
             }

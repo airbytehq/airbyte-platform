@@ -23,6 +23,8 @@ import {
 } from "core/api/types/AirbyteClient";
 import { FormError, generateMessageFromError } from "core/utils/errorStatusMessage";
 
+import { useExperiment } from "../Experiment";
+
 export type ConnectionFormMode = "create" | "edit" | "readonly";
 
 export type ConnectionOrPartialConnection =
@@ -77,6 +79,7 @@ const useConnectionForm = ({
   const initialValues = useInitialFormValues(connection, destDefinitionVersion, mode !== "create");
   const { formatMessage } = useIntl();
   const [submitError, setSubmitError] = useState<FormError | null>(null);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
 
   const getErrorMessage = useCallback<ConnectionFormHook["getErrorMessage"]>(
     (formValid, errors) => {
@@ -86,14 +89,17 @@ const useConnectionForm = ({
 
       if (!formValid) {
         const hasNoStreamsSelectedError = errors?.syncCatalog?.streams?.message === "connectionForm.streams.required";
+        const validationErrorMessage = isSimplifiedCreation
+          ? "connectionForm.validation.creationError"
+          : "connectionForm.validation.error";
         return formatMessage({
-          id: hasNoStreamsSelectedError ? "connectionForm.streams.required" : "connectionForm.validation.error",
+          id: hasNoStreamsSelectedError ? "connectionForm.streams.required" : validationErrorMessage,
         });
       }
 
       return null;
     },
-    [formatMessage, submitError]
+    [formatMessage, submitError, isSimplifiedCreation]
   );
 
   return {

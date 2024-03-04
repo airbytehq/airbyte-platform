@@ -99,7 +99,7 @@ const SimplfieidScheduleTypeFormControl = () => {
           <ControlLabels
             htmlFor={controlId}
             label={
-              <FlexContainer direction="column">
+              <FlexContainer direction="column" gap="sm">
                 <Text bold>
                   <FormattedMessage id="form.scheduleType" />
                 </Text>
@@ -150,7 +150,7 @@ const SimplifiedBasicScheduleFormControl: React.FC = () => {
           <ControlLabels
             htmlFor={controlId}
             label={
-              <FlexContainer direction="column">
+              <FlexContainer direction="column" gap="sm">
                 <Text bold>
                   <FormattedMessage id="form.frequency" />
                 </Text>
@@ -218,7 +218,7 @@ const SimplifiedCronScheduleFormControl: React.FC = () => {
           <ControlLabels
             htmlFor={controlId}
             label={
-              <FlexContainer direction="column">
+              <FlexContainer direction="column" gap="sm">
                 <Text bold>
                   <FormattedMessage id="form.cronExpression" />
                 </Text>
