@@ -27,6 +27,7 @@ import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.exception.WorkerException;
@@ -85,6 +86,7 @@ class DefaultAirbyteDestinationTest {
   private final ProtocolSerializer protocolSerializer = new DefaultProtocolSerializer();
   private ByteArrayOutputStream outputStream;
   private DestinationTimeoutMonitor destinationTimeoutMonitor;
+  private MetricClient metricClient;
 
   @BeforeEach
   void setup() throws IOException, WorkerException {
@@ -113,6 +115,7 @@ class DefaultAirbyteDestinationTest {
 
     streamFactory = noop -> MESSAGES.stream();
     messageWriterFactory = new DefaultAirbyteMessageBufferedWriterFactory();
+    metricClient = mock(MetricClient.class);
   }
 
   @AfterEach
@@ -129,7 +132,8 @@ class DefaultAirbyteDestinationTest {
   @Test
   void testSuccessfulLifecycle() throws Exception {
     final AirbyteDestination destination =
-        new DefaultAirbyteDestination(integrationLauncher, streamFactory, messageWriterFactory, protocolSerializer, destinationTimeoutMonitor);
+        new DefaultAirbyteDestination(integrationLauncher, streamFactory, messageWriterFactory, protocolSerializer, destinationTimeoutMonitor,
+            metricClient);
     destination.start(DESTINATION_CONFIG, jobRoot);
 
     final AirbyteMessage recordMessage = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "blue");
@@ -169,7 +173,8 @@ class DefaultAirbyteDestinationTest {
   void testTaggedLogs() throws Exception {
 
     final AirbyteDestination destination =
-        new DefaultAirbyteDestination(integrationLauncher, streamFactory, messageWriterFactory, protocolSerializer, destinationTimeoutMonitor);
+        new DefaultAirbyteDestination(integrationLauncher, streamFactory, messageWriterFactory, protocolSerializer, destinationTimeoutMonitor,
+            metricClient);
     destination.start(DESTINATION_CONFIG, jobRoot);
 
     final AirbyteMessage recordMessage = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "blue");
@@ -197,7 +202,7 @@ class DefaultAirbyteDestinationTest {
 
   @Test
   void testCloseNotifiesLifecycle() throws Exception {
-    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor);
+    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor, metricClient);
     destination.start(DESTINATION_CONFIG, jobRoot);
 
     verify(outputStream, never()).close();
@@ -209,7 +214,7 @@ class DefaultAirbyteDestinationTest {
 
   @Test
   void testNonzeroExitCodeThrowsException() throws Exception {
-    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor);
+    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor, metricClient);
     destination.start(DESTINATION_CONFIG, jobRoot);
 
     when(process.isAlive()).thenReturn(false);
@@ -219,7 +224,7 @@ class DefaultAirbyteDestinationTest {
 
   @Test
   void testIgnoredExitCodes() throws Exception {
-    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor);
+    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor, metricClient);
     destination.start(DESTINATION_CONFIG, jobRoot);
     when(process.isAlive()).thenReturn(false);
 
@@ -231,7 +236,7 @@ class DefaultAirbyteDestinationTest {
 
   @Test
   void testGetExitValue() throws Exception {
-    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor);
+    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor, metricClient);
     destination.start(DESTINATION_CONFIG, jobRoot);
 
     when(process.isAlive()).thenReturn(false);

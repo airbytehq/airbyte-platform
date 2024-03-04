@@ -16,6 +16,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.PrintLongRecordPks;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.helper.GsonPksExtractor;
@@ -47,19 +48,22 @@ public class AirbyteIntegrationLauncherFactory {
   private final FeatureFlags featureFlags;
   private final FeatureFlagClient featureFlagClient;
   private final GsonPksExtractor gsonPksExtractor;
+  private final MetricClient metricClient;
 
   public AirbyteIntegrationLauncherFactory(final ProcessFactory processFactory,
                                            final AirbyteMessageSerDeProvider serDeProvider,
                                            final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                            final FeatureFlags featureFlags,
                                            final FeatureFlagClient featureFlagClient,
-                                           final GsonPksExtractor gsonPksExtractor) {
+                                           final GsonPksExtractor gsonPksExtractor,
+                                           final MetricClient metricClient) {
     this.processFactory = processFactory;
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
     this.featureFlags = featureFlags;
     this.featureFlagClient = featureFlagClient;
     this.gsonPksExtractor = gsonPksExtractor;
+    this.metricClient = metricClient;
   }
 
   /**
@@ -120,7 +124,8 @@ public class AirbyteIntegrationLauncherFactory {
                 printLongRecordPks)),
         heartbeatMonitor,
         getProtocolSerializer(sourceLauncherConfig),
-        featureFlags);
+        featureFlags,
+        metricClient);
   }
 
   /**
@@ -144,7 +149,9 @@ public class AirbyteIntegrationLauncherFactory {
             new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false)),
         new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
             Optional.of(configuredAirbyteCatalog)),
-        getProtocolSerializer(destinationLauncherConfig), destinationTimeoutMonitor);
+        getProtocolSerializer(destinationLauncherConfig),
+        destinationTimeoutMonitor,
+        metricClient);
   }
 
   private VersionedProtocolSerializer getProtocolSerializer(final IntegrationLauncherConfig launcherConfig) {

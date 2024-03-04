@@ -140,6 +140,7 @@ public class WorkerUtils {
    */
   public static WorkerDestinationConfig syncToWorkerDestinationConfig(final ReplicationInput replicationInput) {
     return new WorkerDestinationConfig()
+        .withConnectionId(replicationInput.getConnectionId())
         .withDestinationId(replicationInput.getDestinationId())
         .withDestinationConnectionConfiguration(replicationInput.getDestinationConfiguration())
         .withCatalog(replicationInput.getCatalog())

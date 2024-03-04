@@ -211,7 +211,7 @@ class ReplicationWorkerHelper(
         .also { fieldSelector.populateFields(it.catalog) }
 
     try {
-      source.start(sourceConfig, jobRoot)
+      source.start(sourceConfig, jobRoot, ctx?.connectionId)
     } catch (e: Exception) {
       throw RuntimeException(e)
     }
