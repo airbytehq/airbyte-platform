@@ -212,7 +212,7 @@ micronaut-validation = { module = "io.micronaut:micronaut-validation", version.r
 apache = ["apache-commons", "apache-commons-lang"]
 bouncycastle = ["bouncycastle-bcprov", "bouncycastle-bcpkix"]
 datadog = ["datadog-trace-api", "datadog-trace-ot"]
-jackson = ["jackson-databind", "jackson-annotations", "jackson-dataformat", "jackson-datatype"]
+jackson = ["jackson-databind", "jackson-annotations", "jackson-dataformat", "jackson-datatype", "jackson-kotlin"]
 junit = ["junit-jupiter-api", "junit-jupiter-engine", "junit-jupiter-params", "mockito-junit-jupiter"]
 keycloak-client = ["keycloak-admin-client", "keycloak-client-registration-api"]
 kubernetes-client = ["kubernetes-client-api", "kubernetes-client"]

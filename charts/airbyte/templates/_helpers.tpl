@@ -201,41 +201,32 @@ Create JDBC URL specifically for Keycloak with a custom schema
 
 
 {{/*
-Create a default fully qualified minio name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-*/}}
-{{- define "airbyte.minio.fullname" -}}
-{{- $name := default "minio" .Values.global.logs.minio.nameOverride -}}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
-{{/*
 Add environment variables to configure minio
 */}}
-{{- define "airbyte.minio.endpoint" -}}
-{{- if .Values.global.logs.minio.enabled -}}
-    {{- .Values.minio.endpoint -}}
-{{- else if .Values.global.logs.externalMinio.endpoint -}}
-    {{- .Values.global.logs.externalMinio.endpoint -}}
-{{- else if .Values.global.logs.externalMinio.enabled -}}
-    {{- printf "http://%s:%g" .Values.global.logs.externalMinio.host .Values.global.logs.externalMinio.port -}}
+{{- define "airbyte.storage.minio.endpoint" -}}
+{{- if eq (lower .Values.global.storage.type) "minio" }}
+    {{- .Values.global.storage.minio.endpoint -}}
+{{- else if .Values.global.storage.externalMinio.endpoint -}}
+    {{- .Values.global.storage.externalMinio.endpoint -}}
+{{- else if .Values.global.storage.externalMinio.enabled -}}
+    {{- printf "http://%s:%g" .Values.global.storage.externalMinio.host .Values.global.storage.externalMinio.port -}}
 {{- else -}}
     {{- printf "" -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "airbyte.s3PathStyleAccess" -}}
-{{- ternary "true" "" (or .Values.global.logs.minio.enabled .Values.global.logs.externalMinio.enabled) -}}
+{{- ternary "true" "" (or (eq (lower .Values.global.storage.type) "minio") .Values.global.storage.externalMinio.enabled) -}}
 {{- end -}}
 
 {{/*
 Returns the GCP credentials path
 */}}
 {{- define "airbyte.gcpLogCredentialsPath" -}}
-{{- if .Values.global.logs.gcs.credentialsJson }}
+{{- if and (eq (lower .Values.global.storage.type) "gcs") .Values.global.storage.gcs.credentialsJson}}
     {{- printf "%s" "/secrets/gcs-log-creds/gcp.json" -}}
 {{- else -}}
-    {{- printf "%s" .Values.global.logs.gcs.credentials -}}
+    {{- printf "%s" .Values.global.storage.gcs.credentials -}}
 {{- end -}}
 {{- end -}}
 
@@ -315,4 +306,19 @@ Construct semi-colon delimited list of comma separated key/value pairs from arra
 {{- $mapList = include "airbyte.flattenMap" $element | mustAppend $mapList -}}
 {{- end -}}
 {{ join ";" $mapList }}
+{{- end -}}
+
+{{/*
+Determine the correct log4j configuration file to load based on the defined storage type.
+*/}}
+{{- define "airbyte.log4jConfig" -}}
+{{- if eq (lower .Values.global.storage.type) "minio" }}
+    {{- printf "log4j2-minio.xml" -}}
+{{- else if eq (lower .Values.global.storage.type) "gcs" -}}
+    {{- printf "log4j2-gcs.xml" -}}
+{{- else if eq (lower .Values.global.storage.type) "s3" -}}
+    {{- printf "log4j2-s3.xml" -}}
+{{- else -}}
+    {{- printf "log4j2.xml" -}}
+{{- end -}}
 {{- end -}}

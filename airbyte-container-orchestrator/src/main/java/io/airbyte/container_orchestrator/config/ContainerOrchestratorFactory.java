@@ -19,8 +19,6 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.workers.config.DocumentStoreFactory;
-import io.airbyte.workers.config.DocumentType;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
@@ -28,7 +26,9 @@ import io.airbyte.workers.process.DockerProcessFactory;
 import io.airbyte.workers.process.KubePortManagerSingleton;
 import io.airbyte.workers.process.KubeProcessFactory;
 import io.airbyte.workers.process.ProcessFactory;
-import io.airbyte.workers.storage.DocumentStoreClient;
+import io.airbyte.workers.storage.DocumentType;
+import io.airbyte.workers.storage.StorageClient;
+import io.airbyte.workers.storage.StorageClientFactory;
 import io.airbyte.workers.sync.DbtLauncherWorker;
 import io.airbyte.workers.sync.NormalizationLauncherWorker;
 import io.airbyte.workers.sync.OrchestratorConstants;
@@ -132,14 +132,14 @@ class ContainerOrchestratorFactory {
 
   @Singleton
   @Named("stateDocumentStore")
-  DocumentStoreClient documentStoreClient(final DocumentStoreFactory documentStoreFactory) {
-    return documentStoreFactory.get(DocumentType.STATE);
+  StorageClient documentStoreClient(final StorageClientFactory factory) {
+    return factory.get(DocumentType.STATE);
   }
 
   @Singleton
   @Named("outputDocumentStore")
-  DocumentStoreClient outputDocumentStoreClient(final DocumentStoreFactory documentStoreFactory) {
-    return documentStoreFactory.get(DocumentType.WORKLOAD_OUTPUTS);
+  StorageClient outputDocumentStoreClient(final StorageClientFactory factory) {
+    return factory.get(DocumentType.WORKLOAD_OUTPUT);
   }
 
   @Prototype

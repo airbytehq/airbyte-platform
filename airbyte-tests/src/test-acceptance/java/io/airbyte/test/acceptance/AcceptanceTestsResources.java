@@ -301,10 +301,10 @@ public class AcceptanceTestsResources {
     // deployment where we don't want to create workspaces.
     // NOTE: the API client can't create workspaces in GKE deployments, so we need to provide a
     // workspace ID in that environment.
-    workspaceId = System.getenv().get(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID) == null ? apiClient.getWorkspaceApi()
+    workspaceId = System.getenv(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID) == null ? apiClient.getWorkspaceApi()
         .createWorkspace(new WorkspaceCreate().email("acceptance-tests@airbyte.io").name("Airbyte Acceptance Tests" + UUID.randomUUID()))
         .getWorkspaceId()
-        : UUID.fromString(System.getenv().get(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID));
+        : UUID.fromString(System.getenv(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID));
     LOGGER.info("workspaceId = " + workspaceId);
 
     // log which connectors are being used.

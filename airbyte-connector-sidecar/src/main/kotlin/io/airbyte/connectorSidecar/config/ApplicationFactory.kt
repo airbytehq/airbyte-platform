@@ -2,9 +2,9 @@ package io.airbyte.connectorSidecar.config
 
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.NotImplementedMetricClient
-import io.airbyte.workers.config.DocumentStoreFactory
-import io.airbyte.workers.config.DocumentType
-import io.airbyte.workers.storage.DocumentStoreClient
+import io.airbyte.workers.storage.DocumentType
+import io.airbyte.workers.storage.StorageClient
+import io.airbyte.workers.storage.StorageClientFactory
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -13,12 +13,8 @@ import jakarta.inject.Singleton
 class ApplicationFactory {
   @Singleton
   @Named("outputDocumentStore")
-  fun outputDocumentStoreClient(documentStoreFactory: DocumentStoreFactory): DocumentStoreClient {
-    return documentStoreFactory.get(DocumentType.WORKLOAD_OUTPUTS)
-  }
+  fun workloadStorageClient(factory: StorageClientFactory): StorageClient = factory.get(DocumentType.WORKLOAD_OUTPUT)
 
   @Singleton
-  fun metricClient(): MetricClient {
-    return NotImplementedMetricClient()
-  }
+  fun metricClient(): MetricClient = NotImplementedMetricClient()
 }

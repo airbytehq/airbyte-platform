@@ -184,7 +184,7 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
       // Use the configuration to create the process.
       process = new AsyncOrchestratorPodProcess(
           kubePodInfo,
-          containerOrchestratorConfig.documentStoreClient(),
+          containerOrchestratorConfig.storageClient(),
           containerOrchestratorConfig.kubernetesClient(),
           containerOrchestratorConfig.secretName(),
           containerOrchestratorConfig.secretMountPath(),

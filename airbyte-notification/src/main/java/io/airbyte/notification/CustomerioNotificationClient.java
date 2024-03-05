@@ -12,12 +12,12 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.common.StreamDescriptorUtils;
 import io.airbyte.api.model.generated.StreamTransform;
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
-import io.airbyte.config.EnvConfigs;
 import io.airbyte.notification.messages.SchemaUpdateNotification;
 import io.airbyte.notification.messages.SyncSummary;
 import java.io.IOException;
@@ -93,8 +93,7 @@ public class CustomerioNotificationClient extends NotificationClient {
   }
 
   public CustomerioNotificationClient() {
-    final EnvConfigs configs = new EnvConfigs();
-    this.apiToken = configs.getCustomerIoKey();
+    this.apiToken = System.getenv(EnvVar.CUSTOMERIO_API_KEY.name());
     this.baseUrl = CUSTOMERIO_BASE_URL;
     this.okHttpClient = new OkHttpClient.Builder()
         .addInterceptor(new CampaignsRateLimitInterceptor())

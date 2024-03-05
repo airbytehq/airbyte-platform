@@ -53,6 +53,8 @@ airbyte:
     network: ${DOCKER_NETWORK:host}
     workspace-mount-name: ${WORKSPACE_DOCKER_MOUNT:}
     workspace-mount-path: ${WORKSPACE_ROOT}
+    local-mount-name: ${LOCAL_DOCKER_MOUNT:}
+    local-mount-path: ${LOCAL_ROOT}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
@@ -178,36 +180,23 @@ airbyte:
   acceptance.test.enabled: ${ACCEPTANCE_TEST_ENABLED:false}
   cloud:
     storage:
-      logs:
-        type: ${WORKER_LOGS_STORAGE_TYPE:}
-        gcs:
-          application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
-          bucket: ${GCS_LOG_BUCKET:}
-        minio:
-          access-key: ${AWS_ACCESS_KEY_ID:}
-          bucket: ${S3_LOG_BUCKET:}
-          endpoint: ${S3_MINIO_ENDPOINT:}
-          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
-        s3:
-          access-key: ${AWS_ACCESS_KEY_ID:}
-          bucket: ${S3_LOG_BUCKET:}
-          region: ${S3_LOG_BUCKET_REGION:}
-          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
-      state:
-        type: ${WORKER_STATE_STORAGE_TYPE:}
-        gcs:
-          application-credentials: ${STATE_STORAGE_GCS_APPLICATION_CREDENTIALS:}
-          bucket: ${STATE_STORAGE_GCS_BUCKET_NAME:}
-        minio:
-          access-key: ${STATE_STORAGE_MINIO_ACCESS_KEY:}
-          bucket: ${STATE_STORAGE_MINIO_BUCKET_NAME:}
-          endpoint: ${STATE_STORAGE_MINIO_ENDPOINT:}
-          secret-access-key: ${STATE_STORAGE_MINIO_SECRET_ACCESS_KEY:}
-        s3:
-          access-key: ${STATE_STORAGE_S3_ACCESS_KEY:}
-          bucket: ${STATE_STORAGE_S3_BUCKET_NAME:}
-          region: ${STATE_STORAGE_S3_REGION:}
-          secret-access-key: ${STATE_STORAGE_S3_SECRET_ACCESS_KEY:}
+      type: ${STORAGE_TYPE}
+      bucket:
+        log: ${STORAGE_BUCKET_LOG}
+        state: ${STORAGE_BUCKET_STATE}
+        workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
+      gcs:
+        application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
+      local:
+        root: ${LOCAL_ROOT:}
+      minio:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        endpoint: ${MINIO_ENDPOINT:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+      s3:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        region: ${AWS_DEFAULT_REGION:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
   workspace:
     docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
     root: ${WORKSPACE_ROOT}

@@ -26,9 +26,7 @@ import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.models.ReplicationActivityInput;
-import io.airbyte.workers.orchestrator.PodNameGenerator;
 import io.airbyte.workers.process.Metadata;
-import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workers.workload.exception.DocStoreAccessException;
@@ -65,8 +63,6 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
 
   private static final Logger log = LoggerFactory.getLogger(WorkloadApiWorker.class);
   private static final Set<WorkloadStatus> TERMINAL_STATUSES = Set.of(WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS);
-  private final DocumentStoreClient documentStoreClient;
-  private final PodNameGenerator podNameGenerator;
   private final JobOutputDocStore jobOutputDocStore;
   private final AirbyteApiClient apiClient;
   private final WorkloadApi workloadApi;
@@ -76,16 +72,12 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
 
   private String workloadId = null;
 
-  public WorkloadApiWorker(final DocumentStoreClient documentStoreClient,
-                           final PodNameGenerator podNameGenerator,
-                           final JobOutputDocStore jobOutputDocStore,
+  public WorkloadApiWorker(final JobOutputDocStore jobOutputDocStore,
                            final AirbyteApiClient apiClient,
                            final WorkloadApi workloadApi,
                            final WorkloadIdGenerator workloadIdGenerator,
                            final ReplicationActivityInput input,
                            final FeatureFlagClient featureFlagClient) {
-    this.documentStoreClient = documentStoreClient;
-    this.podNameGenerator = podNameGenerator;
     this.jobOutputDocStore = jobOutputDocStore;
     this.apiClient = apiClient;
     this.workloadApi = workloadApi;

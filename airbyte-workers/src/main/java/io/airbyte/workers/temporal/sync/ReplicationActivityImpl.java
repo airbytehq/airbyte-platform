@@ -20,7 +20,6 @@ import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.temporal.HeartbeatUtils;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
-import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
@@ -39,8 +38,6 @@ import io.airbyte.workers.Worker;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
-import io.airbyte.workers.orchestrator.PodNameGenerator;
-import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.sync.WorkloadApiWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.airbyte.workers.workload.JobOutputDocStore;
@@ -70,20 +67,16 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private static final Logger LOGGER = LoggerFactory.getLogger(ReplicationActivityImpl.class);
   private static final int MAX_TEMPORAL_MESSAGE_SIZE = 2 * 1024 * 1024;
 
-  private final SecretsRepositoryReader secretsRepositoryReader;
   private final ReplicationInputHydrator replicationInputHydrator;
   private final Path workspaceRoot;
   private final WorkerEnvironment workerEnvironment;
   private final LogConfigs logConfigs;
   private final String airbyteVersion;
-  private final AirbyteConfigValidator airbyteConfigValidator;
-  private final DocumentStoreClient documentStoreClient;
   private final AirbyteApiClient airbyteApiClient;
   private final JobOutputDocStore jobOutputDocStore;
   private final WorkloadApi workloadApi;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final OrchestratorHandleFactory orchestratorHandleFactory;
-  private final PodNameGenerator podNameGenerator;
   private final MetricClient metricClient;
   private final FeatureFlagClient featureFlagClient;
 
@@ -92,17 +85,13 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final WorkerEnvironment workerEnvironment,
                                  final LogConfigs logConfigs,
                                  @Value("${airbyte.version}") final String airbyteVersion,
-                                 final AirbyteConfigValidator airbyteConfigValidator,
                                  final AirbyteApiClient airbyteApiClient,
-                                 @Named("stateDocumentStore") final DocumentStoreClient documentStoreClient,
                                  final JobOutputDocStore jobOutputDocStore,
                                  final WorkloadApi workloadApi,
                                  final WorkloadIdGenerator workloadIdGenerator,
                                  final OrchestratorHandleFactory orchestratorHandleFactory,
-                                 final PodNameGenerator podNameGenerator,
                                  final MetricClient metricClient,
                                  final FeatureFlagClient featureFlagClient) {
-    this.secretsRepositoryReader = secretsRepositoryReader;
     this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient.getConnectionApi(),
         airbyteApiClient.getJobsApi(),
         airbyteApiClient.getStateApi(),
@@ -112,14 +101,11 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.workerEnvironment = workerEnvironment;
     this.logConfigs = logConfigs;
     this.airbyteVersion = airbyteVersion;
-    this.airbyteConfigValidator = airbyteConfigValidator;
     this.airbyteApiClient = airbyteApiClient;
-    this.documentStoreClient = documentStoreClient;
     this.jobOutputDocStore = jobOutputDocStore;
     this.workloadApi = workloadApi;
     this.workloadIdGenerator = workloadIdGenerator;
     this.orchestratorHandleFactory = orchestratorHandleFactory;
-    this.podNameGenerator = podNameGenerator;
     this.metricClient = metricClient;
     this.featureFlagClient = featureFlagClient;
   }
@@ -164,7 +150,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
           // TODO: remove this once migration to workloads complete
           if (useWorkloadApi(replicationActivityInput)) {
-            worker = new WorkloadApiWorker(documentStoreClient, podNameGenerator, jobOutputDocStore, airbyteApiClient,
+            worker = new WorkloadApiWorker(jobOutputDocStore, airbyteApiClient,
                 workloadApi, workloadIdGenerator, replicationActivityInput, featureFlagClient);
           } else {
             final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =

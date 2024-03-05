@@ -47,20 +47,8 @@ public class LogClientSingleton {
   public static final String JOB_LOG_PATH_MDC_KEY = "job_log_path";
   public static final String CLOUD_JOB_LOG_PATH_MDC_KEY = "cloud_job_log_path";
 
-  // S3/Minio
-  public static final String S3_LOG_BUCKET = "S3_LOG_BUCKET";
-  public static final String S3_LOG_BUCKET_REGION = "S3_LOG_BUCKET_REGION";
-  public static final String AWS_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID";
-  public static final String AWS_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY";
-  public static final String S3_MINIO_ENDPOINT = "S3_MINIO_ENDPOINT";
-
-  // GCS
-  public static final String GCS_LOG_BUCKET = "GCS_LOG_BUCKET";
-  public static final String GOOGLE_APPLICATION_CREDENTIALS = "GOOGLE_APPLICATION_CREDENTIALS";
-
   public static final int DEFAULT_PAGE_SIZE = 1000;
   public static final String LOG_FILENAME = "logs.log";
-  public static final String APP_LOGGING_CLOUD_PREFIX = "app-logging";
   public static final String JOB_LOGGING_CLOUD_PREFIX = "job-logging";
 
   /**
@@ -73,26 +61,6 @@ public class LogClientSingleton {
       instance = new LogClientSingleton();
     }
     return instance;
-  }
-
-  /**
-   * Get server log root.
-   *
-   * @param workspaceRoot workspace root dir
-   * @return server log path
-   */
-  public Path getServerLogsRoot(final Path workspaceRoot) {
-    return workspaceRoot.resolve("server/logs");
-  }
-
-  /**
-   * Get scheduler log root.
-   *
-   * @param workspaceRoot workspace root dir
-   * @return scheduler log path
-   */
-  public Path getSchedulerLogsRoot(final Path workspaceRoot) {
-    return workspaceRoot.resolve("scheduler/logs");
   }
 
   /**

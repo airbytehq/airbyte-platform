@@ -52,7 +52,7 @@ public class GcsLogs implements CloudLogs {
 
     LOGGER.debug("Start GCS list request.");
     final Page<Blob> blobs = gcsClient.list(
-        configs.getStorageConfigs().getGcsConfig().getBucketName(),
+        configs.getStorageConfig().getBuckets().getLog(),
         Storage.BlobListOption.prefix(logPath),
         Storage.BlobListOption.pageSize(pageSize));
 
@@ -76,7 +76,7 @@ public class GcsLogs implements CloudLogs {
 
     final var ascendingTimestampBlobs = new ArrayList<Blob>();
     gcsClient.list(
-        configs.getStorageConfigs().getGcsConfig().getBucketName(),
+        configs.getStorageConfig().getBuckets().getLog(),
         Storage.BlobListOption.prefix(logPath))
         .iterateAll()
         .forEach(ascendingTimestampBlobs::add);
@@ -118,7 +118,7 @@ public class GcsLogs implements CloudLogs {
     final Storage gcsClient = getOrCreateGcsClient();
 
     LOGGER.debug("Start GCS list and delete request.");
-    final Page<Blob> blobs = gcsClient.list(configs.getStorageConfigs().getGcsConfig().getBucketName(), Storage.BlobListOption.prefix(logPath));
+    final Page<Blob> blobs = gcsClient.list(configs.getStorageConfig().getBuckets().getLog(), Storage.BlobListOption.prefix(logPath));
     blobs.iterateAll().forEach(blob -> blob.delete(BlobSourceOption.generationMatch()));
     LOGGER.debug("Finished all deletes.");
   }

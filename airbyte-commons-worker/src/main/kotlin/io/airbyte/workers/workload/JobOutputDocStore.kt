@@ -7,7 +7,7 @@ import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
-import io.airbyte.workers.storage.DocumentStoreClient
+import io.airbyte.workers.storage.StorageClient
 import io.airbyte.workers.workload.exception.DocStoreAccessException
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -15,18 +15,19 @@ import java.util.Optional
 
 @Singleton
 class JobOutputDocStore(
-  @Named("outputDocumentStore") val documentStoreClient: DocumentStoreClient,
+  @Named("outputDocumentStore") val storageClient: StorageClient,
   val metricClient: MetricClient,
 ) {
   @Throws(DocStoreAccessException::class)
   fun read(workloadId: String): Optional<ConnectorJobOutput> {
-    val output: Optional<String>
-    try {
-      output = documentStoreClient.read(workloadId)
-    } catch (e: Exception) {
-      throw DocStoreAccessException("Unable to read output for $workloadId", e)
-    }
-    return output.map { o -> Jsons.deserialize(o, ConnectorJobOutput::class.java) }
+    val output: String? =
+      try {
+        storageClient.read(workloadId)
+      } catch (e: Exception) {
+        throw DocStoreAccessException("Unable to read output for $workloadId", e)
+      }
+
+    return Optional.ofNullable(output?.let { Jsons.deserialize(it, ConnectorJobOutput::class.java) })
   }
 
   @Throws(DocStoreAccessException::class)
@@ -35,7 +36,7 @@ class JobOutputDocStore(
     connectorJobOutput: ConnectorJobOutput,
   ) {
     try {
-      documentStoreClient.write(workloadId, Jsons.serialize(connectorJobOutput))
+      storageClient.write(workloadId, Jsons.serialize(connectorJobOutput))
       metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "success"))
     } catch (e: Exception) {
       metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error"))
@@ -45,15 +46,16 @@ class JobOutputDocStore(
 
   @Throws(DocStoreAccessException::class)
   fun readSyncOutput(workloadId: String): Optional<ReplicationOutput> {
-    val output: Optional<String>
-    try {
-      output = documentStoreClient.read(workloadId)
-      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "success"))
-    } catch (e: Exception) {
-      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "error"))
-      throw DocStoreAccessException("Unable to read output for $workloadId", e)
-    }
-    return output.map { o -> Jsons.deserialize(o, ReplicationOutput::class.java) }
+    val output: String? =
+      try {
+        storageClient.read(workloadId).also {
+          metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "success"))
+        }
+      } catch (e: Exception) {
+        metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "error"))
+        throw DocStoreAccessException("Unable to read output for $workloadId", e)
+      }
+    return Optional.ofNullable(output?.let { Jsons.deserialize(it, ReplicationOutput::class.java) })
   }
 
   @Throws(DocStoreAccessException::class)
@@ -62,7 +64,7 @@ class JobOutputDocStore(
     connectorJobOutput: ReplicationOutput,
   ) {
     try {
-      documentStoreClient.write(workloadId, Jsons.serialize(connectorJobOutput))
+      storageClient.write(workloadId, Jsons.serialize(connectorJobOutput))
       metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "success"))
     } catch (e: Exception) {
       metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error"))

@@ -1,0 +1,12 @@
+airbyte:
+  cloud:
+    storage:
+      type: s3
+      bucket:
+        log: log
+        state: state
+        workload-output: workload
+      s3:
+        access-key: access
+        secret-access-key: secret-access
+        region: us-moon-1

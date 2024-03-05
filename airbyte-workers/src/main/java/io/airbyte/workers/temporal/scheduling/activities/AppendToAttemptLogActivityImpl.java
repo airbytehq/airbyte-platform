@@ -73,7 +73,7 @@ public class AppendToAttemptLogActivityImpl implements AppendToAttemptLogActivit
     final Path jobRoot = TemporalUtils.getJobRoot(
         workspaceRoot,
         String.valueOf(input.getJobId()),
-        input.getAttemptNumber());
+        (long) input.getAttemptNumber());
 
     logClientSingleton.setJobMdc(workerEnvironment, logConfigs, jobRoot);
   }

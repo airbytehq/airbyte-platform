@@ -120,7 +120,7 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
     // entirely new object.
     return new ContainerOrchestratorConfig(
         containerOrchestratorConfig.namespace(),
-        containerOrchestratorConfig.documentStoreClient(),
+        containerOrchestratorConfig.storageClient(),
         envMap,
         containerOrchestratorConfig.kubernetesClient(),
         containerOrchestratorConfig.secretName(),

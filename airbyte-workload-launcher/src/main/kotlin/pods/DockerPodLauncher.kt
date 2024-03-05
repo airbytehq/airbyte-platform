@@ -26,6 +26,8 @@ data class DockerConfig(
   @Value("\${airbyte.docker.workspace-mount-name}") val workspaceMountName: String,
   @Value("\${airbyte.docker.workspace-mount-path}") val workspaceMountPath: Path,
   @Value("\${airbyte.docker.docker-socket}") val dockerSocket: Path,
+  @Value("\${airbyte.docker.local-mount-name}") val localMountName: String,
+  @Value("\${airbyte.docker.local-mount-path}") val localMountPath: Path,
 )
 
 @Singleton
@@ -83,6 +85,7 @@ class DockerPodLauncher(private val dockerConfig: DockerConfig) {
     cmd.addOption("-w", jobWorkspace.toString())
 
     cmd.addOption("-v", "${dockerConfig.workspaceMountName}:${dockerConfig.workspaceMountPath}")
+    cmd.addOption("-v", "${dockerConfig.localMountName}:${dockerConfig.localMountPath}")
 
     // mount docker socket so that the orchestrator can start pods
     // the ':' syntax specifies the volume on the local instance to mount to the container

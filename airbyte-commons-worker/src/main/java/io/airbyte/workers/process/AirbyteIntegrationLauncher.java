@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import datadog.trace.api.Trace;
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
@@ -310,11 +311,11 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
             // The platform doesn't support this env-var anymore, however the connectors still depend on it,
             // defaulting to false if not supplied.
             .put("USE_STREAM_CAPABLE_STATE", "true")
-            .put(EnvConfigs.SOCAT_KUBE_CPU_LIMIT, configs.getSocatSidecarKubeCpuLimit())
-            .put(EnvConfigs.SOCAT_KUBE_CPU_REQUEST, configs.getSocatSidecarKubeCpuRequest())
-            .put(EnvConfigs.LAUNCHDARKLY_KEY, configs.getLaunchDarklyKey())
-            .put(EnvConfigs.FEATURE_FLAG_CLIENT, configs.getFeatureFlagClient())
-            .put(EnvConfigs.OTEL_COLLECTOR_ENDPOINT, configs.getOtelCollectorEndpoint())
+            .put(EnvVar.SOCAT_KUBE_CPU_LIMIT.name(), configs.getSocatSidecarKubeCpuLimit())
+            .put(EnvVar.SOCAT_KUBE_CPU_REQUEST.name(), configs.getSocatSidecarKubeCpuRequest())
+            .put(EnvVar.LAUNCHDARKLY_KEY.name(), configs.getLaunchDarklyKey())
+            .put(EnvVar.FEATURE_FLAG_CLIENT.name(), configs.getFeatureFlagClient())
+            .put(EnvVar.OTEL_COLLECTOR_ENDPOINT.name(), configs.getOtelCollectorEndpoint())
             .build());
   }
 

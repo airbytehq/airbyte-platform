@@ -86,13 +86,6 @@ public interface Configs {
 
   // Secrets
 
-  /**
-   * Defines the Secret Persistence type. None by default. Set to GOOGLE_SECRET_MANAGER to use Google
-   * Secret Manager. Set to TESTING_CONFIG_DB_TABLE to use the database as a test. Set to VAULT to use
-   * Hashicorp Vault. Alpha support. Undefined behavior will result if this is turned on and then off.
-   */
-  SecretPersistenceType getSecretPersistenceType();
-
   // Database
 
   /**
@@ -116,18 +109,6 @@ public interface Configs {
    * Define the number of retention days for the temporal history.
    */
   int getTemporalRetentionInDays();
-
-  /**
-   * Define the number of minutes a retry job will attempt to run before timing out.
-   */
-  int getJobInitRetryTimeoutMinutes();
-
-  /**
-   * Defines whether job creation uses connector-specific resource requirements when spawning jobs.
-   * Works on both Docker and Kubernetes. Defaults to false for ease of use in OSS trials of Airbyte
-   * but recommended for production deployments.
-   */
-  boolean connectorSpecificResourceDefaultsEnabled();
 
   /**
    * Get datadog or OTEL metric client for Airbyte to emit metrics. Allows empty value
@@ -184,21 +165,6 @@ public interface Configs {
    * Define if we want to run custom connector related jobs in a separate node pool.
    */
   boolean getUseCustomKubeNodeSelector();
-
-  /**
-   * Define node selectors for Spec job pods specifically. Each kv-pair is separated by a `,`.
-   */
-  Map<String, String> getSpecJobKubeNodeSelectors();
-
-  /**
-   * Define node selectors for Check job pods specifically. Each kv-pair is separated by a `,`.
-   */
-  Map<String, String> getCheckJobKubeNodeSelectors();
-
-  /**
-   * Define node selectors for Discover job pods specifically. Each kv-pair is separated by a `,`.
-   */
-  Map<String, String> getDiscoverJobKubeNodeSelectors();
 
   /**
    * Define one or more Job pod annotations. Each kv-pair is separated by a `,`. Used for the sync job
@@ -286,17 +252,6 @@ public interface Configs {
   LogConfigs getLogConfigs();
 
   /**
-   * Defines the optional Google application credentials used for logging.
-   */
-  String getGoogleApplicationCredentials();
-
-  /**
-   * Define either S3, Minio or GCS as a state storage backend. Multiple variables are involved here.
-   * Please see {@link CloudStorageConfigs} for more info.
-   */
-  CloudStorageConfigs getStateStorageCloudConfigs();
-
-  /**
    * Determine if Datadog tracking events should be published. Mainly for Airbyte internal use.
    */
   boolean getPublishMetrics();
@@ -319,17 +274,6 @@ public interface Configs {
    */
   List<String> getDDConstantTags();
 
-  /**
-   * Define whether to send job failure events to Sentry or log-only. Airbyte internal use.
-   */
-  JobErrorReportingStrategy getJobErrorReportingStrategy();
-
-  /**
-   * Determines the Sentry DSN that should be used when reporting connector job failures to Sentry.
-   * Used with SENTRY error reporting strategy. Airbyte internal use.
-   */
-  String getJobErrorReportingSentryDSN();
-
   // APPLICATIONS
   // Worker
 
@@ -339,8 +283,6 @@ public interface Configs {
   String getCdkPython();
 
   String getCdkEntrypoint();
-
-  String getCustomerIoKey();
 
   /**
    * Job error reporting strategy.

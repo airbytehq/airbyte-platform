@@ -8,12 +8,11 @@ import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.TolerationPOJO;
-import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.workers.storage.DocumentStoreClient;
+import io.airbyte.workers.storage.StorageClient;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.exception.DocStoreAccessException;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
@@ -72,7 +71,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
   private static final String JAVA_OOM_EXCEPTION_STRING = "java.lang.OutOfMemoryError";
 
   private final KubePodInfo kubePodInfo;
-  private final DocumentStoreClient documentStoreClient;
+  private final StorageClient storageClient;
   private final KubernetesClient kubernetesClient;
   private final String secretName;
   private final String secretMountPath;
@@ -92,7 +91,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
 
   public AsyncOrchestratorPodProcess(
                                      final KubePodInfo kubePodInfo,
-                                     final DocumentStoreClient documentStoreClient,
+                                     final StorageClient storageClient,
                                      final KubernetesClient kubernetesClient,
                                      final String secretName,
                                      final String secretMountPath,
@@ -109,7 +108,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
                                      final JobOutputDocStore jobOutputDocStore,
                                      final String workloadId) {
     this.kubePodInfo = kubePodInfo;
-    this.documentStoreClient = documentStoreClient;
+    this.storageClient = storageClient;
     this.kubernetesClient = kubernetesClient;
     this.secretName = secretName;
     this.secretMountPath = secretMountPath;
@@ -392,7 +391,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
   }
 
   private Optional<String> getDocument(final String key) {
-    return documentStoreClient.read(getInfo().namespace() + "/" + getInfo().name() + "/" + key);
+    return Optional.ofNullable(storageClient.read(getInfo().namespace() + "/" + getInfo().name() + "/" + key));
   }
 
   private boolean checkStatus(final AsyncKubePodStatus status) {
@@ -464,7 +463,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
           .withMountPath(secretMountPath)
           .build());
 
-      envVars.add(new EnvVar(LogClientSingleton.GOOGLE_APPLICATION_CREDENTIALS, googleApplicationCredentials, null));
+      envVars.add(new EnvVar(io.airbyte.commons.envvar.EnvVar.GOOGLE_APPLICATION_CREDENTIALS.name(), googleApplicationCredentials, null));
 
     }
 

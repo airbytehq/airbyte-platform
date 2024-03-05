@@ -19,44 +19,43 @@ global:
     secretName: ""
     # -- Secret value for database password
     secretValue: ""
-  state:
-    # -- Determines which state storage will be utilized; "MINIO", "S3", or "GCS"
-    storage:
-      type: "MINIO"
-  logs:
-    accessKey:
-      # -- Logs access key
-      password: ""
-      # -- Existing secret
-      existingSecret: ""
-      # -- Existing secret key
-      existingSecretKey: ""
-    secretKey:
-      # -- Logs secret key
-      password: ""
-      # -- Existing secret
-      existingSecret: ""
-      # -- Existing secret key
-      existingSecretKey: ""
 
-    ## logs.storage.type Determines which log storage  will be utilized.  One of "MINIO", "S3" or "GCS"
-    ##                   Used in conjunction with logs.minio.*, logs.s3.* or logs.gcs.*
-    storage:
-      # -- Determines which log storage will be utilized; "MINIO", "S3", or "GCS".
-      # Used in conjunction with logs.minio.*, logs.s3.* or logs.gcs.*
-      type: "MINIO"
-
-    # Minio configuration, used if logs.storage.type is "MINIO"
+  storage:
+    type: "MINIO"
+    bucket:
+      log: airbyte-dev-logs
+      state: state-storage
+      workloadOutput: state-storage
+    gcs:
+      # -- The path the GCS creds are written to.
+      # If you are mounting an existing secret to extraVolumes on scheduler, server and worker
+      # deployments, then set credentials to the path of the mounted JSON file.
+      credentials: ""
+      # -- Base64 encoded json GCP credentials file contents.
+      # If credentialsJson is set then credentials auto resolves (to /secrets/gcs-log-creds/gcp.json).
+      credentialsJson: ""
     minio:
-      # -- Enable or disable the Minio helm chart
-      enabled: true
-      # -- Node labels for pod assignment
-      nodeSelector: {}
-      # -- Node tolerations for pod assignment
-      tolerations: []
-      # -- Node affinity and anti-affinity for pod assignment
-      affinity: {}
-
+      # -- storage minio access key
+      accessKey: minio
+      # -- storage minio secret key
+      secretKey: minio123
+      # -- storage minio endpoint
+      endpoint: http://airbyte-minio-svc:9000
+    s3:
+      # -- storage s3 region
+      region: ""
+      # -- storage s3 access key
+      accessKey:
+      # -- Existing secret
+      accessKeyExistingSecret:
+      # -- Existing secret key
+      accessKeyExistingSecretKey:
+      # -- storage s3 secret key
+      secretKey:
+      # -- Existing secret
+      secretKeyExistingSecret:
+      # -- Existing secret key
+      secretKeyExistingSecretKey:
     # External minio configuration, used if logs.storage.type is "MINIO" and enabled
     externalMinio:
       # -- Enable or disable an external Minio instance
@@ -66,32 +65,12 @@ global:
       # -- External Minio port
       port: 9000
 
-    # -- S3 configuration, used if logs.storage.type is "S3"
-    s3:
-      # -- Enable or disable custom S3 log location
-      enabled: false
-      # -- Bucket name where logs should be stored
-      bucket: airbyte-dev-logs
-      # -- Region where bucket is located (must be empty if using Minio)
-      bucketRegion: ""
-
-    # Google Cloud Storage (GCS) configuration, used if logs.storage.type is "GCS"
-    gcs:
-      # -- GCS Bucket Name
-      bucket: ""
-      # -- The path the GCS creds are written to.
-      # If you are mounting an existing secret to extraVolumes on scheduler, server and worker
-      # deployments, then set credentials to the path of the mounted JSON file.
-      credentials: ""
-      # -- Base64 encoded json GCP credentials file contents.
-      # If credentialsJson is set then credentials auto resolves (to /secrets/gcs-log-creds/gcp.json).
-      credentialsJson: ""
   metrics:
     # -- The metric client to configure globally. Supports "otel"
     metricClient: ""
-
     # -- The open-telemetry-collector endpoint that metrics will be sent to
     otelCollectorEndpoint: ""
+
   # Jobs resource requests and limits, see http://kubernetes.io/docs/user-guide/compute-resources/
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
@@ -1310,18 +1289,12 @@ externalDatabase:
 ## @section Logs parameters
 
 minio:
-  enabled: true
-  endpoint: http://airbyte-minio-svc:9000
-
   image:
     # -- Minio image used by Minio helm chart
     repository: minio/minio
     # -- Minio tag image
     tag: RELEASE.2023-11-20T22-40-07Z
 
-  auth:
-    rootUser: minio
-    rootPassword: minio123
   storage:
     volumeClaimValue: 500Mi
 

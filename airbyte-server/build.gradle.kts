@@ -19,8 +19,8 @@ configurations.all {
 }
 
 dependencies {
-    annotationProcessor(platform(libs.micronaut.bom))
     annotationProcessor(libs.lombok)
+    annotationProcessor(platform(libs.micronaut.bom))
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
     annotationProcessor(libs.micronaut.jaxrs.processor)
 

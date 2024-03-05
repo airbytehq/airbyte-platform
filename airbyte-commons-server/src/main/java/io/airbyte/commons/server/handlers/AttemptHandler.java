@@ -69,7 +69,7 @@ public class AttemptHandler {
       throw new UnprocessableContentException(String.format("Could not find jobId: %s", jobId), e);
     }
 
-    final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, String.valueOf(jobId), job.getAttemptsCount());
+    final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, String.valueOf(jobId), (long) job.getAttemptsCount());
     final Path logFilePath = jobRoot.resolve(LogClientSingleton.LOG_FILENAME);
     final int persistedAttemptNumber = jobPersistence.createAttempt(jobId, logFilePath);
     jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_CREATED_BY_RELEASE_STAGE, job);

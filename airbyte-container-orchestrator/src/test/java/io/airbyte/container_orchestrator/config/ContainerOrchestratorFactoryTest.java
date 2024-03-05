@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
@@ -78,7 +79,7 @@ class ContainerOrchestratorFactoryTest {
   // Tests will fail if this is uncommented, due to how the implementation of the DocumentStoreClient
   // is being created
   // @Inject
-  // DocumentStoreClient documentStoreClient;
+  // DocumentStoreClient storageClient;
 
   // @Inject
   JobOutputDocStore jobOutputDocStore;
@@ -97,7 +98,7 @@ class ContainerOrchestratorFactoryTest {
   @Test
   void envConfigs() {
     // check one random environment variable to ensure the EnvConfigs was created correctly
-    assertEquals("/tmp/airbyte_local", envConfigs.getEnv(EnvConfigs.LOCAL_DOCKER_MOUNT));
+    assertEquals("/tmp/airbyte_local", envConfigs.getEnv(EnvVar.LOCAL_DOCKER_MOUNT));
   }
 
   @Test

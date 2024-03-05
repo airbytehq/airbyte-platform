@@ -4,9 +4,9 @@
 
 package io.airbyte.workers.config;
 
-import io.airbyte.config.storage.CloudStorageConfigs;
-import io.airbyte.config.storage.CloudStorageConfigs.WorkerStorageType;
-import io.airbyte.workers.storage.DocumentStoreClient;
+import io.airbyte.workers.storage.DocumentType;
+import io.airbyte.workers.storage.StorageClient;
+import io.airbyte.workers.storage.StorageClientFactory;
 import io.micronaut.context.annotation.Factory;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -18,25 +18,30 @@ import jakarta.inject.Singleton;
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class CloudStorageBeanFactory {
 
+  // @Singleton
+  // @Named("logStorageConfigs")
+  // public StorageConfig logStorageConfigs(final StorageConfig storageConfig) {
+  // return storageConfig;
+  // }
+
   @Singleton
-  @Named("logStorageConfigs")
-  public CloudStorageConfigs logStorageConfigs(final DocumentStoreConfigFactory documentStoreConfigFactory) {
-    final WorkerStorageType storageType = documentStoreConfigFactory.getStorageType(DocumentType.LOGS);
-    return documentStoreConfigFactory.get(DocumentType.LOGS, storageType);
+  @Named("logDocumentStore")
+  public StorageClient logStorageClient(final StorageClientFactory factory) {
+    return factory.get(DocumentType.LOGS);
   }
 
   @Singleton
   @Named("stateDocumentStore")
-  public DocumentStoreClient documentStoreClient(final DocumentStoreFactory documentStoreFactory) {
-    return documentStoreFactory.get(DocumentType.STATE);
+  public StorageClient stateStorageClient(final StorageClientFactory factory) {
+    return factory.get(DocumentType.STATE);
   }
 
   @SuppressWarnings("LineLength")
 
   @Singleton
   @Named("outputDocumentStore")
-  public DocumentStoreClient outputDocumentStoreClient(final DocumentStoreFactory documentStoreFactory) {
-    return documentStoreFactory.get(DocumentType.WORKLOAD_OUTPUTS);
+  public StorageClient workloadStorageClient(final StorageClientFactory factory) {
+    return factory.get(DocumentType.WORKLOAD_OUTPUT);
   }
 
 }

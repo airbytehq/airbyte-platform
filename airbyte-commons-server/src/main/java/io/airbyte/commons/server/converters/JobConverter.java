@@ -244,7 +244,7 @@ public class JobConverter {
     }
   }
 
-  public static FailureReason getFailureReason(final @Nullable io.airbyte.config.FailureReason failureReason) {
+  private static FailureReason getFailureReason(final @Nullable io.airbyte.config.FailureReason failureReason) {
     if (failureReason == null) {
       return null;
     }

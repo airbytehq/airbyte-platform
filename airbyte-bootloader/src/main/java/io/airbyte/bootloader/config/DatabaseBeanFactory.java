@@ -57,13 +57,13 @@ public class DatabaseBeanFactory {
 
   @Singleton
   @Named("configDatabase")
-  public Database configDatabase(@Named("config") final DSLContext dslContext) throws IOException {
+  public Database configDatabase(@Named("config") final DSLContext dslContext) {
     return new Database(unwrapContext(dslContext));
   }
 
   @Singleton
   @Named("jobsDatabase")
-  public Database jobsDatabase(@Named("jobs") final DSLContext dslContext) throws IOException {
+  public Database jobsDatabase(@Named("jobs") final DSLContext dslContext) {
     return new Database(unwrapContext(dslContext));
   }
 

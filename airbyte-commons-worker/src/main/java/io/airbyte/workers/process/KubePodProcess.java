@@ -12,8 +12,6 @@ import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.list.Lists;
 import io.airbyte.commons.resources.MoreResources;
-import io.airbyte.config.Configs;
-import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.TolerationPOJO;
 import io.airbyte.featureflag.ConnectorApmEnabled;
@@ -116,8 +114,6 @@ import org.slf4j.MDC;
 @Slf4j
 public class KubePodProcess implements KubePod {
 
-  private static final Configs configs = new EnvConfigs();
-
   private static final Logger LOGGER = LoggerFactory.getLogger(KubePodProcess.class);
 
   public static final String MAIN_CONTAINER_NAME = "main";
@@ -148,7 +144,16 @@ public class KubePodProcess implements KubePod {
   // This timeout was initially 1 minute, but sync pods scheduled on newly-provisioned nodes
   // are occasionally not able to start the copy within 1 minute, hence the increase to 5 as default.
   // Can be set in env
-  private static final Duration INIT_RETRY_TIMEOUT_MINUTES = Duration.ofMinutes(configs.getJobInitRetryTimeoutMinutes());
+  private static final Duration INIT_RETRY_TIMEOUT_MINUTES;
+
+  static {
+    int retryMinutes = 5;
+    final var envRetryMinutes = System.getenv(io.airbyte.commons.envvar.EnvVar.SYNC_JOB_INIT_RETRY_TIMEOUT_MINUTES.name());
+    if (envRetryMinutes != null && !envRetryMinutes.isEmpty()) {
+      retryMinutes = Integer.parseInt(envRetryMinutes);
+    }
+    INIT_RETRY_TIMEOUT_MINUTES = Duration.ofMinutes(retryMinutes);
+  }
 
   private static final int INIT_RETRY_MAX_ITERATIONS = (int) (INIT_RETRY_TIMEOUT_MINUTES.toSeconds() / INIT_SLEEP_PERIOD_SECONDS);
 

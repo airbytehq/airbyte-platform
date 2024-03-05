@@ -10,14 +10,14 @@ import io.airbyte.commons.features.FeatureFlags
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.Configs
 import io.airbyte.config.EnvConfigs
+import io.airbyte.config.storage.StorageConfig
 import io.airbyte.workers.process.Metadata.AWS_ACCESS_KEY_ID
 import io.airbyte.workers.process.Metadata.AWS_SECRET_ACCESS_KEY
 import io.airbyte.workers.sync.OrchestratorConstants
-import io.airbyte.workload.launcher.config.cloud.CloudLoggingConfig
-import io.airbyte.workload.launcher.config.cloud.CloudStateConfig
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.EnvVarSource
 import io.fabric8.kubernetes.api.model.SecretKeySelector
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
 import io.micronaut.context.env.Environment
@@ -25,6 +25,9 @@ import io.micronaut.core.util.StringUtils
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.function.Consumer
+import io.airbyte.commons.envvar.EnvVar as AbEnvVar
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Provides and configures the environment variables for the containers we launch.
@@ -40,8 +43,7 @@ class EnvVarConfigBeanFactory {
     featureFlags: FeatureFlags,
     @Value("\${airbyte.container.orchestrator.java-opts}") containerOrchestratorJavaOpts: String,
     workerEnv: Configs.WorkerEnvironment,
-    cloudLoggingConfig: CloudLoggingConfig,
-    cloudStateConfig: CloudStateConfig,
+    storageConfig: StorageConfig,
     @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
     @Named("metricsEnvMap") metricsEnvMap: Map<String, String>,
     @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
@@ -55,20 +57,17 @@ class EnvVarConfigBeanFactory {
     envMap[JAVA_OPTS_ENV_VAR] = containerOrchestratorJavaOpts
 
     val configs: Configs = EnvConfigs()
-    envMap[EnvConfigs.FEATURE_FLAG_CLIENT] = configs.featureFlagClient
-    envMap[EnvConfigs.LAUNCHDARKLY_KEY] = configs.launchDarklyKey
-    envMap[EnvConfigs.OTEL_COLLECTOR_ENDPOINT] = configs.otelCollectorEndpoint
-    envMap[EnvConfigs.SOCAT_KUBE_CPU_LIMIT] = configs.socatSidecarKubeCpuLimit
-    envMap[EnvConfigs.SOCAT_KUBE_CPU_REQUEST] = configs.socatSidecarKubeCpuRequest
+    envMap[AbEnvVar.FEATURE_FLAG_CLIENT.name] = configs.featureFlagClient
+    envMap[AbEnvVar.LAUNCHDARKLY_KEY.name] = configs.launchDarklyKey
+    envMap[AbEnvVar.OTEL_COLLECTOR_ENDPOINT.name] = configs.otelCollectorEndpoint
+    envMap[AbEnvVar.SOCAT_KUBE_CPU_LIMIT.name] = configs.socatSidecarKubeCpuLimit
+    envMap[AbEnvVar.SOCAT_KUBE_CPU_REQUEST.name] = configs.socatSidecarKubeCpuRequest
 
     // Manually add the worker environment
     envMap[WorkerConstants.WORKER_ENVIRONMENT] = workerEnv.name
 
-    // Cloud logging configuration
-    envMap.putAll(cloudLoggingConfig.toEnvVarMap())
-
-    // Cloud state configuration
-    envMap.putAll(cloudStateConfig.toEnvVarMap())
+    // Cloud storage config
+    envMap.putAll(storageConfig.toEnvVarMap())
 
     // Workload Api configuration
     envMap.putAll(workloadApiEnvMap)
@@ -104,14 +103,22 @@ class EnvVarConfigBeanFactory {
     @Named("orchestratorEnvMap") envMap: Map<String, String>,
     @Named("orchestratorSecretsEnvMap") secretsEnvMap: Map<String, EnvVarSource>,
   ): List<EnvVar> {
-    val envVars =
-      envMap
-        .map { EnvVar(it.key, it.value, null) }
-        .toList()
-
     val secretEnvVars =
       secretsEnvMap
         .map { EnvVar(it.key, null, it.value) }
+        .toList()
+
+    val envVars =
+      envMap
+        .filterNot { env ->
+          secretsEnvMap.containsKey(env.key)
+            .also {
+              if (it) {
+                logger.info { "Skipping env-var ${env.key} as it was already defined as a secret. " }
+              }
+            }
+        }
+        .map { EnvVar(it.key, it.value, null) }
         .toList()
 
     return envVars + secretEnvVars
@@ -123,19 +130,16 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("sideCarEnvVars")
   fun sideCarEnvVars(
-    cloudLoggingConfig: CloudLoggingConfig,
-    cloudStateConfig: CloudStateConfig,
+    storageConfig: StorageConfig,
     @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
     @Named("apiClientEnvMap") apiClientEnvMap: Map<String, String>,
     @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
     @Named("workloadApiSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
-    // Cloud logging configuration
-    envMap.putAll(cloudLoggingConfig.toEnvVarMap())
 
-    // Cloud state configuration
-    envMap.putAll(cloudStateConfig.toEnvVarMap())
+    // Cloud storage configuration
+    envMap.putAll(storageConfig.toEnvVarMap())
 
     // Workload Api configuration
     envMap.putAll(workloadApiEnvMap)

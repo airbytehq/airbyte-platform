@@ -15,8 +15,7 @@ import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.models.ReplicationActivityInput
-import io.airbyte.workers.orchestrator.PodNameGenerator
-import io.airbyte.workers.storage.DocumentStoreClient
+import io.airbyte.workers.storage.StorageClient
 import io.airbyte.workers.sync.WorkloadApiWorker
 import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workers.workload.WorkloadIdGenerator
@@ -37,7 +36,7 @@ import java.util.concurrent.CancellationException
 
 internal class WorkloadApiWorkerTest {
   private var workloadIdGenerator: WorkloadIdGenerator = mockk()
-  private var documentStoreClient: DocumentStoreClient = mockk()
+  private var storageClient: StorageClient = mockk()
   private var apiClient: AirbyteApiClient = mockk()
   private var connectionApi: ConnectionApi = mockk()
   private var workloadApi: WorkloadApi = mockk()
@@ -57,8 +56,6 @@ internal class WorkloadApiWorkerTest {
     replicationInput = ReplicationInput()
     workloadApiWorker =
       WorkloadApiWorker(
-        documentStoreClient,
-        PodNameGenerator("testNs"),
         jobOutputDocStore,
         apiClient,
         workloadApi,
@@ -151,7 +148,7 @@ internal class WorkloadApiWorkerTest {
     every { connectionApi.getConnection(any()) } returns ConnectionRead().geography(Geography.US)
     every { workloadApi.workloadCreate(any()) } returns Unit
     every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.SUCCESS)
-    every { documentStoreClient.read("$expectedDocPrefix/SUCCEEDED") } returns Optional.empty()
+    every { storageClient.read("$expectedDocPrefix/SUCCEEDED") } returns null
 
     assertThrows<WorkerException> { workloadApiWorker.run(replicationInput, jobRoot) }
   }

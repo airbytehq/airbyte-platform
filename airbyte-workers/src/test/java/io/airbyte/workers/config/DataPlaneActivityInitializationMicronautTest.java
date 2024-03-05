@@ -39,12 +39,14 @@ import org.junit.jupiter.api.Test;
           value = "/tmp/local")
 @Property(name = "airbyte.workspace.root",
           value = "/tmp/workspace")
-@Property(name = "airbyte.cloud.storage.logs.type",
+@Property(name = "airbyte.cloud.storage.type",
           value = "local")
-@Property(name = "airbyte.cloud.storage.state.type",
-          value = "local")
-@Property(name = "airbyte.cloud.storage.workload-outputs.type",
-          value = "local")
+@Property(name = "airbyte.cloud.storage.bucket.log",
+          value = "log")
+@Property(name = "airbyte.cloud.storage.bucket.state",
+          value = "state")
+@Property(name = "airbyte.cloud.storage.bucket.workload-output",
+          value = "workload")
 class DataPlaneActivityInitializationMicronautTest {
 
   // Ideally this should be broken down into different tests to get a clearer view of which bean

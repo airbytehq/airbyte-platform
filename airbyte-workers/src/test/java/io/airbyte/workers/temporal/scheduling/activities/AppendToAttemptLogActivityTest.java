@@ -47,7 +47,7 @@ class AppendToAttemptLogActivityTest {
 
     activity.log(input);
 
-    final var expectedPath = TemporalUtils.getJobRoot(path, String.valueOf(jobId), attemptNumber);
+    final var expectedPath = TemporalUtils.getJobRoot(path, String.valueOf(jobId), (long) attemptNumber);
 
     Mockito.verify(mLogClientSingleton, Mockito.times(1)).setJobMdc(env, mLogConfigs, expectedPath);
   }

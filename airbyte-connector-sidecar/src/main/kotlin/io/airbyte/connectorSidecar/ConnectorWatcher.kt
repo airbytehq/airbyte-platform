@@ -19,9 +19,7 @@ import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration
 import io.airbyte.workers.models.SidecarInput
-import io.airbyte.workers.sync.OrchestratorConstants.EXIT_CODE_FILE
-import io.airbyte.workers.sync.OrchestratorConstants.JOB_OUTPUT_FILENAME
-import io.airbyte.workers.sync.OrchestratorConstants.SIDECAR_INPUT
+import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
@@ -53,7 +51,7 @@ class ConnectorWatcher(
   val jobOutputDocStore: JobOutputDocStore,
 ) {
   fun run() {
-    val input = Jsons.deserialize(readFile(SIDECAR_INPUT), SidecarInput::class.java)
+    val input = Jsons.deserialize(readFile(OrchestratorConstants.SIDECAR_INPUT), SidecarInput::class.java)
     val checkConnectionConfiguration = input.checkConnectionInput
     val discoverCatalogInput = input.discoverCatalogInput
     val workloadId = input.workloadId
@@ -70,12 +68,12 @@ class ConnectorWatcher(
         }
       }
       val outputIS =
-        if (Files.exists(Path.of(JOB_OUTPUT_FILENAME))) {
-          Files.newInputStream(Path.of(JOB_OUTPUT_FILENAME))
+        if (Files.exists(Path.of(OrchestratorConstants.JOB_OUTPUT_FILENAME))) {
+          Files.newInputStream(Path.of(OrchestratorConstants.JOB_OUTPUT_FILENAME))
         } else {
           InputStream.nullInputStream()
         }
-      val exitCode = readFile(EXIT_CODE_FILE).trim().toInt()
+      val exitCode = readFile(OrchestratorConstants.EXIT_CODE_FILE).trim().toInt()
       val streamFactory: AirbyteStreamFactory = getStreamFactory(integrationLauncherConfig)
       val connectorOutput: ConnectorJobOutput =
         when (input.operationType) {
@@ -140,7 +138,7 @@ class ConnectorWatcher(
 
   @VisibleForTesting
   fun areNeededFilesPresent(): Boolean {
-    return Files.exists(outputPath) && Files.exists(Path.of(configDir, EXIT_CODE_FILE))
+    return Files.exists(outputPath) && Files.exists(Path.of(configDir, OrchestratorConstants.EXIT_CODE_FILE))
   }
 
   @VisibleForTesting

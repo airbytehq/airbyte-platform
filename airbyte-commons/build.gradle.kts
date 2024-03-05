@@ -4,6 +4,7 @@ plugins {
     id("io.airbyte.gradle.jvm.lib")
     id("io.airbyte.gradle.publish")
     alias(libs.plugins.de.undercouch.download)
+    kotlin("jvm")
 }
 
 dependencies {
@@ -45,4 +46,11 @@ val downloadSpecSecretMask = tasks.register<Download>("downloadSpecSecretMask") 
 
 tasks.named("processResources") {
     dependsOn(downloadSpecSecretMask)
+}
+
+tasks.named<Test>("test") {
+    environment(mapOf(
+        "Z_TESTING_PURPOSES_ONLY_1" to "value-defined",
+        "Z_TESTING_PURPOSES_ONLY_2" to "  ",
+    ))
 }

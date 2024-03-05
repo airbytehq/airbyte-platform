@@ -1,0 +1,10 @@
+airbyte:
+  cloud:
+    storage:
+      type: gcs
+      bucket:
+        log: log
+        state: state
+        workload-output: workload
+      gcs:
+        application-credentials: credz

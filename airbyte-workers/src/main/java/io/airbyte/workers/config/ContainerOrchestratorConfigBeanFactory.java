@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.config;
 
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.config.Configs;
@@ -11,7 +12,7 @@ import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.workers.ContainerOrchestratorConfig;
-import io.airbyte.workers.storage.DocumentStoreClient;
+import io.airbyte.workers.storage.StorageClient;
 import io.airbyte.workers.sync.OrchestratorConstants;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
@@ -56,8 +57,8 @@ public class ContainerOrchestratorConfigBeanFactory {
             value = "true")
   @Named("containerOrchestratorConfig")
   public ContainerOrchestratorConfig kubernetesContainerOrchestratorConfig(
-                                                                           @Named("stateDocumentStore") final DocumentStoreClient documentStoreClient,
-                                                                           @Named("outputDocumentStore") final DocumentStoreClient outputDocumentStoreClient,
+                                                                           @Named("stateDocumentStore") final StorageClient stateStorageClient,
+                                                                           @Named("outputDocumentStore") final StorageClient outputDocumentStoreClient,
                                                                            @Value("${airbyte.version}") final String airbyteVersion,
                                                                            @Value("${airbyte.container.orchestrator.image}") final String containerOrchestratorImage,
                                                                            @Value("${airbyte.worker.job.kube.main.container.image-pull-policy}") final String containerOrchestratorImagePullPolicy,
@@ -110,11 +111,11 @@ public class ContainerOrchestratorConfigBeanFactory {
     }
 
     final Configs configs = new EnvConfigs();
-    environmentVariables.put(EnvConfigs.FEATURE_FLAG_CLIENT, configs.getFeatureFlagClient());
-    environmentVariables.put(EnvConfigs.LAUNCHDARKLY_KEY, configs.getLaunchDarklyKey());
-    environmentVariables.put(EnvConfigs.OTEL_COLLECTOR_ENDPOINT, configs.getOtelCollectorEndpoint());
-    environmentVariables.put(EnvConfigs.SOCAT_KUBE_CPU_LIMIT, configs.getSocatSidecarKubeCpuLimit());
-    environmentVariables.put(EnvConfigs.SOCAT_KUBE_CPU_REQUEST, configs.getSocatSidecarKubeCpuRequest());
+    environmentVariables.put(EnvVar.FEATURE_FLAG_CLIENT.name(), configs.getFeatureFlagClient());
+    environmentVariables.put(EnvVar.LAUNCHDARKLY_KEY.name(), configs.getLaunchDarklyKey());
+    environmentVariables.put(EnvVar.OTEL_COLLECTOR_ENDPOINT.name(), configs.getOtelCollectorEndpoint());
+    environmentVariables.put(EnvVar.SOCAT_KUBE_CPU_LIMIT.name(), configs.getSocatSidecarKubeCpuLimit());
+    environmentVariables.put(EnvVar.SOCAT_KUBE_CPU_REQUEST.name(), configs.getSocatSidecarKubeCpuRequest());
 
     if (System.getenv(DD_ENV_ENV_VAR) != null) {
       environmentVariables.put(DD_ENV_ENV_VAR, System.getenv(DD_ENV_ENV_VAR));
@@ -144,7 +145,7 @@ public class ContainerOrchestratorConfigBeanFactory {
 
     return new ContainerOrchestratorConfig(
         namespace,
-        documentStoreClient,
+        stateStorageClient,
         environmentVariables,
         kubernetesClient,
         containerOrchestratorSecretName,

@@ -18,6 +18,7 @@ import static io.airbyte.workers.process.Metadata.WRITE_STEP;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.workers.config.WorkerConfigs;
@@ -78,11 +79,11 @@ class AirbyteIntegrationLauncherTest {
               .put(EnvVariableFeatureFlags.APPLY_FIELD_SELECTION, String.valueOf(FEATURE_FLAGS.applyFieldSelection()))
               .put(EnvVariableFeatureFlags.FIELD_SELECTION_WORKSPACES, FEATURE_FLAGS.fieldSelectionWorkspaces())
               .put("USE_STREAM_CAPABLE_STATE", "true")
-              .put(EnvConfigs.SOCAT_KUBE_CPU_LIMIT, CONFIGS.getSocatSidecarKubeCpuLimit())
-              .put(EnvConfigs.SOCAT_KUBE_CPU_REQUEST, CONFIGS.getSocatSidecarKubeCpuRequest())
-              .put(EnvConfigs.LAUNCHDARKLY_KEY, CONFIGS.getLaunchDarklyKey())
-              .put(EnvConfigs.FEATURE_FLAG_CLIENT, CONFIGS.getFeatureFlagClient())
-              .put(EnvConfigs.OTEL_COLLECTOR_ENDPOINT, CONFIGS.getOtelCollectorEndpoint())
+              .put(EnvVar.SOCAT_KUBE_CPU_LIMIT.name(), CONFIGS.getSocatSidecarKubeCpuLimit())
+              .put(EnvVar.SOCAT_KUBE_CPU_REQUEST.name(), CONFIGS.getSocatSidecarKubeCpuRequest())
+              .put(EnvVar.LAUNCHDARKLY_KEY.name(), CONFIGS.getLaunchDarklyKey())
+              .put(EnvVar.FEATURE_FLAG_CLIENT.name(), CONFIGS.getFeatureFlagClient())
+              .put(EnvVar.OTEL_COLLECTOR_ENDPOINT.name(), CONFIGS.getOtelCollectorEndpoint())
               .build());
 
   private WorkerConfigs workerConfigs;

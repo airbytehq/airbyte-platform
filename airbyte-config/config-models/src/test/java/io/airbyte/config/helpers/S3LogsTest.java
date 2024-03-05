@@ -6,13 +6,15 @@ package io.airbyte.config.helpers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.airbyte.config.storage.CloudStorageConfigs;
+import io.airbyte.commons.envvar.EnvVar;
+import io.airbyte.config.storage.S3StorageConfig;
+import io.airbyte.config.storage.StorageBucketConfig;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -28,11 +30,20 @@ class S3LogsTest {
   private static final Region REGION = Region.of(REGION_STRING);
   private static final String BUCKET_NAME = "airbyte-kube-integration-logging-test";
 
-  private static final LogConfigs LOG_CONFIGS = new LogConfigs(Optional.of(CloudStorageConfigs.s3(new CloudStorageConfigs.S3Config(
-      System.getenv(LogClientSingleton.S3_LOG_BUCKET),
-      System.getenv(LogClientSingleton.AWS_ACCESS_KEY_ID),
-      System.getenv(LogClientSingleton.AWS_SECRET_ACCESS_KEY),
-      System.getenv(LogClientSingleton.S3_LOG_BUCKET_REGION)))));
+  private static final LogConfigs LOG_CONFIGS;
+
+  static {
+    final var bucketLog = EnvVar.STORAGE_BUCKET_LOG.fetch();
+    Objects.requireNonNull(bucketLog);
+    final var region = EnvVar.AWS_DEFAULT_REGION.fetch();
+    Objects.requireNonNull(region);
+
+    LOG_CONFIGS = new LogConfigs(new S3StorageConfig(
+        new StorageBucketConfig(bucketLog, "state", "workload"),
+        EnvVar.AWS_ACCESS_KEY_ID.fetch(),
+        EnvVar.AWS_SECRET_ACCESS_KEY.fetch(),
+        region));
+  }
 
   private S3Client s3Client;
 
