@@ -205,7 +205,7 @@ export const ConnectionReplicationPage: React.FC = () => {
           if (result.type === "closed" && isBoolean(result.reason)) {
             // Save the connection taking into account the correct skipReset value from the dialog choice.
             await saveConnection(values, {
-              skipReset: result.reason,
+              skipReset: !result.reason,
               catalogHasChanged,
             });
           } else {
