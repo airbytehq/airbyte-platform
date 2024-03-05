@@ -5107,6 +5107,7 @@ paths:
           description: Not found
       operationId: putSource
       summary: Update a Source and fully overwrite it
+      x-sdk-entity-operation: Source#update
     delete:
       tags:
         - public_sources
@@ -5361,6 +5362,7 @@ paths:
           description: Not found
       operationId: putDestination
       summary: Update a Destination and fully overwrite it
+      x-sdk-entity-operation: Destination#update
     parameters:
       - name: destinationId
         schema:
@@ -5458,6 +5460,7 @@ paths:
           description: Not allowed
       operationId: publicCreateConnection
       summary: Create a connection
+      x-sdk-entity-operation: Connection#create
     get:
       tags:
         - public_connections
@@ -5476,6 +5479,7 @@ paths:
           description: Not found
       operationId: listConnections
       summary: List connections
+      x-sdk-entity-operation: Connection#list
       parameters:
         - name: workspaceIds
           description: The UUIDs of the workspaces you wish to list connections for. Empty list will retrieve all allowed workspaces.
@@ -5536,6 +5540,7 @@ paths:
           description: Not found
       operationId: publicGetConnection
       summary: Get Connection details
+      x-sdk-entity-operation: Connection#read
     patch:
       tags:
         - public_connections
@@ -5573,6 +5578,7 @@ paths:
           description: Not found
       operationId: patchConnection
       summary: Update Connection details
+      x-sdk-entity-operation: Connection#update
     delete:
       tags:
         - public_connections
@@ -5587,6 +5593,7 @@ paths:
           description: Not found
       operationId: publicDeleteConnection
       summary: Delete a Connection
+      x-sdk-entity-operation: Connection#delete
     parameters:
       - name: connectionId
         schema:
@@ -5656,6 +5663,7 @@ paths:
           description: Not found
       operationId: publicListWorkspaces
       summary: List workspaces
+      x-sdk-entity-operation: Workspace#list
       parameters:
         - name: workspaceIds
           description: The UUIDs of the workspaces you wish to fetch. Empty list will retrieve all allowed workspaces.
@@ -5722,6 +5730,7 @@ paths:
           description: Not allowed
       operationId: publicCreateWorkspace
       summary: Create a workspace
+      x-sdk-entity-operation: Workspace#create
   /public/v1/workspaces/{workspaceId}:
     parameters:
       - name: workspaceId
@@ -5754,6 +5763,7 @@ paths:
           description: Not found
       operationId: publicGetWorkspace
       summary: Get Workspace details
+      x-sdk-entity-operation: Workspace#read
     patch:
       tags:
         - public_workspaces
@@ -5786,6 +5796,7 @@ paths:
           description: Not allowed
       operationId: publicUpdateWorkspace
       summary: Update a workspace
+      x-sdk-entity-operation: Workspace#update
     delete:
       tags:
         - public_workspaces
@@ -5800,6 +5811,7 @@ paths:
           description: Not found
       operationId: publicDeleteWorkspace
       summary: Delete a Workspace
+      x-sdk-entity-operation: Workspace#delete
   /public/v1/workspaces/{workspaceId}/oauthCredentials:
     put:
       requestBody:
@@ -11221,6 +11233,7 @@ components:
       properties:
         inviteCode:
           type: string
+
     # Airbyte API
     RedirectUrlResponse:
       title: Root Type for RedirectUrlResponse
@@ -11232,6 +11245,7 @@ components:
           type: string
       example:
         redirectUrl: https://example.com
+      x-sdk-component: true
     JobResponse:
       title: Root Type for JobResponse
       description: Provides details of a single job.
@@ -11272,6 +11286,7 @@ components:
         jobType: sync
         startTime: 2023-03-25T01:30:50Z
         duration: PT8H6M12S
+      x-sdk-component: true
     JobsResponse:
       title: Root Type for JobsResponse
       description: ""
@@ -11295,6 +11310,7 @@ components:
             status: running
             jobType: sync
             startTime: 2023-03-25T01:30:50Z
+      x-sdk-component: true
     ConnectionCreateRequest:
       required:
         - sourceId
@@ -11330,6 +11346,9 @@ components:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         status:
           $ref: "#/components/schemas/ConnectionStatusEnum"
+      x-sdk-entity: Connection
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
     ConnectionPatchRequest:
       type: object
       properties:
@@ -11356,6 +11375,9 @@ components:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnumNoDefault"
         status:
           $ref: "#/components/schemas/ConnectionStatusEnum"
+      x-sdk-entity: Connection
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
     JobCreateRequest:
       title: Root Type for JobCreate
       description: Creates a new Job from the configuration provided in the request body.
@@ -11372,6 +11394,7 @@ components:
       example:
         connectionId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
         jobType: sync
+      x-sdk-component: true
     JobStatusEnum:
       enum:
         - pending
@@ -11381,12 +11404,14 @@ components:
         - succeeded
         - cancelled
       type: string
+      x-sdk-component: true
     JobTypeEnum:
       description: Enum that describes the different types of jobs that the platform runs.
       enum:
         - sync
         - reset
       type: string
+      x-sdk-component: true
     SourceCreateRequest:
       required:
         - name
@@ -11410,6 +11435,9 @@ components:
           description: Optional secretID obtained through the  OAuth redirect flow.
           type: string
       x-implements: io.airbyte.api.common.ConfigurableActor
+      x-sdk-entity: Source
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
     SourcePutRequest:
       required:
         - name
@@ -11421,6 +11449,9 @@ components:
         configuration:
           $ref: "#/components/schemas/SourceConfiguration"
       x-implements: io.airbyte.api.common.ConfigurableActor
+      x-sdk-entity: Source
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
     SourcePatchRequest:
       type: object
       properties:
@@ -11436,6 +11467,9 @@ components:
           description: Optional secretID obtained through the  OAuth redirect flow.
           type: string
       x-implements: io.airbyte.api.common.ConfigurableActor
+      x-sdk-entity: Source
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
     InitiateOauthRequest:
       title: Root Type for initiate-oauth-post-body
       required:
@@ -11465,6 +11499,7 @@ components:
         redirectUrl: "https://cloud.airbyte.io/v1/api/oauth/callback"
         workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
         destinationId: 3d93b16c-ff5f-421c-8908-5a3c82088f14
+      x-sdk-component: true
     WorkspaceOAuthCredentialsRequest:
       title: Root Type for WorkspaceOAuthCredentials
       description: POST body for creating/updating workspace level OAuth credentials
@@ -11481,6 +11516,7 @@ components:
           description: The name of the source i.e. google-ads
         configuration:
           $ref: "#/components/schemas/OAuthCredentialsConfiguration"
+      x-sdk-component: true
     OAuthCredentialsConfiguration:
       description: The configuration for this source/destination based on the OAuth section of the relevant specification.
       type: object
@@ -11488,6 +11524,7 @@ components:
         credentials:
           client_id: 871d9b60-11d1-44cb-8c92-c246d53bf87e
           client_secret: shhhhhh
+      x-sdk-component: true
     ConnectionResponse:
       title: Root Type for ConnectionResponse
       description: Provides details of a single connection.
@@ -11533,6 +11570,9 @@ components:
           type: string
         configurations:
           $ref: "#/components/schemas/StreamConfigurations"
+      x-sdk-entity: Connection
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
     AirbyteApiConnectionSchedule:
       description: schedule for when the the connection should run, per the schedule type
       type: object
@@ -11543,11 +11583,13 @@ components:
           $ref: "#/components/schemas/ScheduleTypeEnum"
         cronExpression:
           type: string
+      x-sdk-component: true
     ScheduleTypeEnum:
       type: string
       enum:
         - manual
         - cron
+      x-sdk-component: true
     ConnectionScheduleResponse:
       description: schedule for when the the connection should run, per the schedule type
       type: object
@@ -11560,12 +11602,14 @@ components:
           type: string
         basicTiming:
           type: string
+      x-sdk-component: true
     ScheduleTypeWithBasicEnum:
       type: string
       enum:
         - manual
         - cron
         - basic
+      x-sdk-component: true
     GeographyEnum:
       type: string
       enum:
@@ -11573,18 +11617,21 @@ components:
         - us
         - eu
       default: "auto"
+      x-sdk-component: true
     GeographyEnumNoDefault:
       type: string
       enum:
         - auto
         - us
         - eu
+      x-sdk-component: true
     ConnectionStatusEnum:
       type: string
       enum:
         - active
         - inactive
         - deprecated
+      x-sdk-component: true
     NamespaceDefinitionEnum:
       type: string
       description: Define the location where the data will be stored in the destination
@@ -11593,6 +11640,7 @@ components:
         - destination
         - custom_format
       default: "destination"
+      x-sdk-component: true
     NonBreakingSchemaUpdatesBehaviorEnum:
       type: string
       description: Set how Airbyte handles syncs when it detects a non-breaking schema change in the source
@@ -11602,6 +11650,7 @@ components:
         - propagate_columns # Auto propagate schema change for existing streams
         - propagate_fully # Auto propagate schema change for all streams including the new ones
       default: "ignore"
+      x-sdk-component: true
     NamespaceDefinitionEnumNoDefault:
       type: string
       description: Define the location where the data will be stored in the destination
@@ -11609,6 +11658,7 @@ components:
         - source
         - destination
         - custom_format
+      x-sdk-component: true
     NonBreakingSchemaUpdatesBehaviorEnumNoDefault:
       type: string
       description: Set how Airbyte handles syncs when it detects a non-breaking schema change in the source
@@ -11617,6 +11667,7 @@ components:
         - disable_connection # disable the connection, pausing the sync
         - propagate_columns # Auto propagate schema change for existing streams
         - propagate_fully # Auto propagate schema change for all streams including the new ones
+      x-sdk-component: true
     DestinationResponse:
       title: Root Type for DestinationResponse
       description: Provides details of a single destination.
@@ -11645,6 +11696,7 @@ components:
         name: Analytics Team Postgres
         destinationType: postgres
         workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
+      x-sdk-component: true
     SourceResponse:
       title: Root Type for SourceResponse
       description: Provides details of a single source.
@@ -11673,6 +11725,7 @@ components:
         name: Analytics Team Postgres
         sourceType: postgres
         workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
+      x-sdk-component: true
     DestinationCreateRequest:
       required:
         - name
@@ -11693,6 +11746,9 @@ components:
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
       x-implements: io.airbyte.api.common.ConfigurableActor
+      x-sdk-entity: Destination
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
     DestinationPatchRequest:
       type: object
       properties:
@@ -11701,6 +11757,9 @@ components:
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
       x-implements: io.airbyte.api.common.ConfigurableActor
+      x-sdk-entity: Destination
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
     DestinationPutRequest:
       required:
         - name
@@ -11712,6 +11771,9 @@ components:
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
       x-implements: io.airbyte.api.common.ConfigurableActor
+      x-sdk-entity: Destination
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
     WorkspaceCreateRequest:
       required:
         - name
@@ -11720,6 +11782,9 @@ components:
         name:
           description: Name of the workspace
           type: string
+      x-sdk-entity: Workspace
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
     WorkspaceUpdateRequest:
       required:
         - name
@@ -11728,6 +11793,9 @@ components:
         name:
           description: Name of the workspace
           type: string
+      x-sdk-entity: Workspace
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
     WorkspaceResponse:
       title: Root Type for WorkspaceResponse
       description: Provides details of a single workspace.
@@ -11744,6 +11812,9 @@ components:
           type: string
         dataResidency:
           $ref: "#/components/schemas/GeographyEnum"
+      x-sdk-entity: Workspace
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
     ConnectionsResponse:
       title: Root Type for ConnectionsResponse
       description: ""
@@ -11772,6 +11843,7 @@ components:
               scheduleType: manual
           - status: active
           - dataResidency: auto
+      x-sdk-component: true
     SourcesResponse:
       title: Root Type for SourcesResponse
       description: ""
@@ -11795,6 +11867,7 @@ components:
           name: Analytics Team Postgres
           sourceType: postgres
           workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
+      x-sdk-component: true
     DestinationsResponse:
       title: Root Type for DestinationsResponse
       description: ""
@@ -11818,6 +11891,7 @@ components:
           name: Analytics Team Postgres
           destinationType: postgres
           workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
+      x-sdk-component: true
     WorkspacesResponse:
       title: Root Type for WorkspacesResponse
       description: ""
@@ -11840,6 +11914,7 @@ components:
           workspaceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
           name: Acme Company
           dataResidency: auto
+      x-sdk-component: true
     StreamConfiguration:
       description: Configurations for a single stream.
       type: object
@@ -11862,6 +11937,7 @@ components:
             type: array
             items:
               type: string
+      x-sdk-component: true
     StreamConfigurations:
       description: A list of configured stream options for a connection.
       type: object
@@ -11870,6 +11946,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/StreamConfiguration"
+      x-sdk-component: true
     StreamPropertiesResponse:
       description: A list of stream properties.
       type: object
@@ -11878,6 +11955,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/StreamProperties"
+      x-sdk-component: true
     StreamProperties:
       description: The stream properties associated with a connection.
       type: object
@@ -11906,17 +11984,20 @@ components:
             type: array
             items:
               type: string
+      x-sdk-component: true
     ConnectionSyncModeEnum:
       enum:
         - full_refresh_overwrite
         - full_refresh_append
         - incremental_append
         - incremental_deduped_history
+      x-sdk-component: true
     ActorTypeEnum:
       description: Whether you're setting this override for a source or destination
       enum:
         - source
         - destination
+      x-sdk-component: true
 
   responses:
     NotFoundResponse:
@@ -11925,24 +12006,28 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/NotFoundKnownExceptionInfo"
+      x-sdk-component: true
     InvalidInputResponse:
       description: Input failed validation
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/InvalidInputExceptionInfo"
+      x-sdk-component: true
     ForbiddenResponse:
       description: Operation forbidden
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/KnownExceptionInfo"
+      x-sdk-component: true
     ExceptionResponse:
       description: Exception occurred; see message for details.
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/KnownExceptionInfo"
+      x-sdk-component: true
     InitiateOauthResponse:
       content:
         application/json: {}
@@ -11950,5 +12035,6 @@ components:
         Response from the initiate OAuth call should be an object with a single property which will be
         the `redirect_url`. If a user is redirected to this URL, they'll be prompted by the identity
         provider to authenticate.
+      x-sdk-component: true
 security:
   - {}
