@@ -7,14 +7,14 @@ plugins {
 }
 
 dependencies {
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
     annotationProcessor(platform(libs.micronaut.bom))
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
     implementation( platform(libs.micronaut.bom))
     implementation( libs.bundles.micronaut)
     implementation( libs.bundles.keycloak.client)
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
 
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-auth"))

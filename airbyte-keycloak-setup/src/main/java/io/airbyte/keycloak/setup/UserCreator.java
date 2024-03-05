@@ -6,8 +6,8 @@ package io.airbyte.keycloak.setup;
 
 import io.airbyte.commons.auth.config.InitialUserConfiguration;
 import jakarta.inject.Singleton;
+import jakarta.ws.rs.core.Response;
 import java.util.Arrays;
-import javax.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.CredentialRepresentation;

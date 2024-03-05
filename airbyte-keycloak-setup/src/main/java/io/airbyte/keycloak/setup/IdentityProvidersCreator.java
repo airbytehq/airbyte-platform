@@ -6,10 +6,10 @@ package io.airbyte.keycloak.setup;
 
 import io.airbyte.commons.auth.config.IdentityProviderConfiguration;
 import jakarta.inject.Singleton;
+import jakarta.ws.rs.core.Response;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.IdentityProviderRepresentation;
