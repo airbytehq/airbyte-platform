@@ -54,9 +54,6 @@ export const useUpdatePermissions = () => {
         if (data.organizationId) {
           queryClient.invalidateQueries(organizationKeys.listUsers(data.organizationId));
         }
-        if (data.workspaceId) {
-          queryClient.invalidateQueries(workspaceKeys.listUsers(data.workspaceId));
-        }
         queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
       },
       onError: () => {
@@ -91,9 +88,6 @@ export const useCreatePermission = () => {
         if (data.organizationId) {
           queryClient.invalidateQueries(organizationKeys.listUsers(data.organizationId));
         }
-        if (data.workspaceId) {
-          queryClient.invalidateQueries(workspaceKeys.listUsers(data.workspaceId));
-        }
         queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
       },
       onError: () => {
@@ -123,7 +117,6 @@ export const useDeletePermissions = () => {
         type: "success",
       });
       queryClient.invalidateQueries(organizationKeys.allListUsers);
-      queryClient.invalidateQueries(workspaceKeys.allListUsers);
       queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
     },
     onError: () => {

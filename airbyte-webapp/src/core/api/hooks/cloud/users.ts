@@ -126,7 +126,6 @@ export const useUserHook = () => {
       {
         onSuccess: async () => {
           await queryClient.invalidateQueries(userKeys.lists());
-          await queryClient.invalidateQueries(workspaceKeys.allListUsers);
           await queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
         },
       }
