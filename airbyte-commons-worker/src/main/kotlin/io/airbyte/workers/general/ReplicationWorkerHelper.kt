@@ -383,7 +383,7 @@ class ReplicationWorkerHelper(
 
           if (previousStream != null && previousStream != it) {
             replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(
-              it,
+              previousStream,
               context,
               AirbyteMessageOrigin.DESTINATION,
             )
