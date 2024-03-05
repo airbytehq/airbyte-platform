@@ -152,10 +152,11 @@ public class DefaultAirbyteSource implements AirbyteSource {
 
     final Optional<AirbyteMessage> m = Optional.ofNullable(messageIterator.hasNext() ? messageIterator.next() : null);
     if (m.isPresent()) {
+      final MetricAttribute typeAttribute = new MetricAttribute(MetricTags.MESSAGE_TYPE, m.get().getType().toString());
       if (connectionAttribute != null) {
-        metricClient.count(OssMetricsRegistry.WORKER_SOURCE_MESSAGE_READ, 1, connectionAttribute);
+        metricClient.count(OssMetricsRegistry.WORKER_SOURCE_MESSAGE_READ, 1, connectionAttribute, typeAttribute);
       } else {
-        metricClient.count(OssMetricsRegistry.WORKER_SOURCE_MESSAGE_READ, 1);
+        metricClient.count(OssMetricsRegistry.WORKER_SOURCE_MESSAGE_READ, 1, typeAttribute);
       }
     }
     return m;

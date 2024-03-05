@@ -132,10 +132,11 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
 
   @Override
   public void accept(final AirbyteMessage message) throws IOException {
+    final MetricAttribute typeAttribute = new MetricAttribute(MetricTags.MESSAGE_TYPE, message.getType().toString());
     if (connectionAttribute != null) {
-      metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_MESSAGE_SENT, 1, connectionAttribute);
+      metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_MESSAGE_SENT, 1, connectionAttribute, typeAttribute);
     } else {
-      metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_MESSAGE_SENT, 1);
+      metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_MESSAGE_SENT, 1, typeAttribute);
     }
     destinationTimeoutMonitor.startAcceptTimer();
     acceptWithNoTimeoutMonitor(message);
@@ -228,10 +229,11 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
 
     final Optional<AirbyteMessage> m = Optional.ofNullable(messageIterator.hasNext() ? messageIterator.next() : null);
     if (m.isPresent()) {
+      final MetricAttribute typeAttribute = new MetricAttribute(MetricTags.MESSAGE_TYPE, m.get().getType().toString());
       if (connectionAttribute != null) {
-        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_MESSAGE_READ, 1, connectionAttribute);
+        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_MESSAGE_READ, 1, connectionAttribute, typeAttribute);
       } else {
-        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_MESSAGE_READ, 1);
+        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_MESSAGE_READ, 1, typeAttribute);
       }
     }
     return m;
