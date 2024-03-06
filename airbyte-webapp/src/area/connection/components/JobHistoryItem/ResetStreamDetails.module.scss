@@ -8,9 +8,11 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   line-height: 20px;
+  max-height: 250px;
 
-  &.open {
+  &.expanded {
     white-space: unset;
+    overflow: auto;
   }
 }
 
@@ -24,4 +26,8 @@
   margin-bottom: variables.$spacing-sm;
   white-space: nowrap;
   color: colors.$grey-400;
+}
+
+.expandBtn.expandBtn {
+  height: 20px; // non-standard button size
 }
