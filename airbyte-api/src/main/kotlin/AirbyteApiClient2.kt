@@ -24,6 +24,7 @@ import io.airbyte.api.client2.generated.StateApi
 import io.airbyte.api.client2.generated.StreamStatusesApi
 import io.airbyte.api.client2.generated.WorkspaceApi
 import okhttp3.OkHttpClient
+import java.io.IOException
 
 /**
  * This class wraps all the generated API clients and provides a single entry point. This class is meant
@@ -55,8 +56,15 @@ class AirbyteApiClient2
   constructor(
     basePath: String,
     policy: RetryPolicy<okhttp3.Response> = RetryPolicy.ofDefaults(),
-    httpClient: OkHttpClient = OkHttpClient(),
+    var httpClient: OkHttpClient = OkHttpClient(),
+    throwOn5xx: Boolean = true,
   ) {
+    init {
+      if (throwOn5xx) {
+        httpClient = httpClient.newBuilder().addInterceptor(ThrowOn5xxInterceptor()).build()
+      }
+    }
+
     val connectionApi = ConnectionApi(basePath = basePath, client = httpClient, policy = policy)
     val connectorBuilderProjectApi = ConnectorBuilderProjectApi(basePath = basePath, client = httpClient, policy = policy)
     val deploymentMetadataApi = DeploymentMetadataApi(basePath = basePath, client = httpClient, policy = policy)
@@ -76,3 +84,13 @@ class AirbyteApiClient2
     val streamStatusesApi = StreamStatusesApi(basePath = basePath, client = httpClient, policy = policy)
     val secretPersistenceConfigApi = SecretsPersistenceConfigApi(basePath = basePath, client = httpClient, policy = policy)
   }
+
+class ThrowOn5xxInterceptor : okhttp3.Interceptor {
+  override fun intercept(chain: okhttp3.Interceptor.Chain): okhttp3.Response {
+    val response = chain.proceed(chain.request())
+    if (response.code >= 500) {
+      throw IOException("HTTP error: ${response.code} ${response.message}")
+    }
+    return response
+  }
+}
