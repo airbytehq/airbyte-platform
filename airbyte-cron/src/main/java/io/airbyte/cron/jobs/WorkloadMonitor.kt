@@ -12,7 +12,7 @@ import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.ExpiredDeadlineWorkloadListRequest
 import io.airbyte.workload.api.client.model.generated.LongRunningWorkloadRequest
 import io.airbyte.workload.api.client.model.generated.Workload
-import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest
+import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Property
@@ -65,7 +65,7 @@ open class WorkloadMonitor(
           status = listOf(WorkloadStatus.CLAIMED),
         ),
       )
-    cancelWorkloads(notStartedWorkloads.workloads, "Not started within time limit", CHECK_START)
+    failWorkloads(notStartedWorkloads.workloads, "Not started within time limit", CHECK_START)
   }
 
   @Trace
@@ -87,7 +87,7 @@ open class WorkloadMonitor(
         ),
       )
 
-    cancelWorkloads(notClaimedWorkloads.workloads, "Not claimed within time limit", CHECK_CLAIMS)
+    failWorkloads(notClaimedWorkloads.workloads, "Not claimed within time limit", CHECK_CLAIMS)
   }
 
   @Trace
@@ -109,7 +109,7 @@ open class WorkloadMonitor(
         ),
       )
 
-    cancelWorkloads(nonHeartbeatingWorkloads.workloads, "No heartbeat within time limit", CHECK_HEARTBEAT)
+    failWorkloads(nonHeartbeatingWorkloads.workloads, "No heartbeat within time limit", CHECK_HEARTBEAT)
   }
 
   @Trace
@@ -129,7 +129,7 @@ open class WorkloadMonitor(
         ),
       )
 
-    cancelWorkloads(nonHeartbeatingWorkloads.workloads, "Non sync workload timeout", CHECK_NON_SYNC_TIMEOUT)
+    failWorkloads(nonHeartbeatingWorkloads.workloads, "Non sync workload timeout", CHECK_NON_SYNC_TIMEOUT)
   }
 
   @Trace
@@ -149,10 +149,10 @@ open class WorkloadMonitor(
         ),
       )
 
-    cancelWorkloads(nonHeartbeatingWorkloads.workloads, "Sync workload timeout", CHECK_SYNC_TIMEOUT)
+    failWorkloads(nonHeartbeatingWorkloads.workloads, "Sync workload timeout", CHECK_SYNC_TIMEOUT)
   }
 
-  private fun cancelWorkloads(
+  private fun failWorkloads(
     workloads: List<Workload>,
     reason: String,
     source: String,
@@ -161,7 +161,7 @@ open class WorkloadMonitor(
       var status = "fail"
       try {
         logger.info { "Cancelling workload ${it.id}, reason: $reason" }
-        workloadApi.workloadCancel(WorkloadCancelRequest(workloadId = it.id, reason = reason, source = source))
+        workloadApi.workloadFailure(WorkloadFailureRequest(workloadId = it.id, reason = reason, source = source))
         status = "ok"
       } catch (e: Exception) {
         logger.warn(e) { "Failed to cancel workload ${it.id}" }
