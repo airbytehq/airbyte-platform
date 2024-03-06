@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -27,19 +27,19 @@ import io.airbyte.api.model.generated.ConnectionDataHistoryReadItem;
 import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
-import io.airbyte.api.model.generated.ConnectionSearch;
 import io.airbyte.api.model.generated.ConnectionStatusRead;
 import io.airbyte.api.model.generated.ConnectionStatusesRequestBody;
+import io.airbyte.api.model.generated.ConnectionStreamHistoryReadItem;
+import io.airbyte.api.model.generated.ConnectionStreamHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
-import io.airbyte.api.model.generated.DestinationRead;
-import io.airbyte.api.model.generated.DestinationSearch;
 import io.airbyte.api.model.generated.DestinationSyncMode;
+import io.airbyte.api.model.generated.FailureOrigin;
+import io.airbyte.api.model.generated.FailureReason;
+import io.airbyte.api.model.generated.FailureType;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
-import io.airbyte.api.model.generated.SourceRead;
-import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
@@ -52,18 +52,13 @@ import io.airbyte.commons.server.converters.CatalogDiffConverters;
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.UpdateSchemaResult;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
-import io.airbyte.commons.server.handlers.helpers.ConnectionMatcher;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
-import io.airbyte.commons.server.handlers.helpers.DestinationMatcher;
 import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
-import io.airbyte.commons.server.handlers.helpers.SourceMatcher;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.FailureReason;
-import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.Geography;
 import io.airbyte.config.JobConfig;
@@ -79,6 +74,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
 import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -98,6 +94,7 @@ import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
+import io.airbyte.persistence.job.models.JobsRecordsCommitted;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
@@ -120,6 +117,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -253,6 +251,10 @@ public class ConnectionsHandler {
     if (patch.getNonBreakingChangesPreference() != null) {
       sync.setNonBreakingChangesPreference(ApiPojoConverters.toPersistenceNonBreakingChangesPreference(patch.getNonBreakingChangesPreference()));
     }
+
+    if (patch.getBackfillPreference() != null) {
+      sync.setBackfillPreference(ApiPojoConverters.toPersistenceBackfillPreference(patch.getBackfillPreference()));
+    }
   }
 
   private static String getFrequencyStringFromScheduleType(final ScheduleType scheduleType, final ScheduleData scheduleData) {
@@ -322,7 +324,10 @@ public class ConnectionsHandler {
 
     final boolean warningPreviouslySentForMaxDays =
         warningPreviouslySentForMaxDays(numFailures, successTimestamp, maxDaysOfOnlyFailedJobsBeforeWarning, optionalFirstJob.get(), jobs);
-
+    final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+    for (final Attempt attempt : optionalLastJob.get().getAttempts()) {
+      attemptStats.add(jobPersistence.getAttemptStats(optionalLastJob.get().getId(), attempt.getAttemptNumber()));
+    }
     if (numFailures == 0) {
       return new InternalOperationResult().succeeded(false);
     } else if (numFailures >= maxFailedJobsInARowBeforeConnectionDisable) {
@@ -331,10 +336,10 @@ public class ConnectionsHandler {
       return new InternalOperationResult().succeeded(true);
     } else if (numFailures == maxFailedJobsInARowBeforeConnectionDisableWarning && !warningPreviouslySentForMaxDays) {
       // warn if number of consecutive failures hits 50% of MaxFailedJobsInARow
-      jobNotifier.autoDisableConnectionWarning(optionalLastJob.get());
+      jobNotifier.autoDisableConnectionWarning(optionalLastJob.get(), attemptStats);
       // explicitly send to email if customer.io api key is set, since email notification cannot be set by
       // configs through UI yet
-      jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, optionalLastJob.get());
+      jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, optionalLastJob.get(), attemptStats);
       return new InternalOperationResult().succeeded(false);
     }
 
@@ -364,10 +369,11 @@ public class ConnectionsHandler {
     // send warning if there are only failed jobs in the past maxDaysOfOnlyFailedJobsBeforeWarning days
     // _unless_ a warning should have already been sent in the previous failure
     if (firstReplicationOlderThanMaxDisableWarningDays && successOlderThanPrevFailureByMaxWarningDays) {
-      jobNotifier.autoDisableConnectionWarning(optionalLastJob.get());
+
+      jobNotifier.autoDisableConnectionWarning(optionalLastJob.get(), attemptStats);
       // explicitly send to email if customer.io api key is set, since email notification cannot be set by
       // configs through UI yet
-      jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, optionalLastJob.get());
+      jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, optionalLastJob.get(), attemptStats);
     }
     return new InternalOperationResult().succeeded(false);
   }
@@ -376,10 +382,14 @@ public class ConnectionsHandler {
     standardSync.setStatus(Status.INACTIVE);
     configRepository.writeStandardSync(standardSync);
 
-    jobNotifier.autoDisableConnection(lastJob);
+    final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+    for (final Attempt attempt : lastJob.getAttempts()) {
+      attemptStats.add(jobPersistence.getAttemptStats(lastJob.getId(), attempt.getAttemptNumber()));
+    }
+    jobNotifier.autoDisableConnection(lastJob, attemptStats);
     // explicitly send to email if customer.io api key is set, since email notification cannot be set by
     // configs through UI yet
-    jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_NOTIFICATION, lastJob);
+    jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_NOTIFICATION, lastJob, attemptStats);
   }
 
   private int getDaysSinceTimestamp(final long currentTimestampInSeconds, final long timestampInSeconds) {
@@ -464,8 +474,10 @@ public class ConnectionsHandler {
         .withSourceCatalogId(connectionCreate.getSourceCatalogId())
         .withGeography(getGeographyFromConnectionCreateOrWorkspace(connectionCreate))
         .withBreakingChange(false)
+        .withNotifySchemaChanges(connectionCreate.getNotifySchemaChanges())
         .withNonBreakingChangesPreference(
-            ApiPojoConverters.toPersistenceNonBreakingChangesPreference(connectionCreate.getNonBreakingChangesPreference()));
+            ApiPojoConverters.toPersistenceNonBreakingChangesPreference(connectionCreate.getNonBreakingChangesPreference()))
+        .withBackfillPreference(ApiPojoConverters.toPersistenceBackfillPreference(connectionCreate.getBackfillPreference()));
     if (connectionCreate.getResourceRequirements() != null) {
       standardSync.withResourceRequirements(ApiPojoConverters.resourceRequirementsToInternal(connectionCreate.getResourceRequirements()));
     }
@@ -790,59 +802,6 @@ public class ConnectionsHandler {
     return convertedCatalog;
   }
 
-  public ConnectionReadList searchConnections(final ConnectionSearch connectionSearch)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    final List<ConnectionRead> reads = Lists.newArrayList();
-    for (final StandardSync standardSync : configRepository.listStandardSyncs()) {
-      if (standardSync.getStatus() != StandardSync.Status.DEPRECATED) {
-        final ConnectionRead connectionRead = ApiPojoConverters.internalToConnectionRead(standardSync);
-        if (matchSearch(connectionSearch, connectionRead)) {
-          reads.add(connectionRead);
-        }
-      }
-    }
-
-    return new ConnectionReadList().connections(reads);
-  }
-
-  public boolean matchSearch(final ConnectionSearch connectionSearch, final ConnectionRead connectionRead)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-
-    final SourceConnection sourceConnection = configRepository.getSourceConnection(connectionRead.getSourceId());
-    final StandardSourceDefinition sourceDefinition =
-        configRepository.getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
-    final SourceRead sourceRead = SourceHandler.toSourceRead(sourceConnection, sourceDefinition);
-
-    final DestinationConnection destinationConnection = configRepository.getDestinationConnection(connectionRead.getDestinationId());
-    final StandardDestinationDefinition destinationDefinition =
-        configRepository.getStandardDestinationDefinition(destinationConnection.getDestinationDefinitionId());
-    final DestinationRead destinationRead = DestinationHandler.toDestinationRead(destinationConnection, destinationDefinition);
-
-    final ConnectionMatcher connectionMatcher = new ConnectionMatcher(connectionSearch);
-    final ConnectionRead connectionReadFromSearch = connectionMatcher.match(connectionRead);
-
-    return (connectionReadFromSearch == null || connectionReadFromSearch.equals(connectionRead))
-        && matchSearch(connectionSearch.getSource(), sourceRead)
-        && matchSearch(connectionSearch.getDestination(), destinationRead);
-  }
-
-  // todo (cgardens) - make this static. requires removing one bad dependency in SourceHandlerTest
-  public boolean matchSearch(final SourceSearch sourceSearch, final SourceRead sourceRead) {
-    final SourceMatcher sourceMatcher = new SourceMatcher(sourceSearch);
-    final SourceRead sourceReadFromSearch = sourceMatcher.match(sourceRead);
-
-    return (sourceReadFromSearch == null || sourceReadFromSearch.equals(sourceRead));
-  }
-
-  // todo (cgardens) - make this static. requires removing one bad dependency in
-  // DestinationHandlerTest
-  public boolean matchSearch(final DestinationSearch destinationSearch, final DestinationRead destinationRead) {
-    final DestinationMatcher destinationMatcher = new DestinationMatcher(destinationSearch);
-    final DestinationRead destinationReadFromSearch = destinationMatcher.match(destinationRead);
-
-    return (destinationReadFromSearch == null || destinationReadFromSearch.equals(destinationRead));
-  }
-
   public void deleteConnection(final UUID connectionId) throws JsonValidationException, ConfigNotFoundException, IOException {
     connectionHelper.deleteConnection(connectionId);
     eventRunner.forceDeleteConnection(connectionId);
@@ -893,6 +852,18 @@ public class ConnectionsHandler {
     return new ConnectionReadList().connections(connectionReads);
   }
 
+  public FailureReason mapFailureReason(final io.airbyte.config.FailureReason data) {
+    final FailureReason failureReason = new FailureReason();
+    failureReason.setFailureOrigin(Enums.convertTo(data.getFailureOrigin(), FailureOrigin.class));
+    failureReason.setFailureType(Enums.convertTo(data.getFailureType(), FailureType.class));
+    failureReason.setExternalMessage(data.getExternalMessage());
+    failureReason.setInternalMessage(data.getInternalMessage());
+    failureReason.setStacktrace(data.getStacktrace());
+    failureReason.setRetryable(data.getRetryable());
+    failureReason.setTimestamp(data.getTimestamp());
+    return failureReason;
+  }
+
   public List<ConnectionStatusRead> getConnectionStatuses(
                                                           final ConnectionStatusesRequestBody connectionStatusesRequestBody)
       throws IOException, JsonValidationException, ConfigNotFoundException {
@@ -904,8 +875,9 @@ public class ConnectionsHandler {
           maxJobLookback);
       final boolean isRunning = jobs.stream().anyMatch(job -> JobStatus.NON_TERMINAL_STATUSES.contains(job.getStatus()));
 
-      final Optional<Job> lastJob = jobs.stream().filter(job -> JobStatus.TERMINAL_STATUSES.contains(job.getStatus())).findFirst();
-      final Optional<JobStatus> lastSyncStatus = lastJob.map(job -> job.getStatus());
+      final Optional<Job> lastSucceededOrFailedJob =
+          jobs.stream().filter(job -> JobStatus.TERMINAL_STATUSES.contains(job.getStatus()) && job.getStatus() != JobStatus.CANCELLED).findFirst();
+      final Optional<JobStatus> lastSyncStatus = lastSucceededOrFailedJob.map(job -> job.getStatus());
 
       final Optional<Job> lastSuccessfulJob = jobs.stream().filter(job -> job.getStatus() == JobStatus.SUCCEEDED).findFirst();
       final Optional<Long> lastSuccessTimestamp = lastSuccessfulJob.map(job -> job.getUpdatedAtInSecond());
@@ -917,14 +889,20 @@ public class ConnectionsHandler {
               io.airbyte.api.model.generated.JobStatus.class))
           .lastSuccessfulSync(lastSuccessTimestamp.orElse(null))
           .nextSync(null)
-          .isLastCompletedJobReset(lastJob.map(job -> job.getConfigType() == ConfigType.RESET_CONNECTION).orElse(false));
-      final Optional<FailureType> failureType =
-          lastJob.flatMap(Job::getLastFailedAttempt)
-              .flatMap(Attempt::getFailureSummary)
-              .flatMap(s -> s.getFailures().stream().findFirst())
-              .map(FailureReason::getFailureType);
-      if (failureType.isPresent() && lastJob.get().getStatus() == JobStatus.FAILED) {
-        connectionStatus.setFailureType(Enums.convertTo(failureType.get(), io.airbyte.api.model.generated.FailureType.class));
+          .isLastCompletedJobReset(lastSucceededOrFailedJob.map(job -> job.getConfigType() == ConfigType.RESET_CONNECTION).orElse(false));
+      if (lastSucceededOrFailedJob.isPresent()) {
+        connectionStatus.lastSyncJobId(lastSucceededOrFailedJob.get().getId());
+        final Optional<Attempt> lastAttempt = lastSucceededOrFailedJob.get().getLastAttempt();
+        if (lastAttempt.isPresent()) {
+          connectionStatus.lastSyncAttemptNumber(lastAttempt.get().getAttemptNumber());
+        }
+      }
+      final Optional<io.airbyte.api.model.generated.FailureReason> failureReason = lastSucceededOrFailedJob.flatMap(Job::getLastFailedAttempt)
+          .flatMap(Attempt::getFailureSummary)
+          .flatMap(s -> s.getFailures().stream().findFirst())
+          .map(reason -> mapFailureReason(reason));
+      if (failureReason.isPresent() && lastSucceededOrFailedJob.get().getStatus() == JobStatus.FAILED) {
+        connectionStatus.setFailureReason(failureReason.get());
       }
       result.add(connectionStatus);
     }
@@ -942,15 +920,16 @@ public class ConnectionsHandler {
   public List<ConnectionDataHistoryReadItem> getConnectionDataHistory(final ConnectionDataHistoryRequestBody connectionDataHistoryRequestBody)
       throws IOException {
 
+    final ZoneId requestZone = ZoneId.of(connectionDataHistoryRequestBody.getTimezone());
+
     // Start time in designated timezone
     final ZonedDateTime endTimeInUserTimeZone = Instant.now().atZone(ZoneId.of(connectionDataHistoryRequestBody.getTimezone()));
-    final ZonedDateTime startTimeInUserTimeZone = endTimeInUserTimeZone.minusDays(30);
+    final ZonedDateTime startTimeInUserTimeZone = endTimeInUserTimeZone.toLocalDate().atStartOfDay(requestZone).minusDays(29);
     // Convert start time to UTC (since that's what the database uses)
     final Instant startTimeInUTC = startTimeInUserTimeZone.toInstant();
 
-    final List<AttemptWithJobInfo> attempts = jobPersistence.listAttemptsForConnectionAfterTimestamp(
+    final List<JobsRecordsCommitted> attempts = jobPersistence.listRecordsCommittedForConnectionAfterTimestamp(
         connectionDataHistoryRequestBody.getConnectionId(),
-        ConfigType.SYNC,
         startTimeInUTC);
 
     // we want an entry per day - even if it's empty
@@ -959,8 +938,65 @@ public class ConnectionsHandler {
     final LocalDate endDate = endTimeInUserTimeZone.toLocalDate();
     for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
       connectionDataHistoryReadItemsByDate.put(date, new ConnectionDataHistoryReadItem()
-          .timestamp(Math.toIntExact(date.atStartOfDay(ZoneId.of(connectionDataHistoryRequestBody.getTimezone())).toEpochSecond()))
-          .bytes(0));
+          .timestamp(Math.toIntExact(date.atStartOfDay(requestZone).toEpochSecond()))
+          .recordsCommitted(0L));
+    }
+
+    for (final JobsRecordsCommitted attempt : attempts) {
+      final Optional<Long> endedAtOptional = attempt.getEndedAtInSecond();
+
+      if (endedAtOptional.isPresent()) {
+        // Convert the endedAt timestamp from the database to the designated timezone
+        final Instant attemptEndedAt = Instant.ofEpochSecond(endedAtOptional.get());
+        final LocalDate attemptDateInUserTimeZone = attemptEndedAt.atZone(requestZone)
+            .toLocalDate();
+
+        // Merge it with the bytes synced from the attempt
+        final long recordsCommitted = attempt.getRecordsCommitted().orElse(0L);
+
+        // Update the bytes synced for the corresponding day
+        final ConnectionDataHistoryReadItem existingItem = connectionDataHistoryReadItemsByDate.get(attemptDateInUserTimeZone);
+        existingItem.setRecordsCommitted(existingItem.getRecordsCommitted() + recordsCommitted);
+      }
+    }
+
+    // Sort the results by date
+    return connectionDataHistoryReadItemsByDate.values().stream()
+        .sorted(Comparator.comparing(ConnectionDataHistoryReadItem::getTimestamp))
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Returns records synced per stream per day for the given connection for the last 30 days in the
+   * given timezone.
+   *
+   * @param connectionStreamHistoryRequestBody the connection id and timezone string
+   * @return list of ConnectionStreamHistoryReadItems (timestamp, stream namespace, stream name,
+   *         records synced)
+   */
+
+  public List<ConnectionStreamHistoryReadItem> getConnectionStreamHistory(
+                                                                          final ConnectionStreamHistoryRequestBody connectionStreamHistoryRequestBody)
+      throws IOException {
+
+    // Start time in designated timezone
+    final ZonedDateTime endTimeInUserTimeZone = Instant.now().atZone(ZoneId.of(connectionStreamHistoryRequestBody.getTimezone()));
+    final ZonedDateTime startTimeInUserTimeZone = endTimeInUserTimeZone.minusDays(30);
+    // Convert start time to UTC (since that's what the database uses)
+    final Instant startTimeInUTC = startTimeInUserTimeZone.toInstant();
+
+    final List<AttemptWithJobInfo> attempts = jobPersistence.listAttemptsForConnectionAfterTimestamp(
+        connectionStreamHistoryRequestBody.getConnectionId(),
+        ConfigType.SYNC,
+        startTimeInUTC);
+
+    final TreeMap<LocalDate, Map<List<String>, Long>> connectionStreamHistoryReadItemsByDate = new TreeMap<>();
+    final ZoneId userTimeZone = ZoneId.of(connectionStreamHistoryRequestBody.getTimezone());
+
+    final LocalDate startDate = startTimeInUserTimeZone.toLocalDate();
+    final LocalDate endDate = endTimeInUserTimeZone.toLocalDate();
+    for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+      connectionStreamHistoryReadItemsByDate.put(date, new HashMap<>());
     }
 
     for (final AttemptWithJobInfo attempt : attempts) {
@@ -969,26 +1005,51 @@ public class ConnectionsHandler {
       if (endedAtOptional.isPresent()) {
         // Convert the endedAt timestamp from the database to the designated timezone
         final Instant attemptEndedAt = Instant.ofEpochSecond(endedAtOptional.get());
-        final LocalDate attemptDateInUserTimeZone = attemptEndedAt.atZone(ZoneId.of(connectionDataHistoryRequestBody.getTimezone()))
+        final LocalDate attemptDateInUserTimeZone = attemptEndedAt.atZone(ZoneId.of(connectionStreamHistoryRequestBody.getTimezone()))
             .toLocalDate();
 
-        // Merge it with the bytes synced from the attempt
-        int bytesSynced = 0;
+        // Merge it with the records synced from the attempt
         final Optional<JobOutput> attemptOutput = attempt.getAttempt().getOutput();
         if (attemptOutput.isPresent()) {
-          bytesSynced = Math.toIntExact(attemptOutput.get().getSync().getStandardSyncSummary().getTotalStats().getBytesCommitted());
-        }
+          final List<StreamSyncStats> streamSyncStats = attemptOutput.get().getSync().getStandardSyncSummary().getStreamStats();
+          for (final StreamSyncStats streamSyncStat : streamSyncStats) {
+            final String streamName = streamSyncStat.getStreamName();
+            final String streamNamespace = streamSyncStat.getStreamNamespace();
+            final long recordsCommitted = streamSyncStat.getStats().getRecordsCommitted();
 
-        // Update the bytes synced for the corresponding day
-        final ConnectionDataHistoryReadItem existingItem = connectionDataHistoryReadItemsByDate.get(attemptDateInUserTimeZone);
-        existingItem.setBytes(existingItem.getBytes() + bytesSynced);
+            // Update the records loaded for the corresponding stream for that day
+            final Map<List<String>, Long> existingItem = connectionStreamHistoryReadItemsByDate.get(attemptDateInUserTimeZone);
+            final List<String> key = List.of(streamNamespace, streamName);
+            if (existingItem.containsKey(key)) {
+              existingItem.put(key, existingItem.get(key) + recordsCommitted);
+            } else {
+              existingItem.put(key, recordsCommitted);
+            }
+          }
+        }
       }
     }
 
-    // Sort the results by date
-    return connectionDataHistoryReadItemsByDate.values().stream()
-        .sorted(Comparator.comparing(ConnectionDataHistoryReadItem::getTimestamp))
-        .collect(Collectors.toList());
+    final List<ConnectionStreamHistoryReadItem> result = new ArrayList<>();
+    for (final Entry<LocalDate, Map<List<String>, Long>> entry : connectionStreamHistoryReadItemsByDate.entrySet()) {
+      final LocalDate date = entry.getKey();
+      final Map<List<String>, Long> streamRecordsByStream = entry.getValue();
+
+      streamRecordsByStream.entrySet().stream()
+          .sorted(Comparator.comparing((Entry<List<String>, Long> e) -> e.getKey().get(0))
+              .thenComparing(e -> e.getKey().get(1)))
+          .forEach(streamRecords -> {
+            final List<String> streamNamespaceAndName = streamRecords.getKey();
+            final Long recordsCommitted = streamRecords.getValue();
+
+            result.add(new ConnectionStreamHistoryReadItem()
+                .timestamp(Math.toIntExact(date.atStartOfDay(userTimeZone).toEpochSecond()))
+                .streamNamespace(streamNamespaceAndName.get(0))
+                .streamName(streamNamespaceAndName.get(1))
+                .recordsCommitted(recordsCommitted));
+          });
+    }
+    return result;
   }
 
   public ConnectionAutoPropagateResult applySchemaChange(final ConnectionAutoPropagateSchemaChange request)
@@ -1045,8 +1106,7 @@ public class ConnectionsHandler {
         newCatalog,
         transformations,
         nonBreakingChangesPreference,
-        supportedDestinationSyncModes,
-        featureFlagClient, workspaceId);
+        supportedDestinationSyncModes);
     updateObject.setSyncCatalog(propagateResult.catalog());
     updateObject.setSourceCatalogId(sourceCatalogId);
     trackSchemaChange(workspaceId, connectionId, propagateResult);

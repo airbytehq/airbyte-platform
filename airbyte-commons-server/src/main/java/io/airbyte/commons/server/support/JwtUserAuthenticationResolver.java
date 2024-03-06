@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support;
@@ -9,9 +9,8 @@ import static io.airbyte.commons.server.support.JwtTokenParser.JWT_SSO_REALM;
 import static io.airbyte.commons.server.support.JwtTokenParser.JWT_USER_EMAIL;
 import static io.airbyte.commons.server.support.JwtTokenParser.JWT_USER_NAME;
 
+import io.airbyte.config.AuthProvider;
 import io.airbyte.config.User;
-import io.airbyte.config.User.AuthProvider;
-import io.micronaut.context.annotation.Requires;
 import io.micronaut.security.utils.SecurityService;
 import jakarta.inject.Singleton;
 import java.util.Optional;
@@ -22,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Singleton
 @Slf4j
-@Requires(notEnv = "local-test")
 public class JwtUserAuthenticationResolver implements UserAuthenticationResolver {
 
   private final Optional<SecurityService> securityService;
@@ -57,14 +55,15 @@ public class JwtUserAuthenticationResolver implements UserAuthenticationResolver
    * Resolves JWT token to SsoRealm. If Sso realm does not exist, it will return null.
    */
   @Override
-  public String resolveSsoRealm() {
+  public Optional<String> resolveSsoRealm() {
     if (securityService.isEmpty()) {
-      log.warn("Security service is not available. Returning empty user.");
-      return null;
+      log.warn("Security service is not available. Returning empty realm.");
+      return Optional.empty();
     }
 
     final var jwtMap = securityService.get().getAuthentication().get().getAttributes();
-    return (String) jwtMap.getOrDefault(JWT_SSO_REALM, null);
+    final String realm = (String) jwtMap.getOrDefault(JWT_SSO_REALM, null);
+    return Optional.ofNullable(realm);
   }
 
 }

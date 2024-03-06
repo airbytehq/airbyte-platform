@@ -1,13 +1,13 @@
 import React, { useMemo } from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { useIntl } from "react-intl";
 import * as yup from "yup";
 import { SchemaOf } from "yup";
 
-import { getInitialNormalization } from "components/connection/ConnectionForm/hookFormConfig";
-import { NormalizationHookFormField } from "components/connection/ConnectionForm/NormalizationHookFormField";
+import { getInitialNormalization } from "components/connection/ConnectionForm/formConfig";
+import { NormalizationFormField } from "components/connection/ConnectionForm/NormalizationFormField";
 import { Form } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
-import { CollapsibleCard } from "components/ui/CollapsibleCard";
+import { Card } from "components/ui/Card";
 
 import { NormalizationType } from "area/connection/types";
 import { isNormalizationTransformation } from "area/connection/utils";
@@ -98,11 +98,12 @@ export const NormalizationForm: React.FC = () => {
       onError={onError}
       disabled={mode === "readonly"}
       trackDirtyChanges
+      dataTestId="normalization-form"
     >
-      <CollapsibleCard title={<FormattedMessage id="connection.normalization" />} collapsible>
-        <NormalizationHookFormField />
+      <Card title={formatMessage({ id: "connection.normalization" })} collapsible>
+        <NormalizationFormField />
         <FormSubmissionButtons submitKey="form.saveChanges" />
-      </CollapsibleCard>
+      </Card>
     </Form>
   );
 };

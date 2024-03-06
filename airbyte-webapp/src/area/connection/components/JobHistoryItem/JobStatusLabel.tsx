@@ -4,7 +4,7 @@ import { Text } from "components/ui/Text";
 
 import { JobWithAttempts } from "area/connection/types/jobs";
 import { isJobPartialSuccess, getJobAttempts, getJobStatus } from "area/connection/utils/jobs";
-import { JobStatus } from "core/request/AirbyteClient";
+import { JobStatus } from "core/api/types/AirbyteClient";
 
 interface JobStatusLabelProps {
   jobWithAttempts: JobWithAttempts;

@@ -13,7 +13,7 @@ import { TextWithOverflowTooltip } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
 import { useCurrentWorkspace } from "core/api";
-import { ConnectionScheduleType, ConnectionStatus } from "core/request/AirbyteClient";
+import { ConnectionScheduleType, ConnectionStatus } from "core/api/types/AirbyteClient";
 import { RoutePaths } from "pages/routePaths";
 
 import { ConnectionFreeAndPaidUsage } from "./calculateUsageDataObjects";
@@ -141,8 +141,8 @@ export const UsagePerConnectionTable: React.FC = () => {
         cell: (props) => (
           <FlexContainer alignItems="center">
             <TextWithOverflowTooltip size="sm" className={styles.cellText}>
-              {props.row.original.connection.connectionScheduleType ===
-              (ConnectionScheduleType.manual || ConnectionScheduleType.cron) ? (
+              {props.row.original.connection.connectionScheduleType === ConnectionScheduleType.manual ||
+              props.row.original.connection.connectionScheduleType === ConnectionScheduleType.cron ? (
                 <FormattedMessage id={`frequency.${props.row.original.connection.connectionScheduleType}`} />
               ) : (
                 <FormattedMessage

@@ -1,12 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
-import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.StreamStatusesApi;
@@ -19,7 +18,6 @@ import io.airbyte.api.model.generated.StreamStatusRead;
 import io.airbyte.api.model.generated.StreamStatusReadList;
 import io.airbyte.api.model.generated.StreamStatusRunState;
 import io.airbyte.api.model.generated.StreamStatusUpdateRequestBody;
-import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.server.handlers.StreamStatusesHandler;
@@ -60,8 +58,7 @@ public class StreamStatusesApiController implements StreamStatusesApi {
     return handler.updateStreamStatus(req);
   }
 
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Post(uri = "/list")
   @Override
@@ -71,8 +68,7 @@ public class StreamStatusesApiController implements StreamStatusesApi {
     return handler.listStreamStatus(req);
   }
 
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Post(uri = "/latest_per_run_state")
   @Override

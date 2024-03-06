@@ -33,6 +33,7 @@ dependencies {
     implementation(project(":airbyte-config:config-secrets"))
     implementation(project(":airbyte-data"))
     implementation(project(":airbyte-db:db-lib"))
+    implementation(project(":airbyte-metrics:metrics-lib"))
     implementation(project(":airbyte-json-validation"))
     implementation(project(":airbyte-featureflag"))
     implementation(libs.airbyte.protocol)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.server.services
@@ -17,6 +17,7 @@ import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.Ord
 import io.airbyte.api.client.model.generated.JobListRequestBody
 import io.airbyte.api.client.model.generated.JobReadList
 import io.airbyte.api.client.model.generated.Pagination
+import io.airbyte.api.server.constants.AIRBYTE_API_AUTH_HEADER_VALUE
 import io.airbyte.api.server.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.api.server.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.api.server.filters.JobsFilter
@@ -39,21 +40,25 @@ import java.util.UUID
 interface JobService {
   fun sync(
     connectionId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): JobResponse
 
   fun reset(
     connectionId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): JobResponse
 
   fun cancelJob(
     jobId: Long,
+    authorization: String?,
     userInfo: String?,
   ): JobResponse
 
   fun getJobInfoWithoutLogs(
     jobId: Long,
+    authorization: String?,
     userInfo: String?,
   ): JobResponse
 
@@ -62,6 +67,7 @@ interface JobService {
     jobsFilter: JobsFilter,
     orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT,
     orderByMethod: OrderByMethodEnum = OrderByMethodEnum.DESC,
+    authorization: String?,
     userInfo: String?,
   ): JobsResponse
 
@@ -70,6 +76,7 @@ interface JobService {
     jobsFilter: JobsFilter,
     orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT,
     orderByMethod: OrderByMethodEnum = OrderByMethodEnum.DESC,
+    authorization: String?,
     userInfo: String?,
   ): JobsResponse
 }
@@ -89,12 +96,13 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
    */
   override fun sync(
     connectionId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): JobResponse {
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
     val response =
       try {
-        configApiClient.sync(connectionIdRequestBody, userInfo)
+        configApiClient.sync(connectionIdRequestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for job sync: ", e)
         e.response as HttpResponse<JobInfoRead>
@@ -115,12 +123,13 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
    */
   override fun reset(
     connectionId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): JobResponse {
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
     val response =
       try {
-        configApiClient.reset(connectionIdRequestBody, userInfo)
+        configApiClient.reset(connectionIdRequestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for job reset: ", e)
         e.response as HttpResponse<JobInfoRead>
@@ -135,12 +144,13 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
    */
   override fun cancelJob(
     jobId: Long,
+    authorization: String?,
     userInfo: String?,
   ): JobResponse {
     val jobIdRequestBody = JobIdRequestBody().id(jobId)
     val response =
       try {
-        configApiClient.cancelJob(jobIdRequestBody, userInfo)
+        configApiClient.cancelJob(jobIdRequestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for cancelJob: ", e)
         e.response as HttpResponse<JobInfoRead>
@@ -155,12 +165,13 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
    */
   override fun getJobInfoWithoutLogs(
     jobId: Long,
+    authorization: String?,
     userInfo: String?,
   ): JobResponse {
     val jobIdRequestBody = JobIdRequestBody().id(jobId)
     val response =
       try {
-        configApiClient.getJobInfoWithoutLogs(jobIdRequestBody, userInfo)
+        configApiClient.getJobInfoWithoutLogs(jobIdRequestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error(
           "Config api response error for getJobInfoWithoutLogs: $jobId",
@@ -188,6 +199,7 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
     jobsFilter: JobsFilter,
     orderByField: OrderByFieldEnum,
     orderByMethod: OrderByMethodEnum,
+    authorization: String?,
     userInfo: String?,
   ): JobsResponse {
     val configTypes: List<JobConfigType> = getJobConfigTypes(jobsFilter.jobType)
@@ -196,7 +208,7 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
         .configId(connectionId.toString())
         .configTypes(configTypes)
         .pagination(Pagination().pageSize(jobsFilter.limit).rowOffset(jobsFilter.offset))
-        .status(jobsFilter.getConfigApiStatus())
+        .statuses(jobsFilter.getConfigApiStatus()?.let { listOf(it) })
         .createdAtStart(jobsFilter.createdAtStart)
         .createdAtEnd(jobsFilter.createdAtEnd)
         .updatedAtStart(jobsFilter.updatedAtStart)
@@ -208,7 +220,7 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
 
     val response =
       try {
-        configApiClient.getJobList(jobListRequestBody, userInfo)
+        configApiClient.getJobList(jobListRequestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for getJobList: ", e)
         e.response as HttpResponse<JobReadList>
@@ -233,19 +245,23 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
     jobsFilter: JobsFilter,
     orderByField: OrderByFieldEnum,
     orderByMethod: OrderByMethodEnum,
+    authorization: String?,
     userInfo: String?,
   ): JobsResponse {
     val configTypes = getJobConfigTypes(jobsFilter.jobType)
 
     // Get relevant workspace Ids
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(userInfo) }
+    val workspaceIdsToQuery =
+      workspaceIds.ifEmpty {
+        userService.getAllWorkspaceIdsForUser(authorization ?: System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE), userInfo)
+      }
 
     val requestBody =
       JobListForWorkspacesRequestBody()
         .workspaceIds(workspaceIdsToQuery)
         .configTypes(configTypes)
         .pagination(Pagination().pageSize(jobsFilter.limit).rowOffset(jobsFilter.offset))
-        .status(jobsFilter.getConfigApiStatus())
+        .statuses(jobsFilter.getConfigApiStatus()?.let { listOf(it) })
         .createdAtStart(jobsFilter.createdAtStart)
         .createdAtEnd(jobsFilter.createdAtEnd)
         .updatedAtStart(jobsFilter.updatedAtStart)
@@ -255,7 +271,7 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
 
     val response =
       try {
-        configApiClient.getJobListForWorkspaces(requestBody, userInfo)
+        configApiClient.getJobListForWorkspaces(requestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for getJobList: ", e)
         e.response as HttpResponse<JobReadList>

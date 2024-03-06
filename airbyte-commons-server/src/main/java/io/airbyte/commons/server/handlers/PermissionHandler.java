@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -309,6 +309,10 @@ public class PermissionHandler {
       } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
+      // If the workspace is not in any organization, return true
+      if (requestedWorkspaceOrganizationId == null) {
+        return true;
+      }
       return !requestedWorkspaceOrganizationId.equals(userPermission.getOrganizationId());
     }
 
@@ -355,6 +359,10 @@ public class PermissionHandler {
 
   public Boolean isUserInstanceAdmin(final UUID userId) throws IOException {
     return permissionPersistence.isUserInstanceAdmin(userId);
+  }
+
+  public Boolean isAuthUserInstanceAdmin(final String authUserId) throws IOException {
+    return permissionPersistence.isAuthUserInstanceAdmin(authUserId);
   }
 
   /**

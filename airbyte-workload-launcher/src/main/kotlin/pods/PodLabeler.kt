@@ -1,71 +1,102 @@
 package io.airbyte.workload.launcher.pods
 
-import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.process.Metadata
+import io.airbyte.workers.process.Metadata.CHECK_JOB
+import io.airbyte.workers.process.Metadata.CHECK_STEP_KEY
+import io.airbyte.workers.process.Metadata.CONNECTOR_STEP
+import io.airbyte.workers.process.Metadata.JOB_TYPE_KEY
 import io.airbyte.workers.process.Metadata.ORCHESTRATOR_REPLICATION_STEP
 import io.airbyte.workers.process.Metadata.READ_STEP
+import io.airbyte.workers.process.Metadata.SYNC_JOB
 import io.airbyte.workers.process.Metadata.SYNC_STEP_KEY
 import io.airbyte.workers.process.Metadata.WRITE_STEP
-import io.airbyte.workload.launcher.pods.KubePodClient.Constants.MUTEX_KEY
-import io.airbyte.workload.launcher.pods.KubePodClient.Constants.WORKLOAD_ID
+import io.airbyte.workers.process.ProcessFactory
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.AUTO_ID
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.MUTEX_KEY
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.WORKLOAD_ID
+import jakarta.inject.Named
 import jakarta.inject.Singleton
+import java.util.UUID
 
 @Singleton
-class PodLabeler {
-  fun getSourceLabels(
-    input: ReplicationInput,
-    workloadId: String,
-    passThroughLabels: Map<String, String>,
-  ): Map<String, String> {
-    return getSharedLabels(input, workloadId, passThroughLabels) +
-      mapOf(
-        SYNC_STEP_KEY to READ_STEP,
-      )
+class PodLabeler(
+  @Named("containerOrchestratorImage") private val orchestratorImageName: String,
+) {
+  fun getSourceLabels(): Map<String, String> {
+    return mapOf(
+      SYNC_STEP_KEY to READ_STEP,
+    )
   }
 
-  fun getDestinationLabels(
-    input: ReplicationInput,
-    workloadId: String,
-    passThroughLabels: Map<String, String>,
-  ): Map<String, String> {
-    return getSharedLabels(input, workloadId, passThroughLabels) +
-      mapOf(
-        SYNC_STEP_KEY to WRITE_STEP,
-      )
+  fun getDestinationLabels(): Map<String, String> {
+    return mapOf(
+      SYNC_STEP_KEY to WRITE_STEP,
+    )
   }
 
-  fun getOrchestratorLabels(
-    input: ReplicationInput,
-    workloadId: String,
-    passThroughLabels: Map<String, String>,
-  ): Map<String, String> {
-    return getSharedLabels(input, workloadId, passThroughLabels) +
+  fun getReplicationOrchestratorLabels(): Map<String, String> {
+    return getImageLabels() +
       mapOf(
+        JOB_TYPE_KEY to SYNC_JOB,
         SYNC_STEP_KEY to ORCHESTRATOR_REPLICATION_STEP,
       )
   }
 
-  fun getWorkloadLabels(workloadId: String): Map<String, String> {
+  fun getCheckConnectorLabels(): Map<String, String> {
+    return mapOf(
+      JOB_TYPE_KEY to CHECK_JOB,
+      CHECK_STEP_KEY to CONNECTOR_STEP,
+    )
+  }
+
+  private fun getImageLabels(): Map<String, String> {
+    val shortImageName = ProcessFactory.getShortImageName(orchestratorImageName)
+    val imageVersion = ProcessFactory.getImageVersion(orchestratorImageName)
+
+    return mapOf(
+      Metadata.IMAGE_NAME to shortImageName,
+      Metadata.IMAGE_VERSION to imageVersion,
+    )
+  }
+
+  fun getAutoIdLabels(autoId: UUID): Map<String, String> {
+    return mapOf(
+      AUTO_ID to autoId.toString(),
+    )
+  }
+
+  fun getWorkloadLabels(workloadId: String?): Map<String, String> {
+    if (workloadId == null) {
+      return mapOf()
+    }
+
     return mapOf(
       WORKLOAD_ID to workloadId,
     )
   }
 
-  fun getMutexLabels(input: ReplicationInput): Map<String, String> {
+  fun getMutexLabels(key: String?): Map<String, String> {
+    if (key == null) {
+      return mapOf()
+    }
+
     return mapOf(
-      MUTEX_KEY to getMutexKey(input),
+      MUTEX_KEY to key,
     )
   }
 
   fun getSharedLabels(
-    input: ReplicationInput,
-    workloadId: String,
+    workloadId: String?,
+    mutexKey: String?,
     passThroughLabels: Map<String, String>,
+    autoId: UUID,
   ): Map<String, String> {
-    return passThroughLabels + getMutexLabels(input) + getWorkloadLabels(workloadId)
+    return passThroughLabels + getMutexLabels(mutexKey) + getWorkloadLabels(workloadId) + getAutoIdLabels(autoId)
   }
 
-  // TODO: this should be passed from workload API
-  fun getMutexKey(input: ReplicationInput): String {
-    return input.connectionId.toString()
+  object LabelKeys {
+    const val AUTO_ID = "auto_id"
+    const val MUTEX_KEY = "mutex_key"
+    const val WORKLOAD_ID = "workload_id"
   }
 }

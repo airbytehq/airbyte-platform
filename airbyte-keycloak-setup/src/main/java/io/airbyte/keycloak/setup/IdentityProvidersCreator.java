@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.keycloak.setup;
 
 import io.airbyte.commons.auth.config.IdentityProviderConfiguration;
 import jakarta.inject.Singleton;
+import jakarta.ws.rs.core.Response;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.IdentityProviderRepresentation;
@@ -26,7 +26,8 @@ public class IdentityProvidersCreator {
   private static final Map<IdentityProviderConfiguration.ProviderType, String> PROVIDER_TYPE_TO_KEYCLOAK_PROVIDER_ID = new HashMap<>();
 
   static {
-    PROVIDER_TYPE_TO_KEYCLOAK_PROVIDER_ID.put(IdentityProviderConfiguration.ProviderType.OKTA, "keycloak-oidc");
+    PROVIDER_TYPE_TO_KEYCLOAK_PROVIDER_ID.put(IdentityProviderConfiguration.ProviderType.OKTA, "oidc");
+    PROVIDER_TYPE_TO_KEYCLOAK_PROVIDER_ID.put(IdentityProviderConfiguration.ProviderType.OIDC, "oidc");
   }
 
   private final List<IdentityProviderConfiguration> identityProviderConfigurations;
@@ -77,18 +78,6 @@ public class IdentityProvidersCreator {
       log.error(error);
       throw new RuntimeException(error);
     }
-  }
-
-  /**
-   * Delete existing identity providers and re-create them. This is useful when we want to update the
-   * configuration of an existing identity provider.
-   */
-  public void resetIdentityProviders(RealmResource realmResource) {
-    realmResource.identityProviders().findAll().forEach(idpRepresentation -> {
-      realmResource.identityProviders().get(idpRepresentation.getInternalId()).remove();
-    });
-
-    createIdps(realmResource);
   }
 
 }

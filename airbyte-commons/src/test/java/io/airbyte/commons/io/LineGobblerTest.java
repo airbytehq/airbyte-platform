@@ -1,15 +1,19 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.io;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.airbyte.commons.logging.MdcScope;
+import io.airbyte.commons.logging.MdcScope.Builder;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -43,7 +47,7 @@ class LineGobblerTest {
 
     executor.submit(new LineGobbler(is, consumer, executor, ImmutableMap.of()));
 
-    Mockito.verify(consumer, Mockito.times(2)).accept(anyString());
+    Mockito.verify(consumer, times(2)).accept(anyString());
     Mockito.verify(executor).shutdown();
   }
 
@@ -59,6 +63,21 @@ class LineGobblerTest {
 
     verify(consumer).accept(anyString());
     Mockito.verify(executor).shutdown();
+  }
+
+  @Test
+  void readFromNullInputStream() {
+    final Consumer<String> consumer = Mockito.mock(Consumer.class);
+    final MdcScope.Builder mdcBuilder = Mockito.mock(Builder.class);
+    final InputStream is = null;
+
+    assertDoesNotThrow(() -> {
+      LineGobbler.gobble(is, consumer);
+      LineGobbler.gobble(is, consumer, mdcBuilder);
+      LineGobbler.gobble(is, consumer, "test", mdcBuilder);
+    });
+
+    verify(consumer, times(0)).accept(anyString());
   }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -12,35 +12,45 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.BreakingChangeScope;
+import io.airbyte.config.BreakingChangeScope.ScopeType;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
+import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.HealthCheckServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
+import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -75,32 +85,35 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
   void setup() throws SQLException, JsonValidationException, IOException {
     truncateAllTables();
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
+    when(featureFlagClient.stringVariation(eq(HeartbeatMaxSecondsBetweenMessages.INSTANCE), any(SourceDefinition.class))).thenReturn("3600");
+
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
+    final ConnectionService connectionService = mock(ConnectionService.class);
     configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(database),
         new CatalogServiceJooqImpl(database),
-        new ConnectionServiceJooqImpl(database),
+        connectionService,
         new ConnectorBuilderServiceJooqImpl(database),
         new DestinationServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
             secretsRepositoryWriter,
-            secretPersistenceConfigService),
-        new HealthCheckServiceJooqImpl(database),
+            secretPersistenceConfigService,
+            connectionService),
         new OAuthServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
             secretPersistenceConfigService),
         new OperationServiceJooqImpl(database),
-        new OrganizationServiceJooqImpl(database),
         new SourceServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
             secretsRepositoryWriter,
-            secretPersistenceConfigService),
+            secretPersistenceConfigService,
+            connectionService),
         new WorkspaceServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
@@ -139,8 +152,11 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     final StandardSourceDefinition sourceDefinition2 = sourceDefinition.withName("updated name");
     final ActorDefinitionVersion actorDefinitionVersion2 =
         createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(UPGRADE_IMAGE_TAG);
+    final List<BreakingChangeScope> scopedImpact =
+        List.of(new BreakingChangeScope().withScopeType(ScopeType.STREAM).withImpactedScopes(List.of("stream_a", "stream_b")));
     final List<ActorDefinitionBreakingChange> breakingChanges =
-        List.of(MockData.actorDefinitionBreakingChange(UPGRADE_IMAGE_TAG).withActorDefinitionId(sourceDefinition2.getSourceDefinitionId()));
+        List.of(MockData.actorDefinitionBreakingChange(UPGRADE_IMAGE_TAG).withActorDefinitionId(sourceDefinition2.getSourceDefinitionId())
+            .withScopedImpact(scopedImpact));
     configRepository.writeConnectorMetadata(sourceDefinition2, actorDefinitionVersion2, breakingChanges);
 
     sourceDefinitionFromDB = configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId());
@@ -183,8 +199,12 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     final StandardDestinationDefinition destinationDefinition2 = destinationDefinition.withName("updated name");
     final ActorDefinitionVersion actorDefinitionVersion2 =
         createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId()).withDockerImageTag(UPGRADE_IMAGE_TAG);
+
+    final List<BreakingChangeScope> scopedImpact =
+        List.of(new BreakingChangeScope().withScopeType(ScopeType.STREAM).withImpactedScopes(List.of("stream_a", "stream_b")));
     final List<ActorDefinitionBreakingChange> breakingChanges =
-        List.of(MockData.actorDefinitionBreakingChange(UPGRADE_IMAGE_TAG).withActorDefinitionId(destinationDefinition2.getDestinationDefinitionId()));
+        List.of(MockData.actorDefinitionBreakingChange(UPGRADE_IMAGE_TAG).withActorDefinitionId(destinationDefinition2.getDestinationDefinitionId())
+            .withScopedImpact(scopedImpact));
     configRepository.writeConnectorMetadata(destinationDefinition2, actorDefinitionVersion2, breakingChanges);
 
     destinationDefinitionFromDB = configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId());
@@ -203,7 +223,7 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testVersionedFieldsDoNotChangeWithoutVersionBump() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testUpdateConnectorMetadata() throws IOException, JsonValidationException, ConfigNotFoundException {
     final StandardSourceDefinition sourceDefinition = createBaseSourceDef();
     final UUID actorDefinitionId = sourceDefinition.getSourceDefinitionId();
     final ActorDefinitionVersion actorDefinitionVersion1 = createBaseActorDefVersion(actorDefinitionId);
@@ -226,11 +246,13 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(retrievedSourceDefinition, configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId()));
     final Optional<ActorDefinitionVersion> optADVForTagAfterCall2 = configRepository.getActorDefinitionVersion(actorDefinitionId, DOCKER_IMAGE_TAG);
     assertTrue(optADVForTagAfterCall2.isPresent());
-    // Versioned data does not get updated since the tag did not change - old spec is still returned
-    assertEquals(advForTag, optADVForTagAfterCall2.get());
 
-    // Modifying docker image tag creates a new version (which can contain new versioned data)
-    final ActorDefinitionVersion newADV = createBaseActorDefVersion(actorDefinitionId).withDockerImageTag(UPGRADE_IMAGE_TAG).withSpec(updatedSpec);
+    // Modifying fields without updating image tag updates existing version
+    assertEquals(modifiedADV.withVersionId(advForTag.getVersionId()), optADVForTagAfterCall2.get());
+
+    // Modifying docker image tag creates a new version
+    final ActorDefinitionVersion newADV =
+        createBaseActorDefVersion(actorDefinitionId).withDockerImageTag(UPGRADE_IMAGE_TAG).withSpec(updatedSpec);
     configRepository.writeConnectorMetadata(sourceDefinition, newADV);
 
     final Optional<ActorDefinitionVersion> optADVForTag2 = configRepository.getActorDefinitionVersion(actorDefinitionId, UPGRADE_IMAGE_TAG);
@@ -300,7 +322,8 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     // Update
     if (upgradeShouldSucceed) {
       assertDoesNotThrow(() -> configRepository.writeConnectorMetadata(sourceDefinition,
-          createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(dockerImageTag), sourceBreakingChanges));
+          createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(dockerImageTag),
+          sourceBreakingChanges));
       assertDoesNotThrow(() -> configRepository.writeConnectorMetadata(destinationDefinition,
           createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId()).withDockerImageTag(dockerImageTag),
           destinationBreakingChanges));
@@ -532,7 +555,6 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
 
   private static ActorDefinitionVersion createBaseActorDefVersion(final UUID actorDefId) {
     return new ActorDefinitionVersion()
-        .withVersionId(UUID.randomUUID())
         .withActorDefinitionId(actorDefId)
         .withDockerRepository("source-image-" + actorDefId)
         .withDockerImageTag(DOCKER_IMAGE_TAG)
@@ -569,6 +591,23 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
         .withDestinationDefinitionId(actorDefinitionId)
         .withWorkspaceId(WORKSPACE_ID)
         .withName("destination-" + id);
+  }
+
+  private StandardSync createStandardSync(final SourceConnection source,
+                                          final DestinationConnection destination,
+                                          final List<ConfiguredAirbyteStream> streams) {
+    final UUID connectionId = UUID.randomUUID();
+    return new StandardSync()
+        .withConnectionId(connectionId)
+        .withSourceId(source.getSourceId())
+        .withDestinationId(destination.getDestinationId())
+        .withName("standard-sync-" + connectionId)
+        .withCatalog(new ConfiguredAirbyteCatalog().withStreams(streams))
+        .withManual(true)
+        .withNamespaceDefinition(NamespaceDefinitionType.SOURCE)
+        .withGeography(Geography.AUTO)
+        .withBreakingChange(false)
+        .withStatus(StandardSync.Status.ACTIVE);
   }
 
 }

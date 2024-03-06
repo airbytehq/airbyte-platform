@@ -1280,15 +1280,16 @@ components:
       type: string
     SourceCreateRequest:
       required:
+        - name
         - workspaceId
         - configuration
       type: object
       properties:
         name:
-          description: Name of the source type e.g. mysql. One of name or definitionId must be provided.
+          description: Name of the source e.g. dev-mysql-instance.
           type: string
         definitionId:
-          description: The UUID of the connector definition. One of name or definitionId must be provided.
+          description: The UUID of the connector definition. One of configuration.sourceType or definitionId must be provided.
           format: uuid
           type: string
         workspaceId:
@@ -1570,15 +1571,16 @@ components:
         workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
     DestinationCreateRequest:
       required:
+        - name
         - workspaceId
         - configuration
       type: object
       properties:
         name:
-          description: Name of the destination type e.g. mysql. One of name or definitionId must be provided.
+          description: Name of the destination e.g. dev-mysql-instance.
           type: string
         definitionId:
-          description: The UUID of the connector definition. One of name or definitionId must be provided.
+          description: The UUID of the connector definition. One of configuration.destinationType or definitionId must be provided.
           format: uuid
           type: string
         workspaceId:

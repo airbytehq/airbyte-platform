@@ -51,3 +51,22 @@ airbyte:
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:1Gi}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+  cloud:
+    storage:
+      type: ${STORAGE_TYPE:GCS}
+      bucket:
+        log: ${STORAGE_BUCKET_LOG:log}
+        state: ${STORAGE_BUCKET_STATE:state}
+        workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT:workload-output}
+      gcs:
+        application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:not-blank}
+      local:
+        root: ${LOCAL_ROOT:}
+      minio:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        endpoint: ${MINIO_ENDPOINT:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+      s3:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        region: ${AWS_DEFAULT_REGION:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}

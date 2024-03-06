@@ -1,12 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.config.persistence.UserPersistence.DEFAULT_USER_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -23,6 +22,7 @@ import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationUserRead;
 import io.airbyte.api.model.generated.OrganizationUserReadList;
 import io.airbyte.api.model.generated.PermissionCreate;
+import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
 import io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse;
@@ -32,18 +32,20 @@ import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
+import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.config.InitialUserConfiguration;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.support.JwtUserAuthenticationResolver;
+import io.airbyte.config.AuthProvider;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.User;
-import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.User.Status;
 import io.airbyte.config.UserPermission;
+import io.airbyte.config.WorkspaceUserAccessInfo;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
@@ -110,7 +112,7 @@ class UserHandlerTest {
     initialUserConfiguration = mock(InitialUserConfiguration.class);
 
     userHandler = new UserHandler(userPersistence, permissionPersistence, organizationPersistence, permissionHandler, workspacesHandler,
-        uuidSupplier, Optional.of(jwtUserAuthenticationResolver), Optional.of(initialUserConfiguration));
+        uuidSupplier, jwtUserAuthenticationResolver, Optional.of(initialUserConfiguration));
   }
 
   @Test
@@ -214,6 +216,40 @@ class UserHandlerTest {
 
   }
 
+  @Test
+  void testListAccessInfoByWorkspaceId() throws Exception {
+    final UUID workspaceId = UUID.randomUUID();
+    when(userPersistence.listWorkspaceUserAccessInfo(workspaceId)).thenReturn(List.of(
+        new WorkspaceUserAccessInfo()
+            .withUserId(DEFAULT_USER_ID), // expect the default user to be filtered out.
+        new WorkspaceUserAccessInfo()
+            .withUserId(USER_ID)
+            .withUserName(USER_NAME)
+            .withUserEmail(USER_EMAIL)
+            .withWorkspaceId(workspaceId)
+            .withWorkspacePermission(new Permission()
+                .withPermissionId(PERMISSION1_ID)
+                .withPermissionType(PermissionType.WORKSPACE_ADMIN)
+                .withUserId(USER_ID)
+                .withWorkspaceId(workspaceId))));
+
+    final var result = userHandler.listAccessInfoByWorkspaceId(new WorkspaceIdRequestBody().workspaceId(workspaceId));
+
+    final var expected = new WorkspaceUserAccessInfoReadList().usersWithAccess(List.of(
+        new io.airbyte.api.model.generated.WorkspaceUserAccessInfoRead()
+            .userId(USER_ID)
+            .userName(USER_NAME)
+            .userEmail(USER_EMAIL)
+            .workspaceId(workspaceId)
+            .workspacePermission(new PermissionRead()
+                .permissionId(PERMISSION1_ID)
+                .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_ADMIN)
+                .userId(USER_ID)
+                .workspaceId(workspaceId))));
+
+    assertEquals(expected, result);
+  }
+
   @Nested
   class GetOrCreateUserByAuthIdTest {
 
@@ -303,7 +339,7 @@ class UserHandlerTest {
 
         newUser.setAuthProvider(authProvider);
 
-        when(jwtUserAuthenticationResolver.resolveSsoRealm()).thenReturn(ssoRealm);
+        when(jwtUserAuthenticationResolver.resolveSsoRealm()).thenReturn(Optional.ofNullable(ssoRealm));
         if (ssoRealm != null) {
           when(organizationPersistence.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(Optional.of(ORGANIZATION));
         }
@@ -316,7 +352,7 @@ class UserHandlerTest {
           // replace default user handler with one that doesn't use initial user config (ie to test what
           // happens in Cloud)
           userHandler = new UserHandler(userPersistence, permissionPersistence, organizationPersistence, permissionHandler, workspacesHandler,
-              uuidSupplier, Optional.of(jwtUserAuthenticationResolver), Optional.empty());
+              uuidSupplier, jwtUserAuthenticationResolver, Optional.empty());
         }
 
         if (isFirstOrgUser) {
@@ -355,14 +391,6 @@ class UserHandlerTest {
         verifyInstanceAdminPermissionCreation(initialUserEmail, initialUserPresent);
         verifyOrganizationPermissionCreation(ssoRealm, isFirstOrgUser);
         verifyDefaultWorkspaceCreation(ssoRealm, isDefaultWorkspaceForOrgPresent, userPersistenceInOrder);
-      }
-
-      @Test
-      void testNewSsoUserWithoutOrgThrows() throws IOException {
-        when(jwtUserAuthenticationResolver.resolveSsoRealm()).thenReturn("realm");
-        when(organizationPersistence.getOrganizationBySsoConfigRealm("realm")).thenReturn(Optional.empty());
-        assertThrows(ConfigNotFoundException.class, () -> userHandler.getOrCreateUserByAuthId(
-            new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID)));
       }
 
       private void verifyCreatedUser(final AuthProvider expectedAuthProvider, final InOrder inOrder) throws IOException {

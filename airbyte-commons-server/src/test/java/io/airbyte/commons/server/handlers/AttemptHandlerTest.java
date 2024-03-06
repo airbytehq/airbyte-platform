@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -202,7 +202,7 @@ class AttemptHandlerTest {
     Mockito.when(path.resolve(Mockito.anyString()))
         .thenReturn(path);
 
-    final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
+    final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), (long) ATTEMPT_NUMBER);
     final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
 
     Mockito.when(jobPersistence.createAttempt(JOB_ID, expectedLogPath))

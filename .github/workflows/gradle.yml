@@ -50,6 +50,7 @@ jobs:
       cli: ${{ steps.filter.outputs.cli }}
       db: ${{ steps.filter.outputs.db }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      frontendServers: ${{ steps.changes.outputs.frontendServers }}
     steps:
       - name: Checkout Airbyte
         uses: actions/checkout@v3
@@ -59,7 +60,7 @@ jobs:
           # Note, the following glob expression within a filters are ORs.
           filters: |
             backend:
-              - 'airbyte-!(cdk|integrations|webapp|webapp-e2e-tests)/**'
+              - 'airbyte-!(cdk|integrations|webapp)/**'
               - 'airbyte-integrations/connectors/(destination-jdbc|destination-postgres|source-jdbc|source-postgres)/**'
               - 'airbyte-config/init/src/main/resources/seed/(source|destination)_definitions.yaml'
               - 'docker-compose*.yaml'
@@ -80,6 +81,8 @@ jobs:
               - 'airbyte-connector-builder-resources/CDK_VERSION'
               - 'airbyte-connector-builder-server/src/main/openapi/openapi.yaml'
               - 'airbyte-webapp/**'
+            frontendServers:
+              - 'airbyte-(server|data|connector-builder-server|commons|commons-!(worker|temporal*))/**'
 
   # Uncomment to debug.
   #  changes-output:
@@ -144,7 +147,7 @@ jobs:
       - uses: actions/setup-java@v3
         with:
           distribution: "zulu"
-          java-version: "17"
+          java-version: "21"
 
       - uses: actions/setup-python@v4
         with:
@@ -222,7 +225,7 @@ jobs:
     # Because scheduled builds on main require us to skip the changes job. Use always() to force this to run on master.
     if: |
       needs.changes.outputs.frontend == 'true' || needs.changes.outputs.build == 'true' || github.ref == 'refs/heads/main'
-      || (always() && needs.changes.outputs.backend == 'true')
+      || (always() && needs.changes.outputs.frontendServers == 'true')
     timeout-minutes: 10
     runs-on: ubuntu-latest
     outputs:
@@ -263,7 +266,7 @@ jobs:
       - uses: actions/setup-java@v3
         with:
           distribution: "zulu"
-          java-version: "17"
+          java-version: "21"
 
       - uses: actions/setup-python@v4
         with:
@@ -373,7 +376,7 @@ jobs:
       - uses: actions/setup-java@v3
         with:
           distribution: "zulu"
-          java-version: "17"
+          java-version: "21"
 
       - uses: actions/setup-python@v4
         with:
@@ -601,7 +604,7 @@ jobs:
 
       - uses: actions/setup-java@v1
         with:
-          java-version: "17"
+          java-version: "21"
 
       - name: Install unzip
         shell: bash

@@ -1,14 +1,19 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.DeploymentMode;
-import io.airbyte.config.Configs.JobErrorReportingStrategy;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -52,166 +57,127 @@ class EnvConfigsTest {
 
   @Test
   void testAirbyteRole() {
-    envMap.put(EnvConfigs.AIRBYTE_ROLE, null);
+    envMap.put(EnvVar.AIRBYTE_ROLE.name(), null);
     assertNull(config.getAirbyteRole());
 
-    envMap.put(EnvConfigs.AIRBYTE_ROLE, DEV);
+    envMap.put(EnvVar.AIRBYTE_ROLE.name(), DEV);
     assertEquals(DEV, config.getAirbyteRole());
   }
 
   @Test
   void testAirbyteVersion() {
-    envMap.put(EnvConfigs.AIRBYTE_VERSION, null);
+    envMap.put(EnvVar.AIRBYTE_VERSION.name(), null);
     assertThrows(IllegalArgumentException.class, () -> config.getAirbyteVersion());
 
-    envMap.put(EnvConfigs.AIRBYTE_VERSION, DEV);
+    envMap.put(EnvVar.AIRBYTE_VERSION.name(), DEV);
     assertEquals(new AirbyteVersion(DEV), config.getAirbyteVersion());
   }
 
   @Test
   void testWorkspaceRoot() {
-    envMap.put(EnvConfigs.WORKSPACE_ROOT, null);
+    envMap.put(EnvVar.WORKSPACE_ROOT.name(), null);
     assertThrows(IllegalArgumentException.class, () -> config.getWorkspaceRoot());
 
-    envMap.put(EnvConfigs.WORKSPACE_ROOT, ABCDEF);
+    envMap.put(EnvVar.WORKSPACE_ROOT.name(), ABCDEF);
     assertEquals(Paths.get(ABCDEF), config.getWorkspaceRoot());
   }
 
   @Test
   void testLocalRoot() {
-    envMap.put(EnvConfigs.LOCAL_ROOT, null);
+    envMap.put(EnvVar.LOCAL_ROOT.name(), null);
     assertThrows(IllegalArgumentException.class, () -> config.getLocalRoot());
 
-    envMap.put(EnvConfigs.LOCAL_ROOT, ABCDEF);
+    envMap.put(EnvVar.LOCAL_ROOT.name(), ABCDEF);
     assertEquals(Paths.get(ABCDEF), config.getLocalRoot());
   }
 
   @Test
   void testConfigRoot() {
-    envMap.put(EnvConfigs.CONFIG_ROOT, null);
+    envMap.put(EnvVar.CONFIG_ROOT.name(), null);
     assertThrows(IllegalArgumentException.class, () -> config.getConfigRoot());
 
-    envMap.put(EnvConfigs.CONFIG_ROOT, "a/b");
+    envMap.put(EnvVar.CONFIG_ROOT.name(), "a/b");
     assertEquals(Paths.get("a/b"), config.getConfigRoot());
   }
 
   @Test
   void testGetDatabaseUser() {
-    envMap.put(EnvConfigs.DATABASE_USER, null);
+    envMap.put(EnvVar.DATABASE_USER.name(), null);
     assertThrows(IllegalArgumentException.class, () -> config.getDatabaseUser());
 
-    envMap.put(EnvConfigs.DATABASE_USER, "user");
+    envMap.put(EnvVar.DATABASE_USER.name(), "user");
     assertEquals("user", config.getDatabaseUser());
   }
 
   @Test
   void testGetDatabasePassword() {
-    envMap.put(EnvConfigs.DATABASE_PASSWORD, null);
+    envMap.put(EnvVar.DATABASE_PASSWORD.name(), null);
     assertThrows(IllegalArgumentException.class, () -> config.getDatabasePassword());
 
-    envMap.put(EnvConfigs.DATABASE_PASSWORD, "password");
+    envMap.put(EnvVar.DATABASE_PASSWORD.name(), "password");
     assertEquals("password", config.getDatabasePassword());
   }
 
   @Test
   void testGetDatabaseUrl() {
-    envMap.put(EnvConfigs.DATABASE_URL, null);
+    envMap.put(EnvVar.DATABASE_URL.name(), null);
     assertThrows(IllegalArgumentException.class, () -> config.getDatabaseUrl());
 
-    envMap.put(EnvConfigs.DATABASE_URL, "url");
+    envMap.put(EnvVar.DATABASE_URL.name(), "url");
     assertEquals("url", config.getDatabaseUrl());
   }
 
   @Test
   void testGetWorkspaceDockerMount() {
-    envMap.put(EnvConfigs.WORKSPACE_DOCKER_MOUNT, null);
-    envMap.put(EnvConfigs.WORKSPACE_ROOT, ABCDEF);
+    envMap.put(EnvVar.WORKSPACE_DOCKER_MOUNT.name(), null);
+    envMap.put(EnvVar.WORKSPACE_ROOT.name(), ABCDEF);
     assertEquals(ABCDEF, config.getWorkspaceDockerMount());
 
-    envMap.put(EnvConfigs.WORKSPACE_DOCKER_MOUNT, ROOT);
-    envMap.put(EnvConfigs.WORKSPACE_ROOT, ABCDEF);
+    envMap.put(EnvVar.WORKSPACE_DOCKER_MOUNT.name(), ROOT);
+    envMap.put(EnvVar.WORKSPACE_ROOT.name(), ABCDEF);
     assertEquals(ROOT, config.getWorkspaceDockerMount());
 
-    envMap.put(EnvConfigs.WORKSPACE_DOCKER_MOUNT, null);
-    envMap.put(EnvConfigs.WORKSPACE_ROOT, null);
+    envMap.put(EnvVar.WORKSPACE_DOCKER_MOUNT.name(), null);
+    envMap.put(EnvVar.WORKSPACE_ROOT.name(), null);
     assertThrows(IllegalArgumentException.class, () -> config.getWorkspaceDockerMount());
   }
 
   @Test
   void testGetLocalDockerMount() {
-    envMap.put(EnvConfigs.LOCAL_DOCKER_MOUNT, null);
-    envMap.put(EnvConfigs.LOCAL_ROOT, ABCDEF);
+    envMap.put(EnvVar.LOCAL_DOCKER_MOUNT.name(), null);
+    envMap.put(EnvVar.LOCAL_ROOT.name(), ABCDEF);
     assertEquals(ABCDEF, config.getLocalDockerMount());
 
-    envMap.put(EnvConfigs.LOCAL_DOCKER_MOUNT, ROOT);
-    envMap.put(EnvConfigs.LOCAL_ROOT, ABCDEF);
+    envMap.put(EnvVar.LOCAL_DOCKER_MOUNT.name(), ROOT);
+    envMap.put(EnvVar.LOCAL_ROOT.name(), ABCDEF);
     assertEquals(ROOT, config.getLocalDockerMount());
 
-    envMap.put(EnvConfigs.LOCAL_DOCKER_MOUNT, null);
-    envMap.put(EnvConfigs.LOCAL_ROOT, null);
+    envMap.put(EnvVar.LOCAL_DOCKER_MOUNT.name(), null);
+    envMap.put(EnvVar.LOCAL_ROOT.name(), null);
     assertThrows(IllegalArgumentException.class, () -> config.getLocalDockerMount());
   }
 
   @Test
   void testDockerNetwork() {
-    envMap.put(EnvConfigs.DOCKER_NETWORK, null);
+    envMap.put(EnvVar.DOCKER_NETWORK.name(), null);
     assertEquals("host", config.getDockerNetwork());
 
-    envMap.put(EnvConfigs.DOCKER_NETWORK, ABC);
+    envMap.put(EnvVar.DOCKER_NETWORK.name(), ABC);
     assertEquals(ABC, config.getDockerNetwork());
   }
 
   @Test
-  void testTrackingStrategy() {
-    envMap.put(EnvConfigs.TRACKING_STRATEGY, null);
-    assertEquals(Configs.TrackingStrategy.LOGGING, config.getTrackingStrategy());
-
-    envMap.put(EnvConfigs.TRACKING_STRATEGY, ABC);
-    assertEquals(Configs.TrackingStrategy.LOGGING, config.getTrackingStrategy());
-
-    envMap.put(EnvConfigs.TRACKING_STRATEGY, "logging");
-    assertEquals(Configs.TrackingStrategy.LOGGING, config.getTrackingStrategy());
-
-    envMap.put(EnvConfigs.TRACKING_STRATEGY, "segment");
-    assertEquals(Configs.TrackingStrategy.SEGMENT, config.getTrackingStrategy());
-
-    envMap.put(EnvConfigs.TRACKING_STRATEGY, "LOGGING");
-    assertEquals(Configs.TrackingStrategy.LOGGING, config.getTrackingStrategy());
-  }
-
-  @Test
-  void testErrorReportingStrategy() {
-    envMap.put(EnvConfigs.JOB_ERROR_REPORTING_STRATEGY, null);
-    assertEquals(JobErrorReportingStrategy.LOGGING, config.getJobErrorReportingStrategy());
-
-    envMap.put(EnvConfigs.JOB_ERROR_REPORTING_STRATEGY, ABC);
-    assertEquals(JobErrorReportingStrategy.LOGGING, config.getJobErrorReportingStrategy());
-
-    envMap.put(EnvConfigs.JOB_ERROR_REPORTING_STRATEGY, "logging");
-    assertEquals(JobErrorReportingStrategy.LOGGING, config.getJobErrorReportingStrategy());
-
-    envMap.put(EnvConfigs.JOB_ERROR_REPORTING_STRATEGY, "sentry");
-    assertEquals(JobErrorReportingStrategy.SENTRY, config.getJobErrorReportingStrategy());
-
-    envMap.put(EnvConfigs.JOB_ERROR_REPORTING_STRATEGY, "LOGGING");
-    assertEquals(JobErrorReportingStrategy.LOGGING, config.getJobErrorReportingStrategy());
-
-    envMap.put(EnvConfigs.JOB_ERROR_REPORTING_STRATEGY, "SENTRY");
-    assertEquals(JobErrorReportingStrategy.SENTRY, config.getJobErrorReportingStrategy());
-  }
-
-  @Test
   void testDeploymentMode() {
-    envMap.put(EnvConfigs.DEPLOYMENT_MODE, null);
+    envMap.put(EnvVar.DEPLOYMENT_MODE.name(), null);
     assertEquals(Configs.DeploymentMode.OSS, config.getDeploymentMode());
 
-    envMap.put(EnvConfigs.DEPLOYMENT_MODE, "CLOUD");
+    envMap.put(EnvVar.DEPLOYMENT_MODE.name(), "CLOUD");
     assertEquals(Configs.DeploymentMode.CLOUD, config.getDeploymentMode());
 
-    envMap.put(EnvConfigs.DEPLOYMENT_MODE, "oss");
+    envMap.put(EnvVar.DEPLOYMENT_MODE.name(), "oss");
     assertEquals(Configs.DeploymentMode.OSS, config.getDeploymentMode());
 
-    envMap.put(EnvConfigs.DEPLOYMENT_MODE, "OSS");
+    envMap.put(EnvVar.DEPLOYMENT_MODE.name(), "OSS");
     assertEquals(Configs.DeploymentMode.OSS, config.getDeploymentMode());
   }
 
@@ -220,22 +186,22 @@ class EnvConfigsTest {
     final String airbyteServer = "airbyte-server";
     final String noSchedule = "NoSchedule";
 
-    envMap.put(EnvConfigs.JOB_KUBE_TOLERATIONS, null);
+    envMap.put(EnvVar.JOB_KUBE_TOLERATIONS.name(), null);
     assertEquals(config.getJobKubeTolerations(), List.of());
 
-    envMap.put(EnvConfigs.JOB_KUBE_TOLERATIONS, ";;;");
+    envMap.put(EnvVar.JOB_KUBE_TOLERATIONS.name(), ";;;");
     assertEquals(config.getJobKubeTolerations(), List.of());
 
-    envMap.put(EnvConfigs.JOB_KUBE_TOLERATIONS, "key=k,value=v;");
+    envMap.put(EnvVar.JOB_KUBE_TOLERATIONS.name(), "key=k,value=v;");
     assertEquals(config.getJobKubeTolerations(), List.of());
 
-    envMap.put(EnvConfigs.JOB_KUBE_TOLERATIONS, "key=airbyte-server,operator=Exists,effect=NoSchedule");
+    envMap.put(EnvVar.JOB_KUBE_TOLERATIONS.name(), "key=airbyte-server,operator=Exists,effect=NoSchedule");
     assertEquals(config.getJobKubeTolerations(), List.of(new TolerationPOJO(airbyteServer, noSchedule, null, "Exists")));
 
-    envMap.put(EnvConfigs.JOB_KUBE_TOLERATIONS, "key=airbyte-server,operator=Equals,value=true,effect=NoSchedule");
+    envMap.put(EnvVar.JOB_KUBE_TOLERATIONS.name(), "key=airbyte-server,operator=Equals,value=true,effect=NoSchedule");
     assertEquals(config.getJobKubeTolerations(), List.of(new TolerationPOJO(airbyteServer, noSchedule, "true", "Equals")));
 
-    envMap.put(EnvConfigs.JOB_KUBE_TOLERATIONS,
+    envMap.put(EnvVar.JOB_KUBE_TOLERATIONS.name(),
         "key=airbyte-server,operator=Exists,effect=NoSchedule;key=airbyte-server,operator=Equals,value=true,effect=NoSchedule");
     assertEquals(config.getJobKubeTolerations(), List.of(
         new TolerationPOJO(airbyteServer, noSchedule, null, "Exists"),
@@ -271,88 +237,34 @@ class EnvConfigsTest {
 
   @Test
   void testJobKubeNodeSelectors() {
-    envMap.put(EnvConfigs.JOB_KUBE_NODE_SELECTORS, null);
+    envMap.put(EnvVar.JOB_KUBE_NODE_SELECTORS.name(), null);
     assertNull(config.getJobKubeNodeSelectors());
 
-    envMap.put(EnvConfigs.JOB_KUBE_NODE_SELECTORS, NODE_SELECTORS);
+    envMap.put(EnvVar.JOB_KUBE_NODE_SELECTORS.name(), NODE_SELECTORS);
     assertNull(config.getJobKubeNodeSelectors());
 
-    envMap.put(EnvConfigs.JOB_KUBE_NODE_SELECTORS, ENV_STRING);
+    envMap.put(EnvVar.JOB_KUBE_NODE_SELECTORS.name(), ENV_STRING);
     assertEquals(config.getJobKubeNodeSelectors(), Map.of(KEY, "k"));
 
-    envMap.put(EnvConfigs.JOB_KUBE_NODE_SELECTORS, ONE_EQ_TWO);
+    envMap.put(EnvVar.JOB_KUBE_NODE_SELECTORS.name(), ONE_EQ_TWO);
     assertEquals(config.getJobKubeNodeSelectors(), Map.of(ONE, TWO));
 
-    envMap.put(EnvConfigs.JOB_KUBE_NODE_SELECTORS, AIRB_SERV_SOME_NOTHING);
+    envMap.put(EnvVar.JOB_KUBE_NODE_SELECTORS.name(), AIRB_SERV_SOME_NOTHING);
     assertEquals(config.getJobKubeNodeSelectors(), Map.of(AIRBYTE, SERVER, SOMETHING, NOTHING));
   }
 
   @Test
-  void testSpecKubeNodeSelectors() {
-    envMap.put(EnvConfigs.SPEC_JOB_KUBE_NODE_SELECTORS, null);
-    assertNull(config.getSpecJobKubeNodeSelectors());
-
-    envMap.put(EnvConfigs.SPEC_JOB_KUBE_NODE_SELECTORS, NODE_SELECTORS);
-    assertNull(config.getSpecJobKubeNodeSelectors());
-
-    envMap.put(EnvConfigs.SPEC_JOB_KUBE_NODE_SELECTORS, ENV_STRING);
-    assertEquals(config.getSpecJobKubeNodeSelectors(), Map.of(KEY, "k"));
-
-    envMap.put(EnvConfigs.SPEC_JOB_KUBE_NODE_SELECTORS, ONE_EQ_TWO);
-    assertEquals(config.getSpecJobKubeNodeSelectors(), Map.of(ONE, TWO));
-
-    envMap.put(EnvConfigs.SPEC_JOB_KUBE_NODE_SELECTORS, AIRB_SERV_SOME_NOTHING);
-    assertEquals(config.getSpecJobKubeNodeSelectors(), Map.of(AIRBYTE, SERVER, SOMETHING, NOTHING));
-  }
-
-  @Test
-  void testCheckKubeNodeSelectors() {
-    envMap.put(EnvConfigs.CHECK_JOB_KUBE_NODE_SELECTORS, null);
-    assertNull(config.getCheckJobKubeNodeSelectors());
-
-    envMap.put(EnvConfigs.CHECK_JOB_KUBE_NODE_SELECTORS, NODE_SELECTORS);
-    assertNull(config.getCheckJobKubeNodeSelectors());
-
-    envMap.put(EnvConfigs.CHECK_JOB_KUBE_NODE_SELECTORS, ENV_STRING);
-    assertEquals(config.getCheckJobKubeNodeSelectors(), Map.of(KEY, "k"));
-
-    envMap.put(EnvConfigs.CHECK_JOB_KUBE_NODE_SELECTORS, ONE_EQ_TWO);
-    assertEquals(config.getCheckJobKubeNodeSelectors(), Map.of(ONE, TWO));
-
-    envMap.put(EnvConfigs.CHECK_JOB_KUBE_NODE_SELECTORS, AIRB_SERV_SOME_NOTHING);
-    assertEquals(config.getCheckJobKubeNodeSelectors(), Map.of(AIRBYTE, SERVER, SOMETHING, NOTHING));
-  }
-
-  @Test
-  void testDiscoverKubeNodeSelectors() {
-    envMap.put(EnvConfigs.DISCOVER_JOB_KUBE_NODE_SELECTORS, null);
-    assertNull(config.getDiscoverJobKubeNodeSelectors());
-
-    envMap.put(EnvConfigs.DISCOVER_JOB_KUBE_NODE_SELECTORS, NODE_SELECTORS);
-    assertNull(config.getDiscoverJobKubeNodeSelectors());
-
-    envMap.put(EnvConfigs.DISCOVER_JOB_KUBE_NODE_SELECTORS, ENV_STRING);
-    assertEquals(config.getDiscoverJobKubeNodeSelectors(), Map.of(KEY, "k"));
-
-    envMap.put(EnvConfigs.DISCOVER_JOB_KUBE_NODE_SELECTORS, ONE_EQ_TWO);
-    assertEquals(config.getDiscoverJobKubeNodeSelectors(), Map.of(ONE, TWO));
-
-    envMap.put(EnvConfigs.DISCOVER_JOB_KUBE_NODE_SELECTORS, AIRB_SERV_SOME_NOTHING);
-    assertEquals(config.getDiscoverJobKubeNodeSelectors(), Map.of(AIRBYTE, SERVER, SOMETHING, NOTHING));
-  }
-
-  @Test
   void testPublishMetrics() {
-    envMap.put(EnvConfigs.PUBLISH_METRICS, "true");
+    envMap.put(EnvVar.PUBLISH_METRICS.name(), "true");
     assertTrue(config.getPublishMetrics());
 
-    envMap.put(EnvConfigs.PUBLISH_METRICS, "false");
+    envMap.put(EnvVar.PUBLISH_METRICS.name(), "false");
     assertFalse(config.getPublishMetrics());
 
-    envMap.put(EnvConfigs.PUBLISH_METRICS, null);
+    envMap.put(EnvVar.PUBLISH_METRICS.name(), null);
     assertFalse(config.getPublishMetrics());
 
-    envMap.put(EnvConfigs.PUBLISH_METRICS, "");
+    envMap.put(EnvVar.PUBLISH_METRICS.name(), "");
     assertFalse(config.getPublishMetrics());
   }
 
@@ -361,10 +273,10 @@ class EnvConfigsTest {
   void testDDConstantTags() {
     assertEquals(List.of(), config.getDDConstantTags());
 
-    envMap.put(EnvConfigs.DD_CONSTANT_TAGS, " ");
+    envMap.put(EnvVar.DD_CONSTANT_TAGS.name(), " ");
     assertEquals(List.of(), config.getDDConstantTags());
 
-    envMap.put(EnvConfigs.DD_CONSTANT_TAGS, "airbyte_instance:dev,k8s-cluster:eks-dev");
+    envMap.put(EnvVar.DD_CONSTANT_TAGS.name(), "airbyte_instance:dev,k8s-cluster:eks-dev");
     final List<String> expected = List.of("airbyte_instance:dev", "k8s-cluster:eks-dev");
     assertEquals(expected, config.getDDConstantTags());
     assertEquals(2, config.getDDConstantTags().size());
@@ -372,8 +284,8 @@ class EnvConfigsTest {
 
   @Test
   void testSharedJobEnvMapRetrieval() {
-    envMap.put(EnvConfigs.AIRBYTE_VERSION, DEV);
-    envMap.put(EnvConfigs.WORKER_ENVIRONMENT, WorkerEnvironment.KUBERNETES.name());
+    envMap.put(EnvVar.AIRBYTE_VERSION.name(), DEV);
+    envMap.put(EnvVar.WORKER_ENVIRONMENT.name(), WorkerEnvironment.KUBERNETES.name());
     final Map<String, String> expected = Map.of("AIRBYTE_VERSION", DEV,
         "AIRBYTE_ROLE", "",
         "DEPLOYMENT_MODE", "OSS",
@@ -383,11 +295,11 @@ class EnvConfigsTest {
 
   @Test
   void testAllJobEnvMapRetrieval() {
-    envMap.put(EnvConfigs.AIRBYTE_VERSION, DEV);
-    envMap.put(EnvConfigs.AIRBYTE_ROLE, "UNIT_TEST");
-    envMap.put(EnvConfigs.JOB_DEFAULT_ENV_PREFIX + "ENV1", "VAL1");
-    envMap.put(EnvConfigs.JOB_DEFAULT_ENV_PREFIX + "ENV2", "VAL\"2WithQuotesand$ymbols");
-    envMap.put(EnvConfigs.DEPLOYMENT_MODE, DeploymentMode.CLOUD.name());
+    envMap.put(EnvVar.AIRBYTE_VERSION.name(), DEV);
+    envMap.put(EnvVar.AIRBYTE_ROLE.name(), "UNIT_TEST");
+    envMap.put(EnvVar.JOB_DEFAULT_ENV_.name() + "ENV1", "VAL1");
+    envMap.put(EnvVar.JOB_DEFAULT_ENV_.name() + "ENV2", "VAL\"2WithQuotesand$ymbols");
+    envMap.put(EnvVar.DEPLOYMENT_MODE.name(), DeploymentMode.CLOUD.name());
 
     final Map<String, String> expected = Map.of("ENV1", "VAL1",
         "ENV2", "VAL\"2WithQuotesand$ymbols",

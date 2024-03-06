@@ -11,8 +11,8 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
+import { WorkspaceRead, WorkspaceReadList } from "core/api/types/AirbyteClient";
 import { CloudWorkspaceRead, CloudWorkspaceReadList } from "core/api/types/CloudApi";
-import { WorkspaceRead, WorkspaceReadList } from "core/request/AirbyteClient";
 import { RoutePaths } from "pages/routePaths";
 import { WORKSPACE_LIST_LENGTH } from "pages/workspaces/WorkspacesPage";
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.constants;
@@ -13,11 +13,6 @@ public final class AirbyteCatalogConstants {
    * The name of the resource subdirectory that we write the OSS catalog to.
    */
   private static final String SEED_SUBDIRECTORY = "seed/";
-
-  /**
-   * The name of the resource subdirectory that we write our icon files to.
-   */
-  public static final String ICON_SUBDIRECTORY = "icons/";
 
   public static final String LOCAL_CONNECTOR_CATALOG_PATH_FILE_NAME = "local_oss_registry.json";
   public static final String LOCAL_SECRETS_MASKS_FILE_NAME = "specs_secrets_mask.yaml";

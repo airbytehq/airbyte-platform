@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -25,6 +25,7 @@ import io.airbyte.commons.server.JobStatus;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.config.AttemptFailureSummary;
+import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.JobConfig;
@@ -36,6 +37,7 @@ import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
+import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
 import io.airbyte.persistence.job.errorreporter.SyncJobReportingContext;
 import io.airbyte.persistence.job.models.Attempt;
@@ -100,11 +102,13 @@ public class JobsHandlerTest {
         .jobId(JOB_ID)
         .connectionId(UUID.randomUUID())
         .standardSyncOutput(standardSyncOutput);
+    Job job = new Job(JOB_ID, SYNC, "", null, List.of(), io.airbyte.persistence.job.models.JobStatus.SUCCEEDED, 0L, 0, 0);
+    when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     jobsHandler.jobSuccessWithAttemptNumber(request);
 
     verify(jobPersistence).writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput);
     verify(jobPersistence).succeedAttempt(JOB_ID, ATTEMPT_NUMBER);
-    verify(jobNotifier).successJob(any());
+    verify(jobNotifier).successJob(any(), any());
     verify(helper).trackCompletion(any(), eq(JobStatus.SUCCEEDED));
   }
 
@@ -191,7 +195,7 @@ public class JobsHandlerTest {
     verify(jobPersistence).failAttempt(JOB_ID, ATTEMPT_NUMBER);
     verify(jobPersistence).writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, failureSummary);
     verify(jobPersistence).cancelJob(JOB_ID);
-    verify(jobNotifier).failJob("Job was cancelled", mockJob);
+    verify(jobNotifier).failJob(eq("Job was cancelled"), eq(mockJob), any());
     verify(helper).trackCompletion(any(), eq(JobStatus.FAILED));
   }
 
@@ -244,6 +248,9 @@ public class JobsHandlerTest {
         .withSourceDefinitionVersionId(UUID.randomUUID())
         .withDestinationDefinitionVersionId(UUID.randomUUID());
 
+    final AttemptSyncConfig mSyncConfig = Mockito.mock(AttemptSyncConfig.class);
+    when(mAttempt.getSyncConfig()).thenReturn(Optional.of(mSyncConfig));
+
     final JobConfig mJobConfig = Mockito.mock(JobConfig.class);
     when(mJobConfig.getConfigType()).thenReturn(SYNC);
     when(mJobConfig.getSync()).thenReturn(jobSyncConfig);
@@ -263,9 +270,15 @@ public class JobsHandlerTest {
         jobSyncConfig.getSourceDefinitionVersionId(),
         jobSyncConfig.getDestinationDefinitionVersionId());
 
+    final AttemptConfigReportingContext expectedAttemptConfig =
+        new AttemptConfigReportingContext(
+            mSyncConfig.getSourceConfiguration(),
+            mSyncConfig.getDestinationConfiguration(),
+            mSyncConfig.getState());
+
     verify(jobPersistence).failJob(JOB_ID);
-    verify(jobNotifier).failJob(eq(failureReason), Mockito.any());
-    verify(jobErrorReporter).reportSyncJobFailure(CONNECTION_ID, failureSummary, expectedReportingContext);
+    verify(jobNotifier).failJob(eq(failureReason), Mockito.any(), any());
+    verify(jobErrorReporter).reportSyncJobFailure(CONNECTION_ID, failureSummary, expectedReportingContext, expectedAttemptConfig);
   }
 
   @Test
@@ -293,8 +306,8 @@ public class JobsHandlerTest {
     jobsHandler.jobFailure(new JobFailureRequest().jobId(JOB_ID).attemptNumber(1).connectionId(CONNECTION_ID).reason(failureReason));
 
     verify(jobPersistence).failJob(JOB_ID);
-    verify(jobNotifier).failJob(eq(failureReason), Mockito.any());
-    verify(jobErrorReporter).reportSyncJobFailure(eq(CONNECTION_ID), eq(failureSummary), Mockito.any());
+    verify(jobNotifier).failJob(eq(failureReason), Mockito.any(), any());
+    verify(jobErrorReporter).reportSyncJobFailure(eq(CONNECTION_ID), eq(failureSummary), Mockito.any(), Mockito.any());
   }
 
 }

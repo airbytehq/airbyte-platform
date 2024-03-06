@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="INFO" packages="io.airbyte.commons.logging">
+<Configuration status="INFO">
     <Properties>
-        <Property name="ciMode">${sys:ciMode:-false}</Property>
+        <Property name="ci-mode">${sys:ciMode:-false}</Property>
         <!-- Mask the string apikey=<string> to apikey=***** to prevent secrets leaking. -->
         <Property name="default-pattern">%d{yyyy-MM-dd HH:mm:ss}{GMT+0} %highlight{%p} %C{1.}(%M):%L - %replace{%m}{apikey=[\w\-]*}{apikey=*****}%n</Property>
         <!--Logs the timestamp and log_source/application name in the beginning of the line if it exists with a > separator, and then always the rest of the line.-->
@@ -9,29 +9,19 @@
 
         <!-- Always log INFO by default. -->
         <Property name="log-level">${sys:LOG_LEVEL:-${env:LOG_LEVEL:-INFO}}</Property>
-
-        <!-- Note that logging to S3 will leverage the DefaultAWSCredentialsProviderChain for auth. -->
-        <Property name="s3-bucket">${sys:S3_LOG_BUCKET:-${env:S3_LOG_BUCKET}}</Property>
-        <Property name="s3-region">${sys:S3_LOG_BUCKET_REGION:-${env:S3_LOG_BUCKET_REGION}}</Property>
-        <Property name="s3-minio-endpoint">${sys:S3_MINIO_ENDPOINT:-${env:S3_MINIO_ENDPOINT}}</Property>
-        <Property name="s3-path-style-access">${sys:S3_PATH_STYLE_ACCESS:-${env:S3_PATH_STYLE_ACCESS}}</Property>
-
-        <Property name="gcs-log-bucket">${sys:GCS_LOG_BUCKET:-${env:GCS_LOG_BUCKET}}</Property>
     </Properties>
 
     <Appenders>
         <Console name="Default" target="SYSTEM_OUT">
-            <If condition="${sys:ciMode} == 'true'">
-                <Then>
-                    <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
-                </Then>
-                <Else>
-                    <!-- Existing ContextMapFilter behavior when ciMode is not true -->
-                    <ContextMapFilter onMatch="DENY" onMismatch="ACCEPT">
-                        <KeyValuePair key="simple" value="true"/>
-                    </ContextMapFilter>
-                </Else>
-            </If>
+            <!-- Existing ContextMapFilter behavior when ciMode is not true -->
+            <ContextMapFilter onMatch="DENY" onMismatch="ACCEPT">
+                <KeyValuePair key="simple" value="true"/>
+            </ContextMapFilter>
+            <PatternLayout pattern="${default-pattern}"/>
+        </Console>
+
+        <Console name="CI" target="SYSTEM_OUT">
+            <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
             <PatternLayout pattern="${default-pattern}"/>
         </Console>
 
@@ -43,18 +33,20 @@
         </Console>
 
         <File name="LogFile" fileName="build.log">
+            <PatternLayout pattern="${default-pattern}"/>
+        </File>
+
+        <File name="CILogFile" fileName="build.log">
             <Filters>
                 <!-- Only log to file when ciMode is true -->
-                <If condition="${sys:ciMode} == 'true'">
-                    <ThresholdFilter level="${log-level}" onMatch="ACCEPT" onMismatch="DENY"/>
-                </If>
+                <ThresholdFilter level="${log-level}" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
             <PatternLayout pattern="${default-pattern}"/>
         </File>
 
         <Rewrite name="SecretMaskRewrite">
             <MaskedDataInterceptor></MaskedDataInterceptor>
-            <AppenderRef ref="Default"/>
+            <AppenderRef ref="ConsoleRouter"/>
             <AppenderRef ref="SimpleDefault"/>
             <AppenderRef ref="LogSplit"/>
             <AppenderRef ref="SimpleLogSplit"/>
@@ -62,7 +54,7 @@
             <AppenderRef ref="SimpleLogSplitCloud"/>
             <AppenderRef ref="AppLogSplit"/>
             <AppenderRef ref="AppLogSplitCloud"/>
-            <AppenderRef ref="LogFile"/>
+            <AppenderRef ref="LogFileRouter"/>
         </Rewrite>
 
         <Routing name="LogSplit">
@@ -117,11 +109,8 @@
                 </Route>
                 <Route>
                     <Log4j2Appender name="${ctx:cloud_job_log_path}"
-                      verbose="true"
-                      stagingBufferAge="1"
-                      s3Bucket="${s3-bucket}" s3Path="job-logging${ctx:cloud_job_log_path}" s3Region="${s3-region}"
-                      s3ServiceEndpoint="${s3-minio-endpoint}" s3PathStyleAccess="${s3-path-style-access}"
-                      gcpStorageBucket="${gcs-log-bucket}" gcpStorageBlobNamePrefix="job-logging${ctx:cloud_job_log_path}">
+                      verbose="false"
+                      stagingBufferAge="1">
                         <PatternLayout pattern="${default-pattern}"/>
                     </Log4j2Appender>
                 </Route>
@@ -140,11 +129,7 @@
                 </Route>
                 <Route>
                     <Log4j2Appender name="${ctx:cloud_job_log_path}"
-                                    verbose="true"
-                                    stagingBufferAge="1"
-                                    s3Bucket="${s3-bucket}" s3Path="job-logging${ctx:cloud_job_log_path}" s3Region="${s3-region}"
-                                    s3ServiceEndpoint="${s3-minio-endpoint}" s3PathStyleAccess="${s3-path-style-access}"
-                                    gcpStorageBucket="${gcs-log-bucket}" gcpStorageBlobNamePrefix="job-logging${ctx:cloud_job_log_path}">
+                                    verbose="false">
                         <PatternLayout pattern="${simple-pattern}"/>
                     </Log4j2Appender>
                 </Route>
@@ -182,15 +167,26 @@
                 </Route>
                 <Route>
                     <Log4j2Appender name="app-logging/${ctx:cloud_workspace_app_root}/"
-                      stagingBufferAge="1"
-                      s3Bucket="${s3-bucket}" s3Path="app-logging${ctx:cloud_workspace_app_root}" s3Region="${s3-region}"
-                      s3ServiceEndpoint="${s3-minio-endpoint}" s3PathStyleAccess="${s3-path-style-access}"
-                      gcpStorageBucket="${gcs-log-bucket}" gcpStorageBlobNamePrefix="app-logging${ctx:cloud_workspace_app_root}">
+                      stagingBufferAge="1">
                         <PatternLayout pattern="${default-pattern}"/>
                     </Log4j2Appender>
                 </Route>
             </Routes>
             <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+        </Routing>
+
+        <Routing name="ConsoleRouter">
+            <Routes pattern="$${ci-mode}">
+                <Route ref="CI" key="true"/>
+                <Route ref="Default" key="false"/>
+            </Routes>
+        </Routing>
+
+        <Routing name="LogFileRouter">
+            <Routes pattern="$${ci-mode}">
+                <Route ref="CILogFile" key="true"/>
+                <Route ref="LogFile" key="false"/>
+            </Routes>
         </Routing>
     </Appenders>
 
@@ -210,6 +206,7 @@
         <Logger name="com.networknt.schema" level="INFO" />
         <Logger name="me.andrz.jackson" level="INFO" />
         <Logger name="com.leansoft.bigqueue" level="INFO" />
+<!--        <logger name="io.micronaut.context.condition" level="TRACE" />-->
         <Logger name="io.netty" level="INFO" />
         <Logger name="io.grpc" level="INFO" />
         <Logger name="io.temporal" level="INFO" />

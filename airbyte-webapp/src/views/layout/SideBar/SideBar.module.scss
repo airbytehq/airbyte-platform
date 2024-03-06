@@ -2,20 +2,19 @@
 @use "scss/variables";
 @use "scss/z-indices";
 
-.nav {
+.sidebar {
   z-index: z-indices.$sidebar;
   position: relative;
   height: 100%;
-  width: 100px;
-  min-width: 65px;
+  width: variables.$width-side-menu;
+  flex: 0 0 variables.$width-side-menu;
   background-color: colors.$foreground;
-  padding: variables.$spacing-xl variables.$spacing-xs variables.$spacing-lg;
+  padding: 0 0 variables.$spacing-md 0;
   text-align: center;
   border-right: variables.$border-thin solid colors.$grey-100;
   display: flex;
-  gap: variables.$spacing-md;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
 
   ul {
@@ -26,5 +25,16 @@
       list-style-type: none;
       width: 100%;
     }
+  }
+
+  &__menuItems {
+    width: 100%;
+    padding: 0 variables.$spacing-sm;
+    margin-top: variables.$spacing-sm;
+    flex: 1 1 auto;
+  }
+
+  &__logoutButton * {
+    color: colors.$red-900;
   }
 }

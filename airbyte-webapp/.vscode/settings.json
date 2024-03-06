@@ -1,0 +1,18 @@
+{
+  "typescript.tsdk": "./node_modules/typescript/lib",
+  "typescript.preferences.autoImportFileExcludePatterns": [
+    "core/api/generated/**"
+  ],
+  "stylelint.validate": [
+    // The Stylelint plugin doesn't validate SCSS by default, so need to configure it here
+    "css",
+    "scss"
+  ],
+  "editor.codeActionsOnSave": {
+    // Disable internal import organization, since it messes with the ESLint one
+    "source.organizeImports": "never",
+    // Automatically fix ESLint and Stylelint errors on save
+    "source.fixAll.eslint": "explicit",
+    "source.fixAll.stylelint": "explicit",
+  },
+}

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
@@ -10,10 +10,12 @@ import {
   useSourceDefinitionVersion,
   useGetSourceDefinitionSpecification,
   useSourceDefinition,
+  useDeleteSource,
+  useInvalidateSource,
+  useUpdateSource,
 } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
-import { useDeleteSource, useInvalidateSource, useUpdateSource } from "hooks/services/useSourceHook";
 import { useDeleteModal } from "hooks/useDeleteModal";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm";
@@ -21,6 +23,7 @@ import { ConnectorCardValues } from "views/Connector/ConnectorForm";
 import styles from "./SourceSettingsPage.module.scss";
 
 export const SourceSettingsPage: React.FC = () => {
+  const { formatMessage } = useIntl();
   const source = useGetSourceFromParams();
   const connectionList = useConnectionList({ sourceId: [source.sourceId] });
   const connectionsWithSource = useMemo(() => connectionList?.connections ?? [], [connectionList]);
@@ -77,7 +80,7 @@ export const SourceSettingsPage: React.FC = () => {
     <div className={styles.content}>
       <ConnectorCard
         formType="source"
-        title={<FormattedMessage id="sources.sourceSettings" />}
+        title={formatMessage({ id: "sources.sourceSettings" })}
         isEditMode
         formId={formId}
         availableConnectorDefinitions={[sourceDefinition]}

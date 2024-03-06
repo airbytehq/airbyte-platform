@@ -1,7 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
-import React, { useState } from "react";
+import React, { useDeferredValue, useState } from "react";
 import { FormattedMessage } from "react-intl";
-import { useDebounce } from "react-use";
 
 import AirbyteLogo from "components/illustrations/airbyte-logo.svg?react";
 import { Box } from "components/ui/Box";
@@ -27,8 +26,7 @@ export const CloudWorkspacesPage: React.FC = () => {
   const { isLoading: isLogoutLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
   useTrackPage(PageTrackingCodes.WORKSPACES);
   const [searchValue, setSearchValue] = useState("");
-  const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
-  const [isSearchEmpty, setIsSearchEmpty] = useState(true);
+  const deferredSearchValue = useDeferredValue(searchValue);
 
   const {
     data: workspacesData,
@@ -37,7 +35,7 @@ export const CloudWorkspacesPage: React.FC = () => {
     isFetchingNextPage,
     isFetching,
     isLoading,
-  } = useListCloudWorkspacesInfinite(WORKSPACE_LIST_LENGTH, debouncedSearchValue);
+  } = useListCloudWorkspacesInfinite(WORKSPACE_LIST_LENGTH, deferredSearchValue);
 
   const { organizationsMemberOnly, organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
 
@@ -45,22 +43,23 @@ export const CloudWorkspacesPage: React.FC = () => {
 
   const { logout } = useAuthService();
 
+  /**
+   * Check if we should show the "You don't have permission to anything" message, if:
+   * - We're not currently still loading workspaces (i.e. we're not yet knowing if the user has access to any workspace potentially)
+   * - User is in at least one organization (if not, the user a regular non-org user who always can create workspaces for themselves)
+   * - User has no permissions to create a workspace in any of those organizations (otherwise user could just create a workspace)
+   * - No workspaces have been found (i.e. user doesn't have access to any workspace) while the search value was empty. Otherwise simply
+   *   the search query couldn't have found any matching workspaces.
+   * - Make sure `searchValue` and `deferredSearchValue` are the same, so we don't show the message after clearing out a query (that had no matches)
+   *   but before the new query is triggered (and isFetching would be `true`) due to the debounce effect in starting the next query.
+   */
   const showNoWorkspacesContent =
     !isFetching &&
     !organizationsToCreateIn.length &&
     organizationsMemberOnly.length > 0 &&
     !workspaces.length &&
-    isSearchEmpty;
-
-  useDebounce(
-    () => {
-      setDebouncedSearchValue(searchValue);
-      setIsSearchEmpty(debouncedSearchValue === "");
-    },
-    250,
-    [searchValue]
-  );
-  console.log({ showNoWorkspacesContent });
+    searchValue.length === 0 &&
+    searchValue === deferredSearchValue;
 
   return (
     <div className={styles.cloudWorkspacesPage__container}>

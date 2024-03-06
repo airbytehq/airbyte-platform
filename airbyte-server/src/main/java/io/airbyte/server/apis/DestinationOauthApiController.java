@@ -1,11 +1,10 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
-import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 
@@ -15,7 +14,6 @@ import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.DestinationOauthConsentRequest;
 import io.airbyte.api.model.generated.OAuthConsentRead;
 import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody;
-import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.OAuthHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.context.annotation.Context;
@@ -38,8 +36,7 @@ public class DestinationOauthApiController implements DestinationOauthApi {
   }
 
   @Post("/complete_oauth")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public CompleteOAuthResponse completeDestinationOAuth(final CompleteDestinationOAuthRequest completeDestinationOAuthRequest) {
@@ -47,8 +44,7 @@ public class DestinationOauthApiController implements DestinationOauthApi {
   }
 
   @Post("/get_consent_url")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public OAuthConsentRead getDestinationOAuthConsent(final DestinationOauthConsentRequest destinationOauthConsentRequest) {

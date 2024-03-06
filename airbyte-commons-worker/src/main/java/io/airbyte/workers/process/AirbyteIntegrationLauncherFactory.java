@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.process;
@@ -11,12 +11,12 @@ import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.protocol.VersionedProtocolSerializer;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.featureflag.Connection;
-import io.airbyte.featureflag.FailMissingPks;
 import io.airbyte.featureflag.FailSyncIfTooBig;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.PrintLongRecordPks;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.helper.GsonPksExtractor;
@@ -48,19 +48,22 @@ public class AirbyteIntegrationLauncherFactory {
   private final FeatureFlags featureFlags;
   private final FeatureFlagClient featureFlagClient;
   private final GsonPksExtractor gsonPksExtractor;
+  private final MetricClient metricClient;
 
   public AirbyteIntegrationLauncherFactory(final ProcessFactory processFactory,
                                            final AirbyteMessageSerDeProvider serDeProvider,
                                            final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                            final FeatureFlags featureFlags,
                                            final FeatureFlagClient featureFlagClient,
-                                           final GsonPksExtractor gsonPksExtractor) {
+                                           final GsonPksExtractor gsonPksExtractor,
+                                           final MetricClient metricClient) {
     this.processFactory = processFactory;
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
     this.featureFlags = featureFlags;
     this.featureFlagClient = featureFlagClient;
     this.gsonPksExtractor = gsonPksExtractor;
+    this.metricClient = metricClient;
   }
 
   /**
@@ -109,11 +112,6 @@ public class AirbyteIntegrationLauncherFactory {
             new Connection(sourceLauncherConfig.getConnectionId()),
             new Workspace(sourceLauncherConfig.getWorkspaceId()))));
 
-    final boolean failMissingPks = featureFlagClient.boolVariation(FailMissingPks.INSTANCE,
-        new Multi(List.of(
-            new Connection(sourceLauncherConfig.getConnectionId()),
-            new Workspace(sourceLauncherConfig.getWorkspaceId()))));
-
     final boolean printLongRecordPks = featureFlagClient.boolVariation(PrintLongRecordPks.INSTANCE,
         new Multi(List.of(
             new Connection(sourceLauncherConfig.getConnectionId()),
@@ -123,11 +121,11 @@ public class AirbyteIntegrationLauncherFactory {
         getStreamFactory(sourceLauncherConfig, configuredAirbyteCatalog, SourceException.class, DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER,
             new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(
                 failTooLongRecords,
-                failMissingPks,
                 printLongRecordPks)),
         heartbeatMonitor,
         getProtocolSerializer(sourceLauncherConfig),
-        featureFlags);
+        featureFlags,
+        metricClient);
   }
 
   /**
@@ -148,10 +146,12 @@ public class AirbyteIntegrationLauncherFactory {
             configuredAirbyteCatalog,
             DestinationException.class,
             DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER,
-            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false)),
+            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false)),
         new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
             Optional.of(configuredAirbyteCatalog)),
-        getProtocolSerializer(destinationLauncherConfig), destinationTimeoutMonitor);
+        getProtocolSerializer(destinationLauncherConfig),
+        destinationTimeoutMonitor,
+        metricClient);
   }
 
   private VersionedProtocolSerializer getProtocolSerializer(final IntegrationLauncherConfig launcherConfig) {
@@ -164,7 +164,8 @@ public class AirbyteIntegrationLauncherFactory {
                                                 final MdcScope.Builder mdcScopeBuilder,
                                                 final VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration invalidLineFailureConfiguration) {
     return new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(),
-        Optional.of(configuredAirbyteCatalog), mdcScopeBuilder, Optional.of(exceptionClass), invalidLineFailureConfiguration, gsonPksExtractor);
+        Optional.of(launcherConfig.getConnectionId()), Optional.of(configuredAirbyteCatalog), mdcScopeBuilder, Optional.of(exceptionClass),
+        invalidLineFailureConfiguration, gsonPksExtractor);
   }
 
 }

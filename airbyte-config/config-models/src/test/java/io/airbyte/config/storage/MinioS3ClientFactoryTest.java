@@ -1,39 +1,21 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.storage;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
-import io.airbyte.config.storage.CloudStorageConfigs.MinioConfig;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
-@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class MinioS3ClientFactoryTest {
 
   @Test
   void testMinio() {
-    final var minioConfig = Mockito.mock(MinioConfig.class);
-    Mockito.when(minioConfig.getAwsAccessKey()).thenReturn("access-key");
-    Mockito.when(minioConfig.getAwsSecretAccessKey()).thenReturn("access-key-secret");
-    Mockito.when(minioConfig.getBucketName()).thenReturn("test-bucket");
-    Mockito.when(minioConfig.getMinioEndpoint()).thenReturn("https://minio-endpoint");
+    final var bucket = new StorageBucketConfig("log", "state", "workload");
+    final var config = new MinioStorageConfig(bucket, "access", "secret", "http://endpoint.test");
 
-    new MinioS3ClientFactory(minioConfig).get();
-  }
-
-  @Test
-  void testMinioEndpointMissing() {
-    final var minioConfig = Mockito.mock(MinioConfig.class);
-    // Missing bucket and access key.
-    Mockito.when(minioConfig.getAwsAccessKey()).thenReturn("access-key");
-    Mockito.when(minioConfig.getAwsSecretAccessKey()).thenReturn("access-key-secret");
-    Mockito.when(minioConfig.getBucketName()).thenReturn("test-bucket");
-    Mockito.when(minioConfig.getMinioEndpoint()).thenReturn("");
-
-    assertThrows(IllegalArgumentException.class, () -> new MinioS3ClientFactory(minioConfig));
+    assertDoesNotThrow(() -> new MinioS3ClientFactory(config).get());
   }
 
 }

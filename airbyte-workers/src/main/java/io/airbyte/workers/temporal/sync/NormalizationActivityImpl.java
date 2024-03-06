@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync;
@@ -55,12 +55,13 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.general.DefaultNormalizationWorker;
-import io.airbyte.workers.helpers.SecretPersistenceConfigHelper;
+import io.airbyte.workers.helper.SecretPersistenceConfigHelper;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.normalization.DefaultNormalizationRunner;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.NormalizationLauncherWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
+import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.micronaut.context.annotation.Value;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
@@ -94,6 +95,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;
   private final MetricClient metricClient;
+  private final WorkloadIdGenerator workloadIdGenerator;
 
   private static final String V1_NORMALIZATION_MINOR_VERSION = "3";
 
@@ -109,7 +111,8 @@ public class NormalizationActivityImpl implements NormalizationActivity {
                                    final AirbyteConfigValidator airbyteConfigValidator,
                                    final AirbyteApiClient airbyteApiClient,
                                    final FeatureFlagClient featureFlagClient,
-                                   final MetricClient metricClient) {
+                                   final MetricClient metricClient,
+                                   final WorkloadIdGenerator workloadIdGenerator) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
@@ -123,6 +126,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     this.airbyteApiClient = airbyteApiClient;
     this.featureFlagClient = featureFlagClient;
     this.metricClient = metricClient;
+    this.workloadIdGenerator = workloadIdGenerator;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -320,7 +324,8 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         containerOrchestratorConfig.get(),
         serverPort,
         featureFlagClient,
-        metricClient);
+        metricClient,
+        workloadIdGenerator);
   }
 
   private ConfiguredAirbyteCatalog retrieveCatalog(final UUID connectionId) throws Exception {

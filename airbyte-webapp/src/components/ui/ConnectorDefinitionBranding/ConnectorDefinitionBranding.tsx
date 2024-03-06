@@ -2,7 +2,7 @@ import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { Text } from "components/ui/Text";
 
 import { useSourceDefinitionList, useDestinationDefinitionList } from "core/api";
-import { DestinationDefinitionId, SourceDefinitionId } from "core/request/AirbyteClient";
+import { DestinationDefinitionId, SourceDefinitionId } from "core/api/types/AirbyteClient";
 
 import styles from "./ConnectorDefinitionBranding.module.scss";
 import { FlexContainer } from "../Flex";
@@ -50,7 +50,9 @@ const SourceDefinitionBranding: React.FC<SourceDefinitionBrandingProps> = ({ sou
   return sourceDefinition ? (
     <>
       <ConnectorIcon icon={sourceDefinition.icon} />
-      <Text className={styles.name}>{sourceDefinition.name}</Text>
+      <Text color="grey500" size="lg" className={styles.name}>
+        {sourceDefinition.name}
+      </Text>
       <SupportLevelBadge supportLevel={sourceDefinition.supportLevel} custom={sourceDefinition.custom} />
     </>
   ) : null;
@@ -68,7 +70,9 @@ const DestinationDefinitionBranding: React.FC<DestinationDefinitionBrandingProps
   return destinationDefinition ? (
     <>
       <ConnectorIcon icon={destinationDefinition.icon} />
-      <Text className={styles.name}>{destinationDefinition.name}</Text>
+      <Text color="grey500" size="lg" className={styles.name}>
+        {destinationDefinition.name}
+      </Text>
       <SupportLevelBadge supportLevel={destinationDefinition.supportLevel} custom={destinationDefinition.custom} />
     </>
   ) : null;

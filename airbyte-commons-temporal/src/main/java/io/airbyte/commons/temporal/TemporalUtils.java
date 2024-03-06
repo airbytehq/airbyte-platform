@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal;
@@ -11,7 +11,6 @@ import io.airbyte.commons.temporal.factories.TemporalSelfHostedConfig;
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsFactory;
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsTimeouts;
 import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.persistence.job.models.JobRunConfig;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Value;
 import io.temporal.api.namespace.v1.NamespaceConfig;
@@ -194,12 +193,6 @@ public class TemporalUtils {
     return jobRoot.resolve(LogClientSingleton.LOG_FILENAME);
   }
 
-  // todo (cgardens) - there are 2 sources of truth for job path. we need to reduce this down to one,
-  // once we are fully on temporal.
-  public static Path getJobRoot(final Path workspaceRoot, final JobRunConfig jobRunConfig) {
-    return getJobRoot(workspaceRoot, jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
-  }
-
   /**
    * Get an attempt root director from workspace, job id, and attempt number.
    *
@@ -209,18 +202,6 @@ public class TemporalUtils {
    * @return working directory
    */
   public static Path getJobRoot(final Path workspaceRoot, final String jobId, final long attemptId) {
-    return getJobRoot(workspaceRoot, jobId, Math.toIntExact(attemptId));
-  }
-
-  /**
-   * Get an attempt root director from workspace, job id, and attempt number.
-   *
-   * @param workspaceRoot workspace root
-   * @param jobId job id
-   * @param attemptId attempt number (as int)
-   * @return working directory
-   */
-  public static Path getJobRoot(final Path workspaceRoot, final String jobId, final int attemptId) {
     return workspaceRoot
         .resolve(String.valueOf(jobId))
         .resolve(String.valueOf(attemptId));

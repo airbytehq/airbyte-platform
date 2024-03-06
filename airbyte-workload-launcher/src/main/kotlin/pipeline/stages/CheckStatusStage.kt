@@ -1,18 +1,21 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
 import datadog.trace.api.Trace
+import io.airbyte.metrics.annotations.Instrument
+import io.airbyte.metrics.annotations.Tag
 import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
-import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_PIPELINE_STAGE_OPERATION_NAME
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_ID_TAG
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
-import io.airbyte.workload.launcher.pods.KubePodClient
+import io.airbyte.workload.launcher.pods.PodClient
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import reactor.core.publisher.Mono
 
 private val logger = KotlinLogging.logger {}
 
@@ -22,24 +25,33 @@ private val logger = KotlinLogging.logger {}
  */
 @Singleton
 @Named("check")
-class CheckStatusStage(
-  private val apiClient: WorkloadApiClient,
-  private val kubeClient: KubePodClient,
+open class CheckStatusStage(
+  private val podClient: PodClient,
   private val customMetricPublisher: CustomMetricPublisher,
-) : LaunchStage {
-  @Trace(operationName = LAUNCH_PIPELINE_STAGE_OPERATION_NAME)
+  @Value("\${airbyte.data-plane-id}") dataplaneId: String,
+) : LaunchStage(customMetricPublisher, dataplaneId) {
+  @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "CheckStatusStage")
+  @Instrument(
+    start = "WORKLOAD_STAGE_START",
+    end = "WORKLOAD_STAGE_DONE",
+    tags = [Tag(key = MeterFilterFactory.STAGE_NAME_TAG, value = "check_status")],
+  )
+  override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
+    return super.apply(input)
+  }
+
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
-    if (kubeClient.podsExistForWorkload(input.msg.workloadId)) {
+    val podExists = podClient.podsExistForAutoId(input.msg.autoId)
+
+    if (podExists) {
       logger.info {
         "Found pods running for workload ${input.msg.workloadId}. Setting status to RUNNING and SKIP flag to true."
       }
-      customMetricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_ALREADY_RUNNING, MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId))
-
-      try {
-        apiClient.updateStatusToRunning(input.msg.workloadId)
-      } catch (e: Exception) {
-        logger.error(e) { "Failed to update workload: ${input.msg.workloadId} status to RUNNING. Ignoring." }
-      }
+      customMetricPublisher.count(
+        WorkloadLauncherMetricMetadata.WORKLOAD_ALREADY_RUNNING,
+        MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId),
+        MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
+      )
 
       return input.apply {
         skip = true

@@ -2,19 +2,15 @@ import { renderHook } from "@testing-library/react";
 import dayjs from "dayjs";
 
 import { mockConnection } from "test-utils";
-import { mockAttempt } from "test-utils/mock-data/mockAttempt";
-import { mockJob } from "test-utils/mock-data/mockJob";
 
-import { useListJobsForConnectionStatus, useGetConnection } from "core/api";
+import { useListConnectionsStatuses, useGetConnection } from "core/api";
 import {
   ConnectionScheduleDataBasicSchedule,
   ConnectionScheduleDataCron,
   ConnectionStatus,
-  FailureOrigin,
+  ConnectionStatusRead,
   FailureType,
-  JobConfigType,
   JobStatus,
-  JobWithAttemptsRead,
   SchemaChange,
   WebBackendConnectionRead,
 } from "core/api/types/AirbyteClient";
@@ -22,6 +18,7 @@ import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 
 import { isConnectionLate, isHandleableScheduledConnection, useConnectionStatus } from "./useConnectionStatus";
 import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
+import { jobStatusesIndicatingFinishedExecution } from "../ConnectionSync/ConnectionSyncContext";
 
 const MULTIPLIER_EXPERIMENT_VALUE = 2;
 
@@ -42,8 +39,8 @@ jest.mock("core/api");
 const mockUseGetConnection = useGetConnection as unknown as jest.Mock<WebBackendConnectionRead>;
 
 jest.mock("core/api");
-const mockUseListJobsForConnectionStatus = useListJobsForConnectionStatus as unknown as jest.Mock<
-  ReturnType<typeof useListJobsForConnectionStatus>
+const mockUseListConnectionsStatuses = useListConnectionsStatuses as unknown as jest.Mock<
+  Array<Partial<ConnectionStatusRead>>
 >;
 
 interface MockSetup {
@@ -53,10 +50,16 @@ interface MockSetup {
   scheduleType?: WebBackendConnectionRead["scheduleType"];
   scheduleData?: WebBackendConnectionRead["scheduleData"];
 
-  // job history
-  jobList?: JobWithAttemptsRead[];
+  // status(es)
+  connectionStatuses: Array<Partial<ConnectionStatusRead>>;
 }
-const resetAndSetupMocks = ({ connectionStatus, schemaChange, scheduleType, scheduleData, jobList }: MockSetup) => {
+const resetAndSetupMocks = ({
+  connectionStatus,
+  schemaChange,
+  scheduleType,
+  scheduleData,
+  connectionStatuses,
+}: MockSetup) => {
   if (schemaChange === SchemaChange.breaking && connectionStatus !== ConnectionStatus.inactive) {
     // platform disables a connection when there is a breaking schema change
     throw new Error("A breaking schema change should always result in an inactive connection");
@@ -72,11 +75,7 @@ const resetAndSetupMocks = ({ connectionStatus, schemaChange, scheduleType, sche
     scheduleData,
   }));
 
-  mockUseListJobsForConnectionStatus.mockImplementation(() => ({
-    data: { jobs: jobList || [], totalJobCount: jobList?.length ?? 0 },
-    isPreviousData: false,
-    setData: () => undefined,
-  }));
+  mockUseListConnectionsStatuses.mockReturnValue(connectionStatuses);
 
   mockUseSchemaChanges.mockImplementation(() => ({
     hasBreakingSchemaChange,
@@ -245,29 +244,29 @@ describe("useConnectionStatus", () => {
   const outside2xFrequency = dayjs().subtract(50, "hours").unix();
 
   it.each`
-    title                                                                                           | expectedConnectionStatus                          | connectionStatus             | schemaChange                 | jobList                                               | scheduleType | scheduleData
-    ${"most recent sync was successful, no schema changes"}                                         | ${ConnectionStatusIndicatorStatus.OnTime}         | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildJobs(JobStatus.succeeded, within1xFrequency)}  | ${undefined} | ${undefined}
-    ${"most recent sync was successful, breaking schema changes"}                                   | ${ConnectionStatusIndicatorStatus.ActionRequired} | ${ConnectionStatus.inactive} | ${SchemaChange.breaking}     | ${buildJobs(JobStatus.succeeded, within1xFrequency)}  | ${undefined} | ${undefined}
-    ${"breaking schema changes, sync is within 1x frequency"}                                       | ${ConnectionStatusIndicatorStatus.ActionRequired} | ${ConnectionStatus.inactive} | ${SchemaChange.breaking}     | ${buildJobs(JobStatus.failed, within1xFrequency)}     | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
-    ${"breaking schema changes, sync is within 2x frequency"}                                       | ${ConnectionStatusIndicatorStatus.ActionRequired} | ${ConnectionStatus.inactive} | ${SchemaChange.breaking}     | ${buildJobs(JobStatus.failed, within2xFrequency)}     | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
-    ${"breaking schema changes, sync is outside of 2x frequency"}                                   | ${ConnectionStatusIndicatorStatus.ActionRequired} | ${ConnectionStatus.inactive} | ${SchemaChange.breaking}     | ${buildJobs(JobStatus.failed, outside2xFrequency)}    | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
-    ${"new connection, not scheduled"}                                                              | ${ConnectionStatusIndicatorStatus.Pending}        | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildJobs(JobStatus.incomplete, undefined)}         | ${undefined} | ${undefined}
-    ${"new connection, scheduled"}                                                                  | ${ConnectionStatusIndicatorStatus.Pending}        | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildJobs(JobStatus.incomplete, undefined)}         | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
-    ${"connection status is failed, no previous success"}                                           | ${ConnectionStatusIndicatorStatus.Error}          | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildJobs(JobStatus.failed, undefined)}             | ${undefined} | ${undefined}
-    ${"connection status is failed, last previous success was within 1x schedule frequency"}        | ${ConnectionStatusIndicatorStatus.OnTrack}        | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildJobs(JobStatus.failed, within1xFrequency)}     | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
-    ${"connection status is failed, last previous success was within 2x schedule frequency"}        | ${ConnectionStatusIndicatorStatus.OnTrack}        | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildJobs(JobStatus.failed, within2xFrequency)}     | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
-    ${"connection status is failed, last previous success was within 2x schedule frequency (cron)"} | ${ConnectionStatusIndicatorStatus.Error}          | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildJobs(JobStatus.failed, within2xFrequency)}     | ${"cron"}    | ${{ cronExpression: "* * * * *", cronTimeZone: "UTC" }}
-    ${"connection status is failed, last previous success was outside 2x schedule frequency"}       | ${ConnectionStatusIndicatorStatus.Error}          | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildJobs(JobStatus.failed, outside2xFrequency)}    | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
-    ${"connection status is failed, last previous success was within 2x schedule frequency"}        | ${ConnectionStatusIndicatorStatus.OnTrack}        | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildJobs(JobStatus.failed, within2xFrequency)}     | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
-    ${"last sync was successful, but the next sync hasn't started (outside 2x frequency)"}          | ${ConnectionStatusIndicatorStatus.Late}           | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildJobs(JobStatus.succeeded, outside2xFrequency)} | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
-    ${"last sync was successful, but the next sync hasn't started (outside 2x frequency, cron)"}    | ${ConnectionStatusIndicatorStatus.OnTime}         | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildJobs(JobStatus.succeeded, outside2xFrequency)} | ${"cron"}    | ${{ cronExpression: "* * * * *", cronTimeZone: "UTC" }}
-    ${"last sync was cancelled, but the next cron-scheduled sync hasn't started"}                   | ${ConnectionStatusIndicatorStatus.OnTime}         | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildJobs(JobStatus.cancelled, within1xFrequency)}  | ${"cron"}    | ${{ cronExpression: "* * * * *", cronTimeZone: "UTC" }}
-    ${"last sync was cancelled, but last successful sync is within 1x frequency"}                   | ${ConnectionStatusIndicatorStatus.OnTime}         | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildJobs(JobStatus.cancelled, within1xFrequency)}  | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
-    ${"last sync was cancelled, but last successful sync is within 2x frequency"}                   | ${ConnectionStatusIndicatorStatus.OnTrack}        | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildJobs(JobStatus.cancelled, within2xFrequency)}  | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
-    ${"last sync was cancelled, but last successful sync is outside 2x frequency"}                  | ${ConnectionStatusIndicatorStatus.Late}           | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildJobs(JobStatus.cancelled, outside2xFrequency)} | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
-    ${"last sync has a config_error"}                                                               | ${ConnectionStatusIndicatorStatus.ActionRequired} | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildJobsWithConfigError(within1xFrequency)}        | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
-    ${"most recent completed job was a successful reset"}                                           | ${ConnectionStatusIndicatorStatus.Pending}        | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildJobs(JobStatus.succeeded, undefined, true)}    | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
-    ${"most recent completed job was a failed reset"}                                               | ${ConnectionStatusIndicatorStatus.Pending}        | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildJobs(JobStatus.failed, undefined, true)}       | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    title                                                                                           | expectedConnectionStatus                          | connectionStatus             | schemaChange                 | connectionStatuses                                                      | scheduleType | scheduleData
+    ${"most recent sync was successful, no schema changes"}                                         | ${ConnectionStatusIndicatorStatus.OnTime}         | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildConnectionStatusesRead(JobStatus.succeeded, within1xFrequency)}  | ${undefined} | ${undefined}
+    ${"most recent sync was successful, breaking schema changes"}                                   | ${ConnectionStatusIndicatorStatus.ActionRequired} | ${ConnectionStatus.inactive} | ${SchemaChange.breaking}     | ${buildConnectionStatusesRead(JobStatus.succeeded, within1xFrequency)}  | ${undefined} | ${undefined}
+    ${"breaking schema changes, sync is within 1x frequency"}                                       | ${ConnectionStatusIndicatorStatus.ActionRequired} | ${ConnectionStatus.inactive} | ${SchemaChange.breaking}     | ${buildConnectionStatusesRead(JobStatus.failed, within1xFrequency)}     | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    ${"breaking schema changes, sync is within 2x frequency"}                                       | ${ConnectionStatusIndicatorStatus.ActionRequired} | ${ConnectionStatus.inactive} | ${SchemaChange.breaking}     | ${buildConnectionStatusesRead(JobStatus.failed, within2xFrequency)}     | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    ${"breaking schema changes, sync is outside of 2x frequency"}                                   | ${ConnectionStatusIndicatorStatus.ActionRequired} | ${ConnectionStatus.inactive} | ${SchemaChange.breaking}     | ${buildConnectionStatusesRead(JobStatus.failed, outside2xFrequency)}    | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    ${"new connection, not scheduled"}                                                              | ${ConnectionStatusIndicatorStatus.Pending}        | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildConnectionStatusesRead()}                                        | ${undefined} | ${undefined}
+    ${"new connection, scheduled"}                                                                  | ${ConnectionStatusIndicatorStatus.Pending}        | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildConnectionStatusesRead()}                                        | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    ${"connection status is failed, no previous success"}                                           | ${ConnectionStatusIndicatorStatus.Error}          | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildConnectionStatusesRead(JobStatus.failed, undefined)}             | ${undefined} | ${undefined}
+    ${"connection status is failed, last previous success was within 1x schedule frequency"}        | ${ConnectionStatusIndicatorStatus.OnTrack}        | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildConnectionStatusesRead(JobStatus.failed, within1xFrequency)}     | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    ${"connection status is failed, last previous success was within 2x schedule frequency"}        | ${ConnectionStatusIndicatorStatus.OnTrack}        | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildConnectionStatusesRead(JobStatus.failed, within2xFrequency)}     | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    ${"connection status is failed, last previous success was within 2x schedule frequency (cron)"} | ${ConnectionStatusIndicatorStatus.Error}          | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildConnectionStatusesRead(JobStatus.failed, within2xFrequency)}     | ${"cron"}    | ${{ cronExpression: "* * * * *", cronTimeZone: "UTC" }}
+    ${"connection status is failed, last previous success was outside 2x schedule frequency"}       | ${ConnectionStatusIndicatorStatus.Error}          | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildConnectionStatusesRead(JobStatus.failed, outside2xFrequency)}    | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    ${"connection status is failed, last previous success was within 2x schedule frequency"}        | ${ConnectionStatusIndicatorStatus.OnTrack}        | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildConnectionStatusesRead(JobStatus.failed, within2xFrequency)}     | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    ${"last sync was successful, but the next sync hasn't started (outside 2x frequency)"}          | ${ConnectionStatusIndicatorStatus.Late}           | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildConnectionStatusesRead(JobStatus.succeeded, outside2xFrequency)} | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    ${"last sync was successful, but the next sync hasn't started (outside 2x frequency, cron)"}    | ${ConnectionStatusIndicatorStatus.OnTime}         | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildConnectionStatusesRead(JobStatus.succeeded, outside2xFrequency)} | ${"cron"}    | ${{ cronExpression: "* * * * *", cronTimeZone: "UTC" }}
+    ${"last sync was cancelled, but the next cron-scheduled sync hasn't started"}                   | ${ConnectionStatusIndicatorStatus.OnTime}         | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildConnectionStatusesRead(JobStatus.cancelled, within1xFrequency)}  | ${"cron"}    | ${{ cronExpression: "* * * * *", cronTimeZone: "UTC" }}
+    ${"last sync was cancelled, but last successful sync is within 1x frequency"}                   | ${ConnectionStatusIndicatorStatus.OnTime}         | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildConnectionStatusesRead(JobStatus.cancelled, within1xFrequency)}  | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    ${"last sync was cancelled, but last successful sync is within 2x frequency"}                   | ${ConnectionStatusIndicatorStatus.OnTrack}        | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildConnectionStatusesRead(JobStatus.cancelled, within2xFrequency)}  | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    ${"last sync was cancelled, but last successful sync is outside 2x frequency"}                  | ${ConnectionStatusIndicatorStatus.Late}           | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildConnectionStatusesRead(JobStatus.cancelled, outside2xFrequency)} | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    ${"last sync has a config_error"}                                                               | ${ConnectionStatusIndicatorStatus.ActionRequired} | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildConfigErrorConnectionStatusesRead(within1xFrequency)}            | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    ${"most recent completed job was a successful reset"}                                           | ${ConnectionStatusIndicatorStatus.Pending}        | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildConnectionStatusesRead(JobStatus.succeeded, undefined, true)}    | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    ${"most recent completed job was a failed reset"}                                               | ${ConnectionStatusIndicatorStatus.Pending}        | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildConnectionStatusesRead(JobStatus.failed, undefined, true)}       | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
   `(
     "$title:" +
       "\n\treturns $expectedConnectionStatus when" +
@@ -277,7 +276,7 @@ describe("useConnectionStatus", () => {
       "\n\tand has $schemaChange schema changes",
     ({ expectedConnectionStatus, scheduleType, scheduleData, ...mockConfig }) => {
       resetAndSetupMocks({ ...mockConfig, ...buildScheduleData(scheduleType, scheduleData) });
-      const { result } = renderHook(() => useConnectionStatus("test-connection-id"));
+      const { result } = renderHook(() => useConnectionStatus(mockConnection.connectionId));
       expect(result.current.status).toBe(expectedConnectionStatus);
     }
   );
@@ -286,9 +285,9 @@ describe("useConnectionStatus", () => {
     resetAndSetupMocks({
       connectionStatus: ConnectionStatus.active,
       schemaChange: SchemaChange.no_change,
-      jobList: buildJobs(JobStatus.incomplete, undefined),
+      connectionStatuses: buildConnectionStatusesRead(JobStatus.incomplete, undefined),
     });
-    const { result } = renderHook(() => useConnectionStatus("test-connection-id"));
+    const { result } = renderHook(() => useConnectionStatus(mockConnection.connectionId));
     expect(result.current.isRunning).toBe(true);
   });
 });
@@ -309,62 +308,27 @@ function buildScheduleData(
   return { scheduleType, scheduleData: { cron: schedule as ConnectionScheduleDataCron } };
 }
 
-function buildJobs(latestSyncStatus: JobStatus, lastSuccessfulSync: number | undefined, lastJobWasReset?: boolean) {
-  const jobs: JobWithAttemptsRead[] = [];
-
-  // jobslist endpoint returns the most recent job first
-
-  if (latestSyncStatus && !lastJobWasReset) {
-    jobs.push({
-      job: {
-        ...mockJob,
-        status: latestSyncStatus,
-      },
-      attempts: [], // attempts are not used
-    });
-  }
-
-  if (lastSuccessfulSync) {
-    jobs.push({
-      job: {
-        ...mockJob,
-        createdAt: lastSuccessfulSync,
-      },
-      attempts: [], // attempts are not used
-    });
-  }
-
-  if (lastJobWasReset) {
-    jobs.push({
-      job: {
-        ...mockJob,
-        status: latestSyncStatus,
-        configType: JobConfigType.reset_connection,
-        resetConfig: { streamsToReset: [] },
-      },
-      attempts: [], // attempts are not used
-    });
-  }
-  return jobs;
+function buildConnectionStatusesRead(
+  latestSyncStatus?: JobStatus,
+  lastSuccessfulSync?: number,
+  lastJobWasReset?: boolean
+) {
+  return [
+    {
+      connectionId: mockConnection.connectionId,
+      lastSyncJobStatus: latestSyncStatus,
+      [lastSuccessfulSync ? "lastSuccessfulSync" : ""]: lastSuccessfulSync,
+      isRunning: latestSyncStatus ? !jobStatusesIndicatingFinishedExecution.includes(latestSyncStatus) : false,
+      isLastCompletedJobReset: !!lastJobWasReset,
+    },
+  ] as Array<Partial<ConnectionStatusRead>>;
 }
 
-function buildJobsWithConfigError(lastSuccessfulSync: number | undefined) {
-  const jobs = buildJobs(JobStatus.failed, lastSuccessfulSync);
-
-  jobs[0].attempts = [
-    {
-      ...mockAttempt,
-      failureSummary: {
-        failures: [
-          {
-            failureOrigin: FailureOrigin.source,
-            failureType: FailureType.config_error,
-            timestamp: 0,
-          },
-        ],
-      },
-    },
-  ];
-
+function buildConfigErrorConnectionStatusesRead(lastSuccessfulSync: number | undefined) {
+  const jobs = buildConnectionStatusesRead(JobStatus.failed, lastSuccessfulSync);
+  jobs[0].failureReason = {
+    failureType: FailureType.config_error,
+    timestamp: Date.now(),
+  };
   return jobs;
 }

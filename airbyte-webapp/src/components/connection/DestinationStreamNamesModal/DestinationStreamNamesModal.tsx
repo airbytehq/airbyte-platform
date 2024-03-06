@@ -11,7 +11,7 @@ import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
-import { HookFormConnectionFormValues } from "../ConnectionForm/hookFormConfig";
+import { FormConnectionFormValues } from "../ConnectionForm/formConfig";
 import { LabeledRadioButtonFormControl } from "../ConnectionForm/LabeledRadioButtonFormControl";
 
 export const enum StreamNameDefinitionValueType {
@@ -21,17 +21,20 @@ export const enum StreamNameDefinitionValueType {
 
 export interface DestinationStreamNamesFormValues {
   streamNameDefinition: StreamNameDefinitionValueType;
-  prefix?: string;
+  prefix: string;
 }
 
 const StreamNamePrefixInput: React.FC = () => {
   const { formatMessage } = useIntl();
-  const { watch, trigger } = useFormContext<DestinationStreamNamesFormValues>();
+  const { watch, trigger, setValue } = useFormContext<DestinationStreamNamesFormValues>();
   const watchedStreamNameDefinition = watch("streamNameDefinition");
 
   useEffect(() => {
+    if (watchedStreamNameDefinition !== StreamNameDefinitionValueType.Prefix) {
+      setValue("prefix", "");
+    }
     trigger("prefix");
-  }, [trigger, watchedStreamNameDefinition]);
+  }, [setValue, trigger, watchedStreamNameDefinition]);
 
   return (
     <FormControl
@@ -52,18 +55,21 @@ const destinationStreamNamesValidationSchema = yup.object().shape({
     .mixed<StreamNameDefinitionValueType>()
     .oneOf([StreamNameDefinitionValueType.Mirror, StreamNameDefinitionValueType.Prefix])
     .required("form.empty.error"),
-  prefix: yup.string().when("streamNameDefinition", {
-    is: StreamNameDefinitionValueType.Prefix,
-    then: yup
-      .string()
-      .trim()
-      .required("form.empty.error")
-      .matches(/^[a-zA-Z0-9_]*$/, "form.invalidCharacters.alphanumericunder.error"),
-  }),
+  prefix: yup
+    .string()
+    .when("streamNameDefinition", {
+      is: StreamNameDefinitionValueType.Prefix,
+      then: yup
+        .string()
+        .trim()
+        .required("form.empty.error")
+        .matches(/^[a-zA-Z0-9_]*$/, "form.invalidCharacters.alphanumericunder.error"),
+    })
+    .default(""),
 });
 
 interface DestinationStreamNamesModalProps {
-  initialValues: Pick<HookFormConnectionFormValues, "prefix">;
+  initialValues: Pick<FormConnectionFormValues, "prefix">;
   onCloseModal: () => void;
   onSubmit: (value: DestinationStreamNamesFormValues) => void;
 }
@@ -83,9 +89,8 @@ export const DestinationStreamNamesModal: React.FC<DestinationStreamNamesModalPr
   return (
     <Form
       defaultValues={{
-        streamNameDefinition: initialValues.prefix
-          ? StreamNameDefinitionValueType.Prefix
-          : StreamNameDefinitionValueType.Mirror,
+        streamNameDefinition:
+          initialValues.prefix.length > 0 ? StreamNameDefinitionValueType.Prefix : StreamNameDefinitionValueType.Mirror,
         prefix: initialValues.prefix ?? "",
       }}
       schema={destinationStreamNamesValidationSchema}

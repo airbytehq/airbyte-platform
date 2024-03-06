@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.lib;
@@ -118,6 +118,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   CRON_JOB_RUN_BY_CRON_TYPE(MetricEmittingApps.CRON,
       "cron_jobs_run",
       "number of cron runs by cron type"),
+  CONNECTOR_REGISTRY_DEFINITION_PROCESSED(
+      MetricEmittingApps.CRON, // Actually `cron` or `bootloader` based on which metric client calls the code
+      "connector_registry_definition_processed",
+      "increments when a connector registry definition is processed by the ApplyDefinitionsHelper"),
   EST_NUM_METRICS_EMITTED_BY_REPORTER(
       MetricEmittingApps.METRICS_REPORTER,
       "est_num_metrics_emitted_by_reporter",
@@ -142,6 +146,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.WORKER,
       "json_string_length",
       "string length of a raw json string"),
+  RECORD_SIZE_ERROR(
+      MetricEmittingApps.WORKER,
+      "record_size_error",
+      "length of a raw record json string exceeding the limit"),
   KUBE_POD_PROCESS_CREATE_TIME_MILLISECS(
       MetricEmittingApps.WORKER,
       "kube_pod_process_create_time_millisecs",
@@ -208,11 +216,19 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   ORCHESTRATOR_OUT_OF_MEMORY(MetricEmittingApps.WORKER,
       "orchestrator_out_of_memory",
       "orchestrator out of memory error"),
+  ORCHESTRATOR_INIT_COPY_FAILURE(MetricEmittingApps.WORKER,
+      "orchestrator_init_copy_failure",
+      "init files failed to copy over to orchestrator"),
 
   OVERALL_JOB_RUNTIME_IN_LAST_HOUR_BY_TERMINAL_STATE_SECS(MetricEmittingApps.METRICS_REPORTER,
       "overall_job_runtime_in_last_hour_by_terminal_state_secs",
       "overall job runtime - scheduling and execution for all attempts - for jobs that reach terminal states in the last hour. "
           + "tagged by terminal states."),
+
+  RUNNING_PODS_FOUND_FOR_CONNECTION_ID(MetricEmittingApps.WORKER,
+      "running_pods_found_for_connection_id",
+      "whether we found pods running for a given connection id when attempting to start a sync for that connection id"),
+
   REPLICATION_BYTES_SYNCED(MetricEmittingApps.WORKER,
       "replication_bytes_synced",
       "number of bytes synced during replication"),
@@ -342,6 +358,15 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   WORKFLOWS_HEALED(MetricEmittingApps.CRON,
       "workflows_healed",
       "number of workflow the self healing cron healed"),
+  WORKLOAD_MONITOR_RUN(MetricEmittingApps.CRON,
+      "workload_monitor_run",
+      "number of cron run for the workload_monitor"),
+  WORKLOAD_MONITOR_DONE(MetricEmittingApps.CRON,
+      "workload_monitor_done",
+      "number of cron completed run for the workload_monitor"),
+  WORKLOAD_MONITOR_DURATION(MetricEmittingApps.CRON,
+      "workload_monitor_duration",
+      "duration of a run of the workload_monitor"),
   WORKLOADS_CANCEL(MetricEmittingApps.CRON,
       "workload_cancel",
       "number of workloads canceled"),
@@ -359,7 +384,41 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "Skip the line because of its size"),
   TOO_LONG_LINES_DISTRIBUTION(MetricEmittingApps.WORKER,
       "too_long_lines_distribution",
-      "Too long line distribution");
+      "Too long line distribution"),
+  WORKLOAD_LAUNCHER_KUBE_ERROR(MetricEmittingApps.WORKLOAD_LAUNCHER,
+      "workload_kube_error",
+      "Number of kube error in the workload launcher"),
+  WORKLOAD_LAUNCHER_KUBE_COPY_SUCCESS_OOM(MetricEmittingApps.WORKLOAD_LAUNCHER,
+      "workload_launcher_kube_copy_success_oom",
+      "Number of kube cp errors when trying to write the success file in the launcher"),
+  JOB_OUTPUT_WRITE(MetricEmittingApps.ORCHESTRATOR,
+      "job_output_write",
+      "Write a job output in the output folder"),
+  JOB_OUTPUT_READ(MetricEmittingApps.WORKER,
+      "job_output_read",
+      "Read a job output from the output folder"),
+  SYNC_RECORD_CHECKSUM(MetricEmittingApps.ORCHESTRATOR,
+      "sync_record_checksum",
+      "Report the status of a record checksum"),
+  SYNC_STATE_RECORD_COUNT(MetricEmittingApps.ORCHESTRATOR,
+      "sync_state_record_count",
+      "The record count emitted between state messages."),
+
+  DESTINATION_DESERIALIZATION_ERROR(MetricEmittingApps.ORCHESTRATOR,
+      "destination_deserialization_error",
+      "When a sync failed with a deserialization error from the destination"),
+
+  SIDECAR_CHECK(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
+      "sidecar_check",
+      "Exit of the connetor sidecar"),
+
+  CATALOG_DISCOVERY(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
+      "catalog_discover",
+      "Exit of the connetor sidecar"),
+
+  SPEC(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
+      "spec",
+      "Result of the spec operation");
 
   private final MetricEmittingApp application;
   private final String metricName;

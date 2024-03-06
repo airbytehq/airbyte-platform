@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job.models;
@@ -112,7 +112,7 @@ class JobTest {
     assertDoesNotThrow(() -> incompleteJob.validateStatusTransition(JobStatus.RUNNING));
     assertDoesNotThrow(() -> incompleteJob.validateStatusTransition(JobStatus.FAILED));
     assertDoesNotThrow(() -> incompleteJob.validateStatusTransition(JobStatus.CANCELLED));
-    assertThrows(IllegalStateException.class, () -> incompleteJob.validateStatusTransition(JobStatus.SUCCEEDED));
+    assertDoesNotThrow(() -> incompleteJob.validateStatusTransition(JobStatus.SUCCEEDED));
   }
 
   @Test

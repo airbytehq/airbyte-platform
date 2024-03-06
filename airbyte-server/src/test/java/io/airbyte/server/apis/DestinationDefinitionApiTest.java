@@ -1,8 +1,10 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
+
+import static org.mockito.Mockito.doThrow;
 
 import io.airbyte.api.model.generated.CustomDestinationDefinitionCreate;
 import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
@@ -14,6 +16,7 @@ import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.errors.ApplicationErrorKnownException;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -22,6 +25,7 @@ import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import java.io.IOException;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -52,6 +56,17 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
     testErrorEndpointStatus(
         HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdRequestBody())),
         HttpStatus.NOT_FOUND);
+  }
+
+  @Test
+  void testDeleteDestinationDefinitionNoWriteAccess() {
+    final UUID destinationDefinitionId = UUID.randomUUID();
+    doThrow(new ApplicationErrorKnownException("invalid")).when(actorDefinitionAccessValidator).validateWriteAccess(destinationDefinitionId);
+
+    final String path = "/api/v1/destination_definitions/delete";
+    testErrorEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationDefinitionId))),
+        HttpStatus.UNPROCESSABLE_ENTITY);
   }
 
   @Test
@@ -147,7 +162,8 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testUpdateDestinationDefinition() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testUpdateDestinationDefinition()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     Mockito.when(destinationDefinitionsHandler.updateDestinationDefinition(Mockito.any()))
         .thenReturn(new DestinationDefinitionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -158,6 +174,17 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
     testErrorEndpointStatus(
         HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionUpdate())),
         HttpStatus.NOT_FOUND);
+  }
+
+  @Test
+  void testUpdateDestinationDefinitionNoWriteAccess() {
+    final UUID destinationDefinitionId = UUID.randomUUID();
+    doThrow(new ApplicationErrorKnownException("invalid")).when(actorDefinitionAccessValidator).validateWriteAccess(destinationDefinitionId);
+
+    final String path = "/api/v1/destination_definitions/update";
+    testErrorEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionUpdate().destinationDefinitionId(destinationDefinitionId))),
+        HttpStatus.UNPROCESSABLE_ENTITY);
   }
 
 }

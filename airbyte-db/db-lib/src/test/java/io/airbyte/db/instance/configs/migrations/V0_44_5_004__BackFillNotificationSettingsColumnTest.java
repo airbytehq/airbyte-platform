@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance.configs.migrations;
@@ -77,7 +77,7 @@ class V0_44_5_004__BackFillNotificationSettingsColumnTest extends AbstractConfig
         .withSendOnSyncDisabledWarning(new NotificationItem()
             .withNotificationType(List.of(NotificationType.CUSTOMERIO)));
 
-    String expectedNotificationJson = Jsons.serialize(expectedNotification);
+    final String expectedNotificationJson = Jsons.serialize(expectedNotification);
 
     JSONAssert.assertEquals(expectedNotificationJson, result, /* strict= */ true);
   }
@@ -122,7 +122,7 @@ class V0_44_5_004__BackFillNotificationSettingsColumnTest extends AbstractConfig
         .withSendOnSyncDisabledWarning(new NotificationItem()
             .withNotificationType(List.of(NotificationType.CUSTOMERIO)));
 
-    String expectedNotificationJson = Jsons.serialize(expectedNotification);
+    final String expectedNotificationJson = Jsons.serialize(expectedNotification);
 
     JSONAssert.assertEquals(expectedNotificationJson, result, /* strict= */ true);
   }

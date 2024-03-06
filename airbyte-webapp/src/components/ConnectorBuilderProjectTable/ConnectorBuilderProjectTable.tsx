@@ -1,12 +1,12 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import classNames from "classnames";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
-import { useNavigate } from "react-router-dom";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
+import { Link } from "components/ui/Link";
 import { Modal, ModalBody } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
 import { Table } from "components/ui/Table";
@@ -16,10 +16,12 @@ import { Tooltip } from "components/ui/Tooltip";
 import {
   BuilderProject,
   useChangeBuilderProjectVersion,
+  useCurrentWorkspace,
   useDeleteBuilderProject,
   useListBuilderProjectVersions,
 } from "core/api";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useNotificationService } from "hooks/services/Notification";
 import { getEditPath } from "pages/connectorBuilder/ConnectorBuilderRoutes";
@@ -136,7 +138,7 @@ const VersionChangeModal: React.FC<{
   );
 };
 
-const VersionChanger = ({ project }: { project: BuilderProject }) => {
+const VersionChanger = ({ project, canUpdateConnector }: { project: BuilderProject; canUpdateConnector: boolean }) => {
   const [changeInProgress, setChangeInProgress] = useState(false);
   if (project.version === "draft") {
     return (
@@ -154,6 +156,7 @@ const VersionChanger = ({ project }: { project: BuilderProject }) => {
   return (
     <>
       <Button
+        disabled={!canUpdateConnector}
         variant="clear"
         onClick={() => {
           setChangeInProgress(true);
@@ -180,23 +183,31 @@ export const ConnectorBuilderProjectTable = ({
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const analyticsService = useAnalyticsService();
   const { mutateAsync: deleteProject } = useDeleteBuilderProject();
-  const navigate = useNavigate();
+  const { workspaceId } = useCurrentWorkspace();
+  const canUpdateConnector = useIntent("UpdateCustomConnector", { workspaceId });
+  const getEditUrl = useCallback(
+    (projectId: string) => `${basePath ? basePath : ""}${getEditPath(projectId)}`,
+    [basePath]
+  );
   const columns = useMemo(
     () => [
       columnHelper.accessor("name", {
         header: () => <FormattedMessage id="connectorBuilder.listPage.name" />,
         cell: (props) => (
-          <FlexContainer alignItems="center">
+          <Link to={getEditUrl(props.row.original.id)} className={styles.nameLink}>
             {/* TODO: replace with custom logos once available */}
             <BuilderLogo />
             <Text>{props.cell.getValue()}</Text>
-          </FlexContainer>
+          </Link>
         ),
+        meta: {
+          tdClassName: styles.nameCell,
+        },
       }),
       columnHelper.accessor("version", {
         header: () => <FormattedMessage id="connectorBuilder.listPage.version" />,
         cell: (props) => {
-          return <VersionChanger project={props.row.original} />;
+          return <VersionChanger canUpdateConnector={canUpdateConnector} project={props.row.original} />;
         },
       }),
       columnHelper.display({
@@ -207,73 +218,81 @@ export const ConnectorBuilderProjectTable = ({
             <Text className={styles.draftInProgress} color="grey">
               {props.row.original.hasDraft && <FormattedMessage id="connectorBuilder.draftInProgressLabel" />}
             </Text>
-            <Button
-              variant="clear"
-              data-testid={`edit-project-button-${props.row.original.name}`}
-              icon={<Icon type="pencil" />}
-              onClick={() => {
-                const editPath = getEditPath(props.row.original.id);
-                navigate(basePath ? `${basePath}${editPath}` : editPath);
-              }}
-            />
-            <Tooltip
-              disabled={!props.row.original.sourceDefinitionId}
-              control={
-                <Button
-                  type="button"
-                  variant="clear"
-                  disabled={Boolean(props.row.original.sourceDefinitionId)}
-                  icon={<Icon type="trash" />}
-                  onClick={() => {
-                    unregisterNotificationById(NOTIFICATION_ID);
-                    openConfirmationModal({
-                      text: "connectorBuilder.deleteProjectModal.text",
-                      title: "connectorBuilder.deleteProjectModal.title",
-                      submitButtonText: "connectorBuilder.deleteProjectModal.submitButton",
-                      onSubmit: () => {
-                        closeConfirmationModal();
-                        deleteProject(props.row.original)
-                          .then(() => {
-                            analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONNECTOR_BUILDER_DELETE, {
-                              actionDescription: "User has deleted a Connector Builder project",
-                              projectId: props.row.original.id,
-                            });
-                          })
-                          .catch((e) => {
-                            registerNotification({
-                              id: NOTIFICATION_ID,
-                              text: (
-                                <FormattedMessage
-                                  id={DELETE_PROJECT_ERROR_ID}
-                                  values={{
-                                    reason: e.message,
-                                  }}
-                                />
-                              ),
-                              type: "error",
-                            });
-                          });
-                      },
-                    });
-                  }}
-                />
-              }
-            >
-              <FormattedMessage id="connectorBuilder.deleteProject.publishedTooltip" />
-            </Tooltip>
+            {canUpdateConnector ? (
+              <>
+                <Link
+                  to={getEditUrl(props.row.original.id)}
+                  data-testid={`edit-project-button-${props.row.original.name}`}
+                >
+                  <Icon type="pencil" />
+                </Link>
+                <Tooltip
+                  disabled={!props.row.original.sourceDefinitionId}
+                  control={
+                    <Button
+                      type="button"
+                      variant="clear"
+                      disabled={Boolean(props.row.original.sourceDefinitionId)}
+                      icon={<Icon type="trash" />}
+                      onClick={() => {
+                        unregisterNotificationById(NOTIFICATION_ID);
+                        openConfirmationModal({
+                          text: "connectorBuilder.deleteProjectModal.text",
+                          title: "connectorBuilder.deleteProjectModal.title",
+                          submitButtonText: "connectorBuilder.deleteProjectModal.submitButton",
+                          onSubmit: () => {
+                            closeConfirmationModal();
+                            deleteProject(props.row.original)
+                              .then(() => {
+                                analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONNECTOR_BUILDER_DELETE, {
+                                  actionDescription: "User has deleted a Connector Builder project",
+                                  projectId: props.row.original.id,
+                                });
+                              })
+                              .catch((e) => {
+                                registerNotification({
+                                  id: NOTIFICATION_ID,
+                                  text: (
+                                    <FormattedMessage
+                                      id={DELETE_PROJECT_ERROR_ID}
+                                      values={{
+                                        reason: e.message,
+                                      }}
+                                    />
+                                  ),
+                                  type: "error",
+                                });
+                              });
+                          },
+                        });
+                      }}
+                    />
+                  }
+                >
+                  <FormattedMessage id="connectorBuilder.deleteProject.publishedTooltip" />
+                </Tooltip>
+              </>
+            ) : (
+              <Link
+                to={getEditUrl(props.row.original.id)}
+                data-testid={`view-project-button-${props.row.original.name}`}
+              >
+                <Icon type="eye" />
+              </Link>
+            )}
           </FlexContainer>
         ),
       }),
     ],
     [
-      analyticsService,
-      basePath,
+      getEditUrl,
+      canUpdateConnector,
+      unregisterNotificationById,
+      openConfirmationModal,
       closeConfirmationModal,
       deleteProject,
-      navigate,
-      openConfirmationModal,
+      analyticsService,
       registerNotification,
-      unregisterNotificationById,
     ]
   );
 

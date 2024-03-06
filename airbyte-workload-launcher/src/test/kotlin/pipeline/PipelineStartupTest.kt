@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.pipeline
@@ -16,6 +16,7 @@ class PipelineStartupTest {
   @Test
   fun `should process claimed workloads`() {
     val workerFactory: WorkerFactory = mockk()
+    val highPriorityworkerFactory: WorkerFactory = mockk()
     val claimedProcessor: ClaimedProcessor = mockk()
 
     every { claimedProcessor.retrieveAndProcess() } returns Unit
@@ -25,6 +26,7 @@ class PipelineStartupTest {
       StartupApplicationEventListener(
         claimedProcessor,
         workerFactory,
+        highPriorityworkerFactory,
       )
 
     listener.onApplicationEvent(null)
@@ -32,5 +34,6 @@ class PipelineStartupTest {
 
     verify { claimedProcessor.retrieveAndProcess() }
     verify { workerFactory.start() }
+    verify { highPriorityworkerFactory.start() }
   }
 }

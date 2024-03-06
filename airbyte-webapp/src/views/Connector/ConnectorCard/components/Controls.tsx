@@ -4,7 +4,7 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 
-import { SynchronousJobRead } from "core/request/AirbyteClient";
+import { SynchronousJobRead } from "core/api/types/AirbyteClient";
 
 import { TestCard } from "./TestCard";
 

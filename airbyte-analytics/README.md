@@ -16,7 +16,8 @@ for this environment variable include:
 * `LOGGING`
 * `SEGMENT`
 
-In addition to the type of analytics tracker, the following environment variables must also be set:
+If the `SEGMENT` tracking strategy type is enabled, the write key must also be provided using the `SEGMENT_WRITE_KEY` 
+environment variable. In addition to the type of analytics tracker, the following environment variables must also be set:
 
 * `AIRBYTE_ROLE`
 * `AIRBYTE_VERSION`
@@ -30,37 +31,27 @@ In order to use this module in a service at runtime,  add the following configur
 airbyte:
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   role: ${AIRBYTE_ROLE:dev}
-  tracking-strategy: ${TRACKING_STRATEGY:LOGGING}  
+  tracking:
+    strategy: ${TRACKING_STRATEGY:LOGGING}
+    write-key: ${SEGMENT_WRITE_KEY:}
   version: ${AIRBYTE_VERSION:dev}
 ```
 
-Finally, you must also declare the following singleton beans:
+Finally, you may also declare overrides of the following singleton beans to fetch information at runtime:
 
 ```kotlin
 @Singleton
-@Named("deploymentIdSupplier")
-fun deploymentIdSupplier(jobPersistence:JobPersistence): Supplier<UUID> {
-    return Supplier { jobPersistence.getDeployment().orElseThrow() }
+@Named("deploymentSupplier")
+@Replaces(named="deploymentSupplier")
+fun deploymentSupplier(deploymentMetadataApi: DeploymentMetadataApi) {
+    return Supplier { deploymentMetadataApi.getDeploymentMetadata() }
 }
 
 @Singleton
 @Named("workspaceFetcher")
+@Replaces(named="workspaceFetcher")
 fun workspaceFetcher(workspaceApi: WorkspaceApi): Function<UUID, WorkspaceRead> {
     return Function { workspaceId:UUID -> workspaceApi.getWorkspace(WorkspaceIdRequestBody().workspaceId(workspaceId).includeTombstone(true)) }
-}
-
-@Singleton
-fun airbyteVersion(@Value("\${airbyte.version}") airbyteVersion: String): AirbyteVersion {
-    return AirbyteVersion(airbyteVersion)
-}
-
-@Singleton
-fun deploymentMode(@Value("\${airbyte.deployment-mode}") deploymentMode: String): Configs.DeploymentMode  {
-    return convertToEnum(deploymentMode, Configs.DeploymentMode::valueOf, Configs.DeploymentMode.OSS);
-}
-
-private fun <T> convertToEnum(value: String, creatorFunction: Function<String, T>, defaultValue: T): T {
-    return if (StringUtils.isNotEmpty(value)) creatorFunction.apply(value.uppercase()) else defaultValue
 }
 
 ```

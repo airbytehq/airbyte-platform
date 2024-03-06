@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_JSON_MANIFEST_VALUES } from "components/connectorBuilder/types";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { CommonRequestError } from "core/api/errors";
 
 import { readStream, resolveManifest } from "../generated/ConnectorBuilderClient";
 import { KnownExceptionInfo } from "../generated/ConnectorBuilderClient.schemas";
@@ -47,7 +48,7 @@ export const useBuilderReadStream = (
 export const useBuilderResolvedManifest = (params: ResolveManifestRequestBody, enabled = true) => {
   const requestOptions = useRequestOptions();
 
-  return useQuery<ResolveManifest, KnownExceptionInfo>(
+  return useQuery<ResolveManifest, CommonRequestError<KnownExceptionInfo>>(
     connectorBuilderKeys.resolve(params.manifest),
     () => resolveManifest(params, requestOptions),
     {

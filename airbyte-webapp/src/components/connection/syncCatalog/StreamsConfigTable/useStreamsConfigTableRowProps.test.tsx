@@ -1,8 +1,8 @@
 import { renderHook } from "@testing-library/react";
 
-import { HookFormConnectionFormValues } from "components/connection/ConnectionForm/hookFormConfig";
+import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 
-import { AirbyteStreamAndConfiguration } from "core/request/AirbyteClient";
+import { AirbyteStreamAndConfiguration } from "core/api/types/AirbyteClient";
 import * as connectionFormService from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { useStreamsConfigTableRowProps } from "./useStreamsConfigTableRowProps";
@@ -15,7 +15,7 @@ const mockStream: Partial<AirbyteStreamAndConfiguration> = {
   config: { selected: true, syncMode: "full_refresh", destinationSyncMode: "overwrite" },
 };
 
-const mockInitialValues: Partial<HookFormConnectionFormValues> = {
+const mockInitialValues: Partial<FormConnectionFormValues> = {
   syncCatalog: {
     streams: [
       {
@@ -29,7 +29,7 @@ const mockInitialValues: Partial<HookFormConnectionFormValues> = {
   },
 };
 
-const mockDisabledInitialValues: Partial<HookFormConnectionFormValues> = {
+const mockDisabledInitialValues: Partial<FormConnectionFormValues> = {
   syncCatalog: {
     streams: [
       {
@@ -41,7 +41,7 @@ const mockDisabledInitialValues: Partial<HookFormConnectionFormValues> = {
   },
 };
 
-const testSetup = (initialValues: Partial<HookFormConnectionFormValues>) => {
+const testSetup = (initialValues: Partial<FormConnectionFormValues>) => {
   jest.spyOn(connectionFormService, "useConnectionFormService").mockImplementation(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return { initialValues } as any;

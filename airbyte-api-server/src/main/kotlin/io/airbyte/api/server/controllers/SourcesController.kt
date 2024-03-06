@@ -1,11 +1,10 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.server.controllers
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.airbyte_api.generated.SourcesApi
 import io.airbyte.airbyte_api.model.generated.InitiateOauthRequest
 import io.airbyte.airbyte_api.model.generated.SourceCreateRequest
 import io.airbyte.airbyte_api.model.generated.SourcePatchRequest
@@ -19,6 +18,7 @@ import io.airbyte.api.server.constants.PUT
 import io.airbyte.api.server.constants.SOURCES_PATH
 import io.airbyte.api.server.constants.SOURCES_WITH_ID_PATH
 import io.airbyte.api.server.constants.SOURCE_TYPE
+import io.airbyte.api.server.controllers.interfaces.SourcesApi
 import io.airbyte.api.server.helpers.getActorDefinitionIdFromActorName
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.helpers.removeSourceTypeNode
@@ -40,6 +40,7 @@ open class SourcesController(
 ) : SourcesApi {
   override fun createSource(
     sourceCreateRequest: SourceCreateRequest,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -70,6 +71,7 @@ open class SourcesController(
           sourceService.createSource(
             sourceCreateRequest,
             sourceDefinitionId,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -92,6 +94,7 @@ open class SourcesController(
 
   override fun deleteSource(
     sourceId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -101,6 +104,7 @@ open class SourcesController(
         {
           sourceService.deleteSource(
             sourceId,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -122,6 +126,7 @@ open class SourcesController(
 
   override fun getSource(
     sourceId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -131,6 +136,7 @@ open class SourcesController(
         {
           sourceService.getSource(
             sourceId,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -152,16 +158,18 @@ open class SourcesController(
 
   override fun initiateOAuth(
     initiateOauthRequest: InitiateOauthRequest,
+    authorization: String?,
     userInfo: String?,
   ): Response {
-    return sourceService.controllerInitiateOAuth(initiateOauthRequest, userInfo)
+    return sourceService.controllerInitiateOAuth(initiateOauthRequest, authorization, userInfo)
   }
 
   override fun listSources(
-    workspaceIds: MutableList<UUID>?,
+    workspaceIds: List<UUID>?,
     includeDeleted: Boolean?,
     limit: Int?,
     offset: Int?,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -174,6 +182,7 @@ open class SourcesController(
           includeDeleted!!,
           limit!!,
           offset!!,
+          authorization,
           getLocalUserInfoIfNull(userInfo),
         )
       }, SOURCES_PATH, GET, userId)
@@ -193,6 +202,7 @@ open class SourcesController(
   override fun patchSource(
     sourceId: UUID,
     sourcePatchRequest: SourcePatchRequest,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -205,6 +215,7 @@ open class SourcesController(
           sourceService.partialUpdateSource(
             sourceId,
             sourcePatchRequest,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -227,6 +238,7 @@ open class SourcesController(
   override fun putSource(
     sourceId: UUID,
     sourcePutRequest: SourcePutRequest,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -239,6 +251,7 @@ open class SourcesController(
           sourceService.updateSource(
             sourceId,
             sourcePutRequest,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },

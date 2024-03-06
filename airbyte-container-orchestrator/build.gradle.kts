@@ -21,6 +21,8 @@ plugins {
     id("io.airbyte.gradle.jvm.app")
     id("io.airbyte.gradle.docker")
     id("io.airbyte.gradle.publish")
+    kotlin("jvm")
+    kotlin("kapt")
 }
 
 val airbyteProtocol by configurations.creating
@@ -41,6 +43,7 @@ dependencies {
 
     implementation(platform(libs.micronaut.bom))
     implementation(libs.bundles.micronaut)
+    implementation(libs.bundles.micronaut.metrics)
     implementation(libs.guava)
     implementation(libs.s3)
     implementation(libs.aws.java.sdk.s3)
@@ -56,6 +59,7 @@ dependencies {
     implementation(project(":airbyte-commons-converters"))
     implementation(project(":airbyte-commons-protocol"))
     implementation(project(":airbyte-commons-micronaut"))
+    implementation(project(":airbyte-commons-micronaut-security"))
     implementation(project(":airbyte-commons-temporal"))
     implementation(project(":airbyte-commons-with-dependencies"))
     implementation(project(":airbyte-commons-worker"))
@@ -70,11 +74,11 @@ dependencies {
     testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
     testImplementation(libs.bundles.micronaut.test)
-    testImplementation(libs.mockito.inline)
+    testImplementation(libs.bundles.mockito.inline)
+    testImplementation(libs.bundles.bouncycastle)
     testImplementation(libs.postgresql)
     testImplementation(libs.platform.testcontainers)
     testImplementation(libs.platform.testcontainers.postgresql)
-    testImplementation(libs.bundles.bouncycastle)
 
     airbyteProtocol(libs.airbyte.protocol) {
         isTransitive = false

@@ -1,7 +1,6 @@
 export enum RoutePaths {
   AuthFlow = "/auth_flow",
   Root = "/",
-
   SpeakeasyRedirect = "speakeasy-redirect",
   Workspaces = "workspaces",
   Setup = "setup",
@@ -9,7 +8,6 @@ export enum RoutePaths {
   Destination = "destination",
   Source = "source",
   Settings = "settings",
-  Connection = "connection",
   ConnectorBuilder = "connector-builder",
 }
 
@@ -35,10 +33,12 @@ export const enum ConnectionRoutePaths {
   JobHistory = "job-history",
   ConnectionNew = "new-connection",
   Configure = "configure",
+  ConfigureContinued = "continued",
 }
 
 export enum SettingsRoutePaths {
   Account = "account",
+  Advanced = "advanced",
   Destination = "destination",
   Source = "source",
   Configuration = "configuration",
@@ -48,4 +48,5 @@ export enum SettingsRoutePaths {
   Workspace = "workspace",
   Organization = "organization",
   AccessManagement = "access-management",
+  Applications = "applications",
 }

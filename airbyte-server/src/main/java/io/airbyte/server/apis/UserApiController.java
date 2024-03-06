@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
@@ -15,12 +15,14 @@ import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationUserReadList;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
+import io.airbyte.api.model.generated.UserEmailRequestBody;
 import io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse;
 import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserUpdate;
 import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.SecuredUser;
 import io.airbyte.commons.server.handlers.UserHandler;
@@ -70,6 +72,14 @@ public class UserApiController implements UserApi {
     return ApiHelper.execute(() -> userHandler.getUserByAuthId(userAuthIdRequestBody));
   }
 
+  @Post("/get_by_email")
+  @SecuredUser
+  @Secured({ADMIN, SELF})
+  @Override
+  public UserRead getUserByEmail(final UserEmailRequestBody userEmailRequestBody) {
+    return ApiHelper.execute(() -> userHandler.getUserByEmail(userEmailRequestBody));
+  }
+
   @Post("/delete")
   @SecuredUser
   @Secured({ADMIN, SELF})
@@ -104,6 +114,14 @@ public class UserApiController implements UserApi {
   @Override
   public WorkspaceUserReadList listUsersInWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> userHandler.listUsersInWorkspace(workspaceIdRequestBody));
+  }
+
+  @Post("/list_access_info_by_workspace_id")
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public WorkspaceUserAccessInfoReadList listAccessInfoByWorkspaceId(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
+    return ApiHelper.execute(() -> userHandler.listAccessInfoByWorkspaceId(workspaceIdRequestBody));
   }
 
   @Post("/list_instance_admins")

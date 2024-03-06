@@ -5,8 +5,8 @@ import { Option } from "components/ui/ListBox";
 
 import { useCurrentWorkspace } from "core/api";
 import { useGetCloudWorkspaceUsage } from "core/api/cloud";
+import { DestinationId, SourceId, SupportLevel } from "core/api/types/AirbyteClient";
 import { ConsumptionTimeWindow } from "core/api/types/CloudApi";
-import { DestinationId, SourceId, SupportLevel } from "core/request/AirbyteClient";
 
 import { calculateAvailableSourcesAndDestinations } from "./calculateAvailableSourcesAndDestinations";
 import {
@@ -105,28 +105,27 @@ export const CreditsUsageContextProvider: React.FC<React.PropsWithChildren<unkno
     return rawConsumptionData;
   }, [rawConsumptionData, selectedDestination, selectedSource]);
 
-  const sourceOptions = useMemo(() => {
-    return availableSourcesAndDestinations.sources.map((source) => {
-      const disabled = !selectedDestination ? false : !source.connectedDestinations.includes(selectedDestination);
-      return {
-        label: <ConnectorOptionLabel connector={source} disabled={disabled} />,
-        value: source.id,
-        disabled,
-      };
-    });
-  }, [availableSourcesAndDestinations.sources, selectedDestination]);
+  const sourceOptions = useMemo(
+    () =>
+      availableSourcesAndDestinations.sources
+        .filter((source) => (selectedDestination ? source.connectedDestinations.includes(selectedDestination) : true))
+        .map((source) => ({
+          label: <ConnectorOptionLabel connector={source} />,
+          value: source.id,
+        })),
+    [availableSourcesAndDestinations.sources, selectedDestination]
+  );
 
-  const destinationOptions = useMemo(() => {
-    return availableSourcesAndDestinations.destinations.map((destination) => {
-      const disabled = !selectedSource ? false : !destination.connectedSources.includes(selectedSource);
-
-      return {
-        label: <ConnectorOptionLabel connector={destination} disabled={disabled} />,
-        value: destination.id,
-        disabled,
-      };
-    });
-  }, [availableSourcesAndDestinations.destinations, selectedSource]);
+  const destinationOptions = useMemo(
+    () =>
+      availableSourcesAndDestinations.destinations
+        .filter((destination) => (selectedSource ? destination.connectedSources.includes(selectedSource) : true))
+        .map((destination) => ({
+          label: <ConnectorOptionLabel connector={destination} />,
+          value: destination.id,
+        })),
+    [availableSourcesAndDestinations.destinations, selectedSource]
+  );
 
   return (
     <creditsUsageContext.Provider

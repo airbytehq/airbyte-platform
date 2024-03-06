@@ -98,6 +98,31 @@ spec:
             secretKeyRef:
               name: {{ .Release.Name }}-airbyte-secrets
               key: DATABASE_USER
+        - name: MICROMETER_METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_ENABLED
+        - name: MICROMETER_METRICS_STATSD_FLAVOR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STATSD_FLAVOR
+        - name: SEGMENT_WRITE_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: SEGMENT_WRITE_KEY
+        - name: STATSD_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_HOST
+        - name: STATSD_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_PORT
         - name: TRACKING_STRATEGY
           valueFrom:
             configMapKeyRef:
@@ -219,11 +244,20 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_MAIN_CONTAINER_MEMORY_LIMIT
+        - name: KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS
         - name: WORKLOAD_API_BEARER_TOKEN
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.global.database.secretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
-              key: {{ .Values.global.database.secretValue | default "WORKLOAD_API_BEARER_TOKEN" }}
+              name: {{ index .Values "workloadApi" "bearerTokenSecretName" | default (printf "%s-airbyte-secrets" .Release.Name ) }}
+              key: {{ index .Values "workloadApi" "bearerTokenSecretKey" | default "WORKLOAD_API_BEARER_TOKEN" }}
+        - name: WORKLOAD_API_BEARER_TOKEN_SECRET_NAME
+          value: {{ index .Values "workloadApi" "bearerTokenSecretName" | default (printf "%s-airbyte-secrets" .Release.Name ) }}
+        - name: WORKLOAD_API_BEARER_TOKEN_SECRET_KEY
+          value: {{ index .Values "workloadApi" "bearerTokenSecretKey" | default "WORKLOAD_API_BEARER_TOKEN" }}
         {{- if $.Values.global.jobs.kube.annotations }}
         - name: JOB_KUBE_ANNOTATIONS
           valueFrom:
@@ -300,47 +334,41 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_MAIN_CONTAINER_MEMORY_LIMIT
-        - name: S3_LOG_BUCKET
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: S3_LOG_BUCKET
-        - name: S3_LOG_BUCKET_REGION
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: S3_LOG_BUCKET_REGION
-        {{- if and .Values.global.logs.accessKey.existingSecret .Values.global.logs.accessKey.existingSecretKey }}
+        {{- if and .Values.global.storage.s3.accessKeyExistingSecret .Values.global.storage.s3.secretKeyExistingSecret }}
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.global.logs.accessKey.existingSecret }}
-              key: {{ .Values.global.logs.accessKey.existingSecretKey }}
-        {{- end }}
-        {{- if and .Values.global.logs.secretKey.existingSecret .Values.global.logs.secretKey.existingSecretKey }}
+              name: {{ .Values.global.storage.s3.accessKeyExistingSecret }}
+              key: {{ .Values.global.storage.s3.accessKeyExistingSecretKey }}
         - name: AWS_SECRET_ACCESS_KEY
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.global.logs.secretKey.existingSecret }}
-              key: {{ .Values.global.logs.secretKey.existingSecretKey }}
-        {{- end }}
-        {{- if or .Values.global.logs.minio.enabled .Values.global.logs.externalMinio.enabled }}
+              name: {{ .Values.global.storage.s3.secretKeyExistingSecret }}
+              key: {{ .Values.global.storage.s3.secretKeyExistingSecretKey }}
+        {{- else if or (eq (lower .Values.global.storage.type) "minio") (eq (lower .Values.global.storage.type) "s3") .Values.global.storage.externalMinio.enabled }}
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
               name: {{ .Release.Name }}-airbyte-secrets
-              key: STATE_STORAGE_MINIO_ACCESS_KEY
+              key: AWS_ACCESS_KEY_ID
         - name: AWS_SECRET_ACCESS_KEY
           valueFrom:
             secretKeyRef:
               name: {{ .Release.Name }}-airbyte-secrets
-              key: STATE_STORAGE_MINIO_SECRET_ACCESS_KEY
+              key: AWS_SECRET_ACCESS_KEY
         {{- end }}
-        - name: S3_MINIO_ENDPOINT
+        {{- if $.Values.global.storage.s3.region }}
+        - name: AWS_DEFAULT_REGION
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: S3_MINIO_ENDPOINT
+              key: AWS_DEFAULT_REGION
+        {{- end }}
+        - name: MINIO_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MINIO_ENDPOINT
         - name: S3_PATH_STYLE_ACCESS
           valueFrom:
             configMapKeyRef:
@@ -351,31 +379,21 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: GOOGLE_APPLICATION_CREDENTIALS
-        - name: GCS_LOG_BUCKET
+        - name: STORAGE_BUCKET_LOG
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: GCS_LOG_BUCKET
-        - name: STATE_STORAGE_MINIO_BUCKET_NAME
+              key: STORAGE_BUCKET_LOG
+        - name: STORAGE_BUCKET_STATE
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: STATE_STORAGE_MINIO_BUCKET_NAME
-        - name: STATE_STORAGE_MINIO_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-airbyte-secrets
-              key: STATE_STORAGE_MINIO_ACCESS_KEY
-        - name: STATE_STORAGE_MINIO_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-airbyte-secrets
-              key: STATE_STORAGE_MINIO_SECRET_ACCESS_KEY
-        - name: STATE_STORAGE_MINIO_ENDPOINT
+              key: STORAGE_BUCKET_STATE
+        - name: STORAGE_BUCKET_WORKLOAD_OUTPUT
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: STATE_STORAGE_MINIO_ENDPOINT
+              key: STORAGE_BUCKET_WORKLOAD_OUTPUT
         - name: INTERNAL_API_HOST
           valueFrom:
             configMapKeyRef:
@@ -436,16 +454,16 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: LAUNCHER_MICRONAUT_ENVIRONMENTS
-        - name: WORKER_LOGS_STORAGE_TYPE
+        - name: STORAGE_TYPE
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: WORKER_LOGS_STORAGE_TYPE
-        - name: WORKER_STATE_STORAGE_TYPE
+              key: STORAGE_TYPE
+        - name: WORKLOAD_LAUNCHER_PARALLELISM
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: WORKER_STATE_STORAGE_TYPE
+              key: WORKLOAD_LAUNCHER_PARALLELISM
        {{- if eq .Values.global.edition "pro" }}
         - name: AIRBYTE_API_AUTH_HEADER_NAME
           value: "X-Airbyte-Auth"
@@ -461,7 +479,7 @@ spec:
         - name: {{ $k }}
           valueFrom:
             secretKeyRef:
-              name: worker-secrets
+              name: workload-launcher-secrets
               key: {{ $k }}
         {{- end }}
         {{- end }}

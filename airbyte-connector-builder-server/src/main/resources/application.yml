@@ -1,6 +1,15 @@
 micronaut:
   application:
     name: airbyte-connector-builder-server
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    export:
+      statsd:
+        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        host: ${STATSD_HOST:localhost}
+        port: ${STATSD_PORT:8125}
   security:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
@@ -51,7 +60,9 @@ airbyte:
     docker-mount: ${LOCAL_DOCKER_MOUNT:}
     root: ${LOCAL_ROOT}
   role: ${AIRBYTE_ROLE:}
-  tracking-strategy: ${TRACKING_STRATEGY:LOGGING}
+  tracking:
+    strategy: ${TRACKING_STRATEGY:LOGGING}
+    write-key: ${SEGMENT_WRITE_KEY:}
   version: ${AIRBYTE_VERSION}
   workflow:
     failure:
@@ -59,6 +70,37 @@ airbyte:
   workspace:
     docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
     root: ${WORKSPACE_ROOT}
+
+endpoints:
+  beans:
+    enabled: true
+    sensitive: false
+  env:
+    enabled: true
+    sensitive: false
+  health:
+    enabled: false
+    jdbc:
+      enabled: false
+    sensitive: false
+  info:
+    enabled: true
+    sensitive: true
+  loggers:
+    enabled: true
+    sensitive: true
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    sensitive: false
+  refresh:
+    enabled: false
+    sensitive: true
+  routes:
+    enabled: true
+    sensitive: false
+  threaddump:
+    enabled: true
+    sensitive: true
 
 logger:
   levels:

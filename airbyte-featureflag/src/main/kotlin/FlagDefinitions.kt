@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 /**
@@ -14,7 +14,9 @@ package io.airbyte.featureflag
  * This is a permanent flag and would implement the [Permanent] type once converted from an environment-variable.
  */
 object LogConnectorMessages : EnvVar(envVar = "LOG_CONNECTOR_MESSAGES")
+
 object AutoDetectSchema : EnvVar(envVar = "AUTO_DETECT_SCHEMA")
+
 object NeedStateValidation : EnvVar(envVar = "NEED_STATE_VALIDATION")
 
 object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValidationLimit", default = false)
@@ -29,15 +31,7 @@ object ContainerOrchestratorDevImage : Temporary<String>(key = "container-orches
 
 object ContainerOrchestratorJavaOpts : Temporary<String>(key = "container-orchestrator-java-opts", default = "")
 
-object NewTrialPolicyEnabled : Temporary<Boolean>(key = "billing.newTrialPolicy", default = false)
-
-object CanonicalCatalogSchema : Temporary<Boolean>(key = "canonical-catalog-schema", default = false)
-
-object CatalogCanonicalJson : Temporary<Boolean>(key = "catalog-canonical-json", default = false)
-
 object EarlySyncEnabled : Temporary<Boolean>(key = "billing.early-sync-enabled", default = false)
-
-object FetchEarlySyncJobs : Temporary<Boolean>(key = "billing.fetch-early-sync-jobs", default = false)
 
 object ShouldRunOnGkeDataplane : Temporary<Boolean>(key = "should-run-on-gke-dataplane", default = false)
 
@@ -55,7 +49,7 @@ object ResetBackfillState : Temporary<Boolean>(key = "platform.reset-backfill-st
  */
 object HeartbeatMaxSecondsBetweenMessages : Permanent<String>(key = "heartbeat-max-seconds-between-messages", default = "10800")
 
-object ShouldFailSyncIfHeartbeatFailure : Permanent<Boolean>(key = "heartbeat.failSync", default = true)
+object ShouldFailSyncIfHeartbeatFailure : Permanent<Boolean>(key = "heartbeat.failSync", default = false)
 
 object ConnectorVersionOverride : Permanent<String>(key = "connectors.versionOverrides", default = "")
 
@@ -67,11 +61,13 @@ object DestinationTimeoutSeconds : Permanent<Int>(key = "destination-timeout.sec
 
 object UseActorScopedDefaultVersions : Temporary<Boolean>(key = "connectors.useActorScopedDefaultVersions", default = true)
 
-object RunSupportStateUpdater : Temporary<Boolean>(key = "connectors.runSupportStateUpdater", default = true)
+object EnableConfigurationOverrideProvider : Temporary<Boolean>(key = "connectors.enableConfigurationOverrideProvider", default = false)
 
 object NotifyOnConnectorBreakingChanges : Temporary<Boolean>(key = "connectors.notifyOnConnectorBreakingChanges", default = true)
 
 object NotifyBreakingChangesOnSupportStateUpdate : Temporary<Boolean>(key = "connectors.notifyBreakingChangesOnSupportStateUpdate", default = true)
+
+object UseBreakingChangeScopes : Temporary<Boolean>(key = "connectors.useBreakingChangeScopes", default = true)
 
 object RefreshSchemaPeriod : Temporary<Int>(key = "refreshSchema.period.hours", default = 24)
 
@@ -103,7 +99,7 @@ object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideAc
 
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
 
-object SunsetFCP : Temporary<Boolean>(key = "platform.sunset-fcp", default = false)
+object UseIconUrlInApiResponse : Temporary<Boolean>(key = "connectors.useIconUrlInApiResponse", default = false)
 
 object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides", default = "")
 
@@ -143,7 +139,7 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
 
   object AddSchedulingJitter : Temporary<Boolean>(key = "platform.add-scheduling-jitter", default = false)
 
-  object UseNewSchemaUpdateNotification : Temporary<Boolean>(key = "platform.use-new-schema-update-notification", default = false)
+  object UseNewSchemaUpdateNotification : Temporary<Boolean>(key = "platform.use-new-schema-update-notification", default = true)
 }
 
 object RunSocatInConnectorContainer : Temporary<Boolean>(key = "platform.run-socat-in-connector-container", default = false)
@@ -152,7 +148,19 @@ object FailSyncIfTooBig : Temporary<Boolean>(key = "platform.fail-sync-if-too-bi
 
 object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-default-org-for-new-workspace", default = false)
 
-object WorkloadHeartbeatRate : Permanent<Int>(key = "workload.heartbeat.rate", default = 60)
+object WorkloadHeartbeatRate : Permanent<Int>(key = "workload.heartbeat.rate", default = 5)
+
+/**
+ * Defines whether a workload launcher should be consuming tasks.
+ */
+object WorkloadLauncherConsumerEnabled : Permanent<Boolean>(key = "workload-launcher-consumer-enabled", default = true)
+
+object WorkloadPollingInterval : Permanent<Int>(key = "workload.polling.interval", default = 30)
+
+/**
+ * Duration in minutes. This should always be less than the value for [io.airbyte.cron.jobs.WorkloadMonitor.heartbeatTimeout]
+ */
+object WorkloadHeartbeatTimeout : Permanent<Int>(key = "workload.heartbeat.timeout", default = 4)
 
 object UseNewCronScheduleCalculation : Temporary<Boolean>(key = "platform.use-new-cron-schedule-calculation", default = false)
 
@@ -160,8 +168,26 @@ object UseRuntimeSecretPersistence : Temporary<Boolean>(key = "platform.use-runt
 
 object UseWorkloadApi : Temporary<Boolean>(key = "platform.use-workload-api", default = false)
 
+object EmitStateStatsToSegment : Temporary<Boolean>(key = "platform.emit-state-stats-segment", default = true)
+
+object AddInitialCreditsForWorkspace : Temporary<Int>(key = "add-credits-at-workspace-creation-for-org", default = 0)
+
 object WorkloadApiRouting : Permanent<String>(key = "workload-api-routing", default = "workload_default")
 
-object FailMissingPks : Temporary<Boolean>(key = "platform.fail-missing-pks", default = false)
-
 object PrintLongRecordPks : Temporary<Boolean>(key = "platform.print-long-record-pks", default = false)
+
+object InjectAwsSecretsToConnectorPods : Temporary<Boolean>(key = "platform.inject-aws-secrets-to-connector-pods", default = false)
+
+object UseWorkloadApiForCheck : Temporary<Boolean>(key = "platform.use-workload-api-for-check", default = false)
+
+object WorkloadCheckFrequencyInSeconds : Permanent<Int>(key = "platform.workload-check-frequency-in-seconds", default = 1)
+
+object FailSyncOnInvalidChecksum : Temporary<Boolean>(key = "platform.fail-sync-on-invalid-checksum", default = false)
+
+object HydrateAggregatedStats : Temporary<Boolean>(key = "platform.hydrate-aggregated-stats", default = true)
+
+object BillingCronScopeChangeTimestamp : Permanent<String>(key = "platform.billing-cron-scope-change-timestamp", default = "1735711200")
+
+object UseWorkloadApiForDiscover : Temporary<Boolean>(key = "platform.use-workload-api-for-discover", default = false)
+
+object UseWorkloadApiForSpec : Temporary<Boolean>(key = "platform.use-workload-api-for-spec", default = false)

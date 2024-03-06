@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance.configs.migrations;
@@ -63,7 +63,7 @@ class V0_50_19_001__CreateDefaultOrganizationAndUserTest extends AbstractConfigs
     V0_50_19_001__CreateDefaultOrganizationAndUser.createDefaultUserAndOrganization(ctx);
 
     // verify that a User record was written to the database
-    var userRecord = ctx.selectFrom(DSL.table(USER_TABLE))
+    final var userRecord = ctx.selectFrom(DSL.table(USER_TABLE))
         .where(DSL.field("id").eq(EXPECTED_DEFAULT_USER_ID))
         .fetchOne();
     assertNotNull(userRecord);
@@ -72,7 +72,7 @@ class V0_50_19_001__CreateDefaultOrganizationAndUserTest extends AbstractConfigs
     assertNull(userRecord.get(DSL.field("default_workspace_id", UUID.class)));
 
     // verify that an Organization record was written to the database
-    var organizationRecord = ctx.selectFrom(DSL.table("organization"))
+    final var organizationRecord = ctx.selectFrom(DSL.table("organization"))
         .where(DSL.field("id").eq(EXPECTED_DEFAULT_ORGANIZATION_ID))
         .fetchOne();
     assertNotNull(organizationRecord);
@@ -81,7 +81,7 @@ class V0_50_19_001__CreateDefaultOrganizationAndUserTest extends AbstractConfigs
     assertEquals(EXPECTED_DEFAULT_USER_ID, organizationRecord.get(DSL.field("user_id", UUID.class)));
 
     // verify that a permission record was written to add the User to the Organization
-    var userPermissionRecord = ctx.selectFrom(DSL.table("permission"))
+    final var userPermissionRecord = ctx.selectFrom(DSL.table("permission"))
         .where(DSL.field("user_id").eq(EXPECTED_DEFAULT_USER_ID))
         .fetch()
         .get(0);
@@ -127,7 +127,7 @@ class V0_50_19_001__CreateDefaultOrganizationAndUserTest extends AbstractConfigs
     V0_50_19_001__CreateDefaultOrganizationAndUser.createDefaultUserAndOrganization(ctx);
 
     // 5. verify that the expected User records now exist in the database
-    var userRecord = ctx.selectFrom(DSL.table(USER_TABLE))
+    final var userRecord = ctx.selectFrom(DSL.table(USER_TABLE))
         .where(DSL.field("id").eq(EXPECTED_DEFAULT_USER_ID))
         .fetchOne();
     assertNotNull(userRecord);
@@ -136,7 +136,7 @@ class V0_50_19_001__CreateDefaultOrganizationAndUserTest extends AbstractConfigs
     assertEquals(expectedWorkspaceId, userRecord.get(DSL.field("default_workspace_id", UUID.class)));
 
     // 6. verify that the expected Organization records now exist in the database
-    var organizationRecord = ctx.selectFrom(DSL.table("organization"))
+    final var organizationRecord = ctx.selectFrom(DSL.table("organization"))
         .where(DSL.field("id").eq(EXPECTED_DEFAULT_ORGANIZATION_ID))
         .fetchOne();
     assertNotNull(organizationRecord);
@@ -145,14 +145,14 @@ class V0_50_19_001__CreateDefaultOrganizationAndUserTest extends AbstractConfigs
     assertEquals(EXPECTED_DEFAULT_USER_ID, organizationRecord.get(DSL.field("user_id", UUID.class)));
 
     // 7. verify that the default Workspace record was updated to belong to the default Organization
-    var workspaceRecord = ctx.selectFrom(DSL.table("workspace"))
+    final var workspaceRecord = ctx.selectFrom(DSL.table("workspace"))
         .where(DSL.field("id").eq(expectedWorkspaceId))
         .fetchOne();
     assertNotNull(workspaceRecord);
     assertEquals(EXPECTED_DEFAULT_ORGANIZATION_ID, workspaceRecord.get(DSL.field("organization_id", UUID.class)));
 
     // 8. verify that a permission record was written to add the User to the Organization
-    var userPermissionRecord = ctx.selectFrom(DSL.table("permission"))
+    final var userPermissionRecord = ctx.selectFrom(DSL.table("permission"))
         .where(DSL.field("user_id").eq(EXPECTED_DEFAULT_USER_ID))
         .fetch()
         .get(0);

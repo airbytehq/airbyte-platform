@@ -50,6 +50,10 @@ const modifyAccountsTableInterceptHandler: RouteHandler = (request) => {
         sourceDefinedCursor: true,
         defaultCursorField: ["updated_at"],
       }),
+      modifyConfig: (config) => ({
+        ...config,
+        cursorField: ["updated_at"],
+      }),
     });
 
     response.send(body);

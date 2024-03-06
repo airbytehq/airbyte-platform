@@ -53,7 +53,10 @@ interface ConnectionStatusIndicatorProps {
 }
 
 export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({ status, loading, withBox }) => (
-  <div className={classNames(styles.status, STYLE_BY_STATUS[status], { [BOX_STYLE_BY_STATUS[status]]: withBox })}>
+  <div
+    className={classNames(styles.status, STYLE_BY_STATUS[status], { [BOX_STYLE_BY_STATUS[status]]: withBox })}
+    data-loading={loading}
+  >
     <div className={styles.icon}>{ICON_BY_STATUS[status]}</div>
     {loading && <LoadingSpinner className={styles.spinner} />}
   </div>

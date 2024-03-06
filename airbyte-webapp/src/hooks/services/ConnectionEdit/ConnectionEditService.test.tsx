@@ -27,6 +27,10 @@ import {
 import { ConnectionEditServiceProvider, useConnectionEditService } from "./ConnectionEditService";
 import { useConnectionFormService } from "../ConnectionForm/ConnectionFormService";
 
+jest.mock("core/utils/rbac", () => ({
+  useIntent: () => true,
+}));
+
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
   useGetConnection: () => mockConnection,
@@ -57,7 +61,7 @@ const utils = {
   }),
 };
 
-describe("ConnectionEditHookFormServiceProvider", () => {
+describe("ConnectionEditServiceProvider", () => {
   const Wrapper: React.FC<React.PropsWithChildren> = ({ children }) => (
     <TestWrapper>
       <ConnectionEditServiceProvider connectionId={mockConnection.connectionId}>

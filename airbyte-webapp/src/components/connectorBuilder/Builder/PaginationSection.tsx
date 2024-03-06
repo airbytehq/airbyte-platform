@@ -68,7 +68,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
         path={streamFieldPath("paginator.strategy")}
         label={formatMessage({ id: "connectorBuilder.pagination.strategy.label" })}
         tooltip={formatMessage({ id: "connectorBuilder.pagination.strategy.tooltip" })}
-        manifestOptionPaths={["OffsetIncrement", "PageIncrement", "CursorPagination"]}
+        manifestOptionPaths={[OFFSET_INCREMENT, PAGE_INCREMENT, CURSOR_PAGINATION]}
         options={[
           {
             label: formatMessage({ id: "connectorBuilder.pagination.strategy.offsetIncrement" }),
@@ -93,6 +93,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                 <PageTokenOption
                   label={formatMessage({ id: "connectorBuilder.pagination.strategy.offsetIncrement.offset" })}
                   streamFieldPath={streamFieldPath}
+                  paginatorStrategy={OFFSET_INCREMENT}
                 />
               </>
             ),
@@ -127,6 +128,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                 <PageTokenOption
                   label={formatMessage({ id: "connectorBuilder.pagination.strategy.pageIncrement.pageNumber" })}
                   streamFieldPath={streamFieldPath}
+                  paginatorStrategy={PAGE_INCREMENT}
                 />
               </>
             ),
@@ -240,6 +242,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                 <PageTokenOption
                   label={formatMessage({ id: "connectorBuilder.pagination.strategy.cursorValue" })}
                   streamFieldPath={streamFieldPath}
+                  paginatorStrategy={CURSOR_PAGINATION}
                 />
                 <BuilderField
                   type="number"
@@ -270,9 +273,11 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
 const PageTokenOption = ({
   label,
   streamFieldPath,
+  paginatorStrategy,
 }: {
   label: string;
   streamFieldPath: (fieldPath: string) => string;
+  paginatorStrategy: typeof OFFSET_INCREMENT | typeof PAGE_INCREMENT | typeof CURSOR_PAGINATION;
 }): JSX.Element => {
   const { formatMessage } = useIntl();
 
@@ -288,6 +293,19 @@ const PageTokenOption = ({
       }}
     >
       <BuilderRequestInjection path={streamFieldPath("paginator.pageTokenOption")} descriptor={lowerCase(label)} />
+      {paginatorStrategy !== CURSOR_PAGINATION && (
+        <BuilderField
+          type="boolean"
+          path={streamFieldPath("paginator.strategy.inject_on_first_request")}
+          label={formatMessage({ id: "connectorBuilder.pagination.strategy.injectOnFirstRequest.label" })}
+          tooltip={formatMessage({
+            id:
+              paginatorStrategy === OFFSET_INCREMENT
+                ? "connectorBuilder.pagination.strategy.injectOnFirstRequest.tooltip.offsetIncrement"
+                : "connectorBuilder.pagination.strategy.injectOnFirstRequest.tooltip.pageIncrement",
+          })}
+        />
+      )}
     </ToggleGroupField>
   );
 };

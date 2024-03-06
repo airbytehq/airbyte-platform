@@ -3,9 +3,6 @@ import {
   assertHasNumberOfPages,
   configureLimitOffsetPagination,
   configureParameters,
-  disableAutoImportSchema,
-  disablePagination,
-  disableStreamSlicer,
   enablePagination,
   enableParameterizedRequests,
   enterName,
@@ -38,6 +35,8 @@ export const configureGlobals = (name: string) => {
   } else {
     enterUrlBase("http://172.17.0.1:6767/");
   }
+
+  configureAuth();
 };
 
 export const configureStream = () => {
@@ -46,7 +45,6 @@ export const configureStream = () => {
   enterUrlPathFromForm("items/");
   submitForm();
   enterRecordSelector("items");
-  disableAutoImportSchema();
 };
 
 export const configureAuth = () => {
@@ -55,7 +53,6 @@ export const configureAuth = () => {
   openTestInputs();
   enterTestInputs({ apiKey: "theauthkey" });
   submitForm();
-  goToView("0");
 };
 
 export const configurePagination = () => {
@@ -71,18 +68,11 @@ export const configureParameterizedRequests = (numberOfParameters: number) => {
   enterUrlPath("items/{{}{{} stream_slice.item_id }}");
 };
 
-export const cleanUp = () => {
-  goToView("0");
-  cy.get('[data-testid="tag-tab-stream-configuration"]').click({ force: true });
-  disablePagination();
-  disableStreamSlicer();
-};
-
 export const publishProject = () => {
   // debounce is 2500 so we need to wait at least more before change page
   // eslint-disable-next-line cypress/no-unnecessary-waiting
-  cy.wait(30000);
-  cy.get('[data-testid="publish-button"]').click({ force: true });
+  cy.wait(3000);
+  cy.get('[data-testid="publish-button"]').click();
   submitForm();
 };
 
@@ -159,11 +149,18 @@ const SCHEMA_WITH_MISMATCH =
   '{{}"$schema": "http://json-schema.org/schema#", "properties": {{}"name": {{}"type": "number"}}, "type": "object"}';
 export const acceptSchemaWithMismatch = () => {
   openStreamSchemaTab();
-  cy.get("textarea").clear({ force: true });
-  // TODO is this actually needed?
-  // eslint-disable-next-line cypress/no-unnecessary-waiting
-  cy.wait(500);
-  cy.get("textarea").type(SCHEMA_WITH_MISMATCH, { force: true });
+  // When running against local dev webapp, some uncaught exceptions may be thrown when the monaco editor is loaded.
+  // Ignore them since they do not affect the test.
+  cy.on("uncaught:exception", (err) => {
+    const monacoLoadCancelled = (err as { msg?: string })?.msg?.includes("operation is manually canceled");
+    const monacoScriptLoadFailed = err?.message?.includes("importScripts") && err?.message?.includes("monaco-editor");
+    if (monacoLoadCancelled || monacoScriptLoadFailed) {
+      return false;
+    }
+  });
+  cy.get("label").contains("Automatically import detected schema").click();
+  cy.get("textarea").clear();
+  cy.get("textarea").type(SCHEMA_WITH_MISMATCH);
 };
 
 export const assertSchemaMismatch = () => {

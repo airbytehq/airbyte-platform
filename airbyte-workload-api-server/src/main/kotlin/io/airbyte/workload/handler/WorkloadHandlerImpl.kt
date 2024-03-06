@@ -1,16 +1,17 @@
 package io.airbyte.workload.handler
 
-import io.airbyte.db.instance.configs.jooq.generated.enums.WorkloadStatus
+import io.airbyte.config.WorkloadType
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
-import io.airbyte.workload.api.domain.WorkloadType
 import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
 import io.airbyte.workload.repository.WorkloadRepository
+import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.time.OffsetDateTime
+import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
 
@@ -45,14 +46,20 @@ class WorkloadHandlerImpl(
     return domainWorkloads.map { it.toApi() }
   }
 
+  override fun workloadAlreadyExists(workloadId: String): Boolean {
+    return workloadRepository.existsById(workloadId)
+  }
+
   override fun createWorkload(
     workloadId: String,
     labels: List<WorkloadLabel>?,
     input: String,
     logPath: String,
     geography: String,
-    mutexKey: String,
+    mutexKey: String?,
     type: WorkloadType,
+    autoId: UUID,
+    deadline: OffsetDateTime,
   ) {
     val workloadAlreadyExists = workloadRepository.existsById(workloadId)
     if (workloadAlreadyExists) {
@@ -62,13 +69,15 @@ class WorkloadHandlerImpl(
       DomainWorkload(
         id = workloadId,
         dataplaneId = null,
-        status = WorkloadStatus.pending,
+        status = WorkloadStatus.PENDING,
         workloadLabels = labels?.map { it.toDomain() },
         inputPayload = input,
         logPath = logPath,
         geography = geography,
         mutexKey = mutexKey,
         type = type.toDomain(),
+        autoId = autoId,
+        deadline = deadline,
       )
 
     workloadRepository.save(domainWorkload).toApi()
@@ -77,6 +86,7 @@ class WorkloadHandlerImpl(
   override fun claimWorkload(
     workloadId: String,
     dataplaneId: String,
+    deadline: OffsetDateTime,
   ): Boolean {
     val workload = getDomainWorkload(workloadId)
 
@@ -85,8 +95,14 @@ class WorkloadHandlerImpl(
     }
 
     when (workload.status) {
-      WorkloadStatus.pending -> workloadRepository.update(workloadId, dataplaneId, WorkloadStatus.claimed)
-      WorkloadStatus.claimed -> {}
+      WorkloadStatus.PENDING ->
+        workloadRepository.update(
+          workloadId,
+          dataplaneId,
+          WorkloadStatus.CLAIMED,
+          deadline,
+        )
+      WorkloadStatus.CLAIMED -> {}
       else -> throw InvalidStatusTransitionException(
         "Tried to claim a workload that is not pending. Workload id: $workloadId has status: ${workload.status}",
       )
@@ -95,32 +111,46 @@ class WorkloadHandlerImpl(
     return true
   }
 
-  override fun cancelWorkload(workloadId: String) {
+  override fun cancelWorkload(
+    workloadId: String,
+    source: String?,
+    reason: String?,
+  ) {
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.pending, WorkloadStatus.running, WorkloadStatus.claimed ->
+      WorkloadStatus.PENDING, WorkloadStatus.LAUNCHED, WorkloadStatus.CLAIMED, WorkloadStatus.RUNNING ->
         workloadRepository.update(
           workloadId,
-          WorkloadStatus.cancelled,
+          WorkloadStatus.CANCELLED,
+          source,
+          reason,
+          null,
         )
-      WorkloadStatus.cancelled -> logger.info { "Workload $workloadId is already cancelled. Cancelling an already cancelled workload is a noop" }
+      WorkloadStatus.CANCELLED -> logger.info { "Workload $workloadId is already cancelled. Cancelling an already cancelled workload is a noop" }
       else -> throw InvalidStatusTransitionException(
         "Cannot cancel a workload in either success or failure status. Workload id: $workloadId has status: ${workload.status}",
       )
     }
   }
 
-  override fun failWorkload(workloadId: String) {
+  override fun failWorkload(
+    workloadId: String,
+    source: String?,
+    reason: String?,
+  ) {
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.claimed, WorkloadStatus.running ->
+      WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING ->
         workloadRepository.update(
           workloadId,
-          WorkloadStatus.failure,
+          WorkloadStatus.FAILURE,
+          source,
+          reason,
+          null,
         )
-      WorkloadStatus.failure -> logger.info { "Workload $workloadId is already marked as failed. Failing an already failed workload is a noop" }
+      WorkloadStatus.FAILURE -> logger.info { "Workload $workloadId is already marked as failed. Failing an already failed workload is a noop" }
       else -> throw InvalidStatusTransitionException(
         "Tried to fail a workload that is not active. Workload id: $workloadId has status: ${workload.status}",
       )
@@ -131,12 +161,13 @@ class WorkloadHandlerImpl(
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.claimed, WorkloadStatus.running ->
+      WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING ->
         workloadRepository.update(
           workloadId,
-          WorkloadStatus.success,
+          WorkloadStatus.SUCCESS,
+          null,
         )
-      WorkloadStatus.success ->
+      WorkloadStatus.SUCCESS ->
         logger.info { "Workload $workloadId is already marked as succeeded. Succeeding an already succeeded workload is a noop" }
       else -> throw InvalidStatusTransitionException(
         "Tried to succeed a workload that is not active. Workload id: $workloadId has status: ${workload.status}",
@@ -144,39 +175,107 @@ class WorkloadHandlerImpl(
     }
   }
 
-  override fun setWorkloadStatusToRunning(workloadId: String) {
+  override fun setWorkloadStatusToRunning(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  ) {
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.claimed ->
+      WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED -> {
         workloadRepository.update(
           workloadId,
-          WorkloadStatus.success,
+          WorkloadStatus.RUNNING,
+          deadline,
         )
-      WorkloadStatus.running -> logger.info { "Workload $workloadId is already marked as running. Trying to update its status to running is a noop" }
-      WorkloadStatus.cancelled, WorkloadStatus.failure, WorkloadStatus.success -> throw InvalidStatusTransitionException(
+      }
+      WorkloadStatus.RUNNING -> logger.info { "Workload $workloadId is already marked as running. Skipping..." }
+      WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
         "Heartbeat a workload in a terminal state",
       )
-      WorkloadStatus.pending -> throw InvalidStatusTransitionException(
+      WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
         "Can't set a workload status to running on a workload that hasn't been claimed",
       )
     }
   }
 
-  override fun heartbeat(workloadId: String) {
+  override fun setWorkloadStatusToLaunched(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  ) {
+    val workload = getDomainWorkload(workloadId)
+
+    when (workload.status) {
+      WorkloadStatus.CLAIMED -> {
+        workloadRepository.update(
+          workloadId,
+          WorkloadStatus.LAUNCHED,
+          deadline,
+        )
+      }
+      WorkloadStatus.LAUNCHED -> logger.info { "Workload $workloadId is already marked as launched. Skipping..." }
+      WorkloadStatus.RUNNING -> throw InvalidStatusTransitionException("Workload $workloadId is already marked as running. Skipping...")
+      WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
+        "Heartbeat a workload in a terminal state",
+      )
+      WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
+        "Can't set a workload status to running on a workload that hasn't been claimed",
+      )
+    }
+  }
+
+  override fun heartbeat(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  ) {
     val workload: DomainWorkload = getDomainWorkload(workloadId)
 
     when (workload.status) {
-      WorkloadStatus.claimed, WorkloadStatus.running ->
+      WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING -> {
         workloadRepository.update(
           workloadId,
-          WorkloadStatus.running,
-          OffsetDateTime.now(),
+          WorkloadStatus.RUNNING,
+          offsetDateTime(),
+          deadline,
         )
-      WorkloadStatus.cancelled, WorkloadStatus.failure, WorkloadStatus.success -> throw InvalidStatusTransitionException(
+      }
+      WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
         "Heartbeat a workload in a terminal state",
       )
-      WorkloadStatus.pending -> throw InvalidStatusTransitionException("Heartbeat a non claimed workload")
+      WorkloadStatus.PENDING -> throw InvalidStatusTransitionException("Heartbeat a non claimed workload")
     }
+  }
+
+  fun offsetDateTime(): OffsetDateTime = OffsetDateTime.now()
+
+  override fun getWorkloadsRunningCreatedBefore(
+    dataplaneId: List<String>?,
+    workloadType: List<ApiWorkloadType>?,
+    createdBefore: OffsetDateTime?,
+  ): List<Workload> {
+    val domainWorkloads =
+      workloadRepository.searchByTypeStatusAndCreationDate(
+        dataplaneId,
+        listOf(WorkloadStatus.RUNNING),
+        workloadType?.map { it.toDomain() },
+        createdBefore,
+      )
+
+    return domainWorkloads.map { it.toApi() }
+  }
+
+  override fun getWorkloadsWithExpiredDeadline(
+    dataplaneId: List<String>?,
+    workloadStatus: List<ApiWorkloadStatus>?,
+    deadline: OffsetDateTime,
+  ): List<Workload> {
+    val domainWorkloads =
+      workloadRepository.searchForExpiredWorkloads(
+        dataplaneId,
+        workloadStatus?.map { it.toDomain() },
+        deadline,
+      )
+
+    return domainWorkloads.map { it.toApi() }
   }
 }

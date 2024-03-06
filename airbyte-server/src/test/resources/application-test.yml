@@ -10,6 +10,13 @@ airbyte:
     root: /tmp
   shutdown:
     delay_ms: 0
+  cloud:
+    storage:
+      type: local
+      bucket:
+        log: log
+        state: state
+        workload-output: workload
 
 datasources:
   config:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
@@ -50,6 +50,28 @@ public class WebUrlHelper {
    */
   public String getConnectionUrl(final UUID workspaceId, final UUID connectionId) {
     return String.format("%s/connections/%s", getWorkspaceUrl(workspaceId), connectionId);
+  }
+
+  /**
+   * Get the url for a source.
+   *
+   * @param workspaceId workspace id
+   * @param sourceId source id
+   * @return url for the source
+   */
+  public String getSourceUrl(final UUID workspaceId, final UUID sourceId) {
+    return String.format("%s/source/%s", getWorkspaceUrl(workspaceId), sourceId);
+  }
+
+  /**
+   * Get the url for a destination.
+   *
+   * @param workspaceId workspace id
+   * @param destinationId destination id
+   * @return url for the destination
+   */
+  public String getDestinationUrl(final UUID workspaceId, final UUID destinationId) {
+    return String.format("%s/destination/%s", getWorkspaceUrl(workspaceId), destinationId);
   }
 
   public String getConnectionReplicationPageUrl(final UUID workspaceId, final UUID connectionId) {

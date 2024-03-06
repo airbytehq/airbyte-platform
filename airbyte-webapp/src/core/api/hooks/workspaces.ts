@@ -3,19 +3,19 @@ import { useCallback, useLayoutEffect } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentUser } from "core/services/auth";
-import { SCOPE_USER, SCOPE_WORKSPACE } from "services/Scope";
 
 import {
   createWorkspace,
   deleteWorkspace,
   getWorkspace,
-  listUsersInWorkspace,
+  listAccessInfoByWorkspaceId,
   listWorkspaces,
   listWorkspacesByUser,
   updateWorkspace,
   updateWorkspaceName,
   webBackendGetWorkspaceState,
 } from "../generated/AirbyteClient";
+import { SCOPE_USER, SCOPE_WORKSPACE } from "../scopes";
 import {
   WorkspaceCreate,
   WorkspaceRead,
@@ -30,8 +30,8 @@ export const workspaceKeys = {
   all: [SCOPE_USER, "workspaces"] as const,
   lists: () => [...workspaceKeys.all, "list"] as const,
   list: (filters: string | Record<string, string>) => [...workspaceKeys.lists(), { filters }] as const,
-  allListUsers: [SCOPE_WORKSPACE, "users", "list"] as const,
-  listUsers: (workspaceId: string) => [SCOPE_WORKSPACE, "users", "list", workspaceId] as const,
+  allListAccessUsers: [SCOPE_WORKSPACE, "users", "listAccessUsers"] as const,
+  listAccessUsers: (workspaceId: string) => [SCOPE_WORKSPACE, "users", "listAccessUsers", workspaceId] as const,
   detail: (workspaceId: string) => [...workspaceKeys.all, "details", workspaceId] as const,
   state: (workspaceId: string) => [...workspaceKeys.all, "state", workspaceId] as const,
 };
@@ -135,13 +135,6 @@ export const useGetWorkspace = (
   return useSuspenseQuery(queryKey, queryFn, options);
 };
 
-export const useListUsersInWorkspace = (workspaceId: string) => {
-  const requestOptions = useRequestOptions();
-  const queryKey = workspaceKeys.listUsers(workspaceId);
-
-  return useSuspenseQuery(queryKey, () => listUsersInWorkspace({ workspaceId }, requestOptions));
-};
-
 export const useListWorkspacesInfinite = (pageSize: number, nameContains: string, suspense?: boolean) => {
   const { userId } = useCurrentUser();
   const requestOptions = useRequestOptions();
@@ -226,4 +219,11 @@ export const useInvalidateAllWorkspaceScopeOnChange = (workspaceId: string) => {
   useLayoutEffect(() => {
     invalidateWorkspaceScope();
   }, [invalidateWorkspaceScope, workspaceId]);
+};
+
+export const useListWorkspaceAccessUsers = (workspaceId: string) => {
+  const requestOptions = useRequestOptions();
+  const queryKey = workspaceKeys.listAccessUsers(workspaceId);
+
+  return useSuspenseQuery(queryKey, () => listAccessInfoByWorkspaceId({ workspaceId }, requestOptions));
 };

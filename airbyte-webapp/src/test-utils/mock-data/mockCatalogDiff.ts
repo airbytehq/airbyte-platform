@@ -1,4 +1,4 @@
-import { CatalogDiff } from "core/request/AirbyteClient";
+import { CatalogDiff } from "core/api/types/AirbyteClient";
 
 export const mockCatalogDiff: CatalogDiff = {
   transforms: [

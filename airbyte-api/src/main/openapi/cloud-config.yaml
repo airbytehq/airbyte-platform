@@ -101,19 +101,6 @@ paths:
                 $ref: "#/components/schemas/UserRead"
         "409":
           $ref: "#/components/responses/ExceptionResponse"
-  /v1/users/list:
-    post:
-      tags:
-        - user
-      summary: Lists users
-      operationId: listUsers
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UserReadList"
   /v1/users/get:
     post:
       tags:
@@ -206,25 +193,26 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/users/delete:
+  /v1/users/create_keycloak_user:
     post:
       tags:
         - user
-      summary: Deletes a user (this is the low-level route that does not handle workspaces, see the web_backend routes instead as this may result in orphaned workspaces)
-      operationId: deleteUser
+      summary: Creates the user in keycloak if it does not exist yet
+      operationId: createKeycloakUser
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UserIdRequestBody"
-        required: true
+              $ref: "#/components/schemas/CreateKeycloakUserRequestBody"
       responses:
-        "204":
-          description: The resource was deleted successfully.
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateKeycloakUserResponseBody"
+        "409":
+          $ref: "#/components/responses/ExceptionResponse"
   # CLOUD_WORKSPACE
   /v1/cloud_workspaces/create:
     post:
@@ -415,65 +403,6 @@ paths:
                 $ref: "#/components/schemas/PermissionRead"
         "422":
           $ref: "#/components/responses/ExceptionResponse"
-  /v1/permissions/list:
-    post:
-      tags:
-        - permission
-      summary: List all permissions
-      operationId: listPermissions
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PermissionReadList"
-  /v1/permissions/get:
-    post:
-      tags:
-        - permission
-      summary: Find a permission ressource by ID
-      operationId: getPermission
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PermissionIdRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PermissionRead"
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-  /v1/permissions/update:
-    post:
-      tags:
-        - permission
-      summary: Updates a permission ressource
-      operationId: updatePermission
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PermissionUpdate"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PermissionRead"
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
   /v1/permissions/delete:
     post:
       tags:
@@ -586,46 +515,6 @@ paths:
       # Validation of these events happens in the Cloud Server's ExternalRequestAuthFilter.
       security: []
   # WEB_BACKEND
-  /v1/web_backend/users/create:
-    post:
-      tags:
-        - web_backend
-      summary: Creates a user, cloud workspace, permissions, and airbyte workspace in a single API call
-      operationId: webBackendCreateUser
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UserCreate"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UserRead"
-        "409":
-          $ref: "#/components/responses/ExceptionResponse"
-  /v1/web_backend/users/delete:
-    post:
-      tags:
-        - web_backend
-      summary: Deletes a user, their owned cloud workspace and associated airbyte workspace in a single API call
-      operationId: webBackendDeleteUser
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UserIdRequestBody"
-        required: true
-      responses:
-        "204":
-          description: The resource was deleted successfully.
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
   /v1/web_backend/users/revoke_user_session:
     post:
       tags:
@@ -697,25 +586,6 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
       # This route is unsecured. User has not signed in yet at the time when they call this API.
       security: []
-  /v1/web_backend/cloud_workspaces/delete:
-    post:
-      tags:
-        - web_backend
-      summary: Deletes a cloud workspace and associated airbyte workspace in a single API call.
-      operationId: webBackendDeleteCloudWorkspace
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WorkspaceIdRequestBody"
-        required: true
-      responses:
-        "204":
-          description: The resource was deleted successfully.
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
-        "409":
-          $ref: "#/components/responses/ExceptionResponse"
   /v1/web_backend/cloud_workspaces/revoke_user:
     post:
       tags:
@@ -754,25 +624,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkspaceGetDbtJobsResponse"
-  /v1/web_backend/cloud_workspaces/free_connector_program_info:
-    post:
-      tags:
-        - web_backend
-      summary: Return a summary of Free Connector Program info for the indicated Cloud Workspace
-      operationId: webBackendGetFreeConnectorProgramInfoForWorkspace
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WorkspaceIdRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successfully retrieved Free Connector Program info for Cloud Workspace
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkspaceFreeConnectorProgramInfoResponse"
   /v1/web_backend/permissions/list_by_user:
     post:
       tags:
@@ -792,27 +643,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PermissionReadList"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-  /v1/web_backend/permissions/list_workspaces_owned_by_user:
-    post:
-      tags:
-        - web_backend
-      summary: List cloud workspaces owned by a user
-      operationId: webBackendListWorkspacesOwnedByUser
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UserIdRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CloudWorkspaceReadList"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
   /v1/web_backend/permissions/list_workspaces_by_user:
@@ -889,6 +719,22 @@ components:
         db:
           type: boolean
     # USER
+    CreateKeycloakUserRequestBody:
+      type: object
+      required:
+        - authUserId
+      properties:
+        authUserId:
+          type: string
+        password:
+          type: string
+    CreateKeycloakUserResponseBody:
+      type: object
+      required:
+        - keycloakUserId
+      properties:
+        keycloakUserId:
+          type: string
     UserId:
       type: string
       description: Internal Airbyte Cloud User ID
@@ -1461,6 +1307,7 @@ components:
       enum:
         - community
         - certified
+        - archived
         - none
 
     ConnectionProto:
@@ -1691,6 +1538,7 @@ components:
       enum:
         - instance_admin # Permission to do anything (all permissions below)
         - workspace_owner # Permission to own a workspace (and being billed for it)
+        - workspace_admin # Permission to edit a workspace (all permissions below)
         # - workspace_permissions_editor # Permission to change the permissions of a workspace
         # - workspace_editor # Permission to edit a workspace content (all permissions below)
         # - sources_editor # Permission to edit sources from a workspace

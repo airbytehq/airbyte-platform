@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.bootloader.config;
@@ -17,10 +17,8 @@ import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DestinationService;
-import io.airbyte.data.services.HealthCheckService;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.OperationService;
-import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.db.Database;
@@ -59,13 +57,13 @@ public class DatabaseBeanFactory {
 
   @Singleton
   @Named("configDatabase")
-  public Database configDatabase(@Named("config") final DSLContext dslContext) throws IOException {
+  public Database configDatabase(@Named("config") final DSLContext dslContext) {
     return new Database(unwrapContext(dslContext));
   }
 
   @Singleton
   @Named("jobsDatabase")
-  public Database jobsDatabase(@Named("jobs") final DSLContext dslContext) throws IOException {
+  public Database jobsDatabase(@Named("jobs") final DSLContext dslContext) {
     return new Database(unwrapContext(dslContext));
   }
 
@@ -122,10 +120,8 @@ public class DatabaseBeanFactory {
                                            final ConnectionService connectionService,
                                            final ConnectorBuilderService connectorBuilderService,
                                            final DestinationService destinationService,
-                                           final HealthCheckService healthCheckService,
                                            final OAuthService oauthService,
                                            final OperationService operationService,
-                                           final OrganizationService organizationService,
                                            final SourceService sourceService,
                                            final WorkspaceService workspaceService) {
     return new ConfigRepository(
@@ -134,10 +130,8 @@ public class DatabaseBeanFactory {
         connectionService,
         connectorBuilderService,
         destinationService,
-        healthCheckService,
         oauthService,
         operationService,
-        organizationService,
         sourceService,
         workspaceService);
   }

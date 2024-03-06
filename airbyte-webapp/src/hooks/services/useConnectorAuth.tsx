@@ -1,17 +1,18 @@
+import { BroadcastChannel } from "broadcast-channel";
 import { useCallback, useEffect, useRef } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useAsyncFn, useEffectOnce, useEvent } from "react-use";
+import { v4 as uuid } from "uuid";
 
-import { useCompleteOAuth, useConsentUrls } from "core/api";
-import { ConnectorDefinition, ConnectorDefinitionSpecification, ConnectorSpecification } from "core/domain/connector";
-import { isSourceDefinitionSpecification } from "core/domain/connector/source";
+import { useCompleteOAuth, useConsentUrls, isCommonRequestError } from "core/api";
 import {
   CompleteOAuthResponse,
   CompleteOAuthResponseAuthPayload,
   DestinationOauthConsentRequest,
   SourceOauthConsentRequest,
-} from "core/request/AirbyteClient";
-import { isCommonRequestError } from "core/request/CommonRequestError";
+} from "core/api/types/AirbyteClient";
+import { ConnectorDefinition, ConnectorDefinitionSpecification, ConnectorSpecification } from "core/domain/connector";
+import { isSourceDefinitionSpecification } from "core/domain/connector/source";
 import { useAnalyticsTrackFunctions } from "views/Connector/ConnectorForm/components/Sections/auth/useAnalyticsTrackFunctions";
 import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormContext";
 
@@ -20,17 +21,47 @@ import { useNotificationService } from "./Notification";
 import { useCurrentWorkspace } from "./useWorkspace";
 import { useQuery } from "../useQuery";
 
-let windowObjectReference: Window | null = null; // global variable
+let windowObjectReference: Window | null = null;
+let oauthPopupIdentifier: string | null = null;
 
 const OAUTH_REDIRECT_URL = `${window.location.protocol}//${window.location.host}`;
+export const OAUTH_BROADCAST_CHANNEL_NAME = "airbyte_oauth_callback";
+const OAUTH_POPUP_IDENTIFIER_KEY = "airbyte_oauth_popup_identifier";
 
+/**
+ * Since some OAuth providers clear out the window.opener and window.name properties,
+ * we need to use a different mechanism to relate the popup window back to this tab.
+ *
+ * Therefore, this method first opens the window to the /auth_flow page, with the
+ * consent URL as a query param and a random UUID as the window name.
+ *
+ * This /auth_flow page will store the UUID into session storage before redirecting
+ * to the consent URL.
+ *
+ * Once the OAuth consent flow is finished and the window is redirected back to
+ * /auth_flow, the UUID is retrieved from session storage and attached to the message
+ * sent to the broadcast channel.
+ *
+ * This tab listens for a message on the broadcast channel with the corresponding
+ * UUID, and completes the OAuth flow when it receives the message.
+ *
+ * @param url the OAuth consent URL
+ */
 function openWindow(url: string): void {
   if (windowObjectReference == null || windowObjectReference.closed) {
     /* if the pointer to the window object in memory does not exist
        or if such pointer exists but the window was closed */
 
+    oauthPopupIdentifier = uuid();
+    // Hook does not add type safetiness as we have to dynamically craft the key from the identifier
+    // eslint-disable-next-line @airbyte/no-local-storage
+    localStorage.setItem(`airbyte_consent_url:${oauthPopupIdentifier}`, url);
     const strWindowFeatures = "toolbar=no,menubar=no,width=600,height=700,top=100,left=100";
-    windowObjectReference = window.open(url, "name", strWindowFeatures);
+    windowObjectReference = window.open(
+      `/auth_flow?airbyte_oauth_popup_identifier=${oauthPopupIdentifier}`,
+      "",
+      strWindowFeatures
+    );
     /* then create it. The new window will be created and
        will be brought on top of any other window. */
   } else {
@@ -129,7 +160,11 @@ export function useConnectorAuth(): {
         ...params,
         queryParams,
       };
-      return "sourceDefinitionId" in payload ? completeSourceOAuth(payload) : completeDestinationOAuth(payload);
+
+      const ret = await ("sourceDefinitionId" in payload
+        ? completeSourceOAuth(payload)
+        : completeDestinationOAuth(payload));
+      return ret;
     },
   };
 }
@@ -199,15 +234,18 @@ export function useRunOauthFlow({
     [connector, onDone]
   );
 
-  const onOathGranted = useCallback(
-    async (event: MessageEvent) => {
-      // TODO: check if more secure option is required
-      if (event.data?.airbyte_type === "airbyte_oauth_callback" && event.origin === window.origin) {
-        await completeOauth(event.data.query);
+  useEffectOnce(() => {
+    const bc = new BroadcastChannel(OAUTH_BROADCAST_CHANNEL_NAME);
+    bc.onmessage = async (event) => {
+      if (event.airbyte_oauth_popup_identifier === oauthPopupIdentifier) {
+        await completeOauth(event.query);
       }
-    },
-    [completeOauth]
-  );
+    };
+
+    return () => {
+      bc.close();
+    };
+  });
 
   const onCloseWindow = useCallback(() => {
     windowObjectReference?.close();
@@ -221,7 +259,6 @@ export function useRunOauthFlow({
     [onCloseWindow]
   );
 
-  useEvent("message", onOathGranted);
   // Close popup oauth window when we close the original tab
   useEvent("beforeunload", onCloseWindow);
 
@@ -233,11 +270,32 @@ export function useRunOauthFlow({
 }
 
 export function useResolveNavigate(): void {
-  const query = useQuery();
+  const query = useQuery<{ airbyte_oauth_popup_identifier: string }>();
 
   useEffectOnce(() => {
-    // we add "airbyte_type" into the window so that we can catch events only from this window back in `onOathGranted`
-    window.opener?.postMessage({ airbyte_type: "airbyte_oauth_callback", query });
-    window.close();
+    const airbyteOauthPopupIdentifier = query.airbyte_oauth_popup_identifier;
+    if (airbyteOauthPopupIdentifier) {
+      // Hook does not add type safetiness as we have to dynamically craft the key from the identifier
+      // eslint-disable-next-line @airbyte/no-local-storage
+      const consentUrl = localStorage.getItem(`airbyte_consent_url:${airbyteOauthPopupIdentifier}`);
+      if (!consentUrl) {
+        throw new Error("No consent URL found for the given oauth popup identifier.");
+      }
+      // eslint-disable-next-line @airbyte/no-local-storage
+      localStorage.removeItem(`airbyte_consent_url:${airbyteOauthPopupIdentifier}`);
+      if (consentUrl.startsWith("http://") || consentUrl.startsWith("https://")) {
+        sessionStorage.setItem(OAUTH_POPUP_IDENTIFIER_KEY, airbyteOauthPopupIdentifier);
+        window.location.assign(consentUrl);
+      } else {
+        throw new Error("Did try to redirect to a non http/https URL.");
+      }
+    } else {
+      const bc = new BroadcastChannel(OAUTH_BROADCAST_CHANNEL_NAME);
+      bc.postMessage({
+        query,
+        airbyte_oauth_popup_identifier: sessionStorage.getItem(OAUTH_POPUP_IDENTIFIER_KEY),
+      });
+      window.close();
+    }
   });
 }

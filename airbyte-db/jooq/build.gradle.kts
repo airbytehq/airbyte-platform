@@ -29,7 +29,21 @@ dependencies {
     implementation("net.java.dev.jna:jna-platform:5.8.0")
 
     // The jOOQ code generator(only has access to classes added to the jooqGenerator configuration
-    jooqGenerator(project(":airbyte-db:db-lib"))
+    jooqGenerator(project(":airbyte-db:db-lib")) {
+        isTransitive = false
+    }
+    jooqGenerator(project(":airbyte-commons")) {
+        isTransitive = false
+    }
+    jooqGenerator(project(":airbyte-config:config-models")) {
+        isTransitive = false
+    }
+    jooqGenerator(libs.flyway.core)
+    jooqGenerator(libs.guava)
+    jooqGenerator(libs.hikaricp)
+    jooqGenerator(libs.jackson.datatype)
+    jooqGenerator(libs.postgresql)
+    jooqGenerator(libs.slf4j.simple)
     jooqGenerator(libs.platform.testcontainers.postgresql)
 }
 

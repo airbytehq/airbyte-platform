@@ -2,7 +2,7 @@ import { StatusIcon } from "components/ui/StatusIcon";
 
 import { JobWithAttempts } from "area/connection/types/jobs";
 import { isJobPartialSuccess, didJobSucceed, getJobStatus } from "area/connection/utils/jobs";
-import { JobStatus } from "core/request/AirbyteClient";
+import { JobStatus } from "core/api/types/AirbyteClient";
 
 interface JobStatusIconProps {
   job: JobWithAttempts;

@@ -1,9 +1,9 @@
 [versions]
-airbyte-protocol = "0.4.2"
+airbyte-protocol = "0.5.1"
 bouncycastle = "1.70"
 commons_io = "2.7"
 connectors-testcontainers = "1.15.3"
-datadog-version = "1.14.0"
+datadog-version = "1.24.2"
 docker-java = "3.2.8"
 fasterxml_version = "2.15.2"
 failsafe = "3.3.2"
@@ -15,12 +15,12 @@ java-common-annotations = "1.3.2"
 jax-rs = "2.1.1"
 jmh = "1.36"
 jooq = "3.17.8"
-junit-jupiter = "5.9.1"
-keycloak = "21.1.1" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
+junit-jupiter = "5.9.2"
+keycloak = "23.0.3" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
 kotlin-logging = "5.1.0"
 kubernetes-client = "6.5.1"
-log4j = "2.17.2"
-lombok = "1.18.24"
+log4j = "2.22.1"
+lombok = "1.18.30"
 micronaut = "3.10.1"
 micronaut-data = "3.10.0"
 micronaut-email = "1.5.0"
@@ -32,18 +32,18 @@ micronaut-openapi = "4.10.0"
 micronaut-security = "3.11.1"
 micronaut-test = "3.9.2"
 moshi = "1.15.0"
-mockito = "4.11.0"
-mockito-kotlin = "5.1.0"
-okhttp3 = "4.10.0"
+mockito = "5.8.0"
+mockito-kotlin = "5.2.1"
+okhttp3 = "4.12.0"
 platform-testcontainers = "1.17.6"
 postgresql = "42.5.4"
 reactor = "3.5.5"
 segment = "2.1.1"
 sentry = "6.14.0"
-slf4j = "1.7.36"
+slf4j = "2.0.9"
 swagger = "1.6.2"
+temporal = "1.22.3"
 v3-swagger = "2.2.16"
-temporal = "1.17.0"
 
 [libraries]
 airbyte-protocol = { module = "io.airbyte.airbyte-protocol:protocol-models", version.ref = "airbyte-protocol" }
@@ -54,14 +54,14 @@ apache-commons-collections = { module = "org.apache.commons:commons-collections4
 apache-commons-lang = { module = "org.apache.commons:commons-lang3", version = "3.11" }
 apache-commons-text = { module = "org.apache.commons:commons-text", version = "1.10.0" }
 apache-cxf-core = { module = "org.apache.cxf:cxf-core", version = "3.4.2" }
-appender-log4j2 = { module = "com.therealvan:appender-log4j2", version = "3.6.0" }
+appender-log4j2 = { module = "com.therealvan:appender-log4j2", version = "5.2.0" }
 assertj-core = { module = "org.assertj:assertj-core", version = "3.21.0" }
 aws-java-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version = "1.12.6" }
 aws-java-sdk-sts = {module = "com.amazonaws:aws-java-sdk-sts", version = "1.12.6"}
 aws-secretsmanager-caching-java = { module = "com.amazonaws.secretsmanager:aws-secretsmanager-caching-java", version = "1.0.2" }
 bouncycastle-bcprov = { module = "org.bouncycastle:bcprov-jdk15on", version.ref = "bouncycastle" }
 bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk15on", version.ref = "bouncycastle" }
-byte-buddy = { module = "net.bytebuddy:byte-buddy", version = "1.12.14" }
+byte-buddy = { module = "net.bytebuddy:byte-buddy", version = "1.14.10" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commons_io" }
 connectors-testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "connectors-testcontainers" }
 connectors-testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "connectors-testcontainers" }
@@ -115,28 +115,31 @@ kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version = "1.
 kotlin-test-runner-junit5 = { module = "io.kotlintest:kotlintest-runner-junit5", version = "3.4.2" }
 kubernetes-client = { module = "io.fabric8:kubernetes-client", version.ref = "kubernetes-client" }
 kubernetes-client-api = { module = "io.fabric8:kubernetes-client-api", version.ref = "kubernetes-client" }
+kubernetes-httpclient-okhttp = { module = "io.fabric8:kubernetes-httpclient-okhttp", version.ref = "kubernetes-client" }
 launchdarkly = { module = "com.launchdarkly:launchdarkly-java-server-sdk", version = "6.0.1" }
 log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
 log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
 log4j-impl = { module = "org.apache.logging.log4j:log4j-slf4j-impl", version.ref = "log4j" }
 log4j-over-slf4j = { module = "org.slf4j:log4j-over-slf4j", version.ref = "slf4j" }
+log4j-slf4j2-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j" }
 log4j-web = { module = "org.apache.logging.log4j:log4j-web", version.ref = "log4j" }
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 micrometer-statsd = { module = "io.micrometer:micrometer-registry-statsd", version = "1.9.3" }
 moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
-mockito-inline = { module = "org.mockito:mockito-inline", version.ref = "mockito" }
+mockito-inline = { module = "org.mockito:mockito-inline", version = "5.2.0" }
 mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin" }
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
 mockk = { module = "io.mockk:mockk", version = "1.13.8" }
 mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp3" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp3" }
 openapi-jackson-databind-nullable = { module = "org.openapitools:jackson-databind-nullable", version = "0.2.5" }
-opentracing-util-test = { module = "io.opentracing:opentracing-util", version = "0.33.0" }
-otel-bom = { module = "io.opentelemetry:opentelemetry-bom", version = "1.14.0" }
-otel-sdk = { module = "io.opentelemetry:opentelemetry-sdk-metrics", version = "1.14.0" }
-otel-sdk-testing = { module = "io.opentelemetry:opentelemetry-sdk-metrics-testing", version = "1.13.0-alpha" }
-otel-semconv = { module = "io.opentelemetry:opentelemetry-semconv", version = "1.14.0-alpha" }
+opentracing-util = { module = "io.opentracing:opentracing-util", version = "0.33.0" }
+otel-bom = { module = "io.opentelemetry:opentelemetry-bom", version = "1.33.0" }
+otel-bom-alpha = { module = "io.opentelemetry:opentelemetry-bom-alpha", version = "1.33.0-alpha" }
+otel-sdk = { module = "io.opentelemetry:opentelemetry-sdk-metrics", version = "1.33.0" }
+otel-sdk-testing = { module = "io.opentelemetry:opentelemetry-sdk-testing", version = "1.33.0" }
+otel-semconv = { module = "io.opentelemetry:opentelemetry-semconv", version = "1.30.1-alpha" }
 platform-testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "platform-testcontainers" }
 platform-testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "platform-testcontainers" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
@@ -149,13 +152,15 @@ sts = { module = "software.amazon.awssdk:sts", version = "2.20.162" }
 segment-java-analytics = { module = "com.segment.analytics.java:analytics", version.ref = "segment" }
 sentry-java = { module = "io.sentry:sentry", version.ref = "sentry" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+slf4j-simple = { module = "org.slf4j:slf4j-simple", version = "2.0.9" }
 slugify = { module = "com.github.slugify:slugify", version = "2.4" }
-spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.7.3" }
+spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.8.2" }
 spring-core = { module = "org.springframework:spring-core", version = "6.0.8" }
 stripe = { module = "com.stripe:stripe-java", version = "20.102.0" }
 swagger-annotations = { module = "io.swagger:swagger-annotations", version.ref = "swagger" }
 v3-swagger-annotations = { module = "io.swagger.core.v3:swagger-annotations", version.ref = "v3-swagger" }
 temporal-sdk = { module = "io.temporal:temporal-sdk", version.ref = "temporal" }
+temporal-opentracing = { module = "io.temporal:temporal-opentracing", version.ref = "temporal" }
 temporal-serviceclient = { module = "io.temporal:temporal-serviceclient", version.ref = "temporal" }
 temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "temporal" }
 testcontainers-vault = { module = "org.testcontainers:vault",  version = "1.18.3" }
@@ -207,12 +212,13 @@ micronaut-validation = { module = "io.micronaut:micronaut-validation", version.r
 apache = ["apache-commons", "apache-commons-lang"]
 bouncycastle = ["bouncycastle-bcprov", "bouncycastle-bcpkix"]
 datadog = ["datadog-trace-api", "datadog-trace-ot"]
-jackson = ["jackson-databind", "jackson-annotations", "jackson-dataformat", "jackson-datatype"]
+jackson = ["jackson-databind", "jackson-annotations", "jackson-dataformat", "jackson-datatype", "jackson-kotlin"]
 junit = ["junit-jupiter-api", "junit-jupiter-engine", "junit-jupiter-params", "mockito-junit-jupiter"]
 keycloak-client = ["keycloak-admin-client", "keycloak-client-registration-api"]
 kubernetes-client = ["kubernetes-client-api", "kubernetes-client"]
-log4j = ["log4j-api", "log4j-core", "log4j-impl", "log4j-web"]
+log4j = ["log4j-api", "log4j-core", "log4j-impl", "log4j-slf4j2-impl", "log4j-web", "appender-log4j2"]
 micronaut = ["jakarta-inject", "javax-transaction", "micronaut-http-server-netty", "micronaut-http-client", "micronaut-inject", "micronaut-validation", "micronaut-runtime", "micronaut-management", "micronaut-jaxrs-server", "micronaut-flyway", "micronaut-jdbc-hikari", "micronaut-jooq"]
+micronaut-light = ["jakarta-inject", "micronaut-inject", "micronaut-runtime"]
 micronaut-annotation = ["jakarta-inject", "micronaut-inject-java", "micronaut-openapi"]
 micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor", "micronaut-http-validation", "micronaut-openapi"]
 micronaut-data-jdbc = [ "micronaut-data-jdbc", "micronaut-data-model", "jakarta-persistence-api", "micronaut-jdbc-hikari"]
@@ -221,10 +227,13 @@ micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micro
 micronaut-server = ["micronaut-jaxrs-processor", "micronaut-jaxrs-server"]
 micronaut-test = ["micronaut-test-core", "micronaut-test-junit5", "h2-database"]
 micronaut-test-annotation-processor = ["micronaut-inject-java"]
+mockito-inline = ["mockito-inline", "byte-buddy"]
 secret-hydration = ["google-cloud-storage", "google-cloud-storage-secretmanager", "aws-secretsmanager-caching-java", "vault-java-driver"]
 slf4j = ["jul-to-slf4j", "jcl-over-slf4j", "log4j-over-slf4j"]
 temporal = ["temporal-sdk", "temporal-serviceclient"]
+temporal-telemetry = ["temporal-opentracing"]
 
 [plugins]
 node-gradle = { id = "com.github.node-gradle.node", version = "3.4.0" }
 nu-studer-jooq = { id = "nu.studer.jooq", version = "8.1" }
+de-undercouch-download = { id = "de.undercouch.download", version = "5.5.0" }

@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { isDefined } from "core/utils/common";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { SCOPE_WORKSPACE } from "services/Scope";
 
 import { connectorDefinitionKeys } from "./connectorUpdates";
 import {
@@ -14,6 +13,7 @@ import {
   listSourceDefinitionsForWorkspace,
   updateSourceDefinition,
 } from "../generated/AirbyteClient";
+import { SCOPE_WORKSPACE } from "../scopes";
 import { SourceDefinitionCreate, SourceDefinitionRead, SourceDefinitionReadList } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";

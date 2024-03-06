@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
@@ -23,9 +23,11 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.StreamDescriptor;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,9 +36,6 @@ import org.junit.jupiter.api.Test;
 class EmptyAirbyteSourceTest {
 
   private EmptyAirbyteSource emptyAirbyteSource;
-  private static final AirbyteMessage EMPTY_MESSAGE =
-      new AirbyteMessage().withType(Type.STATE)
-          .withState(new AirbyteStateMessage().withType(AirbyteStateType.LEGACY).withData(Jsons.emptyObject()));
 
   private static final ConfiguredAirbyteCatalog AIRBYTE_CATALOG = new ConfiguredAirbyteCatalog()
       .withStreams(Lists.newArrayList(
@@ -51,24 +50,24 @@ class EmptyAirbyteSourceTest {
 
   @Test
   void testLegacy() throws Exception {
-    emptyAirbyteSource.start(new WorkerSourceConfig(), null);
+    emptyAirbyteSource.start(new WorkerSourceConfig(), null, null);
 
-    legacyStateResult();
+    emptyResult();
   }
 
   @Test
   void testLegacyWithEmptyConfig() throws Exception {
-    emptyAirbyteSource.start(new WorkerSourceConfig().withSourceConnectionConfiguration(Jsons.emptyObject()), null);
+    emptyAirbyteSource.start(new WorkerSourceConfig().withSourceConnectionConfiguration(Jsons.emptyObject()), null, null);
 
-    legacyStateResult();
+    emptyResult();
   }
 
   @Test
   void testLegacyWithWrongConfigFormat() throws Exception {
     emptyAirbyteSource.start(new WorkerSourceConfig().withSourceConnectionConfiguration(Jsons.jsonNode(
-        Map.of("not", "expected"))), null);
+        Map.of("not", "expected"))), null, null);
 
-    legacyStateResult();
+    emptyResult();
   }
 
   @Test
@@ -79,9 +78,9 @@ class EmptyAirbyteSourceTest {
         .withSourceConnectionConfiguration(Jsons.jsonNode(resetSourceConfiguration))
         .withCatalog(AIRBYTE_CATALOG);
 
-    emptyAirbyteSource.start(workerSourceConfig, null);
+    emptyAirbyteSource.start(workerSourceConfig, null, null);
 
-    legacyStateResult();
+    emptyResult();
   }
 
   @Test
@@ -105,7 +104,7 @@ class EmptyAirbyteSourceTest {
             .withState(Jsons.jsonNode(createGlobalState(streamDescriptors, Jsons.emptyObject()))))
         .withCatalog(AIRBYTE_CATALOG);
 
-    emptyAirbyteSource.start(workerSourceConfig, null);
+    emptyAirbyteSource.start(workerSourceConfig, null, null);
 
     final Optional<AirbyteMessage> maybeMessage = emptyAirbyteSource.attemptRead();
     Assertions.assertThat(maybeMessage)
@@ -162,7 +161,7 @@ class EmptyAirbyteSourceTest {
             .withState(Jsons.jsonNode(createGlobalState(streamDescriptors, Jsons.emptyObject()))))
         .withCatalog(AIRBYTE_CATALOG);
 
-    emptyAirbyteSource.start(workerSourceConfig, null);
+    emptyAirbyteSource.start(workerSourceConfig, null, null);
 
     final Optional<AirbyteMessage> maybeMessage = emptyAirbyteSource.attemptRead();
     Assertions.assertThat(maybeMessage)
@@ -208,7 +207,7 @@ class EmptyAirbyteSourceTest {
             .withState(Jsons.jsonNode(createGlobalState(streamDescriptors, Jsons.emptyObject()))))
         .withCatalog(AIRBYTE_CATALOG);
 
-    emptyAirbyteSource.start(workerSourceConfig, null);
+    emptyAirbyteSource.start(workerSourceConfig, null, null);
 
     final Optional<AirbyteMessage> maybeMessage = emptyAirbyteSource.attemptRead();
     Assertions.assertThat(maybeMessage)
@@ -250,7 +249,7 @@ class EmptyAirbyteSourceTest {
             .withState(Jsons.jsonNode(createPerStreamState(streamDescriptors))))
         .withCatalog(AIRBYTE_CATALOG);
 
-    emptyAirbyteSource.start(workerSourceConfig, null);
+    emptyAirbyteSource.start(workerSourceConfig, null, null);
 
     streamsToReset.forEach(this::testReceiveExpectedPerStreamMessages);
 
@@ -275,7 +274,7 @@ class EmptyAirbyteSourceTest {
             .withState(Jsons.jsonNode(createPerStreamState(streamDescriptors))))
         .withCatalog(AIRBYTE_CATALOG);
 
-    emptyAirbyteSource.start(workerSourceConfig, null);
+    emptyAirbyteSource.start(workerSourceConfig, null, null);
 
     streamsToReset.forEach(this::testReceiveExpectedPerStreamMessages);
 
@@ -301,7 +300,7 @@ class EmptyAirbyteSourceTest {
             .withState(Jsons.jsonNode(createPerStreamState(streamDescriptors))))
         .withCatalog(AIRBYTE_CATALOG);
 
-    emptyAirbyteSource.start(workerSourceConfig, null);
+    emptyAirbyteSource.start(workerSourceConfig, null, null);
 
     streamsToReset.forEach(this::testReceiveExpectedPerStreamMessages);
 
@@ -333,7 +332,7 @@ class EmptyAirbyteSourceTest {
             .withState(Jsons.emptyObject()))
         .withCatalog(airbyteCatalogWithExtraStream);
 
-    Assertions.assertThatThrownBy(() -> emptyAirbyteSource.start(workerSourceConfig, null))
+    Assertions.assertThatThrownBy(() -> emptyAirbyteSource.start(workerSourceConfig, null, null))
         .isInstanceOf(IllegalStateException.class);
 
   }
@@ -355,10 +354,10 @@ class EmptyAirbyteSourceTest {
     final WorkerSourceConfig workerSourceConfig = new WorkerSourceConfig()
         .withSourceConnectionConfiguration(Jsons.jsonNode(resetSourceConfiguration))
         .withState(new State()
-            .withState(Jsons.emptyObject()))
+            .withState(Jsons.jsonNode(Collections.singletonMap("cursor", "1"))))
         .withCatalog(airbyteCatalog);
 
-    emptyAirbyteSource.start(workerSourceConfig, null);
+    emptyAirbyteSource.start(workerSourceConfig, null, null);
 
     final Optional<AirbyteMessage> maybeMessage = emptyAirbyteSource.attemptRead();
     Assertions.assertThat(maybeMessage)
@@ -395,10 +394,10 @@ class EmptyAirbyteSourceTest {
     final WorkerSourceConfig workerSourceConfig = new WorkerSourceConfig()
         .withSourceConnectionConfiguration(Jsons.jsonNode(resetSourceConfiguration))
         .withState(new State()
-            .withState(Jsons.emptyObject()))
+            .withState(Jsons.jsonNode(Collections.singletonMap("cursor", "1"))))
         .withCatalog(airbyteCatalog);
 
-    emptyAirbyteSource.start(workerSourceConfig, null);
+    emptyAirbyteSource.start(workerSourceConfig, null, null);
 
     final Optional<AirbyteMessage> maybeMessage = emptyAirbyteSource.attemptRead();
     Assertions.assertThat(maybeMessage)
@@ -435,22 +434,12 @@ class EmptyAirbyteSourceTest {
         .withSourceConnectionConfiguration(Jsons.jsonNode(resetSourceConfiguration))
         .withCatalog(airbyteCatalogWithExtraStream);
 
-    emptyAirbyteSource.start(workerSourceConfig, null);
-
-    final Optional<AirbyteMessage> maybeMessage = emptyAirbyteSource.attemptRead();
-    Assertions.assertThat(maybeMessage)
-        .isNotEmpty();
-
-    final AirbyteMessage message = maybeMessage.get();
-    Assertions.assertThat(message.getType()).isEqualTo(Type.STATE);
-
-    final AirbyteStateMessage stateMessage = message.getState();
-    Assertions.assertThat(stateMessage.getType()).isEqualTo(AirbyteStateType.LEGACY);
-    Assertions.assertThat(stateMessage.getData()).isEqualTo(Jsons.emptyObject());
+    emptyAirbyteSource.start(workerSourceConfig, null, null);
 
     streamsToReset.forEach(this::testReceiveResetMessageTupleForSingleStateTypes);
 
-    Assertions.assertThat(emptyAirbyteSource.attemptRead())
+    final Optional<AirbyteMessage> maybeMessage = emptyAirbyteSource.attemptRead();
+    Assertions.assertThat(maybeMessage)
         .isEmpty();
 
     Assertions.assertThat(emptyAirbyteSource.isFinished()).isTrue();
@@ -509,11 +498,7 @@ class EmptyAirbyteSourceTest {
         name -> new StreamDescriptor().withName(name)).toList();
   }
 
-  private void legacyStateResult() {
-    Assertions.assertThat(emptyAirbyteSource.attemptRead())
-        .isNotEmpty()
-        .contains(EMPTY_MESSAGE);
-
+  private void emptyResult() {
     Assertions.assertThat(emptyAirbyteSource.attemptRead())
         .isEmpty();
   }
@@ -541,6 +526,31 @@ class EmptyAirbyteSourceTest {
         new AirbyteStateMessage()
             .withType(AirbyteStateType.GLOBAL)
             .withGlobal(globalState));
+  }
+
+  @Test
+  void emptyLegacyStateShouldNotEmitState() throws Exception {
+    final StreamDescriptor streamDescriptor = new StreamDescriptor().withName("test").withNamespace("schema");
+    final ResetSourceConfiguration resetSourceConfiguration =
+        new ResetSourceConfiguration().withStreamsToReset(Collections.singletonList(streamDescriptor));
+    final ConfiguredAirbyteCatalog configuredAirbyteCatalog = new ConfiguredAirbyteCatalog()
+        .withStreams(
+            Collections.singletonList(new ConfiguredAirbyteStream()
+                .withStream(
+                    new AirbyteStream()
+                        .withName("test")
+                        .withNamespace("schema"))));
+    final WorkerSourceConfig workerSourceConfig = new WorkerSourceConfig().withSourceId(UUID.randomUUID())
+        .withState(new State().withState(Jsons.emptyObject()))
+        .withCatalog(configuredAirbyteCatalog)
+        .withSourceConnectionConfiguration(Jsons.jsonNode(resetSourceConfiguration));
+
+    emptyAirbyteSource.start(workerSourceConfig, null, null);
+    testReceiveResetMessageTupleForSingleStateTypes(streamDescriptor);
+    Assertions.assertThat(emptyAirbyteSource.attemptRead())
+        .isEmpty();
+
+    Assertions.assertThat(emptyAirbyteSource.isFinished()).isTrue();
   }
 
 }

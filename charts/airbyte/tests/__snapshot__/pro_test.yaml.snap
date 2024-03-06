@@ -115,7 +115,6 @@ manifest should match snapshot:
       DATABASE_PORT: "5432"
       DATABASE_URL: jdbc:postgresql://airbyte-db-svc:5432/db-airbyte
       DB_DOCKER_MOUNT: airbyte_db
-      GCS_LOG_BUCKET: ""
       GOOGLE_APPLICATION_CREDENTIALS: ""
       INTERNAL_API_HOST: RELEASE-NAME-airbyte-server-svc:8001
       JOB_MAIN_CONTAINER_CPU_LIMIT: ""
@@ -131,20 +130,18 @@ manifest should match snapshot:
       METRIC_CLIENT: ""
       OTEL_COLLECTOR_ENDPOINT: ""
       RUN_DATABASE_MIGRATION_ON_STARTUP: "true"
-      S3_LOG_BUCKET: airbyte-dev-logs
-      S3_LOG_BUCKET_REGION: ""
-      S3_MINIO_ENDPOINT: http://airbyte-minio-svc:9000
       S3_PATH_STYLE_ACCESS: "true"
       SHOULD_RUN_NOTIFY_WORKFLOWS: "true"
-      STATE_STORAGE_MINIO_BUCKET_NAME: airbyte-state-storage
-      STATE_STORAGE_MINIO_ENDPOINT: http://airbyte-minio-svc:9000
       TEMPORAL_HOST: RELEASE-NAME-temporal:7233
       TEMPORAL_WORKER_PORTS: 9001,9002,9003,9004,9005,9006,9007,9008,9009,9010,9011,9012,9013,9014,9015,9016,9017,9018,9019,9020,9021,9022,9023,9024,9025,9026,9027,9028,9029,9030,9031,9032,9033,9034,9035,9036,9037,9038,9039,9040
       TRACKING_STRATEGY: segment
       WEBAPP_URL: http://RELEASE-NAME-airbyte-webapp-svc:80
       WORKER_ENVIRONMENT: kubernetes
-      WORKER_LOGS_STORAGE_TYPE: MINIO
-      WORKER_STATE_STORAGE_TYPE: MINIO
+      STORAGE_BUCKET_LOG: airbyte-dev-logs
+      STORAGE_BUCKET_STATE: airbyte-state-storage
+      STORAGE_BUCKET_WORKLOAD_OUTPUT: airbyte-state-storage
+      STORAGE_TYPE: MINIO
+      MINIO_ENDPOINT: http://airbyte-minio-svc:9000
       WORKERS_MICRONAUT_ENVIRONMENTS: control-plane
       WORKFLOW_FAILURE_RESTART_DELAY_SECONDS: ""
       WORKSPACE_DOCKER_MOUNT: airbyte_workspace
@@ -269,8 +266,8 @@ manifest should match snapshot:
       DATABASE_USER: airbyte
       KEYCLOAK_ADMIN_PASSWORD: keycloak123
       KEYCLOAK_ADMIN_USER: airbyteAdmin
-      STATE_STORAGE_MINIO_ACCESS_KEY: minio
-      STATE_STORAGE_MINIO_SECRET_ACCESS_KEY: minio123
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: minio123
     type: Opaque
   9: |
     apiVersion: v1

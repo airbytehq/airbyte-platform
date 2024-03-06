@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
@@ -35,8 +35,7 @@ import java.util.Optional;
 public class BasicAirbyteMessageValidator {
 
   static Optional<AirbyteMessage> validate(final AirbyteMessage message,
-                                           final Optional<ConfiguredAirbyteCatalog> catalog,
-                                           final boolean failMissingPks) {
+                                           final Optional<ConfiguredAirbyteCatalog> catalog) {
     if (message.getType() == null) {
       return Optional.empty();
     }
@@ -57,7 +56,7 @@ public class BasicAirbyteMessageValidator {
         if (record.getStream() == null || record.getData() == null) {
           return Optional.empty();
         }
-        if (failMissingPks && catalog.isPresent()) {
+        if (catalog.isPresent()) {
           final Optional<ConfiguredAirbyteStream> catalogStream = AirbyteMessageExtractor.getCatalogStreamFromMessage(catalog.get(), record);
 
           if (catalogStream.isEmpty()) {

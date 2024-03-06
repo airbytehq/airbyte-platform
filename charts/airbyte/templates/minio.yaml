@@ -1,4 +1,4 @@
-{{- if .Values.minio.enabled }}
+{{- if eq (lower .Values.global.storage.type) "minio" }}
 apiVersion: apps/v1 #  for k8s versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use extensions/v1beta1
 kind: StatefulSet
 metadata:
@@ -39,15 +39,15 @@ spec:
           env:
             # Minio access key and secret key. This must match the S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY declared in /dev/.env.
             - name: MINIO_ROOT_USER
-              value: {{ .Values.minio.auth.rootUser  }}
+              value: {{ .Values.global.storage.minio.accessKey }}
             - name: MINIO_ROOT_PASSWORD
-              value: {{ .Values.minio.auth.rootPassword }}
+              value: {{ .Values.global.storage.minio.secretKey }}
           ports:
             - containerPort: 9000
           # Mount the volume into the pod
           volumeMounts:
             - name: airbyte-minio-pv-claim # must match the volume name, above
-              mountPath: "/data"
+              mountPath: "/storage"
           {{- if .Values.minio.resources }}
           resources: {{- toYaml .Values.minio.resources | nindent 12 }}
           {{- end }}
@@ -99,12 +99,14 @@ spec:
       command: ["/bin/sh", "-c",
         "until (/usr/bin/mc config host add myminio $MINIO_ENDPOINT $MINIO_ACCESS_KEY $MINIO_SECRET_KEY) do echo '...waiting...' && sleep 1; done;
           /usr/bin/mc mb --ignore-existing myminio/state-storage;
-          /usr/bin/mc policy set public myminio/state-storage;"]
+          /usr/bin/mc policy set public myminio/state-storage;
+          /usr/bin/mc mb --ignore-existing myminio/airbyte-dev-logs;
+          /usr/bin/mc policy set public myminio/airbyte-dev-logs;"]
       env:
         - name: MINIO_ACCESS_KEY
-          value: {{ .Values.minio.auth.rootUser }}
+          value: {{ .Values.global.storage.minio.accessKey }}
         - name: MINIO_SECRET_KEY
-          value: {{ .Values.minio.auth.rootPassword }}
+          value: {{ .Values.global.storage.minio.secretKey }}
         - name: MINIO_ENDPOINT
-          value: {{ .Values.minio.endpoint }}
+          value: {{ .Values.global.storage.minio.endpoint }}
 {{ end }}

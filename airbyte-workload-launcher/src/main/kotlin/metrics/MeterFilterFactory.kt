@@ -10,45 +10,40 @@ import jakarta.inject.Singleton
 @Factory
 class MeterFilterFactory(
   @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
-  @Value("\${micronaut.application.name}") private val applicationName: String,
 ) {
   @Bean
   @Singleton
   fun addCommonTagFilter(): MeterFilter {
-    // TODO add all the common tags
-
+    // Add all the common application-specific tags
     val commonTags =
       mutableListOf(
         Tag.of(DATA_PLANE_ID_TAG, dataplaneId),
-        Tag.of(DATA_DOG_SERVICE_TAG, applicationName),
       )
 
-    if (!System.getenv(DATA_DOG_ENVIRONMENT_TAG).isNullOrBlank()) {
-      commonTags.add(Tag.of(DATA_DOG_ENVIRONMENT_TAG, System.getenv(DATA_DOG_ENVIRONMENT_TAG)))
-    }
-
-    if (!System.getenv(DATA_DOG_AGENT_HOST_TAG).isNullOrBlank()) {
-      commonTags.add(Tag.of(DATA_DOG_AGENT_HOST_TAG, System.getenv(DATA_DOG_AGENT_HOST_TAG)))
-    }
-
-    if (!System.getenv(DATA_DOG_VERSION_TAG).isNullOrBlank()) {
-      commonTags.add(Tag.of(DATA_DOG_VERSION_TAG, System.getenv(DATA_DOG_VERSION_TAG)))
-    }
     return MeterFilter.commonTags(commonTags)
   }
 
   companion object {
-    const val DATA_DOG_AGENT_HOST_TAG = "DD_AGENT_HOST"
-    const val DATA_DOG_ENVIRONMENT_TAG = "DD_ENV"
-    const val DATA_DOG_SERVICE_TAG = "DD_SERVICE"
-    const val DATA_DOG_VERSION_TAG = "DD_VERSION"
     const val DATA_PLANE_ID_TAG = "data_plane_id"
+    const val QUEUE_NAME_TAG = "queue_name"
+    const val STAGE_NAME_TAG = "stage_name"
+    const val STATUS_TAG = "status"
     const val WORKLOAD_ID_TAG = "workload_id"
+    const val WORKLOAD_TYPE_TAG = "workload_type"
     const val MUTEX_KEY_TAG = "mutex_key"
+    const val KUBE_COMMAND_TYPE_TAG = "kube_command_type"
+    const val KUBE_POD_TYPE_TAG = "kube_pod_type"
 
     const val LAUNCH_PIPELINE_OPERATION_NAME = "launch-pipeline"
     const val LAUNCH_PIPELINE_STAGE_OPERATION_NAME = "launch-pipeline-stage"
+    const val LAUNCH_REPLICATION_OPERATION_NAME = "launch-replication"
     const val RESUME_CLAIMED_OPERATION_NAME = "resume_claimed"
-    const val KUBERENTES_RESOURCE_MONITOR_NAME = "kuberentes-resource-monitor"
+    const val WAIT_DESTINATION_OPERATION_NAME = "wait-destination"
+    const val WAIT_ORCHESTRATOR_OPERATION_NAME = "wait-orchestrator"
+    const val WAIT_SOURCE_OPERATION_NAME = "wait-source"
+    const val SUCCESS_STATUS = "ok"
+    const val FAILURE_STATUS = "error"
+    const val RUNNING_STATUS = "running"
+    const val STOPPED_STATUS = "stopped"
   }
 }

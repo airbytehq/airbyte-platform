@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync;
@@ -26,7 +26,7 @@ import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.workers.helpers.SecretPersistenceConfigHelper;
+import io.airbyte.workers.helper.SecretPersistenceConfigHelper;
 import jakarta.inject.Singleton;
 import java.net.URI;
 import java.net.http.HttpClient;

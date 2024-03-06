@@ -4,62 +4,38 @@ global:
   credVolumeOverride: ""
   secretName: ""
   extraContainers: []
-  ## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+  ## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
   extraSelectorLabels: {}
   ## extraLabels [object] - use to specify own additional labels for deployment
   extraLabels: {}
   database:
     secretName: ""
     secretValue: ""
-    host: "example.com"
-    port: "5432"
-  logs:
-    ##  logs.accessKey.password Logs Access Key
-    ##  logs.accessKey.existingSecret
-    ##  logs.accessKey.existingSecretKey
-    accessKey:
-      password: minio
-      existingSecret: ""
-      existingSecretKey: ""
-    ##  logs.secretKey.password Logs Secret Key
-    ##  logs.secretKey.existingSecret
-    ##  logs.secretKey.existingSecretKey
-    secretKey:
-      password: minio123
-      existingSecret: ""
-      existingSecretKey: ""
-
-    ##  logs.minio.enabled Switch to enable or disable the Minio helm chart
+  storage:
+    type: "MINIO"
+    bucket:
+      log: airbyte-dev-logs
+      state: airbyte-state
+      workloadOutput: airbyte-state
+    gcs:
+      credentials: ""
+      credentialsJson: ""
     minio:
-      enabled: true
-
-    ##  logs.externalMinio.enabled Switch to enable or disable an external Minio instance
-    ##  logs.externalMinio.host External Minio Host
-    ##  logs.externalMinio.port External Minio Port
+      accessKey: minio
+      secretKey: minio123
+      endpoint: http://airbyte-minio-svc:9000
+    s3:
+      region: ""
+      accessKey:
+      accessKeyExistingSecret:
+      accessKeyExistingSecretKey:
+      secretKey:
+      secretKeyExistingSecret:
+      secretKeyExistingSecretKey:
     externalMinio:
       enabled: false
       host: localhost
       port: 9000
-
-    ##  logs.s3.enabled Switch to enable or disable custom S3 Log location
-    ##  logs.s3.bucket Bucket name where logs should be stored
-    ##  logs.s3.bucketRegion Region of the bucket (must be empty if using minio)
-    s3:
-      enabled: false
-      bucket: airbyte-dev-logs
-      bucketRegion: ""
-
-    ## Google Cloud Storage (GCS) Log Location Configuration
-    ##  logs.gcs.bucket GCS bucket name
-    ##  logs.gcs.credentials The path the GCS creds are written to
-    ##  logs.gcs.credentialsJson Base64 encoded json GCP credentials file contents
-    gcs:
-      bucket: ""
-      # If you are mounting an existing secret to extraVolumes on workload launcher
-      # deployments, then set credentials to the path of the mounted JSON file
-      credentials: ""
-      # If credentialsJson is set then credentials auto resolves (to /secrets/gcs-log-creds/gcp.json)
-      credentialsJson: ""
   jobs:
     ## Jobs resource requests and limits
     ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
@@ -319,57 +295,17 @@ secrets: {}
 #   TRACKING_STRATEGY: segment
 #   WEBAPP_URL: airbyte-webapp-svc:80
 #   INTERNAL_API_HOST: airbyte-server-svc:8001
-
-#   WORKER_ENVIRONMENT: kubernetes
-#   LOG_LEVEL: INFO
-
-#   # S3/Minio Log Configuration
-#   S3_LOG_BUCKET: airbyte-dev-logs
-#   S3_LOG_BUCKET_REGION:
-#   S3_MINIO_ENDPOINT: http://airbyte-minio-svc:9000
-#   S3_PATH_STYLE_ACCESS: true
-
-#   # GCS Log Configuration
-#   GCS_LOG_BUCKET:
-
-#   # State Storage Configuration
-#   STATE_STORAGE_MINIO_BUCKET_NAME: airbyte-dev-logs
-#   STATE_STORAGE_MINIO_ENDPOINT: http://airbyte-minio-svc:9000
-
-#   # Docker Resource Limits
-#   JOB_MAIN_CONTAINER_CPU_REQUEST:
-#   JOB_MAIN_CONTAINER_CPU_LIMIT:
-#   JOB_MAIN_CONTAINER_MEMORY_REQUEST:
-#   JOB_MAIN_CONTAINER_MEMORY_LIMIT:
-
-#   NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_LIMIT:
-#   NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_REQUEST:
-#   NORMALIZATION_JOB_MAIN_CONTAINER_CPU_LIMIT:
-#   NORMALIZATION_JOB_MAIN_CONTAINER_CPU_REQUEST:
-
-#   # Job pod tolerations, annotations, labels and node selectors
-#   JOB_KUBE_TOLERATIONS:
-#   JOB_KUBE_ANNOTATIONS:
-#   JOB_KUBE_LABELS;
-#   JOB_KUBE_NODE_SELECTORS:
-
-#   # Job image pull policy
-#   JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:
-
-#   # Launch a separate pod to orchestrate sync steps
-#   CONTAINER_ORCHESTRATOR_ENABLED: true
-#   CONTAINER_ORCHESTRATOR_IMAGE:
-
-#   # Open Telemetry Configuration
-#   METRIC_CLIENT:
-#   OTEL_COLLECTOR_ENDPOINT:
-
 env_vars: {}
 
-## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
 extraSelectorLabels: {}
 ## extraLabels [object] - use to specify own additional labels for deployment
 extraLabels: {}
+
+## workloadApi:
+##   bearerTokenSecretName: workload-api-bearer-token-name kubernetes secret name where bearer token is stored
+##   bearerTokenSecretKey: workload-api-bearer-token-key kubernetes secret key where bearer token is stored
+workloadApi: {}
 
 debug:
   enabled: false

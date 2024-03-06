@@ -59,7 +59,7 @@ tasks.register("pnpmBuild", PnpmTask) {
     inputs.file '.eslintrc.js'
     inputs.file '.stylelintrc'
     inputs.file 'orval.config.ts'
-    inputs.file 'vite.config.ts'
+    inputs.file 'vite.config.mts'
     inputs.file 'index.html'
     inputs.dir 'scripts'
     inputs.dir 'src'

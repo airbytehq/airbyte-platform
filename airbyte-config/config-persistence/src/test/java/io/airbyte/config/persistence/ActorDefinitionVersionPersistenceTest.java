@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -10,8 +10,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
@@ -25,21 +28,22 @@ import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.HealthCheckServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
+import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -64,6 +68,10 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
   private static final String PROTOCOL_VERSION = "1.0.0";
   private static final ConnectorSpecification SPEC = new ConnectorSpecification()
       .withConnectionSpecification(Jsons.jsonNode(Map.of("key", "value"))).withProtocolVersion(PROTOCOL_VERSION);
+  private static final ConnectorSpecification SPEC_2 = new ConnectorSpecification()
+      .withConnectionSpecification(Jsons.jsonNode(Map.of("key2", "value2"))).withProtocolVersion(PROTOCOL_VERSION);
+  private static final ConnectorSpecification SPEC_3 = new ConnectorSpecification()
+      .withConnectionSpecification(Jsons.jsonNode(Map.of("key3", "value3"))).withProtocolVersion(PROTOCOL_VERSION);
 
   private static StandardSourceDefinition baseSourceDefinition(final UUID actorDefinitionId) {
     return new StandardSourceDefinition()
@@ -107,33 +115,36 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
   void beforeEach() throws Exception {
     truncateAllTables();
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
+    when(featureFlagClient.stringVariation(eq(HeartbeatMaxSecondsBetweenMessages.INSTANCE), any(SourceDefinition.class))).thenReturn("3600");
+
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
+    final ConnectionService connectionService = mock(ConnectionService.class);
     configRepository = spy(
         new ConfigRepository(
             new ActorDefinitionServiceJooqImpl(database),
             new CatalogServiceJooqImpl(database),
-            new ConnectionServiceJooqImpl(database),
+            connectionService,
             new ConnectorBuilderServiceJooqImpl(database),
             new DestinationServiceJooqImpl(database,
                 featureFlagClient,
                 secretsRepositoryReader,
                 secretsRepositoryWriter,
-                secretPersistenceConfigService),
-            new HealthCheckServiceJooqImpl(database),
+                secretPersistenceConfigService,
+                connectionService),
             new OAuthServiceJooqImpl(database,
                 featureFlagClient,
                 secretsRepositoryReader,
                 secretPersistenceConfigService),
             new OperationServiceJooqImpl(database),
-            new OrganizationServiceJooqImpl(database),
             new SourceServiceJooqImpl(database,
                 featureFlagClient,
                 secretsRepositoryReader,
                 secretsRepositoryWriter,
-                secretPersistenceConfigService),
+                secretPersistenceConfigService,
+                connectionService),
             new WorkspaceServiceJooqImpl(database,
                 featureFlagClient,
                 secretsRepositoryReader,
@@ -170,6 +181,63 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
     final Optional<ActorDefinitionVersion> optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
     assertTrue(optRetrievedADV.isPresent());
     assertEquals(adv.withVersionId(id), optRetrievedADV.get());
+  }
+
+  @Test
+  void testUpdateActorDefinitionVersion() throws IOException {
+    final UUID defId = sourceDefinition.getSourceDefinitionId();
+    final ActorDefinitionVersion initialADV = baseActorDefinitionVersion(defId);
+
+    // initial insert
+    final ActorDefinitionVersion insertedADV = configRepository.writeActorDefinitionVersion(Jsons.clone(initialADV));
+    final UUID id = insertedADV.getVersionId();
+
+    Optional<ActorDefinitionVersion> optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
+    assertTrue(optRetrievedADV.isPresent());
+    assertEquals(insertedADV, optRetrievedADV.get());
+    assertEquals(Jsons.clone(initialADV).withVersionId(id), optRetrievedADV.get());
+
+    // update w/o ID
+    final ActorDefinitionVersion advWithNewSpec = Jsons.clone(initialADV).withSpec(SPEC_2);
+    final ActorDefinitionVersion updatedADV = configRepository.writeActorDefinitionVersion(advWithNewSpec);
+
+    optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
+    assertTrue(optRetrievedADV.isPresent());
+    assertEquals(updatedADV, optRetrievedADV.get());
+    assertEquals(Jsons.clone(advWithNewSpec).withVersionId(id), optRetrievedADV.get());
+
+    // update w/ ID
+    final ActorDefinitionVersion advWithAnotherNewSpecAndId = Jsons.clone(updatedADV).withSpec(SPEC_3);
+    final ActorDefinitionVersion updatedADV2 = configRepository.writeActorDefinitionVersion(advWithAnotherNewSpecAndId);
+
+    optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
+    assertTrue(optRetrievedADV.isPresent());
+    assertEquals(updatedADV2, optRetrievedADV.get());
+    assertEquals(advWithAnotherNewSpecAndId, optRetrievedADV.get());
+  }
+
+  @Test
+  void testUpdateActorDefinitionVersionWithMismatchedIdFails() throws IOException {
+    final UUID defId = sourceDefinition.getSourceDefinitionId();
+    final ActorDefinitionVersion initialADV = baseActorDefinitionVersion(defId);
+
+    // initial insert
+    final ActorDefinitionVersion insertedADV = configRepository.writeActorDefinitionVersion(Jsons.clone(initialADV));
+    final UUID id = insertedADV.getVersionId();
+
+    Optional<ActorDefinitionVersion> optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
+    assertTrue(optRetrievedADV.isPresent());
+    assertEquals(insertedADV, optRetrievedADV.get());
+    assertEquals(Jsons.clone(initialADV).withVersionId(id), optRetrievedADV.get());
+
+    // update same tag w/ different ID throws
+    final ActorDefinitionVersion advWithNewId = Jsons.clone(initialADV).withSpec(SPEC_2).withVersionId(UUID.randomUUID());
+    assertThrows(RuntimeException.class, () -> configRepository.writeActorDefinitionVersion(advWithNewId));
+
+    // no change in DB
+    optRetrievedADV = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
+    assertTrue(optRetrievedADV.isPresent());
+    assertEquals(Jsons.clone(initialADV).withVersionId(id), optRetrievedADV.get());
   }
 
   @Test

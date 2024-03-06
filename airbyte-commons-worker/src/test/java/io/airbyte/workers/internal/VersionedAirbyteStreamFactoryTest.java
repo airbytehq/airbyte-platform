@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
@@ -166,7 +166,7 @@ class VersionedAirbyteStreamFactoryTest {
       final Stream<AirbyteMessage> messageStream =
           VersionedAirbyteStreamFactory
               .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 1L,
-                  new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false), gsonPksExtractor)
+                  new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false), gsonPksExtractor)
               .create(bufferedReader);
 
       assertThrows(RuntimeException.class, () -> messageStream.toList());
@@ -187,10 +187,10 @@ class VersionedAirbyteStreamFactoryTest {
       verify(logger).debug(invalidRecord);
     }
 
-    private VersionedAirbyteStreamFactory getFactory(final boolean failTooLongMessage, final boolean failMissingPks) {
+    private VersionedAirbyteStreamFactory getFactory(final boolean failTooLongMessage) {
       return VersionedAirbyteStreamFactory
           .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 100000L,
-              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(failTooLongMessage, failMissingPks, false),
+              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(failTooLongMessage, false),
               gsonPksExtractor);
     }
 
@@ -202,26 +202,26 @@ class VersionedAirbyteStreamFactoryTest {
     @Test
     void testToAirbyteMessageValid() {
       final String messageLine = String.format(VALID_MESSAGE_TEMPLATE, "hello");
-      Assertions.assertThat(getFactory(false, false).toAirbyteMessage(messageLine)).hasSize(1);
+      Assertions.assertThat(getFactory(false).toAirbyteMessage(messageLine)).hasSize(1);
     }
 
     @Test
     void testToAirbyteMessageRandomLog() {
-      Assertions.assertThat(getFactory(false, false).toAirbyteMessage("I should not be send on the same channel than the airbyte messages"))
+      Assertions.assertThat(getFactory(false).toAirbyteMessage("I should not be send on the same channel than the airbyte messages"))
           .isEmpty();
     }
 
     @Test
     void testToAirbyteMessageMixedUpRecordShouldOnlyDebugLog() {
       final String messageLine = "It shouldn't be here" + String.format(VALID_MESSAGE_TEMPLATE, "hello");
-      getFactory(false, false).toAirbyteMessage(messageLine);
+      getFactory(false).toAirbyteMessage(messageLine);
       verify(logger).debug(messageLine);
     }
 
     @Test
     void testToAirbyteMessageMixedUpRecordFailureDisable() {
       final String messageLine = "It shouldn't be here" + String.format(VALID_MESSAGE_TEMPLATE, "hello");
-      Assertions.assertThat(getFactory(false, false).toAirbyteMessage(messageLine)).isEmpty();
+      Assertions.assertThat(getFactory(false).toAirbyteMessage(messageLine)).isEmpty();
     }
 
     @Test
@@ -231,7 +231,7 @@ class VersionedAirbyteStreamFactoryTest {
         longStringBuilder.append("a");
       }
       final String messageLine = String.format(VALID_MESSAGE_TEMPLATE, longStringBuilder);
-      assertThrows(RuntimeException.class, () -> getFactory(true, false).toAirbyteMessage(messageLine));
+      assertThrows(RuntimeException.class, () -> getFactory(true).toAirbyteMessage(messageLine));
     }
 
     @Test
@@ -241,7 +241,7 @@ class VersionedAirbyteStreamFactoryTest {
         longStringBuilder.append("a");
       }
       final String messageLine = String.format(VALID_MESSAGE_TEMPLATE, longStringBuilder);
-      Assertions.assertThat(getFactory(false, false).toAirbyteMessage(messageLine)).isEmpty();
+      Assertions.assertThat(getFactory(false).toAirbyteMessage(messageLine)).isEmpty();
     }
 
     private Stream<AirbyteMessage> stringToMessageStream(final String inputString) {
@@ -249,7 +249,7 @@ class VersionedAirbyteStreamFactoryTest {
       final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
       return VersionedAirbyteStreamFactory
           .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 100000L,
-              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
+              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false),
               gsonPksExtractor)
           .create(bufferedReader);
     }
@@ -282,8 +282,8 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreate() {
       final Version initialVersion = new Version("0.1.2");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(),
-              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), Optional.empty(),
+              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false),
               gsonPksExtractor);
 
       final BufferedReader bufferedReader = new BufferedReader(new StringReader(""));
@@ -296,8 +296,8 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreateWithVersionDetection() {
       final Version initialVersion = new Version("0.0.0");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(),
-              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), Optional.empty(),
+              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false),
               gsonPksExtractor)
                   .withDetectVersion(true);
 
@@ -313,8 +313,8 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreateWithVersionDetectionFallback() {
       final Version initialVersion = new Version("0.0.6");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(),
-              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), Optional.empty(),
+              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false),
               gsonPksExtractor)
                   .withDetectVersion(true);
 
@@ -330,8 +330,8 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreateWithVersionDetectionWithoutSpecMessage() {
       final Version initialVersion = new Version("0.0.1");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(),
-              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), Optional.empty(),
+              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false),
               gsonPksExtractor)
                   .withDetectVersion(true);
 

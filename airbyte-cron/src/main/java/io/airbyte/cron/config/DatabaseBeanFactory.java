@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.cron.config;
@@ -12,12 +12,11 @@ import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DestinationService;
-import io.airbyte.data.services.HealthCheckService;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.OperationService;
-import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.shared.DataSourceUnwrapper;
 import io.airbyte.db.Database;
 import io.airbyte.db.check.DatabaseMigrationCheck;
 import io.airbyte.db.factory.DatabaseCheckFactory;
@@ -32,7 +31,6 @@ import io.micronaut.context.annotation.Value;
 import io.micronaut.flyway.FlywayConfigurationProperties;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.io.IOException;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.flywaydb.core.Flyway;
@@ -52,15 +50,15 @@ public class DatabaseBeanFactory {
 
   @Singleton
   @Named("configDatabase")
-  public Database configDatabase(@Named("config") final DSLContext dslContext) throws IOException {
-    return new Database(dslContext);
+  public Database configDatabase(@Named("config") final DSLContext dslContext) {
+    return new Database(DataSourceUnwrapper.unwrapContext(dslContext));
   }
 
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   @Named("jobsDatabase")
-  public Database jobsDatabase(@Named("jobs") final DSLContext dslContext) throws IOException {
-    return new Database(dslContext);
+  public Database jobsDatabase(@Named("jobs") final DSLContext dslContext) {
+    return new Database(DataSourceUnwrapper.unwrapContext(dslContext));
   }
 
   /**
@@ -77,7 +75,7 @@ public class DatabaseBeanFactory {
                              @Named("config") final DataSource configDataSource,
                              @Value("${airbyte.flyway.configs.minimum-migration-version}") final String baselineVersion) {
     return configFlywayConfigurationProperties.getFluentConfiguration()
-        .dataSource(configDataSource)
+        .dataSource(DataSourceUnwrapper.unwrapDataSource(configDataSource))
         .baselineVersion(baselineVersion)
         .baselineDescription(BASELINE_DESCRIPTION)
         .baselineOnMigrate(BASELINE_ON_MIGRATION)
@@ -93,10 +91,8 @@ public class DatabaseBeanFactory {
                                            final ConnectionService connectionService,
                                            final ConnectorBuilderService connectorBuilderService,
                                            final DestinationService destinationService,
-                                           final HealthCheckService healthCheckService,
                                            final OAuthService oauthService,
                                            final OperationService operationService,
-                                           final OrganizationService organizationService,
                                            final SourceService sourceService,
                                            final WorkspaceService workspaceService) {
     return new ConfigRepository(
@@ -105,10 +101,8 @@ public class DatabaseBeanFactory {
         connectionService,
         connectorBuilderService,
         destinationService,
-        healthCheckService,
         oauthService,
         operationService,
-        organizationService,
         sourceService,
         workspaceService);
   }
@@ -131,7 +125,10 @@ public class DatabaseBeanFactory {
                                                               @Value("${airbyte.flyway.configs.initialization-timeout-ms}") final Long configsDatabaseInitializationTimeoutMs) {
     log.info("Configs database configuration: {} {}", configsDatabaseMinimumFlywayMigrationVersion, configsDatabaseInitializationTimeoutMs);
     return DatabaseCheckFactory
-        .createConfigsDatabaseMigrationCheck(dslContext, configsFlyway, configsDatabaseMinimumFlywayMigrationVersion,
+        .createConfigsDatabaseMigrationCheck(
+            DataSourceUnwrapper.unwrapContext(dslContext),
+            configsFlyway,
+            configsDatabaseMinimumFlywayMigrationVersion,
             configsDatabaseInitializationTimeoutMs);
   }
 

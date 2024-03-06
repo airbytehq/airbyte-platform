@@ -5,5 +5,33 @@ flags:
     serve: false
   - name: test-string
     serve: "example"
+    context:
+      - type: "workspace"
+        include:
+          - "00000000-aaaa-0000-aaaa-000000000000"
+        serve: "context"
+
+  - name: test-context-boolean
+    serve: true
+    context:
+      - type: "workspace"
+        include:
+          - "00000000-aaaa-0000-aaaa-000000000000"
+        serve: false
+
+  - name: test-context-string
+    serve: "all"
+    context:
+      - type: "workspace"
+        include:
+          - "00000000-aaaa-0000-aaaa-000000000000"
+          - "00000000-dddd-0000-dddd-000000000000"
+        serve: "aaaa"
+      - type: "workspace"
+        include:
+          - "00000000-bbbb-0000-bbbb-000000000000"
+          - "00000000-dddd-0000-dddd-000000000000"
+        serve: "bbbb"
+
   - name: test-int
     serve: 1234

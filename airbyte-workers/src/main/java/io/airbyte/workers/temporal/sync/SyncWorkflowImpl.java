@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync;
@@ -52,8 +52,7 @@ import org.slf4j.LoggerFactory;
 public class SyncWorkflowImpl implements SyncWorkflow {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SyncWorkflowImpl.class);
-  private static final String AUTO_DETECT_SCHEMA_TAG = "auto_detect_schema";
-  private static final int AUTO_DETECT_SCHEMA_VERSION = 2;
+
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
   private ReplicationActivity replicationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
@@ -68,6 +67,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private RefreshSchemaActivity refreshSchemaActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private ConfigFetchActivity configFetchActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private WorkloadFeatureFlagActivity workloadFeatureFlagActivity;
 
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
@@ -77,11 +78,18 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                                 final StandardSyncInput syncInput,
                                 final UUID connectionId) {
 
+    // TODO: Remove this once Workload API rolled out
+    final var useWorkloadApi = checkUseWorkloadApiFlag(syncInput);
+    final var useWorkloadOutputDocStore = checkUseWorkloadOutputFlag(syncInput);
+
     ApmTraceUtils
-        .addTagsToTrace(Map.of(ATTEMPT_NUMBER_KEY, jobRunConfig.getAttemptId(), CONNECTION_ID_KEY, connectionId.toString(), JOB_ID_KEY,
-            jobRunConfig.getJobId(), SOURCE_DOCKER_IMAGE_KEY,
-            sourceLauncherConfig.getDockerImage(),
-            DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage()));
+        .addTagsToTrace(Map.of(
+            ATTEMPT_NUMBER_KEY, jobRunConfig.getAttemptId(),
+            CONNECTION_ID_KEY, connectionId.toString(),
+            JOB_ID_KEY, jobRunConfig.getJobId(),
+            SOURCE_DOCKER_IMAGE_KEY, sourceLauncherConfig.getDockerImage(),
+            DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage(),
+            "USE_WORKLOAD_API", useWorkloadApi));
 
     final String taskQueue = Workflow.getInfo().getTaskQueue();
 
@@ -114,7 +122,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
     StandardSyncOutput syncOutput = replicationActivity
         .replicateV2(generateReplicationActivityInput(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, taskQueue,
-            refreshSchemaOutput));
+            refreshSchemaOutput, useWorkloadApi, useWorkloadOutputDocStore));
 
     if (syncInput.getOperationSequence() != null && !syncInput.getOperationSequence().isEmpty()) {
       for (final StandardSyncOperation standardSyncOperation : syncInput.getOperationSequence()) {
@@ -193,7 +201,9 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                                                                     final IntegrationLauncherConfig sourceLauncherConfig,
                                                                     final IntegrationLauncherConfig destinationLauncherConfig,
                                                                     final String taskQueue,
-                                                                    final RefreshSchemaActivityOutput refreshSchemaOutput) {
+                                                                    final RefreshSchemaActivityOutput refreshSchemaOutput,
+                                                                    final boolean useWorkloadApi,
+                                                                    final boolean useWorkloadOutputDocStore) {
     return new ReplicationActivityInput(
         syncInput.getSourceId(),
         syncInput.getDestinationId(),
@@ -212,7 +222,23 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         syncInput.getNamespaceFormat(),
         syncInput.getPrefix(),
         refreshSchemaOutput,
-        syncInput.getConnectionContext());
+        syncInput.getConnectionContext(),
+        useWorkloadApi,
+        useWorkloadOutputDocStore);
+  }
+
+  private boolean checkUseWorkloadApiFlag(final StandardSyncInput syncInput) {
+    return workloadFeatureFlagActivity.useWorkloadApi(new WorkloadFeatureFlagActivity.Input(
+        syncInput.getWorkspaceId(),
+        syncInput.getConnectionId(),
+        syncInput.getConnectionContext().getOrganizationId()));
+  }
+
+  private boolean checkUseWorkloadOutputFlag(final StandardSyncInput syncInput) {
+    return workloadFeatureFlagActivity.useOutputDocStore(new WorkloadFeatureFlagActivity.Input(
+        syncInput.getWorkspaceId(),
+        syncInput.getConnectionId(),
+        syncInput.getConnectionContext().getOrganizationId()));
   }
 
 }

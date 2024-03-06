@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher
@@ -13,6 +13,7 @@ import io.airbyte.workload.api.client.model.generated.WorkloadListRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadListResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.DATA_PLANE_ID_TAG
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.RESUME_CLAIMED_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_ID_TAG
@@ -36,7 +37,7 @@ class ClaimedProcessor(
   private val pipe: LaunchPipeline,
   private val metricPublisher: CustomMetricPublisher,
   @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
-  @Value("\${airbyte.workload-launcher.parallelism}") parallelism: Int,
+  @Value("\${airbyte.workload-launcher.temporal.default-queue.parallelism}") parallelism: Int,
 ) {
   private val scheduler = Schedulers.newParallel("process-claimed-scheduler", parallelism)
 
@@ -69,7 +70,11 @@ class ClaimedProcessor(
   }
 
   private fun runOnClaimedScheduler(msg: LauncherInput): Mono<LaunchStageIO> {
-    metricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_CLAIM_RESUMED, MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId))
+    metricPublisher.count(
+      WorkloadLauncherMetricMetadata.WORKLOAD_CLAIM_RESUMED,
+      MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId),
+      MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, msg.workloadType.toString()),
+    )
     return pipe.buildPipeline(msg)
       .subscribeOn(scheduler)
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.general;
@@ -22,6 +22,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.ConnectorJobOutput.OutputType;
 import io.airbyte.config.FailureReason;
+import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.protocol.models.AirbyteCatalog;
@@ -38,6 +39,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.UUID;
@@ -99,8 +101,15 @@ public class DefaultDiscoverCatalogWorker implements DiscoverCatalogWorker {
         jobOutput.setConnectorConfigurationUpdated(true);
       }
 
-      final Optional<FailureReason> failureReason = WorkerUtils.getJobFailureReasonFromMessages(OutputType.DISCOVER_CATALOG_ID, messagesByType);
-      failureReason.ifPresent(jobOutput::setFailureReason);
+      final Optional<FailureReason> failureReasonOptional =
+          WorkerUtils.getJobFailureReasonFromMessages(OutputType.DISCOVER_CATALOG_ID, messagesByType);
+      if (failureReasonOptional.isPresent()) {
+        final FailureReason failureReason = failureReasonOptional.get();
+        // any failure from a discover job's connector message is guaranteed to be a source failure,
+        // so mark it as such.
+        failureReason.setFailureOrigin(FailureOrigin.SOURCE);
+        jobOutput.setFailureReason(failureReasonOptional.get());
+      }
 
       final int exitCode = process.exitValue();
       if (exitCode != 0) {
@@ -117,7 +126,7 @@ public class DefaultDiscoverCatalogWorker implements DiscoverCatalogWorker {
                 .writeDiscoverCatalogResult(buildSourceDiscoverSchemaWriteRequestBody(discoverSchemaInput, catalog.get())),
                 WRITE_DISCOVER_CATALOG_LOGS_TAG);
         jobOutput.setDiscoverCatalogId(result.getCatalogId());
-      } else if (failureReason.isEmpty()) {
+      } else if (failureReasonOptional.isEmpty()) {
         WorkerUtils.throwWorkerException("Integration failed to output a catalog struct and did not output a failure reason", process);
       }
       return jobOutput;
@@ -130,26 +139,44 @@ public class DefaultDiscoverCatalogWorker implements DiscoverCatalogWorker {
     }
   }
 
+  // NOTE: This logic is getting moved as part of a bug fix, but appears to be missing functionality.
+  // TODO: This logic should validate the path is traversable and not just that the keys exist in the
+  // schema.
+  private String validatePath(final JsonNode jsonSchema, final List<String> path) {
+    for (final String key : path) {
+      if (!jsonSchema.has(key)) {
+        return String.format("key: '%s' of path: '%s' not found in schema: %s", key, path, jsonSchema);
+      }
+    }
+
+    return "";
+  }
+
   private String validateCatalog(final AirbyteCatalog persistenceCatalog) {
     final StringJoiner streamsWithFaultySchema = new StringJoiner(",");
     for (final AirbyteStream s : persistenceCatalog.getStreams()) {
       if (s.getJsonSchema() != null && s.getJsonSchema().has("properties") && s.getJsonSchema().get("properties") != null) {
         final JsonNode jsonSchema = s.getJsonSchema().get("properties");
-        for (final String cursor : s.getDefaultCursorField()) {
-          if (!jsonSchema.has(cursor)) {
-            streamsWithFaultySchema.add(
-                String.format("Stream %s has declared cursor field %s but it's not part of the schema %s", s.getName(), cursor,
-                    jsonSchema.toPrettyString()));
-          }
+
+        final List<String> defaultCursorPath = Objects.requireNonNullElse(s.getDefaultCursorField(), List.of());
+        final var maybePathError = validatePath(jsonSchema, defaultCursorPath);
+        if (!maybePathError.isEmpty()) {
+          streamsWithFaultySchema.add(String.format(
+              "Source defined cursor validation failed for stream: %s. Error: %s",
+              s.getName(),
+              maybePathError));
         }
 
-        for (final List<String> pkey : s.getSourceDefinedPrimaryKey()) {
-          for (final String k : pkey) {
-            if (!jsonSchema.has(k)) {
-              streamsWithFaultySchema.add(
-                  String.format("Stream %s has declared primary key field %s but it's not part of the schema %s", s.getName(), k,
-                      jsonSchema.toPrettyString()));
-            }
+        final List<List<String>> sourceDefinedPrimaryKeyPaths = Objects.requireNonNullElse(s.getSourceDefinedPrimaryKey(), List.of());
+        for (final var path : sourceDefinedPrimaryKeyPaths) {
+          final List<String> nonNullPath = Objects.requireNonNullElse(path, List.of());
+          final var maybeErrorMsg = validatePath(jsonSchema, nonNullPath);
+          if (!maybeErrorMsg.isEmpty()) {
+            streamsWithFaultySchema.add(
+                String.format(
+                    "Source defined primary key validation failed for stream: %s. Error: %s",
+                    s.getName(),
+                    maybeErrorMsg));
           }
         }
       }

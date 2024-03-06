@@ -5,7 +5,7 @@ import { Option } from "components/ui/ListBox";
 import { PillButtonVariant } from "components/ui/PillListBox";
 import { PillListBox } from "components/ui/PillListBox/PillListBox";
 
-import { DestinationSyncMode, SyncMode } from "core/request/AirbyteClient";
+import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 
 import styles from "./SyncModeSelect.module.scss";
 
@@ -43,7 +43,7 @@ export const SyncModeSelect: React.FC<SyncModeSelectProps> = ({ options, onChang
       onSelect={onChange}
       pillClassName={styles.pillSelect}
       variant={variant}
-      disabled={disabled}
+      isDisabled={disabled}
       data-testid="sync-mode-select"
     />
   );

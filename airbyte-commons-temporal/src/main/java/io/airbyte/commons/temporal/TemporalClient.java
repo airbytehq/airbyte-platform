@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal;
@@ -488,7 +488,7 @@ public class TemporalClient {
 
   @VisibleForTesting
   <T> TemporalResponse<T> execute(final JobRunConfig jobRunConfig, final Supplier<T> executor) {
-    final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig);
+    final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
     final Path logPath = TemporalUtils.getLogPath(jobRoot);
 
     T operationOutput = null;

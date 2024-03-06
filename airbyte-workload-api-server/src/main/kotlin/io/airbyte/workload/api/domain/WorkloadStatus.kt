@@ -11,6 +11,9 @@ enum class WorkloadStatus(private val value: String) {
   @JsonProperty("claimed")
   CLAIMED("claimed"),
 
+  @JsonProperty("launched")
+  LAUNCHED("launched"),
+
   @JsonProperty("running")
   RUNNING("running"),
 

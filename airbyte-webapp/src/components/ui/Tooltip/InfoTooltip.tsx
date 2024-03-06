@@ -13,7 +13,7 @@ export const InfoTooltip: React.FC<React.PropsWithChildren<InfoTooltipProps>> = 
       control={
         <span className={styles.container}>
           <span className={styles.icon}>
-            <Icon type="infoOutline" size="sm" />
+            <Icon type="infoOutline" size="xs" />
           </span>
         </span>
       }

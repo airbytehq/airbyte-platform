@@ -2,10 +2,7 @@ import React, { createContext, useCallback, useContext, useState } from "react";
 import { FieldErrors } from "react-hook-form";
 import { useIntl } from "react-intl";
 
-import {
-  HookFormConnectionFormValues,
-  useInitialHookFormValues,
-} from "components/connection/ConnectionForm/hookFormConfig";
+import { FormConnectionFormValues, useInitialFormValues } from "components/connection/ConnectionForm/formConfig";
 
 import {
   useSourceDefinitionVersion,
@@ -14,6 +11,7 @@ import {
   useGetDestinationDefinitionSpecification,
   useSourceDefinition,
   useDestinationDefinition,
+  SchemaError,
 } from "core/api";
 import {
   ActorDefinitionVersionRead,
@@ -22,10 +20,10 @@ import {
   SourceDefinitionRead,
   SourceDefinitionSpecificationRead,
   WebBackendConnectionRead,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 import { FormError, generateMessageFromError } from "core/utils/errorStatusMessage";
 
-import { SchemaError } from "../useSourceHook";
+import { useExperiment } from "../Experiment";
 
 export type ConnectionFormMode = "create" | "edit" | "readonly";
 
@@ -49,14 +47,11 @@ interface ConnectionFormHook {
   destDefinition: DestinationDefinitionRead;
   destDefinitionVersion: ActorDefinitionVersionRead;
   destDefinitionSpecification: DestinationDefinitionSpecificationRead;
-  initialValues: HookFormConnectionFormValues;
+  initialValues: FormConnectionFormValues;
   schemaError?: SchemaError;
   refreshSchema: () => Promise<void>;
   setSubmitError: (submitError: FormError | null) => void;
-  getErrorMessage: (
-    formValid: boolean,
-    errors?: FieldErrors<HookFormConnectionFormValues>
-  ) => string | JSX.Element | null;
+  getErrorMessage: (formValid: boolean, errors?: FieldErrors<FormConnectionFormValues>) => string | JSX.Element | null;
 }
 
 const useConnectionForm = ({
@@ -81,14 +76,10 @@ const useConnectionForm = ({
     connection.destinationId
   );
 
-  const initialValues = useInitialHookFormValues(
-    connection,
-    destDefinitionVersion,
-    destDefinitionSpecification,
-    mode !== "create"
-  );
+  const initialValues = useInitialFormValues(connection, destDefinitionVersion, mode !== "create");
   const { formatMessage } = useIntl();
   const [submitError, setSubmitError] = useState<FormError | null>(null);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
 
   const getErrorMessage = useCallback<ConnectionFormHook["getErrorMessage"]>(
     (formValid, errors) => {
@@ -98,14 +89,17 @@ const useConnectionForm = ({
 
       if (!formValid) {
         const hasNoStreamsSelectedError = errors?.syncCatalog?.streams?.message === "connectionForm.streams.required";
+        const validationErrorMessage = isSimplifiedCreation
+          ? "connectionForm.validation.creationError"
+          : "connectionForm.validation.error";
         return formatMessage({
-          id: hasNoStreamsSelectedError ? "connectionForm.streams.required" : "connectionForm.validation.error",
+          id: hasNoStreamsSelectedError ? "connectionForm.streams.required" : validationErrorMessage,
         });
       }
 
       return null;
     },
-    [formatMessage, submitError]
+    [formatMessage, submitError, isSimplifiedCreation]
   );
 
   return {

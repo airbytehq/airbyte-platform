@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.keycloak.setup;
@@ -12,15 +12,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.auth.config.IdentityProviderConfiguration;
-import java.util.Arrays;
+import jakarta.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import javax.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.keycloak.admin.client.resource.IdentityProviderResource;
 import org.keycloak.admin.client.resource.IdentityProvidersResource;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.IdentityProviderRepresentation;
@@ -34,15 +32,11 @@ class IdentityProvidersCreatorTest {
   @Mock
   private RealmResource realmResource;
   @Mock
-  private Response response;
-  @Mock
   private ConfigurationMapService configurationMapService;
   @Mock
   private IdentityProviderConfiguration identityProviderConfiguration;
   @Mock
   private IdentityProvidersResource identityProvidersResource;
-  @Mock
-  private IdentityProviderRepresentation idpRepresentation;
   @InjectMocks
   private IdentityProvidersCreator identityProvidersCreator;
 
@@ -70,10 +64,10 @@ class IdentityProvidersCreatorTest {
     when(realmResource.identityProviders()).thenReturn(identityProvidersResource);
     when(identityProvidersResource.create(any(IdentityProviderRepresentation.class)))
         .thenReturn(Response.status(Response.Status.CREATED).build());
-    when(identityProviderConfiguration.getType()).thenReturn(IdentityProviderConfiguration.ProviderType.OKTA);
+    when(identityProviderConfiguration.getType()).thenReturn(IdentityProviderConfiguration.ProviderType.OIDC);
 
     Map<String, String> configMap = new HashMap<>();
-    when(configurationMapService.importProviderFrom(realmResource, identityProviderConfiguration, "keycloak-oidc"))
+    when(configurationMapService.importProviderFrom(realmResource, identityProviderConfiguration, "oidc"))
         .thenReturn(configMap);
     when(configurationMapService.setupProviderConfig(identityProviderConfiguration, configMap))
         .thenReturn(configMap);
@@ -89,10 +83,10 @@ class IdentityProvidersCreatorTest {
     when(realmResource.identityProviders()).thenReturn(identityProvidersResource);
     when(identityProvidersResource.create(any(IdentityProviderRepresentation.class)))
         .thenReturn(Response.status(Response.Status.BAD_REQUEST).build());
-    when(identityProviderConfiguration.getType()).thenReturn(IdentityProviderConfiguration.ProviderType.OKTA);
+    when(identityProviderConfiguration.getType()).thenReturn(IdentityProviderConfiguration.ProviderType.OIDC);
 
     Map<String, String> configMap = new HashMap<>();
-    when(configurationMapService.importProviderFrom(realmResource, identityProviderConfiguration, "keycloak-oidc"))
+    when(configurationMapService.importProviderFrom(realmResource, identityProviderConfiguration, "oidc"))
         .thenReturn(configMap);
     when(configurationMapService.setupProviderConfig(identityProviderConfiguration, configMap))
         .thenReturn(configMap);
@@ -100,25 +94,6 @@ class IdentityProvidersCreatorTest {
     assertThrows(RuntimeException.class, () -> {
       identityProvidersCreator.createIdps(realmResource);
     });
-  }
-
-  @Test
-  void testResetIdentityProviders() {
-    IdentityProviderRepresentation identityProviderRepresentation = mock(IdentityProviderRepresentation.class);
-    IdentityProviderResource identityProvider = mock(IdentityProviderResource.class);
-    Response response = mock(Response.class);
-
-    when(realmResource.identityProviders()).thenReturn(identityProvidersResource);
-    when(identityProvidersResource.findAll()).thenReturn(Arrays.asList(identityProviderRepresentation));
-    when(identityProvidersResource.get(identityProviderRepresentation.getInternalId())).thenReturn(identityProvider);
-    when(identityProvidersResource.create(any(IdentityProviderRepresentation.class))).thenReturn(response);
-    when(response.getStatus()).thenReturn(201);
-
-    identityProvidersCreator.resetIdentityProviders(realmResource);
-
-    verify(identityProvidersResource).findAll();
-    verify(identityProvidersResource).get(identityProviderRepresentation.getInternalId());
-    verify(identityProvider).remove();
   }
 
 }

@@ -1,9 +1,9 @@
-import { config } from "config";
+import { config } from "core/config";
 
 import { AnalyticsService } from "./AnalyticsService";
 import { Action, Namespace } from "./types";
 
-jest.mock("config", () => ({
+jest.mock("core/config", () => ({
   config: {
     version: "1.0.0",
   },

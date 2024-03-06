@@ -1,10 +1,9 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.server.controllers
 
-import io.airbyte.airbyte_api.generated.JobsApi
 import io.airbyte.airbyte_api.model.generated.ConnectionResponse
 import io.airbyte.airbyte_api.model.generated.JobCreateRequest
 import io.airbyte.airbyte_api.model.generated.JobStatusEnum
@@ -12,12 +11,14 @@ import io.airbyte.airbyte_api.model.generated.JobTypeEnum
 import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByFieldEnum
 import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByMethodEnum
 import io.airbyte.api.server.apiTracking.TrackingHelper
+import io.airbyte.api.server.constants.AUTH_HEADER
 import io.airbyte.api.server.constants.DELETE
 import io.airbyte.api.server.constants.ENDPOINT_API_USER_INFO_HEADER
 import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.JOBS_PATH
 import io.airbyte.api.server.constants.JOBS_WITH_ID_PATH
 import io.airbyte.api.server.constants.POST
+import io.airbyte.api.server.controllers.interfaces.JobsApi
 import io.airbyte.api.server.filters.JobsFilter
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.problems.BadRequestProblem
@@ -47,6 +48,7 @@ open class JobsController(
   @Path("/{jobId}")
   override fun cancelJob(
     @PathParam("jobId") jobId: Long,
+    @HeaderParam(AUTH_HEADER) authorization: String?,
     @HeaderParam(ENDPOINT_API_USER_INFO_HEADER) userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -56,6 +58,7 @@ open class JobsController(
         {
           jobService.cancelJob(
             jobId,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -77,6 +80,7 @@ open class JobsController(
 
   override fun createJob(
     jobCreateRequest: JobCreateRequest,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -86,6 +90,7 @@ open class JobsController(
         {
           connectionService.getConnection(
             jobCreateRequest.connectionId,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -101,6 +106,7 @@ open class JobsController(
           trackingHelper.callWithTracker({
             jobService.sync(
               jobCreateRequest.connectionId,
+              authorization,
               getLocalUserInfoIfNull(userInfo),
             )
           }, JOBS_PATH, POST, userId)!!
@@ -121,6 +127,7 @@ open class JobsController(
           trackingHelper.callWithTracker({
             jobService.reset(
               jobCreateRequest.connectionId,
+              authorization,
               getLocalUserInfoIfNull(userInfo),
             )
           }, JOBS_PATH, POST, userId)!!
@@ -153,6 +160,7 @@ open class JobsController(
   @Path("/{jobId}")
   override fun getJob(
     @PathParam("jobId") jobId: Long,
+    @HeaderParam(AUTH_HEADER) authorization: String?,
     @HeaderParam(ENDPOINT_API_USER_INFO_HEADER) userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -162,6 +170,7 @@ open class JobsController(
         {
           jobService.getJobInfoWithoutLogs(
             jobId,
+            authorization,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -193,6 +202,7 @@ open class JobsController(
     updatedAtStart: OffsetDateTime?,
     updatedAtEnd: OffsetDateTime?,
     orderBy: String?,
+    authorization: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -221,6 +231,7 @@ open class JobsController(
                 filter,
                 orderByField,
                 orderByMethod,
+                authorization,
                 getLocalUserInfoIfNull(userInfo),
               )
             },
@@ -236,6 +247,7 @@ open class JobsController(
                 filter,
                 orderByField,
                 orderByMethod,
+                authorization,
                 getLocalUserInfoIfNull(userInfo),
               )
             },
@@ -261,7 +273,7 @@ open class JobsController(
     var field: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT
     var method: OrderByMethodEnum = OrderByMethodEnum.ASC
     if (orderBy != null) {
-      val pattern: java.util.regex.Pattern = java.util.regex.Pattern.compile("([a-zA-Z0-9]+)|(ASC|DESC)")
+      val pattern: java.util.regex.Pattern = java.util.regex.Pattern.compile("([a-zA-Z0-9]+)\\|(ASC|DESC)")
       val matcher: java.util.regex.Matcher = pattern.matcher(orderBy)
       if (!matcher.find()) {
         throw BadRequestProblem("Invalid order by clause provided: $orderBy")

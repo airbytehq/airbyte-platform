@@ -3,8 +3,8 @@ import { SchemaOf } from "yup";
 
 import { NormalizationType } from "area/connection/types";
 import { validateCronExpression, validateCronFrequencyOneHourOrMore } from "area/connection/utils";
-import { AirbyteStreamAndConfiguration } from "core/api/types/AirbyteClient";
 import {
+  AirbyteStreamAndConfiguration,
   AirbyteStream,
   AirbyteStreamConfiguration,
   ConnectionScheduleData,
@@ -14,11 +14,11 @@ import {
   NamespaceDefinitionType,
   NonBreakingChangesPreference,
   SyncMode,
-} from "core/request/AirbyteClient";
+  SchemaChangeBackfillPreference,
+} from "core/api/types/AirbyteClient";
+import { ConnectionFormMode } from "hooks/services/ConnectionForm/ConnectionFormService";
 
-import { dbtOperationReadOrCreateSchema } from "../TransformationHookForm";
-
-export type ConnectionHookFormMode = "create" | "edit" | "readonly";
+import { dbtOperationReadOrCreateSchema } from "../TransformationForm";
 
 /**
  * yup schema for the schedule data
@@ -53,7 +53,7 @@ const getScheduleDataSchema = (allowSubOneHourCronExpressions: boolean) =>
                 validation.isValid ||
                 createError({
                   path,
-                  message: validation.message ?? "form.cronExpression.invalid",
+                  message: "form.cronExpression.invalid",
                 })
               );
             })
@@ -184,7 +184,7 @@ export const namespaceFormatSchema = yup.string().when("namespaceDefinition", {
  * generate yup schema for the create connection form
  */
 export const createConnectionValidationSchema = (
-  mode: ConnectionHookFormMode,
+  mode: ConnectionFormMode,
   allowSubOneHourCronExpressions: boolean,
   allowAutoDetectSchema: boolean
 ) =>
@@ -197,7 +197,7 @@ export const createConnectionValidationSchema = (
       scheduleData: getScheduleDataSchema(allowSubOneHourCronExpressions),
       namespaceDefinition: namespaceDefinitionSchema.required("form.empty.error"),
       namespaceFormat: namespaceFormatSchema,
-      prefix: yup.string().optional(),
+      prefix: yup.string().default(""),
       nonBreakingChangesPreference: allowAutoDetectSchema
         ? yup.mixed().oneOf(Object.values(NonBreakingChangesPreference)).required("form.empty.error")
         : yup.mixed().notRequired(),
@@ -205,5 +205,7 @@ export const createConnectionValidationSchema = (
       normalization: yup.mixed<NormalizationType>().oneOf(Object.values(NormalizationType)).optional(),
       transformations: yup.array().of(dbtOperationReadOrCreateSchema).optional(),
       syncCatalog: syncCatalogSchema,
+      notifySchemaChanges: yup.boolean().optional(),
+      backfillPreference: yup.mixed().oneOf(Object.values(SchemaChangeBackfillPreference)).optional(),
     })
     .noUnknown();

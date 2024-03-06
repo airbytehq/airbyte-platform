@@ -1,3 +1,4 @@
+import * as statusPage from "@cy/pages/connection/statusPageObject";
 import {
   DestinationRead,
   SourceRead,
@@ -8,7 +9,7 @@ import {
 
 import {
   enterConnectionName,
-  selectSchedule,
+  selectScheduleType,
   setupDestinationNamespaceSourceFormat,
 } from "pages/connection/connectionFormPageObject";
 import { openCreateConnection } from "pages/destinationPage";
@@ -61,17 +62,13 @@ export const createTestConnection = (sourceName: string, destinationName: string
       createLocalJsonDestination(destinationName);
   }
 
-  // TODO is this actually needed?
-  // eslint-disable-next-line cypress/no-unnecessary-waiting
-  cy.wait(5000);
-
   cy.get("a[data-testid='connections-step']").click();
   openCreateConnection();
 
   cy.get("div").contains(sourceName).click();
-  cy.wait("@discoverSchema");
+  cy.wait("@discoverSchema", { timeout: 60000 });
   enterConnectionName("Connection name");
-  selectSchedule("Manual");
+  selectScheduleType("Manual");
 
   setupDestinationNamespaceSourceFormat();
   submitButtonClick();
@@ -84,15 +81,15 @@ export const startManualSync = () => {
 };
 
 export const startManualReset = () => {
-  cy.get("[data-testid='job-history-dropdown-menu']").click();
-  cy.get("[data-testid='reset-data-dropdown-option']").click();
+  cy.get(statusPage.jobHistoryDropdownMenu).click();
+  cy.get(statusPage.resetDataDropdownOption).click();
   cy.get("[data-id='reset']").click();
 };
 
 export const createPokeApiSourceViaApi = () => {
   let source: SourceRead;
   return requestWorkspaceId().then(() => {
-    const sourceRequestBody = getPokeApiCreateSourceBody(appendRandomString("PokeAPI Source"), "luxray");
+    const sourceRequestBody = getPokeApiCreateSourceBody(appendRandomString("PokeAPI Source"), "venusaur");
     requestCreateSource(sourceRequestBody).then((sourceResponse) => {
       source = sourceResponse;
     });

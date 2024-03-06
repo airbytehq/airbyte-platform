@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -23,6 +23,7 @@ import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.WorkspaceCreate;
+import io.airbyte.api.model.generated.WorkspaceCreateWithId;
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceOrganizationInfoRead;
@@ -30,6 +31,7 @@ import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
+import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
@@ -136,36 +138,56 @@ public class WorkspacesHandler {
   public WorkspaceRead createWorkspace(final WorkspaceCreate workspaceCreate)
       throws JsonValidationException, IOException, ValueConflictKnownException, ConfigNotFoundException {
 
-    final String email = workspaceCreate.getEmail();
-    final Boolean anonymousDataCollection = workspaceCreate.getAnonymousDataCollection();
-    final Boolean news = workspaceCreate.getNews();
-    final Boolean securityUpdates = workspaceCreate.getSecurityUpdates();
-    final Boolean displaySetupWizard = workspaceCreate.getDisplaySetupWizard();
+    final WorkspaceCreateWithId workspaceCreateWithId = new WorkspaceCreateWithId()
+        .id(uuidSupplier.get())
+        .organizationId(workspaceCreate.getOrganizationId())
+        .defaultGeography(workspaceCreate.getDefaultGeography())
+        .displaySetupWizard(workspaceCreate.getDisplaySetupWizard())
+        .name(workspaceCreate.getName())
+        .notifications(workspaceCreate.getNotifications())
+        .webhookConfigs(workspaceCreate.getWebhookConfigs())
+        .anonymousDataCollection(workspaceCreate.getAnonymousDataCollection())
+        .email(workspaceCreate.getEmail())
+        .news(workspaceCreate.getNews())
+        .notificationSettings(workspaceCreate.getNotificationSettings())
+        .securityUpdates(workspaceCreate.getSecurityUpdates());
+
+    return createWorkspaceIfNotExist(workspaceCreateWithId);
+  }
+
+  public WorkspaceRead createWorkspaceIfNotExist(final WorkspaceCreateWithId workspaceCreateWithId)
+      throws JsonValidationException, IOException, ValueConflictKnownException, ConfigNotFoundException {
+
+    final String email = workspaceCreateWithId.getEmail();
+    final Boolean anonymousDataCollection = workspaceCreateWithId.getAnonymousDataCollection();
+    final Boolean news = workspaceCreateWithId.getNews();
+    final Boolean securityUpdates = workspaceCreateWithId.getSecurityUpdates();
+    final Boolean displaySetupWizard = workspaceCreateWithId.getDisplaySetupWizard();
 
     // if not set on the workspaceCreate, set the defaultGeography to AUTO
-    final io.airbyte.config.Geography defaultGeography = workspaceCreate.getDefaultGeography() != null
-        ? Enums.convertTo(workspaceCreate.getDefaultGeography(), io.airbyte.config.Geography.class)
+    final io.airbyte.config.Geography defaultGeography = workspaceCreateWithId.getDefaultGeography() != null
+        ? Enums.convertTo(workspaceCreateWithId.getDefaultGeography(), io.airbyte.config.Geography.class)
         : io.airbyte.config.Geography.AUTO;
 
     // NotificationSettings from input will be patched with default values.
-    final NotificationSettings notificationSettings = patchNotificationSettingsWithDefaultValue(workspaceCreate);
+    final NotificationSettings notificationSettings = patchNotificationSettingsWithDefaultValue(workspaceCreateWithId);
 
     final StandardWorkspace workspace = new StandardWorkspace()
-        .withWorkspaceId(uuidSupplier.get())
+        .withWorkspaceId(workspaceCreateWithId.getId())
         .withCustomerId(uuidSupplier.get()) // "customer_id" should be deprecated
-        .withName(workspaceCreate.getName())
-        .withSlug(generateUniqueSlug(workspaceCreate.getName()))
+        .withName(workspaceCreateWithId.getName())
+        .withSlug(generateUniqueSlug(workspaceCreateWithId.getName()))
         .withInitialSetupComplete(false)
         .withAnonymousDataCollection(anonymousDataCollection != null ? anonymousDataCollection : false)
         .withNews(news != null ? news : false)
         .withSecurityUpdates(securityUpdates != null ? securityUpdates : false)
         .withDisplaySetupWizard(displaySetupWizard != null ? displaySetupWizard : false)
         .withTombstone(false)
-        .withNotifications(NotificationConverter.toConfigList(workspaceCreate.getNotifications()))
+        .withNotifications(NotificationConverter.toConfigList(workspaceCreateWithId.getNotifications()))
         .withNotificationSettings(NotificationSettingsConverter.toConfig(notificationSettings))
         .withDefaultGeography(defaultGeography)
-        .withWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreate.getWebhookConfigs(), uuidSupplier))
-        .withOrganizationId(workspaceCreate.getOrganizationId());
+        .withWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreateWithId.getWebhookConfigs(), uuidSupplier))
+        .withOrganizationId(workspaceCreateWithId.getOrganizationId());
 
     if (!Strings.isNullOrEmpty(email)) {
       workspace.withEmail(email);
@@ -237,7 +259,7 @@ public class WorkspacesHandler {
     persistStandardWorkspace(persistedWorkspace);
   }
 
-  private NotificationSettings patchNotificationSettingsWithDefaultValue(final WorkspaceCreate workspaceCreate) {
+  private NotificationSettings patchNotificationSettingsWithDefaultValue(final WorkspaceCreateWithId workspaceCreateWithId) {
     final NotificationSettings notificationSettings = new NotificationSettings()
         .sendOnSuccess(new NotificationItem().notificationType(List.of()))
         .sendOnFailure(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
@@ -247,8 +269,8 @@ public class WorkspacesHandler {
         .sendOnSyncDisabledWarning(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
         .sendOnBreakingChangeWarning(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
         .sendOnBreakingChangeSyncsDisabled(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO));
-    if (workspaceCreate.getNotificationSettings() != null) {
-      final NotificationSettings inputNotificationSettings = workspaceCreate.getNotificationSettings();
+    if (workspaceCreateWithId.getNotificationSettings() != null) {
+      final NotificationSettings inputNotificationSettings = workspaceCreateWithId.getNotificationSettings();
       if (inputNotificationSettings.getSendOnSuccess() != null) {
         notificationSettings.setSendOnSuccess(inputNotificationSettings.getSendOnSuccess());
       }
@@ -462,6 +484,22 @@ public class WorkspacesHandler {
     configRepository.writeStandardWorkspaceNoSecrets(persistedWorkspace);
 
     return buildWorkspaceReadFromId(workspaceId);
+  }
+
+  @SuppressWarnings("PMD.PreserveStackTrace")
+  public WorkspaceRead updateWorkspaceOrganization(final WorkspaceUpdateOrganization workspaceUpdateOrganization)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final UUID workspaceId = workspaceUpdateOrganization.getWorkspaceId();
+
+    try {
+      final StandardWorkspace persistedWorkspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false);
+      persistedWorkspace
+          .withOrganizationId(workspaceUpdateOrganization.getOrganizationId());
+      workspaceService.writeStandardWorkspaceNoSecrets(persistedWorkspace);
+      return buildWorkspaceReadFromId(workspaceId);
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    }
   }
 
   public void setFeedbackDone(final WorkspaceGiveFeedback workspaceGiveFeedback)

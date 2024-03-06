@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification;
@@ -7,6 +7,8 @@ package io.airbyte.notification;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
+import io.airbyte.notification.messages.SchemaUpdateNotification;
+import io.airbyte.notification.messages.SyncSummary;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
@@ -18,24 +20,12 @@ public abstract class NotificationClient {
 
   public NotificationClient() {}
 
-  public abstract boolean notifyJobFailure(
-                                           final String receiverEmail,
-                                           final String sourceConnector,
-                                           final String destinationConnector,
-                                           final String connectionName,
-                                           final String jobDescription,
-                                           final String logUrl,
-                                           final Long jobId)
+  public abstract boolean notifyJobFailure(final SyncSummary summary,
+                                           final String receiverEmail)
       throws IOException, InterruptedException;
 
-  public abstract boolean notifyJobSuccess(
-                                           final String receiverEmail,
-                                           final String sourceConnector,
-                                           final String destinationConnector,
-                                           final String connectionName,
-                                           final String jobDescription,
-                                           final String logUrl,
-                                           final Long jobId)
+  public abstract boolean notifyJobSuccess(final SyncSummary summary,
+                                           final String receiverEmail)
       throws IOException, InterruptedException;
 
   public abstract boolean notifyConnectionDisabled(String receiverEmail,
@@ -70,17 +60,8 @@ public abstract class NotificationClient {
 
   public abstract boolean notifyFailure(String message) throws IOException, InterruptedException;
 
-  public abstract boolean notifySchemaChange(final UUID connectionId,
-                                             final boolean isBreaking,
-                                             final String url)
-      throws IOException, InterruptedException;
-
-  public abstract boolean notifySchemaPropagated(final UUID connectionId,
-                                                 final String sourceName,
-                                                 final List<String> changes,
-                                                 final String url,
-                                                 final List<String> recipients,
-                                                 boolean isBreaking)
+  public abstract boolean notifySchemaPropagated(final SchemaUpdateNotification notification,
+                                                 final String recipient)
       throws IOException, InterruptedException;
 
   public abstract String getNotificationClientType();

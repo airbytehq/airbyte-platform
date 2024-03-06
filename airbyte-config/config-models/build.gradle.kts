@@ -6,18 +6,21 @@ plugins {
     id("io.airbyte.gradle.publish")
     id("com.github.eirnym.js2p")
     kotlin("jvm")
+    kotlin("kapt")
 }
 
 dependencies {
-    annotationProcessor(libs.bundles.micronaut.annotation.processor)
+    annotationProcessor(libs.lombok)
+    kapt(libs.bundles.micronaut.annotation.processor)
     api(libs.bundles.micronaut.annotation)
 
     implementation(platform("com.fasterxml.jackson:jackson-bom:2.13.0"))
     implementation(libs.bundles.jackson)
     implementation(libs.spotbugs.annotations)
     implementation(libs.guava)
+    implementation(libs.micronaut.kotlin.extensions)
     compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
+
     implementation(libs.google.cloud.storage)
     implementation(libs.aws.java.sdk.s3)
     implementation(libs.aws.java.sdk.sts)
@@ -26,7 +29,6 @@ dependencies {
     implementation(libs.bundles.apache)
 
     compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
 
     implementation(project(":airbyte-json-validation"))
     implementation(libs.airbyte.protocol)
@@ -39,6 +41,7 @@ dependencies {
     testImplementation(libs.bundles.junit)
     testImplementation(libs.assertj.core)
     testImplementation(libs.junit.pioneer)
+    testImplementation(libs.bundles.micronaut.test)
 }
 
 jsonSchema2Pojo {
@@ -82,5 +85,11 @@ tasks.register<Test>("logClientsIntegrationTest") {
     }
     testLogging {
         events = setOf(TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.FAILED)
+    }
+}
+
+afterEvaluate {
+    tasks.named("kaptGenerateStubsKotlin") {
+        dependsOn(tasks.named("generateJsonSchema2Pojo"))
     }
 }

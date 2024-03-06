@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
@@ -15,11 +15,9 @@ import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.featureflag.FeatureFlagClient;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.ws.rs.NotSupportedException;
 import lombok.extern.slf4j.Slf4j;
@@ -50,29 +48,48 @@ public class AutoPropagateSchemaChangeHelper {
    * @param transform the transformation to be applied to the destination
    * @return a list of strings describing the changes that will be applied to the destination.
    */
-  private static String staticFormatDiff(final StreamTransform transform) {
+  @VisibleForTesting
+  static String staticFormatDiff(final StreamTransform transform) {
+    String namespace = transform.getStreamDescriptor().getNamespace();
+    String nsPrefix = namespace != null ? String.format("%s.", namespace) : "";
+    String streamName = transform.getStreamDescriptor().getName();
     switch (transform.getTransformType()) {
       case ADD_STREAM -> {
-        return String.format("Added new stream %s", transform.getStreamDescriptor().getName());
+        return String.format("Added new stream '%s%s'", nsPrefix, streamName);
       }
       case REMOVE_STREAM -> {
-        return String.format("Removed stream %s", transform.getStreamDescriptor().getName());
+        return String.format("Removed stream '%s%s'", nsPrefix, streamName);
       }
       case UPDATE_STREAM -> {
-        String returnValue = String.format("Modified stream %s", transform.getStreamDescriptor().getName());
+        StringBuilder returnValue = new StringBuilder(String.format("Modified stream '%s%s': ", nsPrefix, streamName));
         if (transform.getUpdateStream() == null) {
-          return returnValue;
+          return returnValue.toString();
         }
+        List<String> addedFields = new ArrayList<>();
+        List<String> removedFields = new ArrayList<>();
+        List<String> updatedFields = new ArrayList<>();
+
         for (final FieldTransform fieldTransform : transform.getUpdateStream()) {
           final String fieldName = String.join(".", fieldTransform.getFieldName());
           switch (fieldTransform.getTransformType()) {
-            case ADD_FIELD -> returnValue += String.format("Added field: %s,", fieldName);
-            case REMOVE_FIELD -> returnValue += String.format("Removed field: %s,", fieldName);
-            case UPDATE_FIELD_SCHEMA -> returnValue += String.format("Field type changed: %s,", fieldName);
+            case ADD_FIELD -> addedFields.add(String.format("'%s'", fieldName));
+            case REMOVE_FIELD -> removedFields.add(String.format("'%s'", fieldName));
+            case UPDATE_FIELD_SCHEMA -> updatedFields.add(String.format("'%s'", fieldName));
             default -> throw new NotSupportedException("Not supported transformation.");
           }
         }
-        return returnValue;
+        List<String> detailedUpdates = new ArrayList<>();
+        if (!addedFields.isEmpty()) {
+          detailedUpdates.add(String.format("Added fields [%s]", String.join(", ", addedFields)));
+        }
+        if (!removedFields.isEmpty()) {
+          detailedUpdates.add(String.format("Removed fields [%s]", String.join(", ", removedFields)));
+        }
+        if (!updatedFields.isEmpty()) {
+          detailedUpdates.add(String.format("Altered fields [%s]", String.join(", ", updatedFields)));
+        }
+        returnValue.append(String.join(", ", detailedUpdates));
+        return returnValue.toString();
       }
       default -> {
         return "Unknown Transformation";
@@ -95,9 +112,7 @@ public class AutoPropagateSchemaChangeHelper {
                                                     final AirbyteCatalog newCatalog,
                                                     final List<StreamTransform> transformations,
                                                     final NonBreakingChangesPreference nonBreakingChangesPreference,
-                                                    final List<DestinationSyncMode> supportedDestinationSyncModes,
-                                                    final FeatureFlagClient featureFlagClient,
-                                                    final UUID workspaceId) {
+                                                    final List<DestinationSyncMode> supportedDestinationSyncModes) {
     final AirbyteCatalog copiedOldCatalog = Jsons.clone(oldCatalog);
     final Map<StreamDescriptor, AirbyteStreamAndConfiguration> oldCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(copiedOldCatalog);
     final Map<StreamDescriptor, AirbyteStreamAndConfiguration> newCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(newCatalog);
@@ -165,13 +180,19 @@ public class AutoPropagateSchemaChangeHelper {
    */
   public static boolean shouldAutoPropagate(final CatalogDiff diff,
                                             final ConnectionRead connectionRead) {
-    final boolean hasDiff = !diff.getTransforms().isEmpty();
+    if (diff.getTransforms().isEmpty()) {
+      // If there's no diff we always propagate because it means there's a diff in a disabled stream, or
+      // some other bit of metadata.
+      // We want to acknowledge it and update to the latest source catalog id, but not bother the user
+      // about it.
+      return true;
+    }
     final boolean nonBreakingChange = !AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
     final boolean autoPropagationIsEnabledForConnection =
         connectionRead.getNonBreakingChangesPreference() != null
             && (connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_COLUMNS)
                 || connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_FULLY));
-    return hasDiff && nonBreakingChange && autoPropagationIsEnabledForConnection;
+    return nonBreakingChange && autoPropagationIsEnabledForConnection;
   }
 
   /**

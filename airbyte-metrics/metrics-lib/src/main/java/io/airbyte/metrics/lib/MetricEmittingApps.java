@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.lib;
@@ -24,10 +24,12 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public enum MetricEmittingApps implements MetricEmittingApp {
 
+  BOOTLOADER("bootloader"),
   CRON("cron"),
   METRICS_REPORTER("metrics-reporter"),
   ORCHESTRATOR("orchestrator"),
   SERVER("server"),
+  SIDECAR_ORCHESTRATOR("sidecar-orchestrator"),
   WORKER("worker"),
   WORKLOAD_API("workload-api"),
   WORKLOAD_LAUNCHER("workload-launcher");

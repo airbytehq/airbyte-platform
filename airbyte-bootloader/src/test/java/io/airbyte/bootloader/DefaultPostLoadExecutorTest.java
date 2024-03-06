@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.bootloader;
@@ -38,7 +38,8 @@ class DefaultPostLoadExecutorTest {
   }
 
   @Test
-  void testPostLoadExecutionWithException() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testPostLoadExecutionWithException()
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final ApplyDefinitionsHelper applyDefinitionsHelper = mock(ApplyDefinitionsHelper.class);
     final DeclarativeSourceUpdater declarativeSourceUpdater = mock(DeclarativeSourceUpdater.class);
 

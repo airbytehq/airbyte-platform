@@ -1,14 +1,12 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
-import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
-import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
@@ -38,9 +36,9 @@ import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.TaskQueueNameRead;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.ConnectionsHandler;
+import io.airbyte.commons.server.handlers.MatchSearchHandler;
 import io.airbyte.commons.server.handlers.OperationsHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
@@ -68,17 +66,20 @@ public class ConnectionApiController implements ConnectionApi {
   private final SchedulerHandler schedulerHandler;
   private final RouterService routerService;
   private final StreamStatusesHandler streamStatusesHandler;
+  private final MatchSearchHandler matchSearchHandler;
 
   public ConnectionApiController(final ConnectionsHandler connectionsHandler,
                                  final OperationsHandler operationsHandler,
                                  final SchedulerHandler schedulerHandler,
                                  final RouterService routerService,
-                                 final StreamStatusesHandler streamStatusesHandler) {
+                                 final StreamStatusesHandler streamStatusesHandler,
+                                 final MatchSearchHandler matchSearchHandler) {
     this.connectionsHandler = connectionsHandler;
     this.operationsHandler = operationsHandler;
     this.schedulerHandler = schedulerHandler;
     this.routerService = routerService;
     this.streamStatusesHandler = streamStatusesHandler;
+    this.matchSearchHandler = matchSearchHandler;
   }
 
   @Override
@@ -91,8 +92,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/create")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   public ConnectionRead createConnection(@Body final ConnectionCreate connectionCreate) {
     return ApiHelper.execute(() -> connectionsHandler.createConnection(connectionCreate));
@@ -100,8 +100,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/update")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectionRead updateConnection(@Body final ConnectionUpdate connectionUpdate) {
     return ApiHelper.execute(() -> connectionsHandler.updateConnection(connectionUpdate));
@@ -109,8 +108,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/list")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectionReadList listConnectionsForWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody));
@@ -118,8 +116,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @SuppressWarnings("LineLength")
   @Post(uri = "/list_paginated")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public ConnectionReadList listConnectionsForWorkspacesPaginated(
@@ -129,8 +126,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/list_all")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectionReadList listAllConnectionsForWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.listAllConnectionsForWorkspace(workspaceIdRequestBody));
@@ -147,13 +143,12 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/search")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectionReadList searchConnections(@Body final ConnectionSearch connectionSearch) {
-    return ApiHelper.execute(() -> connectionsHandler.searchConnections(connectionSearch));
+    return ApiHelper.execute(() -> matchSearchHandler.searchConnections(connectionSearch));
   }
 
   @Override
   @Post(uri = "/get")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectionRead getConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.getConnection(connectionIdRequestBody.getConnectionId()));
@@ -161,17 +156,15 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/history/data")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public List<ConnectionDataHistoryReadItem> getConnectionDataHistory(@Body final ConnectionDataHistoryRequestBody connectionDataHistoryRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.getConnectionDataHistory(connectionDataHistoryRequestBody));
   }
 
   @Override
-  @Post(uri = "/connections/status")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Post(uri = "/status")
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public List<ConnectionStatusRead> getConnectionStatuses(@Body final ConnectionStatusesRequestBody connectionStatusesRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.getConnectionStatuses(connectionStatusesRequestBody));
@@ -180,18 +173,16 @@ public class ConnectionApiController implements ConnectionApi {
   @SuppressWarnings("LineLength")
   @Override
   @Post(uri = "/stream_history")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public List<ConnectionStreamHistoryReadItem> getConnectionStreamHistory(
                                                                           @Body final ConnectionStreamHistoryRequestBody connectionStreamHistoryRequestBody) {
-    return null;
+    return ApiHelper.execute(() -> connectionsHandler.getConnectionStreamHistory(connectionStreamHistoryRequestBody));
   }
 
   @Override
   @Post(uri = "/sync_progress")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public List<ConnectionSyncProgressReadItem> getConnectionSyncProgress(final ConnectionIdRequestBody connectionIdRequestBody) {
     return null;
@@ -199,8 +190,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/history/uptime")
-  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public List<ConnectionSyncResultRead> getConnectionUptimeHistory(final ConnectionUptimeHistoryRequestBody connectionUptimeHistoryRequestBody) {
     return ApiHelper.execute(() -> streamStatusesHandler.getConnectionUptimeHistory(connectionUptimeHistoryRequestBody));
@@ -209,8 +199,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Override
   @Post(uri = "/delete")
   @Status(HttpStatus.NO_CONTENT)
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public void deleteConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     ApiHelper.execute(() -> {
@@ -222,8 +211,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/sync")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   public JobInfoRead syncConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.syncConnection(connectionIdRequestBody));
@@ -231,8 +219,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/reset")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   public JobInfoRead resetConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.resetConnection(connectionIdRequestBody));
@@ -240,8 +227,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/reset/stream")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   public JobInfoRead resetConnectionStream(final ConnectionStreamRequestBody connectionStreamRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.resetConnectionStream(connectionStreamRequestBody));
@@ -249,8 +235,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/apply_schema_change")
-  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  @SecuredWorkspace
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectionAutoPropagateResult applySchemaChangeForConnection(final ConnectionAutoPropagateSchemaChange request) {
     return ApiHelper.execute(() -> connectionsHandler.applySchemaChange(request));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.testsyncworkflow;
@@ -26,7 +26,7 @@ public class SyncWorkflowWithActivityFailureException implements SyncWorkflow {
                                 final StandardSyncInput syncInput,
                                 final UUID connectionId) {
     Workflow.sleep(SleepingSyncWorkflow.RUN_TIME);
-    throw new ActivityFailure(1L, 1L, "Replication", "id", RetryState.RETRY_STATE_RETRY_POLICY_NOT_SET,
+    throw new ActivityFailure("sync workflow activity failed", 1L, 1L, "Replication", "id", RetryState.RETRY_STATE_RETRY_POLICY_NOT_SET,
         "identity",
         new Exception("Error"));
   }

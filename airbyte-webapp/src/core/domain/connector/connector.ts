@@ -4,7 +4,7 @@ import {
   ActorDefinitionVersionRead,
   DestinationDefinitionSpecificationRead,
   SourceDefinitionSpecificationRead,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
 import { isSource, isSourceDefinition, isSourceDefinitionSpecification } from "./source";
 import { ConnectorDefinition, ConnectorT } from "./types";
@@ -36,7 +36,7 @@ export const shouldDisplayBreakingChangeBanner = (actorDefinitionVersion: ActorD
 
   // This is important as it catches the case where a user has been explicitly pinned to a previous version
   // e.g. Prereleases, PbA Users etc..
-  const actorNotOverriden = !actorDefinitionVersion.isOverrideApplied;
+  const actorNotOverriden = !actorDefinitionVersion.isVersionOverrideApplied;
 
   return hasUpcomingBreakingChanges && actorNotOverriden;
 };

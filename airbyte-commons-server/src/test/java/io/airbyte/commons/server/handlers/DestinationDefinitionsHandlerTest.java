@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -15,7 +15,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
@@ -60,8 +59,8 @@ import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
@@ -85,6 +84,7 @@ class DestinationDefinitionsHandlerTest {
 
   private static final String TODAY_DATE_STRING = LocalDate.now().toString();
   private static final String DEFAULT_PROTOCOL_VERSION = "0.2.0";
+  private static final String ICON_URL = "https://connectors.airbyte.com/files/metadata/airbyte/destination-presto/latest/icon.svg";
 
   private ConfigRepository configRepository;
   private StandardDestinationDefinition destinationDefinition;
@@ -134,6 +134,7 @@ class DestinationDefinitionsHandlerTest {
         .withDefaultVersionId(UUID.randomUUID())
         .withName("presto")
         .withIcon("http.svg")
+        .withIconUrl(ICON_URL)
         .withTombstone(false)
         .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
   }
@@ -603,7 +604,8 @@ class DestinationDefinitionsHandlerTest {
     verify(configRepository).writeCustomConnectorMetadata(
         newDestinationDefinition
             .withCustom(true)
-            .withDefaultVersionId(null),
+            .withDefaultVersionId(null)
+            .withIconUrl(null),
         destinationDefinitionVersion,
         workspaceId,
         ScopeType.WORKSPACE);
@@ -669,7 +671,8 @@ class DestinationDefinitionsHandlerTest {
     verify(configRepository).writeCustomConnectorMetadata(
         newDestinationDefinition
             .withCustom(true)
-            .withDefaultVersionId(null),
+            .withDefaultVersionId(null)
+            .withIconUrl(null),
         destinationDefinitionVersion,
         workspaceId,
         ScopeType.WORKSPACE);
@@ -735,8 +738,9 @@ class DestinationDefinitionsHandlerTest {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   @DisplayName("updateDestinationDefinition should correctly update a destinationDefinition")
-  void testUpdateDestination(final boolean runSupportStateUpdaterFlagValue) throws ConfigNotFoundException, IOException, JsonValidationException {
-    when(featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(runSupportStateUpdaterFlagValue);
+  void testUpdateDestination(final boolean useIconUrlInApiResponseFlagValue)
+      throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(useIconUrlInApiResponseFlagValue);
 
     final String newDockerImageTag = "averydifferenttag";
     final StandardDestinationDefinition updatedDestination =
@@ -767,16 +771,30 @@ class DestinationDefinitionsHandlerTest {
             new DestinationDefinitionUpdate().destinationDefinitionId(this.destinationDefinition.getDestinationDefinitionId())
                 .dockerImageTag(newDockerImageTag));
 
-    assertEquals(newDockerImageTag, destinationRead.getDockerImageTag());
+    final DestinationDefinitionRead expectedDestinationDefinitionRead = new DestinationDefinitionRead()
+        .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
+        .name(destinationDefinition.getName())
+        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
+        .dockerImageTag(newDockerImageTag)
+        .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
+        .icon(useIconUrlInApiResponseFlagValue ? ICON_URL : DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
+        .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
+        .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
+        .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
+        .supportsDbt(false)
+        .normalizationConfig(new io.airbyte.api.model.generated.NormalizationDestinationDefinitionConfig().supported(false))
+        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+            ._default(new io.airbyte.api.model.generated.ResourceRequirements()
+                .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
+            .jobSpecific(Collections.emptyList()));
+
+    assertEquals(expectedDestinationDefinitionRead, destinationRead);
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
         destinationDefinition.getCustom());
     verify(actorDefinitionHandlerHelper).getBreakingChanges(updatedDestinationDefVersion, ActorType.DESTINATION);
     verify(configRepository).writeConnectorMetadata(updatedDestination, updatedDestinationDefVersion, breakingChanges);
-    if (runSupportStateUpdaterFlagValue) {
-      verify(supportStateUpdater).updateSupportStatesForDestinationDefinition(persistedUpdatedDestination);
-    } else {
-      verifyNoInteractions(supportStateUpdater);
-    }
+    verify(supportStateUpdater).updateSupportStatesForDestinationDefinition(persistedUpdatedDestination);
     verifyNoMoreInteractions(actorDefinitionHandlerHelper, supportStateUpdater);
   }
 
@@ -953,7 +971,7 @@ class DestinationDefinitionsHandlerTest {
       assertEquals(1, destinationDefinitionReadList.size());
 
       final var destinationDefinitionRead = destinationDefinitionReadList.get(0);
-      assertEquals(DestinationDefinitionsHandler.buildDestinationDefinitionRead(
+      assertEquals(destinationDefinitionsHandler.buildDestinationDefinitionRead(
           ConnectorRegistryConverters.toStandardDestinationDefinition(registryDestinationDefinition),
           ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDefinition)), destinationDefinitionRead);
     }

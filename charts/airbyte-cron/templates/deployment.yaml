@@ -82,6 +82,16 @@ spec:
               secretKeyRef:
                 name: {{ .Release.Name }}-airbyte-secrets
                 key: DATABASE_USER
+          - name: MICROMETER_METRICS_ENABLED
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-airbyte-env
+                key: MICROMETER_METRICS_ENABLED
+          - name: MICROMETER_METRICS_STATSD_FLAVOR
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-airbyte-env
+                key: MICROMETER_METRICS_STATSD_FLAVOR
           - name: MICRONAUT_ENVIRONMENTS
             valueFrom:
               configMapKeyRef:
@@ -92,6 +102,21 @@ spec:
               configMapKeyRef:
                 name: {{ .Release.Name }}-airbyte-env
                 key: TEMPORAL_HOST
+          - name: SEGMENT_WRITE_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-airbyte-env
+                key: SEGMENT_WRITE_KEY
+          - name: STATSD_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-airbyte-env
+                key: STATSD_HOST
+          - name: STATSD_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-airbyte-env
+                key: STATSD_PORT
           - name: TRACKING_STRATEGY
             valueFrom:
               configMapKeyRef:
@@ -105,8 +130,8 @@ spec:
           - name: WORKLOAD_API_BEARER_TOKEN
             valueFrom:
               secretKeyRef:
-                name: {{ .Values.global.database.secretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
-                key: {{ .Values.global.database.secretValue | default "WORKLOAD_API_BEARER_TOKEN" }}
+                name: {{ index .Values "workloadApi" "bearerTokenSecretName" | default (printf "%s-airbyte-secrets" .Release.Name ) }}
+                key: {{ index .Values "workloadApi" "bearerTokenSecretKey" | default "WORKLOAD_API_BEARER_TOKEN" }}
           - name: WORKLOAD_API_HOST
             valueFrom:
               configMapKeyRef:

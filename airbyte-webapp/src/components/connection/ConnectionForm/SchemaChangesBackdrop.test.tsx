@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { mockConnection, TestWrapper } from "test-utils/testutils";
 
-import { SchemaChange } from "core/request/AirbyteClient";
+import { SchemaChange } from "core/api/types/AirbyteClient";
 import { FeatureItem } from "core/services/features";
 const mockUseConnectionEditService = jest.fn();
 

@@ -11,7 +11,7 @@ import {
   SyncMode,
 } from "@src/core/api/types/AirbyteClient";
 import {
-  getPostgresToPostgresUpdateConnectionBody,
+  getUpdateConnectionBody,
   requestDeleteConnection,
   requestDeleteDestination,
   requestDeleteSource,
@@ -138,9 +138,7 @@ describe("Connection - Auto-detect schema changes", () => {
         cursorField: ["updated_at"],
       };
 
-      requestUpdateConnection(
-        getPostgresToPostgresUpdateConnectionBody(connection.connectionId, { syncCatalog: newSyncCatalog })
-      );
+      requestUpdateConnection(getUpdateConnectionBody(connection.connectionId, { syncCatalog: newSyncCatalog }));
 
       // Remove cursor from db and refreshes schema to force breaking change detection
       runDbQuery(alterTable("public.users", { drop: ["updated_at"] }));

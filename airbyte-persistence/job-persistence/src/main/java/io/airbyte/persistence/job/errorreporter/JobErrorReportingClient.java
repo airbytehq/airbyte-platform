@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job.errorreporter;
@@ -20,6 +20,7 @@ public interface JobErrorReportingClient {
   void reportJobFailureReason(@Nullable StandardWorkspace workspace,
                               final FailureReason reason,
                               @Nullable final String dockerImage,
-                              Map<String, String> metadata);
+                              Map<String, String> metadata,
+                              @Nullable final AttemptConfigReportingContext attemptConfig);
 
 }

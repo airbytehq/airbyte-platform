@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
@@ -18,6 +18,10 @@ import io.airbyte.commons.logging.MdcScope.Builder;
 import io.airbyte.commons.protocol.DefaultProtocolSerializer;
 import io.airbyte.commons.protocol.ProtocolSerializer;
 import io.airbyte.config.WorkerDestinationConfig;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.workers.WorkerUtils;
@@ -27,6 +31,7 @@ import io.airbyte.workers.process.IntegrationLauncher;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.net.SocketException;
 import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
@@ -55,6 +60,7 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
   private final AirbyteStreamFactory streamFactory;
   private final AirbyteMessageBufferedWriterFactory messageWriterFactory;
   private final ProtocolSerializer protocolSerializer;
+  private final MetricClient metricClient;
 
   private final AtomicBoolean inputHasEnded = new AtomicBoolean(false);
 
@@ -63,20 +69,24 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
   private Iterator<AirbyteMessage> messageIterator = null;
   private Integer exitValue = null;
   private final DestinationTimeoutMonitor destinationTimeoutMonitor;
+  private MetricAttribute connectionAttribute = null;
 
   @VisibleForTesting
-  public DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher, final DestinationTimeoutMonitor destinationTimeoutMonitor) {
+  public DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher,
+                                   final DestinationTimeoutMonitor destinationTimeoutMonitor,
+                                   final MetricClient metricClient) {
     this(integrationLauncher,
         VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(
             LOGGER,
             CONTAINER_LOG_MDC_BUILDER,
             Optional.empty(),
             Runtime.getRuntime().maxMemory(),
-            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
+            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false),
             new GsonPksExtractor()),
         new DefaultAirbyteMessageBufferedWriterFactory(),
         new DefaultProtocolSerializer(),
-        destinationTimeoutMonitor);
+        destinationTimeoutMonitor,
+        metricClient);
   }
 
   @SuppressWarnings({"PMD.ArrayIsStoredDirectly", "PMD.UseVarargs"})
@@ -84,17 +94,23 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
                                    final AirbyteStreamFactory streamFactory,
                                    final AirbyteMessageBufferedWriterFactory messageWriterFactory,
                                    final ProtocolSerializer protocolSerializer,
-                                   final DestinationTimeoutMonitor destinationTimeoutMonitor) {
+                                   final DestinationTimeoutMonitor destinationTimeoutMonitor,
+                                   final MetricClient metricClient) {
     this.integrationLauncher = integrationLauncher;
     this.streamFactory = streamFactory;
     this.messageWriterFactory = messageWriterFactory;
     this.protocolSerializer = protocolSerializer;
     this.destinationTimeoutMonitor = destinationTimeoutMonitor;
+    this.metricClient = metricClient;
   }
 
   @Override
   public void start(final WorkerDestinationConfig destinationConfig, final Path jobRoot) throws IOException, WorkerException {
     Preconditions.checkState(destinationProcess == null);
+
+    if (destinationConfig.getConnectionId() != null) {
+      connectionAttribute = new MetricAttribute(MetricTags.CONNECTION_ID, destinationConfig.getConnectionId().toString());
+    }
 
     LOGGER.info("Running destination...");
     destinationProcess = integrationLauncher.write(
@@ -116,6 +132,12 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
 
   @Override
   public void accept(final AirbyteMessage message) throws IOException {
+    final MetricAttribute typeAttribute = new MetricAttribute(MetricTags.MESSAGE_TYPE, message.getType().toString());
+    if (connectionAttribute != null) {
+      metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_MESSAGE_SENT, 1, connectionAttribute, typeAttribute);
+    } else {
+      metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_MESSAGE_SENT, 1, typeAttribute);
+    }
     destinationTimeoutMonitor.startAcceptTimer();
     acceptWithNoTimeoutMonitor(message);
     destinationTimeoutMonitor.resetAcceptTimer();
@@ -130,7 +152,11 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
   @Override
   public void notifyEndOfInput() throws IOException {
     destinationTimeoutMonitor.startNotifyEndOfInputTimer();
-    notifyEndOfInputWithNoTimeoutMonitor();
+    try {
+      notifyEndOfInputWithNoTimeoutMonitor();
+    } catch (SocketException e) {
+      LOGGER.warn("Try to close a destination which is already close");
+    }
     destinationTimeoutMonitor.resetNotifyEndOfInputTimer();
   }
 
@@ -201,7 +227,16 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
   public Optional<AirbyteMessage> attemptRead() {
     Preconditions.checkState(destinationProcess != null);
 
-    return Optional.ofNullable(messageIterator.hasNext() ? messageIterator.next() : null);
+    final Optional<AirbyteMessage> m = Optional.ofNullable(messageIterator.hasNext() ? messageIterator.next() : null);
+    if (m.isPresent()) {
+      final MetricAttribute typeAttribute = new MetricAttribute(MetricTags.MESSAGE_TYPE, m.get().getType().toString());
+      if (connectionAttribute != null) {
+        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_MESSAGE_READ, 1, connectionAttribute, typeAttribute);
+      } else {
+        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_MESSAGE_READ, 1, typeAttribute);
+      }
+    }
+    return m;
   }
 
 }

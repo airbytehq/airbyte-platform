@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.converters;
@@ -49,6 +49,7 @@ import io.airbyte.persistence.job.models.Job;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -105,7 +106,10 @@ public class JobConverter {
   public static JobWithAttemptsRead getJobWithAttemptsRead(final Job job) {
     return new JobWithAttemptsRead()
         .job(getJobRead(job))
-        .attempts(job.getAttempts().stream().map(JobConverter::getAttemptRead).toList());
+        .attempts(job.getAttempts().stream()
+            .sorted(Comparator.comparingInt(Attempt::getAttemptNumber))
+            .map(JobConverter::getAttemptRead)
+            .toList());
   }
 
   public static JobRead getJobRead(final Job job) {
@@ -240,7 +244,7 @@ public class JobConverter {
     }
   }
 
-  public static FailureReason getFailureReason(final @Nullable io.airbyte.config.FailureReason failureReason) {
+  private static FailureReason getFailureReason(final @Nullable io.airbyte.config.FailureReason failureReason) {
     if (failureReason == null) {
       return null;
     }

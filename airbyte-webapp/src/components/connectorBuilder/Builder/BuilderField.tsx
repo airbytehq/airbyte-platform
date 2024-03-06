@@ -10,13 +10,12 @@ import { LabeledSwitch } from "components/LabeledSwitch";
 import { CodeEditor } from "components/ui/CodeEditor";
 import { ComboBox, MultiComboBox, Option } from "components/ui/ComboBox";
 import DatePicker from "components/ui/DatePicker";
-import { DropDown } from "components/ui/DropDown";
 import { Input } from "components/ui/Input";
+import { ListBox } from "components/ui/ListBox";
 import { TagInput } from "components/ui/TagInput";
 import { Text } from "components/ui/Text";
 import { TextArea } from "components/ui/TextArea";
 import { Tooltip } from "components/ui/Tooltip";
-import { InfoTooltip } from "components/ui/Tooltip/InfoTooltip";
 
 import { FORM_PATTERN_ERROR } from "core/form/types";
 import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
@@ -38,6 +37,7 @@ interface ArrayFieldProps {
   error: boolean;
   itemType?: string;
   directionalStyle?: boolean;
+  uniqueValues?: boolean;
 }
 
 interface BaseFieldProps {
@@ -64,7 +64,13 @@ export type BuilderFieldProps = BaseFieldProps &
       }
     | { type: "date" | "date-time"; onChange?: (newValue: string) => void }
     | { type: "boolean"; onChange?: (newValue: boolean) => void; disabled?: boolean; disabledTooltip?: string }
-    | { type: "array"; onChange?: (newValue: string[]) => void; itemType?: string; directionalStyle?: boolean }
+    | {
+        type: "array";
+        onChange?: (newValue: string[]) => void;
+        itemType?: string;
+        directionalStyle?: boolean;
+        uniqueValues?: boolean;
+      }
     | { type: "textarea"; onChange?: (newValue: string[]) => void }
     | { type: "jsoneditor"; onChange?: (newValue: string[]) => void }
     | {
@@ -78,7 +84,7 @@ export type BuilderFieldProps = BaseFieldProps &
 
 const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, ...props }) => {
   return (
-    <DropDown
+    <ListBox
       {...props}
       options={
         typeof options[0] === "string"
@@ -87,14 +93,22 @@ const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, 
             })
           : (options as Array<{ label: string; value: string }>)
       }
-      onChange={(selected) => selected && setValue(selected.value)}
-      value={value}
-      error={error}
+      onSelect={(selected) => selected && setValue(selected)}
+      selectedValue={value}
+      hasError={error}
     />
   );
 };
 
-const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, itemType, directionalStyle }) => {
+const ArrayField: React.FC<ArrayFieldProps> = ({
+  name,
+  value,
+  setValue,
+  error,
+  itemType,
+  directionalStyle,
+  uniqueValues,
+}) => {
   return (
     <TagInput
       name={name}
@@ -103,6 +117,7 @@ const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, i
       itemType={itemType}
       error={error}
       directionalStyle={directionalStyle}
+      uniqueValues={uniqueValues}
     />
   );
 };
@@ -158,9 +173,11 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   }, [path, scrollToField, setScrollToField]);
 
   if (props.type === "boolean") {
+    const switchId = `switch-${path}`;
     const labeledSwitch = (
       <LabeledSwitch
         {...field}
+        id={switchId}
         ref={(ref) => {
           elementRef.current = ref;
           // Call handler in here to make sure it handles new refs
@@ -168,9 +185,13 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
         }}
         checked={fieldValue as boolean}
         label={
-          <>
-            {label} {tooltip && <InfoTooltip placement="top-start">{tooltip}</InfoTooltip>}
-          </>
+          <ControlLabels
+            className={styles.switchLabel}
+            label={label}
+            infoTooltipContent={tooltip}
+            optional={optional}
+            htmlFor={switchId}
+          />
         }
         disabled={props.disabled}
       />
@@ -287,6 +308,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
             setValue={setValue}
             error={hasError}
             directionalStyle={props.directionalStyle ?? true}
+            uniqueValues={props.uniqueValues}
           />
         </div>
       )}

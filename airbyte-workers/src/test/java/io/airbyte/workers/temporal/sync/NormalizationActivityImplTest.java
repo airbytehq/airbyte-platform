@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync;
@@ -24,7 +24,8 @@ import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.storage.CloudStorageConfigs;
+import io.airbyte.config.storage.GcsStorageConfig;
+import io.airbyte.config.storage.StorageBucketConfig;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.UseCustomK8sScheduler;
@@ -34,7 +35,9 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.process.ProcessFactory;
-import io.airbyte.workers.storage.DocumentStoreClient;
+import io.airbyte.workers.storage.StorageClient;
+import io.airbyte.workers.workload.JobOutputDocStore;
+import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.temporal.testing.TestActivityEnvironment;
 import java.nio.file.Path;
@@ -57,7 +60,7 @@ class NormalizationActivityImplTest {
   private static SecretsRepositoryReader mSecretsRepositoryReader;
   private static final Path WORKSPACE_ROOT = Path.of("/unused/path");
   private static final Configs.WorkerEnvironment WORKER_ENVIRONMENT = Configs.WorkerEnvironment.KUBERNETES;
-  private static CloudStorageConfigs mCloudStorageConfigs;
+  private static GcsStorageConfig mStorageConfigs;
   private static LogConfigs LOG_CONFIGS;
   private static final String AIRBYTE_VERSION = "1.0";
   private static final Integer SERVER_PORT = 8888;
@@ -65,34 +68,40 @@ class NormalizationActivityImplTest {
   private static AirbyteApiClient mAirbyteApiClient;
   private static ConnectionApi mConnectionApi;
   private static FeatureFlagClient mFeatureFlagClient;
+  private static JobOutputDocStore mJobOutputDocStore;
   private static NormalizationActivityImpl normalizationActivityImpl;
   private static NormalizationActivity normalizationActivity;
-  private static final JobRunConfig JOB_RUN_CONFIG = new JobRunConfig().withJobId("unused").withAttemptId(0L);
+  private static final JobRunConfig JOB_RUN_CONFIG = new JobRunConfig().withJobId("1").withAttemptId(0L);
   private static final IntegrationLauncherConfig DESTINATION_CONFIG = new IntegrationLauncherConfig()
       .withDockerImage("unused")
       .withNormalizationDockerImage("unused:unused");
   private static WorkerConfigs mWorkerConfigs;
-  private DocumentStoreClient mDocumentStoreClient;
+  private StorageClient mStorageClient;
   private KubernetesClient mKubernetesClient;
 
   @BeforeEach
   void beforeEach() throws Exception {
     testEnv = TestActivityEnvironment.newInstance();
     mContainerOrchestratorConfig = mock(ContainerOrchestratorConfig.class);
-    mDocumentStoreClient = mock(DocumentStoreClient.class);
+    mStorageClient = mock(StorageClient.class);
     mKubernetesClient = mock(KubernetesClient.class);
+    mJobOutputDocStore = mock(JobOutputDocStore.class);
     when(mContainerOrchestratorConfig.workerEnvironment()).thenReturn(Configs.WorkerEnvironment.KUBERNETES);
     when(mContainerOrchestratorConfig.containerOrchestratorImage()).thenReturn("gcr.io/my-project/image-name:v2");
     when(mContainerOrchestratorConfig.containerOrchestratorImagePullPolicy()).thenReturn("Always");
-    when(mContainerOrchestratorConfig.documentStoreClient()).thenReturn(mDocumentStoreClient);
-    when(mDocumentStoreClient.read(argThat(key -> key.contains(AsyncKubePodStatus.SUCCEEDED.name())))).thenReturn(Optional.of(""));
+    when(mContainerOrchestratorConfig.storageClient()).thenReturn(mStorageClient);
+    when(mStorageClient.read(argThat(key -> key.contains(AsyncKubePodStatus.SUCCEEDED.name())))).thenReturn("");
+    when(mContainerOrchestratorConfig.jobOutputDocStore()).thenReturn(mJobOutputDocStore);
+    when(mJobOutputDocStore.readSyncOutput(any())).thenReturn(Optional.empty());
     when(mContainerOrchestratorConfig.kubernetesClient()).thenReturn(mKubernetesClient);
     mWorkerConfigsProvider = mock(WorkerConfigsProvider.class);
     mWorkerConfigs = mock(WorkerConfigs.class);
-    mCloudStorageConfigs = mock(CloudStorageConfigs.class);
-    when(mCloudStorageConfigs.getType()).thenReturn(CloudStorageConfigs.WorkerStorageType.GCS);
-    when(mCloudStorageConfigs.getGcsConfig()).thenReturn(new CloudStorageConfigs.GcsConfig("unused", "unused"));
-    LOG_CONFIGS = new LogConfigs(Optional.of(mCloudStorageConfigs));
+
+    mStorageConfigs = mock(GcsStorageConfig.class);
+    when(mStorageConfigs.getBuckets()).thenReturn(new StorageBucketConfig("unused", "unused", "unused"));
+    when(mStorageConfigs.getApplicationCredentials()).thenReturn("unused");
+
+    LOG_CONFIGS = new LogConfigs(mStorageConfigs);
     when(mWorkerConfigsProvider.getConfig(any())).thenReturn(mWorkerConfigs);
     mProcessFactory = mock(ProcessFactory.class);
     mSecretsRepositoryReader = mock(SecretsRepositoryReader.class);
@@ -115,7 +124,8 @@ class NormalizationActivityImplTest {
         mAirbyteConfigValidator,
         mAirbyteApiClient,
         mFeatureFlagClient,
-        mock(MetricClient.class));
+        mock(MetricClient.class),
+        new WorkloadIdGenerator());
     testEnv.registerActivitiesImplementations(normalizationActivityImpl);
     normalizationActivity = testEnv.newActivityStub(NormalizationActivity.class);
   }

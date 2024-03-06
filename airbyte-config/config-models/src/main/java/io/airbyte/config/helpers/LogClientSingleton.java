@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.helpers;
@@ -47,20 +47,8 @@ public class LogClientSingleton {
   public static final String JOB_LOG_PATH_MDC_KEY = "job_log_path";
   public static final String CLOUD_JOB_LOG_PATH_MDC_KEY = "cloud_job_log_path";
 
-  // S3/Minio
-  public static final String S3_LOG_BUCKET = "S3_LOG_BUCKET";
-  public static final String S3_LOG_BUCKET_REGION = "S3_LOG_BUCKET_REGION";
-  public static final String AWS_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID";
-  public static final String AWS_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY";
-  public static final String S3_MINIO_ENDPOINT = "S3_MINIO_ENDPOINT";
-
-  // GCS
-  public static final String GCS_LOG_BUCKET = "GCS_LOG_BUCKET";
-  public static final String GOOGLE_APPLICATION_CREDENTIALS = "GOOGLE_APPLICATION_CREDENTIALS";
-
   public static final int DEFAULT_PAGE_SIZE = 1000;
   public static final String LOG_FILENAME = "logs.log";
-  public static final String APP_LOGGING_CLOUD_PREFIX = "app-logging";
   public static final String JOB_LOGGING_CLOUD_PREFIX = "job-logging";
 
   /**
@@ -73,69 +61,6 @@ public class LogClientSingleton {
       instance = new LogClientSingleton();
     }
     return instance;
-  }
-
-  /**
-   * Get server log root.
-   *
-   * @param workspaceRoot workspace root dir
-   * @return server log path
-   */
-  public Path getServerLogsRoot(final Path workspaceRoot) {
-    return workspaceRoot.resolve("server/logs");
-  }
-
-  /**
-   * Get scheduler log root.
-   *
-   * @param workspaceRoot workspace root dir
-   * @return scheduler log path
-   */
-  public Path getSchedulerLogsRoot(final Path workspaceRoot) {
-    return workspaceRoot.resolve("scheduler/logs");
-  }
-
-  /**
-   * Get server log file.
-   *
-   * @param workspaceRoot workspace root dir
-   * @param workerEnvironment worker type
-   * @param logConfigs log configs
-   * @return server log
-   */
-  public File getServerLogFile(final Path workspaceRoot, final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs) {
-    if (shouldUseLocalLogs(workerEnvironment)) {
-      return getServerLogsRoot(workspaceRoot).resolve(LOG_FILENAME).toFile();
-    }
-    final var cloudLogPath = sanitisePath(APP_LOGGING_CLOUD_PREFIX, getServerLogsRoot(workspaceRoot));
-    try {
-      createCloudClientIfNull(logConfigs);
-      return logClient.downloadCloudLog(logConfigs, cloudLogPath);
-    } catch (final IOException e) {
-      throw new RuntimeException("Error retrieving log file: " + cloudLogPath + " from S3", e);
-    }
-  }
-
-  /**
-   * Get scheduler log file.
-   *
-   * @param workspaceRoot root dir of workspace
-   * @param workerEnvironment worker type
-   * @param logConfigs configuration of logs
-   * @return scheduler log file
-   */
-  public File getSchedulerLogFile(final Path workspaceRoot, final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs) {
-    if (shouldUseLocalLogs(workerEnvironment)) {
-      return getSchedulerLogsRoot(workspaceRoot).resolve(LOG_FILENAME).toFile();
-    }
-
-    final var cloudLogPath = APP_LOGGING_CLOUD_PREFIX + getSchedulerLogsRoot(workspaceRoot);
-    try {
-      createCloudClientIfNull(logConfigs);
-      return logClient.downloadCloudLog(logConfigs, cloudLogPath);
-    } catch (final IOException e) {
-      throw new RuntimeException("Error retrieving log file: " + cloudLogPath + " from S3", e);
-    }
   }
 
   /**

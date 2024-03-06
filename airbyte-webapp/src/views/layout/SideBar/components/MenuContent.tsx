@@ -2,7 +2,7 @@ import { PropsWithChildren } from "react";
 
 import styles from "./MenuContent.module.scss";
 
-export const MenuContent: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
+export const MenuContent: React.FC<PropsWithChildren> = ({ children }) => {
   return (
     <ul className={styles.menuContent}>
       {Array.isArray(children) ? (

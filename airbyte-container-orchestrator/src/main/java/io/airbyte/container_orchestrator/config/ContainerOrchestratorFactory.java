@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.container_orchestrator.config;
@@ -26,12 +26,14 @@ import io.airbyte.workers.process.DockerProcessFactory;
 import io.airbyte.workers.process.KubePortManagerSingleton;
 import io.airbyte.workers.process.KubeProcessFactory;
 import io.airbyte.workers.process.ProcessFactory;
-import io.airbyte.workers.storage.DocumentStoreClient;
-import io.airbyte.workers.storage.StateClients;
+import io.airbyte.workers.storage.DocumentType;
+import io.airbyte.workers.storage.StorageClient;
+import io.airbyte.workers.storage.StorageClientFactory;
 import io.airbyte.workers.sync.DbtLauncherWorker;
 import io.airbyte.workers.sync.NormalizationLauncherWorker;
 import io.airbyte.workers.sync.OrchestratorConstants;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
+import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
@@ -44,7 +46,6 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -68,7 +69,6 @@ class ContainerOrchestratorFactory {
     return new EnvConfigs(env);
   }
 
-  // This is currently needed for tests bceause the default env is docker
   @Singleton
   @Requires(notEnv = Environment.KUBERNETES)
   ProcessFactory dockerProcessFactory(final WorkerConfigsProvider workerConfigsProvider, final EnvConfigs configs) {
@@ -109,6 +109,7 @@ class ContainerOrchestratorFactory {
   @Singleton
   JobOrchestrator<?> jobOrchestrator(
                                      @Named("application") final String application,
+                                     @Named("configDir") final String configDir,
                                      final EnvConfigs envConfigs,
                                      final ProcessFactory processFactory,
                                      final WorkerConfigsProvider workerConfigsProvider,
@@ -117,10 +118,11 @@ class ContainerOrchestratorFactory {
                                      final AsyncStateManager asyncStateManager,
                                      final WorkloadApi workloadApi,
                                      final WorkloadIdGenerator workloadIdGenerator,
-                                     @Value("${airbyte.workload.enabled}") final boolean workloadEnabled) {
+                                     @Value("${airbyte.workload.enabled}") final boolean workloadEnabled,
+                                     final JobOutputDocStore jobOutputDocStore) {
     return switch (application) {
-      case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(envConfigs, jobRunConfig,
-          replicationWorkerFactory, asyncStateManager, workloadApi, workloadIdGenerator, workloadEnabled);
+      case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(configDir, envConfigs, jobRunConfig,
+          replicationWorkerFactory, asyncStateManager, workloadApi, workloadIdGenerator, workloadEnabled, jobOutputDocStore);
       case NormalizationLauncherWorker.NORMALIZATION -> new NormalizationJobOrchestrator(envConfigs, processFactory, jobRunConfig, asyncStateManager);
       case DbtLauncherWorker.DBT -> new DbtJobOrchestrator(envConfigs, workerConfigsProvider, processFactory, jobRunConfig, asyncStateManager);
       case AsyncOrchestratorPodProcess.NO_OP -> new NoOpOrchestrator();
@@ -129,8 +131,15 @@ class ContainerOrchestratorFactory {
   }
 
   @Singleton
-  DocumentStoreClient documentStoreClient(final EnvConfigs config) {
-    return StateClients.create(config.getStateStorageCloudConfigs(), Path.of("/state"));
+  @Named("stateDocumentStore")
+  StorageClient documentStoreClient(final StorageClientFactory factory) {
+    return factory.get(DocumentType.STATE);
+  }
+
+  @Singleton
+  @Named("outputDocumentStore")
+  StorageClient outputDocumentStoreClient(final StorageClientFactory factory) {
+    return factory.get(DocumentType.WORKLOAD_OUTPUT);
   }
 
   @Prototype

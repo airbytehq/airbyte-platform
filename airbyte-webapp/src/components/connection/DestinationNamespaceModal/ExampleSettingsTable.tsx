@@ -2,7 +2,7 @@ import React from "react";
 
 import { Text } from "components/ui/Text";
 
-import { NamespaceDefinitionType } from "core/request/AirbyteClient";
+import { NamespaceDefinitionType } from "core/api/types/AirbyteClient";
 
 import styles from "./ExampleSettingsTable.module.scss";
 import { useExampleTableData } from "./useExampleSettingsTable";

@@ -5,16 +5,16 @@ import { useAvailableDbtJobs, useDbtIntegration } from "core/api/cloud";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
-import { DbtCloudErrorBoundaryHookForm } from "./DbtCloudErrorBoundaryHookForm";
-import { DbtCloudTransformationsHookForm } from "./DbtCloudTransformationsHookForm";
+import { DbtCloudErrorBoundary } from "./DbtCloudErrorBoundary";
+import { DbtCloudTransformationsForm } from "./DbtCloudTransformationsForm";
 
 /**
- * wrapper for DbtCloudTransformationsHookForm
+ * wrapper for DbtCloudTransformationsForm
  * to fetch availableDbtJobs from the API since we can't call hooks conditionally
  */
-const DbtCloudTransformationsHookFormWithDbtIntegration: React.FC = () => {
+const DbtCloudTransformationsWithDbtIntegration: React.FC = () => {
   const availableDbtCloudJobs = useAvailableDbtJobs();
-  return <DbtCloudTransformationsHookForm availableDbtCloudJobs={availableDbtCloudJobs} />;
+  return <DbtCloudTransformationsForm availableDbtCloudJobs={availableDbtCloudJobs} />;
 };
 
 /**
@@ -46,10 +46,10 @@ export const DbtCloudTransformations: React.FC = () => {
   const workspaceId = useCurrentWorkspaceId();
 
   return hasDbtIntegration ? (
-    <DbtCloudErrorBoundaryHookForm trackError={trackError} workspaceId={workspaceId}>
-      <DbtCloudTransformationsHookFormWithDbtIntegration />
-    </DbtCloudErrorBoundaryHookForm>
+    <DbtCloudErrorBoundary trackError={trackError} workspaceId={workspaceId}>
+      <DbtCloudTransformationsWithDbtIntegration />
+    </DbtCloudErrorBoundary>
   ) : (
-    <DbtCloudTransformationsHookForm />
+    <DbtCloudTransformationsForm />
   );
 };

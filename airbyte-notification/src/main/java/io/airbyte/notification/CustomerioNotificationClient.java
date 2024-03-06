@@ -1,17 +1,28 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.api.common.StreamDescriptorUtils;
+import io.airbyte.api.model.generated.StreamTransform;
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
-import io.airbyte.config.EnvConfigs;
+import io.airbyte.notification.messages.SchemaUpdateNotification;
+import io.airbyte.notification.messages.SyncSummary;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -46,6 +57,8 @@ import org.slf4j.LoggerFactory;
  */
 public class CustomerioNotificationClient extends NotificationClient {
 
+  public static final ObjectMapper MAPPER = new ObjectMapper();
+
   private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CustomerioNotificationClient.class);
@@ -54,13 +67,11 @@ public class CustomerioNotificationClient extends NotificationClient {
   private static final String AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID = "8";
   private static final String BREAKING_CHANGE_WARNING_BROADCAST_ID = "32";
   private static final String BREAKING_CHANGE_SYNCS_DISABLED_BROADCAST_ID = "33";
-  private static final String SCHEMA_CHANGE_BROADCAST_ID = "23";
-  private static final String SCHEMA_BREAKING_CHANGE_BROADCAST_ID = "24";
+  private static final String SCHEMA_CHANGE_TRANSACTION_ID = "25";
+  private static final String SCHEMA_BREAKING_CHANGE_TRANSACTION_ID = "24";
 
-  private static final String SYNC_SUCCEED_MESSAGE_ID = "18";
-  private static final String SYNC_SUCCEED_TEMPLATE_PATH = "customerio/sync_succeed_template.json";
-  private static final String SYNC_FAILURE_MESSAGE_ID = "19";
-  private static final String SYNC_FAILURE_TEMPLATE_PATH = "customerio/sync_failure_template.json";
+  private static final String SYNC_SUCCEED_MESSAGE_ID = "27";
+  private static final String SYNC_FAILURE_MESSAGE_ID = "26";
 
   private static final String CUSTOMERIO_BASE_URL = "https://api.customer.io/";
   private static final String CUSTOMERIO_EMAIL_API_ENDPOINT = "v1/send/email";
@@ -74,9 +85,15 @@ public class CustomerioNotificationClient extends NotificationClient {
   private final OkHttpClient okHttpClient;
   private final String apiToken;
 
+  static {
+    DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+    MAPPER.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    MAPPER.setDateFormat(dateFormat);
+    MAPPER.registerModule(new JavaTimeModule());
+  }
+
   public CustomerioNotificationClient() {
-    final EnvConfigs configs = new EnvConfigs();
-    this.apiToken = configs.getCustomerIoKey();
+    this.apiToken = System.getenv(EnvVar.CUSTOMERIO_API_KEY.name());
     this.baseUrl = CUSTOMERIO_BASE_URL;
     this.okHttpClient = new OkHttpClient.Builder()
         .addInterceptor(new CampaignsRateLimitInterceptor())
@@ -121,33 +138,21 @@ public class CustomerioNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifyJobFailure(
-                                  final String receiverEmail,
-                                  final String sourceConnector,
-                                  final String destinationConnector,
-                                  final String connectionName,
-                                  final String jobDescription,
-                                  final String logUrl,
-                                  final Long jobId)
+  public boolean notifyJobFailure(final SyncSummary summary,
+                                  final String receiverEmail)
       throws IOException {
-    final String requestBody = renderTemplate(SYNC_FAILURE_TEMPLATE_PATH, SYNC_FAILURE_MESSAGE_ID, receiverEmail,
-        receiverEmail, sourceConnector, destinationConnector, connectionName, jobDescription, logUrl, jobId.toString());
-    return notifyByEmail(requestBody);
+    ObjectNode node = buildSyncCompletedJson(summary, receiverEmail, SYNC_FAILURE_MESSAGE_ID);
+    String payload = Jsons.serialize(node);
+    return notifyByEmail(payload);
   }
 
   @Override
-  public boolean notifyJobSuccess(
-                                  final String receiverEmail,
-                                  final String sourceConnector,
-                                  final String destinationConnector,
-                                  final String connectionName,
-                                  final String jobDescription,
-                                  final String logUrl,
-                                  final Long jobId)
+  public boolean notifyJobSuccess(final SyncSummary summary,
+                                  final String receiverEmail)
       throws IOException {
-    final String requestBody = renderTemplate(SYNC_SUCCEED_TEMPLATE_PATH, SYNC_SUCCEED_MESSAGE_ID, receiverEmail,
-        receiverEmail, sourceConnector, destinationConnector, connectionName, jobDescription, logUrl, jobId.toString());
-    return notifyByEmail(requestBody);
+    ObjectNode node = buildSyncCompletedJson(summary, receiverEmail, SYNC_SUCCEED_MESSAGE_ID);
+    String payload = Jsons.serialize(node);
+    return notifyByEmail(payload);
   }
 
   // Once the configs are editable through the UI, the reciever email should be stored in
@@ -219,26 +224,115 @@ public class CustomerioNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifySchemaChange(final UUID connectionId,
-                                    final boolean isBreaking,
-                                    final String url) {
-    throw new NotImplementedException();
+  public boolean notifySchemaPropagated(final SchemaUpdateNotification notification,
+                                        final String recipient)
+      throws IOException {
+    String transactionalMessageId = notification.isBreakingChange() ? SCHEMA_BREAKING_CHANGE_TRANSACTION_ID : SCHEMA_CHANGE_TRANSACTION_ID;
+
+    ObjectNode node =
+        buildSchemaPropagationJson(notification, recipient, transactionalMessageId);
+
+    String payload = Jsons.serialize(node);
+    return notifyByEmail(payload);
   }
 
-  @Override
-  public boolean notifySchemaPropagated(final UUID connectionId,
-                                        final String sourceName,
-                                        final List<String> changes,
-                                        final String url,
-                                        final List<String> recipients,
-                                        final boolean isBreaking)
-      throws IOException {
-    String templateId = isBreaking ? SCHEMA_CHANGE_BROADCAST_ID : SCHEMA_BREAKING_CHANGE_BROADCAST_ID;
-    String details = String.join("\n", changes);
-    return notifyByEmailBroadcast(templateId, recipients, Map.of(
-        "connection_id", connectionId.toString(),
-        "changes_details", details,
-        "source", sourceName));
+  static ObjectNode buildSyncCompletedJson(final SyncSummary syncSummary,
+                                           final String recipient,
+                                           final String transactionMessageId) {
+    ObjectNode node = MAPPER.createObjectNode();
+    node.put("transactional_message_id", transactionMessageId);
+    node.put("to", recipient);
+
+    ObjectNode identifiersNode = MAPPER.createObjectNode();
+    identifiersNode.put("email", recipient);
+    node.set("identifiers", identifiersNode);
+
+    node.set("message_data", MAPPER.valueToTree(syncSummary));
+    node.put("disable_message_retention", false);
+    node.put("send_to_unsubscribed", true);
+    node.put("tracked", true);
+    node.put("queue_draft", false);
+    node.put("disable_css_preprocessing", true);
+
+    return node;
+  }
+
+  @NotNull
+  @VisibleForTesting
+  static ObjectNode buildSchemaPropagationJson(final SchemaUpdateNotification notification,
+                                               final String recipient,
+                                               final String transactionalMessageId) {
+    ObjectNode node = MAPPER.createObjectNode();
+    node.put("transactional_message_id", transactionalMessageId);
+    node.put("to", recipient);
+
+    ObjectNode identifiersNode = MAPPER.createObjectNode();
+    identifiersNode.put("email", recipient);
+    node.set("identifiers", identifiersNode);
+
+    ObjectNode messageDataNode = MAPPER.createObjectNode();
+    messageDataNode.put("connection_name", notification.getConnectionInfo().getName());
+    messageDataNode.put("connection_id", notification.getConnectionInfo().getId().toString());
+    messageDataNode.put("workspace_id", notification.getWorkspace().getId().toString());
+    messageDataNode.put("workspace_name", notification.getWorkspace().getName());
+
+    ObjectNode changesNode = MAPPER.createObjectNode();
+    messageDataNode.set("changes", changesNode);
+
+    var diff = notification.getCatalogDiff();
+    var newStreams = diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.ADD_STREAM).toList();
+    ArrayNode newStreamsNodes = MAPPER.createArrayNode();
+    changesNode.set("new_streams", newStreamsNodes);
+    for (var stream : newStreams) {
+      newStreamsNodes.add(StreamDescriptorUtils.buildFullyQualifiedName(stream.getStreamDescriptor()));
+    }
+
+    var deletedStreams =
+        diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.REMOVE_STREAM).toList();
+    ArrayNode deletedStreamsNodes = MAPPER.createArrayNode();
+    changesNode.set("deleted_streams", deletedStreamsNodes);
+    for (var stream : deletedStreams) {
+      deletedStreamsNodes.add(StreamDescriptorUtils.buildFullyQualifiedName(stream.getStreamDescriptor()));
+    }
+
+    var alteredStreams =
+        diff.getTransforms().stream().filter((t) -> t.getTransformType() == StreamTransform.TransformTypeEnum.UPDATE_STREAM).toList();
+    ObjectNode modifiedStreamsNodes = MAPPER.createObjectNode();
+    changesNode.set("modified_streams", modifiedStreamsNodes);
+    for (var stream : alteredStreams) {
+
+      var streamNode = MAPPER.createObjectNode();
+      modifiedStreamsNodes.set(StreamDescriptorUtils.buildFullyQualifiedName(stream.getStreamDescriptor()), streamNode);
+      ArrayNode newFields = MAPPER.createArrayNode();
+      ArrayNode deletedFields = MAPPER.createArrayNode();
+      ArrayNode modifiedFields = MAPPER.createArrayNode();
+
+      streamNode.set("new", newFields);
+      streamNode.set("deleted", deletedFields);
+      streamNode.set("altered", modifiedFields);
+
+      for (var fieldChange : stream.getUpdateStream()) {
+        String fieldName = StreamDescriptorUtils.buildFieldName(fieldChange.getFieldName());
+        switch (fieldChange.getTransformType()) {
+          case ADD_FIELD -> newFields.add(fieldName);
+          case REMOVE_FIELD -> deletedFields.add(fieldName);
+          case UPDATE_FIELD_SCHEMA -> modifiedFields.add(fieldName);
+          default -> LOGGER.warn("Unknown TransformType: '{}'", fieldChange.getTransformType());
+        }
+      }
+    }
+    messageDataNode.put("source", notification.getSourceInfo().getName());
+    messageDataNode.put("source_name", notification.getSourceInfo().getName());
+    messageDataNode.put("source_id", notification.getSourceInfo().getId().toString());
+
+    node.set("message_data", messageDataNode);
+
+    node.put("disable_message_retention", false);
+    node.put("send_to_unsubscribed", true);
+    node.put("tracked", true);
+    node.put("queue_draft", false);
+    node.put("disable_css_preprocessing", true);
+    return node;
   }
 
   @Override

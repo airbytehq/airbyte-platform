@@ -14,6 +14,7 @@ data:
   AIRBYTE_EDITION: {{ .Values.global.edition | default "community" | quote }}
   API_URL: {{ .Values.webapp.api.url }}
   CONNECTOR_BUILDER_API_URL: {{ index .Values.webapp "connector-builder-server" "url" | quote }}
+  CONFIG_API_HOST: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }} # temporary solution for oss kube deploys for airbyte api server until that server is wrapped into the config server
   CONFIG_ROOT: /configs
   CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: "0.35.15.001"
   DATA_DOCKER_MOUNT: airbyte_data
@@ -21,16 +22,16 @@ data:
   DATABASE_HOST: {{ include "airbyte.database.host" . }}
   DATABASE_PORT: {{ include "airbyte.database.port" . | quote }}
   DATABASE_URL: {{ include "airbyte.database.url" . | quote }}
+  KEYCLOAK_DATABASE_URL: {{ include "keycloak.database.url" . | quote }}
   DB_DOCKER_MOUNT: airbyte_db
-  GCS_LOG_BUCKET: {{ .Values.global.logs.gcs.bucket | quote }}
   GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.gcpLogCredentialsPath" . | quote }}
   INTERNAL_API_HOST: {{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
 {{- if eq (index .Values "workload-api-server" "enabled") true }}
   # Temporary conditional for OSS deploys.  Eventually, the workload-api will be present in OSS deploys and the else
   # block can be removed
-  WORKLOAD_API_HOST: {{ .Release.Name }}-workload-api-server:{{ index .Values "workload-api-server" "service" "port" }}
+  WORKLOAD_API_HOST: http://{{ .Release.Name }}-workload-api-server-svc:{{ index .Values "workload-api-server" "service" "port" }}
 {{- else }}
-  WORKLOAD_API_HOST: localhost # placeholder value
+  WORKLOAD_API_HOST: http://localhost # placeholder value
 {{- end }}
 {{- if eq .Values.global.edition "pro" }}
   KEYCLOAK_INTERNAL_HOST: {{ .Release.Name }}-airbyte-keycloak-svc:{{ .Values.keycloak.service.port }}
@@ -72,13 +73,22 @@ data:
 {{- end }}
   JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: "0.29.15.001"
   LOCAL_ROOT: /tmp/airbyte_local
+  LOG4J_CONFIGURATION_FILE: {{ include "airbyte.log4jConfig" . | quote }}
+  MICROMETER_METRICS_ENABLED: "false"
+  MICROMETER_METRICS_STATSD_FLAVOR: "datadog"
   RUN_DATABASE_MIGRATION_ON_STARTUP: {{ index .Values "airbyte-bootloader" "runDatabaseMigrationsOnStartup" | default "true" | quote  }}
-  S3_LOG_BUCKET: {{ .Values.global.logs.s3.bucket | quote }}
-  S3_LOG_BUCKET_REGION: {{ .Values.global.logs.s3.bucketRegion | quote }}
-  S3_MINIO_ENDPOINT: {{ include "airbyte.minio.endpoint" . | quote }}
+  SEGMENT_WRITE_KEY: 7UDdp5K55CyiGgsauOr2pNNujGvmhaeu
+  # Storage start
+  STORAGE_TYPE:  {{ .Values.global.storage.type | quote }}
+  STORAGE_BUCKET_LOG: {{ .Values.global.storage.bucket.log | quote }}
+  STORAGE_BUCKET_STATE: {{ .Values.global.storage.bucket.state | quote }}
+  STORAGE_BUCKET_WORKLOAD_OUTPUT: {{ .Values.global.storage.bucket.workloadOutput | quote }}
+  AWS_DEFAULT_REGION: {{ .Values.global.storage.s3.region | quote }}
+  MINIO_ENDPOINT: {{ include "airbyte.storage.minio.endpoint" . | quote }}
   S3_PATH_STYLE_ACCESS: {{ include "airbyte.s3PathStyleAccess" . | quote }}
-  STATE_STORAGE_MINIO_BUCKET_NAME: state-storage
-  STATE_STORAGE_MINIO_ENDPOINT: {{ include "airbyte.minio.endpoint" . | quote }}
+  # Storage end
+  STATSD_HOST: "localhost"
+  STATSD_PORT: "8125"
   TEMPORAL_HOST: {{ .Release.Name }}-temporal:{{ .Values.temporal.service.port }}
   TEMPORAL_WORKER_PORTS: 9001,9002,9003,9004,9005,9006,9007,9008,9009,9010,9011,9012,9013,9014,9015,9016,9017,9018,9019,9020,9021,9022,9023,9024,9025,9026,9027,9028,9029,9030,9031,9032,9033,9034,9035,9036,9037,9038,9039,9040
   TRACKING_STRATEGY: segment
@@ -97,8 +107,9 @@ data:
   LAUNCHER_MICRONAUT_ENVIRONMENTS: "control-plane,oss"
   WORKERS_MICRONAUT_ENVIRONMENTS: "control-plane"
   CRON_MICRONAUT_ENVIRONMENTS: "control-plane"
-  WORKER_LOGS_STORAGE_TYPE: {{ .Values.global.logs.storage.type | quote }}
-  WORKER_STATE_STORAGE_TYPE:  {{ .Values.global.state.storage.type | quote }}
   SHOULD_RUN_NOTIFY_WORKFLOWS: "true"
   MAX_NOTIFY_WORKERS: {{ .Values.worker.maxNotifyWorkers | default "5" | quote }}
+  KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS: ""
+  WORKLOAD_LAUNCHER_PARALLELISM: "10"
+  CONNECTOR_BUILDER_SERVER_API_HOST: http://{{ .Release.Name }}-airbyte-connector-builder-server-svc:{{ index .Values "connector-builder-server" "service" "port" }}
 {{- end }}

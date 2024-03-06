@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.test.acceptance;
@@ -38,12 +38,12 @@ class VersioningAcceptanceTests {
 
   @BeforeAll
   static void init() throws IOException, URISyntaxException {
-    RetryPolicy<okhttp3.Response> policy = RetryPolicy.<okhttp3.Response>builder()
+    final RetryPolicy<okhttp3.Response> policy = RetryPolicy.<okhttp3.Response>builder()
         .handle(Throwable.class)
-        .withMaxAttempts(5)
-        .withBackoff(Duration.ofSeconds(1), Duration.ofSeconds(10)).build();
+        .withMaxAttempts(6)
+        .withBackoff(Duration.ofSeconds(1), Duration.ofSeconds(60)).build();
 
-    OkHttpClient client = new OkHttpClient.Builder().readTimeout(Duration.ofSeconds(20)).build();
+    final OkHttpClient client = new OkHttpClient.Builder().readTimeout(Duration.ofSeconds(60)).build();
     apiClient2 = new AirbyteApiClient2(String.format("%s/api", AIRBYTE_SERVER_HOST), policy, client);
 
     workspaceId = apiClient2.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();

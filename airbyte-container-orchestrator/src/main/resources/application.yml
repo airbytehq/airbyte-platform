@@ -10,17 +10,45 @@ micronaut:
     stream-status:
       type: fixed
       n-threads: ${STREAM_STATUS_EXECUTOR_THREADS:1}
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    export:
+      statsd:
+        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        host: ${STATSD_HOST:localhost}
+        port: ${STATSD_PORT:8125}
   security:
     enabled: false
 
 airbyte:
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
-  role: ${AIRBYTE_ROLE:}
-  version: ${AIRBYTE_VERSION}
-  config-dir: /config
+  role: ${AIRBYTE_ROLE:dev}
+  version: ${AIRBYTE_VERSION:dev}
+  config-dir: ${AIRBYTE_CONFIG_DIR:/config}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}
+  cloud:
+    storage:
+      type: ${STORAGE_TYPE}
+      bucket:
+        log: ${STORAGE_BUCKET_LOG}
+        state: ${STORAGE_BUCKET_STATE}
+        workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
+      gcs:
+        application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
+      local:
+        root: ${LOCAL_ROOT:}
+      minio:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        endpoint: ${MINIO_ENDPOINT:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+      s3:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        region: ${AWS_DEFAULT_REGION:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
   control:
     plane:
       auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
@@ -39,6 +67,9 @@ airbyte:
         name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
         value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
       host: ${INTERNAL_API_HOST}
+  tracking:
+    strategy: ${TRACKING_STRATEGY:LOGGING}
+    write-key: ${SEGMENT_WRITE_KEY:}
   worker:
     isolated:
       kube:

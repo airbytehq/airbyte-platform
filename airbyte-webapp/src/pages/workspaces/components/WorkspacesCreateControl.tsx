@@ -22,7 +22,7 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { useListWorkspaces } from "core/api";
-import { OrganizationRead, WorkspaceCreate, WorkspaceRead } from "core/request/AirbyteClient";
+import { OrganizationRead, WorkspaceCreate, WorkspaceRead } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -84,7 +84,7 @@ export const WorkspacesCreateControl: React.FC<OrganizationWorkspacesCreateContr
   return (
     <>
       {isEditMode ? (
-        <Card withPadding className={styles.animate}>
+        <Card className={styles.animate}>
           <Form<CreateWorkspaceFormValues>
             defaultValues={{
               name: "",

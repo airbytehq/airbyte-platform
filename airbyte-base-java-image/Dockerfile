@@ -1,4 +1,4 @@
-FROM amazoncorretto:19
+FROM amazoncorretto:21
 
 ARG DOCKER_BUILD_ARCH=amd64
 

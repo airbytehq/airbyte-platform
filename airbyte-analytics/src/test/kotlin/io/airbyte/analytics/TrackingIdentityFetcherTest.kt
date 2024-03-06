@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.analytics
@@ -8,7 +8,6 @@ import io.airbyte.api.client.generated.WorkspaceApi
 import io.airbyte.api.client.model.generated.Geography
 import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.client.model.generated.WorkspaceRead
-import io.airbyte.commons.version.AirbyteVersion
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
@@ -18,7 +17,6 @@ import java.util.UUID
 import java.util.function.Function
 
 class TrackingIdentityFetcherTest {
-  private val airbyteVersion = AirbyteVersion("dev")
   private lateinit var workspaceApi: WorkspaceApi
   private lateinit var trackingIdentityFetcher: TrackingIdentityFetcher
   private lateinit var workspaceFetcher: Function<UUID, WorkspaceRead>
@@ -33,7 +31,6 @@ class TrackingIdentityFetcherTest {
       }
     trackingIdentityFetcher =
       TrackingIdentityFetcher(
-        airbyteVersion = airbyteVersion,
         workspaceFetcher = workspaceFetcher,
       )
   }
@@ -57,7 +54,6 @@ class TrackingIdentityFetcherTest {
 
     val workspace1Expected =
       TrackingIdentity(
-        airbyteVersion = airbyteVersion,
         customerId = customerId1,
         email = null,
         anonymousDataCollection = null,
@@ -66,7 +62,6 @@ class TrackingIdentityFetcherTest {
       )
     val workspace2Expected =
       TrackingIdentity(
-        airbyteVersion = airbyteVersion,
         customerId = customerId2,
         email = null,
         anonymousDataCollection = null,
@@ -90,7 +85,6 @@ class TrackingIdentityFetcherTest {
 
     val expected =
       TrackingIdentity(
-        airbyteVersion = airbyteVersion,
         customerId = customerId1,
         email = null,
         anonymousDataCollection = null,
@@ -116,7 +110,6 @@ class TrackingIdentityFetcherTest {
 
     val expected =
       TrackingIdentity(
-        airbyteVersion = airbyteVersion,
         customerId = customerId,
         email = EMAIL,
         anonymousDataCollection = false,
@@ -142,7 +135,6 @@ class TrackingIdentityFetcherTest {
 
     val expected =
       TrackingIdentity(
-        airbyteVersion = airbyteVersion,
         customerId = customerId,
         email = null,
         anonymousDataCollection = true,

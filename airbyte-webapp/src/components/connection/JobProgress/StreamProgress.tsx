@@ -4,7 +4,7 @@ import { FormattedMessage, FormattedNumber, useIntl } from "react-intl";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { AttemptStreamStats } from "core/request/AirbyteClient";
+import { AttemptStreamStats } from "core/api/types/AirbyteClient";
 
 import styles from "./StreamProgress.module.scss";
 

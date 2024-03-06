@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.analytics
@@ -7,9 +7,10 @@ package io.airbyte.analytics
 import com.segment.analytics.Analytics
 import com.segment.analytics.messages.IdentifyMessage
 import com.segment.analytics.messages.TrackMessage
+import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Configs
-import io.micronaut.context.env.Environment
+import io.airbyte.config.Configs.WorkerEnvironment
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.context.ServerRequestContext
@@ -22,17 +23,17 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.Objects
 import java.util.UUID
-import java.util.function.Supplier
 
 class SegmentTrackingClientTest {
   private val airbyteVersion = AirbyteVersion("dev")
-  private val environment: Environment = mockk()
   private val deploymentId = UUID.randomUUID()
-  private val deploymentIdSupplier: Supplier<UUID> = Supplier { deploymentId }
-  private val deployment = Deployment(Configs.DeploymentMode.OSS, deploymentIdSupplier, environment)
+  private val deploymentMetadata: DeploymentMetadataRead =
+    DeploymentMetadataRead().id(
+      deploymentId,
+    ).environment(WorkerEnvironment.KUBERNETES.name).mode(Configs.DeploymentMode.OSS.name).version(airbyteVersion.serialize())
+  private val deployment: Deployment = Deployment(deploymentMetadata)
   private val identity =
     TrackingIdentity(
-      airbyteVersion = airbyteVersion,
       customerId = UUID.randomUUID(),
       email = EMAIL,
       anonymousDataCollection = false,
@@ -40,6 +41,7 @@ class SegmentTrackingClientTest {
       securityUpdates = true,
     )
   private val workspaceId = UUID.randomUUID()
+  private val deploymentFetcher: DeploymentFetcher = mockk()
   private val trackingIdentityFetcher: TrackingIdentityFetcher = mockk()
   private var analytics: Analytics = mockk()
   private var segmentAnalyticsClient: SegmentAnalyticsClient = mockk()
@@ -47,14 +49,14 @@ class SegmentTrackingClientTest {
 
   @BeforeEach
   fun setup() {
-    every { environment.activeNames } returns mutableSetOf("docker")
+    every { deploymentFetcher.get() } returns deployment
     every { trackingIdentityFetcher.apply(any()) } returns identity
     every { segmentAnalyticsClient.analyticsClient } returns analytics
 
     segmentTrackingClient =
       SegmentTrackingClient(
         trackingIdentityFetcher = trackingIdentityFetcher,
-        deployment = deployment,
+        deploymentFetcher = deploymentFetcher,
         segmentAnalyticsClient = segmentAnalyticsClient,
         airbyteRole = AIRBYTE_ROLE,
       )
@@ -73,9 +75,9 @@ class SegmentTrackingClientTest {
       mapOf(
         "anonymized" to identity.anonymousDataCollection!!,
         SegmentTrackingClient.AIRBYTE_VERSION_KEY to airbyteVersion.serialize(),
-        "deployment_env" to deployment.getDeploymentEnvironment(),
-        "deployment_mode" to deployment.deploymentMode,
-        "deployment_id" to deployment.deploymentIdSupplier.get(),
+        "deployment_env" to deploymentMetadata.environment,
+        "deployment_mode" to deploymentMetadata.mode,
+        "deployment_id" to deploymentMetadata.id.toString(),
         EMAIL_KEY to identity.email!!,
         "subscribed_newsletter" to identity.news!!,
         "subscribed_security" to identity.securityUpdates!!,
@@ -90,7 +92,7 @@ class SegmentTrackingClientTest {
     segmentTrackingClient =
       SegmentTrackingClient(
         trackingIdentityFetcher = trackingIdentityFetcher,
-        deployment = deployment,
+        deploymentFetcher = deploymentFetcher,
         segmentAnalyticsClient = segmentAnalyticsClient,
         airbyteRole = "role",
       )
@@ -106,9 +108,9 @@ class SegmentTrackingClientTest {
         "airbyte_role" to "role",
         SegmentTrackingClient.AIRBYTE_VERSION_KEY to airbyteVersion.serialize(),
         "anonymized" to identity.anonymousDataCollection!!,
-        "deployment_env" to deployment.getDeploymentEnvironment(),
-        "deployment_mode" to deployment.deploymentMode,
-        "deployment_id" to deployment.deploymentIdSupplier.get(),
+        "deployment_env" to deploymentMetadata.environment,
+        "deployment_mode" to deploymentMetadata.mode,
+        "deployment_id" to deploymentMetadata.id.toString(),
         EMAIL_KEY to identity.email!!,
         "subscribed_newsletter" to identity.news!!,
         "subscribed_security" to identity.securityUpdates!!,
@@ -127,8 +129,8 @@ class SegmentTrackingClientTest {
         SegmentTrackingClient.AIRBYTE_VERSION_KEY to airbyteVersion.serialize(),
         "user_id" to identity.customerId,
         SegmentTrackingClient.AIRBYTE_SOURCE to SegmentTrackingClient.UNKNOWN,
-        SegmentTrackingClient.AIRBYTE_DEPLOYMENT_ID to deployment.deploymentIdSupplier.get(),
-        SegmentTrackingClient.AIRBYTE_DEPLOYMENT_MODE to deployment.deploymentMode,
+        SegmentTrackingClient.AIRBYTE_DEPLOYMENT_ID to deploymentMetadata.id.toString(),
+        SegmentTrackingClient.AIRBYTE_DEPLOYMENT_MODE to deploymentMetadata.mode,
       )
 
     segmentTrackingClient.track(workspaceId, JUMP)
@@ -152,8 +154,8 @@ class SegmentTrackingClientTest {
         "height" to "80 meters",
         "user_id" to identity.customerId,
         SegmentTrackingClient.AIRBYTE_SOURCE to SegmentTrackingClient.UNKNOWN,
-        SegmentTrackingClient.AIRBYTE_DEPLOYMENT_ID to deployment.deploymentIdSupplier.get(),
-        SegmentTrackingClient.AIRBYTE_DEPLOYMENT_MODE to deployment.deploymentMode,
+        SegmentTrackingClient.AIRBYTE_DEPLOYMENT_ID to deploymentMetadata.id.toString(),
+        SegmentTrackingClient.AIRBYTE_DEPLOYMENT_MODE to deploymentMetadata.mode,
       )
     segmentTrackingClient.track(workspaceId, JUMP, metadata)
     verify(exactly = 1) { analytics.enqueue(any()) }

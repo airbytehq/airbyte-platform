@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.container_orchestrator;
@@ -7,7 +7,8 @@ package io.airbyte.container_orchestrator;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.process.KubePodInfo;
-import io.airbyte.workers.storage.DocumentStoreClient;
+import io.airbyte.workers.storage.StorageClient;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
@@ -34,11 +35,11 @@ public class AsyncStateManager {
       // then check for initialization state
       AsyncKubePodStatus.INITIALIZING);
 
-  private final DocumentStoreClient documentStoreClient;
+  private final StorageClient storageClient;
   private final KubePodInfo kubePodInfo;
 
-  public AsyncStateManager(final DocumentStoreClient documentStoreClient, final KubePodInfo kubePodInfo) {
-    this.documentStoreClient = documentStoreClient;
+  public AsyncStateManager(@Named("stateDocumentStore") final StorageClient storageClient, final KubePodInfo kubePodInfo) {
+    this.storageClient = storageClient;
     this.kubePodInfo = kubePodInfo;
   }
 
@@ -48,7 +49,7 @@ public class AsyncStateManager {
   public void write(final AsyncKubePodStatus status, final String value) {
     final var key = getDocumentStoreKey(status);
     log.info("Writing async status {} for {}...", status, kubePodInfo);
-    documentStoreClient.write(key, value);
+    storageClient.write(key, value);
   }
 
   /**
@@ -80,9 +81,13 @@ public class AsyncStateManager {
    */
   public String getOutput() throws IllegalArgumentException {
     final var key = getDocumentStoreKey(AsyncKubePodStatus.SUCCEEDED);
-    final var output = documentStoreClient.read(key);
+    final var output = storageClient.read(key);
 
-    return output.orElseThrow(() -> new IllegalArgumentException("Expected to retrieve output from a successfully completed pod!"));
+    if (output == null) {
+      throw new IllegalArgumentException("Expected to retrieve output from a successfully completed pod!");
+    }
+
+    return output;
 
   }
 
@@ -97,7 +102,7 @@ public class AsyncStateManager {
 
   private boolean statusFileExists(final AsyncKubePodStatus status) {
     final var key = getDocumentStoreKey(status);
-    return documentStoreClient.read(key).isPresent();
+    return storageClient.read(key) != null;
   }
 
 }

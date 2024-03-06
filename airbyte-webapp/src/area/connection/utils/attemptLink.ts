@@ -1,6 +1,6 @@
 import { useLocation } from "react-router-dom";
 
-import { AttemptRead } from "core/request/AirbyteClient";
+import { AttemptRead } from "core/api/types/AirbyteClient";
 
 const PARSE_REGEXP = /^#(?<jobId>\w*)::(?<attemptId>\w*)$/;
 

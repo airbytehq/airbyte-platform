@@ -49,7 +49,7 @@ data class StreamStatsCounters(
   val meanSecondsToReceiveState: AtomicDouble = AtomicDouble(),
   val maxSecondsBetweenStateEmittedAndCommitted: LongAccumulator = LongAccumulator(Math::max, 0),
   val meanSecondsBetweenStateEmittedAndCommitted: AtomicDouble = AtomicDouble(),
-  val unreliableStateOperations: AtomicBoolean = AtomicBoolean(),
+  val unreliableStateOperations: AtomicBoolean = AtomicBoolean(false),
 )
 
 /**
@@ -59,7 +59,7 @@ data class StreamStatsCounters(
  * destination yet. Those stats are "emitted". They will eventually add up to the committed stats
  * once the state is acked by the destination.
  */
-private data class EmittedStatsCounters(
+data class EmittedStatsCounters(
   val remittedRecordsCount: AtomicLong = AtomicLong(),
   val emittedBytesCount: AtomicLong = AtomicLong(),
 )
@@ -100,6 +100,7 @@ class StreamStatsTracker(
   private val stateHashes = ConcurrentHashMap.newKeySet<Int>()
   private val stagedStatsList = ConcurrentLinkedQueue<StagedStats>()
   private var emittedStats = EmittedStatsCounters()
+  private var previousEmittedStats = EmittedStatsCounters()
   private var previousStateMessageReceivedAt: LocalDateTime? = null
 
   /**
@@ -164,13 +165,13 @@ class StreamStatsTracker(
     }
 
     // Rollover stat bucket
-    val previousEmittedStats: EmittedStatsCounters = emittedStats
+    previousEmittedStats = emittedStats
     emittedStats = EmittedStatsCounters()
 
     stagedStatsList.add(StagedStats(stateHash, stateMessage, previousEmittedStats, currentTime))
 
     // Updating state checkpointing metrics
-    // previsousStateMessageReceivedAt is null when it's the first state message of a stream.
+    // previousStateMessageReceivedAt is null when it's the first state message of a stream.
     previousStateMessageReceivedAt?.let {
       val timeSinceLastState: Long = it.until(currentTime, ChronoUnit.SECONDS)
       streamStats.maxSecondsToReceiveState.accumulate(timeSinceLastState)
@@ -208,20 +209,35 @@ class StreamStatsTracker(
     }
 
     val stateHash: Int = stateMessage.getStateHashCode(hashFunction)
-    if (!stateHashes.contains(stateHash) || stagedStatsList.isEmpty()) {
-      // Unexpected state from destination
-      logger.info {
-        "Unexpected state from destination for stream ${nameNamespacePair.namespace}:${nameNamespacePair.name}"
-      }
-
+    if (!stateHashes.contains(stateHash)) {
       metricClient.count(OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, 1)
+      logger.warn {
+        "Unexpected state from destination for stream ${nameNamespacePair.namespace}:${nameNamespacePair.name}, " +
+          "$stateHash not found in the stored stateHashes"
+      }
+      return
+    } else if (stagedStatsList.isEmpty()) {
+      metricClient.count(OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, 1)
+      logger.warn {
+        "Unexpected state from destination for stream ${nameNamespacePair.namespace}:${nameNamespacePair.name}, " +
+          "stagedStatsList is empty"
+      }
       return
     }
+
+    logger.info { "Hash of the state message received from the destination $stateHash" }
 
     var stagedStats: StagedStats? = null
     // un-stage stats until the stateMessage
     while (!stagedStatsList.isEmpty()) {
       stagedStats = stagedStatsList.poll()
+      logger.info {
+        "removing ${stagedStats.stateHash} from the stored stateHashes for the stream " +
+          "${nameNamespacePair.namespace}:${nameNamespacePair.name}, " +
+          "state received time ${stagedStats.receivedTime}" +
+          "stagedStatsList size after poll: ${stagedStatsList.size}, " +
+          "stateHashes size before removal ${stateHashes.size}"
+      }
       // Cleaning up stateHashes as we go to avoid un-staging on duplicate or our of order state messages
       stateHashes.remove(stagedStats.stateHash)
 
@@ -255,13 +271,30 @@ class StreamStatsTracker(
       estimatedBytesCount.set(msg.byteEstimate)
       estimatedRecordsCount.set(msg.rowEstimate)
     }
+
+  fun getTrackedEmittedRecordsSinceLastStateMessage(): Long {
+    return previousEmittedStats.remittedRecordsCount.get()
+  }
+
+  fun getTrackedCommittedRecordsSinceLastStateMessage(stateMessage: AirbyteStateMessage): Long {
+    val stateHashCode = stateMessage.getStateHashCode(hashFunction)
+    val stagedStats: StagedStats? = stagedStatsList.find { it.stateHash == stateHashCode }
+    if (stagedStats == null) {
+      logger.warn { "Could not find the state message with hash $stateHashCode in the stagedStatsList" }
+    }
+    return stagedStats?.emittedStatsCounters?.remittedRecordsCount?.get() ?: 0
+  }
+
+  fun areStreamStatsReliable(): Boolean {
+    return !streamStats.unreliableStateOperations.get()
+  }
 }
 
-private fun AirbyteStateMessage.getStateHashCode(hashFunction: HashFunction): Int =
+fun AirbyteStateMessage.getStateHashCode(hashFunction: HashFunction): Int =
   when (type) {
     AirbyteStateMessage.AirbyteStateType.GLOBAL -> hashFunction.hashBytes(Jsons.serialize(global).toByteArray()).hashCode()
     AirbyteStateMessage.AirbyteStateType.STREAM -> hashFunction.hashBytes(Jsons.serialize(stream.streamState).toByteArray()).hashCode()
-// state type is legacy
+    // state type is legacy
     else -> hashFunction.hashBytes(Jsons.serialize(data).toByteArray()).hashCode()
   }
 

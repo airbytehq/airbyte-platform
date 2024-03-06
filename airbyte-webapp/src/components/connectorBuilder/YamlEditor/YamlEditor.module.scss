@@ -4,19 +4,7 @@
 
 .container {
   display: flex;
-  flex-flow: column;
   height: 100%;
-  position: relative;
-}
-
-.control {
-  background-color: colors.$grey-30;
-  padding: variables.$spacing-md;
-}
-
-.toggleButton {
-  // hard-coded margin so button stays in same spot when switching
-  margin-left: calc((builderVariables.$sideBarWidth - builderVariables.$toggleButtonWidth) / 2 - variables.$spacing-md);
 }
 
 .editorContainer {

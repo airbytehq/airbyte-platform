@@ -1,4 +1,4 @@
-FROM airbyte/airbyte-base-java-image:2.0.3
+FROM airbyte/airbyte-base-java-image:2.1.0
 
 RUN yum update -y && \
     yum groupinstall -y "Development Tools" && \

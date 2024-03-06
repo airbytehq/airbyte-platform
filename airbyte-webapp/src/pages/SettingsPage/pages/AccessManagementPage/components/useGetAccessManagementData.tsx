@@ -1,26 +1,30 @@
-import { useCurrentWorkspace, useListUsersInOrganization, useListUsersInWorkspace } from "core/api";
-import { OrganizationUserRead, PermissionType, WorkspaceUserRead } from "core/request/AirbyteClient";
-import { useIntent } from "core/utils/rbac";
-
+import { useCurrentWorkspace, useListUsersInOrganization } from "core/api";
+import {
+  OrganizationUserRead,
+  PermissionRead,
+  PermissionType,
+  WorkspaceUserAccessInfoRead,
+  WorkspaceUserRead,
+} from "core/api/types/AirbyteClient";
+import { RbacRole, RbacRoleHierarchy, partitionPermissionType } from "core/utils/rbac/rbacPermissionsQuery";
 export type ResourceType = "workspace" | "organization" | "instance";
 
-export const permissionStringDictionary: Record<PermissionType, string> = {
-  instance_admin: "role.admin",
-  organization_admin: "role.admin",
-  organization_editor: "role.editor",
-  organization_reader: "role.reader",
-  organization_member: "role.member",
-  workspace_admin: "role.admin",
-  workspace_owner: "role.admin",
-  workspace_editor: "role.editor",
-  workspace_reader: "role.reader",
+export const permissionStringDictionary: Record<PermissionType, Record<string, string>> = {
+  instance_admin: { resource: "resource.instance", role: "role.admin" },
+  organization_admin: { resource: "resource.organization", role: "role.admin" },
+  organization_editor: { resource: "resource.organization", role: "role.editor" },
+  organization_reader: { resource: "resource.organization", role: "role.reader" },
+  organization_member: { resource: "resource.organization", role: "role.member" },
+  workspace_admin: { resource: "resource.workspace", role: "role.admin" },
+  workspace_owner: { resource: "resource.workspace", role: "role.admin" },
+  workspace_editor: { resource: "resource.workspace", role: "role.editor" },
+  workspace_reader: { resource: "resource.workspace", role: "role.reader" },
 };
 
 interface PermissionDescription {
   id: string;
   values: Record<"resourceType", ResourceType>;
 }
-
 export const permissionDescriptionDictionary: Record<PermissionType, PermissionDescription> = {
   instance_admin: { id: "role.admin.description", values: { resourceType: "instance" } },
   organization_admin: { id: "role.admin.description", values: { resourceType: "organization" } },
@@ -32,60 +36,59 @@ export const permissionDescriptionDictionary: Record<PermissionType, PermissionD
   workspace_editor: { id: "role.editor.description", values: { resourceType: "workspace" } },
   workspace_reader: { id: "role.reader.description", values: { resourceType: "workspace" } },
 };
-
-export const tableTitleDictionary: Record<ResourceType, string> = {
-  workspace: "settings.accessManagement.workspace",
-  organization: "settings.accessManagement.organization",
-  instance: "settings.accessManagement.instance",
-};
-
 export const permissionsByResourceType: Record<ResourceType, PermissionType[]> = {
   workspace: [
     PermissionType.workspace_admin,
-    // PermissionType.workspace_editor, PermissionType.workspace_reader -- roles not supported in MVP
+    // PermissionType.workspace_editor,
+    PermissionType.workspace_reader,
   ],
   organization: [
     PermissionType.organization_admin,
-    // PermissionType.organization_editor, -- role not supported in MVP
-    // PermissionType.organization_reader, -- role not supported in MVP
+    // PermissionType.organization_editor,
+    // PermissionType.organization_reader,
     PermissionType.organization_member,
   ],
   instance: [PermissionType.instance_admin],
 };
+
+export interface NextAccessUserRead {
+  userId: string;
+  email: string;
+  name?: string;
+  workspacePermission?: PermissionRead;
+  organizationPermission?: PermissionRead;
+}
 
 export interface AccessUsers {
   workspace?: { users: WorkspaceUserRead[]; usersToAdd: OrganizationUserRead[] };
   organization?: { users: OrganizationUserRead[]; usersToAdd: [] };
 }
 
-export const useGetWorkspaceAccessUsers = (): AccessUsers => {
-  const workspace = useCurrentWorkspace();
-  const canListOrganizationUsers = useIntent("ListOrganizationMembers", { organizationId: workspace.organizationId });
-  const workspaceUsers = useListUsersInWorkspace(workspace.workspaceId).users;
-  const organizationUsers =
-    useListUsersInOrganization(workspace.organizationId ?? "", canListOrganizationUsers)?.users ?? [];
-
-  return {
-    workspace: {
-      users: workspaceUsers,
-      usersToAdd: organizationUsers.filter(
-        (user) =>
-          user.permissionType === "organization_member" &&
-          !workspaceUsers.find((workspaceUser) => workspaceUser.userId === user.userId)
-      ),
-    },
-    organization: {
-      users: organizationUsers.filter((user) => user.permissionType !== "organization_member"),
-      usersToAdd: [],
-    },
-  };
-};
+export interface NextAccessUsers {
+  workspace?: { users: NextAccessUserRead[]; usersToAdd: OrganizationUserRead[] };
+}
 
 export const useGetOrganizationAccessUsers = (): AccessUsers => {
   const workspace = useCurrentWorkspace();
   const organizationUsers = useListUsersInOrganization(workspace.organizationId ?? "").users;
-
   return {
     organization: { users: organizationUsers, usersToAdd: [] },
   };
+};
+
+export const getWorkspaceAccessLevel = (user: WorkspaceUserAccessInfoRead): RbacRole => {
+  const orgPermissionType = user.organizationPermission?.permissionType;
+  const workspacePermissionType = user.workspacePermission?.permissionType;
+
+  const orgRole = orgPermissionType ? partitionPermissionType(orgPermissionType)[1] : undefined;
+  const workspaceRole = workspacePermissionType ? partitionPermissionType(workspacePermissionType)[1] : undefined;
+
+  // return whatever is the "highest" role ie the lowest index greater than -1.
+  // the reason we set the index to the length of the array is so that if there is not a given type of role, it will not be the lowest index.
+  return RbacRoleHierarchy[
+    Math.min(
+      orgRole ? RbacRoleHierarchy.indexOf(orgRole) : RbacRoleHierarchy.length,
+      workspaceRole ? RbacRoleHierarchy.indexOf(workspaceRole) : RbacRoleHierarchy.length
+    )
+  ];
 };

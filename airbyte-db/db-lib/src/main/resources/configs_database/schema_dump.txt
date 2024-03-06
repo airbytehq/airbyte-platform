@@ -58,6 +58,7 @@ create table "public"."actor_definition" (
   "custom" boolean not null default false,
   "max_seconds_between_messages" int,
   "default_version_id" uuid,
+  "icon_url" varchar(256),
   constraint "actor_definition_pkey"
     primary key ("id")
 );
@@ -69,6 +70,7 @@ create table "public"."actor_definition_breaking_change" (
   "message" text not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "scoped_impact" jsonb,
   constraint "actor_definition_breaking_change_pkey"
     primary key ("actor_definition_id", "version")
 );
@@ -139,6 +141,18 @@ create table "public"."airbyte_configs_migrations" (
   constraint "airbyte_configs_migrations_pk"
     primary key ("installed_rank")
 );
+create table "public"."auth_user" (
+  "id" uuid not null,
+  "user_id" uuid not null,
+  "auth_user_id" varchar(256) not null,
+  "auth_provider" "public"."auth_provider" not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "auth_user_pkey"
+    primary key ("id"),
+  constraint "auth_user_auth_user_id_auth_provider_key"
+    unique ("auth_user_id", "auth_provider")
+);
 create table "public"."connection" (
   "id" uuid not null,
   "namespace_definition" "public"."namespace_definition_type" not null,
@@ -182,6 +196,7 @@ create table "public"."connector_builder_project" (
   "tombstone" boolean not null default false,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "testing_values" jsonb,
   constraint "connector_builder_project_pkey"
     primary key ("id")
 );
@@ -263,8 +278,35 @@ create table "public"."schema_management" (
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "auto_propagation_status" "public"."auto_propagation_status" not null default cast('ignore' as auto_propagation_status),
+  "backfill_preference" "public"."backfill_preference" not null default cast('disabled' as backfill_preference),
   constraint "schema_management_pkey"
     primary key ("id")
+);
+create table "public"."scoped_configuration" (
+  "id" uuid not null,
+  "key" varchar(256) not null,
+  "resource_type" "public"."config_resource_type" not null,
+  "resource_id" uuid not null,
+  "scope_type" "public"."config_scope_type" not null,
+  "scope_id" uuid not null,
+  "value" varchar(256) not null,
+  "description" text,
+  "reference_url" varchar(256),
+  "origin_type" "public"."config_origin_type" not null,
+  "origin" varchar(256) not null,
+  "expires_at" date,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "scoped_configuration_pkey"
+    primary key ("id"),
+  constraint "scoped_configuration_key_resource_type_resource_id_scope_ty_key"
+    unique (
+      "key",
+      "resource_type",
+      "resource_id",
+      "scope_type",
+      "scope_id"
+    )
 );
 create table "public"."secret_persistence_config" (
   "id" uuid not null,
@@ -339,12 +381,12 @@ create table "public"."user_invitation" (
   "invite_code" varchar(256) not null,
   "inviter_user_id" uuid not null,
   "invited_email" varchar(256) not null,
-  "workspace_id" uuid,
-  "organization_id" uuid,
   "permission_type" "public"."permission_type" not null,
   "status" "public"."invitation_status" not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "scope_id" uuid not null,
+  "scope_type" scope_type not null,
   constraint "user_invitation_pkey"
     primary key ("id"),
   constraint "user_invitation_invite_code_key"
@@ -362,6 +404,10 @@ create table "public"."workload" (
   "geography" varchar(2147483647) not null default cast('AUTO' as varchar),
   "mutex_key" varchar(2147483647),
   "type" "public"."workload_type" not null,
+  "termination_source" varchar(2147483647),
+  "termination_reason" text,
+  "auto_id" uuid,
+  "deadline" timestamp(6) with time zone,
   constraint "workload_pkey"
     primary key ("id")
 );
@@ -454,6 +500,10 @@ alter table "public"."actor_definition_workspace_grant"
   add constraint "actor_definition_workspace_grant_actor_definition_id_fkey"
     foreign key ("actor_definition_id")
     references "public"."actor_definition" ("id");
+alter table "public"."auth_user"
+  add constraint "auth_user_user_id_fkey"
+    foreign key ("user_id")
+    references "public"."user" ("id");
 alter table "public"."connection"
   add constraint "connection_actor_catalog_id_fk"
     foreign key ("source_catalog_id")
@@ -518,14 +568,6 @@ alter table "public"."user_invitation"
   add constraint "user_invitation_inviter_user_id_fkey"
     foreign key ("inviter_user_id")
     references "public"."user" ("id");
-alter table "public"."user_invitation"
-  add constraint "user_invitation_organization_id_fkey"
-    foreign key ("organization_id")
-    references "public"."organization" ("id");
-alter table "public"."user_invitation"
-  add constraint "user_invitation_workspace_id_fkey"
-    foreign key ("workspace_id")
-    references "public"."workspace" ("id");
 alter table "public"."workload_label"
   add constraint "workload_label_workload_id_fkey"
     foreign key ("workload_id")
@@ -564,6 +606,10 @@ create index "user_auth_provider_auth_user_id_idx" on "public"."user"("auth_prov
 create index "user_email_idx" on "public"."user"("email" asc);
 create index "user_invitation_invite_code_idx" on "public"."user_invitation"("invite_code" asc);
 create index "user_invitation_invited_email_idx" on "public"."user_invitation"("invited_email" asc);
-create index "user_invitation_organization_id_idx" on "public"."user_invitation"("organization_id" asc);
-create index "user_invitation_workspace_id_idx" on "public"."user_invitation"("workspace_id" asc);
+create index "user_invitation_scope_id_index" on "public"."user_invitation"("scope_id" asc);
+create index "user_invitation_scope_type_and_scope_id_index" on "public"."user_invitation"("scope_type" asc, "scope_id" asc);
+create index "workload_deadline_idx" on "public"."workload"("deadline" asc)
+where ((deadline IS NOT NULL));
+create index "workload_mutex_idx" on "public"."workload"("mutex_key" asc);
+create index "workload_status_idx" on "public"."workload"("status" asc);
 create index "workload_label_workload_id_idx" on "public"."workload_label"("workload_id" asc);

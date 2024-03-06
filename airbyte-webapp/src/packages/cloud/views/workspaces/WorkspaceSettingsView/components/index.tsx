@@ -1,2 +1,2 @@
-export { GeneralSettingsSection } from "./GeneralSettingsSection";
-export { DeleteWorkspaceSection } from "./DeleteWorkspaceSection";
+export { UpdateCloudWorkspaceName } from "./UpdateCloudWorkspaceName";
+export { DeleteCloudWorkspace } from "./DeleteCloudWorkspace";

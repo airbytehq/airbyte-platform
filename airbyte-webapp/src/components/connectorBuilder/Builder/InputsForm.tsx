@@ -82,6 +82,7 @@ function inputInEditingToFormInput({
       default: showDefaultValueField ? values.definition.default : undefined,
       format: type === "date" ? "date" : type === "date-time" ? "date-time" : values.definition.format,
       pattern: type === "date" ? DATE_PATTERN : type === "date-time" ? DATE_TIME_PATTERN : values.definition.pattern,
+      airbyte_secret: values.definition.airbyte_secret ? true : undefined,
     },
   };
 }
@@ -217,6 +218,7 @@ const InputModal = ({
       onClose={onClose}
     >
       <form
+        className={styles.inputForm}
         onSubmit={(e) => {
           // stop propagation to avoid submitting the outer form as this form is nested
           e.stopPropagation();
@@ -273,6 +275,7 @@ const InputModal = ({
                   path="definition.enum"
                   type="array"
                   optional
+                  uniqueValues
                   label={formatMessage({ id: "connectorBuilder.inputModal.enum" })}
                   tooltip={formatMessage({ id: "connectorBuilder.inputModal.enumTooltip" })}
                 />

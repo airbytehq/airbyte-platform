@@ -1,4 +1,4 @@
-import { ConnectionScheduleDataBasicSchedule } from "core/request/AirbyteClient";
+import { ConnectionScheduleDataBasicSchedule } from "core/api/types/AirbyteClient";
 
 export const frequencyConfig: ConnectionScheduleDataBasicSchedule[] = [
   {

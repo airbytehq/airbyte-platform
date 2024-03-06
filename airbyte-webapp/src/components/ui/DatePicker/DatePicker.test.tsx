@@ -4,7 +4,8 @@ import dayjs from "dayjs";
 
 import { TestWrapper } from "test-utils/testutils";
 
-import { DatePicker, toEquivalentLocalTime } from "./DatePicker";
+import { DatePicker } from "./DatePicker";
+import { toEquivalentLocalTime } from "./utils";
 
 describe("Timezones", () => {
   it("should always be US/Pacific", () => {

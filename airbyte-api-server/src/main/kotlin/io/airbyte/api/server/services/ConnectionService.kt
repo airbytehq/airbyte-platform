@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.server.services
@@ -18,6 +18,7 @@ import io.airbyte.api.client.model.generated.ConnectionReadList
 import io.airbyte.api.client.model.generated.ConnectionUpdate
 import io.airbyte.api.client.model.generated.ListConnectionsForWorkspacesRequestBody
 import io.airbyte.api.client.model.generated.Pagination
+import io.airbyte.api.server.constants.AIRBYTE_API_AUTH_HEADER_VALUE
 import io.airbyte.api.server.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.api.server.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.api.server.forwardingClient.ConfigApiClient
@@ -43,16 +44,19 @@ interface ConnectionService {
     catalogId: UUID,
     configuredCatalog: AirbyteCatalog,
     workspaceId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): ConnectionResponse
 
   fun deleteConnection(
     connectionId: UUID,
+    authorization: String?,
     userInfo: String?,
   )
 
   fun getConnection(
     connectionId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): ConnectionResponse
 
@@ -62,6 +66,7 @@ interface ConnectionService {
     catalogId: UUID,
     configuredCatalog: AirbyteCatalog?,
     workspaceId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): ConnectionResponse
 
@@ -70,6 +75,7 @@ interface ConnectionService {
     limit: Int = 20,
     offset: Int = 0,
     includeDeleted: Boolean = false,
+    authorization: String?,
     userInfo: String?,
   ): ConnectionsResponse
 }
@@ -96,6 +102,7 @@ class ConnectionServiceImpl(
     catalogId: UUID,
     configuredCatalog: AirbyteCatalog,
     workspaceId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): ConnectionResponse {
     val connectionCreateOss: ConnectionCreate =
@@ -103,7 +110,7 @@ class ConnectionServiceImpl(
 
     val response =
       try {
-        configApiClient.createConnection(connectionCreateOss, userInfo)
+        configApiClient.createConnection(connectionCreateOss, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for createConnection: ", e)
         // this is kept as a string to easily parse the error response to determine if a source or a
@@ -134,12 +141,13 @@ class ConnectionServiceImpl(
    */
   override fun deleteConnection(
     connectionId: UUID,
+    authorization: String?,
     userInfo: String?,
   ) {
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
     val response =
       try {
-        configApiClient.deleteConnection(connectionIdRequestBody, userInfo)
+        configApiClient.deleteConnection(connectionIdRequestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for connection delete: ", e)
         e.response as HttpResponse<String>
@@ -153,6 +161,7 @@ class ConnectionServiceImpl(
    */
   override fun getConnection(
     connectionId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): ConnectionResponse {
     val connectionIdRequestBody = ConnectionIdRequestBody()
@@ -160,7 +169,7 @@ class ConnectionServiceImpl(
 
     val response =
       try {
-        configApiClient.getConnection(connectionIdRequestBody, userInfo)
+        configApiClient.getConnection(connectionIdRequestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for getConnection: ", e)
         e.response as HttpResponse<ConnectionRead>
@@ -169,7 +178,7 @@ class ConnectionServiceImpl(
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
 
     // get workspace id from source id
-    val sourceResponse: SourceResponse = sourceService.getSource(response.body()!!.sourceId, userInfo)
+    val sourceResponse: SourceResponse = sourceService.getSource(response.body()!!.sourceId, authorization, userInfo)
 
     return ConnectionReadMapper.from(
       response.body()!!,
@@ -186,6 +195,7 @@ class ConnectionServiceImpl(
     catalogId: UUID,
     configuredCatalog: AirbyteCatalog?,
     workspaceId: UUID,
+    authorization: String?,
     userInfo: String?,
   ): ConnectionResponse {
     val connectionUpdate: ConnectionUpdate =
@@ -200,7 +210,7 @@ class ConnectionServiceImpl(
     // destination id is invalid
     val response =
       try {
-        configApiClient.updateConnection(connectionUpdate, userInfo)
+        configApiClient.updateConnection(connectionUpdate, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for updateConnection: ", e)
         e.response as HttpResponse<String>
@@ -232,10 +242,14 @@ class ConnectionServiceImpl(
     limit: Int,
     offset: Int,
     includeDeleted: Boolean,
+    authorization: String?,
     userInfo: String?,
   ): ConnectionsResponse {
     val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(userInfo) }
+    val workspaceIdsToQuery =
+      workspaceIds.ifEmpty {
+        userService.getAllWorkspaceIdsForUser(authorization ?: System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE), userInfo)
+      }
 
     val listConnectionsForWorkspacesRequestBody =
       ListConnectionsForWorkspacesRequestBody()
@@ -245,7 +259,7 @@ class ConnectionServiceImpl(
 
     val response =
       try {
-        configApiClient.listConnectionsForWorkspaces(listConnectionsForWorkspacesRequestBody, userInfo)
+        configApiClient.listConnectionsForWorkspaces(listConnectionsForWorkspacesRequestBody, authorization, userInfo)
       } catch (e: HttpClientResponseException) {
         log.error("Config api response error for listConnectionsForWorkspaces: ", e)
         e.response as HttpResponse<ConnectionReadList>

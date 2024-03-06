@@ -58,7 +58,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/KnownExceptionInfo'
         "410":
-          description: "Workload is in terminal state, it cannot be claimed."
+          description: Workload is in terminal state. It cannot be claimed.
           content:
             application/json:
               schema:
@@ -77,17 +77,35 @@ paths:
       responses:
         "204":
           description: Successfully created workload
-        "409":
-          description: Workload with given workload id already exists.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KnownExceptionInfo'
+                type: object
+        "200":
+          description: Workload with given workload id already exists.
+  /api/v1/workload/expired_deadline_list:
+    post:
+      tags:
+      - workload
+      summary: Get workloads according to the filters.
+      operationId: workloadListWithExpiredDeadline
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpiredDeadlineWorkloadListRequest'
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkloadListResponse'
   /api/v1/workload/failure:
     put:
       tags:
       - workload
-      summary: Set workload status to 'failure'
+      summary: Sets workload status to 'failure'.
       operationId: workloadFailure
       requestBody:
         content:
@@ -136,6 +154,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/KnownExceptionInfo'
+  /api/v1/workload/launched:
+    put:
+      tags:
+      - workload
+      summary: Sets workload status to 'launched'.
+      operationId: workloadLaunched
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkloadLaunchedRequest'
+      responses:
+        "204":
+          description: Success
+        "404":
+          description: Workload with given id was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
+        "410":
+          description: Workload is not in claimed state. It cannot be set to launched.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownExceptionInfo'
   /api/v1/workload/list:
     post:
       tags:
@@ -154,11 +198,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WorkloadListResponse'
+  /api/v1/workload/list_long_running_non_sync:
+    post:
+      tags:
+      - workload
+      summary: Get workloads according to the filters.
+      operationId: workloadListOldNonSync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LongRunningWorkloadRequest'
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkloadListResponse'
+  /api/v1/workload/list_long_running_sync:
+    post:
+      tags:
+      - workload
+      summary: Get workloads according to the filters.
+      operationId: workloadListOldSync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LongRunningWorkloadRequest'
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkloadListResponse'
   /api/v1/workload/running:
     put:
       tags:
       - workload
-      summary: Set workload status to 'running'
+      summary: Sets workload status to 'running'.
       operationId: workloadRunning
       requestBody:
         content:
@@ -175,7 +255,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/KnownExceptionInfo'
         "410":
-          description: "Workload is not in pending status, it can't be set to running."
+          description: "Workload is not in pending state, it cannot be set to running."
           content:
             application/json:
               schema:
@@ -184,7 +264,7 @@ paths:
     put:
       tags:
       - workload
-      summary: Set workload status to 'success'
+      summary: Sets workload status to 'success'.
       operationId: workloadSuccess
       requestBody:
         content:
@@ -240,6 +320,24 @@ components:
       properties:
         claimed:
           type: boolean
+    ExpiredDeadlineWorkloadListRequest:
+      required:
+      - deadline
+      type: object
+      properties:
+        dataplane:
+          type: array
+          nullable: true
+          items:
+            type: string
+        status:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/WorkloadStatus'
+        deadline:
+          type: string
+          format: date-time
     KnownExceptionInfo:
       required:
       - message
@@ -247,8 +345,21 @@ components:
       properties:
         message:
           type: string
+    LongRunningWorkloadRequest:
+      type: object
+      properties:
+        dataplane:
+          type: array
+          nullable: true
+          items:
+            type: string
+        createdBefore:
+          type: string
+          format: date-time
+          nullable: true
     Workload:
       required:
+      - autoId
       - geography
       - id
       - inputPayload
@@ -281,6 +392,19 @@ components:
           nullable: true
         type:
           $ref: '#/components/schemas/WorkloadType'
+        terminationSource:
+          type: string
+          nullable: true
+        terminationReason:
+          type: string
+          nullable: true
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+        autoId:
+          type: string
+          format: uuid
     WorkloadCancelRequest:
       required:
       - reason
@@ -304,12 +428,15 @@ components:
           type: string
         dataplaneId:
           type: string
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
     WorkloadCreateRequest:
       required:
       - geography
       - labels
       - logPath
-      - mutexKey
       - type
       - workloadId
       - workloadInput
@@ -329,8 +456,13 @@ components:
           type: string
         mutexKey:
           type: string
+          nullable: true
         type:
           $ref: '#/components/schemas/WorkloadType'
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
     WorkloadFailureRequest:
       required:
       - workloadId
@@ -338,6 +470,12 @@ components:
       properties:
         workloadId:
           type: string
+        source:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
     WorkloadHeartbeatRequest:
       required:
       - workloadId
@@ -345,6 +483,10 @@ components:
       properties:
         workloadId:
           type: string
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
     WorkloadLabel:
       required:
       - key
@@ -355,6 +497,17 @@ components:
           type: string
         value:
           type: string
+    WorkloadLaunchedRequest:
+      required:
+      - workloadId
+      type: object
+      properties:
+        workloadId:
+          type: string
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
     WorkloadListRequest:
       type: object
       properties:
@@ -388,11 +541,16 @@ components:
       properties:
         workloadId:
           type: string
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
     WorkloadStatus:
       type: string
       enum:
       - pending
       - claimed
+      - launched
       - running
       - success
       - failure

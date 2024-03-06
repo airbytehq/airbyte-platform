@@ -2,10 +2,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import org.gradle.api.tasks.testing.logging.TestLogEvent
-
 import java.util.Properties
 import java.util.zip.ZipFile
+import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 buildscript {
     repositories {
@@ -57,6 +56,7 @@ dependencies {
     implementation(platform(libs.micronaut.bom))
     implementation(libs.google.cloud.storage)
     implementation(libs.bundles.micronaut)
+    implementation(libs.bundles.micronaut.metrics)
     implementation(libs.micronaut.cache.caffeine)
     implementation(libs.jooq)
     implementation(libs.s3)
@@ -83,6 +83,7 @@ dependencies {
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-converters"))
     implementation(project(":airbyte-commons-micronaut"))
+    implementation(project(":airbyte-commons-micronaut-security"))
     implementation(project(":airbyte-commons-protocol"))
     implementation(project(":airbyte-commons-temporal"))
     implementation(project(":airbyte-commons-temporal-core"))

@@ -1,16 +1,32 @@
 package io.airbyte.workers.internal.bookkeeping
 
+import com.google.common.hash.Hashing
+import io.airbyte.analytics.TrackingClient
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.EmitStateStatsToSegment
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.Workspace
+import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage.Type
 import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
+import io.airbyte.protocol.models.AirbyteStateStats
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair
+import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.workers.context.ReplicationFeatureFlags
+import io.airbyte.workers.exception.InvalidChecksumException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Parameter
 import io.micronaut.context.annotation.Prototype
 import jakarta.inject.Named
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
@@ -23,13 +39,35 @@ private data class SyncStatsCounters(
 
 @Prototype
 @Named("parallelStreamStatsTracker")
-class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncStatsTracker {
+class ParallelStreamStatsTracker(
+  private val metricClient: MetricClient,
+  private val trackingClient: TrackingClient,
+  private val featureFlagClient: FeatureFlagClient,
+  @param:Parameter private val connectionId: UUID,
+  @param:Parameter private val workspaceId: UUID,
+  @param:Parameter private val jobId: Long,
+  @param:Parameter private val attemptNumber: Int,
+) : SyncStatsTracker {
   private val streamTrackers: MutableMap<AirbyteStreamNameNamespacePair, StreamStatsTracker> = ConcurrentHashMap()
   private val syncStatsCounters = SyncStatsCounters()
   private var expectedEstimateType: Type? = null
+  private var replicationFeatureFlags: ReplicationFeatureFlags? = null
+  private val emitStatsCounterFlag: Boolean by lazy {
+    val connectionContext = Multi(listOf(Connection(connectionId), Workspace(workspaceId)))
+    featureFlagClient.boolVariation(EmitStateStatsToSegment, connectionContext)
+  }
 
   @Volatile
   private var hasEstimatesErrors = false
+
+  @Volatile
+  private var checksumValidationEnabled = true
+
+  companion object {
+    const val CHECKSUM_OK = "ok"
+    const val CHECKSUM_PLATFORM_DESTINATION_MISMATCH = "platform-destination-mismatch"
+    const val CHECKSUM_SOURCE_PLATFORM_MISMATCH = "source-platform-mismatch"
+  }
 
   override fun updateStats(recordMessage: AirbyteRecordMessage) {
     getOrCreateStreamStatsTracker(getNameNamespacePair(recordMessage))
@@ -61,13 +99,237 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
   }
 
   override fun updateSourceStatesStats(stateMessage: AirbyteStateMessage) {
-    getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
-      .trackStateFromSource(stateMessage)
+    val failOnInvalidChecksum = replicationFeatureFlags?.failOnInvalidChecksum ?: false
+
+    when (stateMessage.type) {
+      AirbyteStateMessage.AirbyteStateType.GLOBAL -> {
+        stateMessage.global.streamStates.forEach { it ->
+          val statsTracker = getOrCreateStreamStatsTracker(getNameNamespacePair(it.streamDescriptor))
+          statsTracker.trackStateFromSource(stateMessage)
+          updateChecksumValidationStatus(
+            statsTracker.areStreamStatsReliable(),
+            AirbyteMessageOrigin.SOURCE,
+            getNameNamespacePair(it.streamDescriptor),
+          )
+        }
+
+        validateGlobalStateChecksum(stateMessage, AirbyteMessageOrigin.SOURCE, failOnInvalidChecksum)
+      }
+      else -> {
+        val statsTracker = getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
+        statsTracker.trackStateFromSource(stateMessage)
+        updateChecksumValidationStatus(statsTracker.areStreamStatsReliable(), AirbyteMessageOrigin.SOURCE, getNameNamespacePair(stateMessage))
+        validateStateChecksum(
+          stateMessage,
+          statsTracker.getTrackedEmittedRecordsSinceLastStateMessage().toDouble(),
+          AirbyteMessageOrigin.SOURCE,
+          failOnInvalidChecksum,
+        )
+      }
+    }
   }
 
   override fun updateDestinationStateStats(stateMessage: AirbyteStateMessage) {
-    getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
-      .trackStateFromDestination(stateMessage)
+    val failOnInvalidChecksum = replicationFeatureFlags?.failOnInvalidChecksum ?: false
+
+    when (stateMessage.type) {
+      AirbyteStateMessage.AirbyteStateType.GLOBAL -> {
+        validateGlobalStateChecksum(stateMessage, AirbyteMessageOrigin.DESTINATION, failOnInvalidChecksum)
+        stateMessage.global.streamStates.forEach {
+          getOrCreateStreamStatsTracker(getNameNamespacePair(it.streamDescriptor))
+            .trackStateFromDestination(stateMessage)
+        }
+      }
+      else -> {
+        val statsTracker = getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
+        validateStateChecksum(
+          stateMessage,
+          statsTracker.getTrackedCommittedRecordsSinceLastStateMessage(stateMessage).toDouble(),
+          AirbyteMessageOrigin.DESTINATION,
+          failOnInvalidChecksum,
+        )
+        statsTracker.trackStateFromDestination(stateMessage)
+      }
+    }
+  }
+
+  fun isChecksumValidationEnabled(): Boolean {
+    return checksumValidationEnabled
+  }
+
+  private fun updateChecksumValidationStatus(
+    streamStatsReliable: Boolean,
+    origin: AirbyteMessageOrigin,
+    streamNameNamespacePair: AirbyteStreamNameNamespacePair,
+  ) {
+    if (checksumValidationEnabled && !streamStatsReliable) {
+      val logMessage =
+        "State message checksum validation disabled: " +
+          "${origin.name.lowercase()} state message collision detected for " +
+          "stream ${streamNameNamespacePair.name}:${streamNameNamespacePair.namespace}."
+      logger.warn { logMessage }
+      checksumValidationEnabled = false
+    }
+  }
+
+  private fun validateGlobalStateChecksum(
+    stateMessage: AirbyteStateMessage,
+    origin: AirbyteMessageOrigin,
+    failOnInvalidChecksum: Boolean,
+  ) {
+    val expectedRecordCount = streamTrackers.values.sumOf { getEmittedCount(origin, stateMessage, it).toDouble() }
+    validateStateChecksum(stateMessage, expectedRecordCount, origin, failOnInvalidChecksum, false)
+  }
+
+  private fun getEmittedCount(
+    origin: AirbyteMessageOrigin,
+    stateMessage: AirbyteStateMessage,
+    tracker: StreamStatsTracker,
+  ): Long {
+    return when (origin) {
+      AirbyteMessageOrigin.SOURCE -> tracker.getTrackedEmittedRecordsSinceLastStateMessage()
+      AirbyteMessageOrigin.DESTINATION -> tracker.getTrackedCommittedRecordsSinceLastStateMessage(stateMessage)
+      AirbyteMessageOrigin.INTERNAL -> 0
+    }
+  }
+
+  private fun validateStateChecksum(
+    stateMessage: AirbyteStateMessage,
+    expectedRecordCount: Double,
+    origin: AirbyteMessageOrigin,
+    failOnInvalidChecksum: Boolean,
+    includeStreamInLogs: Boolean = true,
+  ) {
+    val stats: AirbyteStateStats? =
+      when (origin) {
+        AirbyteMessageOrigin.SOURCE -> stateMessage.sourceStats
+        AirbyteMessageOrigin.DESTINATION -> stateMessage.destinationStats
+        else -> null
+      }
+    if (stats != null) {
+      if (checksumValidationEnabled) {
+        val stateRecordCount = stats.recordCount
+        if (stateRecordCount != expectedRecordCount) {
+          val errorMessage =
+            "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: state " +
+              "record count $stateRecordCount does not equal tracked record count $expectedRecordCount" +
+              if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
+          logger.error { errorMessage }
+          emitChecksumMetrics(CHECKSUM_SOURCE_PLATFORM_MISMATCH)
+          if (failOnInvalidChecksum) {
+            throw InvalidChecksumException(errorMessage)
+          }
+        } else if (origin == AirbyteMessageOrigin.DESTINATION) {
+          val sourceStats: AirbyteStateStats? = stateMessage.sourceStats
+          if (sourceStats != null) {
+            val sourceRecordCount = sourceStats.recordCount
+            val destinationRecordCount = stats.recordCount
+            if (sourceRecordCount != destinationRecordCount) {
+              val errorMessage =
+                "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: " +
+                  "state source record count $sourceRecordCount does not equal state destination record count $destinationRecordCount" +
+                  if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
+              logger.error { errorMessage }
+              emitChecksumMetrics(CHECKSUM_PLATFORM_DESTINATION_MISMATCH)
+              if (failOnInvalidChecksum) {
+                throw InvalidChecksumException(errorMessage)
+              }
+            } else {
+              logger.info {
+                "${
+                  origin.name.lowercase().replaceFirstChar { it.uppercase() }
+                } state message checksum is valid" +
+                  if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
+              }
+            }
+          }
+        } else {
+          logger.info {
+            "${
+              origin.name.lowercase().replaceFirstChar { it.uppercase() }
+            } state message checksum is valid" +
+              if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
+          }
+          emitChecksumMetrics(CHECKSUM_OK)
+        }
+      }
+
+      if (origin == AirbyteMessageOrigin.SOURCE) {
+        trackStateCountMetrics(
+          AirbyteMessageOrigin.SOURCE.toString(),
+          stats.recordCount,
+          stateMessage,
+          checksumValidationEnabled,
+        )
+        trackStateCountMetrics(
+          AirbyteMessageOrigin.INTERNAL.toString(),
+          expectedRecordCount,
+          stateMessage,
+          checksumValidationEnabled,
+        )
+      } else {
+        trackStateCountMetrics(
+          AirbyteMessageOrigin.DESTINATION.toString(),
+          stats.recordCount,
+          stateMessage,
+          checksumValidationEnabled,
+        )
+      }
+    }
+  }
+
+  private fun emitChecksumMetrics(status: String) {
+    metricClient.count(
+      OssMetricsRegistry.SYNC_RECORD_CHECKSUM,
+      1,
+      MetricAttribute(MetricTags.STATUS, status),
+      MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+      MetricAttribute(MetricTags.JOB_ID, jobId.toString()),
+      MetricAttribute(MetricTags.ATTEMPT_NUMBER, attemptNumber.toString()),
+    )
+  }
+
+  private fun shouldEmitStateStatsToSegment(stateMessage: AirbyteStateMessage): Boolean {
+    return emitStatsCounterFlag &&
+      (
+        stateMessage.type == AirbyteStateMessage.AirbyteStateType.STREAM ||
+          stateMessage.type == AirbyteStateMessage.AirbyteStateType.GLOBAL
+      )
+  }
+
+  private fun trackStateCountMetrics(
+    stateOrigin: String,
+    recordCount: Double,
+    stateMessage: AirbyteStateMessage,
+    checksumValidationEnabled: Boolean,
+  ) {
+    try {
+      if (!shouldEmitStateStatsToSegment(stateMessage)) {
+        return
+      }
+      val payload: MutableMap<String?, Any?> = HashMap()
+      payload["connection_id"] = connectionId.toString()
+      payload["job_id"] = jobId.toString()
+      payload["attempt_number"] = attemptNumber.toString()
+      payload["state_origin"] = stateOrigin
+      payload["record_count"] = recordCount.toString()
+      payload["valid_data"] = checksumValidationEnabled.toString()
+      payload["state_type"] = stateMessage.type.toString()
+      payload["state_hash"] = stateMessage.getStateHashCode(Hashing.murmur3_32_fixed()).toString()
+      if (stateMessage.type == AirbyteStateMessage.AirbyteStateType.STREAM) {
+        val nameNamespacePair = getNameNamespacePair(stateMessage)
+        if (nameNamespacePair.namespace != null) {
+          payload["stream_namespace"] = nameNamespacePair.namespace
+        }
+        payload["stream_name"] = nameNamespacePair.name
+      } else {
+        payload["stream_namespace"] = ""
+        payload["stream_name"] = ""
+      }
+      trackingClient.track(workspaceId, "State Checksum Metrics", payload)
+    } catch (e: Exception) {
+      logger.error(e) { "Exception while trying to emit state count metrics" }
+    }
   }
 
   /**
@@ -219,6 +481,10 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
 
   override fun getUnreliableStateTimingMetrics() = hasSourceStateErrors()
 
+  override fun setReplicationFeatureFlags(replicationFeatureFlags: ReplicationFeatureFlags?) {
+    this.replicationFeatureFlags = replicationFeatureFlags
+  }
+
   private fun hasSourceStateErrors(): Boolean = streamTrackers.any { it.value.streamStats.unreliableStateOperations.get() }
 
   /**
@@ -269,7 +535,10 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
       // Making sure the stream hasn't been created since the previous check.
       streamTrackers[pair]?.let { return it }
       // if no existing tracker exists, create a new one and also place it into the trackers map
-      return StreamStatsTracker(pair, metricClient).also { streamTrackers[pair] = it }
+      return StreamStatsTracker(
+        nameNamespacePair = pair,
+        metricClient = metricClient,
+      ).also { streamTrackers[pair] = it }
     }
   }
 
@@ -316,7 +585,10 @@ private inline fun <reified T : Any> getNameNamespacePair(type: T): AirbyteStrea
     is AirbyteEstimateTraceMessage -> AirbyteStreamNameNamespacePair(type.name, type.namespace)
     is AirbyteStateMessage ->
       type.stream?.streamDescriptor
-        ?.let { AirbyteStreamNameNamespacePair(it.name, it.namespace) }
+        ?.let { getNameNamespacePair(it) }
         ?: AirbyteStreamNameNamespacePair(null, null)
     else -> throw IllegalArgumentException("Unsupported type ${type::class.java}")
   }
+
+private fun getNameNamespacePair(streamDescriptor: StreamDescriptor): AirbyteStreamNameNamespacePair =
+  AirbyteStreamNameNamespacePair(streamDescriptor.name, streamDescriptor.namespace)

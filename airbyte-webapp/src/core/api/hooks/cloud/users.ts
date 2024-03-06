@@ -2,41 +2,27 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { trackAction } from "core/utils/datadog";
+import { AppActionCodes } from "hooks/services/AppMonitoringService";
+
 import {
   webBackendRevokeUserFromWorkspace,
   webBackendResendWithSigninLink,
   webBackendInviteUserToWorkspaceWithSignInLink,
   webBackendListUsersByWorkspace,
-  webBackendCreateUser,
-  getUserByAuthId,
-  getUserByEmail,
   updateUser,
   webBackendRevokeUserSession,
-} from "core/api/generated/CloudApi";
-import { SCOPE_WORKSPACE } from "services/Scope";
-
-import { UserUpdate, UserCreate } from "../../types/CloudApi";
+  createKeycloakUser,
+} from "../../generated/CloudApi";
+import { SCOPE_WORKSPACE } from "../../scopes";
+import { CreateKeycloakUserRequestBody, UserUpdate } from "../../types/CloudApi";
 import { useRequestOptions } from "../../useRequestOptions";
 import { useSuspenseQuery } from "../../useSuspenseQuery";
+import { workspaceKeys } from "../workspaces";
 
 export const useGetUserService = () => {
   const requestOptions = useRequestOptions();
-
-  const getByEmail = useCallback((email: string) => getUserByEmail({ email }, requestOptions), [requestOptions]);
-
-  const getByAuthId = useCallback(
-    (authUserId: string) => getUserByAuthId({ authUserId }, requestOptions),
-    [requestOptions]
-  );
-
   const update = useCallback((params: UserUpdate) => updateUser(params, requestOptions), [requestOptions]);
-
-  const changeName = useCallback(
-    (authUserId: string, userId: string, name: string) => updateUser({ authUserId, userId, name }, requestOptions),
-    [requestOptions]
-  );
-
-  const create = useCallback((user: UserCreate) => webBackendCreateUser(user, requestOptions), [requestOptions]);
 
   const revokeUserSession = useCallback(() => webBackendRevokeUserSession(requestOptions), [requestOptions]);
 
@@ -80,29 +66,14 @@ export const useGetUserService = () => {
 
   return useMemo(
     () => ({
-      getByEmail,
-      getByAuthId,
       update,
-      changeName,
-      create,
       revokeUserSession,
       remove,
       resendWithSignInLink,
       invite,
       listByWorkspaceId,
     }),
-    [
-      getByEmail,
-      getByAuthId,
-      update,
-      changeName,
-      create,
-      revokeUserSession,
-      remove,
-      resendWithSignInLink,
-      invite,
-      listByWorkspaceId,
-    ]
+    [update, revokeUserSession, remove, resendWithSignInLink, invite, listByWorkspaceId]
   );
 };
 
@@ -155,6 +126,7 @@ export const useUserHook = () => {
       {
         onSuccess: async () => {
           await queryClient.invalidateQueries(userKeys.lists());
+          await queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
         },
       }
     ),
@@ -187,5 +159,19 @@ export const useResendSigninLink = () => {
       // This is an unsecured endpoint, so we do not need to pass an access token
       { getAccessToken: () => Promise.resolve(null) }
     )
+  );
+};
+
+export const useCreateKeycloakUser = () => {
+  return useMutation(
+    ({
+      authUserId,
+      password,
+      getAccessToken,
+    }: CreateKeycloakUserRequestBody & { getAccessToken: () => Promise<string> }) =>
+      createKeycloakUser({ authUserId, password }, { getAccessToken }).catch(() => {
+        trackAction(AppActionCodes.KEYCLOAK_USER_CREATION_FAILURE, { authUserId });
+        console.warn("Failed to create keycloak user");
+      })
   );
 };

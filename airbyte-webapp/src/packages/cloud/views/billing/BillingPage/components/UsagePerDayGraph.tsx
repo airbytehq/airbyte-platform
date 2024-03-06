@@ -92,20 +92,39 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
               cursor={{ fill: chartHoverFill }}
               wrapperStyle={{ outline: "none" }}
               wrapperClassName={styles.tooltipWrapper}
-              formatter={(value: number, payload) => {
+              formatter={() => {
+                // effectively disable this formatter; the labelFormatter is used instead to render the tooltip content
+
                 // The type cast is unfortunately necessary, due to broken typing in recharts.
-                // What we return is a [string, string], and the library accepts this as well, but the types
-                // require the first element to be of the same type as value, which isn't what the formatter
-                // is supposed to do: https://github.com/recharts/recharts/issues/3008
-
-                const formattedNumber = <FormattedCredits credits={value} size="md" />;
-
-                return [
-                  formattedNumber,
-                  formatMessage({
-                    id: `credits.${payload}`,
-                  }),
-                ] as unknown as [number, string];
+                // https://github.com/recharts/recharts/issues/3008
+                return [null, null] as unknown as [string, string];
+              }}
+              labelFormatter={(timeChunkLabel, items) => {
+                // preferring `labelFormatter` instead of `content` as the latter removes all pre-defined tooltip styling
+                const isLastDay = timeChunkLabel === chartData.at(-1)?.timeChunkLabel;
+                return (
+                  <div>
+                    <Text size="lg">{timeChunkLabel}</Text>
+                    {items.map(({ name, value }) => (
+                      <Text color={name === "freeUsage" ? "green" : "darkBlue"} size="lg">
+                        {formatMessage({
+                          id: `credits.${name}`,
+                        })}
+                        :{" "}
+                        <FormattedCredits
+                          color={name === "freeUsage" ? "green" : undefined}
+                          credits={value ? parseFloat(value) : 0}
+                          size="md"
+                        />
+                      </Text>
+                    ))}
+                    {isLastDay && (
+                      <Text className={styles.recentCreditUsage}>
+                        <FormattedMessage id="credits.l24HourCredits" />
+                      </Text>
+                    )}
+                  </div>
+                );
               }}
             />
           )}

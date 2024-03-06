@@ -4,11 +4,11 @@
 #
 #    pip-compile
 #
-airbyte-cdk==0.55.2
+airbyte-cdk==0.65.0
     # via -r requirements.in
-airbyte-protocol-models==0.4.2
+airbyte-protocol-models==0.5.1
     # via airbyte-cdk
-attrs==23.1.0
+attrs==23.2.0
     # via
     #   cattrs
     #   jsonschema
@@ -19,9 +19,9 @@ bracex==2.4
     # via wcmatch
 cachetools==5.3.2
     # via airbyte-cdk
-cattrs==23.2.2
+cattrs==23.2.3
     # via requests-cache
-certifi==2023.11.17
+certifi==2024.2.2
     # via requests
 charset-normalizer==3.3.2
     # via requests
@@ -37,23 +37,23 @@ idna==3.6
     # via requests
 isodate==0.6.1
     # via airbyte-cdk
-jinja2==3.1.2
+jinja2==3.1.3
     # via airbyte-cdk
 jsonref==0.3.0
     # via airbyte-cdk
 jsonschema==3.2.0
     # via airbyte-cdk
-markupsafe==2.1.3
+markupsafe==2.1.5
     # via jinja2
 pendulum==2.1.2
     # via airbyte-cdk
-platformdirs==4.0.0
+platformdirs==4.2.0
     # via requests-cache
-pydantic==1.10.13
+pydantic==1.10.14
     # via
     #   airbyte-cdk
     #   airbyte-protocol-models
-pyrate-limiter==3.1.0
+pyrate-limiter==3.1.1
     # via airbyte-cdk
 pyrsistent==0.20.0
     # via jsonschema
@@ -69,7 +69,7 @@ requests==2.31.0
     # via
     #   airbyte-cdk
     #   requests-cache
-requests-cache==1.1.1
+requests-cache==1.2.0
     # via airbyte-cdk
 six==1.16.0
     # via
@@ -77,13 +77,13 @@ six==1.16.0
     #   jsonschema
     #   python-dateutil
     #   url-normalize
-typing-extensions==4.8.0
+typing-extensions==4.9.0
     # via
     #   cattrs
     #   pydantic
 url-normalize==1.4.3
     # via requests-cache
-urllib3==2.1.0
+urllib3==2.2.1
     # via
     #   requests
     #   requests-cache

@@ -5,7 +5,7 @@ import { LabeledSwitch } from "components";
 import { Button } from "components/ui/Button";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 
-import { ConnectionStateType } from "core/request/AirbyteClient";
+import { ConnectionStateType } from "core/api/types/AirbyteClient";
 
 interface ResetWarningModalProps {
   onClose: (withReset: boolean) => void;

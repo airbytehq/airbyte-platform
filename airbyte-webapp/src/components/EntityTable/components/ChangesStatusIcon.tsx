@@ -5,7 +5,7 @@ import { FormattedMessage } from "react-intl";
 import { Icon } from "components/ui/Icon";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { SchemaChange } from "core/request/AirbyteClient";
+import { SchemaChange } from "core/api/types/AirbyteClient";
 import { convertSnakeToCamel } from "core/utils/strings";
 
 import styles from "./ChangesStatusIcon.module.scss";
@@ -24,7 +24,7 @@ export const ChangesStatusIcon: React.FC<ChangesStatusIconProps> = ({ schemaChan
   });
   return (
     <Tooltip
-      placement="left"
+      placement="bottom"
       containerClassName={styles.tooltipContainer}
       control={
         <Icon

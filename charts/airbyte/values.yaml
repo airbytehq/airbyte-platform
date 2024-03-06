@@ -1,209 +1,174 @@
 ### TEST FOR RELEASE WORKFLOW
 
-## @section Global Parameters
-
-##  global -- Global params that are overwritten with umbrella chart
+# Global params that are overwritten with umbrella chart
 global:
-  ##  serviceAccountName -- Service Account name override
+  # -- Service Account name override
   serviceAccountName: &service-account-name "airbyte-admin"
-  ##  deploymentMode -- Deployment mode, whether or not render the default env vars and volumes in deployment spec
+  # -- Deployment mode, whether or not render the default env vars and volumes in deployment spec
   deploymentMode: "oss"
+  # -- Edition; "community" or "pro"
   edition: "community"
+  # -- Log4j configuration file, if not using minio, update to "log4j2-no-minio.xml"
+  log4jConfig: "log4j2.xml"
 
+  # -- Environment variables
   env_vars: {}
-  ##  database [object] -- Object used to overrite database configuration(to use external DB)
-  ##  database.secretName -- secret name where DB creds are stored
-  ##  database.secretValue -- secret value for database password
-  ##  database.host -- Database host override
-  ##  database.port -- Database port override
+  # Database configuration override
   database:
+    # -- Secret name where database credentials are stored
     secretName: ""
+    # -- Secret value for database password
     secretValue: ""
-    host: "example.com"
-    port: "5432"
-  state:
-    ## state.storage.type Determines which state storage will be utilized.  One of "MINIO", "S3" or "GCS"
-    storage:
-      type: "MINIO"
-  logs:
-    ##  logs.accessKey.password Logs Access Key
-    ##  logs.accessKey.existingSecret
-    ##  logs.accessKey.existingSecretKey
-    accessKey:
-      password: ""
-      existingSecret: ""
-      existingSecretKey: ""
-    ##  logs.secretKey.password Logs Secret Key
-    ##  logs.secretKey.existingSecret
-    ##  logs.secretKey.existingSecretKey
-    secretKey:
-      password: ""
-      existingSecret: ""
-      existingSecretKey: ""
 
-    ## logs.storage.type Determines which log storage  will be utilized.  One of "MINIO", "S3" or "GCS"
-    ##                   Used in conjunction with logs.minio.*, logs.s3.* or logs.gcs.*
-    storage:
-      type: "MINIO"
-
-    ##  logs.minio.enabled Switch to enable or disable the Minio helm chart
-    ##  logs.minio.nodeSelector [object] Node labels for pod assignment
-    ##  logs.minio.tolerations [array] Tolerations for webapp pod assignment.
-    ##  logs.minio.affinity [object] Affinity and anti-affinity for webapp pod assignment.
+  storage:
+    type: "MINIO"
+    bucket:
+      log: airbyte-dev-logs
+      state: state-storage
+      workloadOutput: state-storage
+    gcs:
+      # -- The path the GCS creds are written to.
+      # If you are mounting an existing secret to extraVolumes on scheduler, server and worker
+      # deployments, then set credentials to the path of the mounted JSON file.
+      credentials: ""
+      # -- Base64 encoded json GCP credentials file contents.
+      # If credentialsJson is set then credentials auto resolves (to /secrets/gcs-log-creds/gcp.json).
+      credentialsJson: ""
     minio:
-      enabled: true
-      nodeSelector: {}
-      tolerations: []
-      affinity: {}
-
-    ##  logs.externalMinio.enabled Switch to enable or disable an external Minio instance
-    ##  logs.externalMinio.host External Minio Host
-    ##  logs.externalMinio.port External Minio Port
-    ##  logs.externalMinio.endpoint Fully qualified hostname for s3-compatible storage
+      # -- storage minio access key
+      accessKey: minio
+      # -- storage minio secret key
+      secretKey: minio123
+      # -- storage minio endpoint
+      endpoint: http://airbyte-minio-svc:9000
+    s3:
+      # -- storage s3 region
+      region: ""
+      # -- storage s3 access key
+      accessKey:
+      # -- Existing secret
+      accessKeyExistingSecret:
+      # -- Existing secret key
+      accessKeyExistingSecretKey:
+      # -- storage s3 secret key
+      secretKey:
+      # -- Existing secret
+      secretKeyExistingSecret:
+      # -- Existing secret key
+      secretKeyExistingSecretKey:
+    # External minio configuration, used if logs.storage.type is "MINIO" and enabled
     externalMinio:
+      # -- Enable or disable an external Minio instance
       enabled: false
+      # -- External Minio host
       host: localhost
+      # -- External Minio port
       port: 9000
 
-    ##  logs.s3.enabled Switch to enable or disable custom S3 Log location
-    ##  logs.s3.bucket Bucket name where logs should be stored
-    ##  logs.s3.bucketRegion Region of the bucket (must be empty if using minio)
-    s3:
-      enabled: false
-      bucket: airbyte-dev-logs
-      bucketRegion: ""
-
-    ## Google Cloud Storage (GCS) Log Location Configuration
-    ##  logs.gcs.bucket GCS bucket name
-    ##  logs.gcs.credentials The path the GCS creds are written to
-    ##  logs.gcs.credentialsJson Base64 encoded json GCP credentials file contents
-    gcs:
-      bucket: ""
-      # If you are mounting an existing secret to extraVolumes on scheduler, server and worker
-      # deployments, then set credentials to the path of the mounted JSON file
-      credentials: ""
-      # If credentialsJson is set then credentials auto resolves (to /secrets/gcs-log-creds/gcp.json)
-      credentialsJson: ""
   metrics:
-    ## These parameters are used in the airbyte-env ConfigMap, which is then mounted in deployments in the airbyte-worker and airbyte-metrics Charts.
-    ##  global.metrics.metricClient The metric client to configure globally. Supports "otel"
+    # -- The metric client to configure globally. Supports "otel"
     metricClient: ""
-
-    ##  global.metrics.otelCollectorEndpoint The open-telemetry-collector endpoint that metrics will be sent to.
+    # -- The open-telemetry-collector endpoint that metrics will be sent to
     otelCollectorEndpoint: ""
+
+  # Jobs resource requests and limits, see http://kubernetes.io/docs/user-guide/compute-resources/
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube.
   jobs:
-    ## Jobs resource requests and limits
-    ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
-    ## We usually recommend not to specify default resources and to leave this as a conscious
-    ## choice for the user. This also increases chances charts run on environments with little
-    ## resources, such as Minikube. If you do want to specify resources, uncomment the following
-    ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-    ##  jobs.resources.limits [object] The resources limits for jobs
-    ##  jobs.resources.requests [object] The requested resources for jobs
     resources:
       ## Example:
       ## requests:
       ##    memory: 256Mi
       ##    cpu: 250m
+      # -- Job resource requests
       requests: {}
       ## Example:
       ## limits:
       ##    cpu: 200m
       ##    memory: 1Gi
+      # -- Job resource limits
       limits: {}
 
     kube:
       ## JOB_KUBE_ANNOTATIONS
-      ## pod annotations of the sync job and the default pod annotations fallback for others jobs
-      ##  jobs.kube.annotations [object] key/value annotations applied to kube jobs
+      # pod annotations of the sync job and the default pod annotations fallback for others jobs
+      # -- key/value annotations applied to kube jobs
       annotations: {}
 
       ## JOB_KUBE_LABELS
       ## pod labels of the sync job and the default pod labels fallback for others jobs
-      ##  jobs.kube.labels [object] key/value labels applied to kube jobs
+      # -- key/value labels applied to kube jobs
       labels: {}
 
       ## JOB_KUBE_NODE_SELECTORS
       ## pod node selector of the sync job and the default pod node selector fallback for others jobs
-      ##  jobs.kube.nodeSelector [object] key/value node selector applied to kube jobs
+      # -- Node labels for pod assignment
       nodeSelector: {}
 
       ## JOB_KUBE_TOLERATIONS
-      ##  jobs.kube.tolerations [array] Tolerations for jobs.kube pod assignment.
-      ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-      ## any boolean values should be quoted to ensure the value is passed through as a string, eg:
-      ## - key: airbyte-server
-      ##   operator: Equal
-      ##   value: "true"
-      ##   effect: NoSchedule
+      # -- Node tolerations for pod assignment
+      #  Any boolean values should be quoted to ensure the value is passed through as a string.
       tolerations: []
 
       ## JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
-      ## image pull secret to use for job pod
-      ##  jobs.kube.main_container_image_pull_secret [string]  image pull secret to use for job pod
+      # -- image pull secret to use for job pod
       main_container_image_pull_secret: ""
 
       images:
         ## JOB_KUBE_BUSYBOX_IMAGE
-        ## busybox image used by the job pod
-        ##   jobs.kube.images.busybox [string] busybox image used by the job pod
+        # -- busybox image used by the job pod
         busybox: ""
         ## JOB_KUBE_SOCAT_IMAGE
-        ## socat image used by the job pod
-        ##   jobs.kube.images.socat [string] socat image used by the job pod
+        # -- socat image used by the job pod
         socat: ""
         ## JOB_KUBE_CURL_IMAGE
-        ## curl image used by the job pod
-        ##   jobs.kube.images.curl [string] curl image used by the job pod
+        # -- curl image used by the job pod
         curl: ""
 
 ## @section Common Parameters
 
-##  nameOverride -- String to partially override airbyte.fullname template with a string (will prepend the release name)
-##
+# -- String to partially override airbyte.fullname template with a string (will prepend the release name)
 nameOverride: ""
-##  fullnameOverride -- String to fully override airbyte.fullname template with a string
-##
+# -- String to fully override airbyte.fullname template with a string
 fullnameOverride: ""
 
-## Pods Service Account
-## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
-##  serviceAccount.annotations -- [object] Annotations for service account. Evaluated as a template. Only used if `create` is `true`.
-##  serviceAccount.create -- Specifies whether a ServiceAccount should be created
-##  serviceAccount.name -- Name of the service account to use. If not set and create is true, a name is generated using the fullname template.
-##
+# Pods Service Account, see https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
 serviceAccount:
+  # -- Specifies whether a ServiceAccount should be created
   create: true
+  # -- Annotations for service account. Evaluated as a template. Only used if `create` is `true`.
   annotations: {}
+  # -- Name of the service account to use. If not set and create is true, a name is generated using the fullname template.
   name: *service-account-name
 
-# version Sets the AIRBYTE_VERSION environment variable. Defaults to Chart.AppVersion.
-# If changing the image tags below, you should probably also update this.
+# -- Sets the AIRBYTE_VERSION environment variable. Defaults to Chart.AppVersion.
+## If changing the image tags below, you should probably also update this.
 version: ""
 
 ## @section Webapp Parameters
 
 webapp:
   enabled: true
-  ##  webapp.replicaCount Number of webapp replicas
+  # -- Number of webapp replicas
   replicaCount: 1
 
-  ##  webapp.image.repository The repository to use for the airbyte webapp image.
-  ##  webapp.image.pullPolicy the pull policy to use for the airbyte webapp image
+  ##  webapp.image.repository
+  ##  webapp.image.pullPolicy
   ##  webapp.image.tag The airbyte webapp image tag. Defaults to the chart's AppVersion
   image:
+    # -- The repository to use for the airbyte webapp image
     repository: airbyte/webapp
+    # -- The pull policy to use for the airbyte webapp image
     pullPolicy: IfNotPresent
 
-  ##  webapp.podAnnotations [object] Add extra annotations to the webapp pod(s)
-  ##
+  # -- Add extra annotations to the webapp pods
   podAnnotations: {}
 
-  ##  webapp.podLabels [object] Add extra labels to the webapp pod(s)
-  ##
+  # -- webapp.podLabels [object] Add extra labels to the webapp pods
   podLabels: {}
 
-  ##  webapp.containerSecurityContext Security context for the container
+  # -- Security context for the container
   ## Examples:
   ## containerSecurityContext:
   ##    runAsNonRoot: true
@@ -211,44 +176,42 @@ webapp:
   ##    readOnlyRootFilesystem: true
   containerSecurityContext: {}
 
-  ## Configure extra options for the webapp containers' liveness and readiness probes
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-  ##  webapp.livenessProbe.enabled Enable livenessProbe on the webapp
-  ##  webapp.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
-  ##  webapp.livenessProbe.periodSeconds Period seconds for livenessProbe
-  ##  webapp.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
-  ##  webapp.livenessProbe.failureThreshold Failure threshold for livenessProbe
-  ##  webapp.livenessProbe.successThreshold Success threshold for livenessProbe
-  ##
+  ## Configure extra options for the webapp containers' liveness and readiness probes,
+  ## see https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
   livenessProbe:
+    # -- Enable livenessProbe on the webapp
     enabled: true
+    # -- Initial delay seconds for livenessProbe
     initialDelaySeconds: 30
+    # -- Period seconds for livenessProbe
     periodSeconds: 10
+    # -- Timeout seconds for livenessProbe
     timeoutSeconds: 1
+    # -- Failure threshold for livenessProbe
     failureThreshold: 3
+    # -- Success threshold for livenessProbe
     successThreshold: 1
 
-  ##  webapp.readinessProbe.enabled Enable readinessProbe on the webapp
-  ##  webapp.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
-  ##  webapp.readinessProbe.periodSeconds Period seconds for readinessProbe
-  ##  webapp.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
-  ##  webapp.readinessProbe.failureThreshold Failure threshold for readinessProbe
-  ##  webapp.readinessProbe.successThreshold Success threshold for readinessProbe
-  ##
   readinessProbe:
+    # -- Enable readinessProbe on the webapp
     enabled: true
+    # -- Initial delay seconds for readinessProbe
     initialDelaySeconds: 10
+    # -- Period seconds for readinessProbe
     periodSeconds: 10
+    # -- Timeout seconds for readinessProbe
     timeoutSeconds: 1
+    # -- Failure threshold for readinessProbe
     failureThreshold: 3
+    # -- Success threshold for readinessProbe
     successThreshold: 1
 
-  ##  webapp.service.type The service type to use for the webapp service
-  ##  webapp.service.port The service port to expose the webapp on
-  ##  webapp.service.annotations Annotations for the webapp service resource
   service:
+    # -- The service type to use for the webapp service
     type: ClusterIP
+    # -- The service port to expose the webapp on
     port: 80
+    # -- Annotations for the webapp service resource
     annotations: {}
 
   ## Web app resource requests and limits
@@ -257,70 +220,63 @@ webapp:
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
   ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  ##  webapp.resources.limits [object] The resources limits for the Web container
-  ##  webapp.resources.requests [object] The requested resources for the Web container
   resources:
     ## Example:
     ## limits:
     ##    cpu: 200m
     ##    memory: 1Gi
+    # -- The resources limits for the Web container
     limits: {}
     ## Examples:
     ## requests:
     ##    memory: 256Mi
     ##    cpu: 250m
+    # -- The requested resources for the Web container
     requests: {}
 
-  ##  webapp.nodeSelector [object] Node labels for pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
-  ##
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   nodeSelector: {}
 
-  ##  webapp.tolerations [array] Tolerations for webapp pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-  ##
+  # -- Tolerations for webapp pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   tolerations: []
 
-  ##  webapp.affinity [object] Affinity and anti-affinity for webapp pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
-  ##
+  # -- Affinity and anti-affinity for webapp pod assignment, see
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
   ## Configure the ingress resource that allows you to access the Airbyte installation.
   ## ref: http://kubernetes.io/docs/user-guide/ingress/
-  ##  webapp.ingress.enabled Set to true to enable ingress record generation
-  ##  webapp.ingress.className Specifies ingressClassName for clusters >= 1.18+
-  ##  webapp.ingress.annotations [object] Ingress annotations done as key:value pairs
-  ##  webapp.ingress.hosts The list of hostnames to be covered with this ingress record.
-  ##  webapp.ingress.tls [array] Custom ingress TLS configuration
   ingress:
+    # -- Set to true to enable ingress record generation
     enabled: false
+    # -- Specifies ingressClassName for clusters >= 1.18+
     className: ""
+    # -- Ingress annotations done as key:value pairs
     annotations: {}
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
+    # -- The list of hostnames to be covered with this ingress record.
     hosts: []
     # - host: chart-example.local
     #   paths:
     #   - path: /
     #     pathType: ImplementationSpecific
-
+    # -- Custom ingress TLS configuration
     tls: []
     # - secretName: chart-example-tls
     #   hosts:
     #   - chart-example.local
 
-  ##  webapp.api.url The webapp API url.
-  api:
+    api:
+    # -- The webapp API url
     url: /api/v1/
   connector-builder-server:
     url: /connector-builder-api
 
-  ##  webapp.fullstory.enabled Whether or not to enable fullstory
   fullstory:
+    # -- Whether or not to enable fullstory
     enabled: false
 
-  ##  webapp.extraVolumeMounts [array] Additional volumeMounts for webapp container(s).
   ## Examples (when using `webapp.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumeMounts:
   ##   - name: var-run
@@ -330,9 +286,9 @@ webapp:
   ##   - mountPath: /etc/nginx/conf.d
   ##     name: nginx-conf-d
   ##
+  # -- Additional volumeMounts for webapp containers
   extraVolumeMounts: []
 
-  ##  webapp.extraVolumes [array] Additional volumes for webapp pod(s).
   ## Examples (when using `webapp.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumes:
   ##   - name: var-run
@@ -341,10 +297,9 @@ webapp:
   ##     emptyDir: {}
   ##   - name: nginx-conf-d
   ##     emptyDir: {}
-  ##
+  # -- Additional volumes for webapp pods
   extraVolumes: []
 
-  ##  extraContainer [array] Additional container for server pod(s)
   ## Example:
   # extraContainers:
   #   - name: otel_collector
@@ -358,18 +313,17 @@ webapp:
   #       - name: volumeMountCool
   #         mountPath: /some/path
   #         readOnly: true
+  # -- Additional container for server pods
   extraContainers: []
 
-  ##  extraInitContainers [array] Additional init containers for server pod(s)
   ## Example:
   # extraInitContainers:
   #   - name: sleepy
   #     image: alpine
   #     command: ['sleep', '60']
-
+  # -- Additional init containers for server pods
   extraInitContainers: []
 
-  ##  extraEnv [array] Supply extra env variables to main container using full notation
   ## Example: (With default env vars and values taken from generated config map)
   # extraEnv:
   #   - name: POSTGRES_USER
@@ -396,80 +350,74 @@ webapp:
   #       configMapKeyRef:
   #         name: airbyte-env
   #         key: DATABASE_HOST
-  ##
+  # -- Supply extra env variables to main container using full notation
   extraEnv: []
-  ##  secrets [object] Supply additional secrets to container
   ## Example:
   ## secrets:
   ##   DATABASE_PASSWORD: strong-password
   ##   DATABASE_USER: my-db-user
+  # -- Supply additional secrets to container
   secrets: {}
 
-  ##  env_vars [object] Supply extra env variables to main container using simplified notation
   ## Example:
   ## env_vars:
   ##   DATABASE_HOST: airbyte-db
   ##   DATABASE_PORT: 5432
+  # -- Supply extra env variables to main container using simplified notation
   env_vars: {}
 
 ## @section Pod Sweeper parameters
 
 pod-sweeper:
   enabled: true
-  ##  podSweeper.image.repository The image repository to use for the pod sweeper
-  ##  podSweeper.image.pullPolicy The pull policy for the pod sweeper image
-  ##  podSweeper.image.tag The pod sweeper image tag to use
   image:
+    # -- The image repository to use for the pod sweeper
     repository: bitnami/kubectl
+    # -- The pull policy for the pod sweeper image
     pullPolicy: IfNotPresent
+    # -- The pod sweeper image tag to use
     tag: 1.28.4
 
-  ##  podSweeper.podAnnotations [object] Add extra annotations to the podSweeper pod
-  ##
+  # -- Add extra annotations to the podSweeper pod
   podAnnotations: {}
 
-  ##  podSweeper.podLabels [object] Add extra labels to the podSweeper pod
-  ##
+  # -- Add extra labels to the podSweeper pod
   podLabels: {}
 
-  ##  podSweeper.containerSecurityContext Security context for the container
   ## Examples:
   ## containerSecurityContext:
   ##    runAsNonRoot: true
   ##    runAsUser: 1000
   ##    readOnlyRootFilesystem: true
+  # -- Security context for the container
   containerSecurityContext: {}
 
-  ## Configure extra options for the podSweeper containers' liveness and readiness probes
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-  ##  podSweeper.livenessProbe.enabled Enable livenessProbe on the podSweeper
-  ##  podSweeper.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
-  ##  podSweeper.livenessProbe.periodSeconds Period seconds for livenessProbe
-  ##  podSweeper.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
-  ##  podSweeper.livenessProbe.failureThreshold Failure threshold for livenessProbe
-  ##  podSweeper.livenessProbe.successThreshold Success threshold for livenessProbe
-  ##
   livenessProbe:
+    # -- Enable livenessProbe on the podSweeper
     enabled: true
+    # -- Initial delay seconds for livenessProbe
     initialDelaySeconds: 5
+    # -- Period seconds for livenessProbe
     periodSeconds: 30
+    # -- Timeout seconds for livenessProbe
     timeoutSeconds: 1
+    # -- Failure threshold for livenessProbe
     failureThreshold: 3
+    # -- Success threshold for livenessProbe
     successThreshold: 1
 
-  ##  podSweeper.readinessProbe.enabled Enable readinessProbe on the podSweeper
-  ##  podSweeper.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
-  ##  podSweeper.readinessProbe.periodSeconds Period seconds for readinessProbe
-  ##  podSweeper.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
-  ##  podSweeper.readinessProbe.failureThreshold Failure threshold for readinessProbe
-  ##  podSweeper.readinessProbe.successThreshold Success threshold for readinessProbe
-  ##
   readinessProbe:
+    # -- Enable readinessProbe on the podSweeper
     enabled: true
+    # -- Initial delay seconds for readinessProbe
     initialDelaySeconds: 5
+    # -- Period seconds for readinessProbe
     periodSeconds: 30
+    # -- Timeout seconds for readinessProbe
     timeoutSeconds: 1
+    # -- Failure threshold for readinessProbe
     failureThreshold: 3
+    # -- Success threshold for readinessProbe
     successThreshold: 1
 
   ## Pod Sweeper app resource requests and limits
@@ -478,111 +426,98 @@ pod-sweeper:
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
   ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  ##  podSweeper.resources.limits [object] The resources limits for the podSweeper container
-  ##  podSweeper.resources.requests [object] The requested resources for the podSweeper container
   resources:
     ## Example:
     ## limits:
     ##    cpu: 200m
     ##    memory: 1Gi
+    # -- The resources limits for the podSweeper container
     limits: {}
     ## Examples:
     ## requests:
     ##    memory: 256Mi
     ##    cpu: 250m
+    # -- The requested resources for the podSweeper container
     requests: {}
 
-  ##  podSweeper.nodeSelector [object] Node labels for pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
-  ##
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   nodeSelector: {}
 
-  ##  podSweeper.tolerations [array] Tolerations for podSweeper pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-  ##
+  # -- Tolerations for pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   tolerations: []
 
-  ##  podSweeper.affinity [object] Affinity and anti-affinity for podSweeper pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
-  ##
+  # -- Affinity and anti-affinity for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
-  ##  podSweeper.extraVolumeMounts [array] Additional volumeMounts for podSweeper container(s).
   ## Examples:
   ## extraVolumeMounts:
   ##   - name: tmpdir
   ##     mountPath: /tmp
-  ##
+  # -- Additional volumeMounts for podSweeper container(s).
   extraVolumeMounts: []
 
-  ##  podSweeper.extraVolumes [array] Additional volumes for podSweeper pod(s).
   ## Examples:
   ## extraVolumes:
   ##   - name: tmpdir
   ##     emptyDir: {}
-  ##
+  # -- Additional volumes for podSweeper pod(s).
   extraVolumes: []
 
 ## @section Server parameters
 
 server:
   enabled: true
-  ##  server.replicaCount Number of server replicas
+  # -- Number of server replicas
   replicaCount: 1
 
-  ##  server.image.repository The repository to use for the airbyte server image.
-  ##  server.image.pullPolicy the pull policy to use for the airbyte server image
-  ##  server.image.tag The airbyte server image tag. Defaults to the chart's AppVersion
   image:
+    # -- The repository to use for the airbyte server image.
     repository: airbyte/server
+    # -- the pull policy to use for the airbyte server image
     pullPolicy: IfNotPresent
 
-  ##  server.podAnnotations [object] Add extra annotations to the server pod(s)
-  ##
+  # -- Add extra annotations to the server pods
   podAnnotations: {}
 
-  ##  server.podLabels [object] Add extra labels to the server pod(s)
-  ##
+  # -- Add extra labels to the server pods
   podLabels: {}
 
-  ##  server.containerSecurityContext Security context for the container
   ## Examples:
   ## containerSecurityContext:
   ##    runAsNonRoot: true
   ##    runAsUser: 1000
   ##    readOnlyRootFilesystem: true
+  # -- Security context for the container
   containerSecurityContext: {}
 
   ## Configure extra options for the server containers' liveness and readiness probes
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-  ##  server.livenessProbe.enabled Enable livenessProbe on the server
-  ##  server.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
-  ##  server.livenessProbe.periodSeconds Period seconds for livenessProbe
-  ##  server.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
-  ##  server.livenessProbe.failureThreshold Failure threshold for livenessProbe
-  ##  server.livenessProbe.successThreshold Success threshold for livenessProbe
-  ##
   livenessProbe:
+    # -- Enable livenessProbe on the server
     enabled: true
+    # -- Initial delay seconds for livenessProbe
     initialDelaySeconds: 30
+    # -- Period seconds for livenessProbe
     periodSeconds: 10
+    # -- Timeout seconds for livenessProbe
     timeoutSeconds: 10
+    # -- Failure threshold for livenessProbe
     failureThreshold: 3
+    # -- Success threshold for livenessProbe
     successThreshold: 1
 
-  ##  server.readinessProbe.enabled Enable readinessProbe on the server
-  ##  server.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
-  ##  server.readinessProbe.periodSeconds Period seconds for readinessProbe
-  ##  server.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
-  ##  server.readinessProbe.failureThreshold Failure threshold for readinessProbe
-  ##  server.readinessProbe.successThreshold Success threshold for readinessProbe
-  ##
   readinessProbe:
+    # -- Enable readinessProbe on the server
     enabled: true
+    # -- Initial delay seconds for readinessProbe
     initialDelaySeconds: 10
+    # -- Period seconds for readinessProbe
     periodSeconds: 10
+    # -- Timeout seconds for readinessProbe
     timeoutSeconds: 10
+    # -- Failure threshold for readinessProbe
     failureThreshold: 3
+    # -- Success threshold for readinessProbe
     successThreshold: 1
 
   ## server resource requests and limits
@@ -591,56 +526,48 @@ server:
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
   ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  ##  server.resources.limits [object] The resources limits for the server container
-  ##  server.resources.requests [object] The requested resources for the server container
   resources:
     ## Example:
     ## limits:
     ##    cpu: 200m
     ##    memory: 1Gi
+    # -- The resources limits for the server container
     limits: {}
     ## Examples:
     ## requests:
     ##    memory: 256Mi
     ##    cpu: 250m
+    # -- The requested resources for the server container
     requests: {}
 
-  ##  server.nodeSelector [object] Node labels for pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
-  ##
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   nodeSelector: {}
 
-  ##  server.tolerations [array] Tolerations for server pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-  ##
+  # -- Tolerations for server pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   tolerations: []
 
-  ##  server.affinity [object] Affinity and anti-affinity for server pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
-  ##
+  # -- Affinity and anti-affinity for server pod assignment, see
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
-  ##  server.log.level The log level to log at.
   log:
+    # -- The log level to log at
     level: "INFO"
 
-  ##  server.extraVolumeMounts [array] Additional volumeMounts for server container(s).
   ## Examples (when using `server.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumeMounts:
   ##   - name: tmpdir
   ##     mountPath: /tmp
-  ##
+  # -- Additional volumeMounts for server containers
   extraVolumeMounts: []
 
-  ##  server.extraVolumes [array] Additional volumes for server pod(s).
   ## Examples (when using `server.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumes:
   ##   - name: tmpdir
   ##     emptyDir: {}
-  ##
+  # -- Additional volumes for server pods
   extraVolumes: []
 
-  ##  extraContainer [array] Additional container for server pod(s)
   ## Example:
   # extraContainers:
   #   - name: otel_collector
@@ -654,18 +581,17 @@ server:
   #       - name: volumeMountCool
   #         mountPath: /some/path
   #         readOnly: true
+  # -- Additional container for server pods
   extraContainers: []
 
-  ##  extraInitContainers [array] Additional init containers for server pod(s)
   ## Example:
   # extraInitContainers:
   #   - name: sleepy
   #     image: alpine
   #     command: ['sleep', '60']
-
+  # -- Additional init containers for server pods
   extraInitContainers: []
 
-  ##  extraEnv [array] Supply extra env variables to main container using full notation
   ## Example: (With default env vars and values taken from generated config map)
   # extraEnv:
   #   - name: AIRBYTE_VERSION
@@ -694,81 +620,74 @@ server:
   #         name: airbyte-env
   #         key: INTERNAL_API_HOST
   ##
+  # -- Supply extra env variables to main container using full notation
   extraEnv: []
-  ##  secrets [object] Supply additional secrets to container
   ## Example:
   ## secrets:
   ##   DATABASE_PASSWORD: strong-password
   ##   DATABASE_USER: my-db-user
+  # -- Supply additional secrets to container
   secrets: {}
-
-  ##  env_vars [object] Supply extra env variables to main container using simplified notation
   ## Example:
   ## env_vars:
   ##   DATABASE_HOST: airbyte-db
   ##   DATABASE_PORT: 5432
+  # -- Supply extra env variables to main container using simplified notation
   env_vars: {}
 
 ## @section Worker Parameters
 
 worker:
   enabled: true
-  ##  worker.replicaCount Number of worker replicas
+  # -- Number of worker replicas
   replicaCount: 1
 
-  ##  worker.image.repository The repository to use for the airbyte worker image.
-  ##  worker.image.pullPolicy the pull policy to use for the airbyte worker image
-  ##  worker.image.tag The airbyte worker image tag. Defaults to the chart's AppVersion
   image:
+    # -- The repository to use for the airbyte worker image.
     repository: airbyte/worker
+    # -- the pull policy to use for the airbyte worker image
     pullPolicy: IfNotPresent
 
-  ##  worker.podAnnotations [object] Add extra annotations to the worker pod(s)
-  ##
+  # -- Add extra annotations to the worker pods
   podAnnotations: {}
 
-  ##  worker.podLabels [object] Add extra labels to the worker pod(s)
-  ##
+  # -- Add extra labels to the worker pods
   podLabels: {}
 
-  ##  worker.containerSecurityContext Security context for the container
   ## Examples:
   ## containerSecurityContext:
   ##    runAsNonRoot: true
   ##    runAsUser: 1000
   ##    readOnlyRootFilesystem: true
+  # -- Security context for the container
   containerSecurityContext: {}
 
-  ## Configure extra options for the worker containers' liveness and readiness probes
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-  ##  worker.livenessProbe.enabled Enable livenessProbe on the worker
-  ##  worker.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
-  ##  worker.livenessProbe.periodSeconds Period seconds for livenessProbe
-  ##  worker.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
-  ##  worker.livenessProbe.failureThreshold Failure threshold for livenessProbe
-  ##  worker.livenessProbe.successThreshold Success threshold for livenessProbe
-  ##
   livenessProbe:
+    # -- Enable livenessProbe on the worker
     enabled: true
+    # -- Initial delay seconds for livenessProbe
     initialDelaySeconds: 30
+    # -- Period seconds for livenessProbe
     periodSeconds: 10
+    # -- Timeout seconds for livenessProbe
     timeoutSeconds: 1
+    # -- Failure threshold for livenessProbe
     failureThreshold: 3
+    # -- Success threshold for livenessProbe
     successThreshold: 1
 
-  ##  worker.readinessProbe.enabled Enable readinessProbe on the worker
-  ##  worker.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
-  ##  worker.readinessProbe.periodSeconds Period seconds for readinessProbe
-  ##  worker.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
-  ##  worker.readinessProbe.failureThreshold Failure threshold for readinessProbe
-  ##  worker.readinessProbe.successThreshold Success threshold for readinessProbe
-  ##
   readinessProbe:
+    # -- Enable readinessProbe on the worker
     enabled: true
+    # -- Initial delay seconds for readinessProbe
     initialDelaySeconds: 10
+    # -- Period seconds for readinessProbe
     periodSeconds: 10
+    # -- Timeout seconds for readinessProbe
     timeoutSeconds: 1
+    # -- Failure threshold for readinessProbe
     failureThreshold: 3
+    # -- Success threshold for readinessProbe
     successThreshold: 1
 
   ## worker resource requests and limits
@@ -777,63 +696,56 @@ worker:
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
   ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  ##  worker.resources.limits [object] The resources limits for the worker container
-  ##  worker.resources.requests [object] The requested resources for the worker container
   resources:
     ## Example:
     ## limits:
     ##    cpu: 200m
     ##    memory: 1Gi
+    #! -- The resources limits for the worker container
     limits: {}
     ## Examples:
     ## requests:
     ##    memory: 256Mi
     ##    cpu: 250m
+    # -- The requested resources for the worker container
     requests: {}
 
-  ##  worker.nodeSelector [object] Node labels for pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
-  ##
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   nodeSelector: {}
 
-  ##  worker.tolerations [array] Tolerations for worker pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-  ##
+  # -- Tolerations for worker pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   tolerations: []
 
-  ##  worker.affinity [object] Affinity and anti-affinity for worker pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
-  ##
+  # -- Affinity and anti-affinity for worker pod assignment, see
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
-  ##  worker.log.level The log level to log at.
   log:
+    #! -- The log level to log at.
     level: "INFO"
 
-  ##  worker.extraEnv [array] Additional env vars for worker pod(s).
   ## Example:
   ##
   ## extraEnv:
   ## - name: JOB_KUBE_TOLERATIONS
   ##   value: "key=airbyte-server,operator=Equals,value=true,effect=NoSchedule"
+  # -- Additional env vars for worker pods
   extraEnv: []
 
-  ##  worker.extraVolumeMounts [array] Additional volumeMounts for worker container(s).
   ## Examples (when using `worker.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumeMounts:
   ##   - name: tmpdir
   ##     mountPath: /tmp
-  ##
+  # -- Additional volumeMounts for worker containers
   extraVolumeMounts: []
 
-  ##  worker.extraVolumes [array] Additional volumes for worker pod(s).
   ## Examples (when using `worker.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumes:
   ##   - name: tmpdir
   ##     emptyDir: {}
-  ##
+  # -- Additional volumes for worker pods
   extraVolumes: []
-
+  # -- Additional container for worker pods
   extraContainers: []
 
   hpa:
@@ -842,80 +754,69 @@ worker:
   debug:
     enabled: false
 
-  ## Container Orchestrator
-  ## image -- Orchestrator image
-
   containerOrchestrator:
+    # -- Orchestrator image
     image: ""
 
   ## current no exist documentations
   activityMaxAttempt: ""
   activityInitialDelayBetweenAttemptsSeconds: ""
   activityMaxDelayBetweenAttemptsSeconds: ""
-
   maxNotifyWorkers: 5
 
 ## @section Workload Launcher Parameters
 
 workload-launcher:
   enabled: false
-
-  ##  workload-launcher.replicaCount Number of workload launcher replicas
+  # -- Number of workload launcher replicas
   replicaCount: 1
 
-  ##  workload-launcher.image.repository The repository to use for the airbyte workload launcher image.
-  ##  workload-launcher.image.pullPolicy the pull policy to use for the airbyte workload launcher image
-  ##  workload-launcher.image.tag The airbyte workload launcher image tag. Defaults to the chart's AppVersion
   image:
+    # -- The repository to use for the airbyte workload launcher image.
     repository: airbyte/workload-launcher
+    # -- The pull policy to use for the airbyte workload launcher image
     pullPolicy: IfNotPresent
 
-  ##  workload-launcher.podAnnotations [object] Add extra annotations to the workload launcher pod(s)
-  ##
+  # -- Add extra annotations to the workload launcher pods
   podAnnotations: {}
 
-  ##  workload-launcher.podLabels [object] Add extra labels to the workload launcher pod(s)
-  ##
+  # -- Add extra labels to the workload launcher pods
   podLabels: {}
 
-  ##  workload-launcher.containerSecurityContext Security context for the container
   ## Examples:
   ## containerSecurityContext:
   ##    runAsNonRoot: true
   ##    runAsUser: 1000
   ##    readOnlyRootFilesystem: true
+  # -- Security context for the container
   containerSecurityContext: {}
 
-  ## Configure extra options for the workload launcher containers' liveness and readiness probes
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-  ##  workload-launcher.livenessProbe.enabled Enable livenessProbe on the workload launcher
-  ##  workload-launcher.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
-  ##  workload-launcher.livenessProbe.periodSeconds Period seconds for livenessProbe
-  ##  workload-launcher.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
-  ##  workload-launcher.livenessProbe.failureThreshold Failure threshold for livenessProbe
-  ##  workload-launcher.livenessProbe.successThreshold Success threshold for livenessProbe
-  ##
   livenessProbe:
+    # -- Enable livenessProbe on the workload launcher
     enabled: true
+    # -- Initial delay seconds for livenessProbe
     initialDelaySeconds: 30
+    # -- Period seconds for livenessProbe
     periodSeconds: 10
+    # -- Timeout seconds for livenessProbe
     timeoutSeconds: 1
+    # -- Failure threshold for livenessProbe
     failureThreshold: 3
+    # -- Success threshold for livenessProbe
     successThreshold: 1
 
-  ##  workload-launcher.readinessProbe.enabled Enable readinessProbe on the workload launcher
-  ##  workload-launcher.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
-  ##  workload-launcher.readinessProbe.periodSeconds Period seconds for readinessProbe
-  ##  workload-launcher.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
-  ##  workload-launcher.readinessProbe.failureThreshold Failure threshold for readinessProbe
-  ##  workload-launcher.readinessProbe.successThreshold Success threshold for readinessProbe
-  ##
   readinessProbe:
+    # -- Enable readinessProbe on the workload launcher
     enabled: true
+    # -- Initial delay seconds for readinessProbe
     initialDelaySeconds: 10
+    # -- Period seconds for readinessProbe
     periodSeconds: 10
+    # -- Timeout seconds for readinessProbe
     timeoutSeconds: 1
+    # -- Failure threshold for readinessProbe
     failureThreshold: 3
+    # -- Success threshold for readinessProbe
     successThreshold: 1
 
   ## workload launcher resource requests and limits
@@ -924,61 +825,54 @@ workload-launcher:
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
   ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  ##  workload-launcher.resources.limits [object] The resources limits for the workload launcher container
-  ##  workload-launcher.resources.requests [object] The requested resources for the workload launcher container
   resources:
     ## Example:
     ## limits:
     ##    cpu: 200m
     ##    memory: 1Gi
+    # -- The resources limits for the workload launcher container
     limits: {}
     ## Examples:
     ## requests:
     ##    memory: 256Mi
     ##    cpu: 250m
+    # -- The requested resources for the workload launcher container
     requests: {}
 
-  ##  workload-launcher.nodeSelector [object] Node labels for pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
-  ##
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   nodeSelector: {}
 
-  ##  workload-launcher.tolerations [array] Tolerations for workload launcher pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-  ##
+  # -- Tolerations for workload launcher pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   tolerations: []
 
-  ##  workload-launcher.affinity [object] Affinity and anti-affinity for workload launcher pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
-  ##
+  # Affinity and anti-affinity for workload launcher pod assignment, see
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
-  ##  workload-launcher.log.level The log level to log at.
   log:
+    # -- The log level to log at
     level: "INFO"
 
-  ##  workload-launcher.extraEnv [array] Additional env vars for workload launcher pod(s).
   ## Example:
   ##
   ## extraEnv:
   ## - name: JOB_KUBE_TOLERATIONS
   ##   value: "key=airbyte-server,operator=Equals,value=true,effect=NoSchedule"
+  # -- Additional env vars for workload launcher pods
   extraEnv: []
 
-  ##  worker.extraVolumeMounts [array] Additional volumeMounts for workload launcher container(s).
   ## Examples (when using `workload launcher.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumeMounts:
   ##   - name: tmpdir
   ##     mountPath: /tmp
-  ##
+  # -- Additional volumeMounts for workload launcher containers
   extraVolumeMounts: []
 
-  ##  workload-launcher.extraVolumes [array] Additional volumes for workload launcher pod(s).
   ## Examples (when using `workload-launcher.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumes:
   ##   - name: tmpdir
   ##     emptyDir: {}
-  ##
+  # -- Additional volumes for workload launcher pods
   extraVolumes: []
 
   extraContainers: []
@@ -989,12 +883,10 @@ workload-launcher:
   debug:
     enabled: false
 
-  ## Container Orchestrator
-  ## enabled -- Enable or disable Orchestrator
-  ## image -- Orchestrator image
-
   containerOrchestrator:
+    # -- Enable or disable Orchestrator
     enabled: true
+    # -- Orchestrator image
     image: ""
 
   ## current no exist documentations
@@ -1008,30 +900,27 @@ workload-launcher:
 metrics:
   enabled: false
 
-  ##  metrics.replicaCount Number of metrics-reporter replicas
+  # -- Number of metrics-reporter replicas
   replicaCount: 1
 
-  ##  metrics.image.repository The repository to use for the airbyte metrics-reporter image.
-  ##  metrics.image.pullPolicy the pull policy to use for the airbyte metrics-reporter image
-  ##  metrics.image.tag The airbyte metrics-reporter image tag. Defaults to the chart's AppVersion
   image:
+    # -- The repository to use for the airbyte metrics-reporter image.
     repository: airbyte/metrics-reporter
+    # -- The pull policy to use for the airbyte metrics-reporter image
     pullPolicy: IfNotPresent
 
-  ##  metrics.podAnnotations [object] Add extra annotations to the metrics-reporter pod
-  ##
+  # -- Add extra annotations to the metrics-reporter pod
   podAnnotations: {}
 
-  ##  metrics.podLabels [object] Add extra labels to the metrics-reporter pod
-  ##
+  # -- Add extra labels to the metrics-reporter pod
   podLabels: {}
 
-  ##  metrics.containerSecurityContext Security context for the container
   ## Examples:
   ## containerSecurityContext:
   ##    runAsNonRoot: true
   ##    runAsUser: 1000
   ##    readOnlyRootFilesystem: true
+  # -- Security context for the container
   containerSecurityContext: {}
 
   ## metrics-reporter app resource requests and limits
@@ -1040,57 +929,50 @@ metrics:
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
   ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  ##  metrics.resources.limits [object] The resources limits for the metrics-reporter container
-  ##  metrics.resources.requests [object] The requested resources for the metrics-reporter container
   resources:
     ## Example:
     ## limits:
     ##    cpu: 200m
     ##    memory: 1Gi
+    # -- The resources limits for the metrics-reporter container
     limits: {}
     ## Examples:
     ## requests:
     ##    memory: 256Mi
     ##    cpu: 250m
+    # -- The requested resources for the metrics-reporter container
     requests: {}
 
-  ##  metrics.nodeSelector [object] Node labels for pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
-  ##
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   nodeSelector: {}
 
-  ##  metrics.tolerations [array] Tolerations for metrics-reporter pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-  ##
+  # -- Tolerations for metrics-reporter pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   tolerations: []
 
-  ##  metrics.affinity [object] Affinity and anti-affinity for metrics-reporter pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
-  ##
+  # -- Affinity and anti-affinity for metrics-reporter pod assignment, see
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
-  ##  metrics.extraEnv [array] Additional env vars for metrics-reporter pod(s).
   ## Example:
   ##
   ## extraEnv:
   ## - name: SAMPLE_ENV_VAR
   ##   value: "key=sample-value"
+  # -- Additional env vars for metrics-reporter pods
   extraEnv: []
 
-  ##  metrics.extraVolumeMounts [array] Additional volumeMounts for metrics-reporter container(s).
   ## Examples (when using `metrics.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumeMounts:
   ##   - name: tmpdir
   ##     mountPath: /tmp
-  ##
+  # -- Additional volumeMounts for metrics-reporter containers
   extraVolumeMounts: []
 
-  ##  metrics.extraVolumes [array] Additional volumes for metrics-reporter pod(s).
   ## Examples (when using `metrics.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumes:
   ##   - name: tmpdir
   ##     emptyDir: {}
-  ##
+  # -- Additional volumes for metrics-reporter pods
   extraVolumes: []
 
   extraContainers: []
@@ -1103,29 +985,22 @@ metrics:
 
 airbyte-bootloader:
   enabled: true
-  ##  image.repository The repository to use for the airbyte bootloader image.
-  ##  image.pullPolicy the pull policy to use for the airbyte bootloader image
-  ##  image.tag The airbyte bootloader image tag. Defaults to the chart's AppVersion
   image:
+    # -- The repository to use for the airbyte bootloader image.
     repository: airbyte/bootloader
+    # -- The pull policy to use for the airbyte bootloader image
     pullPolicy: IfNotPresent
 
-  ##  podAnnotations [object] Add extra annotations to the bootloader pod
-  ##
+  # -- Add extra annotations to the bootloader pod
   podAnnotations: {}
 
-  ##  podLabels [object] Add extra labels to the bootloader pod
-  ##
+  # -- Add extra labels to the bootloader pod
   podLabels: {}
 
-  ##  nodeSelector [object] Node labels for pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
-  ##
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   nodeSelector: {}
 
-  ##  tolerations [array] Tolerations for worker pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-  ##
+  # -- Tolerations for worker pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   tolerations: []
 
   ## Bootloader resource requests and limits
@@ -1134,26 +1009,24 @@ airbyte-bootloader:
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
   ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  ##  bootloader.resources.limits [object] The resources limits for the airbyte bootloader image
-  ##  bootloader.resources.requests [object] The requested resources for the airbyte bootloader image
   resources:
     ## Example:
     ## requests:
     ##    memory: 256Mi
     ##    cpu: 250m
+    # -- The requested resources for the airbyte bootloader image
     requests: {}
     ## Example:
     ## limits:
     ##    cpu: 200m
     ##    memory: 1Gi
+    # -- The resources limits for the airbyte bootloader image
     limits: {}
 
-  ##  affinity [object] Affinity and anti-affinity for bootloader pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
-  ##
+  # -- Affinity and anti-affinity for bootloader pod assignment, see
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
-  ##  extraEnv [array] Supply extra env variables to main container using full notation
   ## Example: (With default env vars and values taken from generated config map)
   ## extraEnv:
   ##   - name: AIRBYTE_VERSION
@@ -1186,22 +1059,21 @@ airbyte-bootloader:
   ##       secretKeyRef:
   ##         name: airbyte-secrets
   ##         key: DATABASE_USER
-  ##
+  # -- Supply extra env variables to main container using full notation
   extraEnv: []
-  ##  secrets [object] Supply additional secrets to container
   ## Example:
   ## secrets:
   ##   DATABASE_PASSWORD: strong-password
   ##   DATABASE_USER: my-db-user
+  # -- Supply additional secrets to container
   secrets: {}
 
-  ##  env_vars [object] Supply extra env variables to main container using simplified notation
   ## Example:
   ## env_vars:
   ##   DATABASE_HOST: airbyte-db
   ##   DATABASE_PORT: 5432
+  # -- Supply extra env variables to main container using simplified notation
   env_vars: {}
-  ##  extraContainer [array] Additional container for server pod(s)
   ## Example:
   # extraContainers:
   #   - name: otel_collector
@@ -1215,31 +1087,29 @@ airbyte-bootloader:
   #       - name: volumeMountCool
   #         mountPath: /some/path
   #         readOnly: true
+  # -- Additional container for server pod(s)
   extraContainers: []
 
-  ##  extraInitContainers [array] Additional init containers for server pod(s)
   ## Example:
   # extraInitContainers:
   #   - name: sleepy
   #     image: alpine
   #     command: ['sleep', '60']
-
+  # -- Additional init containers for server pods
   extraInitContainers: []
 
-  ##  extraVolumeMounts [array] Additional volumeMounts for server container(s).
   ## Examples (when using `containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumeMounts:
   ##   - name: tmpdir
   ##     mountPath: /tmp
-  ##
+  # -- Additional volumeMounts for server containers
   extraVolumeMounts: []
 
-  ##  extraVolumes [array] Additional volumes for server pod(s).
   ## Examples (when using `containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumes:
   ##   - name: tmpdir
   ##     emptyDir: {}
-  ##
+  # -- Additional volumes for server pods
   extraVolumes: []
 
 ## @section Temporal parameters
@@ -1247,40 +1117,37 @@ airbyte-bootloader:
 
 temporal:
   enabled: true
-  ##  temporal.replicaCount The number of temporal replicas to deploy
+  # -- The number of temporal replicas to deploy
   replicaCount: 1
 
-  ##  temporal.image.repository The temporal image repository to use
-  ##  temporal.image.pullPolicy The pull policy for the temporal image
-  ##  temporal.image.tag The temporal image tag to use
   image:
+    # -- The temporal image repository to use
     repository: temporalio/auto-setup
+    # -- The pull policy for the temporal image
     pullPolicy: IfNotPresent
+    # -- The temporal image tag to use
     tag: "1.20.1"
 
-  ##  temporal.service.type The Kubernetes Service Type
-  ##  temporal.service.port The temporal port and exposed kubernetes port
   service:
+    # -- The Kubernetes Service Type
     type: ClusterIP
+    # -- The temporal port and exposed kubernetes port
     port: 7233
 
-  ##  temporal.podAnnotations [object] Add extra annotations to the temporal pod
-  ##
+  # -- Add extra annotations to the temporal pod
   podAnnotations: {}
 
-  ##  temporal.podLabels [object] Add extra labels to the temporal pod
-  ##
+  # -- Add extra labels to the temporal pod
   podLabels: {}
 
-  ##  temporal.containerSecurityContext Security context for the container
   ## Examples:
   ## containerSecurityContext:
   ##    runAsNonRoot: true
   ##    runAsUser: 1000
   ##    readOnlyRootFilesystem: true
+  # -- Security context for the container
   containerSecurityContext: {}
 
-  ##  temporal.extraInitContainers Additional InitContainers to initialize the pod
   ## Examples (when using `temporal.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraInitContainers:
   ##   - name: config-loader
@@ -1293,71 +1160,51 @@ temporal:
   ##     volumeMounts:
   ##       - name: config
   ##         mountPath: /config
+  # -- Additional InitContainers to initialize the pod
   extraInitContainers: []
 
-  ## Configure extra options for the temporal containers' liveness and readiness probes
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-  ##  temporal.livenessProbe.enabled Enable livenessProbe on the temporal
-  ##  temporal.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
-  ##  temporal.livenessProbe.periodSeconds Period seconds for livenessProbe
-  ##  temporal.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
-  ##  temporal.livenessProbe.failureThreshold Failure threshold for livenessProbe
-  ##  temporal.livenessProbe.successThreshold Success threshold for livenessProbe
-  ##
   livenessProbe:
+    # -- Enable livenessProbe on the temporal
     enabled: false
 
-  ##  temporal.readinessProbe.enabled Enable readinessProbe on the temporal
-  ##  temporal.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
-  ##  temporal.readinessProbe.periodSeconds Period seconds for readinessProbe
-  ##  temporal.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
-  ##  temporal.readinessProbe.failureThreshold Failure threshold for readinessProbe
-  ##  temporal.readinessProbe.successThreshold Success threshold for readinessProbe
-  ##
   readinessProbe:
+    # -- Enable readinessProbe on the temporal
     enabled: false
 
-  ##  temporal.nodeSelector [object] Node labels for temporal pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
-  ##
+  # -- Node labels for temporal pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   nodeSelector: {}
 
-  ##  temporal.tolerations [array] Tolerations for temporal pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-  ##
+  # -- Tolerations for temporal pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   tolerations: []
 
-  ##  temporal.affinity [object] Affinity and anti-affinity for temporal pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
-  ##
+  # -- Affinity and anti-affinity for temporal pod assignment, see
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
-  ##  temporal.extraEnv [array] Additional env vars for temporal pod(s).
   ## Example:
   ##
   ## extraEnv:
   ## - name: SAMPLE_ENV_VAR
   ##   value: "key=sample-value"
+  # -- Additional env vars for temporal pod(s).
   extraEnv: []
 
-  ##  temporal.extraVolumeMounts [array] Additional volumeMounts for temporal container(s).
   ## Examples (when using `temporal.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumeMounts:
   ##   - name: tmpdir
   ##     mountPath: /tmp
   ##   - name: config
   ##     mountPath: /etc/temporal/config
-  ##
+  # -- Additional volumeMounts for temporal containers
   extraVolumeMounts: []
 
-  ##  temporal.extraVolumes [array] Additional volumes for temporal pod(s).
   ## Examples (when using `temporal.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumes:
   ##   - name: tmpdir
   ##     emptyDir: {}
   ##  - name: config
   ##    emptyDir: {}
-  ##
+  # -- Additional volumes for temporal pods
   extraVolumes: []
 
   ## Temporal resource requests and limits
@@ -1366,96 +1213,102 @@ temporal:
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
   ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  ##  temporal.resources.limits [object] The resources limits for temporal pod(s)
-  ##  temporal.resources.requests [object] The requested resources for temporal pod(s)
   resources:
     ## Example:
     ## requests:
     ##    memory: 256Mi
     ##    cpu: 250m
+    # -- The requested resources for temporal pods
     requests: {}
     ## Example:
     ## limits:
     ##    cpu: 200m
     ##    memory: 1Gi
+    # -- The resources limits for temporal pods
     limits: {}
 
   extraContainers: []
 
 ## @section Airbyte Database parameters
 
-## PostgreSQL chart configuration
-## ref: https://github.com/bitnami/charts/blob/master/bitnami/postgresql/values.yaml
-##  postgresql.enabled Switch to enable or disable the PostgreSQL helm chart
-##  postgresql.postgresqlUsername Airbyte Postgresql username
-##  postgresql.postgresqlPassword Airbyte Postgresql password
-##  postgresql.postgresqlDatabase Airbyte Postgresql database
-##  postgresql.existingSecret Name of an existing secret containing the PostgreSQL password ('postgresql-password' key)
-##  postgresql.containerSecurityContext.runAsNonRoot Ensures the container will run with a non-root user
-##  postgresql.commonAnnotations.helm.sh/hook It will determine when the hook should be rendered
-##  postgresql.commonAnnotations.helm.sh/hook-weight The order in which the hooks are executed. If weight is lower, it has higher priority
-##
+# PostgreSQL chart configuration, see https://github.com/bitnami/charts/blob/master/bitnami/postgresql/values.yaml
 postgresql:
+  # -- Switch to enable or disable the PostgreSQL helm chart
   enabled: true
 
   ## image.repository Repository for airbyte-db statefulset
   image:
     repository: airbyte/db
-
+  # -- Airbyte Postgresql username
   postgresqlUsername: airbyte
+  # -- Airbyte Postgresql password
   postgresqlPassword: airbyte
+  # -- Airbyte Postgresql database
   postgresqlDatabase: db-airbyte
   # fullnameOverride: *db-hostname
   ## This secret is used in case of postgresql.enabled=true and we would like to specify password for newly created postgresql instance
-  ##
+  # -- Name of an existing secret containing the PostgreSQL password ('postgresql-password' key)
   existingSecret: ""
   containerSecurityContext:
+    # -- Ensures the container will run with a non-root user
     runAsNonRoot: true
   commonAnnotations:
+    # -- It will determine when the hook should be rendered
     helm.sh/hook: pre-install
+    # -- The order in which the hooks are executed. If weight is lower, it has higher priority
     helm.sh/hook-weight: "-1"
-## External PostgreSQL configuration
-## All of these values are only used when postgresql.enabled is set to false
-##  externalDatabase.host Database host
-##  externalDatabase.user non-root Username for Airbyte Database
-##  externalDatabase.password Database password
-##  externalDatabase.existingSecret Name of an existing secret resource containing the DB password
-##  externalDatabase.existingSecretPasswordKey Name of an existing secret key containing the DB password
-##  externalDatabase.database Database name
-##  externalDatabase.port Database port number
-##  externalDatabase.jdbcUrl Database full JDBL URL (ex: jdbc:postgresql://host:port/db?parameters)
-##
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  nodeSelector: {}
+
+  # -- Tolerations for postgresql pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  tolerations: []
+
+  # -- Affinity and anti-affinity for postgresql pod assignment, see
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+  affinity: {}
+
+# External PostgreSQL configuration, All of these values are only used when postgresql.enabled is set to false
 externalDatabase:
+  # -- Database host
   host: localhost
+  # -- non-root Username for Airbyte Database
   user: airbyte
+  # -- Database password
   password: ""
+  # -- Name of an existing secret resource containing the DB password
   existingSecret: ""
+  # -- Name of an existing secret key containing the DB password
   existingSecretPasswordKey: ""
+  # -- Database name
   database: db-airbyte
+  # -- Database port number
   port: 5432
+  # -- Database full JDBL URL (ex: jdbc:postgresql://host:port/db?parameters)
   jdbcUrl: ""
 
 ## @section Logs parameters
 
-## @section Minio chart overwrites
-##  minio.accessKey.password Minio Access Key
-##  minio.secretKey.password Minio Secret Key
 minio:
-  enabled: true
-  endpoint: http://airbyte-minio-svc:9000
-
-  ## image.repository Minio image used by Minio helm chart
-  ## image.tag Minio tag image
   image:
+    # -- Minio image used by Minio helm chart
     repository: minio/minio
+    # -- Minio tag image
     tag: RELEASE.2023-11-20T22-40-07Z
 
-  auth:
-    rootUser: minio
-    rootPassword: minio123
   storage:
     volumeClaimValue: 500Mi
 
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  ##
+  nodeSelector: {}
+
+  # -- Tolerations for minio pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  ##
+  tolerations: []
+
+  # -- Affinity and anti-affinity for minio pod assignment, see
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+  affinity: {}
   ## Minio resource requests and limits
   ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
   ## We usually recommend not to specify default resources and to leave this as a conscious
@@ -1474,68 +1327,60 @@ minio:
     ## limits:
     ##    cpu: 200m
     ##    memory: 1Gi
-    limits: {}
+    limits:
 
 ## @section cron parameters
 
 cron:
   enabled: true
-  ##  cron.replicaCount Number of cron replicas
+  # -- Number of cron replicas
   replicaCount: 1
-
-  ##  cron.image.repository The repository to use for the airbyte cron image.
-  ##  cron.image.pullPolicy the pull policy to use for the airbyte cron image
-  ##  cron.image.tag The airbyte cron image tag. Defaults to the chart's AppVersion
   image:
+    # -- The repository to use for the airbyte cron image.
     repository: airbyte/cron
+    # -- The pull policy to use for the airbyte cron image
     pullPolicy: IfNotPresent
 
-  ##  cron.podAnnotations [object] Add extra annotations to the cron pod(s)
-  ##
+  # -- Add extra annotations to the cron pods
   podAnnotations: {}
 
-  ##  cron.podLabels [object] Add extra labels to the cron pod(s)
-  ##
+  # -- Add extra labels to the cron pods
   podLabels: {}
 
-  ##  cron.containerSecurityContext Security context for the container
   ## Examples:
   ## containerSecurityContext:
   ##    runAsNonRoot: true
   ##    runAsUser: 1000
   ##    readOnlyRootFilesystem: true
+  # -- Security context for the container
   containerSecurityContext: {}
 
-  ## Configure extra options for the cron containers' liveness and readiness probes
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-  ##  cron.livenessProbe.enabled Enable livenessProbe on the cron
-  ##  cron.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
-  ##  cron.livenessProbe.periodSeconds Period seconds for livenessProbe
-  ##  cron.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
-  ##  cron.livenessProbe.failureThreshold Failure threshold for livenessProbe
-  ##  cron.livenessProbe.successThreshold Success threshold for livenessProbe
-  ##
   livenessProbe:
+    # -- Enable livenessProbe on the cron
     enabled: true
+    # -- Initial delay seconds for livenessProbe
     initialDelaySeconds: 30
+    # -- Period seconds for livenessProbe
     periodSeconds: 10
+    # -- Timeout seconds for livenessProbe
     timeoutSeconds: 1
+    # -- Failure threshold for livenessProbe
     failureThreshold: 3
+    # -- Success threshold for livenessProbe
     successThreshold: 1
 
-  ##  cron.readinessProbe.enabled Enable readinessProbe on the cron
-  ##  cron.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
-  ##  cron.readinessProbe.periodSeconds Period seconds for readinessProbe
-  ##  cron.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
-  ##  cron.readinessProbe.failureThreshold Failure threshold for readinessProbe
-  ##  cron.readinessProbe.successThreshold Success threshold for readinessProbe
-  ##
   readinessProbe:
+    # -- Enable readinessProbe on the cron
     enabled: true
+    # -- Initial delay seconds for readinessProbe
     initialDelaySeconds: 10
+    # -- Period seconds for readinessProbe
     periodSeconds: 10
+    # -- Timeout seconds for readinessProbe
     timeoutSeconds: 1
+    # -- Failure threshold for readinessProbe
     failureThreshold: 3
+    # -- Success threshold for readinessProbe
     successThreshold: 1
 
   ## cron resource requests and limits
@@ -1544,56 +1389,48 @@ cron:
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
   ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  ##  cron.resources.limits [object] The resources limits for the cron container
-  ##  cron.resources.requests [object] The requested resources for the cron container
   resources:
     ## Example:
     ## limits:
     ##    cpu: 200m
     ##    memory: 1Gi
+    # -- The resources limits for the cron container
     limits: {}
     ## Examples:
     ## requests:
     ##    memory: 256Mi
     ##    cpu: 250m
+    # -- The requested resources for the cron container
     requests: {}
 
-  ##  cron.nodeSelector [object] Node labels for pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
-  ##
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   nodeSelector: {}
 
-  ##  cron.tolerations [array] Tolerations for cron pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-  ##
+  # -- Tolerations for cron pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   tolerations: []
 
-  ##  cron.affinity [object] Affinity and anti-affinity for cron pod assignment.
-  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
-  ##
+  # -- Affinity and anti-affinity for cron pod assignment, see
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
-  ##  cron.log.level The log level to log at.
   log:
+    # -- The log level to log at.
     level: "INFO"
 
-  ##  cron.extraVolumeMounts [array] Additional volumeMounts for cron container(s).
   ## Examples (when using `cron.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumeMounts:
   ##   - name: tmpdir
   ##     mountPath: /tmp
-  ##
+  # -- Additional volumeMounts for cron containers
   extraVolumeMounts: []
 
-  ##  cron.extraVolumes [array] Additional volumes for cron pod(s).
   ## Examples (when using `cron.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumes:
   ##   - name: tmpdir
   ##     emptyDir: {}
-  ##
+  # -- Additional volumes for cron pods
   extraVolumes: []
 
-  ##  extraContainer [array] Additional container for cron pod(s)
   ## Example:
   # extraContainers:
   #   - name: otel_collector
@@ -1607,18 +1444,17 @@ cron:
   #       - name: volumeMountCool
   #         mountPath: /some/path
   #         readOnly: true
+  # -- Additional container for cron pods
   extraContainers: []
 
-  ##  extraInitContainers [array] Additional init containers for cron pod(s)
   ## Example:
   # extraInitContainers:
   #   - name: sleepy
   #     image: alpine
   #     command: ['sleep', '60']
-
+  # -- Additional init containers for cron pods
   extraInitContainers: []
 
-  ##  extraEnv [array] Supply extra env variables to main container using full notation
   ## Example: (With default env vars and values taken from generated config map)
   # extraEnv:
   #   - name: AIRBYTE_VERSION
@@ -1646,64 +1482,58 @@ cron:
   #       configMapKeyRef:
   #         name: airbyte-env
   #         key: INTERNAL_API_HOST
-  ##
+  # -- Supply extra env variables to main container using full notation
   extraEnv: []
-  ##  secrets [object] Supply additional secrets to container
   ## Example:
   ## secrets:
   ##   DATABASE_PASSWORD: strong-password
   ##   DATABASE_USER: my-db-user
+  # -- Supply additional secrets to container
   secrets: {}
-
-  ##  env_vars [object] Supply extra env variables to main container using simplified notation
   ## Example:
   ## env_vars:
   ##   DATABASE_HOST: airbyte-db
   ##   DATABASE_PORT: 5432
+  # -- Supply extra env variables to main container using simplified notation
   env_vars: {}
 
 connector-builder-server:
   enabled: true
-  ##  connector-builder-server.replicaCount Number of connector-builder-server replicas
+  # -- Number of connector-builder-server replicas
   replicaCount: 1
 
-  ##  connector-builder-server.image.repository The repository to use for the airbyte connector-builder-server image.
-  ##  connector-builder-server.image.pullPolicy the pull policy to use for the airbyte connector-builder-server image
-  ##  connector-builder-server.image.tag The airbyte connector-builder-server image tag. Defaults to the chart's AppVersion
   image:
+    # -- The repository to use for the airbyte connector-builder-server image.
     repository: airbyte/connector-builder-server
+    # -- The pull policy to use for the airbyte connector-builder-server image
     pullPolicy: IfNotPresent
 
-  ## Configure extra options for the server containers' liveness and readiness probes
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-  ##  server.livenessProbe.enabled Enable livenessProbe on the server
-  ##  server.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
-  ##  server.livenessProbe.periodSeconds Period seconds for livenessProbe
-  ##  server.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
-  ##  server.livenessProbe.failureThreshold Failure threshold for livenessProbe
-  ##  server.livenessProbe.successThreshold Success threshold for livenessProbe
-  ##
   livenessProbe:
+    # -- Enable livenessProbe on the server
     enabled: true
+    # -- Initial delay seconds for livenessProbe
     initialDelaySeconds: 30
+    # -- Period seconds for livenessProbe
     periodSeconds: 10
+    # -- Timeout seconds for livenessProbe
     timeoutSeconds: 10
+    # -- Failure threshold for livenessProbe
     failureThreshold: 3
+    # -- Success threshold for livenessProbe
     successThreshold: 1
 
-  ##  server.readinessProbe.enabled Enable readinessProbe on the server
-  ##  server.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
-  ##  server.readinessProbe.periodSeconds Period seconds for readinessProbe
-  ##  server.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
-  ##  server.readinessProbe.failureThreshold Failure threshold for readinessProbe
-  ##  server.readinessProbe.successThreshold Success threshold for readinessProbe
-  ##
   readinessProbe:
+    # -- Enable readinessProbe on the server
     enabled: true
+    # -- Initial delay seconds for readinessProbe
     initialDelaySeconds: 10
+    # -- Period seconds for readinessProbe
     periodSeconds: 10
+    # -- Timeout seconds for readinessProbe
     timeoutSeconds: 10
+    # -- Failure threshold for readinessProbe
     failureThreshold: 3
+    # -- Success threshold for readinessProbe
     successThreshold: 1
 
   ## connector-builder-server resource requests and limits
@@ -1712,23 +1542,22 @@ connector-builder-server:
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
   ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  ##  connector-builder-server.resources.limits [object] The resources limits for the connector-builder-server container
-  ##  connector-builder-server.resources.requests [object] The requested resources for the connector-builder-server container
   resources:
     ## Example:
     ## limits:
     ##    cpu: 200m
     ##    memory: 1Gi
+    # -- The resources limits for the connector-builder-server container
     limits: {}
     ## Examples:
     ## requests:
     ##    memory: 256Mi
     ##    cpu: 250m
+    # -- The requested resources for the connector-builder-server container
     requests: {}
 
-
-  ##  connector-builder-server.log.level The log level to log at.
   log:
+    # -- The log level to log at.
     level: "INFO"
 
   env_vars: {}
@@ -1737,46 +1566,41 @@ connector-builder-server:
 
 airbyte-api-server:
   enabled: true
-  ##  airbyte-api-server.replicaCount Number of airbyte-api-server replicas
+  # -- Number of airbyte-api-server replicas
   replicaCount: 1
 
-  ##  airbyte-api-server.image.repository The repository to use for the airbyte airbyte-api-server image.
-  ##  airbyte-api-server.image.pullPolicy the pull policy to use for the airbyte airbyte-api-server image
-  ##  airbyte-api-server.image.tag The airbyte airbyte-api-server image tag. Defaults to the chart's AppVersion
   image:
+    # -- The repository to use for the airbyte airbyte-api-server image.
     repository: airbyte/airbyte-api-server
+    # -- The pull policy to use for the airbyte airbyte-api-server image
     pullPolicy: IfNotPresent
 
-  ## Configure extra options for the server containers' liveness and readiness probes
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-  ##  server.livenessProbe.enabled Enable livenessProbe on the server
-  ##  server.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
-  ##  server.livenessProbe.periodSeconds Period seconds for livenessProbe
-  ##  server.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
-  ##  server.livenessProbe.failureThreshold Failure threshold for livenessProbe
-  ##  server.livenessProbe.successThreshold Success threshold for livenessProbe
-  ##
   livenessProbe:
+    # -- Enable livenessProbe on the server
     enabled: true
+    # -- Initial delay seconds for livenessProbe
     initialDelaySeconds: 30
+    # -- Period seconds for livenessProbe
     periodSeconds: 10
+    # -- Timeout seconds for livenessProbe
     timeoutSeconds: 10
+    # -- Failure threshold for livenessProbe
     failureThreshold: 3
+    # -- Success threshold for livenessProbe
     successThreshold: 1
 
-  ##  server.readinessProbe.enabled Enable readinessProbe on the server
-  ##  server.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
-  ##  server.readinessProbe.periodSeconds Period seconds for readinessProbe
-  ##  server.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
-  ##  server.readinessProbe.failureThreshold Failure threshold for readinessProbe
-  ##  server.readinessProbe.successThreshold Success threshold for readinessProbe
-  ##
   readinessProbe:
+    # -- Enable readinessProbe on the server
     enabled: true
+    # -- Initial delay seconds for readinessProbe
     initialDelaySeconds: 10
+    # -- Period seconds for readinessProbe
     periodSeconds: 10
+    # -- Timeout seconds for readinessProbe
     timeoutSeconds: 10
+    # -- Failure threshold for readinessProbe
     failureThreshold: 3
+    # -- Success threshold for readinessProbe
     successThreshold: 1
 
   ## airbyte-api-server resource requests and limits
@@ -1785,48 +1609,45 @@ airbyte-api-server:
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
   ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  ##  airbyte-api-server.resources.limits [object] The resources limits for the airbyte-api-server container
-  ##  airbyte-api-server.resources.requests [object] The requested resources for the airbyte-api-server container
   resources:
     ## Example:
     ## limits:
     ##    cpu: 200m
     ##    memory: 1Gi
+    # -- The resources limits for the airbyte-api-server container
     limits: {}
     ## Examples:
     ## requests:
     ##    memory: 256Mi
     ##    cpu: 250m
+    ## - The requested resources for the airbyte-api-server container
     requests: {}
 
-
-  ##  airbyte-api-server.log.level The log level to log at.
   log:
+    # -- The log level to log at.
     level: "INFO"
 
   env_vars: {}
   service:
     port: 80
 
-  ## Configure the ingress resource that allows you to access the Airbyte API.
-  ## ref: http://kubernetes.io/docs/user-guide/ingress/
-  ##  webapp.ingress.enabled Set to true to enable ingress record generation
-  ##  webapp.ingress.className Specifies ingressClassName for clusters >= 1.18+
-  ##  webapp.ingress.annotations [object] Ingress annotations done as key:value pairs
-  ##  webapp.ingress.hosts The list of hostnames to be covered with this ingress record.
-  ##  webapp.ingress.tls [array] Custom ingress TLS configuration
+  # - Configure the ingress resource that allows you to access the Airbyte API, see http://kubernetes.io/docs/user-guide/ingress/
   ingress:
+    # -- Set to true to enable ingress record generation
     enabled: false
+    # -- Specifies ingressClassName for clusters >= 1.18+
     className: ""
+    # -- Ingress annotations done as key:value pairs
     annotations: {}
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
+    # -- The list of hostnames to be covered with this ingress record.
     hosts: []
     # - host: chart-example.local
     #   paths:
     #   - path: /
     #     pathType: ImplementationSpecific
-
+    # -- Custom ingress TLS configuration
     tls: []
     # - secretName: chart-example-tls
     #   hosts:
@@ -1834,6 +1655,7 @@ airbyte-api-server:
 
 keycloak:
   enabled: false
+  env_vars: {}
 
   auth:
     adminUsername: airbyteAdmin
@@ -1841,52 +1663,48 @@ keycloak:
 
 keycloak-setup:
   enabled: false
+  env_vars: {}
 
 workload-api-server:
   enabled: false
 
   bearerToken: token
 
-  ##  workload-api.replicaCount Number of airbyte-api-server replicas
+  # -- airbyte-api-server replicas
   replicaCount: 1
 
-  ##  workload-api.image.repository The repository to use for the airbyte-workload-api-server image.
-  ##  workload-api.image.pullPolicy the pull policy to use for the airbyte-workload-api-server image
-  ##  workload-api.image.tag The airbyte-workload-api-server image tag. Defaults to the chart's AppVersion
   image:
+    # -- The repository to use for the airbyte-workload-api-server image.
     repository: airbyte/workload-api-server
+    # -- The pull policy to use for the airbyte-workload-api-server image
     pullPolicy: IfNotPresent
 
-  ## Configure extra options for the server containers' liveness and readiness probes
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-  ##  workload-api.livenessProbe.enabled Enable livenessProbe on the server
-  ##  workload-api.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
-  ##  workload-api.livenessProbe.periodSeconds Period seconds for livenessProbe
-  ##  workload-api.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
-  ##  workload-api.livenessProbe.failureThreshold Failure threshold for livenessProbe
-  ##  workload-api.livenessProbe.successThreshold Success threshold for livenessProbe
-  ##
   livenessProbe:
+    # -- Enable livenessProbe on the server
     enabled: true
+    # -- Initial delay seconds for livenessProbe
     initialDelaySeconds: 30
+    # -- Period seconds for livenessProbe
     periodSeconds: 10
+    # -- Timeout seconds for livenessProbe
     timeoutSeconds: 10
+    # -- Failure threshold for livenessProbe
     failureThreshold: 3
+    # -- Success threshold for livenessProbe
     successThreshold: 1
 
-  ##  workload-api.readinessProbe.enabled Enable readinessProbe on the server
-  ##  workload-api.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
-  ##  workload-api.readinessProbe.periodSeconds Period seconds for readinessProbe
-  ##  workload-api.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
-  ##  workload-api.readinessProbe.failureThreshold Failure threshold for readinessProbe
-  ##  workload-api.readinessProbe.successThreshold Success threshold for readinessProbe
-  ##
   readinessProbe:
+    # -- Enable readinessProbe on the server
     enabled: true
+    # -- Initial delay seconds for readinessProbe
     initialDelaySeconds: 10
+    # -- Period seconds for readinessProbe
     periodSeconds: 10
+    # -- Timeout seconds for readinessProbe
     timeoutSeconds: 10
+    # -- Failure threshold for readinessProbe
     failureThreshold: 3
+    # -- Success threshold for readinessProbe
     successThreshold: 1
 
   ## airbyte-workload-api-server resource requests and limits
@@ -1895,23 +1713,22 @@ workload-api-server:
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
   ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  ##  workload-api.resources.limits [object] The resources limits for the airbyte-workload-api-server container
-  ##  workload-api.resources.requests [object] The requested resources for the airbyte-workload-api-server container
   resources:
     ## Example:
     ## limits:
     ##    cpu: 200m
     ##    memory: 1Gi
+    # -- The resources limits for the airbyte-workload-api-server container
     limits: {}
     ## Examples:
     ## requests:
     ##    memory: 256Mi
     ##    cpu: 250m
+    # -- The requested resources for the airbyte-workload-api-server container
     requests: {}
 
-
-  ##  airbyte-workload-api-server.log.level The log level to log at.
   log:
+    # -- The log level at which to log
     level: "INFO"
 
   nodeSelector: {}
@@ -1919,25 +1736,23 @@ workload-api-server:
   service:
     port: 8007
 
-  ## Configure the ingress resource that allows you to access the Airbyte Workload API.
-  ## ref: http://kubernetes.io/docs/user-guide/ingress/
-  ##  workload-api.ingress.enabled Set to true to enable ingress record generation
-  ##  workload-api.ingress.className Specifies ingressClassName for clusters >= 1.18+
-  ##  workload-api.ingress.annotations [object] Ingress annotations done as key:value pairs
-  ##  workload-api.ingress.hosts The list of hostnames to be covered with this ingress record.
-  ##  workload-api.ingress.tls [array] Custom ingress TLS configuration
+  # Configure the ingress resource that allows you to access the Airbyte Workload API, see http://kubernetes.io/docs/user-guide/ingress/
   ingress:
+    # -- Set to true to enable ingress record generation
     enabled: false
+    # -- Specifies ingressClassName for clusters >= 1.18+
     className: ""
+    # -- Ingress annotations done as key:value pairs
     annotations: {}
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
+    # -- The list of hostnames to be covered with this ingress record
     hosts: []
     # - host: chart-example.local
     #   paths:
     #   - path: /
     #     pathType: ImplementationSpecific
-
+    # -- Custom ingress TLS configuration
     tls: []
     # - secretName: chart-example-tls
     #   hosts:

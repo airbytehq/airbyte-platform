@@ -13,13 +13,14 @@ import {
   useState,
 } from "react";
 
-import { config } from "config";
 import { useGetOrCreateUser } from "core/api";
-import { UserRead } from "core/request/AirbyteClient";
+import { UserRead } from "core/api/types/AirbyteClient";
+import { config } from "core/config";
 
 const DEFAULT_KEYCLOAK_REALM = "airbyte";
 const DEFAULT_KEYCLOAK_CLIENT_ID = "airbyte-webapp";
 const KEYCLOAK_IDP_HINT = "default";
+const AIRBYTE_CLOUD_REALM = "_airbyte-cloud-users";
 
 export type KeycloakServiceContext = {
   userManager: UserManager;
@@ -28,6 +29,8 @@ export type KeycloakServiceContext = {
   changeRealmAndRedirectToSignin: (realm: string) => Promise<void>;
   // The access token is stored in a ref so we don't cause a re-render each time it changes. Instead, we can use the current ref value when we call the API.
   accessTokenRef: MutableRefObject<string | null>;
+  redirectToSignInWithGoogle: () => Promise<void>;
+  redirectToSignInWithGithub: () => Promise<void>;
 } & KeycloakAuthState;
 
 const keycloakServiceContext = createContext<KeycloakServiceContext | undefined>(undefined);
@@ -194,8 +197,22 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
   }, [userManager, getAirbyteUser, authState]);
 
   const changeRealmAndRedirectToSignin = useCallback(async (realm: string) => {
+    // This is not a security measure. The realm is publicly accessible, but we don't want users to access it via the SSO flow, because that could cause confusion.
+    if (realm === AIRBYTE_CLOUD_REALM) {
+      throw new Error("Realm inaccessible via SSO flow. Use the default login flow instead.");
+    }
     const newUserManager = createUserManager(realm);
     await newUserManager.signinRedirect({ extraQueryParams: { kc_idp_hint: KEYCLOAK_IDP_HINT } });
+  }, []);
+
+  const redirectToSignInWithGoogle = useCallback(async () => {
+    const newUserManager = createUserManager(AIRBYTE_CLOUD_REALM);
+    await newUserManager.signinRedirect({ extraQueryParams: { kc_idp_hint: "google" } });
+  }, []);
+
+  const redirectToSignInWithGithub = useCallback(async () => {
+    const newUserManager = createUserManager(AIRBYTE_CLOUD_REALM);
+    await newUserManager.signinRedirect({ extraQueryParams: { kc_idp_hint: "github" } });
   }, []);
 
   const contextValue = useMemo(() => {
@@ -207,9 +224,11 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
       isAuthenticated: authState.isAuthenticated,
       changeRealmAndRedirectToSignin,
       accessTokenRef: keycloakAccessTokenRef,
+      redirectToSignInWithGoogle,
+      redirectToSignInWithGithub,
     };
     return value;
-  }, [userManager, changeRealmAndRedirectToSignin, authState]);
+  }, [authState, userManager, changeRealmAndRedirectToSignin, redirectToSignInWithGoogle, redirectToSignInWithGithub]);
 
   return <keycloakServiceContext.Provider value={contextValue}>{children}</keycloakServiceContext.Provider>;
 };

@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 
 import { Tabs, LinkTab } from "components/ui/Tabs";
 
-import { DestinationRead, SourceRead } from "core/request/AirbyteClient";
+import { DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
 import { RoutePaths } from "pages/routePaths";
 
 enum TabTypes {

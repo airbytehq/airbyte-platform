@@ -4,15 +4,13 @@ global:
   configMapName: ""
   secretName: ""
   extraContainers: []
-  ## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+  ## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
   extraSelectorLabels: {}
   ## extraLabels [object] - use to specify own additional labels for deployment
   extraLabels: {}
   database:
     secretName: ""
     secretValue: ""
-    host: "example.com"
-    port: "5432"
 
 enabled: true
 ##  webapp.replicaCount Number of webapp replicas
@@ -249,7 +247,7 @@ env_vars: {}
 
 
 
-## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
 extraSelectorLabels: {}
 ## extraLabels [object] - use to specify own additional labels for deployment
 extraLabels: {}

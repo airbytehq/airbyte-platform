@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
@@ -10,6 +10,7 @@ import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
 import static io.airbyte.persistence.job.DefaultJobPersistence.toSqlName;
+import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -55,16 +56,20 @@ import io.airbyte.persistence.job.models.AttemptStatus;
 import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
+import io.airbyte.persistence.job.models.JobStatusSummary;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
+import io.airbyte.persistence.job.models.JobsRecordsCommitted;
 import io.airbyte.test.utils.Databases;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -104,6 +109,7 @@ class DefaultJobPersistenceTest {
   private static final JobConfig SPEC_JOB_CONFIG = new JobConfig()
       .withConfigType(ConfigType.GET_SPEC)
       .withGetSpec(new JobGetSpecConfig());
+
   private static final JobConfig CHECK_JOB_CONFIG = new JobConfig()
       .withConfigType(ConfigType.CHECK_CONNECTION_DESTINATION)
       .withGetSpec(new JobGetSpecConfig());
@@ -1208,6 +1214,39 @@ class DefaultJobPersistenceTest {
   }
 
   @Nested
+  @DisplayName("List records committed after a given timestamp for a given connection")
+  class ListRecordsCommittedByConnectionByTimestamp {
+
+    @Test
+    @DisplayName("Returns only entries after the timestamp")
+    void testListRecordsCommittedForConnectionAfterTimestamp() throws IOException {
+
+      final long jobId1 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG).orElseThrow();
+      final int attemptId1 = jobPersistence.createAttempt(jobId1, LOG_PATH);
+      jobPersistence.succeedAttempt(jobId1, attemptId1);
+
+      final Instant addTwoSeconds = NOW.plusSeconds(2);
+      when(timeSupplier.get()).thenReturn(addTwoSeconds);
+      final Instant afterNow = NOW;
+
+      final long jobId2 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG).orElseThrow();
+      final int attemptId2 = jobPersistence.createAttempt(jobId2, LOG_PATH);
+      jobPersistence.succeedAttempt(jobId2, attemptId2);
+
+      final long jobId3 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG).orElseThrow();
+      final int attemptId3 = jobPersistence.createAttempt(jobId3, LOG_PATH);
+      jobPersistence.succeedAttempt(jobId3, attemptId3);
+
+      final List<JobsRecordsCommitted> attempts = jobPersistence.listRecordsCommittedForConnectionAfterTimestamp(CONNECTION_ID, afterNow);
+
+      assertEquals(2, attempts.size());
+      assertEquals(jobId2, attempts.get(0).getJobId());
+      assertEquals(jobId3, attempts.get(1).getJobId());
+    }
+
+  }
+
+  @Nested
   @DisplayName("When enqueueing job")
   class EnqueueJob {
 
@@ -1396,7 +1435,7 @@ class DefaultJobPersistenceTest {
     @Test
     @DisplayName("Should return nothing if no sync job exists")
     void testGetLastSyncJobsForConnectionsEmpty() throws IOException {
-      final List<Job> actual = jobPersistence.getLastSyncJobForConnections(CONNECTION_IDS);
+      final var actual = jobPersistence.getLastSyncJobForConnections(CONNECTION_IDS);
 
       assertTrue(actual.isEmpty());
     }
@@ -1410,7 +1449,7 @@ class DefaultJobPersistenceTest {
       final long scope2Job1 = jobPersistence.enqueueJob(SCOPE_2, SYNC_JOB_CONFIG).orElseThrow();
       jobPersistence.succeedAttempt(scope2Job1, jobPersistence.createAttempt(scope2Job1, LOG_PATH));
 
-      final long scope3Job1 = jobPersistence.enqueueJob(SCOPE_3, SYNC_JOB_CONFIG).orElseThrow();
+      jobPersistence.enqueueJob(SCOPE_3, SYNC_JOB_CONFIG).orElseThrow();
 
       final Instant afterNow = NOW.plusSeconds(1000);
       when(timeSupplier.get()).thenReturn(afterNow);
@@ -1420,19 +1459,17 @@ class DefaultJobPersistenceTest {
 
       // should return the latest sync job even if failed
       jobPersistence.failAttempt(scope1Job2, scope1Job2AttemptNumber);
-      final Attempt scope1Job2attempt = jobPersistence.getJob(scope1Job2).getAttempts().stream().findFirst().orElseThrow();
       jobPersistence.failJob(scope1Job2);
 
       // will leave this job running
       final long scope2Job2 = jobPersistence.enqueueJob(SCOPE_2, SYNC_JOB_CONFIG).orElseThrow();
       jobPersistence.createAttempt(scope2Job2, LOG_PATH);
-      final Attempt scope2Job2attempt = jobPersistence.getJob(scope2Job2).getAttempts().stream().findFirst().orElseThrow();
 
-      final List<Job> actual = jobPersistence.getLastSyncJobForConnections(CONNECTION_IDS);
-      final List<Job> expected = new ArrayList<>();
-      expected.add(createJob(scope1Job2, SYNC_JOB_CONFIG, JobStatus.FAILED, List.of(scope1Job2attempt), afterNow.getEpochSecond(), SCOPE_1));
-      expected.add(createJob(scope2Job2, SYNC_JOB_CONFIG, JobStatus.RUNNING, List.of(scope2Job2attempt), afterNow.getEpochSecond(), SCOPE_2));
-      expected.add(createJob(scope3Job1, SYNC_JOB_CONFIG, JobStatus.PENDING, Collections.emptyList(), NOW.getEpochSecond(), SCOPE_3));
+      final List<JobStatusSummary> actual = jobPersistence.getLastSyncJobForConnections(CONNECTION_IDS);
+      final List<JobStatusSummary> expected = new ArrayList<>();
+      expected.add(new JobStatusSummary(CONNECTION_ID_1, afterNow.getEpochSecond(), JobStatus.FAILED));
+      expected.add(new JobStatusSummary(CONNECTION_ID_2, afterNow.getEpochSecond(), JobStatus.RUNNING));
+      expected.add(new JobStatusSummary(CONNECTION_ID_3, NOW.getEpochSecond(), JobStatus.PENDING));
 
       assertTrue(expected.size() == actual.size() && expected.containsAll(actual) && actual.containsAll(expected));
     }
@@ -1446,7 +1483,7 @@ class DefaultJobPersistenceTest {
       final Instant afterNow = NOW.plusSeconds(1000);
       when(timeSupplier.get()).thenReturn(afterNow);
 
-      final List<Job> actual = jobPersistence.getLastSyncJobForConnections(CONNECTION_IDS);
+      final var actual = jobPersistence.getLastSyncJobForConnections(CONNECTION_IDS);
 
       assertTrue(actual.isEmpty());
     }
@@ -1693,16 +1730,159 @@ class DefaultJobPersistenceTest {
   class GetJobCount {
 
     @Test
-    @DisplayName("Should return the total job count for the connection")
+    @DisplayName("Should return the total job count for all connections in any status")
     void testGetJobCount() throws IOException {
+      final int numJobsToCreate = 10;
+      final List<Long> ids = new ArrayList<>();
+      // create jobs for connection 1
+      for (int i = 0; i < numJobsToCreate / 2; i++) {
+        final Long jobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG).orElseThrow();
+        ids.add(jobId);
+      }
+
+      // create jobs for connection 2
+      for (int i = 0; i < numJobsToCreate / 2; i++) {
+        final Long jobId = jobPersistence.enqueueJob(CONNECTION_ID2.toString(), SPEC_JOB_CONFIG).orElseThrow();
+        ids.add(jobId);
+      }
+
+      // fail some jobs
+      for (int i = 0; i < 3; i++) {
+        jobPersistence.failJob(ids.get(i));
+      }
+
+      final Long actualJobCount =
+          jobPersistence.getJobCount(Set.of(SPEC_JOB_CONFIG.getConfigType()), null, null, null, null, null, null);
+
+      assertEquals(numJobsToCreate, actualJobCount);
+    }
+
+    @Test
+    @DisplayName("Should return the total job count for the connection")
+    void testGetJobCountWithConnectionFilter() throws IOException {
       final int numJobsToCreate = 10;
       for (int i = 0; i < numJobsToCreate; i++) {
         jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG);
       }
 
-      final Long actualJobCount = jobPersistence.getJobCount(Set.of(SPEC_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString());
+      final Long actualJobCount =
+          jobPersistence.getJobCount(Set.of(SPEC_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString(), null, null, null, null, null);
 
       assertEquals(numJobsToCreate, actualJobCount);
+    }
+
+    @Test
+    @DisplayName("Should return the total job count for the connection when filtering by failed jobs only")
+    void testGetJobCountWithFailedJobFilter() throws IOException {
+      final int numPendingJobsToCreate = 10;
+      for (int i = 0; i < numPendingJobsToCreate; i++) {
+        jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG);
+      }
+
+      final int numFailedJobsToCreate = 5;
+      for (int i = 0; i < numFailedJobsToCreate; i++) {
+        final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
+        jobPersistence.failJob(jobId);
+      }
+
+      final Long actualJobCount =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, List.of(JobStatus.FAILED), null, null, null, null);
+
+      assertEquals(numFailedJobsToCreate, actualJobCount);
+    }
+
+    @Test
+    @DisplayName("Should return the total job count for the connection when filtering by failed and cancelled jobs only")
+    void testGetJobCountWithFailedAndCancelledJobFilter() throws IOException {
+      final Long jobId1 = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
+      jobPersistence.failJob(jobId1);
+
+      final Long jobId2 = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
+      jobPersistence.cancelJob(jobId2);
+
+      jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
+
+      final Long actualJobCount =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, List.of(JobStatus.FAILED, JobStatus.CANCELLED), null, null,
+              null, null);
+
+      assertEquals(2, actualJobCount);
+    }
+
+    @Test
+    @DisplayName("Should return the total job count filtering by createdAtStart")
+    void testGetJobCountWithCreatedAtStart() throws IOException {
+      final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
+      final Job job = jobPersistence.getJob(jobId);
+      final Long jobCreatedAtSeconds = job.getCreatedAtInSecond();
+
+      final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobCreatedAtSeconds)), ZoneOffset.UTC).minusHours(1);
+      final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobCreatedAtSeconds)), ZoneOffset.UTC).plusHours(1);
+
+      final Long numJobsCreatedAtStartOneHourEarlier =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, oneHourEarlier, null, null, null);
+      final Long numJobsCreatedAtStartOneHourLater =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, oneHourLater, null, null, null);
+
+      assertEquals(1, numJobsCreatedAtStartOneHourEarlier);
+      assertEquals(0, numJobsCreatedAtStartOneHourLater);
+    }
+
+    @Test
+    @DisplayName("Should return the total job count filtering by createdAtEnd")
+    void testGetJobCountCreatedAtEnd() throws IOException {
+      final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
+      final Job job = jobPersistence.getJob(jobId);
+      final Long jobCreatedAtSeconds = job.getCreatedAtInSecond();
+
+      final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobCreatedAtSeconds), ZoneOffset.UTC).minusHours(1);
+      final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobCreatedAtSeconds), ZoneOffset.UTC).plusHours(1);
+
+      final Long numJobsCreatedAtEndOneHourEarlier =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, null, oneHourEarlier, null, null);
+      final Long numJobsCreatedAtEndOneHourLater =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, null, oneHourLater, null, null);
+
+      assertEquals(0, numJobsCreatedAtEndOneHourEarlier);
+      assertEquals(1, numJobsCreatedAtEndOneHourLater);
+    }
+
+    @Test
+    @DisplayName("Should return the total job count filtering by updatedAtStart")
+    void testGetJobCountWithUpdatedAtStart() throws IOException {
+      final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
+      final Job job = jobPersistence.getJob(jobId);
+      final Long jobUpdatedAtSeconds = job.getUpdatedAtInSecond();
+
+      final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobUpdatedAtSeconds)), ZoneOffset.UTC).minusHours(1);
+      final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobUpdatedAtSeconds)), ZoneOffset.UTC).plusHours(1);
+
+      final Long numJobsUpdatedAtStartOneHourEarlier =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, null, null, oneHourEarlier, null);
+      final Long numJobsUpdatedAtStartOneDayLater =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, null, null, oneHourLater, null);
+
+      assertEquals(1, numJobsUpdatedAtStartOneHourEarlier);
+      assertEquals(0, numJobsUpdatedAtStartOneDayLater);
+    }
+
+    @Test
+    @DisplayName("Should return the total job count filtering by updatedAtEnd")
+    void testGetJobCountUpdatedAtEnd() throws IOException {
+      final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG).orElseThrow();
+      final Job job = jobPersistence.getJob(jobId);
+      final Long jobUpdatedAtSeconds = job.getUpdatedAtInSecond();
+
+      final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobUpdatedAtSeconds)), ZoneOffset.UTC).minusHours(1);
+      final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobUpdatedAtSeconds)), ZoneOffset.UTC).plusHours(1);
+
+      final Long numJobsUpdatedAtEndOneHourEarlier =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, null, null, null, oneHourEarlier);
+      final Long numJobsUpdatedAtEndOneHourLater =
+          jobPersistence.getJobCount(Set.of(CHECK_JOB_CONFIG.getConfigType()), SCOPE, null, null, null, null, oneHourLater);
+
+      assertEquals(0, numJobsUpdatedAtEndOneHourEarlier);
+      assertEquals(1, numJobsUpdatedAtEndOneHourLater);
     }
 
     @Test
@@ -1714,7 +1894,8 @@ class DefaultJobPersistenceTest {
       jobPersistence.enqueueJob(otherConnectionId1.toString(), SPEC_JOB_CONFIG);
       jobPersistence.enqueueJob(otherConnectionId2.toString(), SPEC_JOB_CONFIG);
 
-      final Long actualJobCount = jobPersistence.getJobCount(Set.of(SPEC_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString());
+      final Long actualJobCount =
+          jobPersistence.getJobCount(Set.of(SPEC_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString(), null, null, null, null, null);
 
       assertEquals(0, actualJobCount);
     }
@@ -1854,8 +2035,132 @@ class DefaultJobPersistenceTest {
     }
 
     @Test
-    @DisplayName("Should list jobs including the specified job")
+    @DisplayName("Should list jobs across all connections in any status")
+    void testListJobsWithNoFilters() throws IOException {
+      final int numJobsToCreate = 10;
+      final List<Long> ids = new ArrayList<>();
+      for (int i = 0; i < numJobsToCreate / 2; i++) {
+        final Long connection1JobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG).orElseThrow();
+        ids.add(connection1JobId);
+      }
+
+      for (int i = 0; i < numJobsToCreate / 2; i++) {
+        final Long connection2JobId = jobPersistence.enqueueJob(CONNECTION_ID2.toString(), SPEC_JOB_CONFIG).orElseThrow();
+        ids.add(connection2JobId);
+      }
+
+      // fail some jobs
+      for (int i = 0; i < 3; i++) {
+        jobPersistence.failJob(ids.get(i));
+      }
+
+      final String connectionId = null;
+      final List<Job> jobs = jobPersistence.listJobs(
+          Set.of(SPEC_JOB_CONFIG.getConfigType()),
+          connectionId,
+          9999,
+          0,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null);
+
+      assertEquals(new HashSet<>(ids), jobs.stream().map(Job::getId).collect(Collectors.toSet()));
+    }
+
+    @Test
+    @DisplayName("Should list jobs for one connection only")
+    void testListJobsWithConnectionFilters() throws IOException {
+      final int numJobsToCreate = 10;
+      final Set<Long> idsConnection1 = new HashSet<>();
+      for (int i = 0; i < numJobsToCreate / 2; i++) {
+        final Long connection1JobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG).orElseThrow();
+        idsConnection1.add(connection1JobId);
+      }
+
+      for (int i = 0; i < numJobsToCreate / 2; i++) {
+        jobPersistence.enqueueJob(CONNECTION_ID2.toString(), SPEC_JOB_CONFIG).orElseThrow();
+      }
+
+      final List<Job> jobs = jobPersistence.listJobs(
+          Set.of(SPEC_JOB_CONFIG.getConfigType()),
+          CONNECTION_ID.toString(),
+          9999,
+          0,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null);
+
+      assertEquals(idsConnection1, jobs.stream().map(Job::getId).collect(Collectors.toSet()));
+    }
+
+    @Test
+    @DisplayName("Should list jobs filtering by failed and cancelled jobs")
+    void testListJobWithFailedAndCancelledJobFilter() throws IOException {
+      final Long jobId1 = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG).orElseThrow();
+      jobPersistence.failJob(jobId1);
+
+      final Long jobId2 = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG).orElseThrow();
+      jobPersistence.cancelJob(jobId2);
+
+      final Long jobId3 = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG).orElseThrow();
+
+      final List<Job> jobs = jobPersistence.listJobs(
+          Set.of(SPEC_JOB_CONFIG.getConfigType()),
+          CONNECTION_ID.toString(),
+          9999,
+          0,
+          List.of(JobStatus.FAILED, JobStatus.CANCELLED),
+          null,
+          null,
+          null,
+          null,
+          null,
+          null);
+
+      final Set<Long> actualIds = jobs.stream().map(Job::getId).collect(Collectors.toSet());
+      assertEquals(2, actualIds.size());
+      assertFalse(actualIds.contains(jobId3));
+      assertTrue(actualIds.contains(jobId1));
+      assertTrue(actualIds.contains(jobId2));
+    }
+
+    @Test
+    @DisplayName("Should list jobs including the specified job across all connections")
     void testListJobsIncludingId() throws IOException {
+      final List<Long> ids = new ArrayList<>();
+      for (int i = 0; i < 100; i++) {
+        // This makes each enqueued job have an increasingly higher createdAt time
+        when(timeSupplier.get()).thenReturn(Instant.ofEpochSecond(i));
+        // Alternate between spec and check job config types to verify that both config types are fetched
+        // properly
+        final JobConfig jobConfig = i % 2 == 0 ? SPEC_JOB_CONFIG : CHECK_JOB_CONFIG;
+        // spread across different connections
+        final String connectionId = i % 4 == 0 ? CONNECTION_ID.toString() : CONNECTION_ID2.toString();
+        final long jobId = jobPersistence.enqueueJob(connectionId, jobConfig).orElseThrow();
+        ids.add(jobId);
+        // also create an attempt for each job to verify that joining with attempts does not cause failures
+        jobPersistence.createAttempt(jobId, LOG_PATH);
+      }
+
+      final int includingIdIndex = 90;
+      final int pageSize = 25;
+      final List<Job> actualList = jobPersistence.listJobsIncludingId(Set.of(SPEC_JOB_CONFIG.getConfigType(), CHECK_JOB_CONFIG.getConfigType()),
+          null, ids.get(includingIdIndex), pageSize);
+      final List<Long> expectedJobIds = Lists.reverse(ids.subList(ids.size() - pageSize, ids.size()));
+      assertEquals(expectedJobIds, actualList.stream().map(Job::getId).toList());
+    }
+
+    @Test
+    @DisplayName("Should list jobs including the specified job")
+    void testListJobsIncludingIdWithConnectionFilter() throws IOException {
       final List<Long> ids = new ArrayList<>();
       for (int i = 0; i < 100; i++) {
         // This makes each enqueued job have an increasingly higher createdAt time

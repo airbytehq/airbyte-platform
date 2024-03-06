@@ -3,18 +3,12 @@
 ##  secretName Overrides the secrate name with with credentials to S3 Bucket and logging
 ##  database.secretName Name of database secret
 ##  database.secretValue Value of database password key stored in secret
-##  database.host Hostname of database
-##  database.port Database port
 global:
-  
   serviceAccountName: &service-account-name "airbyte-admin"
-  
   secretName: ""
   database:
     secretName: ""
     secretValue: ""
-    host: "example.com"
-    port: "5432"
   logs:
     ##  logs.accessKey.password Logs Access Key
     ##  logs.accessKey.existingSecret

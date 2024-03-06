@@ -13,6 +13,10 @@
     border: none;
     color: colors.$blue-500;
   }
+
+  &:disabled {
+    background: none;
+  }
 }
 
 .selectedOption {

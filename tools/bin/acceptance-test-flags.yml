@@ -7,16 +7,12 @@ flags:
     serve: true
   - name: connectors.versionOverridesEnabled
     serve: true
-  - name: billing.newTrialPolicy
-    serve: false
   - name: heartbeat-max-seconds-between-messages
     serve: "10800"
   - name: use-new-notification-workflow
     serve: false
   - name: validation.removeValidationLimit
     serve: false
-  - name: autopropagation.enabled
-    serve: true
   - name: autopropagate-new-streams.enabled
     serve: true
   - name: connection.columnSelection
@@ -27,3 +23,18 @@ flags:
     serve: true
   - name: platform.remove-large-sync-inputs
     serve: true
+  - name: platform.use-workload-api
+    serve: false
+    context:
+      - type: workspace
+        include:
+          - 3d2985a0-a412-45f4-9124-e15800b739be
+          - 480e631f-1c88-4c2d-9081-855981018205
+        serve: true
+  - name: platform.use-workload-output-doc-store
+    serve: false
+    context:
+      - type: workspace
+        include:
+          - 480e631f-1c88-4c2d-9081-855981018205
+        serve: true

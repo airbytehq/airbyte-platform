@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.helper;
@@ -55,6 +55,7 @@ public class FailureHelper {
 
   private static final String WORKFLOW_TYPE_SYNC = "SyncWorkflow";
   private static final String ACTIVITY_TYPE_REPLICATE = "Replicate";
+  private static final String ACTIVITY_TYPE_REPLICATEV2 = "ReplicateV2";
   private static final String ACTIVITY_TYPE_PERSIST = "Persist";
   private static final String ACTIVITY_TYPE_NORMALIZE = "Normalize";
   private static final String ACTIVITY_TYPE_DBT_RUN = "Run";
@@ -381,7 +382,7 @@ public class FailureHelper {
                                                                    final Throwable t,
                                                                    final Long jobId,
                                                                    final Integer attemptNumber) {
-    if (WORKFLOW_TYPE_SYNC.equals(workflowType) && ACTIVITY_TYPE_REPLICATE.equals(activityType)) {
+    if (WORKFLOW_TYPE_SYNC.equals(workflowType) && (ACTIVITY_TYPE_REPLICATE.equals(activityType) || ACTIVITY_TYPE_REPLICATEV2.equals(activityType))) {
       return replicationFailure(t, jobId, attemptNumber);
     } else if (WORKFLOW_TYPE_SYNC.equals(workflowType) && ACTIVITY_TYPE_PERSIST.equals(activityType)) {
       return persistenceFailure(t, jobId, attemptNumber);
@@ -407,6 +408,20 @@ public class FailureHelper {
         exceptionChainContains(t, SizeLimitException.class)
             ? "Size limit exceeded, please check your configuration, this is often related to a high number of streams."
             : "Something went wrong within the airbyte platform";
+    return genericFailure(t, jobId, attemptNumber)
+        .withFailureOrigin(FailureOrigin.AIRBYTE_PLATFORM)
+        .withExternalMessage(externalMessage);
+  }
+
+  /**
+   * Create generic platform failure.
+   *
+   * @param t throwable that cause the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
+  public static FailureReason platformFailure(final Throwable t, final Long jobId, final Integer attemptNumber, final String externalMessage) {
     return genericFailure(t, jobId, attemptNumber)
         .withFailureOrigin(FailureOrigin.AIRBYTE_PLATFORM)
         .withExternalMessage(externalMessage);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -11,25 +11,32 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
+import io.airbyte.api.model.generated.ResolveActorDefinitionVersionRequestBody;
+import io.airbyte.api.model.generated.ResolveActorDefinitionVersionResponse;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
-import io.airbyte.config.ActorDefinitionBreakingChange;
+import io.airbyte.commons.server.errors.NotFoundException;
+import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
+import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.services.ActorDefinitionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.time.LocalDate;
-import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * ActorDefinitionVersionHandler. Javadocs suppressed because api docs should be used as source of
@@ -39,39 +46,76 @@ import java.util.Objects;
 @Singleton
 public class ActorDefinitionVersionHandler {
 
-  private final ConfigRepository configRepository;
+  private final SourceService sourceService;
+  private final DestinationService destinationService;
+  private final ActorDefinitionService actorDefinitionService;
+  private final ActorDefinitionVersionResolver actorDefinitionVersionResolver;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
 
   @Inject
-  public ActorDefinitionVersionHandler(final ConfigRepository configRepository,
-                                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
-    this.configRepository = configRepository;
+  public ActorDefinitionVersionHandler(final SourceService sourceService,
+                                       final DestinationService destinationService,
+                                       final ActorDefinitionService actorDefinitionService,
+                                       final ActorDefinitionVersionResolver actorDefinitionVersionResolver,
+                                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                                       final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper) {
+    this.sourceService = sourceService;
+    this.destinationService = destinationService;
+    this.actorDefinitionService = actorDefinitionService;
+    this.actorDefinitionVersionResolver = actorDefinitionVersionResolver;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
-  }
-
-  private LocalDate getMinBreakingChangeUpgradeDeadline(final List<ActorDefinitionBreakingChange> breakingChanges) {
-    return breakingChanges.stream()
-        .map(ActorDefinitionBreakingChange::getUpgradeDeadline)
-        .map(LocalDate::parse)
-        .min(LocalDate::compareTo)
-        .orElse(null);
+    this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
   }
 
   public ActorDefinitionVersionRead getActorDefinitionVersionForSourceId(final SourceIdRequestBody sourceIdRequestBody)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    final SourceConnection sourceConnection = configRepository.getSourceConnection(sourceIdRequestBody.getSourceId());
-    final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId());
+      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException, ConfigNotFoundException {
+    final SourceConnection sourceConnection = sourceService.getSourceConnection(sourceIdRequestBody.getSourceId());
+    final StandardSourceDefinition sourceDefinition = sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId());
     final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus =
         actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(sourceDefinition, sourceConnection.getWorkspaceId(),
             sourceConnection.getSourceId());
     return createActorDefinitionVersionRead(versionWithOverrideStatus);
   }
 
+  private ActorDefinitionVersion getDefaultVersion(final ActorType actorType, final UUID actorDefinitionId)
+      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    return switch (actorType) {
+      case SOURCE -> actorDefinitionService
+          .getActorDefinitionVersion(sourceService.getStandardSourceDefinition(actorDefinitionId).getDefaultVersionId());
+      case DESTINATION -> actorDefinitionService.getActorDefinitionVersion(
+          destinationService.getStandardDestinationDefinition(actorDefinitionId).getDefaultVersionId());
+    };
+  }
+
+  public ResolveActorDefinitionVersionResponse resolveActorDefinitionVersionByTag(final ResolveActorDefinitionVersionRequestBody resolveVersionReq)
+      throws JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, IOException {
+    final UUID actorDefinitionId = resolveVersionReq.getActorDefinitionId();
+    final ActorType actorType = ApiPojoConverters.toInternalActorType(resolveVersionReq.getActorType());
+    final ActorDefinitionVersion defaultVersion = getDefaultVersion(actorType, actorDefinitionId);
+
+    final Optional<ActorDefinitionVersion> optResolvedVersion = actorDefinitionVersionResolver.resolveVersionForTag(
+        actorDefinitionId,
+        actorType,
+        defaultVersion.getDockerRepository(),
+        resolveVersionReq.getDockerImageTag());
+
+    if (optResolvedVersion.isEmpty()) {
+      throw new NotFoundException(String.format("Could not find actor definition version for actor definition id %s and tag %s",
+          actorDefinitionId, resolveVersionReq.getDockerImageTag()));
+    }
+
+    final ActorDefinitionVersion resolvedVersion = optResolvedVersion.get();
+
+    return new ResolveActorDefinitionVersionResponse().versionId(resolvedVersion.getVersionId()).dockerImageTag(resolvedVersion.getDockerImageTag())
+        .dockerRepository(resolvedVersion.getDockerRepository());
+  }
+
   public ActorDefinitionVersionRead getActorDefinitionVersionForDestinationId(final DestinationIdRequestBody destinationIdRequestBody)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    final DestinationConnection destinationConnection = configRepository.getDestinationConnection(destinationIdRequestBody.getDestinationId());
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    final DestinationConnection destinationConnection = destinationService.getDestinationConnection(destinationIdRequestBody.getDestinationId());
     final StandardDestinationDefinition destinationDefinition =
-        configRepository.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId());
+        destinationService.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId());
     final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus =
         actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(destinationDefinition,
             destinationConnection.getWorkspaceId(), destinationConnection.getDestinationId());
@@ -89,16 +133,11 @@ public class ActorDefinitionVersionHandler {
         .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(actorDefinitionVersion.getNormalizationConfig()))
         .supportState(toApiSupportState(actorDefinitionVersion.getSupportState()))
         .supportLevel(toApiSupportLevel(actorDefinitionVersion.getSupportLevel()))
-        .isOverrideApplied(versionWithOverrideStatus.isOverrideApplied());
+        .isVersionOverrideApplied(versionWithOverrideStatus.isOverrideApplied());
 
-    final List<ActorDefinitionBreakingChange> breakingChanges = configRepository.listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion);
-
-    if (!breakingChanges.isEmpty()) {
-      final LocalDate minUpgradeDeadline = getMinBreakingChangeUpgradeDeadline(breakingChanges);
-      advRead.breakingChanges(new ActorDefinitionVersionBreakingChanges()
-          .upcomingBreakingChanges(breakingChanges.stream().map(ApiPojoConverters::toApiBreakingChange).toList())
-          .minUpgradeDeadline(minUpgradeDeadline));
-    }
+    final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =
+        actorDefinitionHandlerHelper.getVersionBreakingChanges(actorDefinitionVersion);
+    breakingChanges.ifPresent(advRead::setBreakingChanges);
 
     return advRead;
   }

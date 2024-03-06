@@ -1,85 +1,33 @@
-import React, { useEffect } from "react";
-import { FormattedMessage, useIntl } from "react-intl";
-import * as yup from "yup";
-import { AnySchema } from "yup";
+import React from "react";
+import { FormattedMessage } from "react-intl";
 
-import { Form, FormControl } from "components/forms";
-import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
-import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
+import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
 
-import { useCurrentWorkspace, useUpdateOrganization, useOrganization } from "core/api";
-import { OrganizationUpdateRequestBody } from "core/request/AirbyteClient";
-import { useIntent } from "core/utils/rbac";
-import { useNotificationService } from "hooks/services/Notification";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { FeatureItem, useFeature } from "core/services/features";
 
-const ORGANIZATION_UPDATE_NOTIFICATION_ID = "organization-update-notification";
-
-const organizationValidationSchema = yup.object().shape<Record<keyof OrganizationFormValues, AnySchema>>({
-  organizationName: yup.string().trim().required("form.empty.error"),
-});
-
-type OrganizationFormValues = Pick<OrganizationUpdateRequestBody, "organizationName">;
+import { OrganizationAccessManagementSection } from "./pages/AccessManagementPage/OrganizationAccessManagementSection";
+import { UpdateOrganizationSettingsForm } from "./UpdateOrganizationSettingsForm";
 
 export const GeneralOrganizationSettingsPage: React.FC = () => {
-  const { organizationId } = useCurrentWorkspace();
+  useTrackPage(PageTrackingCodes.SETTINGS_ORGANIZATION);
+  const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
 
   return (
-    <Card title={<FormattedMessage id="settings.generalSettings" />}>
-      <Box p="xl">{organizationId && <OrganizationSettingsForm organizationId={organizationId} />}</Box>
-    </Card>
-  );
-};
-
-const OrganizationSettingsForm = ({ organizationId }: { organizationId: string }) => {
-  const organization = useOrganization(organizationId);
-  const { mutateAsync: updateOrganization } = useUpdateOrganization();
-
-  const { formatMessage } = useIntl();
-  const { registerNotification, unregisterNotificationById } = useNotificationService();
-  const canUpdateOrganization = useIntent("UpdateOrganization", { organizationId });
-
-  const onSubmit = async (values: OrganizationFormValues) => {
-    await updateOrganization({
-      organizationId,
-      ...values,
-    });
-  };
-
-  useEffect(
-    () => () => {
-      unregisterNotificationById(ORGANIZATION_UPDATE_NOTIFICATION_ID);
-    },
-    [unregisterNotificationById]
-  );
-
-  return (
-    <Form<OrganizationFormValues>
-      onSubmit={onSubmit}
-      onSuccess={() => {
-        registerNotification({
-          id: ORGANIZATION_UPDATE_NOTIFICATION_ID,
-          text: formatMessage({ id: "form.changesSaved" }),
-          type: "success",
-        });
-      }}
-      onError={() => {
-        registerNotification({
-          id: ORGANIZATION_UPDATE_NOTIFICATION_ID,
-          text: formatMessage({ id: "form.someError" }),
-          type: "error",
-        });
-      }}
-      schema={organizationValidationSchema}
-      defaultValues={{ organizationName: organization.organizationName }}
-      disabled={!canUpdateOrganization}
-    >
-      <FormControl<OrganizationFormValues>
-        label={formatMessage({ id: "settings.organizationSettings.organizationName" })}
-        fieldType="input"
-        name="organizationName"
-      />
-      {canUpdateOrganization && <FormSubmissionButtons submitKey="form.saveChanges" />}
-    </Form>
+    <FlexContainer direction="column" gap="xl">
+      <Heading as="h2" size="md">
+        <FormattedMessage id="settings.members" />
+      </Heading>
+      <Card>
+        <UpdateOrganizationSettingsForm />
+      </Card>
+      {isAccessManagementEnabled && (
+        <Card>
+          <OrganizationAccessManagementSection />
+        </Card>
+      )}
+    </FlexContainer>
   );
 };

@@ -4,9 +4,10 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { Switch } from "components/ui/Switch";
 
-import { useSyncConnection, useUpdateConnection } from "core/api";
+import { useCurrentWorkspace, useSyncConnection, useUpdateConnection } from "core/api";
 import { ConnectionStatus, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { Action, Namespace, getFrequencyFromScheduleData, useAnalyticsService } from "core/services/analytics";
+import { useIntent } from "core/utils/rbac";
 
 interface StatusCellControlProps {
   hasBreakingChange?: boolean;
@@ -28,6 +29,10 @@ export const StatusCellControl: React.FC<StatusCellControlProps> = ({
   const analyticsService = useAnalyticsService();
   const { mutateAsync: updateConnection, isLoading } = useUpdateConnection();
   const { mutateAsync: syncConnection, isLoading: isSyncStarting } = useSyncConnection();
+
+  const { workspaceId } = useCurrentWorkspace();
+  const canEditConnection = useIntent("EditConnection", { workspaceId });
+  const canSyncConnection = useIntent("SyncConnection", { workspaceId });
 
   const onRunManualSync = (event: React.SyntheticEvent) => {
     event.stopPropagation();
@@ -66,7 +71,7 @@ export const StatusCellControl: React.FC<StatusCellControlProps> = ({
         <Switch
           checked={enabled}
           onChange={onSwitchChange}
-          disabled={hasBreakingChange}
+          disabled={hasBreakingChange || !canEditConnection}
           loading={isLoading}
           data-testid="enable-connection-switch"
         />
@@ -78,7 +83,7 @@ export const StatusCellControl: React.FC<StatusCellControlProps> = ({
     <Button
       onClick={onRunManualSync}
       isLoading={isSyncStarting || isSyncing}
-      disabled={!enabled || hasBreakingChange || isSyncStarting || isSyncing}
+      disabled={!enabled || hasBreakingChange || isSyncStarting || isSyncing || !canSyncConnection}
       data-testid="manual-sync-button"
     >
       <FormattedMessage id="connection.startSync" />

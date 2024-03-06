@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.client
@@ -8,6 +8,7 @@ import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.ClaimResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadClaimRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
+import io.airbyte.workload.api.client.model.generated.WorkloadLaunchedRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadRunningRequest
 import io.airbyte.workload.launcher.pipeline.stages.StageName
 import io.airbyte.workload.launcher.pipeline.stages.model.StageError
@@ -37,15 +38,21 @@ class WorkloadApiClient(
   }
 
   fun updateStatusToRunning(workloadId: String) {
-    val workloadRunningRequest = WorkloadRunningRequest(workloadId)
+    val request = WorkloadRunningRequest(workloadId)
     logger.info { "Attempting to update workload: $workloadId to RUNNING." }
-    workloadApiRaw.workloadRunning(workloadRunningRequest)
+    workloadApiRaw.workloadRunning(request)
   }
 
   fun updateStatusToFailed(workloadId: String) {
-    val workloadFailureRequest = WorkloadFailureRequest(workloadId)
+    val request = WorkloadFailureRequest(workloadId)
     logger.info { "Attempting to update workload: $workloadId to FAILED." }
-    workloadApiRaw.workloadFailure(workloadFailureRequest)
+    workloadApiRaw.workloadFailure(request)
+  }
+
+  fun updateStatusToLaunched(workloadId: String) {
+    val request = WorkloadLaunchedRequest(workloadId)
+    logger.info { "Attempting to update workload: $workloadId to LAUNCHED." }
+    workloadApiRaw.workloadLaunched(request)
   }
 
   fun claim(workloadId: String): Boolean {
@@ -59,10 +66,11 @@ class WorkloadApiClient(
             dataplaneId,
           ),
         )
+      logger.info { "Claimed: ${resp.claimed} for $workloadId via API for $dataplaneId" }
 
       result = resp.claimed
     } catch (e: Exception) {
-      logger.error(e) { "Error claiming workload $workloadId via API" }
+      logger.error(e) { "Error claiming workload $workloadId via API for $dataplaneId" }
     }
 
     return result

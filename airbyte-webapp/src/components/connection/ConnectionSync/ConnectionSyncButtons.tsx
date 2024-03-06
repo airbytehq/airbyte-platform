@@ -3,12 +3,15 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button, ButtonVariant } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
+import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 
+import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
-import styles from "./ConnectionSyncButtons.module.scss";
 import { useConnectionSyncContext } from "./ConnectionSyncContext";
+import { useConnectionStatus } from "../ConnectionStatus/useConnectionStatus";
 
 interface ConnectionSyncButtonsProps {
   buttonText: React.ReactNode;
@@ -34,9 +37,12 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
     connectionEnabled,
     resetStreams,
     resetStarting,
-    jobSyncRunning,
     jobResetRunning,
   } = useConnectionSyncContext();
+  const { mode, connection } = useConnectionFormService();
+  const isReadOnly = mode === "readonly";
+
+  const connectionStatus = useConnectionStatus(connection.connectionId ?? "");
 
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
@@ -63,8 +69,8 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
   };
 
   return (
-    <div className={styles.buttons}>
-      {!jobSyncRunning && !jobResetRunning && (
+    <FlexContainer gap="sm">
+      {!connectionStatus.isRunning && (
         <Button
           onClick={syncConnection}
           icon={syncStarting ? undefined : <Icon type="sync" />}
@@ -72,15 +78,15 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
           className={buttonClassName}
           isLoading={syncStarting}
           data-testid="manual-sync-button"
-          disabled={syncStarting || resetStarting || !connectionEnabled}
+          disabled={syncStarting || resetStarting || !connectionEnabled || isReadOnly}
         >
           {buttonText}
         </Button>
       )}
-      {(jobSyncRunning || jobResetRunning) && (
+      {connectionStatus.isRunning && cancelJob && (
         <Button
           onClick={cancelJob}
-          disabled={syncStarting || resetStarting}
+          disabled={syncStarting || resetStarting || isReadOnly}
           isLoading={cancelStarting}
           variant="danger"
           className={buttonClassName}
@@ -97,7 +103,8 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
           {
             displayName: formatMessage({ id: "connection.resetData" }),
             value: ContextMenuOptions.ResetData,
-            disabled: jobSyncRunning || jobResetRunning,
+            disabled:
+              connectionStatus.isRunning || connection.status !== ConnectionStatus.active || mode === "readonly",
             "data-testid": "reset-data-dropdown-option",
           },
         ]}
@@ -105,6 +112,6 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
       >
         {() => <Button variant="clear" icon={<Icon type="options" />} />}
       </DropdownMenu>
-    </div>
+    </FlexContainer>
   );
 };

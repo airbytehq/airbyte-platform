@@ -15,3 +15,12 @@ airbyte:
           threshold-minutes: 390 # 6.5 hours
         very-low-frequency-bucket:
           jitter-amount-minutes: 25 # anything greater than every 6.5 hours has +/- 25 minutes of jitter
+  cloud:
+    storage:
+      type: ${STORAGE_TYPE:GCS}
+      bucket:
+        log: ${STORAGE_BUCKET_LOG:log}
+        state: ${STORAGE_BUCKET_STATE:state}
+        workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT:workload-output}
+      gcs:
+        application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:not-blank}

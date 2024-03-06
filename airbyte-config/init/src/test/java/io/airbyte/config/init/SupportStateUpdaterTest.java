@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.init;
@@ -23,8 +23,10 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.init.BreakingChangeNotificationHelper.BreakingChangeNotificationData;
 import io.airbyte.config.init.SupportStateUpdater.SupportStateUpdate;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.ActorDefinitionService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.NotifyBreakingChangesOnSupportStateUpdate;
 import io.airbyte.featureflag.TestClient;
@@ -47,7 +49,9 @@ class SupportStateUpdaterTest {
   private static final String V2_0_0 = "2.0.0";
   private static final String V3_0_0 = "3.0.0";
 
-  private ConfigRepository mConfigRepository;
+  private ActorDefinitionService mActorDefinitionService;
+  private SourceService mSourceService;
+  private DestinationService mDestinationService;
   private ActorDefinitionVersionHelper mActorDefinitionVersionHelper;
   private BreakingChangeNotificationHelper mBreakingChangeNotificationHelper;
 
@@ -55,14 +59,17 @@ class SupportStateUpdaterTest {
 
   @BeforeEach
   void setup() {
-    mConfigRepository = mock(ConfigRepository.class);
+    mActorDefinitionService = mock(ActorDefinitionService.class);
+    mSourceService = mock(SourceService.class);
+    mDestinationService = mock(DestinationService.class);
     mBreakingChangeNotificationHelper = mock(BreakingChangeNotificationHelper.class);
     mActorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
 
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
     when(featureFlagClient.boolVariation(NotifyBreakingChangesOnSupportStateUpdate.INSTANCE, new Workspace(ANONYMOUS)))
         .thenReturn(true);
-    supportStateUpdater = new SupportStateUpdater(mConfigRepository, DeploymentMode.CLOUD, mActorDefinitionVersionHelper,
+    supportStateUpdater = new SupportStateUpdater(mActorDefinitionService, mSourceService, mDestinationService,
+        DeploymentMode.CLOUD, mActorDefinitionVersionHelper,
         mBreakingChangeNotificationHelper, featureFlagClient);
   }
 
@@ -87,17 +94,18 @@ class SupportStateUpdaterTest {
   @Test
   void testUpdateSupportStatesForCustomDestinationDefinitionNoOp() throws ConfigNotFoundException, IOException {
     supportStateUpdater.updateSupportStatesForDestinationDefinition(new StandardDestinationDefinition().withCustom(true));
-    verifyNoInteractions(mConfigRepository);
+    verifyNoInteractions(mActorDefinitionService, mSourceService, mDestinationService);
   }
 
   @Test
   void testUpdateSupportStatesForCustomSourceDefinitionNoOp() throws ConfigNotFoundException, IOException {
     supportStateUpdater.updateSupportStatesForSourceDefinition(new StandardSourceDefinition().withCustom(true));
-    verifyNoInteractions(mConfigRepository);
+    verifyNoInteractions(mActorDefinitionService, mSourceService, mDestinationService);
   }
 
   @Test
-  void testUpdateSupportStatesForDestinationDefinition() throws ConfigNotFoundException, IOException {
+  void testUpdateSupportStatesForDestinationDefinition()
+      throws IOException, ConfigNotFoundException {
     final ActorDefinitionVersion ADV_0_1_0 = createActorDefinitionVersion(V0_1_0);
     final ActorDefinitionVersion ADV_1_0_0 = createActorDefinitionVersion(V1_0_0);
     final ActorDefinitionBreakingChange BC_1_0_0 = createBreakingChange(V1_0_0, "2020-01-01");
@@ -106,25 +114,25 @@ class SupportStateUpdaterTest {
         .withDefaultVersionId(ADV_1_0_0.getVersionId())
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID);
 
-    when(mConfigRepository.getActorDefinitionVersion(ADV_1_0_0.getVersionId()))
+    when(mActorDefinitionService.getActorDefinitionVersion(ADV_1_0_0.getVersionId()))
         .thenReturn(ADV_1_0_0);
-    when(mConfigRepository.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID))
+    when(mActorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID))
         .thenReturn(List.of(BC_1_0_0));
-    when(mConfigRepository.listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID))
+    when(mActorDefinitionService.listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID))
         .thenReturn(List.of(ADV_0_1_0, ADV_1_0_0));
 
     supportStateUpdater.updateSupportStatesForDestinationDefinition(destinationDefinition);
 
-    verify(mConfigRepository).getActorDefinitionVersion(ADV_1_0_0.getVersionId());
-    verify(mConfigRepository).listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID);
-    verify(mConfigRepository).listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID);
-    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(ADV_0_1_0.getVersionId()), SupportState.UNSUPPORTED);
-    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(ADV_1_0_0.getVersionId()), SupportState.SUPPORTED);
-    verifyNoMoreInteractions(mConfigRepository);
+    verify(mActorDefinitionService).getActorDefinitionVersion(ADV_1_0_0.getVersionId());
+    verify(mActorDefinitionService).listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID);
+    verify(mActorDefinitionService).listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID);
+    verify(mActorDefinitionService).setActorDefinitionVersionSupportStates(List.of(ADV_0_1_0.getVersionId()), SupportState.UNSUPPORTED);
+    verify(mActorDefinitionService).setActorDefinitionVersionSupportStates(List.of(ADV_1_0_0.getVersionId()), SupportState.SUPPORTED);
+    verifyNoMoreInteractions(mActorDefinitionService, mSourceService, mDestinationService);
   }
 
   @Test
-  void testUpdateSupportStatesForSourceDefinition() throws ConfigNotFoundException, IOException {
+  void testUpdateSupportStatesForSourceDefinition() throws IOException, ConfigNotFoundException {
     final ActorDefinitionVersion ADV_0_1_0 = createActorDefinitionVersion(V0_1_0);
     final ActorDefinitionVersion ADV_1_0_0 = createActorDefinitionVersion(V1_0_0);
     final ActorDefinitionBreakingChange BC_1_0_0 = createBreakingChange(V1_0_0, "2020-01-01");
@@ -133,25 +141,26 @@ class SupportStateUpdaterTest {
         .withDefaultVersionId(ADV_1_0_0.getVersionId())
         .withSourceDefinitionId(ACTOR_DEFINITION_ID);
 
-    when(mConfigRepository.getActorDefinitionVersion(ADV_1_0_0.getVersionId()))
+    when(mActorDefinitionService.getActorDefinitionVersion(ADV_1_0_0.getVersionId()))
         .thenReturn(ADV_1_0_0);
-    when(mConfigRepository.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID))
+    when(mActorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID))
         .thenReturn(List.of(BC_1_0_0));
-    when(mConfigRepository.listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID))
+    when(mActorDefinitionService.listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID))
         .thenReturn(List.of(ADV_0_1_0, ADV_1_0_0));
 
     supportStateUpdater.updateSupportStatesForSourceDefinition(sourceDefinition);
 
-    verify(mConfigRepository).getActorDefinitionVersion(ADV_1_0_0.getVersionId());
-    verify(mConfigRepository).listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID);
-    verify(mConfigRepository).listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID);
-    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(ADV_0_1_0.getVersionId()), SupportState.UNSUPPORTED);
-    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(ADV_1_0_0.getVersionId()), SupportState.SUPPORTED);
-    verifyNoMoreInteractions(mConfigRepository);
+    verify(mActorDefinitionService).getActorDefinitionVersion(ADV_1_0_0.getVersionId());
+    verify(mActorDefinitionService).listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID);
+    verify(mActorDefinitionService).listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID);
+    verify(mActorDefinitionService).setActorDefinitionVersionSupportStates(List.of(ADV_0_1_0.getVersionId()), SupportState.UNSUPPORTED);
+    verify(mActorDefinitionService).setActorDefinitionVersionSupportStates(List.of(ADV_1_0_0.getVersionId()), SupportState.SUPPORTED);
+    verifyNoMoreInteractions(mActorDefinitionService, mSourceService, mDestinationService);
   }
 
   @Test
-  void testUpdateSupportStates() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testUpdateSupportStates()
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final ActorDefinitionVersion SRC_V0_1_0 = createActorDefinitionVersion(V0_1_0);
     final ActorDefinitionVersion SRC_V1_0_0 = createActorDefinitionVersion(V1_0_0);
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -174,14 +183,14 @@ class SupportStateUpdaterTest {
     final ActorDefinitionBreakingChange DEST_BC_1_0_0 = createBreakingChange(V1_0_0, "2020-02-01")
         .withActorDefinitionId(destinationDefinitionId);
 
-    when(mConfigRepository.listPublicSourceDefinitions(false)).thenReturn(List.of(sourceDefinition));
-    when(mConfigRepository.listPublicDestinationDefinitions(false)).thenReturn(List.of(destinationDefinition));
-    when(mConfigRepository.listBreakingChanges()).thenReturn(List.of(SRC_BC_1_0_0, DEST_BC_1_0_0));
-    when(mConfigRepository.listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID))
+    when(mSourceService.listPublicSourceDefinitions(false)).thenReturn(List.of(sourceDefinition));
+    when(mDestinationService.listPublicDestinationDefinitions(false)).thenReturn(List.of(destinationDefinition));
+    when(mActorDefinitionService.listBreakingChanges()).thenReturn(List.of(SRC_BC_1_0_0, DEST_BC_1_0_0));
+    when(mActorDefinitionService.listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID))
         .thenReturn(List.of(SRC_V0_1_0, SRC_V1_0_0));
-    when(mConfigRepository.listActorDefinitionVersionsForDefinition(destinationDefinitionId))
+    when(mActorDefinitionService.listActorDefinitionVersionsForDefinition(destinationDefinitionId))
         .thenReturn(List.of(DEST_V0_1_0, DEST_V1_0_0));
-    when(mConfigRepository.getActorDefinitionVersion(DEST_V1_0_0.getVersionId())).thenReturn(DEST_V1_0_0);
+    when(mActorDefinitionService.getActorDefinitionVersion(DEST_V1_0_0.getVersionId())).thenReturn(DEST_V1_0_0);
 
     final List<UUID> workspaceIdsToNotify = List.of(UUID.randomUUID(), UUID.randomUUID());
     when(mActorDefinitionVersionHelper.getActiveWorkspaceSyncsWithDestinationVersionIds(destinationDefinition, List.of(DEST_V0_1_0.getVersionId())))
@@ -189,23 +198,23 @@ class SupportStateUpdaterTest {
 
     supportStateUpdater.updateSupportStates(LocalDate.parse("2020-01-15"));
 
-    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(SRC_V0_1_0.getVersionId()), SupportState.UNSUPPORTED);
-    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(DEST_V0_1_0.getVersionId()), SupportState.DEPRECATED);
-    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(SRC_V1_0_0.getVersionId(), DEST_V1_0_0.getVersionId()),
+    verify(mActorDefinitionService).setActorDefinitionVersionSupportStates(List.of(SRC_V0_1_0.getVersionId()), SupportState.UNSUPPORTED);
+    verify(mActorDefinitionService).setActorDefinitionVersionSupportStates(List.of(DEST_V0_1_0.getVersionId()), SupportState.DEPRECATED);
+    verify(mActorDefinitionService).setActorDefinitionVersionSupportStates(List.of(SRC_V1_0_0.getVersionId(), DEST_V1_0_0.getVersionId()),
         SupportState.SUPPORTED);
 
     verify(mBreakingChangeNotificationHelper).notifyDeprecatedSyncs(
         List.of(new BreakingChangeNotificationData(ActorType.DESTINATION, destinationDefinition.getName(), workspaceIdsToNotify, DEST_BC_1_0_0)));
 
-    verify(mConfigRepository).listPublicSourceDefinitions(false);
-    verify(mConfigRepository).listPublicDestinationDefinitions(false);
-    verify(mConfigRepository).listBreakingChanges();
-    verify(mConfigRepository).listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID);
-    verify(mConfigRepository).listActorDefinitionVersionsForDefinition(destinationDefinitionId);
-    verify(mConfigRepository).getActorDefinitionVersion(DEST_V1_0_0.getVersionId());
+    verify(mSourceService).listPublicSourceDefinitions(false);
+    verify(mDestinationService).listPublicDestinationDefinitions(false);
+    verify(mActorDefinitionService).listBreakingChanges();
+    verify(mActorDefinitionService).listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID);
+    verify(mActorDefinitionService).listActorDefinitionVersionsForDefinition(destinationDefinitionId);
+    verify(mActorDefinitionService).getActorDefinitionVersion(DEST_V1_0_0.getVersionId());
     verify(mActorDefinitionVersionHelper).getActiveWorkspaceSyncsWithDestinationVersionIds(destinationDefinition,
         List.of(DEST_V0_1_0.getVersionId()));
-    verifyNoMoreInteractions(mConfigRepository);
+    verifyNoMoreInteractions(mActorDefinitionService, mSourceService, mDestinationService);
     verifyNoMoreInteractions(mActorDefinitionVersionHelper);
     verifyNoMoreInteractions(mBreakingChangeNotificationHelper);
   }
@@ -263,7 +272,7 @@ class SupportStateUpdaterTest {
         actorDefinitionVersions);
 
     assertEquals(expectedSupportStateUpdate, supportStateUpdate);
-    verifyNoInteractions(mConfigRepository);
+    verifyNoInteractions(mActorDefinitionService, mSourceService, mDestinationService);
   }
 
   @Test
@@ -291,11 +300,12 @@ class SupportStateUpdaterTest {
         actorDefinitionVersions);
 
     assertEquals(expectedSupportStateUpdate, supportStateUpdate);
-    verifyNoInteractions(mConfigRepository);
+    verifyNoInteractions(mActorDefinitionService, mSourceService, mDestinationService);
   }
 
   @Test
-  void testBuildSourceNotificationData() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testBuildSourceNotificationData()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(UUID.randomUUID())
         .withName("Test Source");
@@ -325,7 +335,8 @@ class SupportStateUpdaterTest {
   }
 
   @Test
-  void testBuildDestinationNotificationData() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testBuildDestinationNotificationData()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(UUID.randomUUID())
         .withName("Test Destination");

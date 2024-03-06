@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers;
@@ -140,6 +140,7 @@ public class WorkerUtils {
    */
   public static WorkerDestinationConfig syncToWorkerDestinationConfig(final ReplicationInput replicationInput) {
     return new WorkerDestinationConfig()
+        .withConnectionId(replicationInput.getConnectionId())
         .withDestinationId(replicationInput.getDestinationId())
         .withDestinationConnectionConfiguration(replicationInput.getDestinationConfiguration())
         .withCatalog(replicationInput.getCatalog())

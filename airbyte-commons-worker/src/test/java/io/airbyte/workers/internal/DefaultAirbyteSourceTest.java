@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
@@ -30,6 +30,7 @@ import io.airbyte.config.State;
 import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
@@ -48,6 +49,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -97,15 +99,18 @@ class DefaultAirbyteSourceTest {
   }
 
   private Path jobRoot;
+  private UUID connectionId;
   private IntegrationLauncher integrationLauncher;
   private Process process;
   private AirbyteStreamFactory streamFactory;
   private HeartbeatMonitor heartbeatMonitor;
   private final ProtocolSerializer protocolSerializer = new DefaultProtocolSerializer();
+  private MetricClient metricClient;
 
   @BeforeEach
   void setup() throws IOException, WorkerException {
     jobRoot = Files.createTempDirectory(Files.createDirectories(TEST_ROOT), "test");
+    connectionId = UUID.randomUUID();
 
     integrationLauncher = mock(IntegrationLauncher.class, RETURNS_DEEP_STUBS);
     process = mock(Process.class, RETURNS_DEEP_STUBS);
@@ -126,6 +131,8 @@ class DefaultAirbyteSourceTest {
     streamFactory = noop -> MESSAGES.stream();
 
     LogClientSingleton.getInstance().setJobMdc(WorkerEnvironment.DOCKER, LogConfigs.EMPTY, logJobRoot);
+
+    metricClient = mock(MetricClient.class);
   }
 
   @AfterEach
@@ -145,8 +152,9 @@ class DefaultAirbyteSourceTest {
 
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true)).thenReturn(Optional.of(false));
 
-    final AirbyteSource source = new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, featureFlags);
-    source.start(SOURCE_CONFIG, jobRoot);
+    final AirbyteSource source = new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, featureFlags,
+        metricClient);
+    source.start(SOURCE_CONFIG, jobRoot, connectionId);
 
     final List<AirbyteMessage> messages = Lists.newArrayList();
 
@@ -181,8 +189,8 @@ class DefaultAirbyteSourceTest {
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true)).thenReturn(Optional.of(false));
 
     final AirbyteSource source = new DefaultAirbyteSource(integrationLauncher, streamFactory,
-        heartbeatMonitor, protocolSerializer, featureFlags);
-    source.start(SOURCE_CONFIG, jobRoot);
+        heartbeatMonitor, protocolSerializer, featureFlags, metricClient);
+    source.start(SOURCE_CONFIG, jobRoot, connectionId);
 
     final List<AirbyteMessage> messages = Lists.newArrayList();
 
@@ -206,8 +214,9 @@ class DefaultAirbyteSourceTest {
 
   @Test
   void testNonzeroExitCodeThrows() throws Exception {
-    final AirbyteSource tap = new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, featureFlags);
-    tap.start(SOURCE_CONFIG, jobRoot);
+    final AirbyteSource tap = new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, featureFlags,
+        metricClient);
+    tap.start(SOURCE_CONFIG, jobRoot, connectionId);
 
     when(process.exitValue()).thenReturn(1);
 
@@ -216,8 +225,9 @@ class DefaultAirbyteSourceTest {
 
   @Test
   void testIgnoredExitCodes() throws Exception {
-    final AirbyteSource tap = new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, featureFlags);
-    tap.start(SOURCE_CONFIG, jobRoot);
+    final AirbyteSource tap = new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, featureFlags,
+        metricClient);
+    tap.start(SOURCE_CONFIG, jobRoot, connectionId);
     when(process.isAlive()).thenReturn(false);
 
     DefaultAirbyteSource.IGNORED_EXIT_CODES.forEach(exitCode -> {
@@ -228,8 +238,9 @@ class DefaultAirbyteSourceTest {
 
   @Test
   void testGetExitValue() throws Exception {
-    final AirbyteSource source = new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, featureFlags);
-    source.start(SOURCE_CONFIG, jobRoot);
+    final AirbyteSource source =
+        new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, featureFlags, metricClient);
+    source.start(SOURCE_CONFIG, jobRoot, connectionId);
 
     when(process.isAlive()).thenReturn(false);
     when(process.exitValue()).thenReturn(2);

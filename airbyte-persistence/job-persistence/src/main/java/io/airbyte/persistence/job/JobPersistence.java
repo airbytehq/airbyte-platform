@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job;
@@ -19,7 +19,9 @@ import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
+import io.airbyte.persistence.job.models.JobStatusSummary;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
+import io.airbyte.persistence.job.models.JobsRecordsCommitted;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -206,13 +208,26 @@ public interface JobPersistence {
   void writeAttemptSyncConfig(long jobId, int attemptNumber, AttemptSyncConfig attemptSyncConfig) throws IOException;
 
   /**
-   * Get count of jobs beloging to the specified connection.
+   * Get count of jobs beloging to the specified connection. This override allows passing several
+   * query filters.
    *
    * @param configTypes - the type of config, e.g. sync
    * @param connectionId - ID of the connection for which the job count should be retrieved
+   * @param statuses - statuses to filter by
+   * @param createdAtStart - minimum created at date to filter by
+   * @param createdAtEnd - maximum created at date to filter by
+   * @param updatedAtStart - minimum updated at date to filter by
+   * @param updatedAtEnd - maximum updated at date to filter by
    * @return count of jobs belonging to the specified connection
    */
-  Long getJobCount(final Set<ConfigType> configTypes, final String connectionId) throws IOException;
+  Long getJobCount(final Set<ConfigType> configTypes,
+                   final String connectionId,
+                   final List<JobStatus> statuses,
+                   final OffsetDateTime createdAtStart,
+                   final OffsetDateTime createdAtEnd,
+                   final OffsetDateTime updatedAtStart,
+                   final OffsetDateTime updatedAtEnd)
+      throws IOException;
 
   /**
    * List jobs of a connection. Pageable.
@@ -225,7 +240,7 @@ public interface JobPersistence {
   List<Job> listJobs(Set<ConfigType> configTypes, String configId, int limit) throws IOException;
 
   /**
-   * List jobs of a connection with filters. Pageable.
+   * List jobs with filters. Pageable.
    *
    * @param configTypes - type of config, e.g. sync
    * @param configId - id of that config
@@ -237,7 +252,7 @@ public interface JobPersistence {
                      String configId,
                      int limit,
                      int offset,
-                     JobStatus status,
+                     final List<JobStatus> statuses,
                      OffsetDateTime createdAtStart,
                      OffsetDateTime createdAtEnd,
                      OffsetDateTime updatedAtStart,
@@ -259,7 +274,7 @@ public interface JobPersistence {
                      List<UUID> workspaceIds,
                      int limit,
                      int offset,
-                     JobStatus status,
+                     final List<JobStatus> statuses,
                      OffsetDateTime createdAtStart,
                      OffsetDateTime createdAtEnd,
                      OffsetDateTime updatedAtStart,
@@ -305,6 +320,10 @@ public interface JobPersistence {
                                                                    Instant attemptEndedAtTimestamp)
       throws IOException;
 
+  List<JobsRecordsCommitted> listRecordsCommittedForConnectionAfterTimestamp(UUID connectionId,
+                                                                             Instant attemptEndedAtTimestamp)
+      throws IOException;
+
   /**
    * List job statuses and timestamps for connection id.
    *
@@ -324,7 +343,7 @@ public interface JobPersistence {
 
   Optional<Job> getLastSyncJob(UUID connectionId) throws IOException;
 
-  List<Job> getLastSyncJobForConnections(final List<UUID> connectionIds) throws IOException;
+  List<JobStatusSummary> getLastSyncJobForConnections(final List<UUID> connectionIds) throws IOException;
 
   List<Job> getRunningSyncJobForConnections(final List<UUID> connectionIds) throws IOException;
 

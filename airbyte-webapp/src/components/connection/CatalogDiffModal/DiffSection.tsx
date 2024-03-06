@@ -1,6 +1,6 @@
 import { FormattedMessage } from "react-intl";
 
-import { AirbyteCatalog, StreamDescriptor, StreamTransform } from "core/request/AirbyteClient";
+import { AirbyteCatalog, StreamDescriptor, StreamTransform } from "core/api/types/AirbyteClient";
 
 import { DiffHeader } from "./DiffHeader";
 import styles from "./DiffSection.module.scss";

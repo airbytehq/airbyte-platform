@@ -19,12 +19,13 @@ dependencies {
 
     implementation(platform(libs.micronaut.bom))
     implementation(libs.bundles.micronaut)
+    implementation(libs.bundles.micronaut.metrics)
     implementation(libs.micronaut.http)
     implementation(libs.kotlin.logging)
     implementation(libs.micronaut.kotlin.extensions)
 
     implementation(libs.bundles.kubernetes.client)
-    implementation("com.auth0:java-jwt:3.19.2")
+    implementation(libs.java.jwt)
     implementation(libs.gson)
     implementation(libs.guava)
     implementation(libs.temporal.sdk) {
@@ -47,6 +48,7 @@ dependencies {
     implementation(libs.sts)
 
     implementation(project(":airbyte-api"))
+    implementation(project(":airbyte-analytics"))
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-auth"))
     implementation(project(":airbyte-commons-converters"))
@@ -70,9 +72,11 @@ dependencies {
     testAnnotationProcessor(libs.jmh.annotations)
 
     testImplementation(libs.bundles.micronaut.test)
+    testImplementation(libs.mockk)
     testImplementation(libs.json.path)
-    testImplementation(libs.mockito.inline)
-    testImplementation(variantOf(libs.opentracing.util.test) { classifier("tests") })
+    testImplementation(libs.bundles.mockito.inline)
+    testImplementation(libs.mockk)
+    testImplementation(variantOf(libs.opentracing.util) { classifier("tests") })
     testImplementation(libs.postgresql)
     testImplementation(libs.platform.testcontainers.postgresql)
     testImplementation(libs.jmh.core)
@@ -80,6 +84,7 @@ dependencies {
     testImplementation(libs.docker.java)
     testImplementation(libs.docker.java.transport.httpclient5)
     testImplementation(libs.reactor.test)
+    testImplementation(libs.mockk)
 
     testCompileOnly(libs.lombok)
     testAnnotationProcessor(libs.lombok)
@@ -87,10 +92,11 @@ dependencies {
     testImplementation(libs.bundles.junit)
     testImplementation(libs.assertj.core)
     testImplementation(libs.junit.pioneer)
+    testImplementation(libs.mockk)
 }
 
 tasks.named<Test>("test") {
-    maxHeapSize = "4g"
+    maxHeapSize = "10g"
 
     useJUnitPlatform {
         excludeTags("cloud-storage")

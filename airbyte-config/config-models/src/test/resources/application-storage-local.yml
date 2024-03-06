@@ -1,0 +1,10 @@
+airbyte:
+  cloud:
+    storage:
+      type: local
+      bucket:
+        log: log
+        state: state
+        workload-output: workload
+      local:
+        root: /tmp

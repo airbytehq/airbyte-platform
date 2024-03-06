@@ -6,6 +6,9 @@ import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
+import { useCurrentWorkspace } from "core/api";
+import { useIntent } from "core/utils/rbac";
+
 import styles from "./TableItemTitle.module.scss";
 import { Button } from "../ui/Button";
 
@@ -18,6 +21,8 @@ interface TableItemTitleProps {
 
 const TableItemTitle: React.FC<TableItemTitleProps> = ({ type, dropdownOptions, onSelect, connectionsCount }) => {
   const { formatMessage } = useIntl();
+  const { workspaceId } = useCurrentWorkspace();
+  const canCreateConnection = useIntent("CreateConnection", { workspaceId });
   return (
     <Box px="xl" pt="lg">
       <FlexContainer alignItems="center" justifyContent="space-between">
@@ -40,7 +45,7 @@ const TableItemTitle: React.FC<TableItemTitleProps> = ({ type, dropdownOptions, 
           onChange={onSelect}
         >
           {() => (
-            <Button data-testid={`select-${type}`}>
+            <Button disabled={!canCreateConnection} data-testid={`select-${type}`}>
               <FormattedMessage id={`tables.${type}Add`} />
             </Button>
           )}

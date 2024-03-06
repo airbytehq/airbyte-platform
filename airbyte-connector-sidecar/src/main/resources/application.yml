@@ -1,0 +1,61 @@
+micronaut:
+  application:
+    name: airbyte-connector-sidecar
+  server:
+    enable: false
+  metrics:
+    enabled: false
+    export:
+      statsd:
+        enabled: false
+  security:
+    enabled: false
+airbyte:
+  deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  role: ${AIRBYTE_ROLE:dev}
+  version: ${AIRBYTE_VERSION:dev}
+  config-dir: ${AIRBYTE_CONFIG_DIR:/config}
+  acceptance:
+    test:
+      enabled: ${ACCEPTANCE_TEST_ENABLED:false}
+  cloud:
+    storage:
+      type: ${STORAGE_TYPE}
+      bucket:
+        log: ${STORAGE_BUCKET_LOG}
+        state: ${STORAGE_BUCKET_STATE}
+        workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
+      gcs:
+        application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
+      local:
+        root: ${LOCAL_ROOT:}
+      minio:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        endpoint: ${MINIO_ENDPOINT:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+      s3:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        region: ${AWS_DEFAULT_REGION:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+  internal:
+    api:
+      auth-header:
+        name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+        value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+      host: ${INTERNAL_API_HOST}
+  control.plane.auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT}
+  data.plane.service-account:
+    credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
+    email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
+  sidecar:
+    file-timeout-minutes: ${SIDECAR_FILE_TIMEOUT_MINUTES:9}
+  workload-api:
+    base-path: ${WORKLOAD_API_HOST:}
+    bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
+    connect-timeout-seconds: ${WORKLOAD_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${WORKLOAD_API_READ_TIMEOUT_SECONDS:300}
+    retries:
+      delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
+      max: ${WORKLOAD_API_MAX_RETRIES:5}
+  workload:
+    enabled: false

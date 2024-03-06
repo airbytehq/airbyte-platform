@@ -24,6 +24,20 @@ services:
     networks:
       - airbyte_internal
       - airbyte_public
+  server:
+    # Acceptance tests make more intensive use of the service than a typical local deployment, and there is only a
+    # single server container in Docker, so we allow more threads to avoid getting overloaded.
+    environment:
+      - IO_TASK_EXECUTOR_THREADS=25
+      - CONFIG_DB_MAX_POOL_SIZE=25
+      - HEALTH_TASK_EXECUTOR_THREADS=25
+      - SCHEDULER_TASK_EXECUTOR_THREADS=50
+  # Acceptance tests do not need the webapp. Ideally we would not build the webapp
+  # and deploy the webapp to save time (~ 5 mins) on CI. However, the proxy currently
+  # written requires the webapp to run. So we pin the webapp to a specific commit.
+  # This is not expected to change frequently - or at all.
+  webapp:
+    image: "airbyte/webapp:dev-0e74a851e8"
 configs:
   flags:
     file: ./tools/bin/acceptance-test-flags.yml

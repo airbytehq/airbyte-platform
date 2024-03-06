@@ -10,9 +10,14 @@ import { Icon } from "components/ui/Icon";
 import { ListBoxControlButtonProps } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useCreatePermission } from "core/api";
-import { OrganizationUserRead, PermissionCreate, PermissionType } from "core/request/AirbyteClient";
+import {
+  useCreatePermission,
+  useCurrentWorkspace,
+  useListUsersInOrganization,
+  useListWorkspaceAccessUsers,
+} from "core/api";
+import { OrganizationUserRead, PermissionCreate, PermissionType } from "core/api/types/AirbyteClient";
+import { useIntent } from "core/utils/rbac";
 
 import styles from "./AddUserControl.module.scss";
 
@@ -35,6 +40,7 @@ const AddUserForm: React.FC<{
   setIsEditMode: (mode: boolean) => void;
 }> = ({ usersToAdd, workspaceId, setIsEditMode }) => {
   const { mutateAsync: createPermission } = useCreatePermission();
+  const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId });
 
   const onSubmitClick = async (values: PermissionCreate) => {
     await createPermission(values).then(() => setIsEditMode(false));
@@ -42,11 +48,17 @@ const AddUserForm: React.FC<{
 
   const AddUserListBoxControl = <T,>({ selectedOption }: ListBoxControlButtonProps<T>) => {
     const value = selectedOption?.value;
-    const userName = usersToAdd.find((user) => user.userId === value)?.name;
+    const userToAdd = usersToAdd.find((user) => user.userId === value);
+    const nameToDisplay = userToAdd?.name ? userToAdd.name : userToAdd?.email;
+
+    if (!userToAdd) {
+      return null;
+    }
+
     return (
       <>
         <Text as="span" className={styles.addUserControl__buttonName}>
-          {userName}
+          {nameToDisplay}
         </Text>
         <Icon type="caretDown" color="action" />
       </>
@@ -62,10 +74,12 @@ const AddUserForm: React.FC<{
         workspaceId,
       }}
       onSubmit={onSubmitClick}
+      disabled={!canUpdateWorkspacePermissions}
     >
       <FlexContainer alignItems="baseline">
         <FormControl<PermissionCreate>
           containerControlClassName={styles.addUserControl__dropdown}
+          optionsMenuClassName={styles.addUserControl__dropdownMenu}
           controlButton={AddUserListBoxControl}
           name="userId"
           fieldType="dropdown"
@@ -74,10 +88,10 @@ const AddUserForm: React.FC<{
               value: user.userId,
               label: (
                 <FlexContainer as="span" direction="column" gap="xs">
-                  <Text as="span" size="sm" bold className={styles.addUserControl__userName}>
-                    {user.name}
+                  <Text as="span" size="sm" bold>
+                    {user.name ? user.name : user.email}
                   </Text>
-                  <Text as="span" size="sm" color="grey" className={styles.addUserControl__userEmail}>
+                  <Text as="span" size="sm" color="grey">
                     {user.email}
                   </Text>
                 </FlexContainer>
@@ -94,15 +108,27 @@ const AddUserForm: React.FC<{
     </Form>
   );
 };
-export const AddUserControl: React.FC<{ usersToAdd: OrganizationUserRead[] }> = ({ usersToAdd }) => {
+export const AddUserControl: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
-  const workspaceId = useCurrentWorkspaceId();
+  const workspace = useCurrentWorkspace();
+
+  const workspaceAccessUsers = useListWorkspaceAccessUsers(workspace.workspaceId);
+  const organizationUsers = useListUsersInOrganization(workspace.organizationId ?? "").users;
+
+  const usersToAdd = organizationUsers.filter(
+    (organizationUser) =>
+      !workspaceAccessUsers.usersWithAccess.find((workspaceUser) => workspaceUser.userId === organizationUser.userId)
+  );
+
+  if (!usersToAdd || usersToAdd.length === 0) {
+    return null;
+  }
 
   return !isEditMode ? (
     <Button onClick={() => setIsEditMode(true)} icon={<Icon type="plus" />}>
       <FormattedMessage id="role.addUser" />
     </Button>
   ) : (
-    <AddUserForm usersToAdd={usersToAdd} workspaceId={workspaceId} setIsEditMode={setIsEditMode} />
+    <AddUserForm usersToAdd={usersToAdd} workspaceId={workspace.workspaceId} setIsEditMode={setIsEditMode} />
   );
 };

@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.pro;
 
-import io.airbyte.commons.auth.AuthRole;
 import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
+import io.airbyte.commons.server.support.RbacRoleHelper;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.security.token.validator.TokenValidator;
@@ -45,8 +45,8 @@ public class AirbyteAuthInternalTokenValidator implements TokenValidator {
 
   private Authentication getAuthentication(final String token) {
     // set the Authentication username to the token value, which must be a valid internal service name.
-    // for now, all internal services get ADMIN roles.
-    return Authentication.build(token, AuthRole.buildAuthRolesSet(AuthRole.ADMIN));
+    // for now, all internal services get instance admin roles.
+    return Authentication.build(token, RbacRoleHelper.getInstanceAdminRoles());
   }
 
 }

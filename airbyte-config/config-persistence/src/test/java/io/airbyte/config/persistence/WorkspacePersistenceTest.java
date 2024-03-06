@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence;
@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.MoreBooleans;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.AuthProvider;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
 import io.airbyte.config.Organization;
@@ -26,26 +27,24 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.User;
-import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.HealthCheckServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
-import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.HashSet;
@@ -88,29 +87,30 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     workspaceService = spy(new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
         secretPersistenceConfigService));
 
+    final ConnectionService connectionService = mock(ConnectionService.class);
     configRepository = spy(
         new ConfigRepository(
             new ActorDefinitionServiceJooqImpl(database),
             new CatalogServiceJooqImpl(database),
-            new ConnectionServiceJooqImpl(database),
+            connectionService,
             new ConnectorBuilderServiceJooqImpl(database),
             new DestinationServiceJooqImpl(database,
                 featureFlagClient,
                 secretsRepositoryReader,
                 secretsRepositoryWriter,
-                secretPersistenceConfigService),
-            new HealthCheckServiceJooqImpl(database),
+                secretPersistenceConfigService,
+                connectionService),
             new OAuthServiceJooqImpl(database,
                 featureFlagClient,
                 secretsRepositoryReader,
                 secretPersistenceConfigService),
             new OperationServiceJooqImpl(database),
-            new OrganizationServiceJooqImpl(database),
             new SourceServiceJooqImpl(database,
                 featureFlagClient,
                 secretsRepositoryReader,
                 secretsRepositoryWriter,
-                secretPersistenceConfigService),
+                secretPersistenceConfigService,
+                connectionService),
             new WorkspaceServiceJooqImpl(database,
                 featureFlagClient,
                 secretsRepositoryReader,
@@ -372,6 +372,25 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     final StandardWorkspace actualWorkspace = workspacePersistence.getDefaultWorkspaceForOrganization(MockData.ORGANIZATION_ID_1);
 
     assertEquals(expectedWorkspace, actualWorkspace);
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "true",
+    "false"
+  })
+  void getInitialSetupComplete(final boolean initialSetupComplete) throws JsonValidationException, IOException {
+    final StandardWorkspace workspace = createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspaceInOrganization1")
+        .withInitialSetupComplete(initialSetupComplete);
+
+    configRepository.writeStandardWorkspaceNoSecrets(workspace);
+
+    final boolean actualInitialSetupComplete = workspacePersistence.getInitialSetupComplete();
+
+    assertEquals(initialSetupComplete, actualInitialSetupComplete);
   }
 
   @Test

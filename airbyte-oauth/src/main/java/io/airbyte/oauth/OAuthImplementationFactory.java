@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.oauth;
@@ -21,6 +21,8 @@ import io.airbyte.oauth.flows.LeverOAuthFlow;
 import io.airbyte.oauth.flows.LinkedinAdsOAuthFlow;
 import io.airbyte.oauth.flows.MailchimpOAuthFlow;
 import io.airbyte.oauth.flows.MicrosoftBingAdsOAuthFlow;
+import io.airbyte.oauth.flows.MicrosoftOneDriveOAuthFlow;
+import io.airbyte.oauth.flows.MicrosoftSharepointOAuthFlow;
 import io.airbyte.oauth.flows.MicrosoftTeamsOAuthFlow;
 import io.airbyte.oauth.flows.MondayOAuthFlow;
 import io.airbyte.oauth.flows.NotionOAuthFlow;
@@ -94,6 +96,10 @@ public class OAuthImplementationFactory {
     builder.put("airbyte/source-linkedin-ads", new LinkedinAdsOAuthFlow(httpClient));
     builder.put("airbyte/source-mailchimp", new MailchimpOAuthFlow(httpClient));
     builder.put("airbyte/source-microsoft-teams", new MicrosoftTeamsOAuthFlow(httpClient));
+    builder.put(
+        "airbyte/source-microsoft-onedrive", new MicrosoftOneDriveOAuthFlow(httpClient));
+    builder.put(
+        "airbyte/source-microsoft-sharepoint", new MicrosoftSharepointOAuthFlow(httpClient));
     builder.put("airbyte/source-monday", new MondayOAuthFlow(httpClient));
     builder.put("airbyte/source-notion", new NotionOAuthFlow(httpClient));
     builder.put("airbyte/source-okta", new OktaOAuthFlow(httpClient));

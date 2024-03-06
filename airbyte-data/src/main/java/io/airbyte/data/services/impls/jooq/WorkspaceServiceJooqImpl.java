@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq;
@@ -10,8 +10,6 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINIT
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
@@ -26,14 +24,12 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.yaml.Yamls;
 import io.airbyte.config.ConfigSchema;
-import io.airbyte.config.ConfigWithMetadata;
 import io.airbyte.config.Geography;
 import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkspaceServiceAccount;
-import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
@@ -48,7 +44,6 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
-import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
@@ -83,6 +78,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   private final SecretsRepositoryReader secretsRepositoryReader;
   private final SecretsRepositoryWriter secretsRepositoryWriter;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
+  private final ConnectionServiceJooqImpl connectionService;
 
   @VisibleForTesting
   public WorkspaceServiceJooqImpl(@Named("configDatabase") final Database database,
@@ -91,6 +87,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
                                   final SecretsRepositoryWriter secretsRepositoryWriter,
                                   final SecretPersistenceConfigService secretPersistenceConfigService) {
     this.database = new ExceptionWrappingDatabase(database);
+    this.connectionService = new ConnectionServiceJooqImpl(database);
     this.featureFlagClient = featureFlagClient;
     this.secretsRepositoryReader = secretsRepositoryReader;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
@@ -229,7 +226,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   @Override
   public StandardWorkspace getStandardWorkspaceFromConnection(final UUID connectionId, final boolean isTombstone) throws ConfigNotFoundException {
     try {
-      final StandardSync sync = getStandardSync(connectionId);
+      final StandardSync sync = connectionService.getStandardSync(connectionId);
       final SourceConnection source = getSourceConnection(sync.getSourceId());
       return getStandardWorkspaceNoSecrets(source.getWorkspaceId(), isTombstone);
     } catch (final ConfigNotFoundException e) {
@@ -339,7 +336,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   }
 
   /**
-   * Test if workspace is has access to a custom connector definition.
+   * Test if workspace has access to a custom connector definition.
    *
    * @param actorDefinitionId custom actor definition id
    * @param workspaceId workspace id
@@ -584,73 +581,6 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
             .execute();
       }
     });
-  }
-
-  /**
-   * Get connection.
-   *
-   * @param connectionId connection id
-   * @return connection
-   * @throws JsonValidationException if the workspace is or contains invalid json
-   * @throws ConfigNotFoundException if the config does not exist
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @VisibleForTesting
-  public StandardSync getStandardSync(final UUID connectionId) throws JsonValidationException, IOException, ConfigNotFoundException {
-    return getStandardSyncWithMetadata(connectionId).getConfig();
-  }
-
-  private ConfigWithMetadata<StandardSync> getStandardSyncWithMetadata(final UUID connectionId) throws IOException, ConfigNotFoundException {
-    final List<ConfigWithMetadata<StandardSync>> result = listStandardSyncWithMetadata(Optional.of(connectionId));
-
-    final boolean foundMoreThanOneConfig = result.size() > 1;
-    if (result.isEmpty()) {
-      throw new ConfigNotFoundException(ConfigSchema.STANDARD_SYNC, connectionId.toString());
-    } else if (foundMoreThanOneConfig) {
-      throw new IllegalStateException(String.format("Multiple %s configs found for ID %s: %s", ConfigSchema.STANDARD_SYNC, connectionId, result));
-    }
-    return result.get(0);
-  }
-
-  private List<ConfigWithMetadata<StandardSync>> listStandardSyncWithMetadata(final Optional<UUID> configId) throws IOException {
-    final Result<Record> result = database.query(ctx -> {
-      final SelectJoinStep<Record> query = ctx.select(CONNECTION.asterisk(),
-          SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
-          .from(CONNECTION)
-          // The schema management can be non-existent for a connection id, thus we need to do a left join
-          .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID));
-      if (configId.isPresent()) {
-        return query.where(CONNECTION.ID.eq(configId.get())).fetch();
-      }
-      return query.fetch();
-    });
-
-    final List<ConfigWithMetadata<StandardSync>> standardSyncs = new ArrayList<>();
-    for (final Record record : result) {
-      final List<NotificationConfigurationRecord> notificationConfigurationRecords = database.query(ctx -> {
-        if (configId.isPresent()) {
-          return ctx.selectFrom(NOTIFICATION_CONFIGURATION)
-              .where(NOTIFICATION_CONFIGURATION.CONNECTION_ID.eq(configId.get()))
-              .fetch();
-        } else {
-          return ctx.selectFrom(NOTIFICATION_CONFIGURATION)
-              .fetch();
-        }
-      });
-
-      final StandardSync standardSync =
-          DbConverter.buildStandardSync(record, connectionOperationIds(record.get(CONNECTION.ID)), notificationConfigurationRecords);
-      if (ScheduleHelpers.isScheduleTypeMismatch(standardSync)) {
-        throw new RuntimeException("unexpected schedule type mismatch");
-      }
-      standardSyncs.add(new ConfigWithMetadata<>(
-          record.get(CONNECTION.ID).toString(),
-          ConfigSchema.STANDARD_SYNC.name(),
-          record.get(CONNECTION.CREATED_AT).toInstant(),
-          record.get(CONNECTION.UPDATED_AT).toInstant(),
-          standardSync));
-    }
-    return standardSyncs;
   }
 
   private List<UUID> connectionOperationIds(final UUID connectionId) throws IOException {

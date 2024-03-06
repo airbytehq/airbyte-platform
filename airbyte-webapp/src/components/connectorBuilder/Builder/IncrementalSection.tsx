@@ -37,8 +37,6 @@ interface IncrementalSectionProps {
 export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
   const filterMode = useBuilderWatch(streamFieldPath("incrementalSync.filter_mode"));
-  const startTimeOption = useBuilderWatch(streamFieldPath("incrementalSync.start_time_option"));
-  const endTimeOption = useBuilderWatch(streamFieldPath("incrementalSync.end_time_option"));
   return (
     <BuilderCard
       docLink={links.connectorBuilderIncrementalSync}
@@ -266,23 +264,20 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
           />
         </ToggleGroupField>
       )}
-      {((filterMode !== "no_filter" && startTimeOption !== undefined) ||
-        (filterMode === "range" && endTimeOption !== undefined)) && (
-        <BuilderFieldWithInputs
-          type="combobox"
-          path={streamFieldPath("incrementalSync.datetime_format")}
-          manifestPath="DatetimeBasedCursor.properties.datetime_format"
-          options={DATETIME_FORMAT_OPTIONS}
-          optional
-          label={formatMessage({ id: "connectorBuilder.incremental.outgoingDatetimeFormat.label" })}
-          tooltip={
-            <>
-              {formatMessage({ id: "connectorBuilder.incremental.outgoingDatetimeFormat.tooltip" })}
-              <ReactMarkdown>{formatMessage({ id: "connectorBuilder.incremental.formatPlaceholders" })}</ReactMarkdown>
-            </>
-          }
-        />
-      )}
+      <BuilderFieldWithInputs
+        type="combobox"
+        path={streamFieldPath("incrementalSync.datetime_format")}
+        manifestPath="DatetimeBasedCursor.properties.datetime_format"
+        options={DATETIME_FORMAT_OPTIONS}
+        optional
+        label={formatMessage({ id: "connectorBuilder.incremental.outgoingDatetimeFormat.label" })}
+        tooltip={
+          <>
+            {formatMessage({ id: "connectorBuilder.incremental.outgoingDatetimeFormat.tooltip" })}
+            <ReactMarkdown>{formatMessage({ id: "connectorBuilder.incremental.formatPlaceholders" })}</ReactMarkdown>
+          </>
+        }
+      />
       <BuilderOptional label={formatMessage({ id: "connectorBuilder.advancedFields" })}>
         {filterMode !== "no_filter" && (
           <ToggleGroupField<BuilderIncrementalSync["slicer"]>

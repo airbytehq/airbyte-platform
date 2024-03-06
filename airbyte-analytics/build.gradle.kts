@@ -6,6 +6,7 @@ plugins {
 }
 
 dependencies {
+    kapt(platform(libs.micronaut.bom))
     kapt(libs.bundles.micronaut.annotation.processor)
 
     api(libs.segment.java.analytics)
@@ -17,10 +18,22 @@ dependencies {
     api(project(":airbyte-config:config-models"))
     api(project(":airbyte-api"))
 
-    testRuntimeOnly(libs.junit.jupiter.engine)
+
+    testAnnotationProcessor(platform(libs.micronaut.bom))
+    testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
     testImplementation(libs.bundles.junit)
     testImplementation(libs.assertj.core)
     testImplementation(libs.junit.pioneer)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlin.test.runner.junit5)
+    testRuntimeOnly(libs.junit.jupiter.engine)
+}
+
+// This is a workaround related to kaptBuild errors.
+// TODO: this should be removed when we move to kotlin 1.9.20
+// TODO: we should write tests
+afterEvaluate {
+    tasks.named("kaptGenerateStubsTestKotlin") {
+        enabled = false
+    }
 }

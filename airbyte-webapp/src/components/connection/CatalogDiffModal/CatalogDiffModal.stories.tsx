@@ -3,7 +3,7 @@ import { FormattedMessage } from "react-intl";
 
 import { Modal } from "components/ui/Modal";
 
-import { CatalogDiff } from "core/request/AirbyteClient";
+import { CatalogDiff } from "core/api/types/AirbyteClient";
 import { ModalServiceProvider } from "hooks/services/Modal";
 
 import { CatalogDiffModal } from "./CatalogDiffModal";

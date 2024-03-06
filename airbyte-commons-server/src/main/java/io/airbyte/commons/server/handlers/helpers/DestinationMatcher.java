@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers;
@@ -36,6 +36,11 @@ public class DestinationMatcher implements Matchable<DestinationRead> {
     fromSearch.destinationName(
         Strings.isBlank(search.getDestinationName()) ? query.getDestinationName() : search.getDestinationName());
     fromSearch.workspaceId(search.getWorkspaceId() == null ? query.getWorkspaceId() : search.getWorkspaceId());
+    fromSearch.icon(query.getIcon());
+    fromSearch.isVersionOverrideApplied(query.getIsVersionOverrideApplied());
+    fromSearch.breakingChanges(query.getBreakingChanges());
+    fromSearch.supportState(query.getSupportState());
+
     if (search.getConnectionConfiguration() == null) {
       fromSearch.connectionConfiguration(query.getConnectionConfiguration());
     } else if (query.getConnectionConfiguration() == null) {

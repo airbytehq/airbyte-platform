@@ -12,7 +12,15 @@ import { Overlay } from "../Overlay";
 
 export interface ModalProps {
   title?: string | React.ReactNode;
-  onClose?: () => void;
+  /**
+   * Function to call when the user clicks on the close button (cross icon).
+   */
+  onClose?: (reason: string) => void;
+  /**
+   * Function to call when the user clicks on overlay or press escape.
+   * Note: if openModal function was called with "preventCancel: true" then this function will not be called.
+   */
+  onCancel?: () => void;
   cardless?: boolean;
   size?: "sm" | "md" | "lg" | "xl" | "full";
   testId?: string;
@@ -35,6 +43,7 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
   title,
   size,
   onClose,
+  onCancel,
   cardless,
   testId,
   wrapIn,
@@ -42,15 +51,22 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
   const [isOpen, setIsOpen] = useState(true);
   const { formatMessage } = useIntl();
 
+  const onModalCancel = () => {
+    if (onCancel) {
+      setIsOpen(false);
+      onCancel();
+    }
+  };
+
   const onModalClose = () => {
     setIsOpen(false);
-    onClose?.();
+    onClose?.("closeButtonClicked");
   };
 
   const Wrapper = wrapIn || "div";
 
   return (
-    <Dialog open={isOpen} onClose={onModalClose} data-testid={testId} className={styles.modalPageContainer}>
+    <Dialog open={isOpen} onClose={onModalCancel} data-testid={testId} className={styles.modalPageContainer}>
       <Overlay />
       <Wrapper
         className={classNames(styles.modalContainer, {

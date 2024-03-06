@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.client;
@@ -98,7 +98,7 @@ public class AirbyteApiClient {
     stateApi = new StateApi(apiClient);
     streamStatusesApi = new StreamStatusesApi(apiClient);
     userApi = new UserApi(apiClient);
-    permissionApi = new PermissionApi();
+    permissionApi = new PermissionApi(apiClient);
     organizationApi = new OrganizationApi(apiClient);
     secretPersistenceConfigApi = new SecretsPersistenceConfigApi(apiClient);
   }

@@ -7,8 +7,8 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 
+import { WorkspaceRead } from "core/api/types/AirbyteClient";
 import { CloudWorkspaceRead } from "core/api/types/CloudApi";
-import { WorkspaceRead } from "core/request/AirbyteClient";
 
 import { WorkspaceItem } from "./WorkspaceItem";
 

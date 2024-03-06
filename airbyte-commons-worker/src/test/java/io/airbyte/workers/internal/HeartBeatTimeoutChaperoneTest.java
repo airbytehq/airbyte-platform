@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
@@ -57,7 +57,10 @@ class HeartBeatTimeoutChaperoneTest {
       }
     })))
         .isInstanceOf(HeartbeatTimeoutChaperone.HeartbeatTimeoutException.class);
-
+    verify(metricClient, times(1)).count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
+        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+        new MetricAttribute(MetricTags.KILLED, "true"),
+        new MetricAttribute(MetricTags.SOURCE_IMAGE, "docker image"));
   }
 
   @Test
@@ -107,12 +110,11 @@ class HeartBeatTimeoutChaperoneTest {
         featureFlagClient,
         workspaceId,
         connectionId,
+        "docker image",
         metricClient);
     when(featureFlagClient.boolVariation(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(true);
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(false));
     assertDoesNotThrow(() -> CompletableFuture.runAsync(() -> heartbeatTimeoutChaperone.monitor()).get(1000, TimeUnit.MILLISECONDS));
-    verify(metricClient, times(1)).count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
-        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
   }
 
   @Test
@@ -123,6 +125,7 @@ class HeartBeatTimeoutChaperoneTest {
         featureFlagClient,
         workspaceId,
         connectionId,
+        "docker image",
         metricClient);
     when(featureFlagClient.boolVariation(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(false);
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true), Optional.of(false));

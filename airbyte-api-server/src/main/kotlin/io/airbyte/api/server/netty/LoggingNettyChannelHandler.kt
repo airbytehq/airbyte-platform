@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory
 
 class LoggingNettyChannelHandler : ChannelDuplexHandler() {
   private val droppedText = "[...dropped...]"
+
   companion object {
     private val log = LoggerFactory.getLogger(LoggingNettyChannelHandler::class.java)
   }

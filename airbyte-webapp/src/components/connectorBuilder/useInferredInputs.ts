@@ -1,4 +1,4 @@
-import { useContext, useMemo } from "react";
+import { useContext } from "react";
 
 import { ConnectorBuilderMainRHFContext } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -14,8 +14,5 @@ export const useInferredInputs = () => {
   const streams = watch("formValues.streams");
   const startDateInput = hasIncrementalSyncUserInput(streams, "start_datetime");
   const endDateInput = hasIncrementalSyncUserInput(streams, "end_datetime");
-  return useMemo(
-    () => getInferredInputList(authenticator, inferredInputOverrides, startDateInput, endDateInput),
-    [authenticator, endDateInput, inferredInputOverrides, startDateInput]
-  );
+  return getInferredInputList(authenticator, inferredInputOverrides, startDateInput, endDateInput);
 };

@@ -1,4 +1,4 @@
-import { config, MissingConfigError } from "config";
+import { config, MissingConfigError } from "core/config";
 import { isCloudApp } from "core/utils/app";
 
 import { ApiCallOptions, fetchApiCall, RequestOptions } from "./apiCall";

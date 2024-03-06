@@ -9,7 +9,6 @@ dependencies {
 
     implementation(platform(libs.micronaut.bom))
     implementation(libs.bundles.micronaut)
-    implementation(libs.micronaut.security)
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
 
