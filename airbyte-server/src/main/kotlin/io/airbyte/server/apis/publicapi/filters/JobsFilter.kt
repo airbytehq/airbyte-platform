@@ -26,5 +26,5 @@ class JobsFilter(
   /**
    * Convert Airbyte API job status to config API job status.
    */
-  fun getConfigApiStatus(): JobStatus? = status?.let { JobStatus.fromValue(it.toString()) }
+  fun getConfigApiStatuses(): List<JobStatus>? = if (status == null) null else JobStatus.entries.filter { it.name == status.name }
 }

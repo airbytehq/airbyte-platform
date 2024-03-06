@@ -681,4 +681,20 @@ class JobHistoryHandlerTest {
 
   }
 
+  @Test
+  @DisplayName("Should test to ensure that JobInfoReadWithoutLogs includes the bytes and records committed")
+  void testGetJobInfoWithoutLogs() throws IOException {
+
+    when(jobPersistence.getJob(JOB_ID))
+        .thenReturn(new Job(JOB_ID, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, ImmutableList.of(testJobAttempt),
+            JOB_STATUS, null, CREATED_AT, CREATED_AT));
+    when(jobPersistence.getAttemptStats(List.of(JOB_ID)))
+        .thenReturn(Map.of(new JobAttemptPair(JOB_ID, testJobAttempt.getAttemptNumber()), FIRST_ATTEMPT_STATS));
+
+    final JobInfoRead resultingJobInfo = jobHistoryHandler.getJobInfoWithoutLogs(new JobIdRequestBody().id(JOB_ID));
+    assertEquals(resultingJobInfo.getJob().getAggregatedStats().getBytesCommitted(), FIRST_ATTEMPT_STATS.combinedStats().getBytesCommitted());
+    assertEquals(resultingJobInfo.getJob().getAggregatedStats().getRecordsCommitted(), FIRST_ATTEMPT_STATS.combinedStats().getRecordsCommitted());
+
+  }
+
 }
