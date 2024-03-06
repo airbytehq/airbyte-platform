@@ -55,7 +55,7 @@ public class UserInvitationApiController implements UserInvitationApi {
     return ApiHelper.execute(() -> {
       final User currentUser = currentUserService.getCurrentUser();
 
-      return userInvitationHandler.create(invitationCreateRequestBody, currentUser.getUserId());
+      return userInvitationHandler.create(invitationCreateRequestBody, currentUser);
     });
   }
 

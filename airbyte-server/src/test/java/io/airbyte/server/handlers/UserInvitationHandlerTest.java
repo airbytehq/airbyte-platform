@@ -11,12 +11,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.api.model.generated.UserInvitationCreateRequestBody;
 import io.airbyte.api.model.generated.UserInvitationRead;
-import io.airbyte.api.model.generated.UserRead;
-import io.airbyte.commons.server.handlers.UserHandler;
 import io.airbyte.config.InvitationStatus;
+import io.airbyte.config.User;
 import io.airbyte.config.UserInvitation;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.data.services.UserInvitationService;
@@ -43,9 +41,6 @@ public class UserInvitationHandlerTest {
   UserInvitationMapper mapper;
 
   @Mock(strictness = LENIENT)
-  UserHandler userHandler;
-
-  @Mock(strictness = LENIENT)
   CustomerIoEmailNotificationSender customerIoEmailNotificationSender;
 
   @Mock(strictness = LENIENT)
@@ -55,7 +50,7 @@ public class UserInvitationHandlerTest {
 
   @BeforeEach
   void setup() {
-    handler = new UserInvitationHandler(service, mapper, userHandler, customerIoEmailNotificationSender, webUrlHelper);
+    handler = new UserInvitationHandler(service, mapper, customerIoEmailNotificationSender, webUrlHelper);
   }
 
   @Test
@@ -63,13 +58,14 @@ public class UserInvitationHandlerTest {
     // mocked data
     UserInvitationCreateRequestBody req = new UserInvitationCreateRequestBody();
     req.setInvitedEmail("test@example.com");
+    User currentUser = new User();
     UUID currentUserId = UUID.randomUUID();
+    currentUser.setUserId(currentUserId);
+    currentUser.setName("inviterName");
     UserInvitation saved = new UserInvitation();
     saved.setInviteCode("randomCode");
     saved.setInviterUserId(currentUserId);
     saved.setStatus(InvitationStatus.PENDING);
-    UserRead currentUser = new UserRead();
-    currentUser.setName("inviterName");
     UserInvitationRead expected = new UserInvitationRead();
     expected.setInviteCode(saved.getInviteCode());
     expected.setInvitedEmail(req.getInvitedEmail());
@@ -77,15 +73,13 @@ public class UserInvitationHandlerTest {
 
     when(mapper.toDomain(req)).thenReturn(new UserInvitation());
     when(service.createUserInvitation(any(UserInvitation.class))).thenReturn(saved);
-    when(userHandler.getUser(any(UserIdRequestBody.class))).thenReturn(currentUser);
     when(webUrlHelper.getBaseUrl()).thenReturn("cloud.airbyte.com");
     when(mapper.toApi(saved)).thenReturn(expected);
 
-    final UserInvitationRead result = handler.create(req, currentUserId);
+    final UserInvitationRead result = handler.create(req, currentUser);
 
     verify(mapper, times(1)).toDomain(req);
     verify(service, times(1)).createUserInvitation(any(UserInvitation.class));
-    verify(userHandler, times(1)).getUser(any(UserIdRequestBody.class));
     verify(webUrlHelper, times(1)).getBaseUrl();
     verify(customerIoEmailNotificationSender, times(1))
         .sendInviteToUser(any(CustomerIoEmailConfig.class), anyString(), anyString());
