@@ -205,8 +205,7 @@ Helm chart to deploy airbyte
 | minio.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/ # |
 | minio.storage.volumeClaimValue | string | `"500Mi"` |  |
 | minio.tolerations | list | `[]` | Tolerations for minio pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ # |
-| minio.resources.limits                                       | object | `{}`                                 | The resources limits for the minio container
- |
+| minio.resources.limits                                       | object | `{}`                                 | The resources limits for the minio container |
 | minio.resources.requests                                     | object | `{}`                                 | The requested resources for the minio container |
 | nameOverride | string | `""` | String to partially override airbyte.fullname template with a string (will prepend the release name) |
 | pod-sweeper.affinity | object | `{}` | Affinity and anti-affinity for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity |
