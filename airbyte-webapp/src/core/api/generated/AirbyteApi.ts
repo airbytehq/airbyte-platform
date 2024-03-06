@@ -6,7 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { RedirectUrlResponse } from "./AirbyteApi.schemas";
-import { cloudAirbyteApiCall } from "../apis";
+import { apiCall } from "../apis";
 
 // eslint-disable-next-line
 type SecondParameter<T extends (...args: any) => any> = T extends (config: any, args: infer P) => any ? P : never;
@@ -15,8 +15,8 @@ type SecondParameter<T extends (...args: any) => any> = T extends (config: any, 
  * Return a JSON data structure that contains the URL that should be redirected to in the redirectUrl field.
  * @summary Get the Speakeasy Callback URL
  */
-export const getSpeakeasyCallbackUrl = (options: SecondParameter<typeof cloudAirbyteApiCall>) => {
-  return cloudAirbyteApiCall<RedirectUrlResponse>({ url: `/speakeasy_callback_url`, method: "get" }, options);
+export const getSpeakeasyCallbackUrl = (options: SecondParameter<typeof apiCall>) => {
+  return apiCall<RedirectUrlResponse>({ url: `/public/speakeasy_callback_url`, method: "get" }, options);
 };
 
 type AwaitedInput<T> = PromiseLike<T> | T;

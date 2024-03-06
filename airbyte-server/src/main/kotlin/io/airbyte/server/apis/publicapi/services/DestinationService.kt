@@ -51,7 +51,7 @@ interface DestinationService {
     destinationPatchRequest: DestinationPatchRequest,
   ): DestinationResponse
 
-  fun deleteDestination(connectionId: UUID)
+  fun deleteDestination(destinationId: UUID)
 
   fun listDestinationsForWorkspaces(
     workspaceIds: List<UUID>,
