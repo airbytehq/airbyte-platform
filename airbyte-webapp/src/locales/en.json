@@ -36,7 +36,6 @@
   "role.editor.description": "Can edit {resourceType}, but not settings",
   "role.reader.description": "Can view {resourceType}, but cannot edit",
   "role.member.description": "Member of {resourceType}, but cannot view anything without additional permissions",
-  "role.addUser": "New member",
   "role.organization.userDescription": "<b>{name}</b> is an <b>Organization {role}.</b>",
   "role.guest": "Guest",
 
@@ -1681,5 +1680,15 @@
   "enterprise.enterprise": "Enterprise",
 
   "userInvitations.accept.success": "Invitation accepted successfully",
-  "userInvitations.accept.error": "Something went wrong accepting the invitation. Please check your link."
+  "userInvitations.accept.error": "Something went wrong accepting the invitation. Please check your link.",
+  "userInvitations.create.modal.title": "Add a member to {workspace}",
+  "userInvitations.create.modal.addNew": "Add new member",
+  "userInvitations.create.modal.existingMember": "This member already exists. Go to workspace settings to edit this user’s permissions.",
+  "userInvitations.create.modal.search": "Type to add a new member",
+  "userInvitations.create.success": "Invitation created successfully",
+  "userInvitations.create.error": "There was an error inviting this user. Please try again.",
+  "userInvitations.create.modal.emptyList": "No matching users found",
+  "userInvitations.create.modal.emptyList.canInvite": "No matching users found. Enter a valid email address to invite a new member.",
+  "userInvitations.create.modal.emptyList.noOrganization": "Enter a valid email address to invite a new member.",
+  "userInvitations.newMember": "New member"
 }

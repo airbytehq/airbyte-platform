@@ -28,7 +28,8 @@ export interface Experiments {
   "onboarding.speedyConnection": boolean;
   "platform.auto-backfill-on-new-columns": boolean;
   "settings.breakingChangeNotifications": boolean;
-  "upcomingFeaturesPage.url": string;
+  "settings.invitationSystemv2": boolean;
   "settings.token-management-ui": boolean;
   "settings.showAdvancedSettings": boolean;
+  "upcomingFeaturesPage.url": string;
 }
