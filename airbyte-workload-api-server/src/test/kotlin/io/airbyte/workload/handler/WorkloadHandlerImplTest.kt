@@ -329,7 +329,7 @@ class WorkloadHandlerImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["SUCCESS", "PENDING", "CANCELLED"])
+  @EnumSource(value = WorkloadStatus::class, names = ["SUCCESS", "CANCELLED"])
   fun `test fail workload in inactive status`(workloadStatus: WorkloadStatus) {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(
       Optional.of(
