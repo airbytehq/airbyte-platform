@@ -1,12 +1,12 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useIntl } from "react-intl";
 
 import { useNotificationService } from "hooks/services/Notification";
 
 import { workspaceKeys } from "./workspaces";
-import { acceptUserInvitation } from "../generated/AirbyteClient";
+import { acceptUserInvitation, createUserInvitation } from "../generated/AirbyteClient";
 import { SCOPE_USER } from "../scopes";
-import { UserInvitationRead } from "../types/AirbyteClient";
+import { UserInvitationCreateRequestBody, UserInvitationRead } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -25,7 +25,6 @@ export const useAcceptUserInvitation = (inviteCode?: string | null): UserInvitat
             type: "success",
             text: formatMessage({ id: "userInvitations.accept.success" }),
             id: "userInvitations.accept.success",
-            timeout: false,
           });
           queryClient.invalidateQueries(workspaceKeys.lists());
           return response;
@@ -39,5 +38,33 @@ export const useAcceptUserInvitation = (inviteCode?: string | null): UserInvitat
           return null;
         }),
     { enabled: !!inviteCode }
+  );
+};
+
+export const useCreateUserInvitation = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+  const { formatMessage } = useIntl();
+  const { registerNotification } = useNotificationService();
+
+  return useMutation(async (invitationCreate: UserInvitationCreateRequestBody) =>
+    createUserInvitation(invitationCreate, requestOptions)
+      .then((response) => {
+        registerNotification({
+          type: "success",
+          text: formatMessage({ id: "userInvitations.create.success" }),
+          id: "userInvitations.create.success",
+        });
+        queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
+        return response;
+      })
+      .catch(() => {
+        registerNotification({
+          type: "error",
+          text: formatMessage({ id: "userInvitations.create.error" }),
+          id: "userInvitations.create.error",
+        });
+        return null;
+      })
   );
 };

@@ -4,10 +4,10 @@ plugins {
 }
 
 dependencies {
-    annotationProcessor(platform(libs.micronaut.bom))
+    annotationProcessor(platform(libs.micronaut.platform))
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-    implementation(platform(libs.micronaut.bom))
+    implementation(platform(libs.micronaut.platform))
     implementation(libs.bundles.micronaut)
 
     implementation(libs.apache.commons.text)
@@ -23,7 +23,7 @@ dependencies {
     implementation(libs.slf4j.api)
     implementation(libs.bundles.datadog)
 
-    testAnnotationProcessor(platform(libs.micronaut.bom))
+    testAnnotationProcessor(platform(libs.micronaut.platform))
     testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
     testAnnotationProcessor(libs.jmh.annotations)
 

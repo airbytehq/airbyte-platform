@@ -8,10 +8,10 @@ import io.airbyte.analytics.TrackingClient
 import io.airbyte.commons.server.errors.problems.AbstractThrowableProblem
 import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
+import jakarta.ws.rs.core.Response
 import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.Callable
-import javax.ws.rs.core.Response
 
 /**
  * Helper for segment tracking used by the public api server.

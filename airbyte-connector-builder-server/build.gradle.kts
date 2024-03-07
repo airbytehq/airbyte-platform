@@ -1,6 +1,6 @@
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
-import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 import java.util.Properties
+import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 
 plugins {
     id("io.airbyte.gradle.jvm.app")
@@ -10,28 +10,29 @@ plugins {
 }
 
 dependencies {
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.1")
+    // Micronaut dependencies)
+    annotationProcessor(platform(libs.micronaut.platform))
+    annotationProcessor(libs.bundles.micronaut.annotation.processor)
+
+    implementation(libs.jackson.datatype)
     implementation("com.googlecode.json-simple:json-simple:1.1.1")
 
     // Cloud service dependencies. These are not strictly necessary yet, but likely needed for any full-fledged cloud service)
     implementation(libs.bundles.datadog)
     // implementation(libs.bundles.temporal  uncomment this when we start using temporal to invoke connector commands)
     implementation(libs.sentry.java)
-
     implementation(libs.guava)
-
-    // Micronaut dependencies)
-    annotationProcessor(platform(libs.micronaut.bom))
-    annotationProcessor(libs.bundles.micronaut.annotation.processor)
-
-    implementation(platform(libs.micronaut.bom))
+    implementation(platform(libs.micronaut.platform))
     implementation(libs.bundles.micronaut)
+    implementation(libs.micronaut.http)
     implementation(libs.micronaut.security)
+    implementation(libs.jakarta.annotation.api)
+    implementation(libs.jakarta.ws.rs.api)
 
     implementation(project(":airbyte-commons"))
 
     // OpenAPI code generation(dependencies)
-    implementation("io.swagger:swagger-annotations:1.6.2")
+    implementation(libs.swagger.annotations)
 
     // Internal dependencies)
     implementation(project(":airbyte-commons"))
@@ -44,6 +45,8 @@ dependencies {
     implementation(project(":airbyte-metrics:metrics-lib"))
 
     implementation(libs.airbyte.protocol)
+
+    runtimeOnly(libs.snakeyaml)
 
     testRuntimeOnly(libs.junit.jupiter.engine)
     testImplementation(libs.bundles.junit)
@@ -106,6 +109,11 @@ val generateOpenApiServer = tasks.register<GenerateTask>("generateOpenApiServer"
             */
             "additionalModelTypeAnnotations" to "\n@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)",
     ))
+
+    doLast {
+        updateToJakartaApi(file("${outputDir.get()}/src/gen/java/${apiPackage.get().replace(".", "/")}"))
+        updateToJakartaApi(file("${outputDir.get()}/src/gen/java/${modelPackage.get().replace(".", "/")}"))
+    }
 }
 
 tasks.named("compileJava") {
@@ -136,4 +144,16 @@ tasks.named<DockerBuildImage>("dockerBuildImage") {
     buildArgs.put("CDK_VERSION", cdkVersion)
 
     dependsOn(copyPythonDeps, generateOpenApiServer)
+}
+
+private fun updateToJakartaApi(srcDir:File) {
+    srcDir.walk().forEach { file ->
+        if(file.isFile) {
+            var contents = file.readText()
+            contents = contents.replace("javax.ws.rs", "jakarta.ws.rs")
+                .replace("javax.validation", "jakarta.validation")
+                .replace("javax.annotation", "jakarta.annotation")
+            file.writeText(contents)
+        }
+    }
 }

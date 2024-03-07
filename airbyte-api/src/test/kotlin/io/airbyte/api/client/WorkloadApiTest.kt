@@ -2,6 +2,8 @@ package io.airbyte.api.client
 
 import dev.failsafe.RetryPolicy
 import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.workload.api.client.generated.infrastructure.ClientError
+import io.airbyte.workload.api.client.generated.infrastructure.ClientException
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest
 import io.mockk.every
 import io.mockk.mockk
@@ -11,8 +13,6 @@ import okhttp3.Response
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.openapitools.client.infrastructure.ClientError
-import org.openapitools.client.infrastructure.ClientException
 
 /**
  * [WorkloadApi] is a generated class using OpenAPI Generator. We are making some changes to the generated class

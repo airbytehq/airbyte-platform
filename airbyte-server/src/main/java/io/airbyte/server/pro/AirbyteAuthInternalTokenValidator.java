@@ -24,7 +24,7 @@ import reactor.core.publisher.Flux;
 @Slf4j
 @Singleton
 @RequiresAirbyteProEnabled
-public class AirbyteAuthInternalTokenValidator implements TokenValidator {
+public class AirbyteAuthInternalTokenValidator implements TokenValidator<HttpRequest<?>> {
 
   @Override
   public Publisher<Authentication> validateToken(final String token, final HttpRequest<?> request) {

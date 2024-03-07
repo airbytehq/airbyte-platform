@@ -11,9 +11,8 @@ import io.airbyte.data.repositories.UserInvitationRepository
 import io.airbyte.data.services.UserInvitationService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
-import io.micronaut.transaction.annotation.TransactionalAdvice
+import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
-import jakarta.transaction.Transactional
 import java.util.UUID
 
 @Singleton
@@ -31,8 +30,7 @@ open class UserInvitationServiceDataImpl(
     return userInvitationRepository.save(invitation.toEntity()).toConfigModel()
   }
 
-  @Transactional
-  @TransactionalAdvice("config")
+  @Transactional("config")
   override fun acceptUserInvitation(
     inviteCode: String,
     invitedUserId: UUID,

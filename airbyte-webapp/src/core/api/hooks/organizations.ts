@@ -12,6 +12,7 @@ import {
 } from "../generated/AirbyteClient";
 import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
 import { SCOPE_ORGANIZATION, SCOPE_USER } from "../scopes";
+import { OrganizationUserReadList } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -80,9 +81,19 @@ export const useListOrganizationsById = (organizationIds: string[]) => {
   );
 };
 
-export const useListUsersInOrganization = (organizationId: string, enabled: boolean = true) => {
+export const useListUsersInOrganization = (organizationId?: string): OrganizationUserReadList => {
   const requestOptions = useRequestOptions();
-  const queryKey = organizationKeys.listUsers(organizationId);
+  const queryKey = organizationKeys.listUsers(organizationId ?? "");
 
-  return useSuspenseQuery(queryKey, () => listUsersInOrganization({ organizationId }, requestOptions), { enabled });
+  return (
+    useSuspenseQuery(
+      queryKey,
+      () => listUsersInOrganization({ organizationId: organizationId ?? "" }, requestOptions),
+      {
+        enabled: !!organizationId,
+      }
+    ) ?? {
+      users: [],
+    }
+  );
 };

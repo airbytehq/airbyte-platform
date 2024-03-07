@@ -4,21 +4,20 @@ plugins {
 }
 
 dependencies {
-    annotationProcessor(platform(libs.micronaut.bom))
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+    annotationProcessor(platform(libs.micronaut.platform))
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-    implementation(platform(libs.micronaut.bom))
+    implementation(platform(libs.micronaut.platform))
     implementation(libs.bundles.micronaut)
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
+    implementation(libs.micronaut.security)
 
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-config:config-models"))
 
-    testAnnotationProcessor(platform(libs.micronaut.bom))
+    testAnnotationProcessor(platform(libs.micronaut.platform))
     testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
-    testCompileOnly(libs.lombok)
-    testAnnotationProcessor(libs.lombok)
 
     testImplementation(libs.bundles.micronaut.test)
     testImplementation(libs.mockito.inline)

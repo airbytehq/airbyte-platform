@@ -14,6 +14,7 @@ import io.airbyte.api.model.generated.SourceCoreConfig;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
@@ -34,7 +35,7 @@ public class SchedulerApiController implements SchedulerApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
-  public CheckConnectionRead executeDestinationCheckConnection(final DestinationCoreConfig destinationCoreConfig) {
+  public CheckConnectionRead executeDestinationCheckConnection(@Body final DestinationCoreConfig destinationCoreConfig) {
     return ApiHelper.execute(() -> schedulerHandler.checkDestinationConnectionFromDestinationCreate(destinationCoreConfig));
   }
 
@@ -42,7 +43,7 @@ public class SchedulerApiController implements SchedulerApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
-  public CheckConnectionRead executeSourceCheckConnection(final SourceCoreConfig sourceCoreConfig) {
+  public CheckConnectionRead executeSourceCheckConnection(@Body final SourceCoreConfig sourceCoreConfig) {
     return ApiHelper.execute(() -> schedulerHandler.checkSourceConnectionFromSourceCreate(sourceCoreConfig));
   }
 
@@ -50,7 +51,7 @@ public class SchedulerApiController implements SchedulerApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
-  public SourceDiscoverSchemaRead executeSourceDiscoverSchema(final SourceCoreConfig sourceCoreConfig) {
+  public SourceDiscoverSchemaRead executeSourceDiscoverSchema(@Body final SourceCoreConfig sourceCoreConfig) {
     return ApiHelper.execute(() -> schedulerHandler.discoverSchemaForSourceFromSourceCreate(sourceCoreConfig));
   }
 

@@ -33,10 +33,10 @@ import io.micronaut.context.annotation.Value
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.client.exceptions.HttpClientResponseException
 import jakarta.inject.Singleton
+import jakarta.ws.rs.core.Response
 import org.slf4j.LoggerFactory
 import java.util.Objects
 import java.util.UUID
-import javax.ws.rs.core.Response
 
 interface WorkspaceService {
   fun createWorkspace(

@@ -70,7 +70,8 @@ export interface NextAccessUsers {
 
 export const useGetOrganizationAccessUsers = (): AccessUsers => {
   const workspace = useCurrentWorkspace();
-  const organizationUsers = useListUsersInOrganization(workspace.organizationId ?? "").users;
+  const { users: organizationUsers } = useListUsersInOrganization(workspace.organizationId);
+
   return {
     organization: { users: organizationUsers, usersToAdd: [] },
   };

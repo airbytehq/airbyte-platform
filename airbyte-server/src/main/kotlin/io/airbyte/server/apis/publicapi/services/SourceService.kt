@@ -30,9 +30,9 @@ import io.micronaut.context.annotation.Secondary
 import io.micronaut.context.annotation.Value
 import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
+import jakarta.ws.rs.core.Response
 import org.slf4j.LoggerFactory
 import java.util.UUID
-import javax.ws.rs.core.Response
 
 interface SourceService {
   fun createSource(

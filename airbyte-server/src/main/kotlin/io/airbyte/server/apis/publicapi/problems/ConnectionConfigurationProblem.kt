@@ -8,9 +8,9 @@ import io.airbyte.commons.server.errors.problems.AbstractThrowableProblem
 import io.airbyte.public_api.model.generated.ConnectionSyncModeEnum
 import io.airbyte.server.apis.publicapi.constants.API_DOC_URL
 import io.micronaut.http.HttpStatus
+import jakarta.validation.Valid
 import java.io.Serial
 import java.net.URI
-import javax.validation.Valid
 
 /**
  * Thrown when a configuration for a connection is not valid.

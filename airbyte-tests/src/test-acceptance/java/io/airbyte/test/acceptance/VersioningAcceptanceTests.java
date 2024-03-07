@@ -44,7 +44,7 @@ class VersioningAcceptanceTests {
         .withBackoff(Duration.ofSeconds(1), Duration.ofSeconds(60)).build();
 
     final OkHttpClient client = new OkHttpClient.Builder().readTimeout(Duration.ofSeconds(60)).build();
-    apiClient2 = new AirbyteApiClient2(String.format("%s/api", AIRBYTE_SERVER_HOST), policy, client);
+    apiClient2 = new AirbyteApiClient2(String.format("%s/api", AIRBYTE_SERVER_HOST), policy, client, /* throwOn5xx */ true);
 
     workspaceId = apiClient2.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();
   }

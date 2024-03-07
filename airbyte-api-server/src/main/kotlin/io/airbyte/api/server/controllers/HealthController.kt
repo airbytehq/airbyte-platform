@@ -10,7 +10,7 @@ import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.swagger.annotations.ApiResponse
 import io.swagger.annotations.ApiResponses
-import javax.ws.rs.GET
+import jakarta.ws.rs.GET
 
 /**
  * Health endpoint used by kubernetes and the gcp load balancer.

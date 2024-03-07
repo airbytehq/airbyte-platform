@@ -14,8 +14,8 @@ import io.airbyte.api.model.generated.Geography
 import io.airbyte.public_api.model.generated.ConnectionPatchRequest
 import io.airbyte.public_api.model.generated.ScheduleTypeEnum
 import io.airbyte.server.apis.publicapi.helpers.ConnectionHelper
+import jakarta.validation.constraints.NotBlank
 import java.util.UUID
-import javax.validation.constraints.NotBlank
 
 /**
  * Mappers that help convert models from the public api to models from the config api.

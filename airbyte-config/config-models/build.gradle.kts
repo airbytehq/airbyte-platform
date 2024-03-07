@@ -10,38 +10,37 @@ plugins {
 }
 
 dependencies {
-    annotationProcessor(libs.lombok)
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+    annotationProcessor(libs.bundles.micronaut.annotation.processor)
+
     kapt(libs.bundles.micronaut.annotation.processor)
+
     api(libs.bundles.micronaut.annotation)
 
-    implementation(platform("com.fasterxml.jackson:jackson-bom:2.13.0"))
+    implementation(project(":airbyte-json-validation"))
+    implementation(project(":airbyte-commons"))
+
+    implementation(platform(libs.fasterxml))
     implementation(libs.bundles.jackson)
     implementation(libs.spotbugs.annotations)
     implementation(libs.guava)
-    implementation(libs.micronaut.kotlin.extensions)
-    compileOnly(libs.lombok)
-
+    implementation(libs.micronaut.kotlin.extension.functions)
     implementation(libs.google.cloud.storage)
     implementation(libs.aws.java.sdk.s3)
     implementation(libs.aws.java.sdk.sts)
     implementation(libs.s3)
     implementation(libs.sts)
     implementation(libs.bundles.apache)
-
-    compileOnly(libs.lombok)
-
-    implementation(project(":airbyte-json-validation"))
     implementation(libs.airbyte.protocol)
     implementation(libs.commons.io)
-    implementation(project(":airbyte-commons"))
 
-    testCompileOnly(libs.lombok)
-    testAnnotationProcessor(libs.lombok)
-    testRuntimeOnly(libs.junit.jupiter.engine)
     testImplementation(libs.bundles.junit)
     testImplementation(libs.assertj.core)
     testImplementation(libs.junit.pioneer)
     testImplementation(libs.bundles.micronaut.test)
+
+    testRuntimeOnly(libs.junit.jupiter.engine)
 }
 
 jsonSchema2Pojo {

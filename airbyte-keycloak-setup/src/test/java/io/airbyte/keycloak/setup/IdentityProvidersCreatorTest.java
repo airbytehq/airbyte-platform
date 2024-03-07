@@ -50,7 +50,7 @@ class IdentityProvidersCreatorTest {
   void testCreateIdps() {
     when(realmResource.identityProviders()).thenReturn(identityProvidersResource);
 
-    Response response = mock(Response.class);
+    final Response response = mock(Response.class);
     when(response.getStatus()).thenReturn(201);
     when(identityProvidersResource.create(any(IdentityProviderRepresentation.class))).thenReturn(response);
 
@@ -66,7 +66,7 @@ class IdentityProvidersCreatorTest {
         .thenReturn(Response.status(Response.Status.CREATED).build());
     when(identityProviderConfiguration.getType()).thenReturn(IdentityProviderConfiguration.ProviderType.OIDC);
 
-    Map<String, String> configMap = new HashMap<>();
+    final Map<String, String> configMap = new HashMap<>();
     when(configurationMapService.importProviderFrom(realmResource, identityProviderConfiguration, "oidc"))
         .thenReturn(configMap);
     when(configurationMapService.setupProviderConfig(identityProviderConfiguration, configMap))
@@ -85,7 +85,7 @@ class IdentityProvidersCreatorTest {
         .thenReturn(Response.status(Response.Status.BAD_REQUEST).build());
     when(identityProviderConfiguration.getType()).thenReturn(IdentityProviderConfiguration.ProviderType.OIDC);
 
-    Map<String, String> configMap = new HashMap<>();
+    final Map<String, String> configMap = new HashMap<>();
     when(configurationMapService.importProviderFrom(realmResource, identityProviderConfiguration, "oidc"))
         .thenReturn(configMap);
     when(configurationMapService.setupProviderConfig(identityProviderConfiguration, configMap))

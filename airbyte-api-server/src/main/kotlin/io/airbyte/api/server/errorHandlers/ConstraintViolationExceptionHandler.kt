@@ -10,8 +10,8 @@ import io.micronaut.http.annotation.Produces
 import io.micronaut.http.server.exceptions.ExceptionHandler
 import io.micronaut.problem.violations.ProblemConstraintViolationExceptionHandler
 import jakarta.inject.Singleton
+import jakarta.validation.ConstraintViolationException
 import org.slf4j.LoggerFactory
-import javax.validation.ConstraintViolationException
 
 /**
  * https://www.baeldung.com/jersey-bean-validation#custom-exception-handler. handles exceptions

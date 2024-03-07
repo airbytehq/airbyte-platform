@@ -9,6 +9,7 @@ import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
 import io.airbyte.config.Application;
 import io.airbyte.config.User;
 import io.airbyte.data.services.ApplicationService;
+import jakarta.annotation.Nonnull;
 import jakarta.inject.Singleton;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.core.Response;
@@ -22,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import org.jetbrains.annotations.NotNull;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
 import org.keycloak.representations.idm.ClientRepresentation;
@@ -45,8 +45,8 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
   private final Keycloak keycloakAdminClient;
 
   public ApplicationServiceKeycloakImpl(
-                                        Keycloak keycloakAdminClient,
-                                        AirbyteKeycloakConfiguration keycloakConfiguration) {
+                                        final Keycloak keycloakAdminClient,
+                                        final AirbyteKeycloakConfiguration keycloakConfiguration) {
     this.keycloakAdminClient = keycloakAdminClient;
     this.keycloakConfiguration = keycloakConfiguration;
   }
@@ -60,7 +60,7 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
    */
   @Override
   @SuppressWarnings("PMD.PreserveStackTrace")
-  public Application createApplication(User user, String name) {
+  public Application createApplication(final User user, final String name) {
     try {
       final var existingClients = listApplicationsByUser(user);
       if (existingClients.size() >= MAX_CREDENTIALS) {
@@ -72,7 +72,7 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
         throw new BadRequestException("User already has a key with this name");
       }
       final var clientRepresentation = buildClientRepresentation(user, name, existingClients.size());
-      var response = keycloakAdminClient
+      final var response = keycloakAdminClient
           .realm(keycloakConfiguration.getClientRealm())
           .clients()
           .create(clientRepresentation);
@@ -104,7 +104,7 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
           .update(serviceAccountUser);
 
       return toApplication(client);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       throw new BadRequestException("An unknown exception has occurred: " + e.getMessage());
     }
   }
@@ -116,7 +116,7 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
    * @return The list of Applications for the user.
    */
   @Override
-  public List<Application> listApplicationsByUser(User userId) {
+  public List<Application> listApplicationsByUser(final User userId) {
     final var users = keycloakAdminClient
         .realm(keycloakConfiguration.getClientRealm())
         .users()
@@ -147,7 +147,7 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
    * @return The deleted Application.
    */
   @Override
-  public Optional<Application> deleteApplication(User user, String applicationId) {
+  public Optional<Application> deleteApplication(final User user, final String applicationId) {
     final var client = keycloakAdminClient
         .realm(keycloakConfiguration.getClientRealm())
         .clients()
@@ -186,7 +186,7 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
    * @return The built JWT.
    */
   @Override
-  public String getToken(String clientId, String clientSecret) {
+  public String getToken(final String clientId, final String clientSecret) {
     final var keycloakClient = KeycloakBuilder
         .builder()
         .serverUrl(keycloakConfiguration.getServerUrl())
@@ -213,8 +213,8 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
    * @param index The index of the client.
    * @return The built client representation.
    */
-  @NotNull
-  private ClientRepresentation buildClientRepresentation(User user, String name, int index) {
+  @Nonnull
+  private ClientRepresentation buildClientRepresentation(final User user, final String name, final int index) {
     final var client = new ClientRepresentation();
     client.setClientId(String.valueOf(UUID.randomUUID()));
     client.setServiceAccountsEnabled(true);
@@ -230,8 +230,9 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
             "airbyte-user"));
     client.setName(name);
 
-    var attributes = new HashMap<String, String>();
+    final var attributes = new HashMap<String, String>();
     attributes.put(USER_ID, String.valueOf(user.getAuthUserId()));
+    attributes.put("user_id", String.valueOf(user.getUserId()));
     attributes.put("access.token.signed.response.alg", "RS256");
     attributes.put("access.token.lifespan", "31536000");
     attributes.put("use.refresh.tokens", "false");
@@ -246,7 +247,7 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
    * @param client The client representation to convert.
    * @return The converted Application.
    */
-  private static Application toApplication(ClientRepresentation client) {
+  private static Application toApplication(final ClientRepresentation client) {
     return new Application()
         .withId(client.getClientId())
         .withName(client.getName())

@@ -27,6 +27,7 @@ import io.airbyte.commons.auth.SecuredUser;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.validation.json.JsonValidationException;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
@@ -54,7 +55,7 @@ public class PermissionApiController implements PermissionApi {
   @Secured({ORGANIZATION_ADMIN, WORKSPACE_ADMIN})
   @Post("/create")
   @Override
-  public PermissionRead createPermission(final PermissionCreate permissionCreate) {
+  public PermissionRead createPermission(@Body final PermissionCreate permissionCreate) {
     return ApiHelper.execute(() -> {
       validatePermissionCreation(permissionCreate);
       return permissionHandler.createPermission(permissionCreate);
@@ -73,21 +74,21 @@ public class PermissionApiController implements PermissionApi {
   @Secured({ORGANIZATION_READER, WORKSPACE_READER})
   @Post("/get")
   @Override
-  public PermissionRead getPermission(final PermissionIdRequestBody permissionIdRequestBody) {
+  public PermissionRead getPermission(@Body final PermissionIdRequestBody permissionIdRequestBody) {
     return ApiHelper.execute(() -> permissionHandler.getPermission(permissionIdRequestBody));
   }
 
   @Secured({ORGANIZATION_ADMIN, WORKSPACE_ADMIN})
   @Post("/update")
   @Override
-  public PermissionRead updatePermission(final PermissionUpdate permissionUpdate) {
+  public PermissionRead updatePermission(@Body final PermissionUpdate permissionUpdate) {
     return ApiHelper.execute(() -> {
       validatePermissionUpdate(permissionUpdate);
       return permissionHandler.updatePermission(permissionUpdate);
     });
   }
 
-  private void validatePermissionUpdate(final PermissionUpdate permissionUpdate) throws JsonValidationException {
+  private void validatePermissionUpdate(@Body final PermissionUpdate permissionUpdate) throws JsonValidationException {
     if (permissionUpdate.getPermissionType() == PermissionType.INSTANCE_ADMIN) {
       throw new JsonValidationException("Cannot modify Instance Admin permissions via API.");
     }
@@ -96,7 +97,7 @@ public class PermissionApiController implements PermissionApi {
   @Secured({ORGANIZATION_ADMIN, WORKSPACE_ADMIN})
   @Post("/delete")
   @Override
-  public void deletePermission(final PermissionIdRequestBody permissionIdRequestBody) {
+  public void deletePermission(@Body final PermissionIdRequestBody permissionIdRequestBody) {
 
     ApiHelper.execute(() -> {
       permissionHandler.deletePermission(permissionIdRequestBody);
@@ -107,7 +108,7 @@ public class PermissionApiController implements PermissionApi {
   @Secured({ORGANIZATION_ADMIN, WORKSPACE_ADMIN})
   @Post("/delete_user_from_workspace")
   @Override
-  public void deleteUserFromWorkspace(final PermissionDeleteUserFromWorkspaceRequestBody permissionDeleteUserFromWorkspaceRequestBody) {
+  public void deleteUserFromWorkspace(@Body final PermissionDeleteUserFromWorkspaceRequestBody permissionDeleteUserFromWorkspaceRequestBody) {
     ApiHelper.execute(() -> {
       permissionHandler.deleteUserFromWorkspace(permissionDeleteUserFromWorkspaceRequestBody);
       return null;
@@ -118,14 +119,14 @@ public class PermissionApiController implements PermissionApi {
   @Secured({ADMIN, SELF})
   @Post("/list_by_user")
   @Override
-  public PermissionReadList listPermissionsByUser(final UserIdRequestBody userIdRequestBody) {
+  public PermissionReadList listPermissionsByUser(@Body final UserIdRequestBody userIdRequestBody) {
     return ApiHelper.execute(() -> permissionHandler.listPermissionsByUser(userIdRequestBody.getUserId()));
   }
 
   @Secured({ADMIN}) // instance admins only
   @Post("/check")
   @Override
-  public PermissionCheckRead checkPermissions(final PermissionCheckRequest permissionCheckRequest) {
+  public PermissionCheckRead checkPermissions(@Body final PermissionCheckRequest permissionCheckRequest) {
 
     return ApiHelper.execute(() -> permissionHandler.checkPermissions(permissionCheckRequest));
   }
@@ -133,7 +134,7 @@ public class PermissionApiController implements PermissionApi {
   @Secured({ADMIN}) // instance admins only
   @Post("/check_multiple_workspaces")
   @Override
-  public PermissionCheckRead checkPermissionsAcrossMultipleWorkspaces(final PermissionsCheckMultipleWorkspacesRequest request) {
+  public PermissionCheckRead checkPermissionsAcrossMultipleWorkspaces(@Body final PermissionsCheckMultipleWorkspacesRequest request) {
     return ApiHelper.execute(() -> permissionHandler.permissionsCheckMultipleWorkspaces(request));
   }
 

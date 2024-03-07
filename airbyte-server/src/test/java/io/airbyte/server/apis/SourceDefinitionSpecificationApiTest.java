@@ -4,10 +4,8 @@
 
 package io.airbyte.server.apis;
 
-import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
+import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead;
-import io.airbyte.api.model.generated.SourceIdRequestBody;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -31,10 +29,10 @@ class SourceDefinitionSpecificationApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/source_definition_specifications/get";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceDefinitionIdWithWorkspaceId()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new SourceDefinitionIdWithWorkspaceId()),
         HttpStatus.NOT_FOUND);
   }
 

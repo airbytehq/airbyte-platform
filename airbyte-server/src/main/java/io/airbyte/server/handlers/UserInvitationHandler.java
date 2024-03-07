@@ -5,12 +5,9 @@
 package io.airbyte.server.handlers;
 
 import io.airbyte.api.model.generated.InviteCodeRequestBody;
-import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.api.model.generated.UserInvitationCreateRequestBody;
 import io.airbyte.api.model.generated.UserInvitationRead;
-import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.commons.server.errors.OperationNotAllowedException;
-import io.airbyte.commons.server.handlers.UserHandler;
 import io.airbyte.config.InvitationStatus;
 import io.airbyte.config.User;
 import io.airbyte.config.UserInvitation;
@@ -30,18 +27,15 @@ public class UserInvitationHandler {
 
   final UserInvitationService service;
   final UserInvitationMapper mapper;
-  final UserHandler userHandler;
   final WebUrlHelper webUrlHelper;
   final CustomerIoEmailNotificationSender customerIoEmailNotificationSender;
 
   public UserInvitationHandler(final UserInvitationService service,
                                final UserInvitationMapper mapper,
-                               final UserHandler userHandler,
                                final CustomerIoEmailNotificationSender customerIoEmailNotificationSender,
                                final WebUrlHelper webUrlHelper) {
     this.service = service;
     this.mapper = mapper;
-    this.userHandler = userHandler;
     this.webUrlHelper = webUrlHelper;
     this.customerIoEmailNotificationSender = customerIoEmailNotificationSender;
   }
@@ -56,11 +50,11 @@ public class UserInvitationHandler {
     return mapper.toApi(invitation);
   }
 
-  public UserInvitationRead create(final UserInvitationCreateRequestBody req, final UUID currentUserId)
+  public UserInvitationRead create(final UserInvitationCreateRequestBody req, final User currentUser)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final UserInvitation model = mapper.toDomain(req);
 
-    model.setInviterUserId(currentUserId);
+    model.setInviterUserId(currentUser.getUserId());
 
     // For now, inviteCodes are simply UUIDs that are converted to strings, to virtually guarantee
     // uniqueness.
@@ -77,7 +71,6 @@ public class UserInvitationHandler {
     // send invite email to the user
     // the email content includes the name of the inviter and the invite link
     // the invite link should look like cloud.airbyte.com/accept-invite?inviteCode=randomCodeHere
-    final UserRead currentUser = userHandler.getUser(new UserIdRequestBody().userId(currentUserId));
     final String inviteLink = webUrlHelper.getBaseUrl() + "/accept-invite?inviteCode=" + saved.getInviteCode();
     customerIoEmailNotificationSender.sendInviteToUser(new CustomerIoEmailConfig(req.getInvitedEmail()), currentUser.getName(), inviteLink);
 

@@ -7,11 +7,11 @@ plugins {
 }
 
 dependencies {
-    kapt(platform(libs.micronaut.bom))
+    kapt(platform(libs.micronaut.platform))
     kapt(libs.bundles.micronaut.annotation.processor)
 
     api(libs.bundles.micronaut.annotation)
-    api(libs.micronaut.kotlin.extensions)
+    api(libs.bundles.micronaut.kotlin)
     api(libs.kotlin.logging)
     api(libs.slf4j.api)
     api(libs.bundles.log4j)
@@ -35,7 +35,7 @@ dependencies {
     implementation(project(":airbyte-config:config-models"))
     implementation(project(":airbyte-json-validation"))
 
-    testAnnotationProcessor(platform(libs.micronaut.bom))
+    testAnnotationProcessor(platform(libs.micronaut.platform))
     testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
     testImplementation(libs.bundles.micronaut.test)
     testImplementation(libs.mockk)

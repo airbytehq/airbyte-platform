@@ -22,7 +22,8 @@ const SEARCH_PARAM = "search";
 export const OrganizationAccessManagementSection: React.FC = () => {
   const workspace = useCurrentWorkspace();
   const organization = useCurrentOrganizationInfo();
-  const organizationUsers = useListUsersInOrganization(workspace.organizationId ?? "").users;
+  const { users } = useListUsersInOrganization(workspace.organizationId);
+
   const [searchParams, setSearchParams] = useSearchParams();
   const filterParam = searchParams.get("search");
 
@@ -38,7 +39,7 @@ export const OrganizationAccessManagementSection: React.FC = () => {
     setSearchParams(searchParams);
   }, [debouncedUserFilter, searchParams, setSearchParams]);
 
-  const filteredUsersWithAccess = organizationUsers.filter((user) => {
+  const filteredUsersWithAccess = users.filter((user) => {
     return (
       user.name?.toLowerCase().includes(filterParam?.toLowerCase() ?? "") ||
       user.email?.toLowerCase().includes(filterParam?.toLowerCase() ?? "")

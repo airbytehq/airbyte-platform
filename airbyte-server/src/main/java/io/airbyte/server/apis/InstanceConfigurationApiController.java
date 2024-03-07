@@ -8,6 +8,7 @@ import io.airbyte.api.generated.InstanceConfigurationApi;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse;
 import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody;
 import io.airbyte.commons.server.handlers.InstanceConfigurationHandler;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.security.annotation.Secured;
@@ -29,8 +30,9 @@ public class InstanceConfigurationApiController implements InstanceConfiguration
     return ApiHelper.execute(instanceConfigurationHandler::getInstanceConfiguration);
   }
 
+  @SuppressWarnings("LineLength")
   @Override
-  public InstanceConfigurationResponse setupInstanceConfiguration(InstanceConfigurationSetupRequestBody instanceConfigurationSetupRequestBody) {
+  public InstanceConfigurationResponse setupInstanceConfiguration(@Body final InstanceConfigurationSetupRequestBody instanceConfigurationSetupRequestBody) {
     return ApiHelper.execute(() -> instanceConfigurationHandler.setupInstanceConfiguration(instanceConfigurationSetupRequestBody));
   }
 

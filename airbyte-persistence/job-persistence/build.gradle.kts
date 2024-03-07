@@ -10,7 +10,10 @@ configurations.all {
 }
 
 dependencies {
-    implementation(platform("com.fasterxml.jackson:jackson-bom:2.13.0"))
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+
+    implementation(platform(libs.fasterxml))
     implementation(libs.bundles.jackson)
     implementation(libs.spotbugs.annotations)
     implementation(libs.guava)
@@ -18,8 +21,6 @@ dependencies {
     implementation(libs.bundles.apache)
     // TODO: remove this, it's pulled in for a Strings.notEmpty() check
     implementation(libs.bundles.log4j)
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
 
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-protocol"))

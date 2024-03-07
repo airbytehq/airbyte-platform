@@ -44,7 +44,7 @@ public class AttemptApiController implements AttemptApi {
         processes = MediaType.APPLICATION_JSON)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
-  public AttemptInfoRead getAttemptForJob(final GetAttemptStatsRequestBody requestBody) {
+  public AttemptInfoRead getAttemptForJob(@Body final GetAttemptStatsRequestBody requestBody) {
     return ApiHelper
         .execute(() -> attemptHandler.getAttemptForJob(requestBody.getJobId(), requestBody.getAttemptNumber()));
   }
@@ -54,7 +54,7 @@ public class AttemptApiController implements AttemptApi {
         processes = MediaType.APPLICATION_JSON)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured({ADMIN})
-  public CreateNewAttemptNumberResponse createNewAttemptNumber(final CreateNewAttemptNumberRequest requestBody) {
+  public CreateNewAttemptNumberResponse createNewAttemptNumber(@Body final CreateNewAttemptNumberRequest requestBody) {
     return ApiHelper
         .execute(() -> attemptHandler.createNewAttemptNumber(requestBody.getJobId()));
   }
@@ -64,7 +64,7 @@ public class AttemptApiController implements AttemptApi {
         processes = MediaType.APPLICATION_JSON)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
-  public AttemptStats getAttemptCombinedStats(final GetAttemptStatsRequestBody requestBody) {
+  public AttemptStats getAttemptCombinedStats(@Body final GetAttemptStatsRequestBody requestBody) {
     return ApiHelper
         .execute(() -> attemptHandler.getAttemptCombinedStats(requestBody.getJobId(), requestBody.getAttemptNumber()));
   }
@@ -73,7 +73,7 @@ public class AttemptApiController implements AttemptApi {
   @Post(uri = "/save_stats",
         processes = MediaType.APPLICATION_JSON)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public InternalOperationResult saveStats(final SaveStatsRequestBody requestBody) {
+  public InternalOperationResult saveStats(@Body final SaveStatsRequestBody requestBody) {
     return ApiHelper.execute(() -> attemptHandler.saveStats(requestBody));
   }
 
@@ -100,7 +100,7 @@ public class AttemptApiController implements AttemptApi {
         processes = MediaType.APPLICATION_JSON)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured({ADMIN})
-  public void failAttempt(final FailAttemptRequest requestBody) {
+  public void failAttempt(@Body final FailAttemptRequest requestBody) {
     ApiHelper.execute(() -> {
       attemptHandler.failAttempt(
           requestBody.getAttemptNumber(),

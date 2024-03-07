@@ -17,6 +17,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/WorkloadCancelRequest'
+        required: true
       responses:
         "204":
           description: Success
@@ -43,6 +44,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/WorkloadClaimRequest'
+        required: true
       responses:
         "200":
           description: "Returns a boolean denoting whether claim was successful. True\
@@ -74,6 +76,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/WorkloadCreateRequest'
+        required: true
       responses:
         "204":
           description: Successfully created workload
@@ -94,6 +97,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ExpiredDeadlineWorkloadListRequest'
+        required: true
       responses:
         "200":
           description: Success
@@ -112,6 +116,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/WorkloadFailureRequest'
+        required: true
       responses:
         "204":
           description: Success
@@ -138,6 +143,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/WorkloadHeartbeatRequest'
+        required: true
       responses:
         "204":
           description: Successfully heartbeated
@@ -165,6 +171,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/WorkloadLaunchedRequest'
+        required: true
       responses:
         "204":
           description: Success
@@ -191,6 +198,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/WorkloadListRequest'
+        required: true
       responses:
         "200":
           description: Success
@@ -209,6 +217,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/LongRunningWorkloadRequest'
+        required: true
       responses:
         "200":
           description: Success
@@ -227,6 +236,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/LongRunningWorkloadRequest'
+        required: true
       responses:
         "200":
           description: Success
@@ -245,6 +255,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/WorkloadRunningRequest'
+        required: true
       responses:
         "204":
           description: Success
@@ -271,6 +282,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/WorkloadSuccessRequest'
+        required: true
       responses:
         "204":
           description: Success

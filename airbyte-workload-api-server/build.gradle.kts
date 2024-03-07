@@ -9,23 +9,22 @@ plugins {
 }
 
 dependencies {
-    compileOnly(libs.v3.swagger.annotations)
     kapt(libs.v3.swagger.annotations)
-
-    kapt(platform(libs.micronaut.bom))
+    kapt(platform(libs.micronaut.platform))
     kapt(libs.bundles.micronaut.annotation.processor)
+    kapt(libs.micronaut.openapi)
 
-    kaptTest(platform(libs.micronaut.bom))
-    kaptTest(libs.bundles.micronaut.test.annotation.processor)
-
-    annotationProcessor(platform(libs.micronaut.bom))
+    annotationProcessor(platform(libs.micronaut.platform))
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
     annotationProcessor(libs.micronaut.jaxrs.processor)
+    annotationProcessor(libs.micronaut.openapi)
 
     implementation(libs.bundles.jackson)
-    implementation(platform(libs.micronaut.bom))
+    implementation(platform(libs.micronaut.platform))
     implementation(libs.bundles.micronaut)
     implementation(libs.bundles.micronaut.data.jdbc)
+    implementation(libs.bundles.micronaut.kotlin)
+    implementation(libs.micronaut.http)
     implementation(libs.failsafe.okhttp)
     implementation(libs.jakarta.transaction.api)
     implementation(libs.bundles.temporal)
@@ -35,11 +34,12 @@ dependencies {
     implementation(libs.micronaut.security)
     implementation(libs.okhttp)
     implementation(libs.v3.swagger.annotations)
-    implementation(libs.javax.ws.rs.api)
+    implementation(libs.jakarta.ws.rs.api)
     implementation(libs.reactor.core)
     implementation(libs.kotlin.logging)
     implementation(libs.bundles.micronaut.metrics)
     implementation(libs.bundles.datadog)
+    implementation(libs.jsoup)
 
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-temporal-core"))
@@ -47,10 +47,15 @@ dependencies {
     implementation(project(":airbyte-featureflag"))
     implementation(project(":airbyte-metrics:metrics-lib"))
 
+    compileOnly(libs.v3.swagger.annotations)
+    compileOnly(libs.micronaut.openapi.annotations)
+
+    runtimeOnly(libs.snakeyaml)
     runtimeOnly(libs.javax.databind)
 
-    testImplementation(libs.bundles.micronaut.test)
-    testAnnotationProcessor(platform(libs.micronaut.bom))
+    kaptTest(platform(libs.micronaut.platform))
+    kaptTest(libs.bundles.micronaut.test.annotation.processor)
+    testAnnotationProcessor(platform(libs.micronaut.platform))
     testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
     testImplementation(project(":airbyte-test-utils"))
@@ -65,6 +70,9 @@ dependencies {
 
 kapt {
     correctErrorTypes = true
+    arguments {
+        arg("micronaut.openapi.project.dir", projectDir.toString())
+    }
 }
 
 val env = Properties().apply {
@@ -97,6 +105,10 @@ tasks.named<Test>("test") {
     "MICRONAUT_ENVIRONMENTS" to "test",
     "SERVICE_NAME" to project.name,
     ))
+}
+
+tasks.withType(JavaCompile::class).configureEach {
+    options.compilerArgs = listOf("-parameters")
 }
 
 // Even though Kotlin is excluded on Spotbugs, this projects)

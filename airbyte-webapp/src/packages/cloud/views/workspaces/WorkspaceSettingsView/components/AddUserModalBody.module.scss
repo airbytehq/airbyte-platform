@@ -1,0 +1,10 @@
+.addUserModalBody {
+  height: 400px;
+
+  &__list,
+  &__listItem {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+}

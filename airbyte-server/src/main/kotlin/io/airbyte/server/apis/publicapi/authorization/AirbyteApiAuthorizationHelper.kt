@@ -195,7 +195,7 @@ class AirbyteApiAuthorizationHelper(
   }
 
   private fun buildPropertiesMapForJob(id: String): Map<String, String> {
-    return mapOf(Scope.JOB.mappedHeaderProperty to Jsons.serialize(id))
+    return mapOf(Scope.JOB.mappedHeaderProperty to id)
   }
 }
 

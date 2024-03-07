@@ -353,7 +353,13 @@ public class JobHistoryHandler {
 
   public JobInfoRead getJobInfoWithoutLogs(final JobIdRequestBody jobIdRequestBody) throws IOException {
     final Job job = jobPersistence.getJob(jobIdRequestBody.getId());
-    return jobConverter.getJobInfoWithoutLogsRead(job);
+
+    final JobWithAttemptsRead jobWithAttemptsRead = JobConverter.getJobWithAttemptsRead(job);
+    hydrateWithStats(List.of(jobWithAttemptsRead), List.of(job), true);
+
+    return new JobInfoRead()
+        .job(jobWithAttemptsRead.getJob())
+        .attempts(job.getAttempts().stream().map(JobConverter::getAttemptInfoWithoutLogsRead).collect(Collectors.toList()));
   }
 
   public JobInfoLightRead getJobInfoLight(final JobIdRequestBody jobIdRequestBody) throws IOException {

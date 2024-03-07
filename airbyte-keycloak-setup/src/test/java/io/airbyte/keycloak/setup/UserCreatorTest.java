@@ -90,7 +90,7 @@ class UserCreatorTest {
     when(initialUserConfiguration.getFirstName()).thenReturn(FIRST_NAME);
     when(initialUserConfiguration.getLastName()).thenReturn(LAST_NAME);
 
-    UserRepresentation userRepresentation = userCreator.createUserRepresentation();
+    final UserRepresentation userRepresentation = userCreator.createUserRepresentation();
 
     assertEquals(USERNAME, userRepresentation.getUsername());
     assertEquals(EMAIL, userRepresentation.getEmail());
@@ -102,7 +102,7 @@ class UserCreatorTest {
   void testCreateCredentialRepresentation() {
     when(initialUserConfiguration.getPassword()).thenReturn(PASSWORD);
 
-    CredentialRepresentation credentialRepresentation = userCreator.createCredentialRepresentation();
+    final CredentialRepresentation credentialRepresentation = userCreator.createCredentialRepresentation();
 
     assertFalse(credentialRepresentation.isTemporary());
     assertEquals(CredentialRepresentation.PASSWORD, credentialRepresentation.getType());

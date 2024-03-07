@@ -16,15 +16,16 @@ export enum FeatureItem {
   APITokenManagement = "API_TOKEN_MANAGEMENT",
   Billing = "BILLING",
   ConnectionHistoryGraphs = "CONNECTION_HISTORY_GRAPHS",
-  ShowAdminWarningInWorkspace = "SHOW_ADMIN_WARNING_IN_WORKSPACE",
-  KeycloakAuthentication = "KEYCLOAK_AUTHENTICATION",
+  ConnectorBreakingChangeDeadlines = "CONNECTOR_BREAKING_CHANGE_DEADLINES",
   EmailNotifications = "EMAIL_NOTIFICATIONS",
   EnterpriseBranding = "ENTERPRISE_BRANDING",
-  ShowInviteUsersHint = "SHOW_INVITE_USERS_HINT",
+  ExternalInvitations = "EXTERNAL_INVITATIONS",
+  KeycloakAuthentication = "KEYCLOAK_AUTHENTICATION",
+  MultiWorkspaceUI = "MULTI_WORKSPACE_UI",
   RBAC = "RBAC",
   RestrictAdminInForeignWorkspace = "RESTRICT_ADMIN_IN_FOREIGN_WORKSPACE",
-  ConnectorBreakingChangeDeadlines = "CONNECTOR_BREAKING_CHANGE_DEADLINES",
-  MultiWorkspaceUI = "MULTI_WORKSPACE_UI",
+  ShowAdminWarningInWorkspace = "SHOW_ADMIN_WARNING_IN_WORKSPACE",
+  ShowInviteUsersHint = "SHOW_INVITE_USERS_HINT",
 }
 
 export type FeatureSet = Partial<Record<FeatureItem, boolean>>;

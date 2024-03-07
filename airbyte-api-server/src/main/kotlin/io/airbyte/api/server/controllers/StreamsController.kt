@@ -23,10 +23,10 @@ import io.airbyte.api.server.services.SourceService
 import io.airbyte.api.server.services.UserService
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
+import jakarta.ws.rs.core.Response
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.UUID
-import javax.ws.rs.core.Response
 
 @Controller(STREAMS_PATH)
 class StreamsController(

@@ -32,6 +32,7 @@ import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_I
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_TYPE_TAG
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
+import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Status
 import io.micronaut.scheduling.TaskExecutors
@@ -44,14 +45,14 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.parameters.RequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import jakarta.ws.rs.Consumes
+import jakarta.ws.rs.GET
+import jakarta.ws.rs.POST
+import jakarta.ws.rs.PUT
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.PathParam
+import jakarta.ws.rs.Produces
 import java.util.UUID
-import javax.ws.rs.Consumes
-import javax.ws.rs.GET
-import javax.ws.rs.POST
-import javax.ws.rs.PUT
-import javax.ws.rs.Path
-import javax.ws.rs.PathParam
-import javax.ws.rs.Produces
 
 @Controller("/api/v1/workload")
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -84,7 +85,7 @@ open class WorkloadApi(
   open fun workloadCreate(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadCreateRequest::class))],
-    ) workloadCreateRequest: WorkloadCreateRequest,
+    ) @Body workloadCreateRequest: WorkloadCreateRequest,
   ): HttpResponse<Any> {
     ApmTraceUtils.addTagsToTrace(
       mutableMapOf(
@@ -151,7 +152,7 @@ open class WorkloadApi(
   open fun workloadFailure(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadFailureRequest::class))],
-    ) workloadFailureRequest: WorkloadFailureRequest,
+    ) @Body workloadFailureRequest: WorkloadFailureRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadFailureRequest.workloadId) as Map<String, Any>?)
     workloadHandler.failWorkload(workloadFailureRequest.workloadId, workloadFailureRequest.source, workloadFailureRequest.reason)
@@ -184,7 +185,7 @@ open class WorkloadApi(
   open fun workloadSuccess(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadSuccessRequest::class))],
-    ) workloadSuccessRequest: WorkloadSuccessRequest,
+    ) @Body workloadSuccessRequest: WorkloadSuccessRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadSuccessRequest.workloadId) as Map<String, Any>?)
     workloadHandler.succeedWorkload(workloadSuccessRequest.workloadId)
@@ -217,7 +218,7 @@ open class WorkloadApi(
   open fun workloadRunning(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadRunningRequest::class))],
-    ) workloadRunningRequest: WorkloadRunningRequest,
+    ) @Body workloadRunningRequest: WorkloadRunningRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadRunningRequest.workloadId) as Map<String, Any>?)
     workloadHandler.setWorkloadStatusToRunning(
@@ -253,7 +254,7 @@ open class WorkloadApi(
   open fun workloadCancel(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadCancelRequest::class))],
-    ) workloadCancelRequest: WorkloadCancelRequest,
+    ) @Body workloadCancelRequest: WorkloadCancelRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(
       mutableMapOf(
@@ -294,7 +295,7 @@ open class WorkloadApi(
   open fun workloadClaim(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadClaimRequest::class))],
-    ) workloadClaimRequest: WorkloadClaimRequest,
+    ) @Body workloadClaimRequest: WorkloadClaimRequest,
   ): ClaimResponse {
     ApmTraceUtils.addTagsToTrace(
       mutableMapOf(
@@ -338,7 +339,7 @@ open class WorkloadApi(
   open fun workloadLaunched(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadLaunchedRequest::class))],
-    ) workloadLaunchedRequest: WorkloadLaunchedRequest,
+    ) @Body workloadLaunchedRequest: WorkloadLaunchedRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadLaunchedRequest.workloadId) as Map<String, Any>?)
     workloadHandler.setWorkloadStatusToLaunched(
@@ -399,7 +400,7 @@ open class WorkloadApi(
   open fun workloadHeartbeat(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadHeartbeatRequest::class))],
-    ) workloadHeartbeatRequest: WorkloadHeartbeatRequest,
+    ) @Body workloadHeartbeatRequest: WorkloadHeartbeatRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadHeartbeatRequest.workloadId) as Map<String, Any>?)
     workloadHandler.heartbeat(workloadHeartbeatRequest.workloadId, workloadHeartbeatRequest.deadline ?: defaultDeadlineValues.heartbeatDeadline())
@@ -422,7 +423,7 @@ open class WorkloadApi(
   open fun workloadList(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadListRequest::class))],
-    ) workloadListRequest: WorkloadListRequest,
+    ) @Body workloadListRequest: WorkloadListRequest,
   ): WorkloadListResponse {
     return WorkloadListResponse(
       workloadHandler.getWorkloads(
@@ -450,7 +451,7 @@ open class WorkloadApi(
   open fun workloadListWithExpiredDeadline(
     @RequestBody(
       content = [Content(schema = Schema(implementation = ExpiredDeadlineWorkloadListRequest::class))],
-    ) expiredDeadlineWorkloadListRequest: ExpiredDeadlineWorkloadListRequest,
+    ) @Body expiredDeadlineWorkloadListRequest: ExpiredDeadlineWorkloadListRequest,
   ): WorkloadListResponse {
     return WorkloadListResponse(
       workloadHandler.getWorkloadsWithExpiredDeadline(
@@ -478,7 +479,7 @@ open class WorkloadApi(
   open fun workloadListOldNonSync(
     @RequestBody(
       content = [Content(schema = Schema(implementation = LongRunningWorkloadRequest::class))],
-    ) longRunningWorkloadRequest: LongRunningWorkloadRequest,
+    ) @Body longRunningWorkloadRequest: LongRunningWorkloadRequest,
   ): WorkloadListResponse {
     return WorkloadListResponse(
       workloadHandler.getWorkloadsRunningCreatedBefore(
@@ -506,7 +507,7 @@ open class WorkloadApi(
   open fun workloadListOldSync(
     @RequestBody(
       content = [Content(schema = Schema(implementation = LongRunningWorkloadRequest::class))],
-    ) longRunningWorkloadRequest: LongRunningWorkloadRequest,
+    ) @Body longRunningWorkloadRequest: LongRunningWorkloadRequest,
   ): WorkloadListResponse {
     return WorkloadListResponse(
       workloadHandler.getWorkloadsRunningCreatedBefore(

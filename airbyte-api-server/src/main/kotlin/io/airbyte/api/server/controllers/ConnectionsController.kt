@@ -28,9 +28,9 @@ import io.airbyte.api.server.services.SourceService
 import io.airbyte.api.server.services.UserService
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Patch
+import jakarta.ws.rs.core.Response
 import java.util.Objects
 import java.util.UUID
-import javax.ws.rs.core.Response
 
 @Controller(CONNECTIONS_PATH)
 open class ConnectionsController(

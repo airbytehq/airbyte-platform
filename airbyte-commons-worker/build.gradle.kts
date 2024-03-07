@@ -12,18 +12,20 @@ configurations.all {
 }
 
 dependencies {
-    annotationProcessor(platform(libs.micronaut.bom))
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+    annotationProcessor(platform(libs.micronaut.platform))
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
     kapt(libs.bundles.micronaut.annotation.processor)
 
-    implementation(platform(libs.micronaut.bom))
+    implementation(platform(libs.micronaut.platform))
     implementation(libs.bundles.micronaut)
     implementation(libs.bundles.micronaut.metrics)
     implementation(libs.micronaut.http)
     implementation(libs.kotlin.logging)
-    implementation(libs.micronaut.kotlin.extensions)
-
+    implementation(libs.bundles.micronaut.kotlin)
+    implementation(libs.micronaut.jackson.databind)
     implementation(libs.bundles.kubernetes.client)
     implementation(libs.java.jwt)
     implementation(libs.gson)
@@ -35,8 +37,6 @@ dependencies {
     implementation(libs.apache.commons.text)
     implementation(libs.bundles.datadog)
     implementation(libs.commons.io)
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
     implementation(libs.bundles.apache)
     implementation(libs.bundles.log4j)
     implementation(libs.failsafe.okhttp)
@@ -67,9 +67,16 @@ dependencies {
     implementation(project(":airbyte-worker-models"))
     implementation(libs.jakarta.validation.api)
 
-    testAnnotationProcessor(platform(libs.micronaut.bom))
+    testCompileOnly(libs.lombok)
+    testAnnotationProcessor(libs.lombok)    // Lombok must be added BEFORE Micronaut
+    testAnnotationProcessor(platform(libs.micronaut.platform))
+    testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
     testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
     testAnnotationProcessor(libs.jmh.annotations)
+
+    kaptTest(platform(libs.micronaut.platform))
+    kaptTest(libs.bundles.micronaut.annotation.processor)
+    kaptTest(libs.bundles.micronaut.test.annotation.processor)
 
     testImplementation(libs.bundles.micronaut.test)
     testImplementation(libs.mockk)
@@ -85,14 +92,13 @@ dependencies {
     testImplementation(libs.docker.java.transport.httpclient5)
     testImplementation(libs.reactor.test)
     testImplementation(libs.mockk)
-
-    testCompileOnly(libs.lombok)
-    testAnnotationProcessor(libs.lombok)
-    testRuntimeOnly(libs.junit.jupiter.engine)
     testImplementation(libs.bundles.junit)
     testImplementation(libs.assertj.core)
     testImplementation(libs.junit.pioneer)
     testImplementation(libs.mockk)
+
+    testRuntimeOnly(libs.junit.jupiter.engine)
+    testRuntimeOnly(libs.javax.databind)
 }
 
 tasks.named<Test>("test") {
@@ -105,7 +111,7 @@ tasks.named<Test>("test") {
 
 // The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.)
 // Kapt, by default, runs all annotation(processors and disables annotation(processing by javac, however)
-// this default behavior(breaks the lombok java annotation(processor.  To avoid(lombok breaking, kapt(has)
+// this default behavior(breaks the lombok java annotation(processor.  To avoid(lombok breaking, ksp(has)
 // keepJavacAnnotationProcessors enabled, which causes duplicate META-INF files to be generated.)
 // Once lombok has been removed, this can also be removed.)
 tasks.withType<Jar>().configureEach {

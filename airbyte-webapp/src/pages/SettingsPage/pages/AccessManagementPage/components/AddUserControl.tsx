@@ -113,9 +113,9 @@ export const AddUserControl: React.FC = () => {
   const workspace = useCurrentWorkspace();
 
   const workspaceAccessUsers = useListWorkspaceAccessUsers(workspace.workspaceId);
-  const organizationUsers = useListUsersInOrganization(workspace.organizationId ?? "").users;
+  const { users } = useListUsersInOrganization(workspace.organizationId);
 
-  const usersToAdd = organizationUsers.filter(
+  const usersToAdd = users.filter(
     (organizationUser) =>
       !workspaceAccessUsers.usersWithAccess.find((workspaceUser) => workspaceUser.userId === organizationUser.userId)
   );
@@ -126,7 +126,7 @@ export const AddUserControl: React.FC = () => {
 
   return !isEditMode ? (
     <Button onClick={() => setIsEditMode(true)} icon={<Icon type="plus" />}>
-      <FormattedMessage id="role.addUser" />
+      <FormattedMessage id="userInvitations.newMember" />
     </Button>
   ) : (
     <AddUserForm usersToAdd={usersToAdd} workspaceId={workspace.workspaceId} setIsEditMode={setIsEditMode} />

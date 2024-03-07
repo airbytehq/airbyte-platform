@@ -7,7 +7,6 @@ package io.airbyte.server.apis;
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.http.HttpRequest;
@@ -30,10 +29,10 @@ class ActorDefinitionVersionApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/actor_definition_versions/get_for_source";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -45,10 +44,10 @@ class ActorDefinitionVersionApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/actor_definition_versions/get_for_destination";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationIdRequestBody())),
+        HttpRequest.POST(path, new DestinationIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationIdRequestBody())),
+        HttpRequest.POST(path, new DestinationIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 

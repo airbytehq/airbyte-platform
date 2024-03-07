@@ -6,20 +6,20 @@ plugins {
 }
 
 dependencies {
-    kapt(platform(libs.micronaut.bom))
+    kapt(platform(libs.micronaut.platform))
     kapt(libs.bundles.micronaut.annotation.processor)
 
     api(libs.segment.java.analytics)
     api(libs.micronaut.http)
     api(libs.bundles.micronaut.annotation)
-    api(libs.micronaut.kotlin.extensions)
+    api(libs.bundles.micronaut.kotlin)
     api(libs.kotlin.logging)
     api(project(":airbyte-commons"))
     api(project(":airbyte-config:config-models"))
     api(project(":airbyte-api"))
 
 
-    testAnnotationProcessor(platform(libs.micronaut.bom))
+    testAnnotationProcessor(platform(libs.micronaut.platform))
     testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
     testImplementation(libs.bundles.junit)
     testImplementation(libs.assertj.core)

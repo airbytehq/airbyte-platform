@@ -28,9 +28,9 @@ import io.airbyte.server.apis.publicapi.problems.ConnectionConfigurationProblem.
 import io.airbyte.server.apis.publicapi.problems.ConnectionConfigurationProblem.Companion.invalidStreamName
 import io.airbyte.server.apis.publicapi.problems.UnexpectedProblem
 import io.micronaut.http.HttpStatus
+import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
 import java.io.IOException
-import javax.validation.Valid
 
 /**
  * Does everything necessary to both build and validate the AirbyteCatalog.

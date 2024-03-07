@@ -1,6 +1,8 @@
 micronaut:
   application:
     name: airbyte-metrics-reporter
+  env:
+    cloud-deduction: true
   security:
     intercept-url-map:
       - pattern: /**

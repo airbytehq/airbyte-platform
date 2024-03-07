@@ -12,7 +12,7 @@ import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import io.swagger.annotations.ApiResponse
 import io.swagger.annotations.ApiResponses
-import javax.ws.rs.GET
+import jakarta.ws.rs.GET
 
 /**
  * Health endpoint used by kubernetes and the gcp load balancer.

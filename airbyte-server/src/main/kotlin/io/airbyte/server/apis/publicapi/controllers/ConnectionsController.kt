@@ -33,14 +33,14 @@ import io.micronaut.http.annotation.Patch
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotNull
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.PathParam
+import jakarta.ws.rs.core.Response
 import services.DestinationService
 import java.util.Objects
 import java.util.UUID
-import javax.validation.Valid
-import javax.validation.constraints.NotNull
-import javax.ws.rs.Path
-import javax.ws.rs.PathParam
-import javax.ws.rs.core.Response
 
 @Controller(CONNECTIONS_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)

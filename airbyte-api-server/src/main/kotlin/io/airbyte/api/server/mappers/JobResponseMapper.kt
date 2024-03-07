@@ -34,13 +34,7 @@ object JobResponseMapper {
    * @return JobResponse Response object which contains job id, status, and job type
    */
   fun from(jobInfoRead: JobInfoRead): JobResponse {
-    val jobResponse: JobResponse = jobResponseFromJobReadMinusSyncedData(jobInfoRead.job)
-    if (jobInfoRead.attempts.size > 0) {
-      val lastAttempt = jobInfoRead.attempts[jobInfoRead.attempts.size - 1]
-      jobResponse.setBytesSynced(lastAttempt.attempt.totalStats?.bytesCommitted)
-      jobResponse.setRowsSynced(lastAttempt.attempt.totalStats?.recordsCommitted)
-    }
-    return jobResponse
+    return jobResponseFromJobReadMinusSyncedData(jobInfoRead.job)
   }
 
   /**
@@ -50,14 +44,7 @@ object JobResponseMapper {
    * @return JobResponse Response object which contains job id, status, and job type
    */
   fun from(jobWithAttemptsRead: JobWithAttemptsRead): JobResponse {
-    val jobResponse: JobResponse = jobResponseFromJobReadMinusSyncedData(jobWithAttemptsRead.job)
-    if (jobWithAttemptsRead.attempts != null && jobWithAttemptsRead.attempts!!.size > 0) {
-      val lastAttempt = jobWithAttemptsRead.attempts!![jobWithAttemptsRead.attempts!!.size - 1]
-
-      jobResponse.setBytesSynced(lastAttempt.totalStats?.bytesCommitted)
-      jobResponse.setRowsSynced(lastAttempt.totalStats?.recordsCommitted)
-    }
-    return jobResponse
+    return jobResponseFromJobReadMinusSyncedData(jobWithAttemptsRead.job)
   }
 
   /**
@@ -65,26 +52,29 @@ object JobResponseMapper {
    */
   private fun jobResponseFromJobReadMinusSyncedData(jobRead: JobRead?): JobResponse {
     val jobResponse = JobResponse()
-    jobResponse.setJobId(jobRead!!.id)
-    jobResponse.setStatus(JobStatusEnum.fromValue(jobRead.status.toString()))
-    jobResponse.setConnectionId(UUID.fromString(jobRead.configId))
+    jobResponse.jobId = jobRead!!.id
+    jobResponse.status = JobStatusEnum.fromValue(jobRead.status.toString())
+    jobResponse.connectionId = UUID.fromString(jobRead.configId)
     when (jobRead.configType) {
-      JobConfigType.SYNC -> jobResponse.setJobType(JobTypeEnum.SYNC)
-      JobConfigType.RESET_CONNECTION -> jobResponse.setJobType(JobTypeEnum.RESET)
+      JobConfigType.SYNC -> jobResponse.jobType = JobTypeEnum.SYNC
+      JobConfigType.RESET_CONNECTION -> jobResponse.jobType = JobTypeEnum.RESET
       else -> {
         assert(ALLOWED_CONFIG_TYPES.contains(jobRead.configType))
       }
     }
     // set to string for now since the jax-rs response entity turns offsetdatetime into epoch seconds
-    jobResponse.setStartTime(OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobRead.createdAt), UTC).toString())
+    jobResponse.startTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobRead.createdAt), UTC).toString()
     if (TERMINAL_JOB_STATUS.contains(jobRead.status)) {
-      jobResponse.setLastUpdatedAt(OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobRead.updatedAt), UTC).toString())
+      jobResponse.lastUpdatedAt = OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobRead.updatedAt), UTC).toString()
     }
 
     // duration is ISO_8601 formatted https://en.wikipedia.org/wiki/ISO_8601#Durations
     if (jobRead.status != JobStatus.PENDING) {
-      jobResponse.setDuration(Duration.ofSeconds(jobRead.updatedAt - jobRead.createdAt).toString())
+      jobResponse.duration = Duration.ofSeconds(jobRead.updatedAt - jobRead.createdAt).toString()
     }
+
+    jobResponse.bytesSynced = jobRead.aggregatedStats?.bytesCommitted
+    jobResponse.rowsSynced = jobRead.aggregatedStats?.recordsCommitted
     return jobResponse
   }
 }

@@ -16,6 +16,7 @@ import io.airbyte.commons.server.handlers.DeclarativeSourceDefinitionsHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.HttpStatus;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Status;
@@ -30,7 +31,7 @@ public class DeclarativeSourceDefinitionsApiController implements DeclarativeSou
 
   private final DeclarativeSourceDefinitionsHandler handler;
 
-  public DeclarativeSourceDefinitionsApiController(final DeclarativeSourceDefinitionsHandler handler) {
+  public DeclarativeSourceDefinitionsApiController(@Body final DeclarativeSourceDefinitionsHandler handler) {
     this.handler = handler;
   }
 
@@ -39,7 +40,7 @@ public class DeclarativeSourceDefinitionsApiController implements DeclarativeSou
   @Status(HttpStatus.CREATED)
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public void createDeclarativeSourceDefinitionManifest(final DeclarativeSourceDefinitionCreateManifestRequestBody requestBody) {
+  public void createDeclarativeSourceDefinitionManifest(@Body final DeclarativeSourceDefinitionCreateManifestRequestBody requestBody) {
     ApiHelper.execute(() -> {
       handler.createDeclarativeSourceDefinitionManifest(requestBody);
       return null;
@@ -51,7 +52,7 @@ public class DeclarativeSourceDefinitionsApiController implements DeclarativeSou
   @Status(HttpStatus.NO_CONTENT)
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public void updateDeclarativeManifestVersion(UpdateActiveManifestRequestBody requestBody) {
+  public void updateDeclarativeManifestVersion(@Body final UpdateActiveManifestRequestBody requestBody) {
     ApiHelper.execute(() -> {
       handler.updateDeclarativeManifestVersion(requestBody);
       return null;
@@ -64,7 +65,7 @@ public class DeclarativeSourceDefinitionsApiController implements DeclarativeSou
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public DeclarativeManifestsReadList listDeclarativeManifests(
-                                                               final ListDeclarativeManifestsRequestBody requestBody) {
+                                                               @Body final ListDeclarativeManifestsRequestBody requestBody) {
     return ApiHelper
         .execute(() -> handler.listManifestVersions(requestBody));
   }

@@ -49,7 +49,7 @@ public class IdentityProvidersCreator {
     for (final IdentityProviderConfiguration provider : identityProviderConfigurations) {
       try {
         createIdp(keycloakRealm, provider);
-      } catch (RuntimeException e) {
+      } catch (final RuntimeException e) {
         log.error("Failed to create identity provider for provider: {}", provider.getAppName(), e);
         throw e;
       }
@@ -65,8 +65,8 @@ public class IdentityProvidersCreator {
     idp.setProviderId(PROVIDER_TYPE_TO_KEYCLOAK_PROVIDER_ID.get(provider.getType()));
     idp.setEnabled(true);
 
-    Map<String, String> configMap = configurationMapService.importProviderFrom(keycloakRealm, provider, idp.getProviderId());
-    Map<String, String> config = configurationMapService.setupProviderConfig(provider, configMap);
+    final Map<String, String> configMap = configurationMapService.importProviderFrom(keycloakRealm, provider, idp.getProviderId());
+    final Map<String, String> config = configurationMapService.setupProviderConfig(provider, configMap);
     idp.setConfig(config);
 
     final Response idpResponse = keycloakRealm.identityProviders().create(idp);
@@ -74,7 +74,7 @@ public class IdentityProvidersCreator {
     if (idpResponse.getStatus() == Response.Status.CREATED.getStatusCode()) {
       log.info("Identity Provider {} created successfully!", provider.getAppName());
     } else {
-      String error = String.format("Failed to create Identity Provider. Status: %s", idpResponse.getStatusInfo().getReasonPhrase());
+      final String error = String.format("Failed to create Identity Provider. Status: %s", idpResponse.getStatusInfo().getReasonPhrase());
       log.error(error);
       throw new RuntimeException(error);
     }

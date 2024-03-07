@@ -7,7 +7,6 @@ package io.airbyte.server.apis;
 import io.airbyte.api.model.generated.CheckConnectionRead;
 import io.airbyte.api.model.generated.DestinationCoreConfig;
 import io.airbyte.api.model.generated.SourceCoreConfig;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -31,10 +30,10 @@ class SchedulerApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/scheduler/destinations/check_connection";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationCoreConfig())),
+        HttpRequest.POST(path, new DestinationCoreConfig()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationCoreConfig())),
+        HttpRequest.POST(path, new DestinationCoreConfig()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -45,10 +44,10 @@ class SchedulerApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/scheduler/sources/check_connection";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceCoreConfig())),
+        HttpRequest.POST(path, new SourceCoreConfig()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceCoreConfig())),
+        HttpRequest.POST(path, new SourceCoreConfig()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -58,7 +57,7 @@ class SchedulerApiTest extends BaseControllerTest {
         .thenReturn(new CheckConnectionRead());
     final String path = "/api/v1/scheduler/sources/check_connection";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceCoreConfig())),
+        HttpRequest.POST(path, new SourceCoreConfig()),
         HttpStatus.OK);
   }
 

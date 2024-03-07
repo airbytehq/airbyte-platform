@@ -32,9 +32,9 @@ dependencies {
     implementation(libs.airbyte.protocol)
     implementation(project(":airbyte-json-validation"))
     implementation(project(":airbyte-config:config-models"))
-    implementation(libs.flyway.core)
+    implementation(libs.bundles.flyway)
     implementation(libs.guava)
-    implementation(platform("com.fasterxml.jackson:jackson-bom:2.13.0"))
+    implementation(platform(libs.fasterxml))
     implementation(libs.bundles.jackson)
     implementation(libs.commons.io)
 
@@ -47,8 +47,8 @@ dependencies {
     // These are required because gradle might be using lower version of Jna from other)
     // library transitive dependency. Can be removed if we can figure out which library is the cause.)
     // Refer: https://github.com/testcontainers/testcontainers-java/issues/3834#issuecomment-825409079)
-    implementation("net.java.dev.jna:jna:5.8.0")
-    implementation("net.java.dev.jna:jna-platform:5.8.0")
+    implementation(libs.jna)
+    implementation(libs.jna.platform)
 
     testImplementation(project(":airbyte-test-utils"))
     testImplementation(libs.apache.commons.lang)

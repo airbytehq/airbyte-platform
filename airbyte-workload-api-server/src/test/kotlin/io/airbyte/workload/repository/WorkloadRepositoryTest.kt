@@ -8,9 +8,10 @@ import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadType
 import io.micronaut.context.ApplicationContext
+import io.micronaut.context.env.Environment
 import io.micronaut.context.env.PropertySource
+import io.micronaut.data.connection.jdbc.advice.DelegatingDataSource
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
-import io.micronaut.transaction.jdbc.DelegatingDataSource
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.junit.jupiter.api.AfterAll
@@ -26,7 +27,7 @@ import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import javax.sql.DataSource
 
-@MicronautTest
+@MicronautTest(environments = [Environment.TEST])
 internal class WorkloadRepositoryTest {
   val defaultDeadline = OffsetDateTime.now()
 

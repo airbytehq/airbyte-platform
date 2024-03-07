@@ -5,6 +5,8 @@ plugins {
 }
 
 dependencies {
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
     api(libs.bundles.micronaut.annotation)
 
@@ -20,8 +22,6 @@ dependencies {
     implementation(project(":airbyte-persistence:job-persistence"))
     implementation(libs.airbyte.protocol)
     implementation(project(":airbyte-json-validation"))
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
     implementation(libs.guava)
 
     testImplementation(project(":airbyte-test-utils"))
@@ -29,8 +29,6 @@ dependencies {
     testImplementation(libs.bundles.junit)
     testImplementation(libs.assertj.core)
     testImplementation(libs.junit.pioneer)
-    testCompileOnly(libs.lombok)
-    testAnnotationProcessor(libs.lombok)
 }
 
 airbyte {

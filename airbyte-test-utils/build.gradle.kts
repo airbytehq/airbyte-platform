@@ -21,7 +21,7 @@ dependencies {
     implementation(project(":airbyte-commons-worker"))
 
     implementation(libs.bundles.kubernetes.client)
-    implementation(libs.flyway.core)
+    implementation(libs.bundles.flyway)
     implementation(libs.temporal.sdk)
 
     api(libs.junit.jupiter.api)

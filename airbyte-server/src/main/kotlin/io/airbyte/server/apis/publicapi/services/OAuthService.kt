@@ -9,8 +9,8 @@ import io.airbyte.api.model.generated.CompleteOAuthResponse
 import io.airbyte.api.model.generated.OAuthConsentRead
 import io.airbyte.public_api.model.generated.ActorTypeEnum
 import io.micronaut.http.HttpResponse
+import jakarta.validation.constraints.NotBlank
 import java.util.UUID
-import javax.validation.constraints.NotBlank
 
 interface OAuthService {
   fun getSourceConsentUrl(

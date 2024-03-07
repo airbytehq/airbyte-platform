@@ -19,8 +19,8 @@ import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -55,7 +55,7 @@ public class UserInvitationApiController implements UserInvitationApi {
     return ApiHelper.execute(() -> {
       final User currentUser = currentUserService.getCurrentUser();
 
-      return userInvitationHandler.create(invitationCreateRequestBody, currentUser.getUserId());
+      return userInvitationHandler.create(invitationCreateRequestBody, currentUser);
     });
   }
 

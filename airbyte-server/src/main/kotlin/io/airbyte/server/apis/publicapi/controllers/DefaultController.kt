@@ -6,10 +6,13 @@ import io.airbyte.server.apis.publicapi.constants.ROOT_PATH
 import io.micronaut.context.annotation.Value
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
+import io.micronaut.security.annotation.Secured
+import io.micronaut.security.rules.SecurityRule
+import jakarta.ws.rs.core.Response
 import java.net.URI
-import javax.ws.rs.core.Response
 
 @Controller(ROOT_PATH)
+@Secured(SecurityRule.IS_ANONYMOUS)
 open class DefaultController() : PublicRootApi {
   @Value("\${airbyte.internal.documentation.host}")
   var documentationHost: String? = null

@@ -50,7 +50,6 @@ public class FlywayDatabaseMigrator implements DatabaseMigrator {
   @Override
   public List<MigrationInfo> list() {
     final MigrationInfoService result = flyway.info();
-    result.getInfoResult().warnings.forEach(LOGGER::warn);
     return Arrays.asList(result.all());
   }
 

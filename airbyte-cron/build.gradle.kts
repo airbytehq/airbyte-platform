@@ -9,12 +9,13 @@ plugins {
 }
 
 dependencies {
-    annotationProcessor(libs.lombok)
-    annotationProcessor(platform(libs.micronaut.bom))
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+    annotationProcessor(platform(libs.micronaut.platform))
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
     kapt(libs.bundles.micronaut.annotation.processor)
 
-    implementation(platform(libs.micronaut.bom))
+    implementation(platform(libs.micronaut.platform))
     implementation(libs.bundles.micronaut)
     implementation(libs.bundles.micronaut.metrics)
     implementation(libs.bundles.kubernetes.client)
@@ -45,6 +46,7 @@ dependencies {
     implementation(project(":airbyte-metrics:metrics-lib"))
     implementation(project(":airbyte-persistence:job-persistence"))
 
+    runtimeOnly(libs.snakeyaml)
 
     testImplementation(libs.bundles.junit)
     testImplementation(libs.mockk)
