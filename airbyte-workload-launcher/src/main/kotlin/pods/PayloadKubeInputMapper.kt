@@ -2,6 +2,7 @@ package io.airbyte.workload.launcher.pods
 
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.ResourceRequirements
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.FeatureFlagClient
@@ -117,7 +118,12 @@ class PayloadKubeInputMapper(
         ),
       )
 
-    val nodeSelectors = getNodeSelectors(input.launcherConfig.isCustomConnector, checkWorkerConfigs)
+    val nodeSelectors =
+      if (WorkloadPriority.DEFAULT.equals(input.launcherConfig.priority)) {
+        getNodeSelectors(input.launcherConfig.isCustomConnector, replicationWorkerConfigs)
+      } else {
+        getNodeSelectors(input.launcherConfig.isCustomConnector, checkWorkerConfigs)
+      }
 
     val fileMap = buildCheckFileMap(workloadId, input, input.jobRunConfig)
 
@@ -153,7 +159,12 @@ class PayloadKubeInputMapper(
         ),
       )
 
-    val nodeSelectors = getNodeSelectors(input.usesCustomConnector(), discoverWorkerConfigs)
+    val nodeSelectors =
+      if (WorkloadPriority.DEFAULT.equals(input.launcherConfig.priority)) {
+        getNodeSelectors(input.launcherConfig.isCustomConnector, replicationWorkerConfigs)
+      } else {
+        getNodeSelectors(input.usesCustomConnector(), discoverWorkerConfigs)
+      }
 
     val fileMap = buildDiscoverFileMap(workloadId, input, input.jobRunConfig)
 
