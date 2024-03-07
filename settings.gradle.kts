@@ -47,15 +47,12 @@ gradleEnterprise {
 }
 
 buildCache {
-    // we use a different caching mechanism for Dagger builds
-    if (System.getenv("DAGGER") == null) {
-        remote<com.github.burrunan.s3cache.AwsS3BuildCache> {
-            region = "us-west-2"
-            bucket = "ab-ci-cache"
-            prefix = "platform-ci-cache/"
-            isPush = isCiServer
-            isEnabled = System.getenv().containsKey("S3_BUILD_CACHE_ACCESS_KEY_ID")
-        }
+    remote<com.github.burrunan.s3cache.AwsS3BuildCache> {
+        region = "us-west-2"
+        bucket = "ab-ci-cache"
+        prefix = "platform-ci-cache/"
+        isPush = isCiServer
+        isEnabled = System.getenv().containsKey("S3_BUILD_CACHE_ACCESS_KEY_ID")
     }
 }
 
