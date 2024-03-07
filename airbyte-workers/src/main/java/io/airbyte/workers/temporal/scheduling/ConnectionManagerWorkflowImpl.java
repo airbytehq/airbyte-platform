@@ -32,6 +32,7 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
+import io.airbyte.config.WorkloadPriority;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricTags;
@@ -537,7 +538,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       checkInputs = getCheckConnectionInput();
     }
 
-    final IntegrationLauncherConfig sourceLauncherConfig = checkInputs.getSourceLauncherConfig();
+    final IntegrationLauncherConfig sourceLauncherConfig = checkInputs.getSourceLauncherConfig()
+        .withPriority(WorkloadPriority.DEFAULT);
 
     if (isResetJob(sourceLauncherConfig) || checkConnectionResult.isFailed()) {
       // reset jobs don't need to connect to any external source, so check connection is unnecessary
@@ -564,9 +566,11 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     if (checkConnectionResult.isFailed()) {
       log.info("DESTINATION CHECK: Skipped, source check failed");
     } else {
+      IntegrationLauncherConfig launcherConfig = checkInputs.getDestinationLauncherConfig()
+          .withPriority(WorkloadPriority.DEFAULT);
       log.info("DESTINATION CHECK: Starting");
       final ConnectorJobOutput destinationCheckResponse;
-      destinationCheckResponse = runCheckInChildWorkflow(jobRunConfig, checkInputs.getDestinationLauncherConfig(),
+      destinationCheckResponse = runCheckInChildWorkflow(jobRunConfig, launcherConfig,
           new StandardCheckConnectionInput()
               .withActorType(ActorType.DESTINATION)
               .withActorId(checkInputs.getDestinationCheckConnectionInput().getActorId())

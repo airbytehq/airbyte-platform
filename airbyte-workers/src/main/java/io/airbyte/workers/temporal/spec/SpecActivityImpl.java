@@ -65,6 +65,7 @@ import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel;
+import io.airbyte.workload.api.client.model.generated.WorkloadPriority;
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus;
 import io.airbyte.workload.api.client.model.generated.WorkloadType;
 import io.micronaut.context.annotation.Requires;
@@ -195,6 +196,7 @@ public class SpecActivityImpl implements SpecActivity {
         fullLogPath(Path.of(workloadId)),
         Geography.AUTO.getValue(),
         WorkloadType.SPEC,
+        WorkloadPriority.HIGH,
         null,
         null);
 

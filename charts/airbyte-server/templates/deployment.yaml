@@ -181,7 +181,7 @@ spec:
             secretKeyRef:
               name: {{ .Values.global.storage.s3.secretKeyExistingSecret }}
               key: {{ .Values.global.storage.s3.secretKeyExistingSecretKey }}
-        {{- else if or (eq (lower .Values.global.storage.type) "minio") (eq (lower .Values.global.storage.type) "s3") .Values.global.storage.externalMinio.enabled }}
+        {{- else if or (eq (lower .Values.global.storage.type) "minio") (eq (lower .Values.global.storage.type) "s3") }}
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:

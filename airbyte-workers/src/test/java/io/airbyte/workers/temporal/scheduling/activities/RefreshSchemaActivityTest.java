@@ -33,6 +33,7 @@ import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamTransform;
 import io.airbyte.api.client.model.generated.SynchronousJobRead;
+import io.airbyte.api.client.model.generated.WorkloadPriority;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.featureflag.AutoBackfillOnNewColumns;
@@ -94,13 +95,14 @@ class RefreshSchemaActivityTest {
         .thenReturn(new WorkspaceRead().workspaceId(WORKSPACE_ID));
     when(mSourceApi.getSource(new SourceIdRequestBody().sourceId(SOURCE_ID))).thenReturn(new SourceRead().sourceDefinitionId(SOURCE_DEFINITION_ID));
     when(mSourceApi.discoverSchemaForSource(
-        new SourceDiscoverSchemaRequestBody().sourceId(SOURCE_ID).disableCache(true).connectionId(CONNECTION_ID).notifySchemaChange(true)))
-            .thenReturn(new SourceDiscoverSchemaRead()
-                .breakingChange(false)
-                .catalog(CATALOG)
-                .catalogDiff(CATALOG_DIFF)
-                .catalogId(CATALOG_ID)
-                .jobInfo(new SynchronousJobRead().succeeded(true)));
+        new SourceDiscoverSchemaRequestBody().sourceId(SOURCE_ID).disableCache(true).connectionId(CONNECTION_ID).notifySchemaChange(true)
+            .priority(WorkloadPriority.DEFAULT)))
+                .thenReturn(new SourceDiscoverSchemaRead()
+                    .breakingChange(false)
+                    .catalog(CATALOG)
+                    .catalogDiff(CATALOG_DIFF)
+                    .catalogId(CATALOG_ID)
+                    .jobInfo(new SynchronousJobRead().succeeded(true)));
     refreshSchemaActivity = new RefreshSchemaActivityImpl(mSourceApi, mConnectionApi, mWorkspaceApi, mEnvVariableFeatureFlags, mFeatureFlagClient);
   }
 
@@ -155,7 +157,8 @@ class RefreshSchemaActivityTest {
     refreshSchemaActivity.refreshSchema(SOURCE_ID, CONNECTION_ID);
 
     verify(mSourceApi).discoverSchemaForSource(
-        new SourceDiscoverSchemaRequestBody().sourceId(SOURCE_ID).disableCache(true).connectionId(CONNECTION_ID).notifySchemaChange(true));
+        new SourceDiscoverSchemaRequestBody().sourceId(SOURCE_ID).disableCache(true).connectionId(CONNECTION_ID).notifySchemaChange(true)
+            .priority(WorkloadPriority.DEFAULT));
     verify(mWorkspaceApi).getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(CONNECTION_ID));
     verify(mSourceApi).applySchemaChangeForSource(new SourceAutoPropagateChange()
         .catalogId(CATALOG_ID)

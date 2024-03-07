@@ -7134,6 +7134,13 @@ components:
           type: boolean
         notifySchemaChange:
           type: boolean
+        priority:
+          $ref: "#/components/schemas/WorkloadPriority"
+    WorkloadPriority:
+      type: string
+      enum:
+        - high
+        - default
     PartialSourceUpdate:
       type: object
       required:

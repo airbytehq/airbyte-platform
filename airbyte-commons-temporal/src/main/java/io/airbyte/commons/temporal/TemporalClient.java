@@ -22,6 +22,7 @@ import io.airbyte.config.JobDiscoverCatalogConfig;
 import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
+import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
@@ -409,7 +410,8 @@ public class TemporalClient {
         .withWorkspaceId(workspaceId)
         .withDockerImage(config.getDockerImage())
         .withProtocolVersion(config.getProtocolVersion())
-        .withIsCustomConnector(config.getIsCustomConnector());
+        .withIsCustomConnector(config.getIsCustomConnector())
+        .withPriority(WorkloadPriority.HIGH);
 
     final StandardCheckConnectionInput input = new StandardCheckConnectionInput()
         .withActorType(config.getActorType())
@@ -437,7 +439,8 @@ public class TemporalClient {
                                                                    final UUID workspaceId,
                                                                    final String taskQueue,
                                                                    final JobDiscoverCatalogConfig config,
-                                                                   final ActorContext context) {
+                                                                   final ActorContext context,
+                                                                   final WorkloadPriority priority) {
     final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
     final IntegrationLauncherConfig launcherConfig = new IntegrationLauncherConfig()
         .withJobId(jobId.toString())
@@ -445,7 +448,8 @@ public class TemporalClient {
         .withWorkspaceId(workspaceId)
         .withDockerImage(config.getDockerImage())
         .withProtocolVersion(config.getProtocolVersion())
-        .withIsCustomConnector(config.getIsCustomConnector());
+        .withIsCustomConnector(config.getIsCustomConnector())
+        .withPriority(priority);
     final StandardDiscoverCatalogInput input = new StandardDiscoverCatalogInput().withConnectionConfiguration(config.getConnectionConfiguration())
         .withSourceId(config.getSourceId()).withConnectorVersion(config.getConnectorVersion()).withConfigHash(config.getConfigHash())
         .withResourceRequirements(config.getResourceRequirements()).withActorContext(context);

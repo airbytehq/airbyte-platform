@@ -99,7 +99,7 @@ open class SourceServiceImpl(
     sourceCreateOss.secretId = sourceCreateRequest.secretId
 
     val result =
-      kotlin.runCatching { sourceHandler.createSource(sourceCreateOss) }
+      kotlin.runCatching { sourceHandler.createSourceWithOptionalSecret(sourceCreateOss) }
         .onFailure {
           log.error("Error for createSource", it)
           ConfigClientErrorHandler.handleError(it, sourceDefinitionId.toString())

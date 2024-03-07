@@ -121,6 +121,7 @@ open class WorkloadApi(
       workloadCreateRequest.mutexKey,
       workloadCreateRequest.type,
       autoId,
+      workloadCreateRequest.priority,
     )
     return HttpResponse.status(HttpStatus.NO_CONTENT)
   }

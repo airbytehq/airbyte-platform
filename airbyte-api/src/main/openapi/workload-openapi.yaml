@@ -449,6 +449,7 @@ components:
       - geography
       - labels
       - logPath
+      - priority
       - type
       - workloadId
       - workloadInput
@@ -475,6 +476,8 @@ components:
           type: string
           format: date-time
           nullable: true
+        priority:
+          $ref: '#/components/schemas/WorkloadPriority'
     WorkloadFailureRequest:
       required:
       - workloadId
@@ -546,6 +549,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Workload'
+    WorkloadPriority:
+      type: string
+      enum:
+      - high
+      - default
     WorkloadRunningRequest:
       required:
       - workloadId

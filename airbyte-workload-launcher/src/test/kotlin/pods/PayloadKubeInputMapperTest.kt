@@ -6,6 +6,7 @@ import io.airbyte.config.ActorType
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
@@ -133,6 +134,7 @@ class PayloadKubeInputMapperTest {
   fun `builds a kube input from a check payload`(
     customConnector: Boolean,
     assumedRoleEnabled: Boolean,
+    workloadPriority: WorkloadPriority,
   ) {
     val ffClient =
       TestClient(
@@ -161,6 +163,8 @@ class PayloadKubeInputMapperTest {
     val discoverConfigs: WorkerConfigs = mockk()
     val specConfigs: WorkerConfigs = mockk()
     val replConfigs: WorkerConfigs = mockk()
+    val replSelectors = mapOf("test-selector-repl" to "normal-repl")
+    every { replConfigs.getworkerKubeNodeSelectors() } returns replSelectors
 
     val mapper =
       PayloadKubeInputMapper(
@@ -197,6 +201,7 @@ class PayloadKubeInputMapperTest {
         every { dockerImage } returns imageName
         every { isCustomConnector } returns customConnector
         every { workspaceId } returns workspaceId1
+        every { priority } returns workloadPriority
       }
     every { input.checkConnectionInput } returns checkConnectionInput
 
@@ -210,7 +215,16 @@ class PayloadKubeInputMapperTest {
     val result = mapper.toKubeInput(workloadId, input, sharedLabels)
 
     Assertions.assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
-    Assertions.assertEquals(if (customConnector) checkCustomSelectors else checkSelectors, result.nodeSelectors)
+    Assertions.assertEquals(
+      if (customConnector) {
+        checkCustomSelectors
+      } else if (WorkloadPriority.DEFAULT.equals(workloadPriority)) {
+        replSelectors
+      } else {
+        checkSelectors
+      },
+      result.nodeSelectors,
+    )
     Assertions.assertEquals(namespace, result.kubePodInfo.namespace)
     Assertions.assertEquals(podName, result.kubePodInfo.name)
     Assertions.assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
@@ -238,6 +252,7 @@ class PayloadKubeInputMapperTest {
   fun `builds a kube input from a discover payload`(
     customConnector: Boolean,
     assumedRoleEnabled: Boolean,
+    workloadPriority: WorkloadPriority,
   ) {
     val ffClient =
       TestClient(
@@ -266,6 +281,8 @@ class PayloadKubeInputMapperTest {
     every { discoverConfigs.jobImagePullPolicy } returns pullPolicy
     val specConfigs: WorkerConfigs = mockk()
     val replConfigs: WorkerConfigs = mockk()
+    val replSelectors = mapOf("test-selector-repl" to "normal-repl")
+    every { replConfigs.getworkerKubeNodeSelectors() } returns replSelectors
 
     val mapper =
       PayloadKubeInputMapper(
@@ -301,6 +318,7 @@ class PayloadKubeInputMapperTest {
         every { dockerImage } returns imageName
         every { isCustomConnector } returns customConnector
         every { workspaceId } returns workspaceId1
+        every { priority } returns workloadPriority
       }
     every { input.discoverCatalogInput } returns discoverCatalogInput
 
@@ -314,7 +332,16 @@ class PayloadKubeInputMapperTest {
     val result = mapper.toKubeInput(workloadId, input, sharedLabels)
 
     Assertions.assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
-    Assertions.assertEquals(if (customConnector) checkCustomSelectors else checkSelectors, result.nodeSelectors)
+    Assertions.assertEquals(
+      if (customConnector) {
+        checkCustomSelectors
+      } else if (WorkloadPriority.DEFAULT.equals(workloadPriority)) {
+        replSelectors
+      } else {
+        checkSelectors
+      },
+      result.nodeSelectors,
+    )
     Assertions.assertEquals(namespace, result.kubePodInfo.namespace)
     Assertions.assertEquals(podName, result.kubePodInfo.name)
     Assertions.assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
@@ -425,10 +452,11 @@ class PayloadKubeInputMapperTest {
     @JvmStatic
     private fun connectorInputMatrix(): Stream<Arguments> {
       return Stream.of(
-        Arguments.of(true, true),
-        Arguments.of(false, true),
-        Arguments.of(true, false),
-        Arguments.of(false, false),
+        Arguments.of(true, true, WorkloadPriority.HIGH),
+        Arguments.of(false, true, WorkloadPriority.HIGH),
+        Arguments.of(true, false, WorkloadPriority.HIGH),
+        Arguments.of(false, false, WorkloadPriority.HIGH),
+        Arguments.of(false, false, WorkloadPriority.DEFAULT),
       )
     }
   }

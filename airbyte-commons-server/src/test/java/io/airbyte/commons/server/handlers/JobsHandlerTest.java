@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.config.JobConfig.ConfigType.RESET_CONNECTION;
 import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -14,6 +15,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -110,6 +112,20 @@ public class JobsHandlerTest {
     verify(jobPersistence).succeedAttempt(JOB_ID, ATTEMPT_NUMBER);
     verify(jobNotifier).successJob(any(), any());
     verify(helper).trackCompletion(any(), eq(JobStatus.SUCCEEDED));
+  }
+
+  @Test
+  void testResetJobNoNotification() throws IOException {
+    final var request = new JobSuccessWithAttemptNumberRequest()
+        .attemptNumber(ATTEMPT_NUMBER)
+        .jobId(JOB_ID)
+        .connectionId(UUID.randomUUID())
+        .standardSyncOutput(standardSyncOutput);
+    Job job = new Job(JOB_ID, RESET_CONNECTION, "", null, List.of(), io.airbyte.persistence.job.models.JobStatus.SUCCEEDED, 0L, 0, 0);
+    when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
+    jobsHandler.jobSuccessWithAttemptNumber(request);
+
+    verify(jobNotifier, never()).successJob(any(), any());
   }
 
   @Test
@@ -259,6 +275,7 @@ public class JobsHandlerTest {
     when(mJob.getScope()).thenReturn(CONNECTION_ID.toString());
     when(mJob.getConfig()).thenReturn(mJobConfig);
     when(mJob.getLastFailedAttempt()).thenReturn(Optional.of(mAttempt));
+    when(mJob.getConfigType()).thenReturn(SYNC);
 
     when(jobPersistence.getJob(JOB_ID))
         .thenReturn(mJob);
@@ -299,6 +316,7 @@ public class JobsHandlerTest {
     Mockito.when(mJob.getScope()).thenReturn(CONNECTION_ID.toString());
     Mockito.when(mJob.getConfig()).thenReturn(mJobConfig);
     Mockito.when(mJob.getLastFailedAttempt()).thenReturn(Optional.of(mAttempt));
+    Mockito.when(mJob.getConfigType()).thenReturn(SYNC);
 
     Mockito.when(jobPersistence.getJob(JOB_ID))
         .thenReturn(mJob);

@@ -32,10 +32,7 @@ global:
       secretKey:
       secretKeyExistingSecret:
       secretKeyExistingSecretKey:
-    externalMinio:
-      enabled: false
-      host: localhost
-      port: 9000
+
   jobs:
     ## Jobs resource requests and limits
     ## ref: http://kubernetes.io/docs/user-guide/compute-resources/

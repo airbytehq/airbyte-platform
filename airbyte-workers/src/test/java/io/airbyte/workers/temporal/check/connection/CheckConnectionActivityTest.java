@@ -23,6 +23,7 @@ import io.airbyte.config.Configs;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardCheckConnectionOutput;
+import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.featureflag.ConfigFileClient;
@@ -155,7 +156,7 @@ public class CheckConnectionActivityTest {
         .withActorContext(
             new ActorContext().withActorDefinitionId(ACTOR_DEFINITION_ID)
                 .withWorkspaceId(WORKSPACE_ID)));
-    input.setLauncherConfig(new IntegrationLauncherConfig().withConnectionId(CONNECTION_ID));
+    input.setLauncherConfig(new IntegrationLauncherConfig().withConnectionId(CONNECTION_ID).withPriority(WorkloadPriority.DEFAULT));
 
     return input;
   }

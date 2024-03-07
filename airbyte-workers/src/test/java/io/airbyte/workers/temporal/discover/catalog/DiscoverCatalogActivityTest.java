@@ -21,6 +21,7 @@ import io.airbyte.config.ActorContext;
 import io.airbyte.config.Configs;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
+import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.featureflag.ConfigFileClient;
@@ -102,7 +103,7 @@ public class DiscoverCatalogActivityTest {
         .withActorContext(new ActorContext()
             .withWorkspaceId(workspaceId)
             .withActorDefinitionId(actorDefinitionId)));
-    input.setLauncherConfig(new IntegrationLauncherConfig().withConnectionId(connectionId));
+    input.setLauncherConfig(new IntegrationLauncherConfig().withConnectionId(connectionId).withPriority(WorkloadPriority.DEFAULT));
 
     when(workloadIdGenerator.generateDiscoverWorkloadId(actorDefinitionId, jobId, attemptNumber)).thenReturn(workloadId);
     doReturn(Geography.AUTO).when(discoverCatalogActivity).getGeography(any(), any());
