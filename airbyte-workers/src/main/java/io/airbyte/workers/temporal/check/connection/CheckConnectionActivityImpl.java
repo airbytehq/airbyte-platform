@@ -87,6 +87,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.openapitools.client.infrastructure.ClientException;
 
 /**
@@ -278,19 +279,27 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         metricClient.count(OssMetricsRegistry.SIDECAR_CHECK, 1, new MetricAttribute(MetricTags.STATUS, "success"));
       }
 
-      return connectorJobOutput.orElse(new ConnectorJobOutput()
-          .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
-          .withCheckConnection(
-              new StandardCheckConnectionOutput()
-                  .withStatus(StandardCheckConnectionOutput.Status.FAILED)
-                  .withMessage("Unable to read output"))
-          .withFailureReason(new FailureReason()
-              .withFailureType(FailureReason.FailureType.CONFIG_ERROR)
-              .withInternalMessage("Unable to read output for workload: " + workloadId)
-              .withExternalMessage("Unable to read output")));
+      return connectorJobOutput.orElse(getErrorOutput(workloadId, Optional.empty()));
     } catch (final DocStoreAccessException e) {
-      throw new WorkerException("Unable to read output", e);
+      return getErrorOutput(workloadId, Optional.of(e));
     }
+  }
+
+  private ConnectorJobOutput getErrorOutput(String workloadId, Optional<Exception> e) {
+    FailureReason failureReason = new FailureReason()
+        .withFailureType(FailureReason.FailureType.CONFIG_ERROR)
+        .withInternalMessage("Unable to read output for workload: " + workloadId)
+        .withExternalMessage("Unable to read output");
+
+    e.ifPresent(exception -> failureReason.setStacktrace(ExceptionUtils.getStackTrace(exception)));
+
+    return new ConnectorJobOutput()
+        .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
+        .withCheckConnection(
+            new StandardCheckConnectionOutput()
+                .withStatus(StandardCheckConnectionOutput.Status.FAILED)
+                .withMessage("Unable to read output"))
+        .withFailureReason(failureReason);
   }
 
   @Override
