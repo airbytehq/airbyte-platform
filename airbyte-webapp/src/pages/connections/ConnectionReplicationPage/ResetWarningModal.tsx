@@ -4,6 +4,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { LabeledSwitch } from "components";
 import { Button } from "components/ui/Button";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
+import { Text } from "components/ui/Text";
 
 import { ConnectionStateType } from "core/api/types/AirbyteClient";
 
@@ -21,11 +22,9 @@ export const ResetWarningModal: React.FC<ResetWarningModalProps> = ({ onCancel, 
   return (
     <>
       <ModalBody>
-        {/* 
-          TODO: This should use proper text stylings once we have them available.
-          See https://github.com/airbytehq/airbyte/issues/14478
-        */}
-        <FormattedMessage id="connection.streamResetHint" />
+        <Text>
+          <FormattedMessage id="connection.streamResetHint" />
+        </Text>
         <p>
           <LabeledSwitch
             name="reset"
