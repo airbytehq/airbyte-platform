@@ -24,6 +24,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import jakarta.annotation.Nullable;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
@@ -31,7 +32,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
 /**

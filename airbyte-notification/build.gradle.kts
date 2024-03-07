@@ -6,6 +6,9 @@ plugins {
 }
 
 dependencies {
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+
     kapt(libs.bundles.micronaut.annotation.processor)
 
     implementation(project(":airbyte-api"))
@@ -17,13 +20,10 @@ dependencies {
     implementation("org.apache.httpcomponents:httpclient:4.5.13")
     implementation("org.commonmark:commonmark:0.21.0")
 
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
-
     implementation(libs.guava)
     implementation(libs.bundles.apache)
     implementation(libs.commons.io)
-    implementation(platform("com.fasterxml.jackson:jackson-bom:2.13.0"))
+    implementation(platform(libs.fasterxml))
     implementation(libs.bundles.jackson)
     // TODO remove this, it"s used for String.isEmpty check)
     implementation(libs.bundles.log4j)

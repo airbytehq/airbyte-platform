@@ -14,6 +14,7 @@ import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.server.handlers.RetryStatesHandler;
 import io.micronaut.http.HttpStatus;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Status;
@@ -33,7 +34,7 @@ public class JobRetryStatesApiController implements JobRetryStatesApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Post(uri = "/get")
   @Override
-  public RetryStateRead get(final JobIdRequestBody req) {
+  public RetryStateRead get(@Body final JobIdRequestBody req) {
     final var found = handler.getByJobId(req);
 
     if (found.isEmpty()) {
@@ -48,7 +49,7 @@ public class JobRetryStatesApiController implements JobRetryStatesApi {
   @Post(uri = "/create_or_update")
   @Override
   @Status(HttpStatus.NO_CONTENT)
-  public void createOrUpdate(final JobRetryStateRequestBody req) {
+  public void createOrUpdate(@Body final JobRetryStateRequestBody req) {
     handler.putByJobId(req);
   }
 

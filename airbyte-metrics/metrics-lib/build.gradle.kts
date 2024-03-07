@@ -6,6 +6,9 @@ plugins {
 }
 
 dependencies {
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+
     kapt(libs.bundles.micronaut.annotation.processor)
 
     implementation(project(":airbyte-commons"))
@@ -15,8 +18,6 @@ dependencies {
 
     implementation(libs.guava)
     implementation(libs.google.cloud.storage)
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
 
     implementation(libs.otel.semconv)
     implementation(libs.otel.sdk)

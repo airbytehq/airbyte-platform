@@ -1,9 +1,8 @@
-import java.util.Properties
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-
+import java.util.Properties
 import java.util.zip.ZipFile
 
 plugins {
@@ -20,7 +19,7 @@ buildscript {
     }
     dependencies {
         // necessary to convert the well_know_types from yaml to json
-        val jacksonVersion = "2.16.0"
+        val jacksonVersion = libs.versions.fasterxml.version.get()
         classpath("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion")
         classpath("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
     }
@@ -40,22 +39,22 @@ configurations.all {
 configurations.all {
     exclude(group = "io.micronaut", module = "micronaut-http-server-netty")
     exclude(group = "io.micronaut.openapi")
-    exclude(group = "io.micronaut.openapi")
     exclude(group = "io.micronaut.flyway")
     exclude(group = "io.micronaut.sql")
 }
 
 dependencies {
-    kapt(platform(libs.micronaut.bom))
+    kapt(platform(libs.micronaut.platform))
     kapt(libs.bundles.micronaut.annotation.processor)
 
+    implementation(platform(libs.micronaut.platform))
     implementation(libs.bundles.log4j)
     implementation(libs.bundles.micronaut.light)
     implementation(libs.google.cloud.storage)
     implementation(libs.java.jwt)
     implementation(libs.kotlin.logging)
+    implementation(libs.micronaut.jackson.databind)
     implementation(libs.slf4j.api)
-    implementation(platform(libs.micronaut.bom))
 
     implementation(project(":airbyte-api"))
     implementation(project(":airbyte-commons"))
@@ -68,12 +67,14 @@ dependencies {
     implementation(project(":airbyte-worker-models"))
     implementation(libs.airbyte.protocol)
 
+    runtimeOnly(libs.snakeyaml)
     runtimeOnly(libs.kotlin.reflect)
     runtimeOnly(libs.appender.log4j2)
     runtimeOnly(libs.bundles.bouncycastle) // cryptography package
 
-    testAnnotationProcessor(platform(libs.micronaut.bom))
-    testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
+    kaptTest(platform(libs.micronaut.platform))
+    kaptTest(libs.bundles.micronaut.annotation.processor)
+    kaptTest(libs.bundles.micronaut.test.annotation.processor)
 
     testImplementation(libs.bundles.micronaut.test)
     testImplementation(libs.mockk)

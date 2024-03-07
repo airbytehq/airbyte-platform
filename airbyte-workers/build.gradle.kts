@@ -12,7 +12,7 @@ buildscript {
     }
     dependencies {
         // necessary to convert the well_know_types from yaml to json
-        val jacksonVersion = "2.16.0"
+        val jacksonVersion = libs.versions.fasterxml.version.get()
         classpath("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion")
         classpath("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
     }
@@ -39,21 +39,13 @@ configurations.all {
 }
 
 dependencies {
-    annotationProcessor(platform(libs.micronaut.bom))
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+    annotationProcessor(platform(libs.micronaut.platform))
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
-    testCompileOnly(libs.lombok)
-    testAnnotationProcessor(libs.lombok)
-
     implementation(libs.spotbugs.annotations)
-    testRuntimeOnly(libs.junit.jupiter.engine)
-    testImplementation(libs.bundles.junit)
-    testImplementation(libs.assertj.core)
-    testImplementation(libs.junit.pioneer)
-
-    implementation(platform(libs.micronaut.bom))
+    implementation(platform(libs.micronaut.platform))
     implementation(libs.google.cloud.storage)
     implementation(libs.bundles.micronaut)
     implementation(libs.bundles.micronaut.metrics)
@@ -104,9 +96,13 @@ dependencies {
     implementation(project(":airbyte-notification"))
     implementation(project(":airbyte-worker-models"))
 
+    runtimeOnly(libs.snakeyaml)
     runtimeOnly(libs.javax.databind)
 
-    testAnnotationProcessor(platform(libs.micronaut.bom))
+    testCompileOnly(libs.lombok)
+    testAnnotationProcessor(libs.lombok)    // Lombok must be added BEFORE Micronaut
+    testAnnotationProcessor(platform(libs.micronaut.platform))
+    testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
     testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
     testImplementation(libs.bundles.micronaut.test)
@@ -119,8 +115,13 @@ dependencies {
     testImplementation(project(":airbyte-test-utils"))
     testImplementation(libs.bundles.bouncycastle)
     testImplementation(project(":airbyte-api"))
+    testImplementation(libs.bundles.junit)
+    testImplementation(libs.assertj.core)
+    testImplementation(libs.junit.pioneer)
 
-    integrationTestAnnotationProcessor(platform(libs.micronaut.bom))
+    testRuntimeOnly(libs.junit.jupiter.engine)
+
+    integrationTestAnnotationProcessor(platform(libs.micronaut.platform))
     integrationTestAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
     integrationTestImplementation(libs.bundles.junit)
     integrationTestImplementation(libs.junit.pioneer)

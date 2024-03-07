@@ -59,7 +59,7 @@ class WebClientCreatorTest {
   void testCreateClientRepresentation() {
     when(keycloakConfiguration.getWebClientId()).thenReturn(WEB_CLIENT_ID);
 
-    ClientRepresentation clientRepresentation = webClientCreator.createClientRepresentation();
+    final ClientRepresentation clientRepresentation = webClientCreator.createClientRepresentation();
 
     assertEquals(WEB_CLIENT_ID, clientRepresentation.getClientId());
     assertTrue(clientRepresentation.isPublicClient());

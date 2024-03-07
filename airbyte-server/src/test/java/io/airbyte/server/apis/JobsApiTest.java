@@ -5,10 +5,10 @@
 package io.airbyte.server.apis;
 
 import io.airbyte.api.model.generated.AttemptNormalizationStatusReadList;
+import io.airbyte.api.model.generated.JobCreate;
 import io.airbyte.api.model.generated.JobDebugInfoRead;
 import io.airbyte.api.model.generated.JobIdRequestBody;
 import io.airbyte.api.model.generated.JobInfoRead;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -32,10 +32,10 @@ class JobsApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/jobs/create";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new JobIdRequestBody())),
+        HttpRequest.POST(path, new JobCreate()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new JobIdRequestBody())),
+        HttpRequest.POST(path, new JobCreate()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -45,7 +45,7 @@ class JobsApiTest extends BaseControllerTest {
         .thenReturn(new JobInfoRead());
     final String path = "/api/v1/jobs/cancel";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new JobIdRequestBody())),
+        HttpRequest.POST(path, new JobIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -55,7 +55,7 @@ class JobsApiTest extends BaseControllerTest {
         .thenReturn(new AttemptNormalizationStatusReadList());
     final String path = "/api/v1/jobs/get_normalization_status";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new JobIdRequestBody())),
+        HttpRequest.POST(path, new JobIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -66,10 +66,10 @@ class JobsApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/jobs/get_debug_info";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new JobIdRequestBody())),
+        HttpRequest.POST(path, new JobIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new JobIdRequestBody())),
+        HttpRequest.POST(path, new JobIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 

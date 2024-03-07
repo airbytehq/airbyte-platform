@@ -4,15 +4,16 @@ plugins {
 }
 
 dependencies {
-    annotationProcessor(platform(libs.micronaut.bom))
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+    annotationProcessor(platform(libs.micronaut.platform))
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-    implementation(platform(libs.micronaut.bom))
+    implementation(platform(libs.micronaut.platform))
     implementation(libs.bundles.micronaut)
     implementation(libs.bundles.temporal)
-
-    testAnnotationProcessor(platform(libs.micronaut.bom))
-    testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
+    implementation(libs.bundles.apache)
+    implementation(libs.failsafe)
 
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-temporal-core"))
@@ -27,10 +28,8 @@ dependencies {
     implementation(project(":airbyte-api"))
     implementation(project(":airbyte-json-validation"))
 
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
-    implementation(libs.bundles.apache)
-    implementation(libs.failsafe)
+    testAnnotationProcessor(platform(libs.micronaut.platform))
+    testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
     testImplementation(libs.temporal.testing)
     // Needed to be able to mock final class)

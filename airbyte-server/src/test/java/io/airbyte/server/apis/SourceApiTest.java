@@ -18,7 +18,6 @@ import io.airbyte.api.model.generated.SourceReadList;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -42,10 +41,10 @@ class SourceApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/sources/check_connection";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -56,10 +55,10 @@ class SourceApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/sources/check_connection_for_update";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceUpdate()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceUpdate()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -70,10 +69,10 @@ class SourceApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/sources/clone";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceCloneRequestBody())),
+        HttpRequest.POST(path, new SourceCloneRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceCloneRequestBody())),
+        HttpRequest.POST(path, new SourceCloneRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -84,10 +83,10 @@ class SourceApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/sources/create";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceCreate())),
+        HttpRequest.POST(path, new SourceCreate()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceCreate())),
+        HttpRequest.POST(path, new SourceCreate()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -99,10 +98,10 @@ class SourceApiTest extends BaseControllerTest {
 
     final String path = "/api/v1/sources/delete";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.NO_CONTENT);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -113,10 +112,10 @@ class SourceApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/sources/discover_schema";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDiscoverSchemaRequestBody())),
+        HttpRequest.POST(path, new SourceDiscoverSchemaRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDiscoverSchemaRequestBody())),
+        HttpRequest.POST(path, new SourceDiscoverSchemaRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -127,10 +126,10 @@ class SourceApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/sources/get";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -140,7 +139,7 @@ class SourceApiTest extends BaseControllerTest {
         .thenReturn(new ActorCatalogWithUpdatedAt());
     final String path = "/api/v1/sources/most_recent_source_actor_catalog";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -151,10 +150,10 @@ class SourceApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/sources/list";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
+        HttpRequest.POST(path, new WorkspaceIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
+        HttpRequest.POST(path, new WorkspaceIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -165,10 +164,10 @@ class SourceApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/sources/search";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceSearch())),
+        HttpRequest.POST(path, new SourceSearch()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceSearch())),
+        HttpRequest.POST(path, new SourceSearch()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -179,10 +178,10 @@ class SourceApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/sources/update";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceUpdate())),
+        HttpRequest.POST(path, new SourceUpdate()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceUpdate())),
+        HttpRequest.POST(path, new SourceUpdate()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -192,7 +191,7 @@ class SourceApiTest extends BaseControllerTest {
         .thenReturn(new DiscoverCatalogResult());
     final String path = "/api/v1/sources/write_discover_catalog_result";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDiscoverSchemaWriteRequestBody())),
+        HttpRequest.POST(path, new SourceDiscoverSchemaWriteRequestBody()),
         HttpStatus.OK);
   }
 
@@ -203,10 +202,10 @@ class SourceApiTest extends BaseControllerTest {
         .when(sourceHandler).upgradeSourceVersion(Mockito.any());
     final String path = "/api/v1/sources/upgrade_version";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.NO_CONTENT);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 

@@ -17,6 +17,7 @@ import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsReque
 import io.airbyte.commons.server.handlers.OAuthHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.context.annotation.Context;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
@@ -39,7 +40,7 @@ public class DestinationOauthApiController implements DestinationOauthApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public CompleteOAuthResponse completeDestinationOAuth(final CompleteDestinationOAuthRequest completeDestinationOAuthRequest) {
+  public CompleteOAuthResponse completeDestinationOAuth(@Body final CompleteDestinationOAuthRequest completeDestinationOAuthRequest) {
     return ApiHelper.execute(() -> oAuthHandler.completeDestinationOAuth(completeDestinationOAuthRequest));
   }
 
@@ -47,7 +48,7 @@ public class DestinationOauthApiController implements DestinationOauthApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public OAuthConsentRead getDestinationOAuthConsent(final DestinationOauthConsentRequest destinationOauthConsentRequest) {
+  public OAuthConsentRead getDestinationOAuthConsent(@Body final DestinationOauthConsentRequest destinationOauthConsentRequest) {
     return ApiHelper.execute(() -> oAuthHandler.getDestinationOAuthConsent(destinationOauthConsentRequest));
   }
 
@@ -56,7 +57,7 @@ public class DestinationOauthApiController implements DestinationOauthApi {
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public void setInstancewideDestinationOauthParams(final SetInstancewideDestinationOauthParamsRequestBody setInstancewideDestinationOauthParamsRequestBody) {
+  public void setInstancewideDestinationOauthParams(@Body final SetInstancewideDestinationOauthParamsRequestBody setInstancewideDestinationOauthParamsRequestBody) {
     ApiHelper.execute(() -> {
       oAuthHandler.setDestinationInstancewideOauthParams(setInstancewideDestinationOauthParamsRequestBody);
       return null;

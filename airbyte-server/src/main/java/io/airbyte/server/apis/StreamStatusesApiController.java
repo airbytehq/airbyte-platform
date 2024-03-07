@@ -22,11 +22,13 @@ import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.server.handlers.StreamStatusesHandler;
 import io.micronaut.http.HttpStatus;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Status;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
+import java.io.Serial;
 
 @Controller("/api/v1/stream_statuses")
 public class StreamStatusesApiController implements StreamStatusesApi {
@@ -42,7 +44,7 @@ public class StreamStatusesApiController implements StreamStatusesApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Post(uri = "/create")
   @Override
-  public StreamStatusRead createStreamStatus(final StreamStatusCreateRequestBody req) {
+  public StreamStatusRead createStreamStatus(@Body final StreamStatusCreateRequestBody req) {
     Validations.validate(req.getRunState(), req.getIncompleteRunCause());
 
     return handler.createStreamStatus(req);
@@ -52,7 +54,7 @@ public class StreamStatusesApiController implements StreamStatusesApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Post(uri = "/update")
   @Override
-  public StreamStatusRead updateStreamStatus(final StreamStatusUpdateRequestBody req) {
+  public StreamStatusRead updateStreamStatus(@Body final StreamStatusUpdateRequestBody req) {
     Validations.validate(req.getRunState(), req.getIncompleteRunCause());
 
     return handler.updateStreamStatus(req);
@@ -62,7 +64,7 @@ public class StreamStatusesApiController implements StreamStatusesApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Post(uri = "/list")
   @Override
-  public StreamStatusReadList getStreamStatuses(final StreamStatusListRequestBody req) {
+  public StreamStatusReadList getStreamStatuses(@Body final StreamStatusListRequestBody req) {
     Validations.validate(req.getPagination());
 
     return handler.listStreamStatus(req);
@@ -72,7 +74,7 @@ public class StreamStatusesApiController implements StreamStatusesApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Post(uri = "/latest_per_run_state")
   @Override
-  public StreamStatusReadList getStreamStatusesByRunState(final ConnectionIdRequestBody req) {
+  public StreamStatusReadList getStreamStatusesByRunState(@Body final ConnectionIdRequestBody req) {
     return handler.listStreamStatusPerRunState(req);
   }
 
@@ -87,10 +89,20 @@ public class StreamStatusesApiController implements StreamStatusesApi {
 
     static void validate(final StreamStatusRunState runState, final StreamStatusIncompleteRunCause incompleteRunCause) {
       if (runState != StreamStatusRunState.INCOMPLETE && incompleteRunCause != null) {
-        throw new BadRequestException("Incomplete run cause may only be set for runs that stopped in an incomplete state.") {};
+        throw new BadRequestException("Incomplete run cause may only be set for runs that stopped in an incomplete state.") {
+
+          @Serial
+          private static final long serialVersionUID = 2755161328698829068L;
+
+        };
       }
       if (runState == StreamStatusRunState.INCOMPLETE && incompleteRunCause == null) {
-        throw new BadRequestException("Incomplete run cause must be set for runs that stopped in an incomplete state.") {};
+        throw new BadRequestException("Incomplete run cause must be set for runs that stopped in an incomplete state.") {
+
+          @Serial
+          private static final long serialVersionUID = -7206700955952601425L;
+
+        };
       }
     }
 

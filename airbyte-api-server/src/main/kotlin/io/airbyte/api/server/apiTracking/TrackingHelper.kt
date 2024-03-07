@@ -7,11 +7,11 @@ package io.airbyte.api.server.apiTracking
 import io.airbyte.analytics.TrackingClient
 import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
+import jakarta.ws.rs.core.Response
 import org.zalando.problem.AbstractThrowableProblem
 import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.Callable
-import javax.ws.rs.core.Response
 
 /**
  * Helper for segment tracking used by the public-api server.

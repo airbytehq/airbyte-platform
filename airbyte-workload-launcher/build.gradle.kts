@@ -4,13 +4,14 @@ plugins {
     id("io.airbyte.gradle.jvm.app")
     id("io.airbyte.gradle.publish")
     id("io.airbyte.gradle.docker")
-    kotlin("jvm")
     kotlin("kapt")
+    kotlin("jvm")
 }
 
 dependencies {
-    kapt(platform(libs.micronaut.bom))
+    kapt(platform(libs.micronaut.platform))
     kapt(libs.bundles.micronaut.annotation.processor)
+    kapt(libs.micronaut.openapi)
 
     implementation(libs.bundles.datadog)
     implementation(libs.bundles.kubernetes.client)
@@ -27,13 +28,13 @@ dependencies {
     implementation(libs.kotlin.logging)
     implementation(libs.micronaut.jackson.databind)
     implementation(libs.micronaut.jooq)
-    implementation(libs.micronaut.kotlin.extensions)
+    implementation(libs.bundles.micronaut.kotlin)
     implementation(libs.okhttp)
     implementation(libs.reactor.core)
     implementation(libs.reactor.kotlin.extensions)
     implementation(libs.slf4j.api)
     implementation(libs.bundles.micronaut.metrics)
-    implementation(platform(libs.micronaut.bom))
+    implementation(platform(libs.micronaut.platform))
     implementation(project(":airbyte-api"))
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-micronaut"))
@@ -49,6 +50,7 @@ dependencies {
     implementation(project(":airbyte-micronaut-temporal"))
     implementation(project(":airbyte-worker-models"))
 
+    runtimeOnly(libs.snakeyaml)
     runtimeOnly(libs.kotlin.reflect)
     runtimeOnly(libs.appender.log4j2)
     runtimeOnly(libs.bundles.bouncycastle)
@@ -57,8 +59,11 @@ dependencies {
     runtimeOnly(libs.hikaricp)
     runtimeOnly(libs.h2.database)
 
-    testAnnotationProcessor(platform(libs.micronaut.bom))
+    kaptTest((platform(libs.micronaut.platform)))
+    kaptTest(libs.bundles.micronaut.test.annotation.processor)
+    testAnnotationProcessor(platform(libs.micronaut.platform))
     testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
+
     testImplementation(libs.bundles.micronaut.test)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlin.test.runner.junit5)

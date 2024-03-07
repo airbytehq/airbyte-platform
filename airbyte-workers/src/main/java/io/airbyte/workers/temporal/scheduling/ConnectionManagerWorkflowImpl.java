@@ -91,6 +91,7 @@ import io.temporal.failure.ChildWorkflowFailure;
 import io.temporal.workflow.CancellationScope;
 import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.Workflow;
+import jakarta.annotation.Nullable;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Map;
@@ -100,7 +101,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
 /**

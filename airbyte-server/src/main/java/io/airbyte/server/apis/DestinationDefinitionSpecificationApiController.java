@@ -12,6 +12,7 @@ import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
@@ -33,7 +34,7 @@ public class DestinationDefinitionSpecificationApiController implements Destinat
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public DestinationDefinitionSpecificationRead getDestinationDefinitionSpecification(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId) {
+  public DestinationDefinitionSpecificationRead getDestinationDefinitionSpecification(@Body final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId) {
     return ApiHelper.execute(() -> connectorDefinitionSpecificationHandler.getDestinationSpecification(destinationDefinitionIdWithWorkspaceId));
   }
 
@@ -41,7 +42,7 @@ public class DestinationDefinitionSpecificationApiController implements Destinat
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public DestinationDefinitionSpecificationRead getSpecificationForDestinationId(final DestinationIdRequestBody destinationIdRequestBody) {
+  public DestinationDefinitionSpecificationRead getSpecificationForDestinationId(@Body final DestinationIdRequestBody destinationIdRequestBody) {
     return ApiHelper.execute(() -> connectorDefinitionSpecificationHandler.getSpecificationForDestinationId(destinationIdRequestBody));
   }
 

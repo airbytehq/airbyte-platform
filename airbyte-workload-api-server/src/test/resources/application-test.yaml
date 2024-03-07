@@ -30,3 +30,5 @@ jooq:
 logger:
   levels:
     io.micronaut.context.condition: INFO
+    io.micronaut.data.query: TRACE
+    io.micronaut.http.client: TRACE

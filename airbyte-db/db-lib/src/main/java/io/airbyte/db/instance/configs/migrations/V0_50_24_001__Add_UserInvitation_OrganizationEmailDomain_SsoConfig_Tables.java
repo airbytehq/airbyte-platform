@@ -59,7 +59,7 @@ public class V0_50_24_001__Add_UserInvitation_OrganizationEmailDomain_SsoConfig_
 
   private static void createInvitationStatusEnumType(final DSLContext ctx) {
     ctx.createType(InvitationStatus.NAME)
-        .asEnum(Arrays.stream(InvitationStatus.values()).map(InvitationStatus::getLiteral).toList())
+        .asEnum(Arrays.stream(InvitationStatus.values()).map(InvitationStatus::getLiteral).toArray(String[]::new))
         .execute();
   }
 

@@ -13,7 +13,6 @@ import io.airbyte.api.model.generated.DestinationReadList;
 import io.airbyte.api.model.generated.DestinationSearch;
 import io.airbyte.api.model.generated.DestinationUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -21,9 +20,9 @@ import io.micronaut.context.env.Environment;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import jakarta.validation.ConstraintViolationException;
 import java.io.IOException;
 import java.util.HashSet;
-import javax.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -39,10 +38,10 @@ class DestinationApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destinations/check_connection";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationIdRequestBody())),
+        HttpRequest.POST(path, new DestinationIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationIdRequestBody())),
+        HttpRequest.POST(path, new DestinationIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -53,10 +52,10 @@ class DestinationApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destinations/check_connection_for_update";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationUpdate())),
+        HttpRequest.POST(path, new DestinationUpdate()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationUpdate())),
+        HttpRequest.POST(path, new DestinationUpdate()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -67,10 +66,10 @@ class DestinationApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destinations/clone";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationCloneRequestBody())),
+        HttpRequest.POST(path, new DestinationCloneRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationCloneRequestBody())),
+        HttpRequest.POST(path, new DestinationCloneRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -81,10 +80,10 @@ class DestinationApiTest extends BaseControllerTest {
         .thenThrow(new ConstraintViolationException(new HashSet<>()));
     final String path = "/api/v1/destinations/create";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationCreate())),
+        HttpRequest.POST(path, new DestinationCreate()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationCreate())),
+        HttpRequest.POST(path, new DestinationCreate()),
         HttpStatus.BAD_REQUEST);
   }
 
@@ -96,10 +95,10 @@ class DestinationApiTest extends BaseControllerTest {
 
     final String path = "/api/v1/destinations/delete";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationIdRequestBody())),
+        HttpRequest.POST(path, new DestinationIdRequestBody()),
         HttpStatus.NO_CONTENT);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationIdRequestBody())),
+        HttpRequest.POST(path, new DestinationIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -110,10 +109,10 @@ class DestinationApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destinations/get";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationIdRequestBody())),
+        HttpRequest.POST(path, new DestinationIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationIdRequestBody())),
+        HttpRequest.POST(path, new DestinationIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -124,10 +123,10 @@ class DestinationApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destinations/list";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
+        HttpRequest.POST(path, new WorkspaceIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
+        HttpRequest.POST(path, new WorkspaceIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -138,10 +137,10 @@ class DestinationApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destinations/search";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationSearch())),
+        HttpRequest.POST(path, new DestinationSearch()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationSearch())),
+        HttpRequest.POST(path, new DestinationSearch()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -152,10 +151,10 @@ class DestinationApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destinations/update";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationUpdate())),
+        HttpRequest.POST(path, new DestinationUpdate()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationUpdate())),
+        HttpRequest.POST(path, new DestinationUpdate()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -166,10 +165,10 @@ class DestinationApiTest extends BaseControllerTest {
         .when(destinationHandler).upgradeDestinationVersion(Mockito.any());
     final String path = "/api/v1/destinations/upgrade_version";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationIdRequestBody())),
+        HttpRequest.POST(path, new DestinationIdRequestBody()),
         HttpStatus.NO_CONTENT);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new DestinationIdRequestBody())),
+        HttpRequest.POST(path, new DestinationIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 

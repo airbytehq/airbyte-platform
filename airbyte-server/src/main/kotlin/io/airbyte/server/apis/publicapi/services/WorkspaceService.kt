@@ -27,9 +27,9 @@ import io.airbyte.server.apis.publicapi.mappers.WorkspaceResponseMapper
 import io.micronaut.context.annotation.Secondary
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
+import jakarta.ws.rs.core.Response
 import org.slf4j.LoggerFactory
 import java.util.UUID
-import javax.ws.rs.core.Response
 
 interface WorkspaceService {
   fun createWorkspace(workspaceCreateRequest: WorkspaceCreateRequest): WorkspaceResponse

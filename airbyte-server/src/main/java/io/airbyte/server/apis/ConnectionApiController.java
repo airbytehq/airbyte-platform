@@ -184,15 +184,16 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/sync_progress")
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public List<ConnectionSyncProgressReadItem> getConnectionSyncProgress(final ConnectionIdRequestBody connectionIdRequestBody) {
+  public List<ConnectionSyncProgressReadItem> getConnectionSyncProgress(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return null;
   }
 
+  @SuppressWarnings("LineLength")
   @Override
   @Post(uri = "/history/uptime")
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public List<ConnectionSyncResultRead> getConnectionUptimeHistory(final ConnectionUptimeHistoryRequestBody connectionUptimeHistoryRequestBody) {
+  public List<ConnectionSyncResultRead> getConnectionUptimeHistory(@Body final ConnectionUptimeHistoryRequestBody connectionUptimeHistoryRequestBody) {
     return ApiHelper.execute(() -> streamStatusesHandler.getConnectionUptimeHistory(connectionUptimeHistoryRequestBody));
   }
 
@@ -229,7 +230,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/reset/stream")
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
-  public JobInfoRead resetConnectionStream(final ConnectionStreamRequestBody connectionStreamRequestBody) {
+  public JobInfoRead resetConnectionStream(@Body final ConnectionStreamRequestBody connectionStreamRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.resetConnectionStream(connectionStreamRequestBody));
   }
 
@@ -237,7 +238,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/apply_schema_change")
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public ConnectionAutoPropagateResult applySchemaChangeForConnection(final ConnectionAutoPropagateSchemaChange request) {
+  public ConnectionAutoPropagateResult applySchemaChangeForConnection(@Body final ConnectionAutoPropagateSchemaChange request) {
     return ApiHelper.execute(() -> connectionsHandler.applySchemaChange(request));
   }
 
@@ -245,7 +246,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/get_task_queue_name")
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public TaskQueueNameRead getTaskQueueName(final GetTaskQueueNameRequest request) {
+  public TaskQueueNameRead getTaskQueueName(@Body final GetTaskQueueNameRequest request) {
     final TemporalJobType jobType;
     try {
       jobType = TemporalJobType.valueOf(request.getTemporalJobType());

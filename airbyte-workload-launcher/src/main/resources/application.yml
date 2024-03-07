@@ -1,6 +1,8 @@
 micronaut:
   application:
     name: airbyte-workload-launcher
+  env:
+    cloud-deduction: true
   server:
     port: 8016
     netty:

@@ -19,28 +19,39 @@ configurations.all {
 }
 
 dependencies {
-    annotationProcessor(libs.lombok)
-    annotationProcessor(platform(libs.micronaut.bom))
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+    annotationProcessor(platform(libs.micronaut.platform))
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
     annotationProcessor(libs.micronaut.jaxrs.processor)
 
-    implementation(libs.reactor.core)
-    compileOnly(libs.lombok)
+    kapt(platform(libs.micronaut.platform))
+    kapt(libs.bundles.micronaut.annotation.processor)
+    kapt(libs.micronaut.jaxrs.processor)
 
-    testCompileOnly(libs.lombok)
-    testAnnotationProcessor(libs.lombok)
-
-    implementation(platform(libs.micronaut.bom))
+    implementation(platform(libs.micronaut.platform))
     implementation(libs.bundles.micronaut)
     implementation(libs.bundles.micronaut.data.jdbc)
     implementation(libs.bundles.micronaut.metrics)
     implementation(libs.micronaut.jaxrs.server)
+    implementation(libs.micronaut.http)
     implementation(libs.micronaut.security)
-    implementation(libs.flyway.core)
+    implementation(libs.bundles.flyway)
     implementation(libs.s3)
     implementation(libs.sts)
     implementation(libs.aws.java.sdk.s3)
     implementation(libs.aws.java.sdk.sts)
+    implementation(libs.reactor.core)
+    implementation(libs.slugify)
+    implementation(libs.temporal.sdk)
+    implementation(libs.bundles.datadog)
+    implementation(libs.sentry.java)
+    implementation(libs.swagger.annotations)
+    implementation(libs.google.cloud.storage)
+    implementation(libs.cron.utils)
+    implementation(libs.log4j.slf4j2.impl) // Because cron-utils uses slf4j 2.0+
+    implementation(libs.jakarta.ws.rs.api)
+    implementation(libs.jakarta.validation.api )
 
     implementation(project(":airbyte-analytics"))
     implementation(project(":airbyte-api"))
@@ -70,44 +81,33 @@ dependencies {
     implementation(libs.airbyte.protocol)
     implementation(project(":airbyte-persistence:job-persistence"))
 
-    implementation(libs.slugify)
-    implementation(libs.temporal.sdk)
-    implementation(libs.bundles.datadog)
-    implementation(libs.sentry.java)
-    implementation(libs.swagger.annotations)
-    implementation(libs.google.cloud.storage)
-
     runtimeOnly(libs.javax.databind)
 
     // Required for local database secret hydration)
     runtimeOnly(libs.hikaricp)
     runtimeOnly(libs.h2.database)
 
-    testImplementation(libs.bundles.micronaut.test)
-    testAnnotationProcessor(platform(libs.micronaut.bom))
+    testCompileOnly(libs.lombok)
+    testAnnotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+    testAnnotationProcessor(platform(libs.micronaut.platform))
+    testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
+    testAnnotationProcessor(libs.micronaut.jaxrs.processor)
     testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
-    testImplementation(project(":airbyte-test-utils"))
     testImplementation(libs.bundles.micronaut.test)
+    testImplementation(project(":airbyte-test-utils"))
     testImplementation(libs.postgresql)
     testImplementation(libs.platform.testcontainers.postgresql)
     testImplementation(libs.mockwebserver)
     testImplementation(libs.mockito.inline)
-
     testImplementation(libs.reactor.test)
-    testRuntimeOnly(libs.junit.jupiter.engine)
     testImplementation(libs.bundles.junit)
     testImplementation(libs.assertj.core)
-
     testImplementation(libs.junit.pioneer)
-
-    // Airbyte API server
-    kapt(platform(libs.micronaut.bom))
-    kapt(libs.bundles.micronaut.annotation.processor)
-    kapt(libs.micronaut.jaxrs.processor)
-    implementation("com.cronutils:cron-utils:9.2.1")
-    implementation("org.apache.logging.log4j:log4j-slf4j2-impl") // Because cron-utils uses slf4j 2.0+
     testImplementation(libs.mockk)
+    testImplementation(libs.micronaut.http.client)
+
+    testRuntimeOnly(libs.junit.jupiter.engine)
 }
 
 // we want to be able to access the generated db files from config/init when we build the server docker image.)
@@ -134,25 +134,25 @@ airbyte {
     application {
         mainClass = "io.airbyte.server.Application"
         defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
-            @Suppress("UNCHECKED_CAST")
-            localEnvVars.putAll(env.toMap() as Map<String, String>)
-            localEnvVars.putAll(mapOf(
-                "AIRBYTE_ROLE"                     to (System.getenv("AIRBYTE_ROLE") ?: "undefined"),
-                "AIRBYTE_VERSION"                  to env["VERSION"].toString(),
-                "DATABASE_USER"                    to env["DATABASE_USER"].toString(),
-                "DATABASE_PASSWORD"                to env["DATABASE_PASSWORD"].toString(),
-                "CONFIG_DATABASE_USER"             to (env["CONFIG_DATABASE_USER"]?.toString() ?: ""),
-                "CONFIG_DATABASE_PASSWORD"         to (env["CONFIG_DATABASE_PASSWORD"]?.toString() ?: ""),
-                // we map the docker pg db to port 5433 so it does not conflict with other pg instances.
-                "DATABASE_URL"                     to "jdbc:postgresql://localhost:5433/${env["DATABASE_DB"]}",
-                "CONFIG_DATABASE_URL"              to "jdbc:postgresql://localhost:5433/${env["CONFIG_DATABASE_DB"]}",
-                "RUN_DATABASE_MIGRATION_ON_STARTUP" to "true",
-                "WORKSPACE_ROOT"                   to env["WORKSPACE_ROOT"].toString(),
-                "CONFIG_ROOT"                      to "/tmp/airbyte_config",
-                "TRACKING_STRATEGY"                to env["TRACKING_STRATEGY"].toString(),
-                "TEMPORAL_HOST"                    to "localhost:7233",
-                "MICRONAUT_ENVIRONMENTS"           to "control-plane",
-            ))
+        @Suppress("UNCHECKED_CAST")
+        localEnvVars.putAll(env.toMap() as Map<String, String>)
+        localEnvVars.putAll(mapOf(
+            "AIRBYTE_ROLE"                     to (System.getenv("AIRBYTE_ROLE") ?: "undefined"),
+            "AIRBYTE_VERSION"                  to env["VERSION"].toString(),
+            "DATABASE_USER"                    to env["DATABASE_USER"].toString(),
+            "DATABASE_PASSWORD"                to env["DATABASE_PASSWORD"].toString(),
+            "CONFIG_DATABASE_USER"             to (env["CONFIG_DATABASE_USER"]?.toString() ?: ""),
+            "CONFIG_DATABASE_PASSWORD"         to (env["CONFIG_DATABASE_PASSWORD"]?.toString() ?: ""),
+            // we map the docker pg db to port 5433 so it does not conflict with other pg instances.
+            "DATABASE_URL"                     to "jdbc:postgresql://localhost:5433/${env["DATABASE_DB"]}",
+            "CONFIG_DATABASE_URL"              to "jdbc:postgresql://localhost:5433/${env["CONFIG_DATABASE_DB"]}",
+            "RUN_DATABASE_MIGRATION_ON_STARTUP" to "true",
+            "WORKSPACE_ROOT"                   to env["WORKSPACE_ROOT"].toString(),
+            "CONFIG_ROOT"                      to "/tmp/airbyte_config",
+            "TRACKING_STRATEGY"                to env["TRACKING_STRATEGY"].toString(),
+            "TEMPORAL_HOST"                    to "localhost:7233",
+            "MICRONAUT_ENVIRONMENTS"           to "control-plane",
+        ))
     }
 
     docker {
@@ -161,18 +161,18 @@ airbyte {
 
     spotbugs {
         excludes = listOf("  <Match>\n" +
-                            "    <Package name=\"io.airbyte.server.repositories.domain.*\" />\n" +
-                            "    <!-- All args constructor used by builders trigger this error -->\n" +
-                            "    <Bug pattern=\"NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE\" />\n" +
-                            "  </Match>")
+                "    <Package name=\"io.airbyte.server.repositories.domain.*\" />\n" +
+                "    <!-- All args constructor used by builders trigger this error -->\n" +
+                "    <Bug pattern=\"NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE\" />\n" +
+                "  </Match>")
     }
 }
 
 tasks.named<Test>("test") {
     environment(mapOf(
- "AIRBYTE_VERSION" to env["VERSION"],
- "MICRONAUT_ENVIRONMENTS" to  "test",
- "SERVICE_NAME" to project.name,
+        "AIRBYTE_VERSION" to env["VERSION"],
+        "MICRONAUT_ENVIRONMENTS" to  "test",
+        "SERVICE_NAME" to project.name,
     ))
 }
 

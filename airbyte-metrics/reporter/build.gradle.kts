@@ -15,10 +15,10 @@ configurations.all {
 }
 
 dependencies {
-    annotationProcessor(platform(libs.micronaut.bom))
+    annotationProcessor(platform(libs.micronaut.platform))
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-    implementation(platform(libs.micronaut.bom))
+    implementation(platform(libs.micronaut.platform))
     implementation(libs.bundles.micronaut)
 
     implementation(project(":airbyte-config:config-models"))
@@ -27,7 +27,9 @@ dependencies {
     implementation(project(":airbyte-metrics:metrics-lib"))
     implementation(libs.jooq)
 
-    testAnnotationProcessor(platform(libs.micronaut.bom))
+    runtimeOnly(libs.snakeyaml)
+
+    testAnnotationProcessor(platform(libs.micronaut.platform))
     testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
     testImplementation(project(":airbyte-test-utils"))

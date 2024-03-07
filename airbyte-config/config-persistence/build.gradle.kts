@@ -9,11 +9,11 @@ configurations.all {
 }
 
 dependencies {
-    annotationProcessor(libs.bundles.micronaut.annotation.processor)
-    api(libs.bundles.micronaut.annotation)
-
     compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+    annotationProcessor(libs.bundles.micronaut.annotation.processor)
+
+    api(libs.bundles.micronaut.annotation)
 
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-protocol"))
@@ -29,21 +29,20 @@ dependencies {
     implementation(libs.bundles.apache)
     implementation(libs.google.cloud.storage)
     implementation(libs.commons.io)
+    implementation(libs.jackson.databind)
 
-    testImplementation("org.hamcrest:hamcrest-all:1.3")
+    testImplementation(libs.hamcrest.all)
     testImplementation(libs.platform.testcontainers.postgresql)
-    testImplementation(libs.flyway.core)
+    testImplementation(libs.bundles.flyway)
     testImplementation(libs.mockito.inline)
     testImplementation(project(":airbyte-test-utils"))
-
-    integrationTestImplementation(project(":airbyte-config:config-persistence"))
-
-    testRuntimeOnly(libs.junit.jupiter.engine)
     testImplementation(libs.bundles.junit)
     testImplementation(libs.assertj.core)
     testImplementation(libs.junit.pioneer)
-    testCompileOnly(libs.lombok)
-    testAnnotationProcessor(libs.lombok)
+
+    testRuntimeOnly(libs.junit.jupiter.engine)
+
+    integrationTestImplementation(project(":airbyte-config:config-persistence"))
 
     testFixturesApi(libs.jackson.databind)
     testFixturesApi(libs.guava)

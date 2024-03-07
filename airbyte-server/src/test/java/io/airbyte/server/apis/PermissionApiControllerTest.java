@@ -13,7 +13,6 @@ import io.airbyte.api.model.generated.PermissionReadList;
 import io.airbyte.api.model.generated.PermissionUpdate;
 import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest;
 import io.airbyte.api.model.generated.UserIdRequestBody;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.http.HttpRequest;
@@ -32,7 +31,7 @@ class PermissionApiControllerTest extends BaseControllerTest {
         .thenReturn(new PermissionRead());
     final String path = "/api/v1/permissions/create";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new PermissionCreate().workspaceId(UUID.randomUUID()))),
+        HttpRequest.POST(path, new PermissionCreate().workspaceId(UUID.randomUUID())),
         HttpStatus.OK);
   }
 
@@ -42,7 +41,7 @@ class PermissionApiControllerTest extends BaseControllerTest {
         .thenReturn(new PermissionRead());
     final String path = "/api/v1/permissions/get";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new PermissionIdRequestBody())),
+        HttpRequest.POST(path, new PermissionIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -55,7 +54,7 @@ class PermissionApiControllerTest extends BaseControllerTest {
         .thenReturn(new PermissionRead().userId(userId));
     final String path = "/api/v1/permissions/update";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new PermissionUpdate().permissionId(UUID.randomUUID()))),
+        HttpRequest.POST(path, new PermissionUpdate().permissionId(UUID.randomUUID())),
         HttpStatus.OK);
   }
 
@@ -64,7 +63,7 @@ class PermissionApiControllerTest extends BaseControllerTest {
     Mockito.doNothing().when(permissionHandler).deletePermission(Mockito.any());
     final String path = "/api/v1/permissions/delete";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new PermissionIdRequestBody())),
+        HttpRequest.POST(path, new PermissionIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -74,7 +73,7 @@ class PermissionApiControllerTest extends BaseControllerTest {
         .thenReturn(new PermissionReadList());
     final String path = "/api/v1/permissions/list_by_user";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new UserIdRequestBody())),
+        HttpRequest.POST(path, new UserIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -84,7 +83,7 @@ class PermissionApiControllerTest extends BaseControllerTest {
         .thenReturn(new PermissionCheckRead());
     final String path = "/api/v1/permissions/check";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new PermissionCheckRequest())),
+        HttpRequest.POST(path, new PermissionCheckRequest()),
         HttpStatus.OK);
   }
 
@@ -94,7 +93,7 @@ class PermissionApiControllerTest extends BaseControllerTest {
         .thenReturn(new PermissionCheckRead());
     final String path = "/api/v1/permissions/check_multiple_workspaces";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new PermissionsCheckMultipleWorkspacesRequest())),
+        HttpRequest.POST(path, new PermissionsCheckMultipleWorkspacesRequest()),
         HttpStatus.OK);
   }
 

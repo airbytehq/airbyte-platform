@@ -121,7 +121,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public WorkspaceOrganizationInfoRead getOrganizationInfo(final WorkspaceIdRequestBody workspaceIdRequestBody) {
+  public WorkspaceOrganizationInfoRead getOrganizationInfo(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> workspacesHandler.getWorkspaceOrganizationInfo(workspaceIdRequestBody));
   }
 

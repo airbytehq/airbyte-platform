@@ -4,7 +4,7 @@ plugins {
 }
 
 dependencies {
-    annotationProcessor(platform(libs.micronaut.bom))
+    annotationProcessor(platform(libs.micronaut.platform))
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
     implementation(libs.bundles.micronaut)

@@ -10,13 +10,15 @@ plugins {
 }
 
 dependencies {
-    kapt(platform(libs.micronaut.bom))
+    kapt(platform(libs.micronaut.platform))
     kapt(libs.bundles.micronaut.annotation.processor)
+    kapt(libs.micronaut.jaxrs.processor)
 
-    kaptTest(platform(libs.micronaut.bom))
+    kaptTest(platform(libs.micronaut.platform))
     kaptTest(libs.bundles.micronaut.test.annotation.processor)
+    kaptTest(libs.micronaut.jaxrs.processor)
 
-    annotationProcessor(platform(libs.micronaut.bom))
+    annotationProcessor(platform(libs.micronaut.platform))
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
     annotationProcessor(libs.micronaut.jaxrs.processor)
 
@@ -24,27 +26,27 @@ dependencies {
     implementation(project(":airbyte-api"))
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-config:config-models"))
-    implementation("com.cronutils:cron-utils:9.2.1")
-    implementation("org.apache.logging.log4j:log4j-slf4j2-impl")
+    implementation(platform(libs.micronaut.platform))
+    implementation(libs.cron.utils)
+    implementation(libs.log4j.slf4j2.impl)
     implementation(libs.bundles.jackson)
-
-    implementation(platform(libs.micronaut.bom))
     implementation(libs.bundles.micronaut)
     implementation(libs.bundles.micronaut.data.jdbc)
     implementation(libs.bundles.micronaut.metrics)
     implementation(libs.micronaut.jaxrs.server)
     implementation(libs.micronaut.problem.json)
     implementation(libs.micronaut.security)
-
     implementation(libs.sentry.java)
     implementation(libs.swagger.annotations)
-    implementation(libs.javax.ws.rs.api)
+    implementation(libs.jakarta.ws.rs.api)
+    implementation(libs.airbyte.protocol)
 
     runtimeOnly(libs.javax.databind)
+    runtimeOnly(libs.snakeyaml)
 
-    testImplementation(libs.bundles.micronaut.test)
-    testAnnotationProcessor(platform(libs.micronaut.bom))
+    testAnnotationProcessor(platform(libs.micronaut.platform))
     testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
+    testAnnotationProcessor(libs.micronaut.jaxrs.processor)
 
     testImplementation(project(":airbyte-test-utils"))
     testImplementation(libs.bundles.micronaut.test)
@@ -52,8 +54,6 @@ dependencies {
     testImplementation(libs.platform.testcontainers.postgresql)
     testImplementation(libs.mockwebserver)
     testImplementation(libs.mockito.inline)
-
-    implementation(libs.airbyte.protocol)
 }
 
 kapt {

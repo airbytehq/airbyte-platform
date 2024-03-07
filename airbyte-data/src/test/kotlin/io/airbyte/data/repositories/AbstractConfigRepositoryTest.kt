@@ -3,8 +3,8 @@ package io.airbyte.data.repositories
 import io.airbyte.db.factory.DSLContextFactory
 import io.airbyte.db.instance.test.TestDatabaseProviders
 import io.micronaut.context.ApplicationContext
+import io.micronaut.data.connection.jdbc.advice.DelegatingDataSource
 import io.micronaut.data.repository.CrudRepository
-import io.micronaut.transaction.jdbc.DelegatingDataSource
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.junit.jupiter.api.AfterAll

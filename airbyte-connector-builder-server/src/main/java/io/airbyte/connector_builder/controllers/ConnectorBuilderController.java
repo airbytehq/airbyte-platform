@@ -17,6 +17,7 @@ import io.airbyte.connector_builder.handlers.ResolveManifestHandler;
 import io.airbyte.connector_builder.handlers.StreamHandler;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.MediaType;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.Post;
@@ -59,7 +60,7 @@ public class ConnectorBuilderController implements V1Api {
         produces = MediaType.APPLICATION_JSON)
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(TaskExecutors.IO)
-  public StreamRead readStream(final StreamReadRequestBody streamReadRequestBody) {
+  public StreamRead readStream(@Body final StreamReadRequestBody streamReadRequestBody) {
     return streamHandler.readStream(streamReadRequestBody);
   }
 
@@ -68,7 +69,7 @@ public class ConnectorBuilderController implements V1Api {
         produces = MediaType.APPLICATION_JSON)
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(TaskExecutors.IO)
-  public ResolveManifest resolveManifest(final ResolveManifestRequestBody resolveManifestRequestBody) {
+  public ResolveManifest resolveManifest(@Body final ResolveManifestRequestBody resolveManifestRequestBody) {
     return resolveManifestHandler.resolveManifest(resolveManifestRequestBody);
   }
 

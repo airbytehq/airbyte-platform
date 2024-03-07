@@ -11,11 +11,12 @@ configurations.all {
         force(libs.platform.testcontainers.postgresql)
     }
 }
+
 dependencies {
     implementation(libs.jooq.meta)
     implementation(libs.jooq)
     implementation(libs.postgresql)
-    implementation(libs.flyway.core)
+    implementation(libs.bundles.flyway)
     implementation(project(":airbyte-db:db-lib"))
 
     // jOOQ code generation)
@@ -25,8 +26,8 @@ dependencies {
     // These are required because gradle might be using lower version of Jna from other
     // library transitive dependency. Can be removed if we can figure out which library is the cause.
     // Refer: https://github.com/testcontainers/testcontainers-java/issues/3834#issuecomment-825409079
-    implementation("net.java.dev.jna:jna:5.8.0")
-    implementation("net.java.dev.jna:jna-platform:5.8.0")
+    implementation(libs.jna)
+    implementation(libs.jna.platform)
 
     // The jOOQ code generator(only has access to classes added to the jooqGenerator configuration
     jooqGenerator(project(":airbyte-db:db-lib")) {
@@ -38,7 +39,7 @@ dependencies {
     jooqGenerator(project(":airbyte-config:config-models")) {
         isTransitive = false
     }
-    jooqGenerator(libs.flyway.core)
+    jooqGenerator(libs.bundles.flyway)
     jooqGenerator(libs.guava)
     jooqGenerator(libs.hikaricp)
     jooqGenerator(libs.jackson.datatype)

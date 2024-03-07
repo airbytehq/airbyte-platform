@@ -11,10 +11,10 @@ import io.airbyte.api.server.constants.WORKSPACES_PATH
 import io.airbyte.api.server.controllers.interfaces.WorkspacesApi
 import io.airbyte.api.server.services.WorkspaceService
 import io.micronaut.http.annotation.Controller
+import jakarta.ws.rs.PATCH
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.core.Response
 import java.util.UUID
-import javax.ws.rs.PATCH
-import javax.ws.rs.Path
-import javax.ws.rs.core.Response
 
 @Controller(WORKSPACES_PATH)
 open class WorkspacesController(

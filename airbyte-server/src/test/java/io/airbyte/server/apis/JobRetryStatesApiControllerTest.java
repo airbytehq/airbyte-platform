@@ -9,7 +9,6 @@ import static org.mockito.Mockito.when;
 import io.airbyte.api.model.generated.JobIdRequestBody;
 import io.airbyte.api.model.generated.JobRetryStateRequestBody;
 import io.airbyte.api.model.generated.RetryStateRead;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.server.handlers.RetryStatesHandler;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
@@ -54,7 +53,7 @@ class JobRetryStatesApiControllerTest extends BaseControllerTest {
     testEndpointStatus(
         HttpRequest.POST(
             PATH_GET,
-            Jsons.serialize(Fixtures.jobIdReq())),
+            Fixtures.jobIdReq()),
         HttpStatus.OK);
   }
 
@@ -66,7 +65,7 @@ class JobRetryStatesApiControllerTest extends BaseControllerTest {
     testErrorEndpointStatus(
         HttpRequest.POST(
             PATH_GET,
-            Jsons.serialize(Fixtures.jobIdReq())),
+            Fixtures.jobIdReq()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -75,7 +74,7 @@ class JobRetryStatesApiControllerTest extends BaseControllerTest {
     testEndpointStatus(
         HttpRequest.POST(
             PATH_PUT,
-            Jsons.serialize(Fixtures.retryPutReq())),
+            Fixtures.retryPutReq()),
         HttpStatus.NO_CONTENT);
   }
 

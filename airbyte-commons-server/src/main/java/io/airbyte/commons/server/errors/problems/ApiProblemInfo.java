@@ -7,9 +7,9 @@ package io.airbyte.commons.server.errors.problems;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.airbyte.api.model.generated.KnownExceptionInfo;
 import io.micronaut.core.annotation.Introspected;
+import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
-import javax.validation.Valid;
 
 @Introspected
 public class ApiProblemInfo extends KnownExceptionInfo {
@@ -18,12 +18,12 @@ public class ApiProblemInfo extends KnownExceptionInfo {
   private URI reference;
   private @Valid String title;
 
-  public ApiProblemInfo title(String title) {
+  public ApiProblemInfo title(final String title) {
     this.title = title;
     return this;
   }
 
-  public ApiProblemInfo reference(URI reference) {
+  public ApiProblemInfo reference(final URI reference) {
     this.reference = reference;
     return this;
   }

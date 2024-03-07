@@ -16,7 +16,6 @@ import io.airbyte.api.model.generated.StreamStatusRead;
 import io.airbyte.api.model.generated.StreamStatusReadList;
 import io.airbyte.api.model.generated.StreamStatusRunState;
 import io.airbyte.api.model.generated.StreamStatusUpdateRequestBody;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.server.handlers.StreamStatusesHandler;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
@@ -65,7 +64,7 @@ class StreamStatusesApiControllerTest extends BaseControllerTest {
     testEndpointStatus(
         HttpRequest.POST(
             PATH_CREATE,
-            Jsons.serialize(Fixtures.validCreate())),
+            Fixtures.validCreate()),
         HttpStatus.CREATED);
   }
 
@@ -82,7 +81,7 @@ class StreamStatusesApiControllerTest extends BaseControllerTest {
     testErrorEndpointStatus(
         HttpRequest.POST(
             PATH_CREATE,
-            Jsons.serialize(invalid)),
+            invalid),
         HttpStatus.BAD_REQUEST);
   }
 
@@ -94,7 +93,7 @@ class StreamStatusesApiControllerTest extends BaseControllerTest {
     testEndpointStatus(
         HttpRequest.POST(
             PATH_UPDATE,
-            Jsons.serialize(Fixtures.validUpdate())),
+            Fixtures.validUpdate()),
         HttpStatus.OK);
   }
 
@@ -111,7 +110,7 @@ class StreamStatusesApiControllerTest extends BaseControllerTest {
     testErrorEndpointStatus(
         HttpRequest.POST(
             PATH_UPDATE,
-            Jsons.serialize(invalid)),
+            invalid),
         HttpStatus.BAD_REQUEST);
   }
 
@@ -138,7 +137,7 @@ class StreamStatusesApiControllerTest extends BaseControllerTest {
     testEndpointStatus(
         HttpRequest.POST(
             PATH_LIST,
-            Jsons.serialize(valid)),
+            valid),
         HttpStatus.OK);
   }
 
@@ -162,7 +161,7 @@ class StreamStatusesApiControllerTest extends BaseControllerTest {
     testErrorEndpointStatus(
         HttpRequest.POST(
             PATH_LIST,
-            Jsons.serialize(invalid)),
+            invalid),
         HttpStatus.BAD_REQUEST);
   }
 
@@ -189,7 +188,7 @@ class StreamStatusesApiControllerTest extends BaseControllerTest {
     testEndpointStatus(
         HttpRequest.POST(
             PATH_LATEST_PER_RUN_STATE,
-            Jsons.serialize(req)),
+            req),
         HttpStatus.OK);
   }
 

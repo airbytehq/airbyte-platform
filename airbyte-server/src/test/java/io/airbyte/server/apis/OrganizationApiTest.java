@@ -8,7 +8,6 @@ import io.airbyte.api.model.generated.OrganizationCreateRequestBody;
 import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationRead;
 import io.airbyte.api.model.generated.OrganizationUpdateRequestBody;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -31,7 +30,7 @@ class OrganizationApiTest extends BaseControllerTest {
         .thenReturn(new OrganizationRead());
     final String path = "/api/v1/organizations/get";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new OrganizationIdRequestBody())),
+        HttpRequest.POST(path, new OrganizationIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -41,7 +40,7 @@ class OrganizationApiTest extends BaseControllerTest {
         .thenReturn(new OrganizationRead());
     final String path = "/api/v1/organizations/update";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new OrganizationUpdateRequestBody())),
+        HttpRequest.POST(path, new OrganizationUpdateRequestBody()),
         HttpStatus.OK);
   }
 
@@ -51,7 +50,7 @@ class OrganizationApiTest extends BaseControllerTest {
         .thenReturn(new OrganizationRead());
     final String path = "/api/v1/organizations/create";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new OrganizationCreateRequestBody())),
+        HttpRequest.POST(path, new OrganizationCreateRequestBody()),
         HttpStatus.OK);
   }
 

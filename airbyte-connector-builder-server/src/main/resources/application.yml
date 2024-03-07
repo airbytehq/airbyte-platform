@@ -1,6 +1,8 @@
 micronaut:
   application:
     name: airbyte-connector-builder-server
+  env:
+    cloud-deduction: true
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     export:

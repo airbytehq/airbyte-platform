@@ -36,7 +36,7 @@ public class WebClientCreator {
     this.keycloakConfiguration = keycloakConfiguration;
   }
 
-  public void createWebClient(RealmResource keycloakRealm) {
+  public void createWebClient(final RealmResource keycloakRealm) {
     final ClientRepresentation client = createClientRepresentation();
     final Response clientResponse = keycloakRealm.clients().create(client);
     handleClientCreationResponse(clientResponse, client.getClientId());
@@ -60,7 +60,7 @@ public class WebClientCreator {
     return attributeMap;
   }
 
-  private void handleClientCreationResponse(Response clientResponse, String webClientId) {
+  private void handleClientCreationResponse(final Response clientResponse, final String webClientId) {
     if (clientResponse.getStatus() == HTTP_STATUS_CREATED) {
       log.info(webClientId + " client created successfully. Status: " + clientResponse.getStatusInfo());
     } else {

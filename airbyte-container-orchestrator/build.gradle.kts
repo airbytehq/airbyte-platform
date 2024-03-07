@@ -11,7 +11,7 @@ buildscript {
     }
     dependencies {
         // necessary to convert the well_know_types from yaml to json
-        val jacksonVersion = "2.16.0"
+        val jacksonVersion = libs.versions.fasterxml.version.get()
         classpath("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion")
         classpath("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
     }
@@ -37,11 +37,12 @@ configurations.all {
     }
 }
 dependencies {
-    annotationProcessor(platform(libs.micronaut.bom))
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+    annotationProcessor(platform(libs.micronaut.platform))
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
-    annotationProcessor(libs.lombok)
 
-    implementation(platform(libs.micronaut.bom))
+    implementation(platform(libs.micronaut.platform))
     implementation(libs.bundles.micronaut)
     implementation(libs.bundles.micronaut.metrics)
     implementation(libs.guava)
@@ -51,7 +52,6 @@ dependencies {
     implementation(libs.kubernetes.client)
     implementation(libs.bundles.datadog)
     implementation(libs.bundles.log4j)
-    compileOnly(libs.lombok)
 
     implementation(project(":airbyte-api"))
     implementation(project(":airbyte-commons"))
@@ -70,7 +70,9 @@ dependencies {
     implementation(project(":airbyte-metrics:metrics-lib"))
     implementation(project(":airbyte-worker-models"))
 
-    testAnnotationProcessor(platform(libs.micronaut.bom))
+    runtimeOnly(libs.snakeyaml)
+
+    testAnnotationProcessor(platform(libs.micronaut.platform))
     testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
     testImplementation(libs.bundles.micronaut.test)

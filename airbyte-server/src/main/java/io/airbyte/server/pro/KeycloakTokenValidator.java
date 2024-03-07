@@ -40,7 +40,7 @@ import reactor.core.publisher.Mono;
 @Singleton
 @RequiresAirbyteProEnabled
 @SuppressWarnings({"PMD.PreserveStackTrace", "PMD.UseTryWithResources", "PMD.UnusedFormalParameter", "PMD.UnusedPrivateMethod"})
-public class KeycloakTokenValidator implements TokenValidator {
+public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
 
   private final HttpClient client;
   private final AirbyteKeycloakConfiguration keycloakConfiguration;

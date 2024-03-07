@@ -7,17 +7,15 @@ plugins {
 }
 
 dependencies {
-    implementation(platform("com.fasterxml.jackson:jackson-bom:2.13.0"))
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+
+    implementation(platform(libs.fasterxml))
     implementation(libs.bundles.jackson)
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-config:config-models"))
     implementation(libs.airbyte.protocol)
     implementation(project(":airbyte-api"))
-
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
-    testCompileOnly(libs.lombok)
-    testAnnotationProcessor(libs.lombok)
 }
 
 jsonSchema2Pojo {

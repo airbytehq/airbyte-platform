@@ -6,12 +6,12 @@ package io.airbyte.config.secrets.persistence
 
 import io.airbyte.config.secrets.SecretCoordinate
 import io.micronaut.context.annotation.Requires
-import io.micronaut.transaction.annotation.TransactionalAdvice
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import jakarta.transaction.Transactional
 import org.jooq.DSLContext
 import org.jooq.exception.DataAccessException
+import io.micronaut.transaction.annotation.Transactional as TransactionalAdvice
 
 @Singleton
 @Requires(property = "airbyte.secret.persistence", pattern = "(?i)^testing_config_db_table$")

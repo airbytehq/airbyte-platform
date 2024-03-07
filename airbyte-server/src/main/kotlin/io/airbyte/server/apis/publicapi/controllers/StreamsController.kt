@@ -28,11 +28,11 @@ import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
+import jakarta.ws.rs.core.Response
 import org.slf4j.LoggerFactory
 import services.DestinationService
 import java.io.IOException
 import java.util.UUID
-import javax.ws.rs.core.Response
 
 @Controller(STREAMS_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)

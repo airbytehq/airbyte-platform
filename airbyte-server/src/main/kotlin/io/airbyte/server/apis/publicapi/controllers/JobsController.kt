@@ -31,14 +31,14 @@ import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
+import jakarta.ws.rs.DELETE
+import jakarta.ws.rs.GET
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.PathParam
+import jakarta.ws.rs.core.Response
 import services.JobService
 import java.time.OffsetDateTime
 import java.util.UUID
-import javax.ws.rs.DELETE
-import javax.ws.rs.GET
-import javax.ws.rs.Path
-import javax.ws.rs.PathParam
-import javax.ws.rs.core.Response
 
 @Controller(JOBS_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)

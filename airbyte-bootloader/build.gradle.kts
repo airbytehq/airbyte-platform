@@ -13,16 +13,16 @@ configurations.all {
 }
 
 dependencies {
-    annotationProcessor(platform(libs.micronaut.bom))
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+    annotationProcessor(platform(libs.micronaut.platform))
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
-    implementation(platform(libs.micronaut.bom))
+    implementation(platform(libs.micronaut.platform))
     implementation(libs.bundles.micronaut)
-    implementation(libs.flyway.core)
+    implementation(libs.bundles.flyway)
     implementation(libs.jooq)
     implementation(libs.guava)
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
 
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-micronaut"))
@@ -39,21 +39,23 @@ dependencies {
     implementation(libs.airbyte.protocol)
     implementation(project(":airbyte-persistence:job-persistence"))
 
-    testAnnotationProcessor(platform(libs.micronaut.bom))
-    testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
+    runtimeOnly(libs.snakeyaml)
 
     testCompileOnly(libs.lombok)
-    testAnnotationProcessor(libs.lombok)
+    testAnnotationProcessor(libs.lombok)    // Lombok must be added BEFORE Micronaut
+    testAnnotationProcessor(platform(libs.micronaut.platform))
+    testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
+    testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
     testImplementation(libs.bundles.micronaut.test)
     testImplementation(libs.bundles.junit)
     testImplementation(libs.junit.jupiter.system.stubs)
     testImplementation(libs.platform.testcontainers.postgresql)
-    testRuntimeOnly(libs.junit.jupiter.engine)
     testImplementation(libs.bundles.junit)
     testImplementation(libs.assertj.core)
     testImplementation(libs.junit.pioneer)
 
+    testRuntimeOnly(libs.junit.jupiter.engine)
 }
 
 val env = Properties().apply {

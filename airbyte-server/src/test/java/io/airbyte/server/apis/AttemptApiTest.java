@@ -6,7 +6,7 @@ package io.airbyte.server.apis;
 
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.SaveStatsRequestBody;
-import io.airbyte.commons.json.Jsons;
+import io.airbyte.api.model.generated.SetWorkflowInAttemptRequestBody;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
 import io.micronaut.http.HttpRequest;
@@ -26,7 +26,7 @@ class AttemptApiTest extends BaseControllerTest {
         .thenReturn(new InternalOperationResult());
     final String path = "/api/v1/attempt/save_stats";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SaveStatsRequestBody())),
+        HttpRequest.POST(path, new SaveStatsRequestBody()),
         HttpStatus.OK);
   }
 
@@ -36,7 +36,7 @@ class AttemptApiTest extends BaseControllerTest {
         .thenReturn(new InternalOperationResult());
     final String path = "/api/v1/attempt/set_workflow_in_attempt";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SaveStatsRequestBody())),
+        HttpRequest.POST(path, new SetWorkflowInAttemptRequestBody()),
         HttpStatus.OK);
   }
 

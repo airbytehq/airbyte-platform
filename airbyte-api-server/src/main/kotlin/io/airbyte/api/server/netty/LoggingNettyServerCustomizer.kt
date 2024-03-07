@@ -5,8 +5,9 @@ import io.micronaut.context.event.BeanCreatedEventListener
 import io.micronaut.http.netty.channel.ChannelPipelineCustomizer
 import io.micronaut.http.server.netty.NettyServerCustomizer
 import io.netty.channel.Channel
+import jakarta.inject.Singleton
 
-@jakarta.inject.Singleton
+@Singleton
 class LoggingNettyServerCustomizer() : BeanCreatedEventListener<NettyServerCustomizer.Registry> {
   override fun onCreated(event: BeanCreatedEvent<NettyServerCustomizer.Registry>): NettyServerCustomizer.Registry {
     val registry: NettyServerCustomizer.Registry = event.bean
@@ -23,8 +24,8 @@ class LoggingNettyServerCustomizer() : BeanCreatedEventListener<NettyServerCusto
     }
 
     override fun onStreamPipelineBuilt() {
-      channel!!.pipeline().addBefore(
-        ChannelPipelineCustomizer.HANDLER_HTTP_STREAM,
+      channel!!.pipeline().addAfter(
+        ChannelPipelineCustomizer.HANDLER_HTTP_SERVER_CODEC,
         "AirbyteApiLogs",
         LoggingNettyChannelHandler(),
       )

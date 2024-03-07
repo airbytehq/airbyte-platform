@@ -8,8 +8,8 @@ import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
+import jakarta.ws.rs.core.Response
 import java.net.URI
-import javax.ws.rs.core.Response
 
 @Controller(ROOT_PATH)
 @Secured(SecurityRule.IS_ANONYMOUS)

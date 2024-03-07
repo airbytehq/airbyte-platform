@@ -15,11 +15,11 @@ import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
+import jakarta.ws.rs.NotSupportedException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import javax.ws.rs.NotSupportedException;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -50,9 +50,9 @@ public class AutoPropagateSchemaChangeHelper {
    */
   @VisibleForTesting
   static String staticFormatDiff(final StreamTransform transform) {
-    String namespace = transform.getStreamDescriptor().getNamespace();
-    String nsPrefix = namespace != null ? String.format("%s.", namespace) : "";
-    String streamName = transform.getStreamDescriptor().getName();
+    final String namespace = transform.getStreamDescriptor().getNamespace();
+    final String nsPrefix = namespace != null ? String.format("%s.", namespace) : "";
+    final String streamName = transform.getStreamDescriptor().getName();
     switch (transform.getTransformType()) {
       case ADD_STREAM -> {
         return String.format("Added new stream '%s%s'", nsPrefix, streamName);
@@ -61,13 +61,13 @@ public class AutoPropagateSchemaChangeHelper {
         return String.format("Removed stream '%s%s'", nsPrefix, streamName);
       }
       case UPDATE_STREAM -> {
-        StringBuilder returnValue = new StringBuilder(String.format("Modified stream '%s%s': ", nsPrefix, streamName));
+        final StringBuilder returnValue = new StringBuilder(String.format("Modified stream '%s%s': ", nsPrefix, streamName));
         if (transform.getUpdateStream() == null) {
           return returnValue.toString();
         }
-        List<String> addedFields = new ArrayList<>();
-        List<String> removedFields = new ArrayList<>();
-        List<String> updatedFields = new ArrayList<>();
+        final List<String> addedFields = new ArrayList<>();
+        final List<String> removedFields = new ArrayList<>();
+        final List<String> updatedFields = new ArrayList<>();
 
         for (final FieldTransform fieldTransform : transform.getUpdateStream()) {
           final String fieldName = String.join(".", fieldTransform.getFieldName());
@@ -78,7 +78,7 @@ public class AutoPropagateSchemaChangeHelper {
             default -> throw new NotSupportedException("Not supported transformation.");
           }
         }
-        List<String> detailedUpdates = new ArrayList<>();
+        final List<String> detailedUpdates = new ArrayList<>();
         if (!addedFields.isEmpty()) {
           detailedUpdates.add(String.format("Added fields [%s]", String.join(", ", addedFields)));
         }

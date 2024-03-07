@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -27,6 +26,7 @@ import org.flywaydb.core.api.MigrationVersion;
 import org.flywaydb.core.api.configuration.Configuration;
 import org.flywaydb.core.api.migration.JavaMigration;
 import org.flywaydb.core.api.output.MigrateResult;
+import org.flywaydb.core.api.resolver.MigrationResolver;
 import org.flywaydb.core.api.resolver.ResolvedMigration;
 import org.flywaydb.core.internal.resolver.java.ScanningJavaMigrationResolver;
 import org.flywaydb.core.internal.scanner.LocationScannerCache;
@@ -125,16 +125,12 @@ public class MigrationDevHelper {
     final Configuration configuration = migrator.getFlyway().getConfiguration();
     final ClassProvider<JavaMigration> scanner = new Scanner<>(
         JavaMigration.class,
-        Arrays.asList(configuration.getLocations()),
-        configuration.getClassLoader(),
-        configuration.getEncoding(),
-        configuration.getDetectEncoding(),
         false,
         new ResourceNameCache(),
         new LocationScannerCache(),
-        configuration.getFailOnMissingLocations());
+        configuration);
     final ScanningJavaMigrationResolver resolver = new ScanningJavaMigrationResolver(scanner, configuration);
-    return resolver.resolveMigrations(() -> configuration).stream()
+    return resolver.resolveMigrations(new MigrationResolver.Context(configuration, null, null, null, null)).stream()
         // There may be duplicated migration from the resolver.
         .distinct()
         .collect(Collectors.toList());

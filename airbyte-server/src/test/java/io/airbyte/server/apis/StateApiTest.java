@@ -4,9 +4,9 @@
 
 package io.airbyte.server.apis;
 
+import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionState;
-import io.airbyte.api.model.generated.SourceIdRequestBody;
-import io.airbyte.commons.json.Jsons;
+import io.airbyte.api.model.generated.ConnectionStateCreateOrUpdate;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
 import io.micronaut.http.HttpRequest;
@@ -27,7 +27,7 @@ class StateApiTest extends BaseControllerTest {
         .thenReturn(new ConnectionState());
     final String path = "/api/v1/state/create_or_update";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new ConnectionStateCreateOrUpdate()),
         HttpStatus.OK);
   }
 
@@ -37,7 +37,7 @@ class StateApiTest extends BaseControllerTest {
         .thenReturn(new ConnectionState());
     final String path = "/api/v1/state/get";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new ConnectionIdRequestBody()),
         HttpStatus.OK);
   }
 

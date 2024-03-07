@@ -7,12 +7,15 @@ plugins {
 }
 
 dependencies {
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+
     api(libs.bundles.micronaut.annotation)
 
-    kapt(platform(libs.micronaut.bom))
+    kapt(platform(libs.micronaut.platform))
     kapt(libs.bundles.micronaut.annotation.processor)
 
-    kaptTest(platform(libs.micronaut.bom))
+    kaptTest(platform(libs.micronaut.platform))
     kaptTest(libs.bundles.micronaut.test.annotation.processor)
 
     implementation(libs.bundles.apache)
@@ -33,19 +36,14 @@ dependencies {
     // For Keycloak Application Management
     implementation(libs.bundles.keycloak.client)
 
+    testCompileOnly(libs.lombok)
+    testAnnotationProcessor(libs.lombok)
+
     testImplementation(libs.bundles.micronaut.test)
     testImplementation(libs.postgresql)
     testImplementation(libs.platform.testcontainers.postgresql)
     testImplementation(libs.mockk)
     testImplementation(project(":airbyte-test-utils"))
-
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
-
-    testCompileOnly(libs.lombok)
-    testAnnotationProcessor(libs.lombok)
-
-    testImplementation(libs.bundles.micronaut.test)
     testImplementation(libs.bundles.junit)
 
     // TODO: flip this import - MockData should live in airbyte-data's testFixtures

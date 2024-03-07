@@ -55,7 +55,8 @@ class InstanceConfigurationApiControllerTest extends BaseControllerTest {
     when(instanceConfigurationHandler.setupInstanceConfiguration(Mockito.any()))
         .thenReturn(new InstanceConfigurationResponse());
 
-    testEndpointStatus(HttpRequest.POST(PATH + "/setup", new InstanceConfigurationResponse()), HttpStatus.OK);
+    testEndpointStatus(HttpRequest.POST(PATH + "/setup", new InstanceConfigurationResponse()),
+        HttpStatus.OK);
   }
 
 }

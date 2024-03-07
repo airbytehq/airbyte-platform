@@ -1,6 +1,8 @@
 micronaut:
   application:
     name: airbyte-server
+  env:
+    cloud-deduction: true
   executors:
     health:
       type: fixed

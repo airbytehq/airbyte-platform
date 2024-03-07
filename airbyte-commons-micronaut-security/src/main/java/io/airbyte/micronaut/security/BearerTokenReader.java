@@ -6,7 +6,6 @@ package io.airbyte.micronaut.security;
 
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.security.token.reader.HttpHeaderTokenReader;
-import io.micronaut.security.token.reader.TokenReader;
 import jakarta.inject.Singleton;
 
 /**
@@ -18,7 +17,7 @@ import jakarta.inject.Singleton;
  */
 @SuppressWarnings("PMD.CommentSize")
 @Singleton
-public class BearerTokenReader extends HttpHeaderTokenReader implements TokenReader {
+public class BearerTokenReader extends HttpHeaderTokenReader {
 
   private static final String AUTHORIZATION_HEADER_NAME = HttpHeaders.AUTHORIZATION;
   private static final String BEARER_PREFIX = "Bearer";

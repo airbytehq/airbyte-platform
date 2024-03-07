@@ -4,8 +4,8 @@
 
 package io.airbyte.config;
 
+import jakarta.annotation.Nullable;
 import java.util.UUID;
-import javax.annotation.Nullable;
 import lombok.NonNull;
 
 /**

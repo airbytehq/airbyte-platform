@@ -13,7 +13,6 @@ import io.airbyte.api.model.generated.WorkspaceCreateWithId;
 import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.User;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
@@ -47,17 +46,17 @@ class WorkspaceApiTest extends BaseControllerTest {
 
     // no org id, expect 200
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceCreate())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
 
     // org id present, permission check succeeds, expect 200
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceCreate().organizationId(UUID.randomUUID()))),
+        HttpRequest.POST(path, new WorkspaceCreate().organizationId(UUID.randomUUID())),
         HttpStatus.OK);
 
     // org id present, permission check fails, expect 403
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceCreate().organizationId(UUID.randomUUID()))),
+        HttpRequest.POST(path, new WorkspaceCreate().organizationId(UUID.randomUUID())),
         HttpStatus.FORBIDDEN);
   }
 
@@ -76,17 +75,17 @@ class WorkspaceApiTest extends BaseControllerTest {
 
     // no org id, expect 200
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceCreateWithId())),
+        HttpRequest.POST(path, new WorkspaceCreateWithId()),
         HttpStatus.OK);
 
     // org id present, permission check succeeds, expect 200
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceCreateWithId().organizationId(UUID.randomUUID()))),
+        HttpRequest.POST(path, new WorkspaceCreateWithId().organizationId(UUID.randomUUID())),
         HttpStatus.OK);
 
     // org id present, permission check fails, expect 403
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceCreateWithId().organizationId(UUID.randomUUID()))),
+        HttpRequest.POST(path, new WorkspaceCreateWithId().organizationId(UUID.randomUUID())),
         HttpStatus.FORBIDDEN);
   }
 
@@ -97,10 +96,10 @@ class WorkspaceApiTest extends BaseControllerTest {
         .when(workspacesHandler).deleteWorkspace(Mockito.any());
     final String path = "/api/v1/workspaces/delete";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.NO_CONTENT);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new SourceDefinitionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -111,10 +110,10 @@ class WorkspaceApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/workspaces/get";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new SourceDefinitionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -125,10 +124,10 @@ class WorkspaceApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/workspaces/get_by_slug";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new SourceDefinitionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -138,7 +137,7 @@ class WorkspaceApiTest extends BaseControllerTest {
         .thenReturn(new WorkspaceReadList());
     final String path = "/api/v1/workspaces/list";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
   }
 
@@ -149,10 +148,10 @@ class WorkspaceApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/workspaces/update";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new SourceDefinitionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -163,10 +162,10 @@ class WorkspaceApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/workspaces/update_organization";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceUpdateOrganization())),
+        HttpRequest.POST(path, new WorkspaceUpdateOrganization()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new WorkspaceUpdateOrganization())),
+        HttpRequest.POST(path, new WorkspaceUpdateOrganization()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -177,10 +176,10 @@ class WorkspaceApiTest extends BaseControllerTest {
         .when(workspacesHandler).setFeedbackDone(Mockito.any());
     final String path = "/api/v1/workspaces/tag_feedback_status_as_done";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new SourceDefinitionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -191,10 +190,10 @@ class WorkspaceApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/workspaces/update_name";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceDefinitionIdRequestBody())),
+        HttpRequest.POST(path, new SourceDefinitionIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 
@@ -205,10 +204,10 @@ class WorkspaceApiTest extends BaseControllerTest {
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/workspaces/get_by_connection_id";
     testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.OK);
     testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpRequest.POST(path, new SourceIdRequestBody()),
         HttpStatus.NOT_FOUND);
   }
 

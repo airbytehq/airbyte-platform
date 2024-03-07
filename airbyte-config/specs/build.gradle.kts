@@ -7,29 +7,29 @@ plugins {
 }
 
 dependencies {
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
+
     api(libs.bundles.micronaut.annotation)
 
-    implementation("commons-cli:commons-cli:1.4")
+    implementation(project(":airbyte-commons"))
+    implementation(project(":airbyte-config:config-models"))
+    implementation(project(":airbyte-json-validation"))
+
+    implementation(libs.commons.cli)
     implementation(libs.commons.io)
-    implementation(platform("com.fasterxml.jackson:jackson-bom:2.13.0"))
+    implementation(platform(libs.fasterxml))
     implementation(libs.bundles.jackson)
     implementation(libs.google.cloud.storage)
     implementation(libs.micronaut.cache.caffeine)
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
-    implementation(project(":airbyte-commons"))
-    implementation(project(":airbyte-config:config-models"))
     implementation(libs.airbyte.protocol)
-    implementation(project(":airbyte-json-validation"))
     implementation(libs.okhttp)
 
     testRuntimeOnly(libs.junit.jupiter.engine)
     testImplementation(libs.bundles.junit)
     testImplementation(libs.assertj.core)
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.9.1")
-    testCompileOnly(libs.lombok)
-    testAnnotationProcessor(libs.lombok)
+    testImplementation(libs.mockwebserver)
     testImplementation(libs.junit.pioneer)
 }
 

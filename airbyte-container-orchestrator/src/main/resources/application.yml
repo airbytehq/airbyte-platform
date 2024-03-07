@@ -1,6 +1,8 @@
 micronaut:
   application:
     name: airbyte-container-orchestrator
+  env:
+    cloud-deduction: true
   server:
     port: 9000
   executors:

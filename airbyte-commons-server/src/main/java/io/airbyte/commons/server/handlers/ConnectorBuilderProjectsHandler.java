@@ -59,6 +59,7 @@ import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.annotation.Nullable;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -67,7 +68,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-import javax.annotation.Nullable;
 
 /**
  * ConnectorBuilderProjectsHandler. Javadocs suppressed because api docs should be used as source of
@@ -325,7 +325,7 @@ public class ConnectorBuilderProjectsHandler {
     }
   }
 
-  public ConnectorBuilderProjectStreamRead readConnectorBuilderProjectStream(ConnectorBuilderProjectStreamReadRequestBody requestBody)
+  public ConnectorBuilderProjectStreamRead readConnectorBuilderProjectStream(final ConnectorBuilderProjectStreamReadRequestBody requestBody)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     try {
       final ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(requestBody.getBuilderProjectId(), false);
@@ -364,7 +364,7 @@ public class ConnectorBuilderProjectsHandler {
     }
   }
 
-  private ConnectorBuilderProjectStreamRead convertStreamRead(StreamRead streamRead) {
+  private ConnectorBuilderProjectStreamRead convertStreamRead(final StreamRead streamRead) {
     return new ConnectorBuilderProjectStreamRead()
         .logs(streamRead.getLogs())
         .slices(streamRead.getSlices().stream().map(slice -> new ConnectorBuilderProjectStreamReadSlicesInner()
@@ -387,7 +387,7 @@ public class ConnectorBuilderProjectsHandler {
         .inferredDatetimeFormats(streamRead.getInferredDatetimeFormats());
   }
 
-  private ConnectorBuilderHttpRequest convertHttpRequest(@Nullable HttpRequest request) {
+  private ConnectorBuilderHttpRequest convertHttpRequest(@Nullable final HttpRequest request) {
     return request != null
         ? new ConnectorBuilderHttpRequest()
             .url(request.getUrl())
@@ -398,7 +398,7 @@ public class ConnectorBuilderProjectsHandler {
         : null;
   }
 
-  private ConnectorBuilderHttpResponse convertHttpResponse(HttpResponse response) {
+  private ConnectorBuilderHttpResponse convertHttpResponse(final HttpResponse response) {
     return response != null
         ? new ConnectorBuilderHttpResponse()
             .status(response.getStatus())

@@ -42,13 +42,13 @@ import io.airbyte.featureflag.UseResourceRequirementsVariant;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.StreamDescriptor;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
-import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
 /**
