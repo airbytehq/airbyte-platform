@@ -206,17 +206,13 @@ Add environment variables to configure minio
 {{- define "airbyte.storage.minio.endpoint" -}}
 {{- if eq (lower .Values.global.storage.type) "minio" }}
     {{- .Values.global.storage.minio.endpoint -}}
-{{- else if .Values.global.storage.externalMinio.endpoint -}}
-    {{- .Values.global.storage.externalMinio.endpoint -}}
-{{- else if .Values.global.storage.externalMinio.enabled -}}
-    {{- printf "http://%s:%g" .Values.global.storage.externalMinio.host .Values.global.storage.externalMinio.port -}}
 {{- else -}}
     {{- printf "" -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "airbyte.s3PathStyleAccess" -}}
-{{- ternary "true" "" (or (eq (lower .Values.global.storage.type) "minio") .Values.global.storage.externalMinio.enabled) -}}
+{{- ternary "true" "" (eq (lower .Values.global.storage.type) "minio") -}}
 {{- end -}}
 
 {{/*

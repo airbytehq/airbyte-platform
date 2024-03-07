@@ -56,14 +56,6 @@ global:
       secretKeyExistingSecret:
       # -- Existing secret key
       secretKeyExistingSecretKey:
-    # External minio configuration, used if logs.storage.type is "MINIO" and enabled
-    externalMinio:
-      # -- Enable or disable an external Minio instance
-      enabled: false
-      # -- External Minio host
-      host: localhost
-      # -- External Minio port
-      port: 9000
 
   metrics:
     # -- The metric client to configure globally. Supports "otel"

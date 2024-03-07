@@ -34,10 +34,6 @@ global:
       secretKey:
       secretKeyExistingSecret:
       secretKeyExistingSecretKey:
-    externalMinio:
-      enabled: false
-      host: localhost
-      port: 9000
 
 enabled: true
 ##  replicaCount Number of server replicas

@@ -32,14 +32,6 @@ global:
     minio:
       enabled: true
 
-    ##  logs.externalMinio.enabled Switch to enable or disable an external Minio instance
-    ##  logs.externalMinio.host External Minio Host
-    ##  logs.externalMinio.port External Minio Port
-    externalMinio:
-      enabled: false
-      host: localhost
-      port: 9000
-
     ##  logs.s3.enabled Switch to enable or disable custom S3 Log location
     ##  logs.s3.bucket Bucket name where logs should be stored
     ##  logs.s3.bucketRegion Region of the bucket (must be empty if using minio)
