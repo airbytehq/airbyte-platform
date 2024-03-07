@@ -43,3 +43,6 @@ properties:
   additionalLabels:
     type: object
     existingJavaType: "java.util.Map<String,String>"
+  priority:
+    type: enum
+    existingJavaType: io.airbyte.config.WorkloadPriority

@@ -42,6 +42,7 @@ import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
+import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.persistence.job.errorreporter.ConnectorJobReportingContext;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
@@ -292,11 +293,10 @@ class DefaultSynchronousSchedulerClientTest {
       final ConnectorJobOutput jobOutput = new ConnectorJobOutput().withDiscoverCatalogId(expectedCatalogId);
       when(
           temporalClient.submitDiscoverSchema(any(UUID.class), eq(0), eq(WORKSPACE_ID), eq(DISCOVER_TASK_QUEUE), any(JobDiscoverCatalogConfig.class),
-              any(
-                  ActorContext.class)))
-                      .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
+              any(ActorContext.class), any()))
+                  .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<UUID> response =
-          schedulerClient.createDiscoverSchemaJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false, null);
+          schedulerClient.createDiscoverSchemaJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false, null, WorkloadPriority.HIGH);
       assertEquals(expectedCatalogId, response.getOutput());
       verify(configInjector).injectConfig(any(), eq(SOURCE_CONNECTION.getSourceDefinitionId()));
     }

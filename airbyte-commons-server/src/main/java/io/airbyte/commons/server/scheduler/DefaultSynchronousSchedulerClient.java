@@ -29,6 +29,7 @@ import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
+import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.persistence.job.errorreporter.ConnectorJobReportingContext;
@@ -163,7 +164,8 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
   public SynchronousResponse<UUID> createDiscoverSchemaJob(final SourceConnection source,
                                                            final ActorDefinitionVersion sourceVersion,
                                                            final boolean isCustomConnector,
-                                                           final ResourceRequirements actorDefinitionResourceRequirements)
+                                                           final ResourceRequirements actorDefinitionResourceRequirements,
+                                                           final WorkloadPriority priority)
       throws IOException {
     final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceVersion);
     final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
@@ -193,7 +195,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         ConfigType.DISCOVER_SCHEMA,
         jobReportingContext,
         source.getSourceDefinitionId(),
-        () -> temporalClient.submitDiscoverSchema(jobId, 0, source.getWorkspaceId(), taskQueue, jobDiscoverCatalogConfig, context),
+        () -> temporalClient.submitDiscoverSchema(jobId, 0, source.getWorkspaceId(), taskQueue, jobDiscoverCatalogConfig, context, priority),
         ConnectorJobOutput::getDiscoverCatalogId,
         source.getWorkspaceId(),
         source.getSourceId());

@@ -69,6 +69,7 @@ import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel;
+import io.airbyte.workload.api.client.model.generated.WorkloadPriority;
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus;
 import io.airbyte.workload.api.client.model.generated.WorkloadType;
 import io.micronaut.context.annotation.Value;
@@ -250,6 +251,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         fullLogPath(Path.of(workloadId)),
         geo.getValue(),
         WorkloadType.CHECK,
+        WorkloadPriority.Companion.decode(input.getLauncherConfig().getPriority().toString()),
         null,
         null);
 

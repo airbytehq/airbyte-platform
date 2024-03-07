@@ -76,6 +76,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -366,7 +367,9 @@ public class SchedulerHandler {
               source,
               sourceVersion,
               isCustomConnector,
-              resourceRequirements);
+              resourceRequirements,
+              discoverSchemaRequestBody.getPriority() == null ? WorkloadPriority.HIGH
+                  : WorkloadPriority.fromValue(discoverSchemaRequestBody.getPriority().toString()));
       final SourceDiscoverSchemaRead discoveredSchema = retrieveDiscoveredSchema(persistedCatalogId, sourceVersion);
 
       if (persistedCatalogId.isSuccess() && discoverSchemaRequestBody.getConnectionId() != null) {
@@ -540,7 +543,8 @@ public class SchedulerHandler {
         source,
         sourceVersion,
         isCustomConnector,
-        resourceRequirements);
+        resourceRequirements,
+        WorkloadPriority.HIGH);
     return retrieveDiscoveredSchema(response, sourceVersion);
   }
 

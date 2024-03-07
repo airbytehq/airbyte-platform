@@ -20,6 +20,7 @@ import io.airbyte.api.client.model.generated.SourceAutoPropagateChange;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
+import io.airbyte.api.client.model.generated.WorkloadPriority;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.featureflag.AutoBackfillOnNewColumns;
 import io.airbyte.featureflag.Connection;
@@ -96,7 +97,8 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
     ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId, SOURCE_ID_KEY, sourceId));
 
     final SourceDiscoverSchemaRequestBody requestBody =
-        new SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(true).connectionId(connectionId).notifySchemaChange(true);
+        new SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(true).connectionId(connectionId).notifySchemaChange(true)
+            .priority(WorkloadPriority.DEFAULT);
 
     return AirbyteApiClient.retryWithJitterThrows(
         () -> sourceApi.discoverSchemaForSource(requestBody),
