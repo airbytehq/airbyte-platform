@@ -16,6 +16,7 @@ import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.AttemptSyncConfig;
+import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
@@ -76,7 +77,9 @@ public class JobsHandler {
       for (Attempt attempt : job.getAttempts()) {
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
       }
-      jobNotifier.failJob(input.getReason(), job, attemptStats);
+      if (!job.getConfigType().equals(JobConfig.ConfigType.RESET_CONNECTION)) {
+        jobNotifier.failJob(input.getReason(), job, attemptStats);
+      }
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_FAILED_BY_RELEASE_STAGE, job);
 
       final UUID connectionId = UUID.fromString(job.getScope());
@@ -154,7 +157,9 @@ public class JobsHandler {
       for (Attempt attempt : job.getAttempts()) {
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
       }
-      jobNotifier.successJob(job, attemptStats);
+      if (!job.getConfigType().equals(JobConfig.ConfigType.RESET_CONNECTION)) {
+        jobNotifier.successJob(job, attemptStats);
+      }
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_SUCCEEDED_BY_RELEASE_STAGE, job);
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.SUCCEEDED);
 
