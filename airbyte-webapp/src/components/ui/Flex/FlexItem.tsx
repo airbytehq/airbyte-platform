@@ -12,7 +12,7 @@ interface FlexItemProps {
   /**
    * The `align-self` css property
    */
-  alignSelf?: "flex-start" | "flex-end" | "center" | "baseline" | "stretch";
+  alignSelf?: "stretch" | "center" | "flex-start" | "flex-end";
 }
 
 /**
@@ -33,7 +33,6 @@ export const FlexItem: React.FC<React.PropsWithChildren<FlexItemProps & HTMLAttr
       [styles.alignSelfStart]: alignSelf === "flex-start",
       [styles.alignSelfEnd]: alignSelf === "flex-end",
       [styles.alignSelfCenter]: alignSelf === "center",
-      [styles.alignSelfBaseline]: alignSelf === "baseline",
       [styles.alignSelfStretch]: alignSelf === "stretch",
     },
     className
