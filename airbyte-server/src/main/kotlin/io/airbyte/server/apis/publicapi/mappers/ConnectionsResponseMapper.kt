@@ -41,11 +41,10 @@ object ConnectionsResponseMapper {
         .queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
         .queryParam(INCLUDE_DELETED, includeDeleted)
     val connectionsResponse = ConnectionsResponse()
-    connectionsResponse.setNext(PaginationMapper.getNextUrl(connectionReadList.connections, limit, offset, uriBuilder))
-    connectionsResponse.setPrevious(PaginationMapper.getPreviousUrl(limit, offset, uriBuilder))
-    connectionsResponse.setData(
-      connectionReadList.connections.map { connectionRead: ConnectionRead -> ConnectionReadMapper.from(connectionRead, connectionRead.workspaceId) },
-    )
+    connectionsResponse.next = PaginationMapper.getNextUrl(connectionReadList.connections, limit, offset, uriBuilder)
+    connectionsResponse.previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder)
+    connectionsResponse.data =
+      connectionReadList.connections.map { connectionRead: ConnectionRead -> ConnectionReadMapper.from(connectionRead, connectionRead.workspaceId) }
     return connectionsResponse
   }
 }

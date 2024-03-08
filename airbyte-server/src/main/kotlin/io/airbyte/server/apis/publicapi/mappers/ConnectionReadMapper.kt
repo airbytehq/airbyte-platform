@@ -37,58 +37,58 @@ object ConnectionReadMapper {
     workspaceId: UUID?,
   ): ConnectionResponse {
     val connectionResponse = ConnectionResponse()
-    connectionResponse.setConnectionId(connectionRead.connectionId)
-    connectionResponse.setName(connectionRead.name)
-    connectionResponse.setSourceId(connectionRead.sourceId)
-    connectionResponse.setDestinationId(connectionRead.destinationId)
-    connectionResponse.setWorkspaceId(workspaceId)
-    connectionResponse.setStatus(ConnectionStatusEnum.fromValue(connectionRead.status.name))
+    connectionResponse.connectionId = connectionRead.connectionId
+    connectionResponse.name = connectionRead.name
+    connectionResponse.sourceId = connectionRead.sourceId
+    connectionResponse.destinationId = connectionRead.destinationId
+    connectionResponse.workspaceId = workspaceId
+    connectionResponse.status = ConnectionStatusEnum.fromValue(connectionRead.status.toString())
     if (connectionRead.geography != null) {
-      connectionResponse.setDataResidency(GeographyEnum.fromValue(connectionRead.geography.name))
+      connectionResponse.dataResidency = GeographyEnum.fromValue(connectionRead.geography.toString())
     }
     val connectionScheduleResponse = ConnectionScheduleResponse()
     if (connectionRead.namespaceDefinition != null) {
-      connectionResponse.setNamespaceDefinition(convertNamespaceDefinitionType(connectionRead.namespaceDefinition))
+      connectionResponse.namespaceDefinition = convertNamespaceDefinitionType(connectionRead.namespaceDefinition)
     }
     if (connectionRead.namespaceFormat != null) {
-      connectionResponse.setNamespaceFormat(connectionRead.namespaceFormat)
+      connectionResponse.namespaceFormat = connectionRead.namespaceFormat
     }
     if (connectionRead.prefix != null) {
-      connectionResponse.setPrefix(connectionRead.prefix)
+      connectionResponse.prefix = connectionRead.prefix
     }
     if (connectionRead.nonBreakingChangesPreference != null) {
-      connectionResponse.setNonBreakingSchemaUpdatesBehavior(convertNonBreakingChangesPreference(connectionRead.nonBreakingChangesPreference))
+      connectionResponse.nonBreakingSchemaUpdatesBehavior = convertNonBreakingChangesPreference(connectionRead.nonBreakingChangesPreference)
     }
 
     // connectionRead.getSchedule() is soon to be deprecated, but has not been cleaned up in the
     // database yet
     if (connectionRead.schedule != null) {
-      connectionScheduleResponse.setScheduleType(ScheduleTypeWithBasicEnum.BASIC)
+      connectionScheduleResponse.scheduleType = ScheduleTypeWithBasicEnum.BASIC
       // should this string just be a json object?
       val basicTimingString = "Every " + connectionRead.schedule!!.units + " " + connectionRead.schedule!!.timeUnit.name
-      connectionScheduleResponse.setBasicTiming(basicTimingString)
+      connectionScheduleResponse.basicTiming = basicTimingString
     } else if (connectionRead.schedule != null && connectionRead.scheduleType == null) {
-      connectionScheduleResponse.setScheduleType(ScheduleTypeWithBasicEnum.MANUAL)
+      connectionScheduleResponse.scheduleType = ScheduleTypeWithBasicEnum.MANUAL
     }
     if (connectionRead.scheduleType == ConnectionScheduleType.MANUAL) {
-      connectionScheduleResponse.setScheduleType(ScheduleTypeWithBasicEnum.MANUAL)
+      connectionScheduleResponse.scheduleType = ScheduleTypeWithBasicEnum.MANUAL
     } else if (connectionRead.scheduleType == ConnectionScheduleType.CRON) {
-      connectionScheduleResponse.setScheduleType(ScheduleTypeWithBasicEnum.CRON)
+      connectionScheduleResponse.scheduleType = ScheduleTypeWithBasicEnum.CRON
       if (connectionRead.scheduleData != null && connectionRead.scheduleData!!.cron != null) {
         // should this string just be a json object?
         val cronExpressionWithTimezone =
           connectionRead.scheduleData!!.cron!!
             .cronExpression + " " + connectionRead.scheduleData!!.cron!!.cronTimeZone
-        connectionScheduleResponse.setCronExpression(cronExpressionWithTimezone)
+        connectionScheduleResponse.cronExpression = cronExpressionWithTimezone
       } else {
 //        ConnectionReadMapper.log.error("CronExpression not found in ScheduleData for connection: {}", connectionRead.connectionId)
       }
     } else if (connectionRead.scheduleType == ConnectionScheduleType.BASIC) {
-      connectionScheduleResponse.setScheduleType(ScheduleTypeWithBasicEnum.BASIC)
+      connectionScheduleResponse.scheduleType = ScheduleTypeWithBasicEnum.BASIC
       if (connectionRead.scheduleData != null && connectionRead.scheduleData!!.basicSchedule != null) {
         val schedule = connectionRead.scheduleData!!.basicSchedule
         val basicTimingString = "Every " + schedule!!.units + " " + schedule.timeUnit.name
-        connectionScheduleResponse.setBasicTiming(basicTimingString)
+        connectionScheduleResponse.basicTiming = basicTimingString
       } else {
 //        ConnectionReadMapper.log.error("BasicSchedule not found in ScheduleData for connection: {}", connectionRead.connectionId)
       }
@@ -110,9 +110,9 @@ object ConnectionReadMapper {
             .syncMode(connectionSyncMode),
         )
       }
-      connectionResponse.setConfigurations(streamConfigurations)
+      connectionResponse.configurations = streamConfigurations
     }
-    connectionResponse.setSchedule(connectionScheduleResponse)
+    connectionResponse.schedule = connectionScheduleResponse
     return connectionResponse
   }
 

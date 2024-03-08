@@ -43,13 +43,12 @@ object DestinationsResponseMapper {
         .queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
         .queryParam(INCLUDE_DELETED, includeDeleted)
     val destinationsResponse = DestinationsResponse()
-    destinationsResponse.setNext(PaginationMapper.getNextUrl(destinationReadList.destinations, limit, offset, uriBuilder))
-    destinationsResponse.setPrevious(PaginationMapper.getPreviousUrl(limit, offset, uriBuilder))
-    destinationsResponse.setData(
+    destinationsResponse.next = PaginationMapper.getNextUrl(destinationReadList.destinations, limit, offset, uriBuilder)
+    destinationsResponse.previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder)
+    destinationsResponse.data =
       destinationReadList.destinations.stream()
         .map(Function { obj: DestinationRead? -> DestinationReadMapper.from(obj!!) })
-        .toList(),
-    )
+        .toList()
     return destinationsResponse
   }
 }

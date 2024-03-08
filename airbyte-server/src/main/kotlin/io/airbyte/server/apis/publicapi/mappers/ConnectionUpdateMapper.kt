@@ -38,54 +38,53 @@ object ConnectionUpdateMapper {
   ): ConnectionUpdate {
     val connectionUpdateOss = ConnectionUpdate()
     connectionUpdateOss.connectionId(connectionId)
-    connectionUpdateOss.setName(connectionPatchRequest.getName())
-    if (connectionPatchRequest.getNonBreakingSchemaUpdatesBehavior() != null) {
-      connectionUpdateOss.setNonBreakingChangesPreference(
-        ConnectionHelper.convertNonBreakingSchemaUpdatesBehaviorEnum(connectionPatchRequest.getNonBreakingSchemaUpdatesBehavior()),
-      )
+    connectionUpdateOss.name = connectionPatchRequest.name
+    if (connectionPatchRequest.nonBreakingSchemaUpdatesBehavior != null) {
+      connectionUpdateOss.nonBreakingChangesPreference =
+        ConnectionHelper.convertNonBreakingSchemaUpdatesBehaviorEnum(
+          connectionPatchRequest.nonBreakingSchemaUpdatesBehavior,
+        )
     }
-    if (connectionPatchRequest.getNamespaceDefinition() != null) {
-      connectionUpdateOss.setNamespaceDefinition(
-        ConnectionHelper.convertNamespaceDefinitionEnum(connectionPatchRequest.getNamespaceDefinition()),
-      )
+    if (connectionPatchRequest.namespaceDefinition != null) {
+      connectionUpdateOss.namespaceDefinition = ConnectionHelper.convertNamespaceDefinitionEnum(connectionPatchRequest.namespaceDefinition)
     }
-    if (connectionPatchRequest.getNamespaceFormat() != null) {
-      connectionUpdateOss.setNamespaceFormat(connectionPatchRequest.getNamespaceFormat())
+    if (connectionPatchRequest.namespaceFormat != null) {
+      connectionUpdateOss.namespaceFormat = connectionPatchRequest.namespaceFormat
     }
-    if (connectionPatchRequest.getPrefix() != null) {
-      connectionUpdateOss.setPrefix(connectionPatchRequest.getPrefix())
+    if (connectionPatchRequest.prefix != null) {
+      connectionUpdateOss.prefix = connectionPatchRequest.prefix
     }
 
     // set geography
-    if (connectionPatchRequest.getDataResidency() != null) {
-      connectionUpdateOss.setGeography(Geography.fromValue(connectionPatchRequest.getDataResidency().toString()))
+    if (connectionPatchRequest.dataResidency != null) {
+      connectionUpdateOss.geography = Geography.fromValue(connectionPatchRequest.dataResidency.toString())
     }
 
     // set schedule
-    if (connectionPatchRequest.getSchedule() != null) {
-      connectionUpdateOss.setScheduleType(ConnectionScheduleType.fromValue(connectionPatchRequest.getSchedule().getScheduleType().toString()))
-      if (connectionPatchRequest.getSchedule().getScheduleType() !== ScheduleTypeEnum.MANUAL) {
+    if (connectionPatchRequest.schedule != null) {
+      connectionUpdateOss.scheduleType = ConnectionScheduleType.fromValue(connectionPatchRequest.schedule.scheduleType.toString())
+      if (connectionPatchRequest.schedule.scheduleType !== ScheduleTypeEnum.MANUAL) {
         // This should only be set if we're not manual
         val connectionScheduleDataCron = ConnectionScheduleDataCron()
-        connectionScheduleDataCron.setCronExpression(connectionPatchRequest.getSchedule().getCronExpression())
-        connectionScheduleDataCron.setCronTimeZone("UTC")
+        connectionScheduleDataCron.cronExpression = connectionPatchRequest.schedule.cronExpression
+        connectionScheduleDataCron.cronTimeZone = "UTC"
         val connectionScheduleData = ConnectionScheduleData()
-        connectionScheduleData.setCron(connectionScheduleDataCron)
-        connectionUpdateOss.setScheduleData(connectionScheduleData)
+        connectionScheduleData.cron = connectionScheduleDataCron
+        connectionUpdateOss.scheduleData = connectionScheduleData
       } else {
-        connectionUpdateOss.setScheduleType(ConnectionScheduleType.MANUAL)
+        connectionUpdateOss.scheduleType = ConnectionScheduleType.MANUAL
       }
     }
 
     // set streams
     if (catalogId != null) {
-      connectionUpdateOss.setSourceCatalogId(catalogId)
+      connectionUpdateOss.sourceCatalogId = catalogId
     }
     if (configuredCatalog != null) {
-      connectionUpdateOss.setSyncCatalog(configuredCatalog)
+      connectionUpdateOss.syncCatalog = configuredCatalog
     }
-    if (connectionPatchRequest.getStatus() != null) {
-      connectionUpdateOss.setStatus(ConnectionStatus.fromValue(connectionPatchRequest.getStatus().toString()))
+    if (connectionPatchRequest.status != null) {
+      connectionUpdateOss.status = ConnectionStatus.fromValue(connectionPatchRequest.status.toString())
     }
     return connectionUpdateOss
   }
