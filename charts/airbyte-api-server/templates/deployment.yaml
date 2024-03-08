@@ -105,6 +105,60 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: TRACKING_STRATEGY
+
+        # SECRETS MANAGER
+        - name: SECRET_PERSISTENCE
+          value: {{ include "airbyte.secretPersistence" . }}
+        # Values for AwsSecretsManager
+        {{- if eq ((((.Values.global).secretsManager).awsSecretManager).authenticationType) "credentials" }}
+        - name: AWS_SECRET_MANAGER_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.awsSecretManagerAccessKeyIdSecretKey" .Values.global.secretsManager.awsSecretManager.accessKeyIdSecretKey }}
+        - name: AWS_SECRET_MANAGER_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.awsSecretManagerSecretAccessKeySecretKey" .Values.global.secretsManager.awsSecretManager.secretAccessKeySecretKey }}
+        {{- end }}
+        {{- if ((((.Values.global).secretsManager).awsSecretManager).region) }}
+        - name: AWS_SECRET_MANAGER_REGION
+          value: {{ (((.Values.global).secretsManager).awsSecretManager).region }}
+        {{- end }}
+
+        {{- if ((((.Values.global).secretsManager).awsSecretManager).tags) }}
+        - name: AWS_SECRET_MANAGER_SECRET_TAGS
+          value: {{ include "airbyte.tagsToString" .Values.global.secretsManager.awsSecretManager.tags }}
+        {{- end }}
+        {{- if ((((.Values.global).secretsManager).awsSecretManager).kms) }}
+        - name: AWS_KMS_KEY_ARN
+          value: {{ ((((.Values.global).secretsManager).awsSecretManager).kms) | default "" }}
+        {{- end }}
+
+        # Values for googleSecretManager secrets
+        {{- if (((.Values.global).secretsManager).googleSecretManager) }}
+        - name: SECRET_STORE_GCP_PROJECT_ID
+          value: {{ .Values.global.secretsManager.googleSecretManager.projectId }}
+        - name: SECRET_STORE_GCP_CREDENTIALS
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.googleSecretManagerCredentialsSecretKey" .Values.global.secretsManager.googleSecretManager.credentialsSecretKey }}
+        {{- end }}
+
+        # Values for vault secrets
+        {{- if (((.Values.global).secretsManager).vault) }}
+        - name: VAULT_ADDRESS
+          value: {{ (((.Values.global).secretsManager).vault).address }}
+        - name: VAULT_PREFIX
+          value: {{ (((.Values.global).secretsManager).vault).prefix }}
+        - name: VAULT_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.vaultAuthTokenSecretKey" .Values.global.secretsManager.vault.authTokenSecretKey }}
+        {{- end }}
         {{- end }}
 
         # Values from secret

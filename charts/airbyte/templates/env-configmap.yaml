@@ -19,7 +19,7 @@ data:
   CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: "0.35.15.001"
   DATA_DOCKER_MOUNT: airbyte_data
   DATABASE_DB: {{ include "airbyte.database.name" . }}
-  DATABASE_HOST: {{ include "airbyte.database.host" . }}
+  DATABASE_HOST: {{ include "airbyte.database.host" . }} # todo: database information into secrets
   DATABASE_PORT: {{ include "airbyte.database.port" . | quote }}
   DATABASE_URL: {{ include "airbyte.database.url" . | quote }}
   KEYCLOAK_DATABASE_URL: {{ include "keycloak.database.url" . | quote }}
@@ -79,11 +79,11 @@ data:
   RUN_DATABASE_MIGRATION_ON_STARTUP: {{ index .Values "airbyte-bootloader" "runDatabaseMigrationsOnStartup" | default "true" | quote  }}
   SEGMENT_WRITE_KEY: 7UDdp5K55CyiGgsauOr2pNNujGvmhaeu
   # Storage start
-  STORAGE_TYPE:  {{ .Values.global.storage.type | quote }}
-  STORAGE_BUCKET_LOG: {{ .Values.global.storage.bucket.log | quote }}
-  STORAGE_BUCKET_STATE: {{ .Values.global.storage.bucket.state | quote }}
-  STORAGE_BUCKET_WORKLOAD_OUTPUT: {{ .Values.global.storage.bucket.workloadOutput | quote }}
-  AWS_DEFAULT_REGION: {{ .Values.global.storage.s3.region | quote }}
+  STORAGE_TYPE: {{ (((.Values.global).storage).type) | default "minio" | quote }}
+  STORAGE_BUCKET_LOG: {{ ((((.Values.global).storage).bucket).log) | default "airbyte-storage" | quote }}
+  STORAGE_BUCKET_STATE: {{ ((((.Values.global).storage).bucket).state) | default "airbyte-storage" | quote }}
+  STORAGE_BUCKET_WORKLOAD_OUTPUT: {{ ((((.Values.global).storage).bucket).workloadOutput) | default "airbyte-storage" | quote }}
+  AWS_DEFAULT_REGION: {{ ((((.Values.global).storage).s3).region) | default ""  | quote }}
   MINIO_ENDPOINT: {{ include "airbyte.storage.minio.endpoint" . | quote }}
   S3_PATH_STYLE_ACCESS: {{ include "airbyte.s3PathStyleAccess" . | quote }}
   # Storage end

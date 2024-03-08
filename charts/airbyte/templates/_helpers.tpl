@@ -204,27 +204,28 @@ Create JDBC URL specifically for Keycloak with a custom schema
 Add environment variables to configure minio
 */}}
 {{- define "airbyte.storage.minio.endpoint" -}}
-{{- if eq (lower .Values.global.storage.type) "minio" }}
+{{- if ((((.Values.global).storage).minio).endpoint) }}
     {{- .Values.global.storage.minio.endpoint -}}
 {{- else -}}
-    {{- printf "" -}}
+    {{- printf "http://airbyte-minio-svc:9000" -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "airbyte.s3PathStyleAccess" -}}
-{{- ternary "true" "" (eq (lower .Values.global.storage.type) "minio") -}}
+{{- ternary "true" "" (eq (lower (default "" .Values.global.storage.type)) "minio") -}}
 {{- end -}}
 
 {{/*
 Returns the GCP credentials path
 */}}
 {{- define "airbyte.gcpLogCredentialsPath" -}}
-{{- if and (eq (lower .Values.global.storage.type) "gcs") .Values.global.storage.gcs.credentialsJson}}
-    {{- printf "%s" "/secrets/gcs-log-creds/gcp.json" -}}
+{{- if ((((.Values.global).storage).gcs).credentialsPath) }}
+    {{- printf "%s" .Values.global.storage.gcs.credentialsPath -}}
 {{- else -}}
-    {{- printf "%s" .Values.global.storage.gcs.credentials -}}
+    {{- printf "%s" "/secrets/gcs-log-creds/gcp.json" -}}
 {{- end -}}
 {{- end -}}
+
 
 {{/*
 Returns the Airbyte Scheduler Image
@@ -308,13 +309,209 @@ Construct semi-colon delimited list of comma separated key/value pairs from arra
 Determine the correct log4j configuration file to load based on the defined storage type.
 */}}
 {{- define "airbyte.log4jConfig" -}}
-{{- if eq (lower .Values.global.storage.type) "minio" }}
+{{- if eq (lower (default "" .Values.global.storage.type)) "minio" }}
     {{- printf "log4j2-minio.xml" -}}
-{{- else if eq (lower .Values.global.storage.type) "gcs" -}}
+{{- else if eq (lower (default "" .Values.global.storage.type)) "gcs" -}}
     {{- printf "log4j2-gcs.xml" -}}
-{{- else if eq (lower .Values.global.storage.type) "s3" -}}
+{{- else if eq (lower (default "" .Values.global.storage.type)) "s3" -}}
     {{- printf "log4j2-s3.xml" -}}
 {{- else -}}
     {{- printf "log4j2.xml" -}}
 {{- end -}}
 {{- end -}}
+
+
+## DEFAULT HELM VALUES
+# Secret Manager Defaults
+{{/*
+Define secret persistence
+*/}}
+{{- define "airbyte.secretPersistence" -}}
+{{- if (((.Values.global).secretsManager).type) }}
+    {{- printf "%s" (snakecase .Values.global.secretsManager.type) }}
+{{- else }}
+    {{- printf "" }}
+{{- end }}
+{{- end }}
+
+{{/*
+Get secret store name or default
+*/}}
+{{- define "airbyte.secretStoreName" -}}
+{{- $secretStoreName := . -}}
+{{- if $secretStoreName -}}
+  {{- printf "%s" $secretStoreName -}}
+{{- else -}}
+  {{- printf "airbyte-config-secrets" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get awsSecretManager access key id secret key or default
+*/}}
+{{- define "airbyte.awsSecretManagerAccessKeyIdSecretKey" -}}
+{{- $awsSecretManagerAccessKeyIdSecretKey := . -}}
+{{- if $awsSecretManagerAccessKeyIdSecretKey -}}
+  {{- printf "%s" $awsSecretManagerAccessKeyIdSecretKey -}}
+{{- else -}}
+  {{- printf "aws-secret-manager-access-key-id" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get awsSecretManager secret access key secret key or default
+*/}}
+{{- define "airbyte.awsSecretManagerSecretAccessKeySecretKey" -}}
+{{- $awsSecretManagerSecretAccessKeySecretKey := . -}}
+{{- if $awsSecretManagerSecretAccessKeySecretKey -}}
+  {{- printf "%s" $awsSecretManagerSecretAccessKeySecretKey -}}
+{{- else -}}
+  {{- printf "aws-secret-manager-secret-access-key" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get googleSecretManager credentials secret key or default
+*/}}
+{{- define "airbyte.googleSecretManagerCredentialsSecretKey" -}}
+{{- $googleSecretManagerCredentialsSecretKey := . -}}
+{{- if $googleSecretManagerCredentialsSecretKey -}}
+  {{- printf "%s" $googleSecretManagerCredentialsSecretKey -}}
+{{- else -}}
+  {{- printf "google-secret-manager-credentials" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get vault auth token secret key or default
+*/}}
+{{- define "airbyte.vaultAuthTokenSecretKey" -}}
+{{- $vaultAuthTokenSecretKey := . -}}
+{{- if $vaultAuthTokenSecretKey -}}
+  {{- printf "%s" $vaultAuthTokenSecretKey -}}
+{{- else -}}
+  {{- printf "vault-auth-token" -}}
+{{- end -}}
+{{- end -}}
+
+
+# Storage Defaults
+{{/*
+Get storage type or default
+*/}}
+{{- define "airbyte.storageType" -}}
+{{- $storageType := . -}}
+{{- if $storageType -}}
+  {{- printf "%s" $storageType -}}
+{{- else -}}
+  {{- printf "local" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get storage bucket log or default
+*/}}
+{{- define "airbyte.storageBucketLog" -}}
+{{- $storageBucketLog := . -}}
+{{- if $storageBucketLog -}}
+  {{- printf "%s" $storageBucketLog -}}
+{{- else -}}
+  {{- printf "airbyte-storage" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get storage bucket state or default
+*/}}
+{{- define "airbyte.storageBucketState" -}}
+{{- $storageBucketState := . -}}
+{{- if $storageBucketState -}}
+  {{- printf "%s" $storageBucketState -}}
+{{- else -}}
+  {{- printf "airbyte-storage" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get storage bucket workload output or default
+*/}}
+{{- define "airbyte.storageBucketWorkloadOutput" -}}
+{{- $storageBucketWorkloadOutput := . -}}
+{{- if $storageBucketWorkloadOutput -}}
+  {{- printf "%s" $storageBucketWorkloadOutput -}}
+{{- else -}}
+  {{- printf "airbyte-storage" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get s3 access key id secret key or default
+*/}}
+{{- define "airbyte.s3AccessKeyIdSecretKey" -}}
+{{- $s3AccessKeyIdSecretKey := . -}}
+{{- if  $s3AccessKeyIdSecretKey -}}
+  {{- printf "%s" $s3AccessKeyIdSecretKey -}}
+{{- else -}}
+  {{- printf "s3-access-key-id" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get s3 secret access key secret key or default
+*/}}
+{{- define "airbyte.s3SecretAccessKeySecretKey" -}}
+{{- $s3SecretAccessKeySecretKey := . -}}
+{{- if $s3SecretAccessKeySecretKey -}}
+  {{- printf "%s" $s3SecretAccessKeySecretKey -}}
+{{- else -}}
+  {{- printf "s3-secret-access-key" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get minio access key id secret key or default
+*/}}
+{{- define "airbyte.minioAccessKeyIdSecretKey" -}}
+{{- $minioAccessKeyIdSecretKey := . -}}
+{{- if $minioAccessKeyIdSecretKey -}}
+  {{- printf "%s" $minioAccessKeyIdSecretKey -}}
+{{- else -}}
+  {{- printf "minio-access-key-id" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get minio secret access key secret key or default
+*/}}
+{{- define "airbyte.minioSecretAccessKeySecretKey" -}}
+{{- $minioSecretAccessKeySecretKey := . -}}
+{{- if $minioSecretAccessKeySecretKey -}}
+  {{- printf "%s" $minioSecretAccessKeySecretKey -}}
+{{- else -}}
+  {{- printf "minio-secret-access-key" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get gcs credentials secret key or default
+*/}}
+{{- define "airbyte.gcsCredentialsSecretKey" -}}
+{{- $gcsCredentialsSecretKey := . -}}
+{{- if $gcsCredentialsSecretKey -}}
+  {{- printf "%s" $gcsCredentialsSecretKey -}}
+{{- else -}}
+  {{- printf "gcs-credentials" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Convert tags to a comma-separated list of key=value pairs.
+*/}}
+{{- define "airbyte.tagsToString" -}}
+{{- $result := list -}}
+{{- range . -}}
+  {{- $result = append $result (printf "%s=%s" .key .value) -}}
+{{- end -}}
+{{- join "," $result -}}
+{{- end -}}
+

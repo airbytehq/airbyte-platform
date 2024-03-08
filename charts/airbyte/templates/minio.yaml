@@ -1,4 +1,4 @@
-{{- if eq (lower .Values.global.storage.type) "minio" }}
+{{- if (eq (lower (default "" .Values.global.storage.type)) "minio")}}
 apiVersion: apps/v1 #  for k8s versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use extensions/v1beta1
 kind: StatefulSet
 metadata:
@@ -39,9 +39,15 @@ spec:
           env:
             # Minio access key and secret key. This must match the S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY declared in /dev/.env.
             - name: MINIO_ROOT_USER
-              value: {{ .Values.global.storage.minio.accessKey }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-airbyte-secrets
+                  key: DEFAULT_MINIO_ACCESS_KEY
             - name: MINIO_ROOT_PASSWORD
-              value: {{ .Values.global.storage.minio.secretKey }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-airbyte-secrets
+                  key: DEFAULT_MINIO_SECRET_KEY
           ports:
             - containerPort: 9000
           # Mount the volume into the pod
@@ -100,10 +106,33 @@ spec:
           /usr/bin/mc mb --ignore-existing myminio/airbyte-dev-logs;
           /usr/bin/mc policy set public myminio/airbyte-dev-logs;"]
       env:
+        {{- if and (eq (lower (default "" .Values.global.storage.type)) "minio") (((.Values.global).storage).minio) }}
         - name: MINIO_ACCESS_KEY
-          value: {{ .Values.global.storage.minio.accessKey }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.storage.storageSecretName }}
+              key: {{ include "airbyte.minioAccessKeyIdSecretKey" .Values.global.storage.minio.accessKeyIdSecretKey }}
         - name: MINIO_SECRET_KEY
-          value: {{ .Values.global.storage.minio.secretKey }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.storage.storageSecretName }}
+              key: {{ include "airbyte.minioSecretAccessKeySecretKey" .Values.global.storage.minio.secretAccessKeySecretKey }}
+        {{- else }}
+        # this is for the internally deployed minio
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-airbyte-secrets
+              key: DEFAULT_MINIO_ACCESS_KEY
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-airbyte-secrets
+              key: DEFAULT_MINIO_SECRET_KEY
+        {{- end }}
         - name: MINIO_ENDPOINT
-          value: {{ .Values.global.storage.minio.endpoint }}
-{{ end }}
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MINIO_ENDPOINT
+{{- end }}

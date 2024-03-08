@@ -11,27 +11,7 @@ global:
   database:
     secretName: ""
     secretValue: ""
-  storage:
-    type: "MINIO"
-    bucket:
-      log: airbyte-dev-logs
-      state: airbyte-state
-      workloadOutput: airbyte-state
-    gcs:
-      credentials: ""
-      credentialsJson: ""
-    minio:
-      accessKey: minio
-      secretKey: minio123
-      endpoint: http://airbyte-minio-svc:9000
-    s3:
-      region: ""
-      accessKey:
-      accessKeyExistingSecret:
-      accessKeyExistingSecretKey:
-      secretKey:
-      secretKeyExistingSecret:
-      secretKeyExistingSecretKey:
+
   jobs:
     ## Jobs resource requests and limits
     ## ref: http://kubernetes.io/docs/user-guide/compute-resources/

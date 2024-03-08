@@ -175,51 +175,91 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: JOB_MAIN_CONTAINER_MEMORY_LIMIT
-        {{- if and .Values.global.storage.s3.accessKeyExistingSecret .Values.global.storage.s3.secretKeyExistingSecret }}
-        - name: AWS_ACCESS_KEY_ID
+        - name: CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
+        - name: JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
+        - name: KEYCLOAK_INTERNAL_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: KEYCLOAK_INTERNAL_HOST
+        - name: CONNECTOR_BUILDER_SERVER_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONNECTOR_BUILDER_SERVER_API_HOST
+        - name: AIRBYTE_API_AUTH_HEADER_NAME
+          value: "X-Airbyte-Auth"
+        - name: AIRBYTE_API_AUTH_HEADER_VALUE
+          value: "Internal server"
+
+        # SECRETS MANAGER
+        - name: SECRET_PERSISTENCE
+          value: {{ include "airbyte.secretPersistence" . }}
+        # Values for AwsSecretsManager
+        {{- if eq ((((.Values.global).secretsManager).awsSecretManager).authenticationType) "credentials" }}
+        - name: AWS_SECRET_MANAGER_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.global.storage.s3.accessKeyExistingSecret }}
-              key: {{ .Values.global.storage.s3.accessKeyExistingSecretKey }}
-        - name: AWS_SECRET_ACCESS_KEY
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.awsSecretManagerAccessKeyIdSecretKey" .Values.global.secretsManager.awsSecretManager.accessKeyIdSecretKey }}
+        - name: AWS_SECRET_MANAGER_SECRET_ACCESS_KEY
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.global.storage.s3.secretKeyExistingSecret }}
-              key: {{ .Values.global.storage.s3.secretKeyExistingSecretKey }}
-        {{- else if or (eq (lower .Values.global.storage.type) "minio") (eq (lower .Values.global.storage.type) "s3") }}
-        - name: AWS_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-airbyte-secrets
-              key: AWS_ACCESS_KEY_ID
-        - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Release.Name }}-airbyte-secrets
-              key: AWS_SECRET_ACCESS_KEY
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.awsSecretManagerSecretAccessKeySecretKey" .Values.global.secretsManager.awsSecretManager.secretAccessKeySecretKey }}
         {{- end }}
-        {{- if $.Values.global.storage.s3.region }}
-        - name: AWS_DEFAULT_REGION
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: AWS_DEFAULT_REGION
+        {{- if ((((.Values.global).secretsManager).awsSecretManager).region) }}
+        - name: AWS_SECRET_MANAGER_REGION
+          value: {{ (((.Values.global).secretsManager).awsSecretManager).region }}
         {{- end }}
-        - name: MINIO_ENDPOINT
+
+        {{- if ((((.Values.global).secretsManager).awsSecretManager).tags) }}
+        - name: AWS_SECRET_MANAGER_SECRET_TAGS
+          value: {{ include "airbyte.tagsToString" .Values.global.secretsManager.awsSecretManager.tags }}
+        {{- end }}
+        {{- if ((((.Values.global).secretsManager).awsSecretManager).kms) }}
+        - name: AWS_KMS_KEY_ARN
+          value: {{ ((((.Values.global).secretsManager).awsSecretManager).kms) | default "" }}
+        {{- end }}
+
+        # Values for googleSecretManager secrets
+        {{- if (((.Values.global).secretsManager).googleSecretManager) }}
+        - name: SECRET_STORE_GCP_PROJECT_ID
+          value: {{ .Values.global.secretsManager.googleSecretManager.projectId }}
+        - name: SECRET_STORE_GCP_CREDENTIALS
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.googleSecretManagerCredentialsSecretKey" .Values.global.secretsManager.googleSecretManager.credentialsSecretKey }}
+        {{- end }}
+
+        # Values for vault secrets
+        {{- if (((.Values.global).secretsManager).vault) }}
+        - name: VAULT_ADDRESS
+          value: {{ (((.Values.global).secretsManager).vault).address }}
+        - name: VAULT_PREFIX
+          value: {{ (((.Values.global).secretsManager).vault).prefix }}
+        - name: VAULT_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.vaultAuthTokenSecretKey" .Values.global.secretsManager.vault.authTokenSecretKey }}
+        {{- end }}
+
+        # STORAGE
+        - name: STORAGE_TYPE
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: MINIO_ENDPOINT
-        - name: S3_PATH_STYLE_ACCESS
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: S3_PATH_STYLE_ACCESS
-        - name: GOOGLE_APPLICATION_CREDENTIALS
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: GOOGLE_APPLICATION_CREDENTIALS
+              key: STORAGE_TYPE
         - name: STORAGE_BUCKET_LOG
           valueFrom:
             configMapKeyRef:
@@ -235,35 +275,81 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: STORAGE_BUCKET_WORKLOAD_OUTPUT
-        - name: CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
+
+        # local
+        {{- if eq (lower (default "" .Values.global.storage.type)) "local" }}
+        - name: LOCAL_ROOT
+          valueFrom:
+              name: {{ .Release.Name }}-airbyte-env
+              key: LOCAL_ROOT
+        {{- end }}
+
+        # S3
+        {{- if eq ((((.Values.global).storage).s3).authenticationType) "credentials" }}
+        - name: AWS_ACCESS_KEY_ID # todo: change to S3_ACCESS_KEY_ID, changes need to be pushed to the applications.yaml files
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.storage.storageSecretName }}
+              key: {{ include "airbyte.s3AccessKeyIdSecretKey" .Values.global.storage.s3.accessKeyIdSecretKey }}
+        - name: AWS_SECRET_ACCESS_KEY # todo: change to S3_SECRET_ACCESS_KEY, changes need to be pushed to the applications.yaml files
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.storage.storageSecretName }}
+              key: {{ include "airbyte.s3SecretAccessKeySecretKey" .Values.global.storage.s3.secretAccessKeySecretKey }}
+        {{- end }}
+        {{- if ((((.Values.global).storage).s3).region) }}
+        - name: AWS_DEFAULT_REGION # todo: change to S3_DEFAULT_REGION, changes need to be pushed to the applications.yaml files
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
-        - name: JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
+              key: AWS_DEFAULT_REGION
+        {{- end }}
+        - name: S3_PATH_STYLE_ACCESS
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
-        - name: STORAGE_TYPE
+              key: S3_PATH_STYLE_ACCESS
+
+        # MINIO
+        {{- if and (eq (lower (default "" .Values.global.storage.type)) "minio") (((.Values.global).storage).minio)}}
+        - name: AWS_ACCESS_KEY_ID # todo: change to MINIO_ACCESS_KEY_ID, changes need to be pushed to the applications.yaml files
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.storage.storageSecretName }}
+              key: {{ include "airbyte.minioAccessKeyIdSecretKey" .Values.global.storage.minio.accessKeyIdSecretKey }}
+        - name: AWS_SECRET_ACCESS_KEY # todo: change to MINIO_SECRET_ACCESS_KEY, changes need to be pushed to the applications.yaml files
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.storage.storageSecretName }}
+              key: {{ include "airbyte.minioSecretAccessKeySecretKey" .Values.global.storage.minio.secretAccessKeySecretKey }}
+        {{- else if (ne (lower (default "" .Values.global.storage.type)) "s3") }} # default behavior if none supplied is internal minio deployment
+        # this is for the internally deployed minio
+        - name: AWS_ACCESS_KEY_ID # todo: change to MINIO_ACCESS_KEY_ID, changes need to be pushed to the applications.yaml files
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-airbyte-secrets
+              key: DEFAULT_MINIO_ACCESS_KEY
+        - name: AWS_SECRET_ACCESS_KEY # todo: change to MINIO_SECRET_ACCESS_KEY, changes need to be pushed to the applications.yaml files
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-airbyte-secrets
+              key: DEFAULT_MINIO_SECRET_KEY
+        {{- end }}
+        - name: MINIO_ENDPOINT
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: STORAGE_TYPE
-        - name: KEYCLOAK_INTERNAL_HOST
+              key: MINIO_ENDPOINT
+
+        #GCS
+        {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS
           valueFrom:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
-              key: KEYCLOAK_INTERNAL_HOST
-        - name: CONNECTOR_BUILDER_SERVER_API_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: CONNECTOR_BUILDER_SERVER_API_HOST
-        - name: AIRBYTE_API_AUTH_HEADER_NAME
-          value: "X-Airbyte-Auth"
-        - name: AIRBYTE_API_AUTH_HEADER_VALUE
-          value: "Internal server"
+              key: GOOGLE_APPLICATION_CREDENTIALS
+        {{- end }}
+
         {{- end }}
         # Values from secret
         {{- if .Values.secrets }}

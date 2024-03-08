@@ -71,3 +71,76 @@ Define imageTag
     {{- printf "%s" .Chart.AppVersion }}
 {{- end }}
 {{- end }}
+
+## DEFAULT HELM VALUES
+# Secret Manager Defaults
+{{/*
+Define secret persistence
+*/}}
+{{- define "airbyte.secretPersistence" -}}
+{{- if (((.Values.global).secretsManager).type) }}
+    {{- printf "%s" (snakecase .Values.global.secretsManager.type) }}
+{{- else }}
+    {{- printf "" }}
+{{- end }}
+{{- end }}
+
+{{/*
+Get secret store name or default
+*/}}
+{{- define "airbyte.secretStoreName" -}}
+{{- $secretStoreName := . -}}
+{{- if $secretStoreName -}}
+  {{- printf "%s" $secretStoreName -}}
+{{- else -}}
+  {{- printf "airbyte-config-secrets" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get awsSecretManager access key id secret key or default
+*/}}
+{{- define "airbyte.awsSecretManagerAccessKeyIdSecretKey" -}}
+{{- $awsSecretManagerAccessKeyIdSecretKey := . -}}
+{{- if $awsSecretManagerAccessKeyIdSecretKey -}}
+  {{- printf "%s" $awsSecretManagerAccessKeyIdSecretKey -}}
+{{- else -}}
+  {{- printf "aws-secret-manager-access-key-id" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get awsSecretManager secret access key secret key or default
+*/}}
+{{- define "airbyte.awsSecretManagerSecretAccessKeySecretKey" -}}
+{{- $awsSecretManagerSecretAccessKeySecretKey := . -}}
+{{- if $awsSecretManagerSecretAccessKeySecretKey -}}
+  {{- printf "%s" $awsSecretManagerSecretAccessKeySecretKey -}}
+{{- else -}}
+  {{- printf "aws-secret-manager-secret-access-key" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get googleSecretManager credentials secret key or default
+*/}}
+{{- define "airbyte.googleSecretManagerCredentialsSecretKey" -}}
+{{- $googleSecretManagerCredentialsSecretKey := . -}}
+{{- if $googleSecretManagerCredentialsSecretKey -}}
+  {{- printf "%s" $googleSecretManagerCredentialsSecretKey -}}
+{{- else -}}
+  {{- printf "google-secret-manager-credentials" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get vault auth token secret key or default
+*/}}
+{{- define "airbyte.vaultAuthTokenSecretKey" -}}
+{{- $vaultAuthTokenSecretKey := . -}}
+{{- if $vaultAuthTokenSecretKey -}}
+  {{- printf "%s" $vaultAuthTokenSecretKey -}}
+{{- else -}}
+  {{- printf "vault-auth-token" -}}
+{{- end -}}
+{{- end -}}
