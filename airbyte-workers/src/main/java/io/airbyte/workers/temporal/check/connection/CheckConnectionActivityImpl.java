@@ -273,7 +273,8 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
     try {
       final Optional<ConnectorJobOutput> connectorJobOutput = jobOutputDocStore.read(workloadId);
 
-      if (connectorJobOutput.isEmpty() || connectorJobOutput.get().getCheckConnection().getStatus() == StandardCheckConnectionOutput.Status.FAILED) {
+      if (connectorJobOutput.isEmpty() || connectorJobOutput.get().getCheckConnection() == null
+          || connectorJobOutput.get().getCheckConnection().getStatus() == StandardCheckConnectionOutput.Status.FAILED) {
         metricClient.count(OssMetricsRegistry.SIDECAR_CHECK, 1, new MetricAttribute(MetricTags.STATUS, "failed"));
       } else {
         metricClient.count(OssMetricsRegistry.SIDECAR_CHECK, 1, new MetricAttribute(MetricTags.STATUS, "success"));
