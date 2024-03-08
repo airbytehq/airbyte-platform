@@ -36,27 +36,31 @@ describe("Connection - Stream details", () => {
   let destination: DestinationRead;
   let connection: WebBackendConnectionRead;
 
-  before(() => {
-    dropTables();
+  // setup logic adapted from https://stackoverflow.com/questions/71285827/cypress-e2e-before-hook-not-working-on-retries/71377694#71377694
+  // to allow retrying, as Cypress doesn't retry if `before` throws an error
+  let isBackendSetup = false;
+  let isError = false;
+  const setup = () => {
+    if (isBackendSetup === false) {
+      dropTables();
 
-    runDbQuery(getCreateUsersTableQuery("users"), createUserCarsTableQuery, createTableWithLotsOfColumnsQuery);
+      runDbQuery(getCreateUsersTableQuery("users"), createUserCarsTableQuery, createTableWithLotsOfColumnsQuery);
 
-    createPostgresSourceViaApi().then((pgSource) => {
-      source = pgSource;
-      createPostgresDestinationViaApi().then((pgDestination) => {
-        destination = pgDestination;
-        createNewConnectionViaApi(source, destination).then((connectionResponse) => {
-          connection = connectionResponse;
+      return createPostgresSourceViaApi().then((pgSource) => {
+        source = pgSource;
+        createPostgresDestinationViaApi().then((pgDestination) => {
+          destination = pgDestination;
+          createNewConnectionViaApi(source, destination).then((connectionResponse) => {
+            connection = connectionResponse;
+            isBackendSetup = true;
+          });
         });
       });
-    });
-  });
+    }
+    return cy.get("body"); // return a Cypress chainable so it can be 'then'ed
+  };
 
-  beforeEach(() => {
-    connectionPage.visit(connection, "replication");
-  });
-
-  after(() => {
+  const cleanup = () => {
     if (connection) {
       requestDeleteConnection({ connectionId: connection.connectionId });
     }
@@ -68,7 +72,25 @@ describe("Connection - Stream details", () => {
     }
 
     dropTables();
+  };
+
+  beforeEach(() => {
+    cy.once("fail", (err) => {
+      isError = true;
+      throw err;
+    });
+    if (isError) {
+      cleanup();
+      isError = false;
+    }
+
+    // @ts-expect-error the .then() signature between the two possibilities don't exactly match
+    setup().then(() => {
+      connectionPage.visit(connection, "replication");
+    });
   });
+
+  after(cleanup);
 
   describe("basics", () => {
     beforeEach(() => {
