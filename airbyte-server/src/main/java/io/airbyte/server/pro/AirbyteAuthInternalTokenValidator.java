@@ -4,6 +4,7 @@
 
 package io.airbyte.server.pro;
 
+import io.airbyte.commons.auth.AirbyteAuthConstants;
 import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
 import io.airbyte.commons.server.support.RbacRoleHelper;
 import io.micronaut.http.HttpRequest;

@@ -11,6 +11,7 @@ testing {
 
         implementation(project(":airbyte-api"))
         implementation(project(":airbyte-commons"))
+        implementation(project(":airbyte-commons-auth"))
         implementation(project(":airbyte-commons-temporal"))
         implementation(project(":airbyte-config:config-models"))
         implementation(project(":airbyte-config:config-persistence"))

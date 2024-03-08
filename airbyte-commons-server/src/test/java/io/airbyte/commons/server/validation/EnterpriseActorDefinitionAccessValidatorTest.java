@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.validation;
 
+import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException;
@@ -42,9 +43,8 @@ class EnterpriseActorDefinitionAccessValidatorTest {
   class ValidateWriteAccess {
 
     @Test
-    void instanceAdminAllowed() throws IOException {
-      when(mSecurityService.username()).thenReturn(java.util.Optional.of(USERNAME));
-      when(mPermissionPersistence.isAuthUserInstanceAdmin(USERNAME)).thenReturn(true);
+    void instanceAdminAllowed() {
+      when(mSecurityService.hasRole(ADMIN)).thenReturn(true);
 
       // any actor definition ID passes this check for an instance admin.
       Assertions.assertDoesNotThrow(() -> enterpriseActorDefinitionAccessValidator.validateWriteAccess(UUID.randomUUID()));
@@ -53,7 +53,6 @@ class EnterpriseActorDefinitionAccessValidatorTest {
     @Test
     void defaultOrgAdminAllowed() throws IOException {
       when(mSecurityService.username()).thenReturn(java.util.Optional.of(USERNAME));
-      when(mPermissionPersistence.isAuthUserInstanceAdmin(USERNAME)).thenReturn(false);
       when(mPermissionPersistence.findPermissionTypeForUserAndOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID, USERNAME))
           .thenReturn(PermissionType.ORGANIZATION_ADMIN);
 
@@ -66,7 +65,7 @@ class EnterpriseActorDefinitionAccessValidatorTest {
   @Test
   void otherwiseThrows() throws IOException {
     when(mSecurityService.username()).thenReturn(java.util.Optional.of(USERNAME));
-    when(mPermissionPersistence.isAuthUserInstanceAdmin(USERNAME)).thenReturn(false);
+    when(mSecurityService.hasRole(ADMIN)).thenReturn(false);
     when(mPermissionPersistence.findPermissionTypeForUserAndOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID, USERNAME))
         .thenReturn(PermissionType.ORGANIZATION_EDITOR);
 

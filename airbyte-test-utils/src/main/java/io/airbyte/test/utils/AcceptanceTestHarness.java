@@ -191,7 +191,7 @@ public class AcceptanceTestHarness {
 
   public static final int JITTER_MAX_INTERVAL_SECS = 10;
   public static final int FINAL_INTERVAL_SECS = 60;
-  public static final int MAX_TRIES = 3;
+  public static final int MAX_TRIES = 5;
   public static final int MAX_ALLOWED_SECOND_PER_RUN = 120;
 
   // NOTE: we include `INCOMPLETE` here because the job may still retry; see
