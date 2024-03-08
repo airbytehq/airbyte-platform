@@ -41,13 +41,14 @@ class EnvVarConfigBeanFactory {
   @Named("orchestratorEnvMap")
   fun orchestratorEnvMap(
     featureFlags: FeatureFlags,
-    @Value("\${airbyte.container.orchestrator.java-opts}") containerOrchestratorJavaOpts: String,
     workerEnv: Configs.WorkerEnvironment,
     storageConfig: StorageConfig,
     @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
     @Named("metricsEnvMap") metricsEnvMap: Map<String, String>,
     @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
     @Named("apiClientEnvMap") apiClientEnvMap: Map<String, String>,
+    @Value("\${airbyte.container.orchestrator.java-opts}") containerOrchestratorJavaOpts: String,
+    @Value("\${airbyte.connector.source.credentials.aws.assumed-role.secret-name}") awsAssumedRoleSecretName: String,
   ): Map<String, String> {
     // Build the map of additional environment variables to be passed to the container orchestrator
     val envMap: MutableMap<String, String> = HashMap()
@@ -62,6 +63,9 @@ class EnvVarConfigBeanFactory {
     envMap[AbEnvVar.OTEL_COLLECTOR_ENDPOINT.name] = AbEnvVar.OTEL_COLLECTOR_ENDPOINT.fetch() ?: ""
     envMap[AbEnvVar.SOCAT_KUBE_CPU_LIMIT.name] = configs.socatSidecarKubeCpuLimit
     envMap[AbEnvVar.SOCAT_KUBE_CPU_REQUEST.name] = configs.socatSidecarKubeCpuRequest
+
+    // secret name used by orchestrator for assumed role look-ups
+    envMap[AbEnvVar.AWS_ASSUME_ROLE_SECRET_NAME.name] = awsAssumedRoleSecretName
 
     // Manually add the worker environment
     envMap[WorkerConstants.WORKER_ENVIRONMENT] = workerEnv.name
