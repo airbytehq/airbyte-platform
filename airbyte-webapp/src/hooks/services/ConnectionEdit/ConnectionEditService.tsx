@@ -1,5 +1,5 @@
 import pick from "lodash/pick";
-import { useContext, useState, createContext, useCallback } from "react";
+import { createContext, useCallback, useContext, useState } from "react";
 import { useIntl } from "react-intl";
 import { useAsyncFn } from "react-use";
 
@@ -57,6 +57,7 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
     unregisterNotificationById("connection.noDiff");
 
     const refreshedConnection = await getConnectionQuery({ connectionId, withRefreshedCatalog: true });
+
     if (refreshedConnection.catalogDiff && refreshedConnection.catalogDiff.transforms?.length > 0) {
       setConnection(refreshedConnection);
       setSchemaHasBeenRefreshed(true);
@@ -64,8 +65,12 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
       setConnection((connection) => ({
         ...connection,
         schemaChange: refreshedConnection.schemaChange,
+        /**
+         * set refreshed syncCatalog since the stream(AirbyteStream) data might have changed
+         * (eg. new sync mode is available)
+         */
+        syncCatalog: refreshedConnection.syncCatalog,
       }));
-
       registerNotification({
         id: "connection.noDiff",
         text: formatMessage({ id: "connection.updateSchema.noDiff" }),
