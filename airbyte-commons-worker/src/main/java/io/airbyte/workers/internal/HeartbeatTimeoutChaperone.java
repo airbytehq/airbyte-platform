@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,10 +127,9 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
             new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
             new MetricAttribute(MetricTags.KILLED, "true"),
             new MetricAttribute(MetricTags.SOURCE_IMAGE, sourceDockerImage));
-        throw new HeartbeatTimeoutException(
-            String.format("Heartbeat has stopped. Heartbeat freshness threshold: %s secs Actual heartbeat age: %s secs",
-                heartbeatMonitor.getHeartbeatFreshnessThreshold().getSeconds(),
-                heartbeatMonitor.getTimeSinceLastBeat().orElse(Duration.ZERO).getSeconds()));
+        final var threshold = heartbeatMonitor.getHeartbeatFreshnessThreshold().getSeconds();
+        final var timeBetweenLastRecord = heartbeatMonitor.getTimeSinceLastBeat().orElse(Duration.ZERO).getSeconds();
+        throw new HeartbeatTimeoutException(threshold, timeBetweenLastRecord);
       } else {
         LOGGER.info("Do not terminate as feature flag is disable");
         metricClient.count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
@@ -185,8 +185,15 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
    */
   public static class HeartbeatTimeoutException extends RuntimeException {
 
-    public HeartbeatTimeoutException(final String message) {
-      super(message);
+    public final String humanReadableThreshold;
+    public final String humanReadableTimeSinceLastRec;
+
+    public HeartbeatTimeoutException(final long threshold, final long timeBetweenLastRecord) {
+      super(String.format("Last record saw %s ago, exceeding the threshold of %s.",
+          DurationFormatUtils.formatDurationWords(timeBetweenLastRecord, true, true),
+          DurationFormatUtils.formatDurationWords(threshold, true, true)));
+      this.humanReadableThreshold = DurationFormatUtils.formatDurationWords(threshold, true, true);
+      this.humanReadableTimeSinceLastRec = DurationFormatUtils.formatDurationWords(threshold, true, true);
     }
 
   }

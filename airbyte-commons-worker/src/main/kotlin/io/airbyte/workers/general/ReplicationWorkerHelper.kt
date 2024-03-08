@@ -471,7 +471,14 @@ class ReplicationWorkerHelper(
       when (ex) {
         is SourceException -> FailureHelper.sourceFailure(ex, jobId, attempt)
         is DestinationException -> FailureHelper.destinationFailure(ex, jobId, attempt)
-        is HeartbeatTimeoutChaperone.HeartbeatTimeoutException -> FailureHelper.sourceHeartbeatFailure(ex, jobId, attempt)
+        is HeartbeatTimeoutChaperone.HeartbeatTimeoutException ->
+          FailureHelper.sourceHeartbeatFailure(
+            ex,
+            jobId,
+            attempt,
+            ex.humanReadableThreshold,
+            ex.humanReadableTimeSinceLastRec,
+          )
         is DestinationTimeoutMonitor.TimeoutException -> FailureHelper.destinationTimeoutFailure(ex, jobId, attempt)
         is WorkloadHeartbeatException -> FailureHelper.platformFailure(ex, jobId, attempt, ex.message)
         else -> FailureHelper.replicationFailure(ex, jobId, attempt)

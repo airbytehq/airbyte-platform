@@ -180,11 +180,18 @@ public class FailureHelper {
    * @param attemptNumber attempt number
    * @return failure reason
    */
-  public static FailureReason sourceHeartbeatFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
+  public static FailureReason sourceHeartbeatFailure(final Throwable t,
+                                                     final Long jobId,
+                                                     final Integer attemptNumber,
+                                                     final String humanReadableThreshold,
+                                                     final String timeBetweenLastRecord) {
+    final var errorMessage = String.format(
+        "Airbyte detected that the Source didn't send any records in the last %s, exceeding the configured %s threshold. Airbyte will try reading again on the next sync. Please see https://docs.airbyte.com/understanding-airbyte/heartbeats for more info.",
+        timeBetweenLastRecord, humanReadableThreshold);
     return connectorCommandFailure(t, jobId, attemptNumber, ConnectorCommand.READ)
         .withFailureOrigin(FailureOrigin.SOURCE)
         .withFailureType(FailureType.HEARTBEAT_TIMEOUT)
-        .withExternalMessage("The source is unresponsive");
+        .withExternalMessage(errorMessage);
   }
 
   /**
