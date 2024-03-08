@@ -460,7 +460,7 @@ public class SchedulerHandler {
             && !result.appliedDiff().getTransforms().isEmpty()
             && (Boolean.TRUE == connectionRead.getNotifySchemaChanges())) {
           notifySchemaPropagated(notificationSettings, diff, workspace, connectionRead, source,
-              workspace.getEmail(), result);
+              workspace.getEmail());
         }
       } else {
         LOGGER.info("Not propagating changes for connectionId: '{}', new catalogId '{}'",
@@ -474,8 +474,7 @@ public class SchedulerHandler {
                                      final StandardWorkspace workspace,
                                      final ConnectionRead connection,
                                      final SourceConnection source,
-                                     final String email,
-                                     final UpdateSchemaResult result)
+                                     final String email)
       throws IOException {
     final NotificationItem item;
 

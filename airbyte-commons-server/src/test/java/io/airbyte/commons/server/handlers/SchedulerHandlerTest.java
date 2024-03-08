@@ -1887,7 +1887,7 @@ class SchedulerHandlerTest {
         .catalog(newCatalog);
     spySchedulerHandler.applySchemaChangeForSource(request);
     verify(connectionsHandler).updateConnection(any());
-    verify(spySchedulerHandler, never()).notifySchemaPropagated(any(), any(), any(), any(), any(), any(), any());
+    verify(spySchedulerHandler, never()).notifySchemaPropagated(any(), any(), any(), any(), any(), any());
   }
 
   @Test
