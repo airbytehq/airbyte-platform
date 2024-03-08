@@ -55,9 +55,6 @@ public class EnvConfigs implements Configs {
   private static final String DEFAULT_JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY = "IfNotPresent";
   private static final String DEFAULT_JOB_KUBE_SOCAT_IMAGE = "alpine/socat:1.7.4.4-r0";
   private static final String DEFAULT_JOB_KUBE_BUSYBOX_IMAGE = "busybox:1.35";
-  private static final String DEFAULT_JOB_KUBE_CURL_IMAGE = "curlimages/curl:7.87.0";
-  private static final String DEFAULT_NETWORK = "host";
-  public static final int DEFAULT_TEMPORAL_HISTORY_RETENTION_IN_DAYS = 30;
   public static final int DEFAULT_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE = 100;
   public static final int DEFAULT_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE = 14;
 
@@ -131,54 +128,14 @@ public class EnvConfigs implements Configs {
   }
 
   @Override
-  public DeploymentMode getDeploymentMode() {
-    return getEnvOrDefault(EnvVar.DEPLOYMENT_MODE.name(), DeploymentMode.OSS, s -> {
-      try {
-        return DeploymentMode.valueOf(s);
-      } catch (final IllegalArgumentException e) {
-        LOGGER.info(s + " not recognized, defaulting to " + DeploymentMode.OSS);
-        return DeploymentMode.OSS;
-      }
-    });
-  }
-
-  @Override
   public WorkerEnvironment getWorkerEnvironment() {
     return getEnvOrDefault(EnvVar.WORKER_ENVIRONMENT, WorkerEnvironment.DOCKER, s -> WorkerEnvironment.valueOf(s.toUpperCase()));
-  }
-
-  @Override
-  public Path getConfigRoot() {
-    return getPath(EnvVar.CONFIG_ROOT);
   }
 
   @Override
   public Path getWorkspaceRoot() {
     return getPath(EnvVar.WORKSPACE_ROOT);
   }
-
-  // Docker Only
-  @Override
-  public String getWorkspaceDockerMount() {
-    return getEnvOrDefault(EnvVar.WORKSPACE_DOCKER_MOUNT, getWorkspaceRoot().toString());
-  }
-
-  @Override
-  public String getLocalDockerMount() {
-    return getEnvOrDefault(EnvVar.LOCAL_DOCKER_MOUNT, getLocalRoot().toString());
-  }
-
-  @Override
-  public String getDockerNetwork() {
-    return getEnvOrDefault(EnvVar.DOCKER_NETWORK, DEFAULT_NETWORK);
-  }
-
-  @Override
-  public Path getLocalRoot() {
-    return getPath(EnvVar.LOCAL_ROOT);
-  }
-
-  // Secrets
 
   // Database
   @Override
@@ -194,11 +151,6 @@ public class EnvConfigs implements Configs {
   @Override
   public String getDatabaseUrl() {
     return getEnsureEnv(EnvVar.DATABASE_URL);
-  }
-
-  @Override
-  public int getTemporalRetentionInDays() {
-    return getEnvOrDefault(EnvVar.TEMPORAL_HISTORY_RETENTION_IN_DAYS, DEFAULT_TEMPORAL_HISTORY_RETENTION_IN_DAYS);
   }
 
   /**
@@ -360,11 +312,6 @@ public class EnvConfigs implements Configs {
   }
 
   @Override
-  public String getJobKubeSocatImage() {
-    return getEnvOrDefault(EnvVar.JOB_KUBE_SOCAT_IMAGE, DEFAULT_JOB_KUBE_SOCAT_IMAGE);
-  }
-
-  @Override
   public String getSocatSidecarKubeCpuRequest() {
     return getEnvOrDefault(EnvVar.SOCAT_KUBE_CPU_REQUEST, getSidecarKubeCpuRequest());
   }
@@ -372,41 +319,6 @@ public class EnvConfigs implements Configs {
   @Override
   public String getSocatSidecarKubeCpuLimit() {
     return getEnvOrDefault(EnvVar.SOCAT_KUBE_CPU_LIMIT, getSidecarKubeCpuLimit());
-  }
-
-  @Override
-  public String getJobKubeBusyboxImage() {
-    return getEnvOrDefault(EnvVar.JOB_KUBE_BUSYBOX_IMAGE, DEFAULT_JOB_KUBE_BUSYBOX_IMAGE);
-  }
-
-  @Override
-  public String getJobKubeCurlImage() {
-    return getEnvOrDefault(EnvVar.JOB_KUBE_CURL_IMAGE, DEFAULT_JOB_KUBE_CURL_IMAGE);
-  }
-
-  @Override
-  public String getJobKubeNamespace() {
-    return getEnvOrDefault(EnvVar.JOB_KUBE_NAMESPACE, DEFAULT_JOB_KUBE_NAMESPACE);
-  }
-
-  @Override
-  public String getMetricClient() {
-    return getEnvOrDefault(EnvVar.METRIC_CLIENT, "");
-  }
-
-  @Override
-  public String getOtelCollectorEndpoint() {
-    return getEnvOrDefault(EnvVar.OTEL_COLLECTOR_ENDPOINT, "");
-  }
-
-  @Override
-  public String getLaunchDarklyKey() {
-    return getEnvOrDefault(EnvVar.LAUNCHDARKLY_KEY, "");
-  }
-
-  @Override
-  public String getFeatureFlagClient() {
-    return getEnvOrDefault(EnvVar.FEATURE_FLAG_CLIENT, "");
   }
 
   /**
@@ -435,61 +347,20 @@ public class EnvConfigs implements Configs {
     return new LogConfigs(getLogConfiguration());
   }
 
-  @Override
-  public boolean getPublishMetrics() {
-    return getEnvOrDefault(EnvVar.PUBLISH_METRICS, false);
-  }
-
-  @Override
-  public String getDDAgentHost() {
-    return getEnvOrDefault(EnvVar.DD_AGENT_HOST, "");
-  }
-
-  @Override
-  public String getDDDogStatsDPort() {
-    return getEnvOrDefault(EnvVar.DD_DOGSTATSD_PORT, "");
-  }
-
-  @Override
-  public List<String> getDDConstantTags() {
-    final String tagsString = getEnvOrDefault(EnvVar.DD_CONSTANT_TAGS, "");
-    return Splitter.on(",")
-        .splitToStream(tagsString)
-        .filter(s -> !s.trim().isBlank())
-        .collect(Collectors.toList());
-  }
-
-  // APPLICATIONS
-  // Worker
-
-  @Override
-  public String getCdkPython() {
-    return getEnv(EnvVar.CDK_PYTHON);
-  }
-
-  @Override
-  public String getCdkEntrypoint() {
-    return getEnv(EnvVar.CDK_ENTRYPOINT);
-  }
-
   // Helpers
   public String getEnvOrDefault(final EnvVar envVar, final String defaultValue) {
     return getEnvOrDefault(envVar.name(), defaultValue, Function.identity(), false);
-  }
-
-  public int getEnvOrDefault(final EnvVar key, final int defaultValue) {
-    return getEnvOrDefault(key.name(), defaultValue, Integer::parseInt, false);
   }
 
   public boolean getEnvOrDefault(final EnvVar key, final boolean defaultValue) {
     return getEnvOrDefault(key, defaultValue, Boolean::parseBoolean);
   }
 
-  public <T> T getEnvOrDefault(final String key, final T defaultValue, final Function<String, T> parser) {
+  private <T> T getEnvOrDefault(final String key, final T defaultValue, final Function<String, T> parser) {
     return getEnvOrDefault(key, defaultValue, parser, false);
   }
 
-  public <T> T getEnvOrDefault(final EnvVar envVar, final T defaultValue, final Function<String, T> parser) {
+  private <T> T getEnvOrDefault(final EnvVar envVar, final T defaultValue, final Function<String, T> parser) {
     return getEnvOrDefault(envVar.name(), defaultValue, parser, false);
   }
 
@@ -554,6 +425,17 @@ public class EnvConfigs implements Configs {
 
   private Path getPath(final EnvVar envVar) {
     return getPath(envVar.name());
+  }
+
+  private DeploymentMode getDeploymentMode() {
+    return getEnvOrDefault(EnvVar.DEPLOYMENT_MODE.name(), DeploymentMode.OSS, s -> {
+      try {
+        return DeploymentMode.valueOf(s);
+      } catch (final IllegalArgumentException e) {
+        LOGGER.info(s + " not recognized, defaulting to " + DeploymentMode.OSS);
+        return DeploymentMode.OSS;
+      }
+    });
   }
 
 }

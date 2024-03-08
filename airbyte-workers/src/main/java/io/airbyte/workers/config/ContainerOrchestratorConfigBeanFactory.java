@@ -111,9 +111,9 @@ public class ContainerOrchestratorConfigBeanFactory {
     }
 
     final Configs configs = new EnvConfigs();
-    environmentVariables.put(EnvVar.FEATURE_FLAG_CLIENT.name(), configs.getFeatureFlagClient());
-    environmentVariables.put(EnvVar.LAUNCHDARKLY_KEY.name(), configs.getLaunchDarklyKey());
-    environmentVariables.put(EnvVar.OTEL_COLLECTOR_ENDPOINT.name(), configs.getOtelCollectorEndpoint());
+    environmentVariables.put(EnvVar.FEATURE_FLAG_CLIENT.name(), EnvVar.FEATURE_FLAG_CLIENT.fetch(""));
+    environmentVariables.put(EnvVar.LAUNCHDARKLY_KEY.name(), EnvVar.LAUNCHDARKLY_KEY.fetch(""));
+    environmentVariables.put(EnvVar.OTEL_COLLECTOR_ENDPOINT.name(), EnvVar.OTEL_COLLECTOR_ENDPOINT.fetch(""));
     environmentVariables.put(EnvVar.SOCAT_KUBE_CPU_LIMIT.name(), configs.getSocatSidecarKubeCpuLimit());
     environmentVariables.put(EnvVar.SOCAT_KUBE_CPU_REQUEST.name(), configs.getSocatSidecarKubeCpuRequest());
 

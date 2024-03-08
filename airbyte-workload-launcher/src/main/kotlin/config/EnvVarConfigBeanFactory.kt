@@ -57,9 +57,9 @@ class EnvVarConfigBeanFactory {
     envMap[JAVA_OPTS_ENV_VAR] = containerOrchestratorJavaOpts
 
     val configs: Configs = EnvConfigs()
-    envMap[AbEnvVar.FEATURE_FLAG_CLIENT.name] = configs.featureFlagClient
-    envMap[AbEnvVar.LAUNCHDARKLY_KEY.name] = configs.launchDarklyKey
-    envMap[AbEnvVar.OTEL_COLLECTOR_ENDPOINT.name] = configs.otelCollectorEndpoint
+    envMap[AbEnvVar.FEATURE_FLAG_CLIENT.name] = AbEnvVar.FEATURE_FLAG_CLIENT.fetch() ?: ""
+    envMap[AbEnvVar.LAUNCHDARKLY_KEY.name] = AbEnvVar.LAUNCHDARKLY_KEY.fetch() ?: ""
+    envMap[AbEnvVar.OTEL_COLLECTOR_ENDPOINT.name] = AbEnvVar.OTEL_COLLECTOR_ENDPOINT.fetch() ?: ""
     envMap[AbEnvVar.SOCAT_KUBE_CPU_LIMIT.name] = configs.socatSidecarKubeCpuLimit
     envMap[AbEnvVar.SOCAT_KUBE_CPU_REQUEST.name] = configs.socatSidecarKubeCpuRequest
 

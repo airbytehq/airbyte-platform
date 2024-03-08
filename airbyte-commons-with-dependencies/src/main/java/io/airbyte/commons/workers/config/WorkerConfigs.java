@@ -5,6 +5,7 @@
 package io.airbyte.commons.workers.config;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.config.Configs;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ResourceRequirements;
@@ -18,6 +19,9 @@ import java.util.Optional;
  */
 public class WorkerConfigs {
 
+  private static final String DEFAULT_JOB_KUBE_BUSYBOX_IMAGE = "busybox:1.35";
+  private static final String DEFAULT_JOB_KUBE_CURL_IMAGE = "curlimages/curl:7.87.0";
+  private static final String DEFAULT_JOB_KUBE_SOCAT_IMAGE = "alpine/socat:1.7.4.4-r0";
   private final Configs.WorkerEnvironment workerEnvironment;
   private final ResourceRequirements resourceRequirements;
   private final List<TolerationPOJO> workerKubeTolerations;
@@ -80,9 +84,9 @@ public class WorkerConfigs {
         configs.getJobKubeMainContainerImagePullSecrets(),
         configs.getJobKubeMainContainerImagePullPolicy(),
         configs.getJobKubeSidecarContainerImagePullPolicy(),
-        configs.getJobKubeSocatImage(),
-        configs.getJobKubeBusyboxImage(),
-        configs.getJobKubeCurlImage(),
+        EnvVar.JOB_KUBE_SOCAT_IMAGE.fetch(DEFAULT_JOB_KUBE_SOCAT_IMAGE),
+        EnvVar.JOB_KUBE_BUSYBOX_IMAGE.fetch(DEFAULT_JOB_KUBE_BUSYBOX_IMAGE),
+        EnvVar.JOB_KUBE_CURL_IMAGE.fetch(DEFAULT_JOB_KUBE_CURL_IMAGE),
         configs.getJobDefaultEnvMap());
   }
 

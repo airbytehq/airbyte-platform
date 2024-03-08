@@ -81,9 +81,9 @@ class AirbyteIntegrationLauncherTest {
               .put("USE_STREAM_CAPABLE_STATE", "true")
               .put(EnvVar.SOCAT_KUBE_CPU_LIMIT.name(), CONFIGS.getSocatSidecarKubeCpuLimit())
               .put(EnvVar.SOCAT_KUBE_CPU_REQUEST.name(), CONFIGS.getSocatSidecarKubeCpuRequest())
-              .put(EnvVar.LAUNCHDARKLY_KEY.name(), CONFIGS.getLaunchDarklyKey())
-              .put(EnvVar.FEATURE_FLAG_CLIENT.name(), CONFIGS.getFeatureFlagClient())
-              .put(EnvVar.OTEL_COLLECTOR_ENDPOINT.name(), CONFIGS.getOtelCollectorEndpoint())
+              .put(EnvVar.LAUNCHDARKLY_KEY.name(), EnvVar.LAUNCHDARKLY_KEY.fetch(""))
+              .put(EnvVar.FEATURE_FLAG_CLIENT.name(), EnvVar.FEATURE_FLAG_CLIENT.fetch(""))
+              .put(EnvVar.OTEL_COLLECTOR_ENDPOINT.name(), EnvVar.OTEL_COLLECTOR_ENDPOINT.fetch(""))
               .build());
 
   private WorkerConfigs workerConfigs;

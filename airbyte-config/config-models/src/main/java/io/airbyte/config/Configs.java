@@ -43,48 +43,15 @@ public interface Configs {
   String getAirbyteVersionOrWarning();
 
   /**
-   * Distinguishes internal Airbyte deployments. Internal-use only.
-   */
-  DeploymentMode getDeploymentMode();
-
-  /**
    * Defines if the deployment is Docker or Kubernetes. Airbyte behaves accordingly.
    */
   WorkerEnvironment getWorkerEnvironment();
-
-  /**
-   * Defines the configs directory. Applies only to Docker, and is present in Kubernetes for backward
-   * compatibility.
-   */
-  Path getConfigRoot();
 
   /**
    * Defines the Airbyte workspace directory. Applies only to Docker, and is present in Kubernetes for
    * backward compatibility.
    */
   Path getWorkspaceRoot();
-
-  // Docker Only
-
-  /**
-   * Defines the name of the Airbyte docker volume.
-   */
-  String getWorkspaceDockerMount();
-
-  /**
-   * Defines the name of the docker mount that is used for local file handling. On Docker, this allows
-   * connector pods to interact with a volume for "local file" operations.
-   */
-  String getLocalDockerMount();
-
-  /**
-   * Defines the docker network jobs are launched on with the new scheduler.
-   */
-  String getDockerNetwork();
-
-  Path getLocalRoot();
-
-  // Secrets
 
   // Database
 
@@ -104,36 +71,6 @@ public interface Configs {
    * password.
    */
   String getDatabaseUrl();
-
-  /**
-   * Define the number of retention days for the temporal history.
-   */
-  int getTemporalRetentionInDays();
-
-  /**
-   * Get datadog or OTEL metric client for Airbyte to emit metrics. Allows empty value
-   */
-  String getMetricClient();
-
-  /**
-   * If choosing OTEL as the metric client, Airbyte will emit metrics and traces to this provided
-   * endpoint.
-   */
-  String getOtelCollectorEndpoint();
-
-  /**
-   * If using a LaunchDarkly feature flag client, this API key will be used.
-   *
-   * @return LaunchDarkly API key as a string.
-   */
-  String getLaunchDarklyKey();
-
-  /**
-   * Get the type of feature flag client to use.
-   *
-   * @return feature flag client
-   */
-  String getFeatureFlagClient();
 
   /**
    * Defines a default map of environment variables to use for any launched job containers. The
@@ -214,11 +151,6 @@ public interface Configs {
   String getSidecarKubeCpuLimit();
 
   /**
-   * Define the CPU request for the SOCAT Sidecar.
-   */
-  String getJobKubeSocatImage();
-
-  /**
    * Define the CPU limit for the SOCAT Sidecar.
    */
   String getSocatSidecarKubeCpuLimit();
@@ -228,21 +160,6 @@ public interface Configs {
    */
   String getSocatSidecarKubeCpuRequest();
 
-  /**
-   * Define the Job pod busybox image.
-   */
-  String getJobKubeBusyboxImage();
-
-  /**
-   * Define the Job pod curl image pull.
-   */
-  String getJobKubeCurlImage();
-
-  /**
-   * Define the Kubernetes namespace Job pods are created in.
-   */
-  String getJobKubeNamespace();
-
   // Logging/Monitoring/Tracking
 
   /**
@@ -250,47 +167,6 @@ public interface Configs {
    * involved here. Please see {@link CloudStorageConfigs} for more info.
    */
   LogConfigs getLogConfigs();
-
-  /**
-   * Determine if Datadog tracking events should be published. Mainly for Airbyte internal use.
-   */
-  boolean getPublishMetrics();
-
-  /**
-   * Set the Agent to publish Datadog metrics to. Only relevant if metrics should be published. Mainly
-   * for Airbyte internal use.
-   */
-  String getDDAgentHost();
-
-  /**
-   * Set the port to publish Datadog metrics to. Only relevant if metrics should be published. Mainly
-   * for Airbyte internal use.
-   */
-  String getDDDogStatsDPort();
-
-  /**
-   * Set constant tags to be attached to all metrics. Useful for distinguishing between environments.
-   * Example: airbyte_instance:dev,k8s-cluster:aws-dev
-   */
-  List<String> getDDConstantTags();
-
-  // APPLICATIONS
-  // Worker
-
-  /**
-   * Connector Builder configs.
-   */
-  String getCdkPython();
-
-  String getCdkEntrypoint();
-
-  /**
-   * Job error reporting strategy.
-   */
-  enum JobErrorReportingStrategy {
-    SENTRY,
-    LOGGING
-  }
 
   /**
    * Worker environment.
