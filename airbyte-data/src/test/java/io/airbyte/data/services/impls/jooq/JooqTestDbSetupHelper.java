@@ -23,6 +23,8 @@ import io.airbyte.config.SupportLevel;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
+import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
@@ -74,18 +76,23 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
 
     when(featureFlagClient.stringVariation(eq(HeartbeatMaxSecondsBetweenMessages.INSTANCE), any(SourceDefinition.class))).thenReturn("3600");
 
+    final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
+    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
+        new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService);
     this.destinationServiceJooqImpl = new DestinationServiceJooqImpl(database,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
-        connectionService);
+        connectionService,
+        actorDefinitionVersionUpdater);
     this.sourceServiceJooqImpl = new SourceServiceJooqImpl(database,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
-        connectionService);
+        connectionService,
+        actorDefinitionVersionUpdater);
     this.workspaceServiceJooqImpl = new WorkspaceServiceJooqImpl(database,
         featureFlagClient,
         secretsRepositoryReader,
