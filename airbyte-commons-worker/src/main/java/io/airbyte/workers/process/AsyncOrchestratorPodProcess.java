@@ -4,6 +4,8 @@
 
 package io.airbyte.workers.process;
 
+import static io.airbyte.commons.workers.config.WorkerConfigs.DEFAULT_JOB_KUBE_BUSYBOX_IMAGE;
+
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ResourceRequirements;
@@ -44,6 +46,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -488,9 +491,11 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     final List<ContainerPort> containerPorts = KubePodProcess.createContainerPortList(portMap);
     containerPorts.add(new ContainerPort(serverPort, null, null, null, null));
 
+    final String initImageName = resolveInitContainerImageName();
+
     final var initContainer = new ContainerBuilder()
         .withName(KubePodProcess.INIT_CONTAINER_NAME)
-        .withImage("busybox:1.35")
+        .withImage(initImageName)
         .withVolumeMounts(volumeMounts)
         .withCommand(List.of(
             "sh",
@@ -580,6 +585,11 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     updatedFileMap.put(KUBE_POD_INFO, Jsons.serialize(kubePodInfo));
 
     copyFilesToKubeConfigVolumeMain(createdPod, updatedFileMap);
+  }
+
+  private String resolveInitContainerImageName() {
+    final String initImageNameFromEnv = environmentVariables.get(io.airbyte.commons.envvar.EnvVar.JOB_KUBE_BUSYBOX_IMAGE.toString());
+    return Objects.requireNonNullElse(initImageNameFromEnv, DEFAULT_JOB_KUBE_BUSYBOX_IMAGE);
   }
 
   private Toleration[] buildPodTolerations(final List<TolerationPOJO> tolerations) {
