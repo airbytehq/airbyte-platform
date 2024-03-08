@@ -479,7 +479,14 @@ class ReplicationWorkerHelper(
             ex.humanReadableThreshold,
             ex.humanReadableTimeSinceLastRec,
           )
-        is DestinationTimeoutMonitor.TimeoutException -> FailureHelper.destinationTimeoutFailure(ex, jobId, attempt)
+        is DestinationTimeoutMonitor.TimeoutException ->
+          FailureHelper.destinationTimeoutFailure(
+            ex,
+            jobId,
+            attempt,
+            ex.humanReadableThreshold,
+            ex.humanReadableTimeSinceLastAction,
+          )
         is WorkloadHeartbeatException -> FailureHelper.platformFailure(ex, jobId, attempt, ex.message)
         else -> FailureHelper.replicationFailure(ex, jobId, attempt)
       }

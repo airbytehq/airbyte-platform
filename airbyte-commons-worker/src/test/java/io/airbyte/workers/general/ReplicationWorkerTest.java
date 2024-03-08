@@ -1142,7 +1142,7 @@ abstract class ReplicationWorkerTest {
     assertEquals(failureReason.getFailureType(), FailureReason.FailureType.HEARTBEAT_TIMEOUT);
     failureReason = ReplicationWorkerHelper.getFailureReason(new RuntimeException(), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.REPLICATION);
-    failureReason = ReplicationWorkerHelper.getFailureReason(new TimeoutException(""), jobId, attempt);
+    failureReason = ReplicationWorkerHelper.getFailureReason(new TimeoutException(10, 15), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.DESTINATION);
     assertEquals(failureReason.getFailureType(), FailureType.DESTINATION_TIMEOUT);
   }
