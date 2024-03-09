@@ -171,6 +171,15 @@ create table "public"."connection_operation" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "connection_operation_pkey" primary key ("id", "connection_id", "operation_id")
 );
+create table "public"."connection_timeline_event" (
+  "id" uuid not null,
+  "connection_id" uuid not null,
+  "user_id" uuid,
+  "event_type" varchar(2147483647) not null,
+  "summary" jsonb,
+  "created_at" timestamp(6) with time zone not null,
+  constraint "connection_timeline_event_pkey" primary key ("id")
+);
 create table "public"."connector_builder_project" (
   "id" uuid not null,
   "workspace_id" uuid not null,
@@ -421,6 +430,7 @@ create index "connection_destination_id_idx" on "public"."connection"("destinati
 create index "connection_source_id_idx" on "public"."connection"("source_id" asc);
 create index "connection_status_idx" on "public"."connection"("status" asc);
 create index "connection_operation_connection_id_idx" on "public"."connection_operation"("connection_id" asc);
+create index "idx_connection_timeline_connection_id" on "public"."connection_timeline_event"("connection_id" asc, "created_at" desc, "event_type" asc);
 create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
 create index "organization_email_domain_email_domain_idx" on "public"."organization_email_domain"("email_domain" asc);
 create index "organization_email_domain_organization_id_idx" on "public"."organization_email_domain"("organization_id" asc);
@@ -459,6 +469,8 @@ alter table "public"."connection" add constraint "connection_destination_id_fkey
 alter table "public"."connection" add constraint "connection_source_id_fkey" foreign key ("source_id") references "public"."actor" ("id");
 alter table "public"."connection_operation" add constraint "connection_operation_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."connection_operation" add constraint "connection_operation_operation_id_fkey" foreign key ("operation_id") references "public"."operation" ("id");
+alter table "public"."connection_timeline_event" add constraint "connection_timeline_event_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
+alter table "public"."connection_timeline_event" add constraint "connection_timeline_event_user_id_fkey" foreign key ("user_id") references "public"."user" ("id");
 alter table "public"."notification_configuration" add constraint "notification_configuration_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."operation" add constraint "operation_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."organization_email_domain" add constraint "organization_email_domain_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");

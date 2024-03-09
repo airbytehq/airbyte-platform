@@ -123,6 +123,7 @@ public class BaseConfigDatabaseTest {
               actor_definition_config_injection,
               actor_oauth_parameter,
               auth_user,
+              connection_timeline_event,
               connection,
               connection_operation,
               connector_builder_project,
