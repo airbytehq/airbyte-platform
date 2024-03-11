@@ -420,6 +420,7 @@ spec:
         - name: airbyte-yml-volume
           mountPath: /app/configs/airbyte.yml
           subPath: fileContents
+          readOnly: true
         {{- end }}
 
         {{- if .Values.extraVolumeMounts }}
@@ -440,8 +441,8 @@ spec:
         secret:
           secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) (.Values.global.credVolumeOverride) (eq .Values.global.deploymentMode "oss") }}
       - name: airbyte-yml-volume
-        configMap:
-          name: {{ .Release.Name }}-airbyte-yml
+        secret:
+          secretName: {{ .Release.Name }}-airbyte-yml
       {{- end }}
       {{- if .Values.extraVolumes }}
 {{ toYaml .Values.extraVolumes | nindent 6 }}
