@@ -1,11 +1,10 @@
-package mappers
+package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionScheduleType
 import io.airbyte.api.model.generated.ConnectionStatus
 import io.airbyte.api.model.generated.Geography
 import io.airbyte.api.model.generated.NamespaceDefinitionType
-import io.airbyte.server.apis.publicapi.mappers.ConnectionReadMapper
 import org.junit.jupiter.api.Test
 import java.util.UUID
 

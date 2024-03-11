@@ -1,28 +1,25 @@
-package mappers
+package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.api.model.generated.AirbyteCatalog
+import io.airbyte.api.model.generated.ConnectionCreate
 import io.airbyte.api.model.generated.ConnectionScheduleType
 import io.airbyte.api.model.generated.ConnectionStatus
-import io.airbyte.api.model.generated.ConnectionUpdate
 import io.airbyte.api.model.generated.Geography
 import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
 import io.airbyte.public_api.model.generated.AirbyteApiConnectionSchedule
-import io.airbyte.public_api.model.generated.ConnectionPatchRequest
+import io.airbyte.public_api.model.generated.ConnectionCreateRequest
 import io.airbyte.public_api.model.generated.ConnectionStatusEnum
-import io.airbyte.public_api.model.generated.GeographyEnumNoDefault
-import io.airbyte.public_api.model.generated.NamespaceDefinitionEnumNoDefault
-import io.airbyte.public_api.model.generated.NonBreakingSchemaUpdatesBehaviorEnumNoDefault
+import io.airbyte.public_api.model.generated.GeographyEnum
+import io.airbyte.public_api.model.generated.NamespaceDefinitionEnum
 import io.airbyte.public_api.model.generated.ScheduleTypeEnum
-import io.airbyte.server.apis.publicapi.mappers.ConnectionUpdateMapper
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
-class ConnectionUpdateMapperTest {
+class ConnectionCreateMapperTest {
   @Test
-  fun testConnectionUpdateMapper() {
-    val connectionId = UUID.randomUUID()
+  fun testConnectionCreateMapper() {
     val catalogId = UUID.randomUUID()
 
     val catalog =
@@ -30,14 +27,16 @@ class ConnectionUpdateMapperTest {
         this.streams = emptyList()
       }
 
-    val connectionPatchRequest =
-      ConnectionPatchRequest().apply {
+    val connectionCreateRequest =
+      ConnectionCreateRequest().apply {
+        this.sourceId = UUID.randomUUID()
+        this.destinationId = UUID.randomUUID()
         this.name = "test"
-        this.nonBreakingSchemaUpdatesBehavior = NonBreakingSchemaUpdatesBehaviorEnumNoDefault.DISABLE_CONNECTION
-        this.namespaceDefinition = NamespaceDefinitionEnumNoDefault.DESTINATION
+        this.nonBreakingSchemaUpdatesBehavior = io.airbyte.public_api.model.generated.NonBreakingSchemaUpdatesBehaviorEnum.DISABLE_CONNECTION
+        this.namespaceDefinition = NamespaceDefinitionEnum.DESTINATION
         this.namespaceFormat = "test"
         this.prefix = "test"
-        this.dataResidency = GeographyEnumNoDefault.US
+        this.dataResidency = GeographyEnum.US
         this.schedule =
           AirbyteApiConnectionSchedule().apply {
             this.scheduleType = ScheduleTypeEnum.CRON
@@ -46,9 +45,11 @@ class ConnectionUpdateMapperTest {
         this.status = ConnectionStatusEnum.INACTIVE
       }
 
-    val expectedOssConnectionUpdateRequest =
-      ConnectionUpdate().apply {
-        this.name = connectionPatchRequest.name
+    val expectedOssConnectionCreateRequest =
+      ConnectionCreate().apply {
+        this.sourceId = connectionCreateRequest.sourceId
+        this.destinationId = connectionCreateRequest.destinationId
+        this.name = connectionCreateRequest.name
         this.nonBreakingChangesPreference = NonBreakingChangesPreference.DISABLE
         this.namespaceDefinition = NamespaceDefinitionType.DESTINATION
         this.namespaceFormat = "test"
@@ -68,11 +69,7 @@ class ConnectionUpdateMapperTest {
             this.cron = connectionScheduleDataCron
           }
         this.scheduleData = connectionScheduleData
-        this.connectionId = connectionId
       }
-    Assertions.assertEquals(
-      expectedOssConnectionUpdateRequest,
-      ConnectionUpdateMapper.from(connectionId, connectionPatchRequest, catalogId, catalog),
-    )
+    assertEquals(expectedOssConnectionCreateRequest, ConnectionCreateMapper.from(connectionCreateRequest, catalogId, catalog))
   }
 }

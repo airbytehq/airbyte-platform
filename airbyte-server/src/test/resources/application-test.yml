@@ -27,6 +27,8 @@ airbyte:
         log: log
         state: state
         workload-output: workload
+  api:
+    host: https://api.airbyte.com
 
 datasources:
   config:

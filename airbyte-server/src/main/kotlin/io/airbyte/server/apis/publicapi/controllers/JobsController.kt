@@ -27,6 +27,7 @@ import io.airbyte.server.apis.publicapi.filters.JobsFilter
 import io.airbyte.server.apis.publicapi.problems.BadRequestProblem
 import io.airbyte.server.apis.publicapi.problems.UnprocessableEntityProblem
 import io.airbyte.server.apis.publicapi.services.ConnectionService
+import io.airbyte.server.apis.publicapi.services.JobService
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
@@ -36,7 +37,6 @@ import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.core.Response
-import services.JobService
 import java.time.OffsetDateTime
 import java.util.UUID
 

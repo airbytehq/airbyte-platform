@@ -26,6 +26,7 @@ import io.airbyte.server.apis.publicapi.constants.POST
 import io.airbyte.server.apis.publicapi.constants.PUT
 import io.airbyte.server.apis.publicapi.helpers.AirbyteCatalogHelper
 import io.airbyte.server.apis.publicapi.services.ConnectionService
+import io.airbyte.server.apis.publicapi.services.DestinationService
 import io.airbyte.server.apis.publicapi.services.SourceService
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -38,7 +39,6 @@ import jakarta.validation.constraints.NotNull
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.core.Response
-import services.DestinationService
 import java.util.Objects
 import java.util.UUID
 

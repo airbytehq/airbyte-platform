@@ -22,6 +22,7 @@ import io.airbyte.server.apis.publicapi.authorization.Scope
 import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.STREAMS_PATH
 import io.airbyte.server.apis.publicapi.problems.UnexpectedProblem
+import io.airbyte.server.apis.publicapi.services.DestinationService
 import io.airbyte.server.apis.publicapi.services.SourceService
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
@@ -30,7 +31,6 @@ import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import jakarta.ws.rs.core.Response
 import org.slf4j.LoggerFactory
-import services.DestinationService
 import java.io.IOException
 import java.util.UUID
 
