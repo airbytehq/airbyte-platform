@@ -43,12 +43,14 @@ fun ModelConfigResourceType.toEntity(): EntityConfigResourceType {
 fun EntityConfigOriginType.toConfigModel(): ModelConfigOriginType {
   return when (this) {
     EntityConfigOriginType.user -> ModelConfigOriginType.USER
+    EntityConfigOriginType.breaking_change -> ModelConfigOriginType.BREAKING_CHANGE
   }
 }
 
 fun ModelConfigOriginType.toEntity(): EntityConfigOriginType {
   return when (this) {
     ModelConfigOriginType.USER -> EntityConfigOriginType.user
+    ModelConfigOriginType.BREAKING_CHANGE -> EntityConfigOriginType.breaking_change
   }
 }
 
