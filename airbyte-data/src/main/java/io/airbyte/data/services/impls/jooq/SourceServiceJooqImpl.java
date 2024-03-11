@@ -29,6 +29,7 @@ import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
@@ -88,21 +89,22 @@ public class SourceServiceJooqImpl implements SourceService {
   private final SecretsRepositoryWriter secretsRepositoryWriter;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
   private final ConnectionService connectionService;
-  private final ConnectorMetadataJooqHelper connectorMetadataJooqHelper;
+  private final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
 
   public SourceServiceJooqImpl(@Named("configDatabase") final Database database,
                                final FeatureFlagClient featureFlagClient,
                                final SecretsRepositoryReader secretsRepositoryReader,
                                final SecretsRepositoryWriter secretsRepositoryWriter,
                                final SecretPersistenceConfigService secretPersistenceConfigService,
-                               final ConnectionService connectionService) {
+                               final ConnectionService connectionService,
+                               final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater) {
     this.database = new ExceptionWrappingDatabase(database);
     this.connectionService = connectionService;
     this.featureFlagClient = featureFlagClient;
     this.secretRepositoryReader = secretsRepositoryReader;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
-    this.connectorMetadataJooqHelper = new ConnectorMetadataJooqHelper(featureFlagClient, connectionService);
+    this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater;
   }
 
   /**
@@ -417,6 +419,9 @@ public class SourceServiceJooqImpl implements SourceService {
       writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, breakingChangesForDefinition, ctx);
       return null;
     });
+
+    // FIXME(pedro): this should be moved out of this service
+    actorDefinitionVersionUpdater.updateSourceDefaultVersion(sourceDefinition, actorDefinitionVersion, breakingChangesForDefinition);
   }
 
   @Override
@@ -431,6 +436,8 @@ public class SourceServiceJooqImpl implements SourceService {
           io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType.valueOf(scopeType.toString()), ctx);
       return null;
     });
+
+    actorDefinitionVersionUpdater.updateSourceDefaultVersion(sourceDefinition, defaultVersion, List.of());
   }
 
   /**
@@ -459,7 +466,7 @@ public class SourceServiceJooqImpl implements SourceService {
    * @param sourceDefinitionId to retrieve the default max seconds between messages for.
    * @return
    */
-  private Long retrieveDefaultMaxSecondsBetweenMessages(UUID sourceDefinitionId) {
+  private Long retrieveDefaultMaxSecondsBetweenMessages(final UUID sourceDefinitionId) {
     return Long.parseLong(featureFlagClient.stringVariation(HeartbeatMaxSecondsBetweenMessages.INSTANCE, new SourceDefinition(sourceDefinitionId)));
   }
 
@@ -485,7 +492,7 @@ public class SourceServiceJooqImpl implements SourceService {
                                       final DSLContext ctx) {
     writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
     ConnectorMetadataJooqHelper.writeActorDefinitionBreakingChanges(breakingChangesForDefinition, ctx);
-    connectorMetadataJooqHelper.setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
+    ConnectorMetadataJooqHelper.writeActorDefinitionVersion(actorDefinitionVersion, ctx);
   }
 
   private Stream<StandardSourceDefinition> sourceDefQuery(final Optional<UUID> sourceDefId, final boolean includeTombstone) throws IOException {
@@ -670,17 +677,7 @@ public class SourceServiceJooqImpl implements SourceService {
   }
 
   private ActorDefinitionVersion getDefaultVersionForActorDefinitionId(final UUID actorDefinitionId, final DSLContext ctx) {
-    return getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx).orElseThrow();
-  }
-
-  /**
-   * Get an optional ADV for an actor definition's default version. The optional will be empty if the
-   * defaultVersionId of the actor definition is set to null in the DB. The only time this should be
-   * the case is if we are in the process of inserting and have already written the source definition,
-   * but not yet set its default version.
-   */
-  private Optional<ActorDefinitionVersion> getDefaultVersionForActorDefinitionIdOptional(final UUID actorDefinitionId, final DSLContext ctx) {
-    return ConnectorMetadataJooqHelper.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx);
+    return ConnectorMetadataJooqHelper.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx).orElseThrow();
   }
 
   /**

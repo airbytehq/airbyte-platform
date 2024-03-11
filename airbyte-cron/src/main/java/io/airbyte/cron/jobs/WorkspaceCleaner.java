@@ -7,6 +7,7 @@ package io.airbyte.cron.jobs;
 import static io.airbyte.cron.MicronautCronRunner.SCHEDULED_TRACE_OPERATION_NAME;
 
 import datadog.trace.api.Trace;
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.config.Configs;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.metrics.lib.ApmTraceUtils;
@@ -43,6 +44,8 @@ public class WorkspaceCleaner {
   private final long maxAgeFilesInDays;
   private final MetricClient metricClient;
 
+  public static final String DEFAULT_TEMPORAL_HISTORY_RETENTION_IN_DAYS = "30";
+
   WorkspaceCleaner(final MetricClient metricClient) {
     log.info("Creating workspace cleaner");
 
@@ -52,7 +55,7 @@ public class WorkspaceCleaner {
     this.workspaceRoot = configs.getWorkspaceRoot();
     // We align max file age on temporal for history consistency
     // It might make sense configure this independently in the future
-    this.maxAgeFilesInDays = configs.getTemporalRetentionInDays();
+    this.maxAgeFilesInDays = Integer.parseInt(EnvVar.TEMPORAL_HISTORY_RETENTION_IN_DAYS.fetch(DEFAULT_TEMPORAL_HISTORY_RETENTION_IN_DAYS));
     this.metricClient = metricClient;
   }
 

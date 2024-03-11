@@ -38,13 +38,13 @@ object WorkspacesResponseMapper {
     apiHost: String,
   ): WorkspacesResponse {
     val uriBuilder =
-      io.airbyte.server.apis.publicapi.mappers.PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(WORKSPACES_PATH))
-        .queryParam(WORKSPACE_IDS, io.airbyte.server.apis.publicapi.mappers.PaginationMapper.uuidListToQueryString(workspaceIds))
+      PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(WORKSPACES_PATH))
+        .queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
         .queryParam(INCLUDE_DELETED, includeDeleted)
     val workspacesResponse = WorkspacesResponse()
     workspacesResponse.next =
-      io.airbyte.server.apis.publicapi.mappers.PaginationMapper.getNextUrl(workspaceReadList.workspaces, limit, offset, uriBuilder)
-    workspacesResponse.previous = io.airbyte.server.apis.publicapi.mappers.PaginationMapper.getPreviousUrl(limit, offset, uriBuilder)
+      PaginationMapper.getNextUrl(workspaceReadList.workspaces, limit, offset, uriBuilder)
+    workspacesResponse.previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder)
     workspacesResponse.data =
       workspaceReadList.workspaces.stream()
         .map { obj: WorkspaceRead? -> from(obj!!) }

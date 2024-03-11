@@ -19,43 +19,11 @@ global:
     secretName: ""
     # -- Secret value for database password
     secretValue: ""
-
+  # todo: remove so there is no need to create secrets for gcs if not using gcs
   storage:
-    type: "MINIO"
-    bucket:
-      log: airbyte-dev-logs
-      state: state-storage
-      workloadOutput: state-storage
+    type: minio # default storage used
     gcs:
-      # -- The path the GCS creds are written to.
-      # If you are mounting an existing secret to extraVolumes on scheduler, server and worker
-      # deployments, then set credentials to the path of the mounted JSON file.
-      credentials: ""
-      # -- Base64 encoded json GCP credentials file contents.
-      # If credentialsJson is set then credentials auto resolves (to /secrets/gcs-log-creds/gcp.json).
       credentialsJson: ""
-    minio:
-      # -- storage minio access key
-      accessKey: minio
-      # -- storage minio secret key
-      secretKey: minio123
-      # -- storage minio endpoint
-      endpoint: http://airbyte-minio-svc:9000
-    s3:
-      # -- storage s3 region
-      region: ""
-      # -- storage s3 access key
-      accessKey:
-      # -- Existing secret
-      accessKeyExistingSecret:
-      # -- Existing secret key
-      accessKeyExistingSecretKey:
-      # -- storage s3 secret key
-      secretKey:
-      # -- Existing secret
-      secretKeyExistingSecret:
-      # -- Existing secret key
-      secretKeyExistingSecretKey:
 
   metrics:
     # -- The metric client to configure globally. Supports "otel"

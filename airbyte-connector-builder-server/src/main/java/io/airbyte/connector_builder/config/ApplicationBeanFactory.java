@@ -4,7 +4,7 @@
 
 package io.airbyte.connector_builder.config;
 
-import io.airbyte.config.EnvConfigs;
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.connector_builder.command_runner.SynchronousCdkCommandRunner;
 import io.airbyte.connector_builder.command_runner.SynchronousPythonCdkCommandRunner;
 import io.airbyte.connector_builder.exceptions.ConnectorBuilderException;
@@ -20,19 +20,19 @@ import jakarta.inject.Singleton;
 public class ApplicationBeanFactory {
 
   private String getPython() {
-    final EnvConfigs configs = new EnvConfigs();
-    if (configs.getCdkPython() == null) {
+    final var cdkPython = EnvVar.CDK_PYTHON.fetch();
+    if (cdkPython == null) {
       throw new ConnectorBuilderException("Missing `CDK_PYTHON` env var.");
     }
-    return configs.getCdkPython();
+    return cdkPython;
   }
 
   private String getCdkEntrypoint() {
-    final EnvConfigs configs = new EnvConfigs();
-    if (configs.getCdkEntrypoint() == null) {
+    final var cdkEntrypoint = EnvVar.CDK_ENTRYPOINT.fetch();
+    if (cdkEntrypoint == null) {
       throw new ConnectorBuilderException("Missing `CDK_ENTRYPOINT` env var.");
     }
-    return configs.getCdkEntrypoint();
+    return cdkEntrypoint;
   }
 
   /**

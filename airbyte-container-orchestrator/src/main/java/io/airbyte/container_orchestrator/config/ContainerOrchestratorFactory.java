@@ -4,6 +4,7 @@
 
 package io.airbyte.container_orchestrator.config;
 
+import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
@@ -53,6 +54,9 @@ import java.util.concurrent.ScheduledExecutorService;
 @Factory
 class ContainerOrchestratorFactory {
 
+  private static final String DEFAULT_NETWORK = "host";
+  private static final String DEFAULT_JOB_KUBE_NAMESPACE = "default";
+
   @Singleton
   public MetricClient metricClient() {
     MetricClientFactory.initialize(MetricEmittingApps.ORCHESTRATOR);
@@ -75,9 +79,9 @@ class ContainerOrchestratorFactory {
     return new DockerProcessFactory(
         workerConfigsProvider,
         configs.getWorkspaceRoot(), // Path.of(workspaceRoot),
-        configs.getWorkspaceDockerMount(), // workspaceDockerMount,
-        configs.getLocalDockerMount(), // localDockerMount,
-        configs.getDockerNetwork()// dockerNetwork
+        EnvVar.WORKSPACE_DOCKER_MOUNT.fetch(EnvVar.WORKSPACE_ROOT.fetch()), // workspaceDockerMount,
+        EnvVar.LOCAL_DOCKER_MOUNT.fetch(EnvVar.LOCAL_ROOT.fetch()), // localDockerMount,
+        EnvVar.DOCKER_NETWORK.fetch(DEFAULT_NETWORK)// dockerNetwork
     );
   }
 
@@ -100,7 +104,7 @@ class ContainerOrchestratorFactory {
     return new KubeProcessFactory(
         workerConfigsProvider,
         featureFlagClient,
-        configs.getJobKubeNamespace(),
+        EnvVar.JOB_KUBE_NAMESPACE.fetch(DEFAULT_JOB_KUBE_NAMESPACE),
         serviceAccount,
         new DefaultKubernetesClient(),
         kubeHeartbeatUrl);

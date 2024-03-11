@@ -45,36 +45,36 @@ object ConnectionCreateMapper {
       connectionCreateOss.namespaceFormat = connectionCreateRequest.namespaceFormat
     }
     if (connectionCreateRequest.prefix != null) {
-      connectionCreateOss.setPrefix(connectionCreateRequest.prefix)
+      connectionCreateOss.prefix = connectionCreateRequest.prefix
     }
 
     // set geography
-    connectionCreateOss.setGeography(Geography.fromValue(connectionCreateRequest.dataResidency.toString()))
+    connectionCreateOss.geography = Geography.fromValue(connectionCreateRequest.dataResidency.toString())
 
     // set schedule
     if (connectionCreateRequest.schedule != null) {
       connectionCreateOss.scheduleType = ConnectionScheduleType.fromValue(connectionCreateRequest.schedule.scheduleType.toString())
       val connectionScheduleDataCron = ConnectionScheduleDataCron()
       connectionScheduleDataCron.cronExpression = connectionCreateRequest.schedule.cronExpression
-      connectionScheduleDataCron.setCronTimeZone("UTC")
+      connectionScheduleDataCron.cronTimeZone = "UTC"
       val connectionScheduleData = ConnectionScheduleData()
-      connectionScheduleData.setCron(connectionScheduleDataCron)
-      connectionCreateOss.setScheduleData(connectionScheduleData)
+      connectionScheduleData.cron = connectionScheduleDataCron
+      connectionCreateOss.scheduleData = connectionScheduleData
     } else {
-      connectionCreateOss.setScheduleType(ConnectionScheduleType.MANUAL)
+      connectionCreateOss.scheduleType = ConnectionScheduleType.MANUAL
     }
 
     // set streams
     if (catalogId != null) {
-      connectionCreateOss.setSourceCatalogId(catalogId)
+      connectionCreateOss.sourceCatalogId = catalogId
     }
     if (configuredCatalog != null) {
-      connectionCreateOss.setSyncCatalog(configuredCatalog)
+      connectionCreateOss.syncCatalog = configuredCatalog
     }
     if (connectionCreateRequest.status != null) {
-      connectionCreateOss.setStatus(ConnectionStatus.fromValue(connectionCreateRequest.status.toString()))
+      connectionCreateOss.status = ConnectionStatus.fromValue(connectionCreateRequest.status.toString())
     } else {
-      connectionCreateOss.setStatus(ConnectionStatus.ACTIVE)
+      connectionCreateOss.status = ConnectionStatus.ACTIVE
     }
     return connectionCreateOss
   }

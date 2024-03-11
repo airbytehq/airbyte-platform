@@ -313,9 +313,9 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
             .put("USE_STREAM_CAPABLE_STATE", "true")
             .put(EnvVar.SOCAT_KUBE_CPU_LIMIT.name(), configs.getSocatSidecarKubeCpuLimit())
             .put(EnvVar.SOCAT_KUBE_CPU_REQUEST.name(), configs.getSocatSidecarKubeCpuRequest())
-            .put(EnvVar.LAUNCHDARKLY_KEY.name(), configs.getLaunchDarklyKey())
-            .put(EnvVar.FEATURE_FLAG_CLIENT.name(), configs.getFeatureFlagClient())
-            .put(EnvVar.OTEL_COLLECTOR_ENDPOINT.name(), configs.getOtelCollectorEndpoint())
+            .put(EnvVar.LAUNCHDARKLY_KEY.name(), EnvVar.LAUNCHDARKLY_KEY.fetch(""))
+            .put(EnvVar.FEATURE_FLAG_CLIENT.name(), EnvVar.FEATURE_FLAG_CLIENT.fetch(""))
+            .put(EnvVar.OTEL_COLLECTOR_ENDPOINT.name(), EnvVar.OTEL_COLLECTOR_ENDPOINT.fetch(""))
             .build());
   }
 

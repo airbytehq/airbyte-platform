@@ -44,7 +44,15 @@ public interface ActorDefinitionService {
 
   List<ActorDefinitionVersion> getActorDefinitionVersions(List<UUID> actorDefinitionVersionIds) throws IOException;
 
+  void updateActorDefinitionDefaultVersionId(final UUID actorDefinitionId, final UUID versionId) throws IOException;
+
+  Optional<ActorDefinitionVersion> getDefaultVersionForActorDefinitionIdOptional(final UUID actorDefinitionId) throws IOException;
+
   void setActorDefaultVersion(UUID actorId, UUID actorDefinitionVersionId) throws IOException;
+
+  void setActorDefaultVersions(List<UUID> actorId, UUID actorDefinitionVersionId) throws IOException;
+
+  Set<UUID> getActorsWithDefaultVersionId(UUID defaultVersionId) throws IOException;
 
   List<ActorDefinitionBreakingChange> listBreakingChangesForActorDefinition(UUID actorDefinitionId) throws IOException;
 

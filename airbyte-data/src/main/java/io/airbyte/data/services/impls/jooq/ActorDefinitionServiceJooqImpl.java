@@ -290,6 +290,35 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
         .execute());
   }
 
+  @Override
+  public void setActorDefaultVersions(final List<UUID> actorIds, final UUID actorDefinitionVersionId) throws IOException {
+    database.query(ctx -> ctx.update(Tables.ACTOR)
+        .set(Tables.ACTOR.DEFAULT_VERSION_ID, actorDefinitionVersionId)
+        .set(Tables.ACTOR.UPDATED_AT, OffsetDateTime.now())
+        .where(Tables.ACTOR.ID.in(actorIds))
+        .execute());
+  }
+
+  @Override
+  public Set<UUID> getActorsWithDefaultVersionId(final UUID defaultVersionId) throws IOException {
+    return database.query(ctx -> ctx.select(ACTOR.ID)
+        .from(ACTOR)
+        .where(ACTOR.DEFAULT_VERSION_ID.eq(defaultVersionId))
+        .fetch()
+        .stream()
+        .map(r -> r.get(ACTOR.ID))
+        .collect(Collectors.toSet()));
+  }
+
+  @Override
+  public void updateActorDefinitionDefaultVersionId(final UUID actorDefinitionId, final UUID versionId) throws IOException {
+    database.query(ctx -> ctx.update(ACTOR_DEFINITION)
+        .set(ACTOR_DEFINITION.DEFAULT_VERSION_ID, versionId)
+        .set(ACTOR_DEFINITION.UPDATED_AT, OffsetDateTime.now())
+        .where(ACTOR_DEFINITION.ID.eq(actorDefinitionId))
+        .execute());
+  }
+
   /**
    * Get the list of breaking changes available affecting an actor definition.
    *
@@ -477,7 +506,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
   }
 
   private ActorDefinitionVersion getDefaultVersionForActorDefinitionId(final UUID actorDefinitionId, final DSLContext ctx) {
-    return getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx).orElseThrow();
+    return ConnectorMetadataJooqHelper.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx).orElseThrow();
   }
 
   /**
@@ -486,15 +515,9 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
    * the case is if we are in the process of inserting and have already written the source definition,
    * but not yet set its default version.
    */
-  private Optional<ActorDefinitionVersion> getDefaultVersionForActorDefinitionIdOptional(final UUID actorDefinitionId, final DSLContext ctx) {
-    return ctx.select(Tables.ACTOR_DEFINITION_VERSION.asterisk())
-        .from(ACTOR_DEFINITION)
-        .join(ACTOR_DEFINITION_VERSION).on(Tables.ACTOR_DEFINITION_VERSION.ID.eq(Tables.ACTOR_DEFINITION.DEFAULT_VERSION_ID))
-        .where(ACTOR_DEFINITION.ID.eq(actorDefinitionId))
-        .fetch()
-        .stream()
-        .findFirst()
-        .map(DbConverter::buildActorDefinitionVersion);
+  @Override
+  public Optional<ActorDefinitionVersion> getDefaultVersionForActorDefinitionIdOptional(final UUID actorDefinitionId) throws IOException {
+    return database.query(ctx -> ConnectorMetadataJooqHelper.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx));
   }
 
   /**

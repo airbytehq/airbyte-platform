@@ -33,6 +33,8 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
+import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
@@ -58,6 +60,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.jooq.exception.DataAccessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -92,6 +95,9 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
     final ConnectionService connectionService = mock(ConnectionService.class);
+    final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
+    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
+        new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService);
     configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(database),
         new CatalogServiceJooqImpl(database),
@@ -102,7 +108,8 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
             secretsRepositoryReader,
             secretsRepositoryWriter,
             secretPersistenceConfigService,
-            connectionService),
+            connectionService,
+            actorDefinitionVersionUpdater),
         new OAuthServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
@@ -113,7 +120,8 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
             secretsRepositoryReader,
             secretsRepositoryWriter,
             secretPersistenceConfigService,
-            connectionService),
+            connectionService,
+            actorDefinitionVersionUpdater),
         new WorkspaceServiceJooqImpl(database,
             featureFlagClient,
             secretsRepositoryReader,
@@ -498,22 +506,23 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(initialSourceDefinitionDefaultVersionId, initialSourceDefaultVersionId);
 
     // Introduce a breaking change between 0.0.1 and UPGRADE_IMAGE_TAG to make the upgrade breaking, but
-    // with a tag that will
-    // fail validation. We want to check that the state is rolled back correctly.
-    final String invalidUpgradeTag = "1.0";
+    // with a version that will fail to write (due to null docker repo).
+    // We want to check that the state is rolled back correctly.
+    final String invalidVersion = "1.0.0";
     final List<ActorDefinitionBreakingChange> breakingChangesForDef =
-        List.of(MockData.actorDefinitionBreakingChange("1.0.0").withActorDefinitionId(sourceDefId));
+        List.of(MockData.actorDefinitionBreakingChange(invalidVersion).withActorDefinitionId(sourceDefId));
 
     final UUID newVersionId = UUID.randomUUID();
     final ActorDefinitionVersion newVersion = MockData.actorDefinitionVersion()
         .withActorDefinitionId(sourceDefId)
         .withVersionId(newVersionId)
-        .withDockerImageTag(invalidUpgradeTag)
+        .withDockerRepository(null)
+        .withDockerImageTag(invalidVersion)
         .withDocumentationUrl("https://www.something.new");
 
     final StandardSourceDefinition updatedSourceDefinition = Jsons.clone(sourceDefinition).withName("updated name");
 
-    assertThrows(IllegalArgumentException.class,
+    assertThrows(DataAccessException.class,
         () -> configRepository.writeConnectorMetadata(updatedSourceDefinition, newVersion, breakingChangesForDef));
 
     final UUID sourceDefinitionDefaultVersionIdAfterFailedUpgrade =
@@ -523,7 +532,7 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     final StandardSourceDefinition sourceDefinitionAfterFailedUpgrade =
         configRepository.getStandardSourceDefinition(sourceDefId);
     final Optional<ActorDefinitionVersion> newActorDefinitionVersionAfterFailedUpgrade =
-        configRepository.getActorDefinitionVersion(sourceDefId, invalidUpgradeTag);
+        configRepository.getActorDefinitionVersion(sourceDefId, invalidVersion);
     final ActorDefinitionVersion defaultActorDefinitionVersionAfterFailedUpgrade =
         configRepository.getActorDefinitionVersion(sourceDefinitionDefaultVersionIdAfterFailedUpgrade);
 

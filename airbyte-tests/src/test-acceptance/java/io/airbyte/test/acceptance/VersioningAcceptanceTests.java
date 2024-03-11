@@ -4,6 +4,7 @@
 
 package io.airbyte.test.acceptance;
 
+import static io.airbyte.test.acceptance.AcceptanceTestConstants.IS_ENTERPRISE_TRUE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import dev.failsafe.RetryPolicy;
@@ -37,14 +38,21 @@ class VersioningAcceptanceTests {
   private static final String AIRBYTE_SERVER_HOST = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001");
 
   @BeforeAll
-  static void init() throws IOException, URISyntaxException {
+  static void init() throws IOException {
     final RetryPolicy<okhttp3.Response> policy = RetryPolicy.<okhttp3.Response>builder()
         .handle(Throwable.class)
-        .withMaxAttempts(6)
-        .withBackoff(Duration.ofSeconds(1), Duration.ofSeconds(60)).build();
+        .withMaxAttempts(10)
+        .withBackoff(Duration.ofSeconds(1), Duration.ofSeconds(120)).build();
 
-    final OkHttpClient client = new OkHttpClient.Builder().readTimeout(Duration.ofSeconds(60)).build();
-    apiClient2 = new AirbyteApiClient2(String.format("%s/api", AIRBYTE_SERVER_HOST), policy, client, /* throwOn5xx */ true);
+    final OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder().readTimeout(Duration.ofSeconds(60));
+
+    if (IS_ENTERPRISE_TRUE) {
+      // In Enterprise, auth features are enabled. Add this header via
+      // interceptor so that the API client can auth as an instance admin.
+      clientBuilder.addInterceptor(new AcceptanceTestAuthHeaderInterceptor());
+    }
+
+    apiClient2 = new AirbyteApiClient2(String.format("%s/api", AIRBYTE_SERVER_HOST), policy, clientBuilder.build());
 
     workspaceId = apiClient2.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();
   }

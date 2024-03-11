@@ -1,23 +1,19 @@
 @use "scss/variables";
 
 .alignSelfStart {
-  align-items: flex-end;
+  align-self: flex-start;
 }
 
 .alignSelfEnd {
-  align-items: flex-end;
+  align-self: flex-end;
 }
 
 .alignSelfCenter {
-  align-items: center;
-}
-
-.alignSelfBaseline {
-  align-items: baseline;
+  align-self: center;
 }
 
 .alignSelfStretch {
-  align-items: stretch;
+  align-self: stretch;
 }
 
 .grow {

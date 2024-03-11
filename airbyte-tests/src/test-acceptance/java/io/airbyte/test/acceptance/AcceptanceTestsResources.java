@@ -4,6 +4,10 @@
 
 package io.airbyte.test.acceptance;
 
+import static io.airbyte.commons.auth.AirbyteAuthConstants.X_AIRBYTE_AUTH_HEADER;
+import static io.airbyte.test.acceptance.AcceptanceTestConstants.IS_ENTERPRISE_TRUE;
+import static io.airbyte.test.acceptance.AcceptanceTestConstants.X_AIRBYTE_AUTH_HEADER_TEST_CLIENT_VALUE;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -62,7 +66,7 @@ public class AcceptanceTestsResources {
   static final Boolean WITHOUT_SCD_TABLE = false;
   static final String GATEWAY_AUTH_HEADER = "X-Endpoint-API-UserInfo";
   // NOTE: this is just a base64 encoding of a jwt representing a test user in some deployments.
-  static final String AIRBYTE_AUTH_HEADER = "eyJ1c2VyX2lkIjogImNsb3VkLWFwaSIsICJlbWFpbF92ZXJpZmllZCI6ICJ0cnVlIn0K";
+  static final String CLOUD_API_USER_HEADER_VALUE = "eyJ1c2VyX2lkIjogImNsb3VkLWFwaSIsICJlbWFpbF92ZXJpZmllZCI6ICJ0cnVlIn0K";
   static final String AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID = "AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID";
   static final String AIRBYTE_SERVER_HOST = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001");
   static final UUID POSTGRES_SOURCE_DEF_ID = UUID.fromString("decd338e-5647-4c0b-adf4-da0e75f5a750");
@@ -282,7 +286,13 @@ public class AcceptanceTestsResources {
         .setPort(url.getPort())
         .setBasePath("/api");
     if (isGke) {
-      underlyingApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
+      underlyingApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, CLOUD_API_USER_HEADER_VALUE));
+    }
+    if (IS_ENTERPRISE_TRUE) {
+      // In Enterprise, auth features are enabled. Add this header
+      // so that the API client can auth as an instance admin.
+
+      underlyingApiClient.setRequestInterceptor(builder -> builder.setHeader(X_AIRBYTE_AUTH_HEADER, X_AIRBYTE_AUTH_HEADER_TEST_CLIENT_VALUE).build());
     }
     final var apiClient = new AirbyteApiClient(underlyingApiClient);
 
@@ -292,7 +302,13 @@ public class AcceptanceTestsResources {
         .setPort(url.getPort())
         .setBasePath("/api");
     if (isGke) {
-      underlyingWebBackendApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
+      underlyingWebBackendApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, CLOUD_API_USER_HEADER_VALUE).build());
+    }
+    if (IS_ENTERPRISE_TRUE) {
+      // In Enterprise, auth features are enabled. Add this header
+      // so that the API client can auth as an instance admin.
+      underlyingWebBackendApiClient
+          .setRequestInterceptor(builder -> builder.setHeader(X_AIRBYTE_AUTH_HEADER, X_AIRBYTE_AUTH_HEADER_TEST_CLIENT_VALUE).build());
     }
     final var webBackendApi = new WebBackendApi(underlyingWebBackendApiClient);
 

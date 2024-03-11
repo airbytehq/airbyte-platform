@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.validation;
 
+import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
+
 import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException;
 import io.airbyte.config.Permission.PermissionType;
@@ -13,6 +15,7 @@ import io.micronaut.context.annotation.Replaces;
 import io.micronaut.security.utils.SecurityService;
 import jakarta.inject.Singleton;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Enterprise edition implementation of {@link ActorDefinitionAccessValidator}. Allows any
@@ -24,6 +27,7 @@ import java.util.UUID;
  */
 @Singleton
 @RequiresAirbyteProEnabled
+@Slf4j
 @Replaces(CommunityActorDefinitionAccessValidator.class)
 public class EnterpriseActorDefinitionAccessValidator implements ActorDefinitionAccessValidator {
 
@@ -42,7 +46,7 @@ public class EnterpriseActorDefinitionAccessValidator implements ActorDefinition
       final String authId = securityService.username().orElse(null);
 
       // instance admin always has write access
-      if (permissionPersistence.isAuthUserInstanceAdmin(authId)) {
+      if (securityService.hasRole(ADMIN)) {
         return;
       }
 

@@ -25,6 +25,7 @@ class OrchestratorPodFactory(
   @Named("orchestratorEnvVars") private val sharedEnvVars: List<EnvVar>,
   @Named("orchestratorContainerPorts") private val containerPorts: List<ContainerPort>,
   private val volumeFactory: VolumeFactory,
+  private val initContainerFactory: InitContainerFactory,
 ) {
   fun create(
     allLabels: Map<String, String>,
@@ -55,42 +56,7 @@ class OrchestratorPodFactory(
 
     val containerResources = KubePodProcess.getResourceRequirementsBuilder(resourceRequirements).build()
 
-    val initContainer =
-      ContainerBuilder()
-        .withName(KubePodProcess.INIT_CONTAINER_NAME)
-        .withImage("busybox:1.35")
-        .withVolumeMounts(volumeMounts)
-        .withResources(containerResources)
-        .withCommand(
-          listOf(
-            "sh",
-            "-c",
-            String.format(
-              """
-              i=0
-              until [ ${'$'}i -gt 60 ]
-              do
-                echo "${'$'}i - waiting for config file transfer to complete..."
-                # check if the upload-complete file exists, if so exit without error
-                if [ -f "%s/%s" ]; then
-                  # Wait 50ms for the incoming kubectl cp call to cleanly exit
-                  sleep .05
-                  exit 0
-                fi
-                i=${'$'}((i+1))
-                sleep 1
-              done
-              echo "config files did not transfer in time"
-              # no upload-complete file was created in time, exit with error
-              exit 1
-              
-              """.trimIndent(),
-              KubePodProcess.CONFIG_DIR,
-              KubePodProcess.SUCCESS_FILE_NAME,
-            ),
-          ),
-        )
-        .build()
+    val initContainer = initContainerFactory.create(containerResources, volumeMounts)
 
     val extraKubeEnv = additionalEnvVars.map { (k, v) -> EnvVar(k, v, null) }
 

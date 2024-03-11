@@ -4,6 +4,9 @@
 
 package io.airbyte.test.acceptance;
 
+import static io.airbyte.commons.auth.AirbyteAuthConstants.X_AIRBYTE_AUTH_HEADER;
+import static io.airbyte.test.acceptance.AcceptanceTestConstants.IS_ENTERPRISE_TRUE;
+import static io.airbyte.test.acceptance.AcceptanceTestConstants.X_AIRBYTE_AUTH_HEADER_TEST_CLIENT_VALUE;
 import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_ID;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -93,7 +96,14 @@ class AdvancedAcceptanceTests {
         new ApiClient().setScheme(url.getScheme())
             .setHost(url.getHost())
             .setPort(url.getPort())
-            .setBasePath("/api"));
+            .setBasePath("/api")
+            .setRequestInterceptor(builder -> {
+              if (IS_ENTERPRISE_TRUE) {
+                // In Enterprise, auth features are enabled. Add this header
+                // so that the API client can auth as an instance admin.
+                builder.setHeader(X_AIRBYTE_AUTH_HEADER, X_AIRBYTE_AUTH_HEADER_TEST_CLIENT_VALUE);
+              }
+            }));
     // work in whatever default workspace is present.
     workspaceId = apiClient.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();
     LOGGER.info("workspaceId = " + workspaceId);

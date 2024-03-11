@@ -1,7 +1,7 @@
 import { BroadcastChannel } from "broadcast-channel";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useRef } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
-import { useAsyncFn, useEffectOnce, useEvent } from "react-use";
+import { useAsyncFn, useEffectOnce, useEvent, useUnmount } from "react-use";
 import { v4 as uuid } from "uuid";
 
 import { useCompleteOAuth, useConsentUrls, isCommonRequestError } from "core/api";
@@ -22,55 +22,59 @@ import { useCurrentWorkspace } from "./useWorkspace";
 import { useQuery } from "../useQuery";
 
 let windowObjectReference: Window | null = null;
-let oauthPopupIdentifier: string | null = null;
 
+interface CompletedOAuthEvent {
+  type: "completed";
+  query: Record<string, unknown>;
+}
+
+interface TakeoverOAuthEvent {
+  type: "takeover";
+}
+
+interface CancelOAuthEvent {
+  type: "cancel";
+  tabUuid: string;
+}
+
+type OAuthEvent = CompletedOAuthEvent | TakeoverOAuthEvent | CancelOAuthEvent;
+
+const tabUuid = uuid();
 const OAUTH_REDIRECT_URL = `${window.location.protocol}//${window.location.host}`;
 export const OAUTH_BROADCAST_CHANNEL_NAME = "airbyte_oauth_callback";
-const OAUTH_POPUP_IDENTIFIER_KEY = "airbyte_oauth_popup_identifier";
 
 /**
  * Since some OAuth providers clear out the window.opener and window.name properties,
- * we need to use a different mechanism to relate the popup window back to this tab.
+ * we must listen for a message on a broadcast channel to complete the OAuth flow.
  *
- * Therefore, this method first opens the window to the /auth_flow page, with the
- * consent URL as a query param and a random UUID as the window name.
+ * Since we don't have any context to relate the complete OAuth payload back to the
+ * tab that started the flow, we must restrict the OAuth flow to only be in progress
+ * for a single tab at a time.
  *
- * This /auth_flow page will store the UUID into session storage before redirecting
- * to the consent URL.
+ * We do this by closing the popup and broadcast channels for all other tabs whenever
+ * a new OAuth flow is started (using the type: "takeover" event).
  *
- * Once the OAuth consent flow is finished and the window is redirected back to
- * /auth_flow, the UUID is retrieved from session storage and attached to the message
- * sent to the broadcast channel.
+ * When navigating away from this page, we close the popup and broadcast channel for
+ * this tab specifically by passing the tabUuid in the broadcast channel message
+ * with type: "cancel".
  *
- * This tab listens for a message on the broadcast channel with the corresponding
- * UUID, and completes the OAuth flow when it receives the message.
+ * When the OAuth flow is completed, the popup window emits a message with
+ * type: "completed" along with the oauth body, which the single tab that is listening
+ * on the broadcast channel receives and uses to complete the OAuth flow.
  *
  * @param url the OAuth consent URL
  */
-function openWindow(url: string): void {
-  if (windowObjectReference == null || windowObjectReference.closed) {
-    /* if the pointer to the window object in memory does not exist
+function openWindow(url: string): Window | null {
+  /* if the pointer to the window object in memory does not exist
        or if such pointer exists but the window was closed */
 
-    oauthPopupIdentifier = uuid();
-    // Hook does not add type safetiness as we have to dynamically craft the key from the identifier
-    // eslint-disable-next-line @airbyte/no-local-storage
-    localStorage.setItem(`airbyte_consent_url:${oauthPopupIdentifier}`, url);
-    const strWindowFeatures = "toolbar=no,menubar=no,width=600,height=700,top=100,left=100";
-    windowObjectReference = window.open(
-      `/auth_flow?airbyte_oauth_popup_identifier=${oauthPopupIdentifier}`,
-      "",
-      strWindowFeatures
-    );
-    /* then create it. The new window will be created and
+  // Hook does not add type safetiness as we have to dynamically craft the key from the identifier
+  // eslint-disable-next-line @airbyte/no-local-storage
+  const strWindowFeatures = "toolbar=no,menubar=no,width=600,height=700";
+  windowObjectReference = window.open(url, "", strWindowFeatures);
+  /* then create it. The new window will be created and
        will be brought on top of any other window. */
-  } else {
-    windowObjectReference.focus();
-    /* else the window reference must exist and the window
-       is not closed; therefore, we can bring it back on top of any other
-       window with the focus() method. There would be no need to re-create
-       the window or to reload the referenced resource. */
-  }
+  return windowObjectReference;
 }
 
 export function useConnectorAuth(): {
@@ -189,16 +193,6 @@ export function useRunOauthFlow({
   const param = useRef<SourceOauthConsentRequest | DestinationOauthConsentRequest>();
   const connectorType = isSourceDefinitionSpecification(connector) ? "source" : "destination";
   const { trackOAuthSuccess, trackOAuthAttemp } = useAnalyticsTrackFunctions(connectorType);
-  const [{ loading }, onStartOauth] = useAsyncFn(
-    async (oauthInputParams: Record<string, unknown>) => {
-      trackOAuthAttemp(connectorDefinition);
-      const consentRequestInProgress = await getConsentUrl(connector, oauthInputParams);
-
-      param.current = consentRequestInProgress.payload;
-      openWindow(consentRequestInProgress.consentUrl);
-    },
-    [connector]
-  );
 
   const [{ loading: loadingCompleteOauth, value }, completeOauth] = useAsyncFn(
     async (queryParams: Record<string, unknown>) => {
@@ -234,32 +228,52 @@ export function useRunOauthFlow({
     [connector, onDone]
   );
 
-  useEffectOnce(() => {
-    const bc = new BroadcastChannel(OAUTH_BROADCAST_CHANNEL_NAME);
-    bc.onmessage = async (event) => {
-      if (event.airbyte_oauth_popup_identifier === oauthPopupIdentifier) {
-        await completeOauth(event.query);
-      }
-    };
+  const [{ loading }, onStartOauth] = useAsyncFn(
+    async (oauthInputParams: Record<string, unknown>) => {
+      trackOAuthAttemp(connectorDefinition);
+      const consentRequestInProgress = await getConsentUrl(connector, oauthInputParams);
 
-    return () => {
-      bc.close();
-    };
+      param.current = consentRequestInProgress.payload;
+
+      if (windowObjectReference && !windowObjectReference.closed) {
+        // popup window is already open, so just focus it
+        windowObjectReference.focus();
+      } else {
+        // popup window is not open, so open it and start listening on broadcast channel
+        const popupWindow = openWindow(consentRequestInProgress.consentUrl);
+
+        const bc = new BroadcastChannel<OAuthEvent>(OAUTH_BROADCAST_CHANNEL_NAME);
+        bc.postMessage({ type: "takeover" });
+        bc.onmessage = async (event) => {
+          if (event.type === "cancel" && event.tabUuid !== tabUuid) {
+            // cancel event is not meant for this tab, so ignore it
+            return;
+          }
+          if (event.type === "completed") {
+            await completeOauth(event.query);
+          }
+          // OAuth flow is completed or taken over by another tab, so close the broadcast channel
+          // and popup window if it is still open.
+          await bc.close();
+          popupWindow?.close();
+        };
+      }
+    },
+    [connector]
+  );
+
+  // close the popup window and broadcast channel when unmounting
+  useUnmount(() => {
+    const cancelBc = new BroadcastChannel<OAuthEvent>(OAUTH_BROADCAST_CHANNEL_NAME);
+    cancelBc.postMessage({ type: "cancel", tabUuid });
+    cancelBc.close();
   });
 
   const onCloseWindow = useCallback(() => {
     windowObjectReference?.close();
   }, []);
 
-  useEffect(
-    () => () => {
-      // Close popup oauth window when unmounting
-      onCloseWindow();
-    },
-    [onCloseWindow]
-  );
-
-  // Close popup oauth window when we close the original tab
+  // close popup oauth window when we close the original tab
   useEvent("beforeunload", onCloseWindow);
 
   return {
@@ -270,32 +284,12 @@ export function useRunOauthFlow({
 }
 
 export function useResolveNavigate(): void {
-  const query = useQuery<{ airbyte_oauth_popup_identifier: string }>();
+  const query = useQuery();
 
+  // pass the OAuth payload to the broadcast channel and close the window
   useEffectOnce(() => {
-    const airbyteOauthPopupIdentifier = query.airbyte_oauth_popup_identifier;
-    if (airbyteOauthPopupIdentifier) {
-      // Hook does not add type safetiness as we have to dynamically craft the key from the identifier
-      // eslint-disable-next-line @airbyte/no-local-storage
-      const consentUrl = localStorage.getItem(`airbyte_consent_url:${airbyteOauthPopupIdentifier}`);
-      if (!consentUrl) {
-        throw new Error("No consent URL found for the given oauth popup identifier.");
-      }
-      // eslint-disable-next-line @airbyte/no-local-storage
-      localStorage.removeItem(`airbyte_consent_url:${airbyteOauthPopupIdentifier}`);
-      if (consentUrl.startsWith("http://") || consentUrl.startsWith("https://")) {
-        sessionStorage.setItem(OAUTH_POPUP_IDENTIFIER_KEY, airbyteOauthPopupIdentifier);
-        window.location.assign(consentUrl);
-      } else {
-        throw new Error("Did try to redirect to a non http/https URL.");
-      }
-    } else {
-      const bc = new BroadcastChannel(OAUTH_BROADCAST_CHANNEL_NAME);
-      bc.postMessage({
-        query,
-        airbyte_oauth_popup_identifier: sessionStorage.getItem(OAUTH_POPUP_IDENTIFIER_KEY),
-      });
-      window.close();
-    }
+    const bc = new BroadcastChannel<OAuthEvent>(OAUTH_BROADCAST_CHANNEL_NAME);
+    bc.postMessage({ type: "completed", query });
+    window.close();
   });
 }

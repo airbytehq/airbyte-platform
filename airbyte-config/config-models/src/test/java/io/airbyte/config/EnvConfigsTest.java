@@ -5,11 +5,9 @@
 package io.airbyte.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.version.AirbyteVersion;
@@ -20,7 +18,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("PMD.NullAssignment")
@@ -83,24 +80,6 @@ class EnvConfigsTest {
   }
 
   @Test
-  void testLocalRoot() {
-    envMap.put(EnvVar.LOCAL_ROOT.name(), null);
-    assertThrows(IllegalArgumentException.class, () -> config.getLocalRoot());
-
-    envMap.put(EnvVar.LOCAL_ROOT.name(), ABCDEF);
-    assertEquals(Paths.get(ABCDEF), config.getLocalRoot());
-  }
-
-  @Test
-  void testConfigRoot() {
-    envMap.put(EnvVar.CONFIG_ROOT.name(), null);
-    assertThrows(IllegalArgumentException.class, () -> config.getConfigRoot());
-
-    envMap.put(EnvVar.CONFIG_ROOT.name(), "a/b");
-    assertEquals(Paths.get("a/b"), config.getConfigRoot());
-  }
-
-  @Test
   void testGetDatabaseUser() {
     envMap.put(EnvVar.DATABASE_USER.name(), null);
     assertThrows(IllegalArgumentException.class, () -> config.getDatabaseUser());
@@ -125,60 +104,6 @@ class EnvConfigsTest {
 
     envMap.put(EnvVar.DATABASE_URL.name(), "url");
     assertEquals("url", config.getDatabaseUrl());
-  }
-
-  @Test
-  void testGetWorkspaceDockerMount() {
-    envMap.put(EnvVar.WORKSPACE_DOCKER_MOUNT.name(), null);
-    envMap.put(EnvVar.WORKSPACE_ROOT.name(), ABCDEF);
-    assertEquals(ABCDEF, config.getWorkspaceDockerMount());
-
-    envMap.put(EnvVar.WORKSPACE_DOCKER_MOUNT.name(), ROOT);
-    envMap.put(EnvVar.WORKSPACE_ROOT.name(), ABCDEF);
-    assertEquals(ROOT, config.getWorkspaceDockerMount());
-
-    envMap.put(EnvVar.WORKSPACE_DOCKER_MOUNT.name(), null);
-    envMap.put(EnvVar.WORKSPACE_ROOT.name(), null);
-    assertThrows(IllegalArgumentException.class, () -> config.getWorkspaceDockerMount());
-  }
-
-  @Test
-  void testGetLocalDockerMount() {
-    envMap.put(EnvVar.LOCAL_DOCKER_MOUNT.name(), null);
-    envMap.put(EnvVar.LOCAL_ROOT.name(), ABCDEF);
-    assertEquals(ABCDEF, config.getLocalDockerMount());
-
-    envMap.put(EnvVar.LOCAL_DOCKER_MOUNT.name(), ROOT);
-    envMap.put(EnvVar.LOCAL_ROOT.name(), ABCDEF);
-    assertEquals(ROOT, config.getLocalDockerMount());
-
-    envMap.put(EnvVar.LOCAL_DOCKER_MOUNT.name(), null);
-    envMap.put(EnvVar.LOCAL_ROOT.name(), null);
-    assertThrows(IllegalArgumentException.class, () -> config.getLocalDockerMount());
-  }
-
-  @Test
-  void testDockerNetwork() {
-    envMap.put(EnvVar.DOCKER_NETWORK.name(), null);
-    assertEquals("host", config.getDockerNetwork());
-
-    envMap.put(EnvVar.DOCKER_NETWORK.name(), ABC);
-    assertEquals(ABC, config.getDockerNetwork());
-  }
-
-  @Test
-  void testDeploymentMode() {
-    envMap.put(EnvVar.DEPLOYMENT_MODE.name(), null);
-    assertEquals(Configs.DeploymentMode.OSS, config.getDeploymentMode());
-
-    envMap.put(EnvVar.DEPLOYMENT_MODE.name(), "CLOUD");
-    assertEquals(Configs.DeploymentMode.CLOUD, config.getDeploymentMode());
-
-    envMap.put(EnvVar.DEPLOYMENT_MODE.name(), "oss");
-    assertEquals(Configs.DeploymentMode.OSS, config.getDeploymentMode());
-
-    envMap.put(EnvVar.DEPLOYMENT_MODE.name(), "OSS");
-    assertEquals(Configs.DeploymentMode.OSS, config.getDeploymentMode());
   }
 
   @Test
@@ -251,35 +176,6 @@ class EnvConfigsTest {
 
     envMap.put(EnvVar.JOB_KUBE_NODE_SELECTORS.name(), AIRB_SERV_SOME_NOTHING);
     assertEquals(config.getJobKubeNodeSelectors(), Map.of(AIRBYTE, SERVER, SOMETHING, NOTHING));
-  }
-
-  @Test
-  void testPublishMetrics() {
-    envMap.put(EnvVar.PUBLISH_METRICS.name(), "true");
-    assertTrue(config.getPublishMetrics());
-
-    envMap.put(EnvVar.PUBLISH_METRICS.name(), "false");
-    assertFalse(config.getPublishMetrics());
-
-    envMap.put(EnvVar.PUBLISH_METRICS.name(), null);
-    assertFalse(config.getPublishMetrics());
-
-    envMap.put(EnvVar.PUBLISH_METRICS.name(), "");
-    assertFalse(config.getPublishMetrics());
-  }
-
-  @Test
-  @DisplayName("Should parse constant tags")
-  void testDDConstantTags() {
-    assertEquals(List.of(), config.getDDConstantTags());
-
-    envMap.put(EnvVar.DD_CONSTANT_TAGS.name(), " ");
-    assertEquals(List.of(), config.getDDConstantTags());
-
-    envMap.put(EnvVar.DD_CONSTANT_TAGS.name(), "airbyte_instance:dev,k8s-cluster:eks-dev");
-    final List<String> expected = List.of("airbyte_instance:dev", "k8s-cluster:eks-dev");
-    assertEquals(expected, config.getDDConstantTags());
-    assertEquals(2, config.getDDConstantTags().size());
   }
 
   @Test

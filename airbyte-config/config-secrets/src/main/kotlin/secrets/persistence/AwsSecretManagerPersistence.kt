@@ -180,7 +180,7 @@ class AwsClient(
     if (serializedConfig == null) {
       logger.debug { "fetching access key/secret key based AWS secret manager" }
       AWSSecretsManagerClientBuilder.standard().withRegion(awsRegion).apply {
-        if (awsAccessKey != null && awsSecretKey != null) {
+        if (!awsAccessKey.isNullOrEmpty() && !awsSecretKey.isNullOrEmpty()) {
           withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
         }
       }.build()
@@ -188,7 +188,7 @@ class AwsClient(
       logger.debug { "fetching role based AWS secret manager" }
       val stsClient =
         AWSSecurityTokenServiceClientBuilder.standard().withRegion(awsRegion).apply {
-          if (awsAccessKey != null && awsSecretKey != null) {
+          if (!awsAccessKey.isNullOrEmpty() && !awsSecretKey.isNullOrEmpty()) {
             withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
           }
         }.build()
