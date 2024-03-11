@@ -6,10 +6,12 @@ package io.airbyte.config.persistence.version_overrides;
 
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.ConfigOriginType;
 import io.airbyte.config.ConfigResourceType;
 import io.airbyte.config.ConfigScopeType;
 import io.airbyte.config.ScopedConfiguration;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ScopedConfigurationService;
@@ -71,17 +73,19 @@ public class ConfigurationDefinitionVersionOverrideProvider implements Definitio
   }
 
   @Override
-  public Optional<ActorDefinitionVersion> getOverride(final ActorType actorType,
-                                                      final UUID actorDefinitionId,
-                                                      final UUID workspaceId,
-                                                      final @Nullable UUID actorId,
-                                                      final ActorDefinitionVersion defaultVersion) {
+  public Optional<ActorDefinitionVersionWithOverrideStatus> getOverride(final ActorType actorType,
+                                                                        final UUID actorDefinitionId,
+                                                                        final UUID workspaceId,
+                                                                        final @Nullable UUID actorId,
+                                                                        final ActorDefinitionVersion defaultVersion) {
 
-    final Optional<ScopedConfiguration> config = getScopedConfig(actorDefinitionId, workspaceId, actorId);
-    if (config.isPresent()) {
+    final Optional<ScopedConfiguration> optConfig = getScopedConfig(actorDefinitionId, workspaceId, actorId);
+    if (optConfig.isPresent()) {
+      final ScopedConfiguration config = optConfig.get();
       try {
-        final ActorDefinitionVersion version = actorDefinitionService.getActorDefinitionVersion(UUID.fromString(config.get().getValue()));
-        return Optional.of(version);
+        final ActorDefinitionVersion version = actorDefinitionService.getActorDefinitionVersion(UUID.fromString(config.getValue()));
+        final boolean isManualOverride = config.getOriginType() == ConfigOriginType.USER;
+        return Optional.of(new ActorDefinitionVersionWithOverrideStatus(version, isManualOverride));
       } catch (final ConfigNotFoundException | IOException e) {
         throw new RuntimeException(e);
       }

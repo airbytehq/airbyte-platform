@@ -17,6 +17,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AllowedHosts;
+import io.airbyte.config.ConfigOriginType;
 import io.airbyte.config.ConfigResourceType;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfigScopeType;
@@ -25,6 +26,7 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ScopedConfiguration;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SuggestedStreams;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ScopedConfigurationService;
@@ -39,6 +41,8 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class ConfigurationDefinitionVersionOverrideProviderTest {
 
@@ -113,7 +117,7 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
             ConfigScopeType.ACTOR, ACTOR_ID)))
                 .thenReturn(Optional.empty());
 
-    final Optional<ActorDefinitionVersion> optResult =
+    final Optional<ActorDefinitionVersionWithOverrideStatus> optResult =
         overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
     assertTrue(optResult.isEmpty());
 
@@ -125,8 +129,9 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
     verifyNoInteractions(mActorDefinitionService);
   }
 
-  @Test
-  void testGetVersionWithOverride() throws ConfigNotFoundException, IOException {
+  @ParameterizedTest
+  @ValueSource(strings = {"user", "breaking_change"})
+  void testGetVersionWithOverride(final String originTypeStr) throws ConfigNotFoundException, IOException {
     final UUID versionId = UUID.randomUUID();
     final ScopedConfiguration versionConfig = new ScopedConfiguration()
         .withId(UUID.randomUUID())
@@ -134,7 +139,8 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
         .withScopeId(WORKSPACE_ID)
         .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
         .withResourceId(ACTOR_DEFINITION_ID)
-        .withValue(versionId.toString());
+        .withValue(versionId.toString())
+        .withOriginType(ConfigOriginType.fromValue(originTypeStr));
 
     when(mScopedConfigurationService.getScopedConfiguration(ConnectorVersionKey.INSTANCE, ConfigResourceType.ACTOR_DEFINITION, ACTOR_DEFINITION_ID,
         Map.of(
@@ -145,11 +151,14 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
 
     when(mActorDefinitionService.getActorDefinitionVersion(versionId)).thenReturn(OVERRIDE_VERSION);
 
-    final Optional<ActorDefinitionVersion> optResult =
+    final Optional<ActorDefinitionVersionWithOverrideStatus> optResult =
         overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
 
     assertTrue(optResult.isPresent());
-    assertEquals(OVERRIDE_VERSION, optResult.get());
+    assertEquals(OVERRIDE_VERSION, optResult.get().actorDefinitionVersion());
+
+    final boolean expectedOverrideStatus = originTypeStr.equals("user");
+    assertEquals(expectedOverrideStatus, optResult.get().isOverrideApplied());
 
     verify(mScopedConfigurationService).getScopedConfiguration(ConnectorVersionKey.INSTANCE, ConfigResourceType.ACTOR_DEFINITION, ACTOR_DEFINITION_ID,
         Map.of(
@@ -161,8 +170,9 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
     verifyNoMoreInteractions(mScopedConfigurationService, mActorDefinitionService);
   }
 
-  @Test
-  void testGetVersionWithOverrideNoActor() throws ConfigNotFoundException, IOException {
+  @ParameterizedTest
+  @ValueSource(strings = {"user", "breaking_change"})
+  void testGetVersionWithOverrideNoActor(final String originTypeStr) throws ConfigNotFoundException, IOException {
     final UUID versionId = UUID.randomUUID();
     final ScopedConfiguration versionConfig = new ScopedConfiguration()
         .withId(UUID.randomUUID())
@@ -170,7 +180,8 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
         .withScopeId(WORKSPACE_ID)
         .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
         .withResourceId(ACTOR_DEFINITION_ID)
-        .withValue(versionId.toString());
+        .withValue(versionId.toString())
+        .withOriginType(ConfigOriginType.fromValue(originTypeStr));
 
     when(mScopedConfigurationService.getScopedConfiguration(ConnectorVersionKey.INSTANCE, ConfigResourceType.ACTOR_DEFINITION, ACTOR_DEFINITION_ID,
         Map.of(
@@ -180,11 +191,14 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
 
     when(mActorDefinitionService.getActorDefinitionVersion(versionId)).thenReturn(OVERRIDE_VERSION);
 
-    final Optional<ActorDefinitionVersion> optResult =
+    final Optional<ActorDefinitionVersionWithOverrideStatus> optResult =
         overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, null, DEFAULT_VERSION);
 
     assertTrue(optResult.isPresent());
-    assertEquals(OVERRIDE_VERSION, optResult.get());
+    assertEquals(OVERRIDE_VERSION, optResult.get().actorDefinitionVersion());
+
+    final boolean expectedOverrideStatus = originTypeStr.equals("user");
+    assertEquals(expectedOverrideStatus, optResult.get().isOverrideApplied());
 
     verify(mScopedConfigurationService).getScopedConfiguration(ConnectorVersionKey.INSTANCE, ConfigResourceType.ACTOR_DEFINITION, ACTOR_DEFINITION_ID,
         Map.of(

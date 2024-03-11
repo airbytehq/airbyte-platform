@@ -125,7 +125,7 @@ public class ActorDefinitionVersionHelper {
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final ActorDefinitionVersion defaultVersion = getDefaultSourceVersion(sourceDefinition, workspaceId, actorId);
 
-    Optional<ActorDefinitionVersion> versionOverride = Optional.empty();
+    Optional<ActorDefinitionVersionWithOverrideStatus> versionOverride = Optional.empty();
 
     if (featureFlagClient.boolVariation(EnableConfigurationOverrideProvider.INSTANCE, new Workspace(workspaceId))) {
       versionOverride = configOverrideProvider.getOverride(
@@ -145,7 +145,7 @@ public class ActorDefinitionVersionHelper {
           defaultVersion);
     }
 
-    return new ActorDefinitionVersionWithOverrideStatus(versionOverride.orElse(defaultVersion), versionOverride.isPresent());
+    return versionOverride.orElse(new ActorDefinitionVersionWithOverrideStatus(defaultVersion, false));
   }
 
   /**
@@ -189,7 +189,7 @@ public class ActorDefinitionVersionHelper {
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final ActorDefinitionVersion defaultVersion = getDefaultDestinationVersion(destinationDefinition, workspaceId, actorId);
 
-    Optional<ActorDefinitionVersion> versionOverride = Optional.empty();
+    Optional<ActorDefinitionVersionWithOverrideStatus> versionOverride = Optional.empty();
 
     if (featureFlagClient.boolVariation(EnableConfigurationOverrideProvider.INSTANCE, new Workspace(workspaceId))) {
       versionOverride = configOverrideProvider.getOverride(
@@ -209,7 +209,7 @@ public class ActorDefinitionVersionHelper {
           defaultVersion);
     }
 
-    return new ActorDefinitionVersionWithOverrideStatus(versionOverride.orElse(defaultVersion), versionOverride.isPresent());
+    return versionOverride.orElse(new ActorDefinitionVersionWithOverrideStatus(defaultVersion, false));
   }
 
   /**
