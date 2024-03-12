@@ -1,5 +1,5 @@
 import uniqueId from "lodash/uniqueId";
-import { useState } from "react";
+import React, { useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
@@ -10,7 +10,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
-export const SimplifiedSchemaChangeNotificationFormField = () => {
+export const SimplifiedSchemaChangeNotificationFormField: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
   const { control } = useFormContext<FormConnectionFormValues>();
   const [controlId] = useState(`input-control-${uniqueId()}`);
 
@@ -33,7 +33,7 @@ export const SimplifiedSchemaChangeNotificationFormField = () => {
               </FlexContainer>
             }
           />
-          <Switch id={controlId} checked={field.value} onChange={field.onChange} size="lg" />
+          <Switch id={controlId} checked={field.value} onChange={field.onChange} size="lg" disabled={disabled} />
         </FormFieldLayout>
       )}
     />

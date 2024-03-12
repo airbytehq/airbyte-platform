@@ -34,6 +34,7 @@ import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./ConnectionReplicationPage.module.scss";
@@ -220,6 +221,8 @@ export const ConnectionReplicationPage: React.FC = () => {
     }
   }, [refreshSchema, state]);
 
+  const isSimpliedCreation = useExperiment("connection.simplifiedCreation", false);
+
   return (
     <FlexContainer direction="column" className={styles.content}>
       {schemaError && !schemaRefreshing ? (
@@ -235,7 +238,7 @@ export const ConnectionReplicationPage: React.FC = () => {
           <FlexContainer direction="column">
             <SchemaChangeMessage />
             <SchemaChangeBackdrop>
-              <ConnectionConfigurationCard />
+              {!isSimpliedCreation && <ConnectionConfigurationCard />}
               <SyncCatalogCard />
               <div className={styles.editControlsContainer}>
                 <UpdateConnectionFormControls onCancel={discardRefreshedSchema} />

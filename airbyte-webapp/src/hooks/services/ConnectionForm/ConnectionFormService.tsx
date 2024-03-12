@@ -76,7 +76,7 @@ const useConnectionForm = ({
     connection.destinationId
   );
 
-  const initialValues = useInitialFormValues(connection, destDefinitionVersion, mode !== "create");
+  const initialValues = useInitialFormValues(connection, destDefinitionVersion, mode === "edit");
   const { formatMessage } = useIntl();
   const [submitError, setSubmitError] = useState<FormError | null>(null);
   const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);

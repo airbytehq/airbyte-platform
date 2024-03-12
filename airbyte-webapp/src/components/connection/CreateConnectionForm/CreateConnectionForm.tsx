@@ -47,7 +47,7 @@ const CreateConnectionFormInner: React.FC = () => {
 
   const validationSchema = useConnectionValidationSchema();
 
-  const useSimpliedCreation = useExperiment("connection.simplifiedCreation", false);
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
 
   const onSubmit = useCallback(
     async ({ normalization, transformations, ...restFormValues }: FormConnectionFormValues) => {
@@ -76,7 +76,7 @@ const CreateConnectionFormInner: React.FC = () => {
         navigate(`../../connections/${createdConnection.connectionId}`);
 
         const willSyncAfterCreation = restFormValues.scheduleType === ConnectionScheduleType.basic;
-        if (useSimpliedCreation && willSyncAfterCreation) {
+        if (isSimplifiedCreation && willSyncAfterCreation) {
           registerNotification({
             id: "onboarding.firstSyncStarted",
             text: formatMessage({ id: "onboarding.firstSyncStarted" }),
@@ -96,7 +96,7 @@ const CreateConnectionFormInner: React.FC = () => {
       navigate,
       setSubmitError,
       workspaceId,
-      useSimpliedCreation,
+      isSimplifiedCreation,
       registerNotification,
       formatMessage,
     ]
@@ -112,7 +112,7 @@ const CreateConnectionFormInner: React.FC = () => {
         formTrackerId={CREATE_CONNECTION_FORM_ID}
       >
         <FlexContainer direction="column" className={styles.formContainer}>
-          {useSimpliedCreation ? (
+          {isSimplifiedCreation ? (
             <SimplifiedConnectionConfiguration />
           ) : (
             <>

@@ -60,7 +60,8 @@ export const DataResidencyDropdown = <T extends FormValues>({
 
 export const StandaloneDataResidencyDropdown = <T extends FormValues>({
   name,
-}: Pick<DataResidencyFormControlProps<T>, "name">): JSX.Element => {
+  disabled,
+}: Pick<DataResidencyFormControlProps<T>, "name" | "disabled">): JSX.Element => {
   const { formatMessage } = useIntl();
   const { geographies } = useAvailableGeographies();
 
@@ -77,5 +78,5 @@ export const StandaloneDataResidencyDropdown = <T extends FormValues>({
     };
   });
 
-  return <SelectWrapper name={name} options={options} />;
+  return <SelectWrapper name={name} options={options} disabled={disabled} />;
 };
