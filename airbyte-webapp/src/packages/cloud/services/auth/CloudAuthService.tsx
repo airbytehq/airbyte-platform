@@ -232,7 +232,7 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
         user: keycloakAuth.airbyteUser,
         authProvider: AuthProvider.keycloak,
         displayName: keycloakAuth.keycloakUser?.profile.name ?? null,
-        emailVerified: true,
+        emailVerified: keycloakAuth.keycloakUser?.profile.email_verified ?? false,
         email: keycloakAuth.keycloakUser?.profile.email ?? null,
         getAccessToken: () => Promise.resolve(keycloakAuth.accessTokenRef?.current),
         logout,
