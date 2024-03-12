@@ -961,7 +961,7 @@ public class DefaultJobPersistence implements JobPersistence {
     return jobDatabase.query(ctx -> {
       final String jobsSubquery = "(" + ctx.select(JOBS.asterisk()).from(JOBS)
           .join(Tables.CONNECTION)
-          .on(Tables.CONNECTION.ID.eq(JOBS.SCOPE.cast(UUID.class)))
+          .on(Tables.CONNECTION.ID.cast(String.class).eq(JOBS.SCOPE))
           .join(Tables.ACTOR)
           .on(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
           .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
