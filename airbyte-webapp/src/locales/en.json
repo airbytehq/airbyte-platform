@@ -224,6 +224,7 @@
   "connectionForm.backToSetupSchema": "Back to Set up schema",
   "connectionForm.nextButton": "Next",
   "connectionForm.configureConnection": "Configure connection",
+  "connectionForm.selectStreams": "Select streams",
   "connectionForm.selectSyncMode": "Select sync mode",
   "connectionForm.destinationNew": "Set up a new destination",
   "connectionForm.destinationNewDescription": "Configure a new destination from Airbyte's catalog of available connectors",
