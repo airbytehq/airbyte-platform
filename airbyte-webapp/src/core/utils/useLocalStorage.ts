@@ -9,7 +9,6 @@ import { Theme } from "hooks/theme/useAirbyteTheme";
 
 // Represents all the data we store in localStorage across the airbyte app
 interface AirbyteLocalStorage {
-  "exp-speedy-connection-timestamp": string;
   connectorBuilderEditorView: BuilderState["mode"];
   connectorBuilderInputsWarning: boolean;
   connectorBuilderRecordView: "json" | "table";

@@ -25,7 +25,6 @@ export interface Experiments {
   "connector.airbyteCloudIpAddresses": string;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
-  "onboarding.speedyConnection": boolean;
   "platform.auto-backfill-on-new-columns": boolean;
   "settings.breakingChangeNotifications": boolean;
   "settings.invitationSystemv2": boolean;

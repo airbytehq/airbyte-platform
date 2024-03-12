@@ -30,7 +30,6 @@ import { useGetOrCreateUser } from "core/api";
 import { useCreateKeycloakUser, useResendSigninLink, useRevokeUserSession, useUpdateUser } from "core/api/cloud";
 import { AuthProvider, UserRead } from "core/api/types/AirbyteClient";
 import { AuthContext, AuthContextApi, OAuthLoginState } from "core/services/auth";
-import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useNotificationService } from "hooks/services/Notification";
 import { SignupFormValues } from "packages/cloud/views/auth/SignupPage/components/SignupForm";
 import { useAuth } from "packages/firebaseReact";
@@ -53,7 +52,6 @@ export enum FirebaseAuthMessageId {
 // Checks for a valid auth session with either keycloak or firebase, and returns the user if found.
 export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
   const passwordRef = useRef<undefined | string>(undefined);
-  const [, setSpeedyConnectionTimestamp] = useLocalStorage("exp-speedy-connection-timestamp", "");
   const [logoutInProgress, setLogoutInProgress] = useState(false);
   const queryClient = useQueryClient();
   const { registerNotification } = useNotificationService();
@@ -334,11 +332,6 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
 
           // Send verification mail via firebase
           await sendEmailVerification(user);
-
-          // exp-speedy-connection
-          if (firebaseAuth.currentUser) {
-            setSpeedyConnectionTimestamp(String(new Date(new Date().getTime() + 24 * 60 * 60 * 1000)));
-          }
         } catch (err) {
           // Clear the password ref if the user creation fails
           passwordRef.current = undefined;
@@ -398,7 +391,6 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
     logout,
     registerNotification,
     resendWithSignInLink,
-    setSpeedyConnectionTimestamp,
     updateAirbyteUser,
     verifyFirebaseEmail,
   ]);
