@@ -414,9 +414,11 @@ spec:
         {{- end }}
         volumeMounts:
         {{- if eq .Values.global.deploymentMode "oss" }}
+          {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
         - name: gcs-log-creds-volume
           mountPath: /secrets/gcs-log-creds
           readOnly: true
+          {{- end }}
         - name: airbyte-yml-volume
           mountPath: /app/configs/airbyte.yml
           subPath: fileContents
@@ -437,9 +439,11 @@ spec:
       {{- end }}
       volumes:
       {{- if eq .Values.global.deploymentMode "oss" }}
+        {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
       - name: gcs-log-creds-volume
         secret:
-          secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) (.Values.global.credVolumeOverride) (eq .Values.global.deploymentMode "oss") }}
+          secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) .Values.global.storage.storageSecretName (not ((.Values.global.storage).storageSecretName)) }}
+        {{- end }}
       - name: airbyte-yml-volume
         secret:
           secretName: {{ .Release.Name }}-airbyte-yml

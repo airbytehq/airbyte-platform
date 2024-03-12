@@ -22,8 +22,6 @@ global:
   # todo: remove so there is no need to create secrets for gcs if not using gcs
   storage:
     type: minio # default storage used
-    gcs:
-      credentialsJson: ""
 
   metrics:
     # -- The metric client to configure globally. Supports "otel"
