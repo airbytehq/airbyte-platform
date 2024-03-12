@@ -18,13 +18,17 @@ describe("OAuthLogin", () => {
   });
 
   it("should call auth service for Google", async () => {
-    const { getByTestId } = render(<OAuthLogin loginWithOAuth={mockLoginWithOAuth} />, { wrapper: TestWrapper });
+    const { getByTestId } = render(<OAuthLogin loginWithOAuth={mockLoginWithOAuth} type="login" />, {
+      wrapper: TestWrapper,
+    });
     await userEvents.click(getByTestId("googleOauthLogin"));
     expect(mockLoginWithOAuth).toHaveBeenCalledWith("google");
   });
 
   it("should call auth service for GitHub", async () => {
-    const { getByTestId } = render(<OAuthLogin loginWithOAuth={mockLoginWithOAuth} />, { wrapper: TestWrapper });
+    const { getByTestId } = render(<OAuthLogin loginWithOAuth={mockLoginWithOAuth} type="login" />, {
+      wrapper: TestWrapper,
+    });
     await userEvents.click(getByTestId("githubOauthLogin"));
     expect(mockLoginWithOAuth).toHaveBeenCalledWith("github");
   });

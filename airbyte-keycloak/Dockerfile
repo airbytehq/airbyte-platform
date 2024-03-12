@@ -9,6 +9,6 @@ FROM airbyte/mirrored-keycloak:23.0.3
 WORKDIR /opt/keycloak
 
 COPY bin/scripts/entrypoint.sh entrypoint.sh
-COPY bin/themes/airbyte-keycloak-theme themes/airbyte-keycloak-theme
+COPY bin/themes themes
 
 ENTRYPOINT ["./entrypoint.sh"]

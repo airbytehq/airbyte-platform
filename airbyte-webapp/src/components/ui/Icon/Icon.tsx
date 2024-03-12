@@ -41,6 +41,7 @@ import DownloadIcon from "./icons/downloadIcon.svg?react";
 import DragHandleIcon from "./icons/dragHandleIcon.svg?react";
 import DuplicateIcon from "./icons/duplicateIcon.svg?react";
 import EarthIcon from "./icons/earthIcon.svg?react";
+import EnvelopeIcon from "./icons/envelopeIcon.svg?react";
 import EqualIcon from "./icons/equalIcon.svg?react";
 import ErrorFilledIcon from "./icons/errorFilledIcon.svg?react";
 import ErrorOutlineIcon from "./icons/errorOutlineIcon.svg?react";
@@ -121,7 +122,6 @@ import SuitcaseIcon from "./icons/suitcaseIcon.svg?react";
 import SyncIcon from "./icons/syncIcon.svg?react";
 import TableIcon from "./icons/tableIcon.svg?react";
 import TargetIcon from "./icons/targetIcon.svg?react";
-import TicketIcon from "./icons/ticketIcon.svg?react";
 import TrashIcon from "./icons/trashIcon.svg?react";
 import UnlockIcon from "./icons/unlockIcon.svg?react";
 import UnsortedIcon from "./icons/unsorted.svg?react";
@@ -155,8 +155,8 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   arrowRight: ArrowRightIcon,
   article: ArticleIcon,
   bell: BellIcon,
-  calendarCheck: CalendarCheckIcon,
   calendar: CalendarIcon,
+  calendarCheck: CalendarCheckIcon,
   caretDown: CaretDownIcon,
   cast: CastIcon,
   certified: CertifiedIcon,
@@ -185,9 +185,10 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   docker: DockerIcon,
   docs: DocsIcon,
   download: DownloadIcon,
-  duplicate: DuplicateIcon,
   drag: DragHandleIcon,
+  duplicate: DuplicateIcon,
   earth: EarthIcon,
+  envelope: EnvelopeIcon,
   equal: EqualIcon,
   errorFilled: ErrorFilledIcon,
   errorOutline: ErrorOutlineIcon,
@@ -218,8 +219,8 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   location: LocationIcon,
   lock: LockIcon,
   menu: MenuIcon,
-  minusCircle: MinusCircleIcon,
   minus: MinusIcon,
+  minusCircle: MinusCircleIcon,
   modification: ModificationIcon,
   monitor: MonitorIcon,
   moon: MoonIcon,
@@ -268,7 +269,6 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   sync: SyncIcon,
   table: TableIcon,
   target: TargetIcon,
-  ticket: TicketIcon,
   trash: TrashIcon,
   unlock: UnlockIcon,
   unsorted: UnsortedIcon,

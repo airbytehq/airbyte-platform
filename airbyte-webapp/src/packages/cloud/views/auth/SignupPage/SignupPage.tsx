@@ -1,6 +1,7 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 import { useSearchParams } from "react-router-dom";
+import useLocalStorage from "react-use/lib/useLocalStorage";
 
 import { HeadTitle } from "components/common/HeadTitle";
 import { Button } from "components/ui/Button";
@@ -30,6 +31,7 @@ const Detail: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
 };
 
 const SignupPage: React.FC<SignupPageProps> = () => {
+  const [keycloakAuthEnabled] = useLocalStorage("airbyte_keycloak-auth-ui", false);
   const { loginWithOAuth, signUp } = useAuthService();
   useTrackPage(PageTrackingCodes.SIGNUP);
 
@@ -71,10 +73,12 @@ const SignupPage: React.FC<SignupPageProps> = () => {
         </>
       ) : (
         <>
-          {loginWithOAuth && <OAuthLogin loginWithOAuth={loginWithOAuth} />}
-          <Button onClick={() => setSignupMethod("email")} variant="clear" size="sm" icon={<Icon type="ticket" />}>
-            <FormattedMessage id="signup.method.email" />
-          </Button>
+          {loginWithOAuth && <OAuthLogin loginWithOAuth={loginWithOAuth} type="signup" />}
+          {!keycloakAuthEnabled && (
+            <Button onClick={() => setSignupMethod("email")} variant="clear" size="sm" icon={<Icon type="envelope" />}>
+              <FormattedMessage id="signup.method.email" />
+            </Button>
+          )}
         </>
       )}
 

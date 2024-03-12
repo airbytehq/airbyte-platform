@@ -119,6 +119,7 @@ body {
   font-family: var(--font-sans-serif);
   color: var(--color-text);
   background-color: var(--color-grey-40);
+  accent-color: var(--color-blue-400);
 }
 
 input {
@@ -138,12 +139,19 @@ input {
   padding-bottom: 20vh;
 }
 
+.ab-login-page a:link,
+.ab-login-page a:visited {
+  color: var(--color-grey-400);
+}
+
 .ab-alert {
+  max-width: 410px;
   margin-block: var(--spacing-xl);
   background: var(--color-yellow-100);
   font-size: var(--font-size-lg);
   padding: var(--spacing-lg);
   border-radius: 6px;
+  line-height: 1.5;
 }
 
 .ab-form-card {
@@ -153,8 +161,7 @@ input {
   box-shadow: var(--box-shadow);
   border-radius: 10px;
   padding: 150px 20px 20px;
-  min-width: 410px;
-  max-width: 800px;
+  width: 410px;
 }
 
 .ab-form-group {
@@ -211,7 +218,7 @@ input {
 
 #kc-form-buttons {
   display: flex;
-  width: 100%;
+  align-items: flex-end;
 }
 
 #kc-form-buttons input[type='submit'] {
@@ -254,6 +261,10 @@ input {
   padding: 0;
 }
 
+#kc-social-providers ul li {
+  list-style: none;
+}
+
 #kc-social-providers ul a {
   display: block;
   padding: 10px 14px;
@@ -264,4 +275,8 @@ input {
   font-weight: 400;
   text-decoration: none;
   color: var(--color-text);
+}
+
+[data-password-toggle] {
+  display: none;
 }

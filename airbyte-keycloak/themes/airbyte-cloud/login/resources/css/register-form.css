@@ -1,0 +1,37 @@
+#kc-page-title {
+    display: block;
+}
+
+form#kc-register-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-xl);
+}
+
+#kc-register-form .ab-form-group {
+    grid-column: span 2;
+    margin-top: 0;
+}
+
+#kc-register-form .ab-form-group:has(label[for="firstName"]),
+#kc-register-form .ab-form-group:has(label[for="lastName"]) {
+    grid-column: span 1;
+    margin-top: 0;
+}
+
+#kc-register-form .ab-form-group:has(#kc-form-buttons) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-xl);
+}
+
+#backToApplication,
+#kc-register-form .ab-form-group:has(#kc-form-buttons) .ab-form-options-wrapper a {
+    color: var(--color-grey-400);
+    font-size: var(--font-size-lg);
+}
+
+.ab-terms-of-servic {
+    grid-column: span 2;
+}

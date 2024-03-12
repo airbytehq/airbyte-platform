@@ -16,6 +16,7 @@ import { Text } from "components/ui/Text";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
@@ -53,6 +54,7 @@ export const LoginPage: React.FC = () => {
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
   const [searchParams] = useSearchParams();
+  const [keycloakAuthEnabled] = useLocalStorage("airbyte_keycloak-auth-ui", false);
   const loginRedirectString = searchParams.get("loginRedirect");
 
   const navigate = useNavigate();
@@ -102,50 +104,51 @@ export const LoginPage: React.FC = () => {
 
       {loginWithOAuth && (
         <>
-          <OAuthLogin loginWithOAuth={loginWithOAuth} />
-          <Separator />
+          <OAuthLogin loginWithOAuth={loginWithOAuth} type="login" />
+          {!keycloakAuthEnabled && <Separator />}
         </>
       )}
+      {!keycloakAuthEnabled && (
+        <Form<LoginPageFormValues>
+          defaultValues={{
+            email: "",
+            password: "",
+          }}
+          schema={LoginPageValidationSchema}
+          onSubmit={onSubmit}
+          onError={onError}
+        >
+          <FormControl
+            name="email"
+            fieldType="input"
+            type="text"
+            label={formatMessage({ id: "login.yourEmail" })}
+            placeholder={formatMessage({ id: "login.yourEmail.placeholder" })}
+            autoComplete="email"
+            data-testid="login.email"
+          />
+          <FormControl
+            name="password"
+            fieldType="input"
+            type="password"
+            label={formatMessage({ id: "login.yourPassword" })}
+            placeholder={formatMessage({ id: "login.yourPassword.placeholder" })}
+            autoComplete="current-password"
+            data-testid="login.password"
+          />
 
-      <Form<LoginPageFormValues>
-        defaultValues={{
-          email: "",
-          password: "",
-        }}
-        schema={LoginPageValidationSchema}
-        onSubmit={onSubmit}
-        onError={onError}
-      >
-        <FormControl
-          name="email"
-          fieldType="input"
-          type="text"
-          label={formatMessage({ id: "login.yourEmail" })}
-          placeholder={formatMessage({ id: "login.yourEmail.placeholder" })}
-          autoComplete="email"
-          data-testid="login.email"
-        />
-        <FormControl
-          name="password"
-          fieldType="input"
-          type="password"
-          label={formatMessage({ id: "login.yourPassword" })}
-          placeholder={formatMessage({ id: "login.yourPassword.placeholder" })}
-          autoComplete="current-password"
-          data-testid="login.password"
-        />
-
-        <Box mt="2xl">
-          <FlexContainer direction="row" justifyContent="space-between" alignItems="center">
-            <Text size="sm" color="grey300">
-              <Link to={resetPasswordTo} data-testid="reset-password-link">
-                <FormattedMessage id="login.forgotPassword" />
-              </Link>
-            </Text>
-            <LoginButton />
-          </FlexContainer>
-        </Box>
-      </Form>
+          <Box mt="2xl">
+            <FlexContainer direction="row" justifyContent="space-between" alignItems="center">
+              <Text size="sm" color="grey300">
+                <Link to={resetPasswordTo} data-testid="reset-password-link">
+                  <FormattedMessage id="login.forgotPassword" />
+                </Link>
+              </Text>
+              <LoginButton />
+            </FlexContainer>
+          </Box>
+        </Form>
+      )}
       <Disclaimer />
       <LoginSignupNavigation type="signup" />
     </FlexContainer>

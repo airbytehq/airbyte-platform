@@ -1516,6 +1516,7 @@
   "login.oauth.or": "or",
   "login.oauth.google": "Continue with Google",
   "login.oauth.github": "Continue with GitHub",
+  "login.email": "Continue with Email",
   "login.oauth.differentCredentialsError": "Use your email and password to sign in.",
   "login.oauth.unknownError": "An unknown error happened during sign in: {error}",
   "login.selfhosting": "Interested in self-hosting?",

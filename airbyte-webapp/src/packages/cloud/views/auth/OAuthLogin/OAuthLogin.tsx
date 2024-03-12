@@ -4,9 +4,12 @@ import { createSearchParams, useNavigate, useSearchParams } from "react-router-d
 import { useUnmount } from "react-use";
 import { Subscription } from "rxjs";
 
+import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
+import { LoadingSpinner } from "components/ui/LoadingSpinner";
+import { SignInButton } from "components/ui/SignInButton";
 import { Spinner } from "components/ui/Spinner";
 
 import { OAuthProviders, AuthOAuthLogin } from "core/services/auth";
@@ -18,19 +21,26 @@ import githubLogo from "./assets/github-logo.svg";
 import googleLogo from "./assets/google-logo.svg";
 import styles from "./OAuthLogin.module.scss";
 
-const GitHubButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
+type PendingRedirect = "github" | "google" | "password" | null;
+
+interface LoginButtonProps {
+  onClick: () => void;
+  pendingRedirect: PendingRedirect;
+}
+
+const GitHubButton: React.FC<LoginButtonProps> = ({ pendingRedirect, onClick }) => {
   return (
-    <button className={styles.github} onClick={onClick} data-testid="githubOauthLogin">
-      <img src={githubLogo} alt="" />
+    <button className={styles.github} onClick={onClick} data-testid="githubOauthLogin" disabled={!!pendingRedirect}>
+      {pendingRedirect === "github" ? <LoadingSpinner /> : <img src={githubLogo} alt="" />}
       <FormattedMessage id="login.oauth.github" tagName="span" />
     </button>
   );
 };
 
-const GoogleButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
+const GoogleButton: React.FC<LoginButtonProps> = ({ onClick, pendingRedirect }) => {
   return (
-    <button className={styles.google} onClick={onClick} data-testid="googleOauthLogin">
-      <img src={googleLogo} alt="" />
+    <button className={styles.google} onClick={onClick} data-testid="googleOauthLogin" disabled={!!pendingRedirect}>
+      {pendingRedirect === "google" ? <LoadingSpinner /> : <img src={googleLogo} alt="" />}
       <FormattedMessage id="login.oauth.google" tagName="span" />
     </button>
   );
@@ -52,10 +62,12 @@ const SsoButton: React.FC = () => {
 };
 
 interface OAuthLoginProps {
+  type: "login" | "signup";
   loginWithOAuth: AuthOAuthLogin;
 }
 
-export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth }) => {
+export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth, type }) => {
+  const [pendingRedirect, setPendingRedirect] = useState<"google" | "github" | "password" | null>(null);
   const { formatMessage } = useIntl();
   const stateSubscription = useRef<Subscription>();
   const [errorCode, setErrorCode] = useState<string>();
@@ -63,8 +75,13 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth }) => {
   const [searchParams] = useSearchParams();
   const loginRedirect = searchParams.get("loginRedirect");
   const navigate = useNavigate();
-  const [keycloakSocialLoginsEnabled] = useLocalStorage("airbyte_keycloak-social-logins", false);
-  const { redirectToSignInWithGithub, redirectToSignInWithGoogle } = useKeycloakService();
+  const [keycloakAuthEnabled] = useLocalStorage("airbyte_keycloak-auth-ui", false);
+  const {
+    redirectToSignInWithGithub,
+    redirectToSignInWithGoogle,
+    redirectToSignInWithPassword,
+    redirectToRegistrationWithPassword,
+  } = useKeycloakService();
 
   useUnmount(() => {
     stateSubscription.current?.unsubscribe();
@@ -109,6 +126,25 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth }) => {
 
   const errorMessage = errorCode ? getErrorMessage(errorCode) : undefined;
 
+  const doRedirectToSignInWithGithub = () => {
+    setPendingRedirect("github");
+    redirectToSignInWithGithub().catch(() => setPendingRedirect(null));
+  };
+
+  const doRedirectToSignInWithGoogle = () => {
+    setPendingRedirect("google");
+    redirectToSignInWithGoogle().catch(() => setPendingRedirect(null));
+  };
+
+  const handleEmailButtonClick = () => {
+    setPendingRedirect("password");
+    if (type === "signup") {
+      redirectToRegistrationWithPassword().catch(() => setPendingRedirect(null));
+    } else {
+      redirectToSignInWithPassword().catch(() => setPendingRedirect(null));
+    }
+  };
+
   return (
     <>
       {isLoading && (
@@ -119,12 +155,32 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth }) => {
       {!isLoading && (
         <>
           <GoogleButton
-            onClick={() => (keycloakSocialLoginsEnabled ? redirectToSignInWithGoogle() : login("google"))}
+            onClick={() => (keycloakAuthEnabled ? doRedirectToSignInWithGoogle() : login("google"))}
+            pendingRedirect={pendingRedirect}
           />
           <GitHubButton
-            onClick={() => (keycloakSocialLoginsEnabled ? redirectToSignInWithGithub() : login("github"))}
+            onClick={() => (keycloakAuthEnabled ? doRedirectToSignInWithGithub() : login("github"))}
+            pendingRedirect={pendingRedirect}
           />
           <SsoButton />
+
+          {keycloakAuthEnabled &&
+            (type === "login" ? (
+              <SignInButton onClick={handleEmailButtonClick} disabled={!!pendingRedirect}>
+                {pendingRedirect === "password" ? <LoadingSpinner /> : <Icon type="envelope" />}
+                <FormattedMessage id="login.email" />
+              </SignInButton>
+            ) : (
+              <Button
+                onClick={handleEmailButtonClick}
+                variant="clear"
+                isLoading={pendingRedirect === "password"}
+                size="sm"
+                icon={<Icon type="envelope" />}
+              >
+                <FormattedMessage id="signup.method.email" />
+              </Button>
+            ))}
         </>
       )}
       {errorMessage && <div className={styles.error}>{errorMessage}</div>}
