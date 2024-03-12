@@ -9,6 +9,7 @@ import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.PermissionRepository
 import io.airbyte.data.repositories.UserInvitationRepository
 import io.airbyte.data.services.UserInvitationService
+import io.airbyte.data.services.impls.data.mappers.EntityInvitationStatus
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
 import io.micronaut.transaction.annotation.Transactional
@@ -24,6 +25,17 @@ open class UserInvitationServiceDataImpl(
     return userInvitationRepository.findByInviteCode(inviteCode).orElseThrow {
       ConfigNotFoundException(ConfigSchema.USER_INVITATION, inviteCode)
     }.toConfigModel()
+  }
+
+  override fun getPendingInvitations(
+    scopeType: ScopeType,
+    scopeId: UUID,
+  ): List<UserInvitation> {
+    return userInvitationRepository.findByStatusAndScopeTypeAndScopeId(
+      EntityInvitationStatus.pending,
+      scopeType.toEntity(),
+      scopeId,
+    ).map { it.toConfigModel() }
   }
 
   override fun createUserInvitation(invitation: UserInvitation): UserInvitation {

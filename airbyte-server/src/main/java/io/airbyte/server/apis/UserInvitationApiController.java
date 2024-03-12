@@ -4,12 +4,15 @@
 
 package io.airbyte.server.apis;
 
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 
 import io.airbyte.api.generated.UserInvitationApi;
 import io.airbyte.api.model.generated.InviteCodeRequestBody;
 import io.airbyte.api.model.generated.UserInvitationCreateRequestBody;
+import io.airbyte.api.model.generated.UserInvitationListRequestBody;
 import io.airbyte.api.model.generated.UserInvitationRead;
 import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.User;
@@ -17,10 +20,12 @@ import io.airbyte.server.handlers.UserInvitationHandler;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
+import io.micronaut.http.annotation.Post;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -47,6 +52,14 @@ public class UserInvitationApiController implements UserInvitationApi {
       // exception if a user other than the invitee tries to get the invitation.
       return userInvitationHandler.getByInviteCode(inviteCode, currentUser);
     });
+  }
+
+  @Post
+  @Path("/list_pending")
+  @Override
+  @Secured({WORKSPACE_ADMIN, ORGANIZATION_ADMIN})
+  public List<UserInvitationRead> listPendingInvitations(@Body final UserInvitationListRequestBody invitationListRequestBody) {
+    return userInvitationHandler.getPendingInvitations(invitationListRequestBody);
   }
 
   @Override

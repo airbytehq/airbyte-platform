@@ -4626,6 +4626,27 @@ paths:
         "404":
           $ref: "#/components/responses/NotFoundResponse"
 
+  /v1/user_invitations/list_pending:
+    post:
+      summary: List pending invitations
+      tags:
+        - user_invitation
+      operationId: listPendingInvitations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInvitationListRequestBody"
+      responses:
+        "200":
+          description: A list of pending user invitations, or an empty list if no invitations are found.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserInvitationRead"
+
   /v1/user_invitations/accept:
     post:
       summary: Accept a user invitation
@@ -11181,6 +11202,17 @@ components:
           format: email
         permissionType:
           $ref: "#/components/schemas/PermissionType"
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          type: string
+          format: uuid
+    UserInvitationListRequestBody:
+      type: object
+      required:
+        - scopeType
+        - scopeId
+      properties:
         scopeType:
           $ref: "#/components/schemas/ScopeType"
         scopeId:

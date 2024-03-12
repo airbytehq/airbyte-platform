@@ -6,9 +6,11 @@ package io.airbyte.server.handlers;
 
 import io.airbyte.api.model.generated.InviteCodeRequestBody;
 import io.airbyte.api.model.generated.UserInvitationCreateRequestBody;
+import io.airbyte.api.model.generated.UserInvitationListRequestBody;
 import io.airbyte.api.model.generated.UserInvitationRead;
 import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.config.InvitationStatus;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.User;
 import io.airbyte.config.UserInvitation;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -20,7 +22,9 @@ import io.airbyte.server.handlers.api_domain_mapping.UserInvitationMapper;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Singleton
 public class UserInvitationHandler {
@@ -50,6 +54,15 @@ public class UserInvitationHandler {
     return mapper.toApi(invitation);
   }
 
+  public List<UserInvitationRead> getPendingInvitations(final UserInvitationListRequestBody invitationListRequestBody) {
+    final ScopeType scopeType = mapper.toDomain(invitationListRequestBody.getScopeType());
+    final List<UserInvitation> invitations = service.getPendingInvitations(scopeType, invitationListRequestBody.getScopeId());
+
+    return invitations.stream()
+        .map(mapper::toApi)
+        .collect(Collectors.toList());
+  }
+
   public UserInvitationRead create(final UserInvitationCreateRequestBody req, final User currentUser)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final UserInvitation model = mapper.toDomain(req);
@@ -57,10 +70,8 @@ public class UserInvitationHandler {
     model.setInviterUserId(currentUser.getUserId());
 
     // For now, inviteCodes are simply UUIDs that are converted to strings, to virtually guarantee
-    // uniqueness.
-    // The column itself is a string, so if UUIDs prove to be cumbersome or too long, we can always
-    // switch to
-    // a different method of generating shorter, unique inviteCodes.
+    // uniqueness. The column itself is a string, so if UUIDs prove to be cumbersome or too long,
+    // we can always switch to a different method of generating shorter, unique inviteCodes.
     model.setInviteCode(UUID.randomUUID().toString());
 
     // New UserInvitations are always created with a status of PENDING.
@@ -85,9 +96,8 @@ public class UserInvitationHandler {
     }
 
     // TODO - ensure that only org-level invitation can be accepted by a user currently logged into that
-    // org.
-    // email is not enough, because a user can have multiple logins with the same associated email, ie
-    // if they sign in through both SSO and via email/password.
+    // org. email is not enough, because a user can have multiple logins with the same associated email,
+    // ie if they sign in through both SSO and via email/password.
     final UserInvitation accepted = service.acceptUserInvitation(req.getInviteCode(), currentUser.getUserId());
 
     return mapper.toApi(accepted);

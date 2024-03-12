@@ -1,5 +1,6 @@
 package io.airbyte.data.services
 
+import io.airbyte.config.ScopeType
 import io.airbyte.config.UserInvitation
 import java.util.UUID
 
@@ -11,6 +12,14 @@ interface UserInvitationService {
    * Get a user invitation by its unique invite code.
    */
   fun getUserInvitationByInviteCode(inviteCode: String): UserInvitation
+
+  /**
+   * Get a list of pending invitations for a given scope type and scope id.
+   */
+  fun getPendingInvitations(
+    scopeType: ScopeType,
+    scopeId: UUID,
+  ): List<UserInvitation>
 
   /**
    * Create a new user invitation.
