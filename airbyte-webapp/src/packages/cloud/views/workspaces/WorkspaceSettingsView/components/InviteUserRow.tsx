@@ -1,37 +1,36 @@
 import React, { useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { SelectedIndicatorDot } from "components/connection/CreateConnection/SelectedIndicatorDot";
+import { Badge } from "components/ui/Badge";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { PermissionType, WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
+import { useCurrentUser } from "core/services/auth";
+import { getWorkspaceAccessLevel } from "pages/SettingsPage/pages/AccessManagementPage/components/useGetAccessManagementData";
 
 import { AddUserFormValues } from "./AddUserModal";
+import { ExistingUserIndicator } from "./ExistingUserIndicator";
 import styles from "./InviteUserRow.module.scss";
 
 interface InviteUserRowProps {
   id: string;
   name?: string;
   email: string;
-  permissions?: Pick<WorkspaceUserAccessInfoRead, "workspacePermission" | "organizationPermission">;
   selectedRow: string | null;
   setSelectedRow: (value: string | null) => void;
+  user?: WorkspaceUserAccessInfoRead;
 }
 
-export const InviteUserRow: React.FC<InviteUserRowProps> = ({
-  id,
-  name,
-  email,
-  permissions,
-  selectedRow,
-  setSelectedRow,
-}) => {
+export const InviteUserRow: React.FC<InviteUserRowProps> = ({ id, name, email, selectedRow, setSelectedRow, user }) => {
   const [permissionType] = useState<PermissionType>(PermissionType.workspace_admin);
   const { setValue } = useFormContext<AddUserFormValues>();
   const { formatMessage } = useIntl();
+  const { userId: currentUserId } = useCurrentUser();
 
   const onSelectRow = () => {
     setSelectedRow(id);
@@ -42,20 +41,46 @@ export const InviteUserRow: React.FC<InviteUserRowProps> = ({
   const shouldDisableRow = useMemo(() => {
     return id === "inviteNewUser"
       ? false
-      : permissions?.organizationPermission?.permissionType === PermissionType.organization_admin ||
-          !!permissions?.workspacePermission?.permissionType;
-  }, [permissions, id]);
+      : user?.organizationPermission?.permissionType === PermissionType.organization_admin ||
+          !!user?.workspacePermission?.permissionType ||
+          user?.userId === currentUserId;
+  }, [currentUserId, id, user]);
 
-  if (shouldDisableRow) {
+  const highestPermissionType = user ? getWorkspaceAccessLevel(user) : undefined;
+
+  if (shouldDisableRow && highestPermissionType) {
     return (
       <Box py="md" className={styles.inviteUserRow}>
-        <FlexContainer>
+        <FlexContainer justifyContent="space-between" alignItems="center">
           <FlexContainer direction="column" gap="none" justifyContent="center">
-            <Text>{id === "inviteNewUser" ? formatMessage({ id: "userInvitations.create.modal.addNew" }) : name}</Text>
+            <Text>
+              {name}
+              {user?.userId === currentUserId && (
+                <Box as="span" px="sm">
+                  <Badge variant="grey">
+                    <FormattedMessage id="settings.accessManagement.youHint" />
+                  </Badge>
+                </Box>
+              )}
+            </Text>
             <Text color="grey400" italicized>
               {email}
             </Text>
           </FlexContainer>
+          {user?.organizationPermission?.permissionType === PermissionType.organization_admin ? (
+            <Tooltip
+              control={
+                <Badge variant="grey">
+                  <FormattedMessage id="role.organizationAdmin" />
+                </Badge>
+              }
+              placement="top-start"
+            >
+              <FormattedMessage id="userInvitations.create.modal.organizationAdminTooltip" />
+            </Tooltip>
+          ) : (
+            <ExistingUserIndicator highestPermissionType={highestPermissionType} />
+          )}
         </FlexContainer>
       </Box>
     );

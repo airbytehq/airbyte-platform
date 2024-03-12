@@ -1692,5 +1692,7 @@
   "userInvitations.create.modal.emptyList": "No matching users found",
   "userInvitations.create.modal.emptyList.canInvite": "No matching users found. Enter a valid email address to invite a new member.",
   "userInvitations.create.modal.emptyList.noOrganization": "Enter a valid email address to invite a new member.",
-  "userInvitations.newMember": "New member"
+  "userInvitations.newMember": "New member",
+  "userInvitations.create.modal.existingUserTooltip": "Go to workspace member settings to edit this user’s permissions.",
+  "userInvitations.create.modal.organizationAdminTooltip": "This user already has full access to this workspace."
 }

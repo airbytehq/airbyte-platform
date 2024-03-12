@@ -81,10 +81,7 @@ export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
                   email={user.userEmail}
                   selectedRow={selectedRow}
                   setSelectedRow={setSelectedRow}
-                  permissions={{
-                    organizationPermission: user.organizationPermission,
-                    workspacePermission: user.workspacePermission,
-                  }}
+                  user={user}
                 />
               </li>
             );
