@@ -561,6 +561,7 @@
   "connection.updateSchema.namespace": "Namespace",
   "connection.updateSchema.dataType": "Data type",
   "connection.updateSchema.noDiff": "No changes were detected in the source schema.",
+  "connection.updateSchema.updateAutomaticallyApplied": "Schema update automatically applied.",
   "connection.enable.creditsProblem": "You're out of credits! Add more to re-enable your sync.",
   "connection.enable.creditsProblem.cta": "Add credits",
   "connection.freeHistoricalSyncs.message.initial": "Free syncs for 7 days",
