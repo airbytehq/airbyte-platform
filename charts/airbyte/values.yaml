@@ -1593,7 +1593,7 @@ airbyte-api-server:
     #   - chart-example.local
 
 keycloak:
-  enabled: false
+  enabled: true
   env_vars: {}
 
   auth:
@@ -1601,7 +1601,7 @@ keycloak:
     adminPassword: keycloak123
 
 keycloak-setup:
-  enabled: false
+  enabled: true
   env_vars: {}
 
 workload-api-server:

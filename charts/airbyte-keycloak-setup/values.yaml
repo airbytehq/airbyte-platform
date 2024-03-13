@@ -5,6 +5,7 @@
 ##  database.secretValue Value of database password key stored in secret
 global:
   serviceAccountName: placeholderServiceAccount
+  edition: community
   deploymentMode: oss
   secretName: ""
   database:

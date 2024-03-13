@@ -62,6 +62,10 @@ spec:
         - name: JAVA_TOOL_OPTIONS
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end}}
+        {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+        - name: API_AUTHORIZATION_ENABLED
+          value: "true"
+        {{- end }}
         {{- if eq .Values.global.deploymentMode "oss"  }}
         - name: AIRBYTE_VERSION
           valueFrom:
@@ -280,6 +284,7 @@ spec:
         {{- if eq (lower (default "" .Values.global.storage.type)) "local" }}
         - name: LOCAL_ROOT
           valueFrom:
+            configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: LOCAL_ROOT
         {{- end }}

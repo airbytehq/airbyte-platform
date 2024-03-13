@@ -11,7 +11,11 @@ metadata:
     {{- include "airbyte.labels" . | nindent 4 }}
 data:
   AIRBYTE_VERSION: {{ .Values.version | default .Chart.AppVersion }}
-  AIRBYTE_EDITION: {{ .Values.global.edition | default "community" | quote }}
+{{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+  AIRBYTE_EDITION: "pro"
+{{- else }}
+  AIRBYTE_EDITION: "community"
+{{- end }}
   API_URL: {{ .Values.webapp.api.url }}
   CONNECTOR_BUILDER_API_URL: {{ index .Values.webapp "connector-builder-server" "url" | quote }}
   CONFIG_API_HOST: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }} # temporary solution for oss kube deploys for airbyte api server until that server is wrapped into the config server
@@ -33,7 +37,7 @@ data:
 {{- else }}
   WORKLOAD_API_HOST: http://localhost # placeholder value
 {{- end }}
-{{- if eq .Values.global.edition "pro" }}
+{{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
   KEYCLOAK_INTERNAL_HOST: {{ .Release.Name }}-airbyte-keycloak-svc:{{ .Values.keycloak.service.port }}
   KEYCLOAK_PORT: {{ .Values.keycloak.service.port | quote }}
   KEYCLOAK_HOSTNAME_URL: {{ printf "%s/auth" (index $airbyteYmlDict "webapp-url") | quote }}
