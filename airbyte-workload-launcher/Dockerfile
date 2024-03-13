@@ -1,4 +1,4 @@
-FROM airbyte/airbyte-base-java-worker:1.0.0
+FROM airbyte/airbyte-base-java-worker-image:2.0.1
 
 ENV APPLICATION airbyte-workload-launcher
 ENV VERSION ${VERSION}

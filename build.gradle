@@ -161,7 +161,7 @@ subprojects { sp ->
         def nginxImage = System.getenv('NGINX_IMAGE') ?: isArm64 ? 'arm64v8/nginx:alpine' : 'amd64/nginx:alpine'
 
         // Used by the platform -- Must be an Amazon Corretto-based image for build to work without modification to Dockerfile instructions
-        def openjdkImage = System.getenv('JDK_IMAGE') ?: 'airbyte/airbyte-base-java-image:2.1.0'
+        def openjdkImage = System.getenv('JDK_IMAGE') ?: 'airbyte/airbyte-base-java-image:3.0.1'
 
         platform = buildPlatform
         images.add("airbyte/$sp.dockerImageName:$rootProject.ext.image_tag")

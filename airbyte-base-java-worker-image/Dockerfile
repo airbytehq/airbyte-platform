@@ -1,4 +1,4 @@
-FROM airbyte/airbyte-base-java-image:2.1.0
+FROM airbyte/airbyte-base-java-image:3.0.1
 
 ARG TARGETPLATFORM
 

@@ -1,4 +1,4 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.1.0
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.0.1
 FROM ${JDK_IMAGE} AS server
 EXPOSE 8007 5005
 ENV APPLICATION airbyte-workload-api-server
