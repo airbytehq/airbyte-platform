@@ -14,21 +14,20 @@ import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
 import io.airbyte.commons.server.support.JwtTokenParser;
 import io.airbyte.commons.server.support.RbacRoleHelper;
 import io.micrometer.common.util.StringUtils;
-import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
-import io.micronaut.http.HttpResponse;
-import io.micronaut.http.HttpStatus;
-import io.micronaut.http.MediaType;
-import io.micronaut.http.client.HttpClient;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.security.authentication.AuthenticationException;
 import io.micronaut.security.token.validator.TokenValidator;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.HashSet;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
@@ -42,14 +41,14 @@ import reactor.core.publisher.Mono;
 @SuppressWarnings({"PMD.PreserveStackTrace", "PMD.UseTryWithResources", "PMD.UnusedFormalParameter", "PMD.UnusedPrivateMethod"})
 public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
 
-  private final HttpClient client;
+  private final OkHttpClient client;
   private final AirbyteKeycloakConfiguration keycloakConfiguration;
   private final RbacRoleHelper rbacRoleHelper;
 
-  public KeycloakTokenValidator(final HttpClient httpClient,
+  public KeycloakTokenValidator(@Named("keycloakTokenValidatorHttpClient") final OkHttpClient okHttpClient,
                                 final AirbyteKeycloakConfiguration keycloakConfiguration,
                                 final RbacRoleHelper rbacRoleHelper) {
-    this.client = httpClient;
+    this.client = okHttpClient;
     this.keycloakConfiguration = keycloakConfiguration;
     this.rbacRoleHelper = rbacRoleHelper;
   }
@@ -100,27 +99,25 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
   }
 
   private Mono<Boolean> validateTokenWithKeycloak(final String token) {
-    final HttpRequest<?> httpRequest = buildHttpRequest(token);
+    final okhttp3.Request request = new Request.Builder()
+        .addHeader(org.apache.http.HttpHeaders.CONTENT_TYPE, "application/json")
+        .addHeader(org.apache.http.HttpHeaders.AUTHORIZATION, "Bearer " + token)
+        .url(keycloakConfiguration.getKeycloakUserInfoEndpoint())
+        .get()
+        .build();
 
-    return Mono.from(client.exchange(httpRequest, String.class))
-        .flatMap(this::handleResponse)
-        .doOnError(e -> log.error("Failed to validate access token.", e))
-        .onErrorReturn(false)
-        .doOnTerminate(() -> client.close());
-  }
-
-  private HttpRequest<?> buildHttpRequest(final String token) {
-    return HttpRequest.GET(keycloakConfiguration.getKeycloakUserInfoEndpoint())
-        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-        .contentType(MediaType.APPLICATION_JSON);
-  }
-
-  private Mono<Boolean> handleResponse(final HttpResponse<String> response) {
-    if (response.getStatus().equals(HttpStatus.OK)) {
-      return validateUserInfo(response.body());
-    } else {
-      log.warn("Non-200 response from userinfo endpoint: {}", response.getStatus());
-      return Mono.just(false);
+    try (final Response response = client.newCall(request).execute()) {
+      if (response.isSuccessful()) {
+        assert response.body() != null;
+        final String responseBody = response.body().string();
+        return validateUserInfo(responseBody);
+      } else {
+        log.warn("Non-200 response from userinfo endpoint: {}", response.code());
+        return Mono.just(false);
+      }
+    } catch (final Exception e) {
+      log.error("Failed to validate access token.", e);
+      return Mono.error(e);
     }
   }
 
