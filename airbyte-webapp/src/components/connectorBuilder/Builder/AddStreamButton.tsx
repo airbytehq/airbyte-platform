@@ -8,7 +8,6 @@ import { v4 as uuid } from "uuid";
 import * as yup from "yup";
 
 import { Button } from "components/ui/Button";
-import { Icon } from "components/ui/Icon";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
@@ -17,10 +16,10 @@ import styles from "./AddStreamButton.module.scss";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import {
+  authenticatorSchema,
   BuilderStream,
   DEFAULT_BUILDER_STREAM_VALUES,
   DEFAULT_SCHEMA,
-  authenticatorSchema,
   useBuilderWatch,
 } from "../types";
 
@@ -115,7 +114,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
             type="button"
             className={classNames(styles.addButton, styles.disableable)}
             onClick={buttonClickHandler}
-            icon={<Icon type="plus" />}
+            icon="plus"
             data-testid={testId}
             disabled={disabled}
           />

@@ -19,7 +19,6 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
 import { Spinner } from "components/ui/Spinner";
 
@@ -174,7 +173,7 @@ export const ConnectionSettingsPage: React.FC = () => {
             <Disclosure.Button
               as={Button}
               variant="clear"
-              icon={<Icon type={open ? "chevronDown" : "chevronRight"} />}
+              icon={open ? "chevronDown" : "chevronRight"}
               className={styles.advancedButton}
             >
               <FormattedMessage id="connectionForm.settings.advancedButton" />
@@ -276,7 +275,7 @@ const SimplifiedConnectionSettingsPage = () => {
             <Disclosure.Button
               as={Button}
               variant="clear"
-              icon={<Icon type={open ? "chevronDown" : "chevronRight"} />}
+              icon={open ? "chevronDown" : "chevronRight"}
               iconPosition="right"
               className={classnames(styles.advancedButton, styles.alignStart)}
             >

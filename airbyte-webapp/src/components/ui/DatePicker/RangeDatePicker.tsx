@@ -8,7 +8,6 @@ import styles from "./RangeDatePicker.module.scss";
 import { MONTH_DAY } from "./utils";
 import { Button, ButtonProps } from "../Button";
 import { FlexContainer } from "../Flex";
-import { Icon } from "../Icon";
 import { Text } from "../Text";
 
 export interface RangeDatePickerProps {
@@ -48,14 +47,7 @@ export const RangeDatePicker: React.FC<RangeDatePickerProps> = ({
     const dateTo = value[1] ? dayjs(value[1]).format(dateFormat) : "";
 
     return (
-      <Button
-        variant="clear"
-        className={styles.button}
-        icon={<Icon type="calendar" />}
-        onClick={onClick}
-        type="button"
-        ref={ref}
-      >
+      <Button variant="clear" className={styles.button} icon="calendar" onClick={onClick} type="button" ref={ref}>
         <FlexContainer alignItems="center" gap="xs">
           {dateFrom ? (
             <>

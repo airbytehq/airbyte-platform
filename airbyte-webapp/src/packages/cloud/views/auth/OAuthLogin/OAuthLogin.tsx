@@ -12,7 +12,7 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { SignInButton } from "components/ui/SignInButton";
 import { Spinner } from "components/ui/Spinner";
 
-import { OAuthProviders, AuthOAuthLogin } from "core/services/auth";
+import { AuthOAuthLogin, OAuthProviders } from "core/services/auth";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { useKeycloakService } from "packages/cloud/services/auth/KeycloakService";
@@ -176,7 +176,7 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth, type }) 
                 variant="clear"
                 isLoading={pendingRedirect === "password"}
                 size="sm"
-                icon={<Icon type="envelope" />}
+                icon="envelope"
               >
                 <FormattedMessage id="signup.method.email" />
               </Button>

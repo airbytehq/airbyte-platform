@@ -161,7 +161,7 @@ const VersionChanger = ({ project, canUpdateConnector }: { project: BuilderProje
         onClick={() => {
           setChangeInProgress(true);
         }}
-        icon={<Icon type="chevronDown" />}
+        icon="chevronDown"
         iconPosition="right"
         data-testid={`version-changer-${project.name}`}
       >
@@ -233,7 +233,7 @@ export const ConnectorBuilderProjectTable = ({
                       type="button"
                       variant="clear"
                       disabled={Boolean(props.row.original.sourceDefinitionId)}
-                      icon={<Icon type="trash" />}
+                      icon="trash"
                       onClick={() => {
                         unregisterNotificationById(NOTIFICATION_ID);
                         openConfirmationModal({

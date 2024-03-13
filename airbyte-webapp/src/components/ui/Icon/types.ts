@@ -127,11 +127,12 @@ export type IconType =
   | "wrench";
 
 export type IconColor = "primary" | "disabled" | "action" | "success" | "error" | "warning" | "affordance";
+export type IconSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 export interface IconProps {
   type: IconType;
   className?: string;
-  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  size?: IconSize;
   color?: IconColor;
   withBackground?: boolean;
   title?: string;

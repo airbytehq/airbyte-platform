@@ -10,14 +10,17 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
   const {
     full = false,
     size = "xs",
-    iconPosition = "left",
     variant = "primary",
     children,
     className,
-    icon,
     isLoading,
     width,
     disabled,
+    icon,
+    iconSize,
+    iconColor,
+    iconClassName,
+    iconPosition = "left",
     ...buttonProps
   } = props;
 
@@ -50,7 +53,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
       {isLoading && <Icon type="loading" className={classNames(styles.buttonIcon, styles.loadingIcon)} />}
       {icon &&
         iconPosition === "left" &&
-        React.cloneElement(icon, {
+        React.cloneElement(<Icon type={icon} size={iconSize} color={iconColor} className={iconClassName} />, {
           className: classNames(styles.buttonIcon, {
             [styles.positionLeft]: true,
             [styles.isRegularIcon]: true,
@@ -60,8 +63,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
       <span className={styles.childrenContainer}>{children}</span>
       {icon &&
         iconPosition === "right" &&
-        React.cloneElement(icon, {
-          className: classNames(icon.props.className, styles.buttonIcon, {
+        React.cloneElement(<Icon type={icon} size={iconSize} color={iconColor} className={iconClassName} />, {
+          className: classNames(styles.buttonIcon, {
             [styles.positionRight]: true,
             [styles.isRegularIcon]: true,
             [styles.withLabel]: Boolean(children),

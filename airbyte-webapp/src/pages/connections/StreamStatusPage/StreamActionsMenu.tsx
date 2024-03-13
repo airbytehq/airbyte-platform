@@ -6,7 +6,6 @@ import { useConnectionSyncContext } from "components/connection/ConnectionSync/C
 import { StreamWithStatus } from "components/connection/StreamStatus/streamStatusUtils";
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
-import { Icon } from "components/ui/Icon";
 
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { ConnectionRoutePaths } from "pages/routePaths";
@@ -52,7 +51,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
 
   return (
     <DropdownMenu placement="bottom-end" options={options} onChange={onOptionClick}>
-      {() => <Button variant="clear" icon={<Icon type="options" />} />}
+      {() => <Button variant="clear" icon="options" />}
     </DropdownMenu>
   );
 };

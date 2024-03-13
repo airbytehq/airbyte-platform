@@ -10,13 +10,12 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { Heading } from "components/ui/Heading";
-import { Icon } from "components/ui/Icon";
 import { PageHeader } from "components/ui/PageHeader";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
 import { useConnectionList, useCurrentWorkspace, useSourceList } from "core/api";
-import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useIntent } from "core/utils/rbac";
 
 import styles from "./AllSourcesPage.module.scss";
@@ -53,13 +52,7 @@ const AllSourcesPage: React.FC = () => {
             </Heading>
           }
           endComponent={
-            <Button
-              disabled={!canCreateSource}
-              icon={<Icon type="plus" />}
-              onClick={onCreateSource}
-              size="sm"
-              data-id="new-source"
-            >
+            <Button disabled={!canCreateSource} icon="plus" onClick={onCreateSource} size="sm" data-id="new-source">
               <FormattedMessage id="sources.newSource" />
             </Button>
           }

@@ -3,11 +3,10 @@ import snakeCase from "lodash/snakeCase";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
-import { Icon } from "components/ui/Icon";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { FILE_TYPE_DOWNLOAD, downloadFile } from "core/utils/file";
+import { downloadFile, FILE_TYPE_DOWNLOAD } from "core/utils/file";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./DownloadYamlButton.module.scss";
@@ -71,7 +70,7 @@ export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ classNam
       variant="secondary"
       onClick={handleClick}
       disabled={buttonDisabled}
-      icon={showWarningIcon ? <Icon type="warningOutline" /> : undefined}
+      {...(showWarningIcon && { icon: "warningOutline" })}
       data-testid="download-yaml-button"
       type="button"
     >

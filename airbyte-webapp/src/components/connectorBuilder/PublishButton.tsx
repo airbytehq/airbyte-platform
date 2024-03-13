@@ -2,7 +2,6 @@ import { useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
-import { Icon } from "components/ui/Icon";
 import { Tooltip } from "components/ui/Tooltip";
 
 import {
@@ -57,7 +56,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
       }}
       disabled={buttonDisabled}
       data-testid="publish-button"
-      icon={showWarningIcon ? <Icon type="warningOutline" /> : undefined}
+      {...(showWarningIcon && { type: "warningOutline" })}
       type="button"
     >
       <FormattedMessage

@@ -5,7 +5,6 @@ import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
-import { Icon } from "components/ui/Icon";
 import { ModalFooter } from "components/ui/Modal";
 import { Tooltip } from "components/ui/Tooltip";
 
@@ -55,7 +54,7 @@ export const CreateApplicationControl = () => {
       {applications.length === 2 ? (
         <Tooltip
           control={
-            <Button icon={<Icon type="plus" />} onClick={onAddApplicationButtonClick} variant="primary" disabled>
+            <Button icon="plus" onClick={onAddApplicationButtonClick} variant="primary" disabled>
               <FormattedMessage id="settings.application.create" />
             </Button>
           }
@@ -63,12 +62,7 @@ export const CreateApplicationControl = () => {
           <FormattedMessage id="settings.applications.create.disabledTooltip" />
         </Tooltip>
       ) : (
-        <Button
-          icon={<Icon type="plus" />}
-          onClick={onAddApplicationButtonClick}
-          variant="primary"
-          disabled={applications.length >= 2}
-        >
+        <Button icon="plus" onClick={onAddApplicationButtonClick} variant="primary" disabled={applications.length >= 2}>
           <FormattedMessage id="settings.application.create" />
         </Button>
       )}

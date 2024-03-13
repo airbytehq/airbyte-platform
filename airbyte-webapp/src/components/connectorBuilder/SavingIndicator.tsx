@@ -128,7 +128,7 @@ export const SavingIndicator: React.FC = () => {
         onClick={() => {
           setChangeInProgress(true);
         }}
-        icon={<Icon type="chevronDown" />}
+        icon="chevronDown"
         iconPosition="right"
       >
         {message}

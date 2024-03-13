@@ -125,7 +125,7 @@ export const AddUserControl: React.FC = () => {
   }
 
   return !isEditMode ? (
-    <Button onClick={() => setIsEditMode(true)} icon={<Icon type="plus" />}>
+    <Button onClick={() => setIsEditMode(true)} icon="plus">
       <FormattedMessage id="userInvitations.newMember" />
     </Button>
   ) : (

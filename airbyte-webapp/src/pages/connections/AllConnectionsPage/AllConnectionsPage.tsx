@@ -10,13 +10,12 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { Icon } from "components/ui/Icon";
 import { PageHeader } from "components/ui/PageHeader";
 import { Text } from "components/ui/Text";
 
 import { useConnectionList, useCurrentWorkspace, useFilters } from "core/api";
 import { JobStatus, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
-import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
 
@@ -169,7 +168,7 @@ export const AllConnectionsPage: React.FC = () => {
                   <FlexItem className={styles.alignSelfStart}>
                     <Button
                       disabled={!canCreateConnection}
-                      icon={<Icon type="plus" />}
+                      icon="plus"
                       variant="primary"
                       size="sm"
                       onClick={() => onCreateClick()}

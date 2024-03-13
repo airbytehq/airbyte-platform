@@ -21,6 +21,7 @@ import { OAuthLogin } from "../OAuthLogin";
 interface SignupPageProps {
   highlightStyle?: React.CSSProperties;
 }
+
 const Detail: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   return (
     <FlexContainer gap="sm" alignItems="center" className={styles.detailTextContainer}>
@@ -67,7 +68,7 @@ const SignupPage: React.FC<SignupPageProps> = () => {
       {searchParams.get("method") === "email" ? (
         <>
           {signUp && <SignupForm signUp={signUp} />}
-          <Button onClick={() => setSignupMethod()} variant="clear" size="sm" icon={<Icon type="google" />}>
+          <Button onClick={() => setSignupMethod()} variant="clear" size="sm" icon="google">
             <FormattedMessage id="signup.method.oauth" />
           </Button>
         </>
@@ -75,7 +76,7 @@ const SignupPage: React.FC<SignupPageProps> = () => {
         <>
           {loginWithOAuth && <OAuthLogin loginWithOAuth={loginWithOAuth} type="signup" />}
           {!keycloakAuthEnabled && (
-            <Button onClick={() => setSignupMethod("email")} variant="clear" size="sm" icon={<Icon type="envelope" />}>
+            <Button onClick={() => setSignupMethod("email")} variant="clear" size="sm" icon="envelope">
               <FormattedMessage id="signup.method.email" />
             </Button>
           )}

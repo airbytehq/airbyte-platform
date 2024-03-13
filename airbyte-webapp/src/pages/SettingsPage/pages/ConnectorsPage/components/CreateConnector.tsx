@@ -106,7 +106,7 @@ interface NewConnectorButtonProps {
 
 const NewConnectorButton = React.forwardRef<HTMLButtonElement, NewConnectorButtonProps>(({ onClick }, ref) => {
   return (
-    <Button size="xs" icon={<Icon type="plus" />} onClick={onClick} ref={ref}>
+    <Button size="xs" icon="plus" onClick={onClick} ref={ref}>
       <FormattedMessage id="admin.newConnector" />
     </Button>
   );

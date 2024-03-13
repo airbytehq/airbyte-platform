@@ -13,7 +13,7 @@ import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
 import styles from "./BuilderCard.module.scss";
-import { BuilderStream, useBuilderWatch, BuilderState } from "../types";
+import { BuilderState, BuilderStream, useBuilderWatch } from "../types";
 import { useCopyValueIncludingArrays } from "../utils";
 
 interface BuilderCardProps {
@@ -132,7 +132,7 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
         onClick={() => {
           setCopyFromOpen(true);
         }}
-        icon={<Icon type="import" />}
+        icon="import"
       />
       {currentRelevantConfig && (
         <Button
@@ -141,7 +141,7 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
           onClick={() => {
             setCopyToOpen(true);
           }}
-          icon={<Icon type="share" />}
+          icon="share"
         />
       )}
       {isCopyToOpen && (

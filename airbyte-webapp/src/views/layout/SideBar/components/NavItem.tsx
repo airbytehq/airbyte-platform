@@ -5,6 +5,7 @@ import { NavLink } from "react-router-dom";
 
 import { Badge } from "components/ui/Badge";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon, IconProps } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import styles from "./NavItem.module.scss";
@@ -32,7 +33,7 @@ type NavItemProps = LinkNavItemProps | ButtonNavItemProps;
 
 interface NavItemInnerProps {
   label: React.ReactNode;
-  icon: React.ReactNode;
+  icon: IconProps["type"];
   withNotification?: boolean;
   isActive?: boolean;
   withBadge?: "beta";
@@ -41,7 +42,9 @@ interface NavItemInnerProps {
 const NavItemInner: React.FC<NavItemInnerProps> = ({ icon, label, withNotification, isActive, withBadge }) => {
   return (
     <FlexContainer direction="row" alignItems="center" gap="md">
-      <span className={styles.icon}>{icon}</span>
+      <span className={styles.icon}>
+        <Icon type={icon} />
+      </span>
       <Text size="sm" color={isActive ? "darkBlue" : "grey500"} bold className={styles.label}>
         {label}
       </Text>

@@ -4,7 +4,6 @@ import { FormattedMessage } from "react-intl";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
@@ -125,7 +124,7 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
             variant="clear"
             onClick={onClose}
             className={styles.crossIcon}
-            icon={<Icon type="cross" />}
+            icon="cross"
             data-testid="stream-details-close-button"
           />
         </FlexContainer>

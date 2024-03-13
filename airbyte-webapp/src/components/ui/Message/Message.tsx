@@ -98,14 +98,7 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
         </Button>
       )}
       {onClose && (
-        <Button
-          type="button"
-          variant="clear"
-          className={styles.closeButton}
-          onClick={onClose}
-          size="xs"
-          icon={<Icon type="cross" />}
-        />
+        <Button type="button" variant="clear" className={styles.closeButton} onClick={onClose} size="xs" icon="cross" />
       )}
     </div>
   );

@@ -40,14 +40,14 @@ export const CopyButton: React.FC<React.PropsWithChildren<CopyButtonProps>> = ({
       className={classNames(className, styles.button)}
       variant="secondary"
       title={title || formatMessage({ id: "copyButton.title" })}
-      icon={
-        <div>
-          <Icon type="copy" />
-          {copied && <Icon className={styles.success} type="successFilled" color="success" />}
-        </div>
-      }
+      icon="copy"
       onClick={handleClick}
     >
+      {copied && (
+        <div className={styles.iconContainer}>
+          <Icon className={styles.success} type="successFilled" color="success" />
+        </div>
+      )}
       {children}
     </Button>
   );

@@ -10,13 +10,12 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { Heading } from "components/ui/Heading";
-import { Icon } from "components/ui/Icon";
 import { PageHeader } from "components/ui/PageHeader";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
 import { useConnectionList, useCurrentWorkspace, useDestinationList } from "core/api";
-import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useIntent } from "core/utils/rbac";
 
 import styles from "./AllDestinationsPage.module.scss";
@@ -57,7 +56,7 @@ export const AllDestinationsPage: React.FC = () => {
           endComponent={
             <Button
               disabled={!canCreateDestination}
-              icon={<Icon type="plus" />}
+              icon="plus"
               onClick={onCreateDestination}
               size="sm"
               data-id="new-destination"

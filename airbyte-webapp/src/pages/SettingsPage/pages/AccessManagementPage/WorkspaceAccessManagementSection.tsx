@@ -5,7 +5,6 @@ import { useSearchParams } from "react-router-dom";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
@@ -81,11 +80,7 @@ const WorkspaceAccessManagementSection: React.FC = () => {
             {showAddUserButton && <AddUserControl />}
           </>
         ) : (
-          <Button
-            onClick={onOpenInviteUsersModal}
-            disabled={!canUpdateWorkspacePermissions}
-            icon={<Icon type="plus" />}
-          >
+          <Button onClick={onOpenInviteUsersModal} disabled={!canUpdateWorkspacePermissions} icon="plus">
             <FormattedMessage id="userInvitations.newMember" />
           </Button>
         )}

@@ -4,7 +4,6 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { Button, ButtonVariant } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 
 import { ConnectionStatus } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
@@ -73,7 +72,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
       {!connectionStatus.isRunning && (
         <Button
           onClick={syncConnection}
-          icon={syncStarting ? undefined : <Icon type="sync" />}
+          {...(syncStarting && { icon: "sync" })}
           variant={variant}
           className={buttonClassName}
           isLoading={syncStarting}
@@ -110,7 +109,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
         ]}
         onChange={handleDropdownMenuOptionClick}
       >
-        {() => <Button variant="clear" icon={<Icon type="options" />} />}
+        {() => <Button variant="clear" icon="options" />}
       </DropdownMenu>
     </FlexContainer>
   );
