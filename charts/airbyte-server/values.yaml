@@ -1,4 +1,3 @@
-
 global:
   serviceAccountName: placeholderServiceAccount
   edition: community
@@ -98,6 +97,7 @@ resources:
 ##  service.port The service port to expose the API server on
 service:
   type: ClusterIP
+  loadBalancerIP: ""
   port: 8001
   annotations: {}
 
@@ -193,12 +193,10 @@ secrets: {}
 #   CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: 0.35.15.001
 env_vars: {}
 
-
 ## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
 extraSelectorLabels: {}
 ## extraLabels [object] - use to specify own additional labels for deployment
 extraLabels: {}
-
 
 ## deploymentStrategyType [string] - deployment strategy type for airbyte-server deployment.
 ## Defaults to Recreate since the pod is using pvc
