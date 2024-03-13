@@ -42,7 +42,7 @@ public class UserInvitationApiController implements UserInvitationApi {
   }
 
   @Get
-  @Path("/{inviteCode}")
+  @Path("/by_code/{inviteCode}")
   @Override
   public UserInvitationRead getUserInvitation(@PathParam("inviteCode") final String inviteCode) {
     return ApiHelper.execute(() -> {

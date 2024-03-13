@@ -4603,7 +4603,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserInvitationRead"
 
-  /v1/user_invitations/{inviteCode}:
+  /v1/user_invitations/by_code/{inviteCode}:
     get:
       summary: Get a user invitation by its unique code (not primary key ID)
       tags:
