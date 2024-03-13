@@ -1,7 +1,7 @@
 FROM airbyte/airbyte-base-java-worker-image:2.0.1
 
 # Don't change this manually.  Bump version expects to make moves based on this string
-ARG VERSION=dev
+ARG VERSION=0.52.1
 
 ENV APPLICATION airbyte-container-orchestrator
 ENV VERSION=${VERSION}
