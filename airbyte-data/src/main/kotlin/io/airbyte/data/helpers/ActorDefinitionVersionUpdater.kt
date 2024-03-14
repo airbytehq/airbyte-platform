@@ -4,13 +4,21 @@ import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
+import io.airbyte.config.ActorType
 import io.airbyte.config.BreakingChangeScope
+import io.airbyte.config.ConfigOriginType
+import io.airbyte.config.ConfigResourceType
+import io.airbyte.config.ConfigScopeType
+import io.airbyte.config.DestinationConnection
+import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.helpers.BreakingChangeScopeFactory
 import io.airbyte.config.helpers.StreamBreakingChangeScope
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.data.services.ScopedConfigurationService
+import io.airbyte.data.services.shared.ConnectorVersionKey
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseBreakingChangeScopes
@@ -25,6 +33,7 @@ class ActorDefinitionVersionUpdater(
   private val featureFlagClient: FeatureFlagClient,
   private val connectionService: ConnectionService,
   private val actorDefinitionService: ActorDefinitionService,
+  private val scopedConfigurationService: ScopedConfigurationService,
 ) {
   fun updateDestinationDefaultVersion(
     destinationDefinition: StandardDestinationDefinition,
@@ -48,6 +57,63 @@ class ActorDefinitionVersionUpdater(
       newDefaultVersion,
       breakingChangesForDefinition,
     )
+  }
+
+  /**
+   * Upgrade the source to the latest version, opting-in to any breaking changes that may exist.
+   */
+  fun upgradeActorVersion(
+    source: SourceConnection,
+    sourceDefinition: StandardSourceDefinition,
+  ) {
+    return upgradeActorVersion(
+      source.sourceId,
+      sourceDefinition.sourceDefinitionId,
+      sourceDefinition.defaultVersionId,
+      ActorType.SOURCE,
+    )
+  }
+
+  /**
+   * Upgrade the destination to the latest version, opting-in to any breaking changes that may exist.
+   */
+  fun upgradeActorVersion(
+    destination: DestinationConnection,
+    destinationDefinition: StandardDestinationDefinition,
+  ) {
+    return upgradeActorVersion(
+      destination.destinationId,
+      destinationDefinition.destinationDefinitionId,
+      destinationDefinition.defaultVersionId,
+      ActorType.DESTINATION,
+    )
+  }
+
+  @VisibleForTesting
+  fun upgradeActorVersion(
+    actorId: UUID,
+    actorDefinitionId: UUID,
+    newVersionId: UUID,
+    actorType: ActorType,
+  ) {
+    val versionPinConfigOpt =
+      scopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        ConfigScopeType.ACTOR,
+        actorId,
+      )
+
+    versionPinConfigOpt.ifPresent { versionPinConfig ->
+      if (versionPinConfig.originType != ConfigOriginType.BREAKING_CHANGE) {
+        throw IllegalStateException("This %s is manually pinned to a version, and therefore cannot be upgraded.".format(actorType))
+      }
+
+      scopedConfigurationService.deleteScopedConfiguration(versionPinConfig.id)
+    }
+
+    actorDefinitionService.setActorDefaultVersion(actorId, newVersionId)
   }
 
   @VisibleForTesting

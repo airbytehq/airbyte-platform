@@ -3,10 +3,17 @@ package io.airbyte.data.helpers
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
+import io.airbyte.config.ActorType
 import io.airbyte.config.BreakingChangeScope
+import io.airbyte.config.ConfigOriginType
+import io.airbyte.config.ConfigResourceType
+import io.airbyte.config.ConfigScopeType
+import io.airbyte.config.ScopedConfiguration
 import io.airbyte.config.persistence.MockData
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.data.services.ScopedConfigurationService
+import io.airbyte.data.services.shared.ConnectorVersionKey
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.UseBreakingChangeScopes
@@ -18,6 +25,8 @@ import io.mockk.verifyAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -29,8 +38,15 @@ import java.util.stream.Stream
 internal class ActorDefinitionVersionUpdaterTest {
   private val connectionService = mockk<ConnectionService>()
   private val actorDefinitionService = mockk<ActorDefinitionService>(relaxed = true)
+  private val scopedConfigurationService = mockk<ScopedConfigurationService>(relaxed = true)
   private val featureFlagClient = mockk<TestClient>()
-  private val actorDefinitionVersionUpdater = ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService)
+  private val actorDefinitionVersionUpdater =
+    ActorDefinitionVersionUpdater(
+      featureFlagClient,
+      connectionService,
+      actorDefinitionService,
+      scopedConfigurationService,
+    )
 
   companion object {
     val ACTOR_DEFINITION_ID: UUID = UUID.randomUUID()
@@ -273,5 +289,109 @@ internal class ActorDefinitionVersionUpdaterTest {
   ) {
     val breakingChangesForDef = listOf<ActorDefinitionBreakingChange>()
     assertTrue(actorDefinitionVersionUpdater.getBreakingChangesForUpgrade(initialImageTag, upgradeImageTag, breakingChangesForDef).isEmpty())
+  }
+
+  @Test
+  fun testUpgradeActorVersionWithBCPin() {
+    val actorId = UUID.randomUUID()
+    val actorDefinitionId = UUID.randomUUID()
+    val newVersionId = UUID.randomUUID()
+
+    val breakingChangePinConfig =
+      ScopedConfiguration()
+        .withId(UUID.randomUUID())
+        .withOriginType(ConfigOriginType.BREAKING_CHANGE)
+
+    every {
+      scopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        ConfigScopeType.ACTOR,
+        actorId,
+      )
+    } returns Optional.of(breakingChangePinConfig)
+
+    actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, newVersionId, ActorType.SOURCE)
+
+    verifyAll {
+      scopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        ConfigScopeType.ACTOR,
+        actorId,
+      )
+
+      scopedConfigurationService.deleteScopedConfiguration(breakingChangePinConfig.id)
+      actorDefinitionService.setActorDefaultVersion(actorId, newVersionId)
+    }
+  }
+
+  @Test
+  fun testUpgradeActorVersionWithManualPinThrowsError() {
+    val actorId = UUID.randomUUID()
+    val actorDefinitionId = UUID.randomUUID()
+    val newVersionId = UUID.randomUUID()
+
+    val manualPinConfig =
+      ScopedConfiguration()
+        .withId(UUID.randomUUID())
+        .withOriginType(ConfigOriginType.USER)
+
+    every {
+      scopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        ConfigScopeType.ACTOR,
+        actorId,
+      )
+    } returns Optional.of(manualPinConfig)
+
+    assertThrows<RuntimeException> {
+      actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, newVersionId, ActorType.SOURCE)
+    }
+
+    verifyAll {
+      scopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        ConfigScopeType.ACTOR,
+        actorId,
+      )
+    }
+  }
+
+  @Test
+  fun testUpgradeActorVersionWithNoPins() {
+    val actorId = UUID.randomUUID()
+    val actorDefinitionId = UUID.randomUUID()
+    val newVersionId = UUID.randomUUID()
+
+    every {
+      scopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        ConfigScopeType.ACTOR,
+        actorId,
+      )
+    } returns Optional.empty()
+
+    actorDefinitionVersionUpdater.upgradeActorVersion(actorId, actorDefinitionId, newVersionId, ActorType.SOURCE)
+
+    verifyAll {
+      scopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        ConfigScopeType.ACTOR,
+        actorId,
+      )
+
+      actorDefinitionService.setActorDefaultVersion(actorId, newVersionId)
+    }
   }
 }

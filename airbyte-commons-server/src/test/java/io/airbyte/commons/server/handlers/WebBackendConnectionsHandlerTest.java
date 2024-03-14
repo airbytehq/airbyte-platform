@@ -100,6 +100,7 @@ import io.airbyte.config.persistence.ConfigRepository.SourceAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
@@ -181,6 +182,7 @@ class WebBackendConnectionsHandlerTest {
     final ConfigurationUpdate configurationUpdate = mock(ConfigurationUpdate.class);
     final OAuthConfigSupplier oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
     final DestinationService destinationService = mock(DestinationService.class);
+    final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
 
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SourceService sourceService = mock(SourceService.class);
@@ -202,7 +204,8 @@ class WebBackendConnectionsHandlerTest {
         actorDefinitionVersionHelper,
         destinationService,
         featureFlagClient,
-        actorDefinitionHandlerHelper);
+        actorDefinitionHandlerHelper,
+        actorDefinitionVersionUpdater);
 
     final SourceHandler sourceHandler = new SourceHandler(configRepository,
         secretsRepositoryReader,
@@ -213,7 +216,8 @@ class WebBackendConnectionsHandlerTest {
         configurationUpdate,
         oAuthConfigSupplier,
         actorDefinitionVersionHelper, featureFlagClient, sourceService, workspaceService, secretPersistenceConfigService,
-        actorDefinitionHandlerHelper);
+        actorDefinitionHandlerHelper,
+        actorDefinitionVersionUpdater);
 
     wbHandler = new WebBackendConnectionsHandler(
         connectionsHandler,
