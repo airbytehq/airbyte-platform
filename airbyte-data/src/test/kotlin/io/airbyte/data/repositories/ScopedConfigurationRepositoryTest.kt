@@ -112,6 +112,61 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
   }
 
   @Test
+  fun `test db delete multi`() {
+    val config =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = UUID.randomUUID(),
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+        description = "my_description",
+      )
+
+    val config2 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = UUID.randomUUID(),
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+        description = "my_description",
+      )
+
+    val config3 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = UUID.randomUUID(),
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+        description = "my_description",
+      )
+
+    repository.saveAll(listOf(config, config2, config3))
+    assert(repository.count() == 3L)
+
+    repository.deleteByIdInList(listOf(config.id, config2.id))
+    assert(repository.count() == 1L)
+
+    assert(repository.findById(config3.id).isPresent)
+    assert(repository.findById(config2.id).isEmpty)
+    assert(repository.findById(config.id).isEmpty)
+  }
+
+  @Test
   fun `test db insert same key+resource+scope throws`() {
     val config =
       ScopedConfiguration(
@@ -343,5 +398,86 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest<
 
     val persistedIds = findConfigsResult.map { it.id }
     assert(persistedIds.containsAll(listOf(config.id, config2.id)))
+  }
+
+  @Test
+  fun `test db find by origin in list`() {
+    val resourceId = UUID.randomUUID()
+    val originA = UUID.randomUUID().toString()
+    val config =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = originA,
+      )
+
+    repository.save(config)
+
+    val config2 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value2",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = originA,
+      )
+
+    repository.save(config2)
+
+    val originB = UUID.randomUUID().toString()
+    val config3 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value2",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = originB,
+      )
+
+    repository.save(config3)
+
+    val originC = UUID.randomUUID().toString()
+    val config4 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value2",
+        scopeType = ConfigScopeType.organization,
+        scopeId = config.scopeId,
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = originC,
+      )
+
+    repository.save(config4)
+    assert(repository.count() == 4L)
+
+    val findConfigsResult =
+      repository.findByKeyAndResourceTypeAndResourceIdAndOriginTypeAndOriginInList(
+        CONFIG_KEY,
+        ConfigResourceType.actor_definition,
+        resourceId,
+        ConfigOriginType.user,
+        listOf(originA, originB),
+      )
+    assert(findConfigsResult.size == 3)
+
+    val persistedIds = findConfigsResult.map { it.id }
+    assert(persistedIds.containsAll(listOf(config.id, config2.id, config3.id)))
   }
 }

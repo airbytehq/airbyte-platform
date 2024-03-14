@@ -1,6 +1,7 @@
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.ScopedConfiguration
+import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigOriginType
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigResourceType
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigScopeType
 import io.micronaut.data.jdbc.annotation.JdbcRepository
@@ -26,5 +27,15 @@ interface ScopedConfigurationRepository : PageableRepository<ScopedConfiguration
     scopeId: List<UUID>,
   ): List<ScopedConfiguration>
 
+  fun findByKeyAndResourceTypeAndResourceIdAndOriginTypeAndOriginInList(
+    key: String,
+    resourceType: ConfigResourceType,
+    resourceId: UUID,
+    originType: ConfigOriginType,
+    origins: List<String>,
+  ): List<ScopedConfiguration>
+
   fun findByKey(key: String): List<ScopedConfiguration>
+
+  fun deleteByIdInList(ids: List<UUID>)
 }
