@@ -114,7 +114,7 @@ object ConfigClientErrorHandler {
         if (message.contains("Could not find job with id")) {
           throw ConflictProblem(JOB_NOT_RUNNING_MESSAGE)
         } else {
-          throw UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR)
+          throw UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR, message)
         }
       }
     }
