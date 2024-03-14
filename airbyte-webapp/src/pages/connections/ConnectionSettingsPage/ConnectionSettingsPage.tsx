@@ -180,11 +180,7 @@ export const ConnectionSettingsPage: React.FC = () => {
             </Disclosure.Button>
             <Disclosure.Panel className={styles.advancedPanel}>
               <React.Suspense fallback={<Spinner />}>
-                <StateBlock
-                  connectionId={connection.connectionId}
-                  syncCatalog={connection.syncCatalog}
-                  disabled={mode === "readonly"}
-                />
+                <StateBlock connectionId={connection.connectionId} disabled={mode === "readonly"} />
               </React.Suspense>
             </Disclosure.Panel>
           </>
@@ -283,11 +279,7 @@ const SimplifiedConnectionSettingsPage = () => {
             </Disclosure.Button>
             <Disclosure.Panel className={styles.advancedPanel}>
               <React.Suspense fallback={<Spinner />}>
-                <StateBlock
-                  connectionId={connection.connectionId}
-                  syncCatalog={connection.syncCatalog}
-                  disabled={mode === "readonly"}
-                />
+                <StateBlock connectionId={connection.connectionId} disabled={mode === "readonly"} />
               </React.Suspense>
             </Disclosure.Panel>
           </>
