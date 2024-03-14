@@ -4,22 +4,21 @@ import { FormattedMessage } from "react-intl";
 
 import { Table } from "components/ui/Table";
 
-import { WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { RbacRoleHierarchy } from "core/utils/rbac/rbacPermissionsQuery";
 
-import { getWorkspaceAccessLevel } from "./components/useGetAccessManagementData";
+import { getWorkspaceAccessLevel, UnifiedWorkspaceUserModel } from "./components/useGetAccessManagementData";
 import { UserCell } from "./components/UserCell";
-import { RoleManagementMenu } from "./next/RoleManagementMenu";
+import { RoleManagementCell } from "./next/RoleManagementCell";
 
 export const WorkspaceUsersTable: React.FC<{
-  users: WorkspaceUserAccessInfoRead[];
+  users: UnifiedWorkspaceUserModel[];
 }> = ({ users }) => {
   const { userId: currentUserId } = useCurrentUser();
   const areAllRbacRolesEnabled = useFeature(FeatureItem.AllowAllRBACRoles);
 
-  const columnHelper = createColumnHelper<WorkspaceUserAccessInfoRead>();
+  const columnHelper = createColumnHelper<UnifiedWorkspaceUserModel>();
 
   const columns = useMemo(
     () => [
@@ -30,8 +29,8 @@ export const WorkspaceUsersTable: React.FC<{
             <UserCell
               name={props.row.original.userName}
               email={props.row.original.userEmail}
-              isCurrentUser={props.row.original.userId === currentUserId}
-              userId={props.row.original.userId}
+              isCurrentUser={props.row.original.id === currentUserId}
+              uniqueId={props.row.original.id}
             />
           );
         },
@@ -52,7 +51,7 @@ export const WorkspaceUsersTable: React.FC<{
           ),
           meta: { responsive: true },
           cell: (props) => {
-            return <RoleManagementMenu user={props.row.original} resourceType="workspace" />;
+            return <RoleManagementCell user={props.row.original} resourceType="workspace" />;
           },
           enableSorting: !!areAllRbacRolesEnabled,
           sortingFn: (a, b, order) => {

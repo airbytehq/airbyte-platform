@@ -4,9 +4,13 @@ import { useIntl } from "react-intl";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { workspaceKeys } from "./workspaces";
-import { acceptUserInvitation, createUserInvitation } from "../generated/AirbyteClient";
-import { SCOPE_USER } from "../scopes";
-import { UserInvitationCreateRequestBody, UserInvitationRead } from "../types/AirbyteClient";
+import { acceptUserInvitation, createUserInvitation, listPendingInvitations } from "../generated/AirbyteClient";
+import { SCOPE_ORGANIZATION, SCOPE_USER, SCOPE_WORKSPACE } from "../scopes";
+import {
+  UserInvitationCreateRequestBody,
+  UserInvitationListRequestBody,
+  UserInvitationRead,
+} from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -66,5 +70,13 @@ export const useCreateUserInvitation = () => {
         });
         return null;
       })
+  );
+};
+
+export const useListUserInvitations = (userInvitationListRequestBody: UserInvitationListRequestBody) => {
+  const requestOptions = useRequestOptions();
+  const keyScope = userInvitationListRequestBody.scopeType === "workspace" ? SCOPE_WORKSPACE : SCOPE_ORGANIZATION;
+  return useSuspenseQuery([keyScope, "userInvitations"], () =>
+    listPendingInvitations(userInvitationListRequestBody, requestOptions)
   );
 };

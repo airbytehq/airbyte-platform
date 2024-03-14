@@ -1,6 +1,6 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { useFormState } from "react-hook-form";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { SchemaOf } from "yup";
 import * as yup from "yup";
 
@@ -43,6 +43,7 @@ const SubmissionButton: React.FC = () => {
 };
 
 export const AddUserModal: React.FC<{ closeModal: () => void }> = ({ closeModal }) => {
+  const { formatMessage } = useIntl();
   const workspaceId = useCurrentWorkspaceId();
   const organizationInfo = useCurrentOrganizationInfo();
   const { users } = useListUsersInOrganization(organizationInfo?.organizationId);
@@ -132,7 +133,11 @@ export const AddUserModal: React.FC<{ closeModal: () => void }> = ({ closeModal 
       onSubmit={onInviteSubmit}
     >
       <Box p="md">
-        <SearchInput value={searchValue} onChange={(e) => setSearchValue(e.target.value)} />
+        <SearchInput
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          placeholder={formatMessage({ id: "userInvitations.create.modal.search" })}
+        />
       </Box>
       <AddUserModalBody
         usersToList={usersToList}

@@ -1,11 +1,4 @@
-import { useCurrentWorkspace, useListUsersInOrganization } from "core/api";
-import {
-  OrganizationUserRead,
-  PermissionRead,
-  PermissionType,
-  WorkspaceUserAccessInfoRead,
-  WorkspaceUserRead,
-} from "core/api/types/AirbyteClient";
+import { PermissionType, UserInvitationRead, WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
 import { RbacRole, RbacRoleHierarchy, partitionPermissionType } from "core/utils/rbac/rbacPermissionsQuery";
 export type ResourceType = "workspace" | "organization" | "instance";
 
@@ -51,37 +44,69 @@ export const permissionsByResourceType: Record<ResourceType, PermissionType[]> =
   instance: [PermissionType.instance_admin],
 };
 
-export interface NextAccessUserRead {
-  userId: string;
-  email: string;
-  name?: string;
-  workspacePermission?: PermissionRead;
-  organizationPermission?: PermissionRead;
-}
+/**
+ * a unified typing to allow listing invited and current users together in WorkspaceUsersTable
+ * using this custom union rather than a union of WorkspaceUserAccessInfoRead | UserInvitationRead
+ * allows us to handle intentionally missing properties more gracefully.
+ */
+export type UnifiedWorkspaceUserModel =
+  | {
+      id: string;
+      userEmail: string;
+      userName?: string;
+      organizationPermission?: WorkspaceUserAccessInfoRead["organizationPermission"];
+      workspacePermission?: WorkspaceUserAccessInfoRead["workspacePermission"];
+      invitationStatus?: never; // Explicitly marking these as never when permissions are present
+      invitationPermissionType?: never;
+    }
+  | {
+      id: string;
+      userEmail: string;
+      userName?: string;
+      organizationPermission?: never; // Explicitly marking these as never when invitation fields are present
+      workspacePermission?: never;
+      invitationStatus: UserInvitationRead["status"];
+      invitationPermissionType: UserInvitationRead["permissionType"];
+    };
 
-export interface AccessUsers {
-  workspace?: { users: WorkspaceUserRead[]; usersToAdd: OrganizationUserRead[] };
-  organization?: { users: OrganizationUserRead[]; usersToAdd: [] };
-}
+export const unifyWorkspaceUserData = (
+  workspaceAccessUsers: WorkspaceUserAccessInfoRead[],
+  workspaceInvitations: UserInvitationRead[]
+): UnifiedWorkspaceUserModel[] => {
+  const normalizedUsers = workspaceAccessUsers.map((user) => {
+    return {
+      id: user.userId,
+      userEmail: user.userEmail,
+      userName: user.userName,
+      organizationPermission: user.organizationPermission,
+      workspacePermission: user.workspacePermission,
+    };
+  });
 
-export interface NextAccessUsers {
-  workspace?: { users: NextAccessUserRead[]; usersToAdd: OrganizationUserRead[] };
-}
+  const normalizedInvitations = workspaceInvitations.map((invitation) => {
+    return {
+      id: invitation.id,
+      userEmail: invitation.invitedEmail,
+      invitationStatus: invitation.status,
+      invitationPermissionType: invitation.permissionType,
+    };
+  });
 
-export const useGetOrganizationAccessUsers = (): AccessUsers => {
-  const workspace = useCurrentWorkspace();
-  const { users: organizationUsers } = useListUsersInOrganization(workspace.organizationId);
-
-  return {
-    organization: { users: organizationUsers, usersToAdd: [] },
-  };
+  return [...normalizedUsers, ...normalizedInvitations];
 };
 
-export const getWorkspaceAccessLevel = (user: WorkspaceUserAccessInfoRead): RbacRole => {
-  const orgPermissionType = user.organizationPermission?.permissionType;
-  const workspacePermissionType = user.workspacePermission?.permissionType;
+export const getWorkspaceAccessLevel = (
+  unifiedWorkspaceUser: Pick<
+    UnifiedWorkspaceUserModel,
+    "workspacePermission" | "organizationPermission" | "invitationPermissionType"
+  >
+): RbacRole => {
+  const workspacePermissionType =
+    unifiedWorkspaceUser.workspacePermission?.permissionType ?? unifiedWorkspaceUser.invitationPermissionType;
 
-  const orgRole = orgPermissionType ? partitionPermissionType(orgPermissionType)[1] : undefined;
+  const organizationPermissionType = unifiedWorkspaceUser.organizationPermission?.permissionType;
+
+  const orgRole = organizationPermissionType ? partitionPermissionType(organizationPermissionType)[1] : undefined;
   const workspaceRole = workspacePermissionType ? partitionPermissionType(workspacePermissionType)[1] : undefined;
 
   // return whatever is the "highest" role ie the lowest index greater than -1.

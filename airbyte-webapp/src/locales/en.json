@@ -1694,5 +1694,8 @@
   "userInvitations.create.modal.emptyList.noOrganization": "Enter a valid email address to invite a new member.",
   "userInvitations.newMember": "New member",
   "userInvitations.create.modal.existingUserTooltip": "Go to workspace member settings to edit this user’s permissions.",
-  "userInvitations.create.modal.organizationAdminTooltip": "This user already has full access to this workspace."
+  "userInvitations.create.modal.organizationAdminTooltip": "This user already has full access to this workspace.",
+  "userInvitations.pendingInvitation": "Pending...",
+  "userInvitations.pendingInvitation.tooltipMain": "This member has not yet accepted their invitation.",
+  "userInvitations.pendingInvitation.tooltipAdditionalInfo": "They do not yet have access to this workspace."
 }
