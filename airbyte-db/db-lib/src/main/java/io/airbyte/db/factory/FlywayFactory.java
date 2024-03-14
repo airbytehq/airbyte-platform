@@ -6,6 +6,7 @@ package io.airbyte.db.factory;
 
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
+import org.flywaydb.database.postgresql.PostgreSQLConfigurationExtension;
 
 /**
  * Temporary factory class that provides convenience methods for creating a {@link Flyway}
@@ -68,15 +69,22 @@ public class FlywayFactory {
                               final String baselineDescription,
                               final boolean baselineOnMigrate,
                               final String... migrationFileLocations) {
-    return Flyway.configure()
+    final var flywayConfiguration = Flyway.configure()
         .dataSource(dataSource)
         .baselineVersion(baselineVersion)
         .baselineDescription(baselineDescription)
         .baselineOnMigrate(baselineOnMigrate)
         .installedBy(installedBy)
         .table(String.format(MIGRATION_TABLE_FORMAT, dbIdentifier))
-        .locations(migrationFileLocations)
-        .load();
+        .locations(migrationFileLocations);
+
+    // Setting the transactional lock to false allows us run queries outside transactions
+    // without hanging. This enables creating indexes concurrently (i.e. without locking tables)
+    flywayConfiguration.getPluginRegister()
+        .getPlugin(PostgreSQLConfigurationExtension.class)
+        .setTransactionalLock(false);
+
+    return flywayConfiguration.load();
   }
 
 }
