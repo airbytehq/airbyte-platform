@@ -5,13 +5,12 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_ADMIN;
-import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_ADMIN;
-import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 
 import io.airbyte.api.generated.UserInvitationApi;
 import io.airbyte.api.model.generated.InviteCodeRequestBody;
 import io.airbyte.api.model.generated.UserInvitationCreateRequestBody;
+import io.airbyte.api.model.generated.UserInvitationCreateResponse;
 import io.airbyte.api.model.generated.UserInvitationListRequestBody;
 import io.airbyte.api.model.generated.UserInvitationRead;
 import io.airbyte.commons.server.support.CurrentUserService;
@@ -63,12 +62,12 @@ public class UserInvitationApiController implements UserInvitationApi {
   }
 
   @Override
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  public UserInvitationRead createUserInvitation(@Body final UserInvitationCreateRequestBody invitationCreateRequestBody) {
+  @Secured({WORKSPACE_ADMIN, ORGANIZATION_ADMIN})
+  public UserInvitationCreateResponse createUserInvitation(@Body final UserInvitationCreateRequestBody invitationCreateRequestBody) {
     return ApiHelper.execute(() -> {
       final User currentUser = currentUserService.getCurrentUser();
 
-      return userInvitationHandler.create(invitationCreateRequestBody, currentUser);
+      return userInvitationHandler.createInvitationOrPermission(invitationCreateRequestBody, currentUser);
     });
   }
 

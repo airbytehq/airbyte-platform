@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.config.persistence.ConfigNotFoundException.NO_ORGANIZATION_FOR_WORKSPACE;
+
 import com.github.slugify.Slugify;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -349,7 +351,7 @@ public class WorkspacesHandler {
     final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
     final Optional<Organization> organization = organizationPersistence.getOrganizationByWorkspaceId(workspaceId);
     if (organization.isEmpty()) {
-      throw new ConfigNotFoundException("ORGANIZATION_FOR_WORKSPACE", workspaceId.toString());
+      throw new ConfigNotFoundException(NO_ORGANIZATION_FOR_WORKSPACE, workspaceId.toString());
     }
     return buildWorkspaceOrganizationInfoRead(organization.get());
   }

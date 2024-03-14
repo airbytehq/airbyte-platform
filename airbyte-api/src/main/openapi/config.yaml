@@ -4597,11 +4597,11 @@ paths:
               $ref: "#/components/schemas/UserInvitationCreateRequestBody"
       responses:
         "201":
-          description: Successfully created user invitation.
+          description: Successfully processed user invitation create request.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserInvitationRead"
+                $ref: "#/components/schemas/UserInvitationCreateResponse"
 
   /v1/user_invitations/by_code/{inviteCode}:
     get:
@@ -11207,6 +11207,15 @@ components:
         scopeId:
           type: string
           format: uuid
+    UserInvitationCreateResponse:
+      type: object
+      properties:
+        inviteCode:
+          type: string
+          description: The created invite code, if the request resulted in a new invitation being created.
+        directlyAdded:
+          type: boolean
+          description: True if the request resulted in the user being directly added, without a created invitation.
     UserInvitationListRequestBody:
       type: object
       required:
