@@ -11,6 +11,7 @@ dependencies {
 
     api(libs.segment.java.analytics)
     api(libs.micronaut.http)
+    api(libs.micronaut.cache.caffeine)
     api(libs.bundles.micronaut.annotation)
     api(libs.bundles.micronaut.kotlin)
     api(libs.kotlin.logging)

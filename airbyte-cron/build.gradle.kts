@@ -17,6 +17,7 @@ dependencies {
 
     implementation(platform(libs.micronaut.platform))
     implementation(libs.bundles.micronaut)
+    implementation(libs.bundles.micronaut.cache)
     implementation(libs.bundles.micronaut.metrics)
     implementation(libs.bundles.kubernetes.client)
     implementation(libs.bundles.temporal)

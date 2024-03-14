@@ -14,6 +14,8 @@ import com.segment.analytics.messages.TrackMessage
 import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.cache.annotation.CacheConfig
+import io.micronaut.cache.annotation.Cacheable
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
 import io.micronaut.http.context.ServerRequestContext
@@ -337,9 +339,11 @@ class LoggingTrackingClient(
 }
 
 @Singleton
-class DeploymentFetcher(
+@CacheConfig("analytics-tracking-deployments")
+open class DeploymentFetcher(
   @Named("deploymentSupplier") val deploymentFetcher: Supplier<DeploymentMetadataRead>,
 ) : Supplier<Deployment> {
+  @Cacheable
   override fun get(): Deployment {
     val deploymentMetadata = deploymentFetcher.get()
     return Deployment(deploymentMetadata)
@@ -347,9 +351,11 @@ class DeploymentFetcher(
 }
 
 @Singleton
-class TrackingIdentityFetcher(
+@CacheConfig("analytics-tracking-identity")
+open class TrackingIdentityFetcher(
   @Named("workspaceFetcher") val workspaceFetcher: Function<UUID, WorkspaceRead>,
 ) : Function<UUID, TrackingIdentity> {
+  @Cacheable
   override fun apply(workspaceId: UUID): TrackingIdentity {
     val workspaceRead = workspaceFetcher.apply(workspaceId)
     val email: String? =

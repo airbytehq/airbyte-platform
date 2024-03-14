@@ -21,6 +21,7 @@ kubernetes-client = "6.5.1"
 log4j = "2.22.1"
 lombok = "1.18.30"
 micronaut = "4.3.5"
+micronaut-cache = "4.2.2"
 micronaut-data = "4.6.1"
 micronaut-email = "2.4.0"
 micronaut-jaxrs = "4.3.0"
@@ -184,7 +185,8 @@ vault-java-driver = { module = "com.bettercloud:vault-java-driver", version = "5
 
 # Micronaut-related dependencies
 h2-database = { module = "com.h2database:h2", version = "2.2.224" }
-micronaut-cache-caffeine = { module = "io.micronaut.cache:micronaut-cache-caffeine", version = "4.2.2" }
+micronaut-cache-caffeine = { module = "io.micronaut.cache:micronaut-cache-caffeine", version.ref = "micronaut-cache" }
+micronaut-cache-management = { module = "io.micronaut.cache:micronaut-cache-management", version.ref = "micronaut-cache" }
 micronaut-data-connection = { module = "io.micronaut.data:micronaut-data-connection", version.ref = "micronaut-data" }
 micronaut-data-processor = { module = "io.micronaut.data:micronaut-data-processor", version.ref = "micronaut-data" }
 micronaut-data-jdbc = { module = "io.micronaut.data:micronaut-data-jdbc", version.ref = "micronaut-data" }
@@ -238,6 +240,7 @@ micronaut = ["jakarta-annotation-api", "jakarta-transaction-api", "micronaut-htt
 micronaut-light = ["jakarta-annotation-api", "micronaut-inject-java", "micronaut-runtime"]
 micronaut-annotation = ["jakarta-annotation-api", "micronaut-inject-java", "micronaut-inject-kotlin"]
 micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor", "micronaut-http-validation"]
+micronaut-cache = ["micronaut-cache-caffeine", "micronaut-cache-management"]
 micronaut-data-jdbc = [ "micronaut-data-connection", "micronaut-data-jdbc", "micronaut-data-model", "micronaut-data-tx", "jakarta-persistence-api", "micronaut-jdbc-hikari"]
 micronaut-email = ["micronaut-email", "micronaut-email-sendgrid"]
 micronaut-kotlin = ["micronaut-kotlin-extension-functions", "micronaut-kotlin-runtime"]
