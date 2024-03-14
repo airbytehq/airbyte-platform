@@ -16,6 +16,7 @@ import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpResponseFactory
 import io.micronaut.http.HttpStatus
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import java.util.UUID
 
@@ -95,6 +96,13 @@ class ConfigClientErrorHandlerTest {
     val failureReason = "Could not find job with id: -1"
     assertThrows<ConflictProblem>(JOB_NOT_RUNNING_MESSAGE) {
       ConfigClientErrorHandler.handleError(RuntimeException(failureReason), resourceId.toString())
+    }
+  }
+
+  @Test
+  fun `test that it doesn't throw on non-error http responses`() {
+    assertDoesNotThrow {
+      ConfigClientErrorHandler.handleError(HttpResponse.ok<String>(), resourceId.toString())
     }
   }
 }

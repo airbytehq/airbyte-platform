@@ -151,10 +151,10 @@ object ConfigClientErrorHandler {
    * @param response HttpResponse, most likely from the config api
    */
   private fun passThroughBadStatusCode(response: HttpResponse<*>) {
-    if (response.status.code >= HttpStatus.BAD_REQUEST.code && response.status.code < HttpStatus.INTERNAL_SERVER_ERROR.code) {
-      throw BadRequestProblem("${response.status.reason}: ${response.body}")
-    } else {
+    if (response.status.code >= HttpStatus.INTERNAL_SERVER_ERROR.code) {
       throw UnexpectedProblem(response.status, response.body()?.toString())
+    } else if (response.status.code >= HttpStatus.BAD_REQUEST.code) {
+      throw BadRequestProblem("${response.status.reason}: ${response.body}")
     }
   }
 }
