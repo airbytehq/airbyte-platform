@@ -154,19 +154,21 @@ export const ConnectionReplicationPage: React.FC = () => {
         return agg;
       }, {});
 
-      const hasUserChangesInEnabledStreamsRequiringReset = values.syncCatalog.streams.some((_stream) => {
-        const formStream = structuredClone(_stream);
-        const connectionStream = structuredClone(lookupConnectionValuesStreamById[getStreamId(formStream)]);
+      const hasUserChangesInEnabledStreamsRequiringReset = values.syncCatalog.streams
+        .filter((streamNode) => streamNode.config?.selected)
+        .some((streamNode) => {
+          const formStream = structuredClone(streamNode);
+          const connectionStream = structuredClone(lookupConnectionValuesStreamById[getStreamId(formStream)]);
 
-        return !compareObjectsByFields<AirbyteStreamConfiguration>(formStream.config, connectionStream.config, [
-          "cursorField",
-          "destinationSyncMode",
-          "primaryKey",
-          "selectedFields",
-          "syncMode",
-          "aliasName",
-        ]);
-      });
+          return !compareObjectsByFields<AirbyteStreamConfiguration>(formStream.config, connectionStream.config, [
+            "cursorField",
+            "destinationSyncMode",
+            "primaryKey",
+            "selectedFields",
+            "syncMode",
+            "aliasName",
+          ]);
+        });
 
       const catalogChangesRequireReset = hasCatalogDiffInEnabledStream || hasUserChangesInEnabledStreamsRequiringReset;
 
