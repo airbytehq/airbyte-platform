@@ -17,6 +17,7 @@ import static io.airbyte.test.acceptance.AcceptanceTestsResources.WITHOUT_SCD_TA
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.WITH_SCD_TABLE;
 import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_ID;
 import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_NAME;
+import static io.airbyte.test.utils.AcceptanceTestHarness.POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
 import static io.airbyte.test.utils.AcceptanceTestHarness.STREAM_NAME;
@@ -82,19 +83,15 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.TestInstance.Lifecycle;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,13 +114,12 @@ import org.slf4j.LoggerFactory;
   "PMD.AvoidDuplicateLiterals"})
 @DisabledIfEnvironmentVariable(named = "SKIP_BASIC_ACCEPTANCE_TESTS",
                                matches = "true")
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@TestInstance(Lifecycle.PER_CLASS)
+@Execution(ExecutionMode.CONCURRENT)
 class SyncAcceptanceTests {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SyncAcceptanceTests.class);
 
-  private static final AcceptanceTestsResources testResources = new AcceptanceTestsResources();
+  private AcceptanceTestsResources testResources;
 
   static final String SLOW_TEST_IN_GKE =
       "TODO(https://github.com/airbytehq/airbyte-platform-internal/issues/5181): re-enable slow tests in GKE";
@@ -139,25 +135,18 @@ class SyncAcceptanceTests {
   AcceptanceTestHarness testHarness;
   UUID workspaceId;
 
-  @BeforeAll
-  void init() throws URISyntaxException, IOException, InterruptedException, ApiException {
+  @BeforeEach
+  void setup() throws SQLException, URISyntaxException, IOException, ApiException, InterruptedException {
+    testResources = new AcceptanceTestsResources();
     testResources.init();
     testHarness = testResources.getTestHarness();
     workspaceId = testResources.getWorkspaceId();
-  }
-
-  @BeforeEach
-  void setup() throws SQLException, URISyntaxException, IOException, ApiException {
     testResources.setup();
   }
 
   @AfterEach
   void tearDown() {
     testResources.tearDown();
-  }
-
-  @AfterAll
-  static void end() {
     testResources.end();
   }
 
@@ -620,21 +609,20 @@ class SyncAcceptanceTests {
                                  disabledReason = SLOW_TEST_IN_GKE)
   void testSyncAfterUpgradeToPerStreamState(final TestInfo testInfo) throws Exception {
     LOGGER.info("Starting {}", testInfo.getDisplayName());
-    final SourceRead source = testHarness.createPostgresSource();
-    final UUID sourceId = source.getSourceId();
-    final UUID sourceDefinitionId = source.getSourceDefinitionId();
+    // create custom source so that we don't share the source that is also being used by other tests
+    // Set the source to a version that does not support per-stream state
+    SourceDefinitionRead postgresSourceDefinition = testHarness.createPostgresSourceDefinition(workspaceId, POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
+    final SourceRead customPostgres =
+        testHarness.createSource("custom postgres", workspaceId, postgresSourceDefinition.getSourceDefinitionId(), testHarness.getSourceDbConfig());
+    final UUID sourceId = customPostgres.getSourceId();
+    final UUID customSourceDefinitionId = customPostgres.getSourceDefinitionId();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
     final AirbyteCatalog catalog = discoverResult.getCatalog();
 
     // Fetch the current/most recent source definition version
-    final SourceDefinitionRead sourceDefinitionRead = testHarness.getSourceDefinition(sourceDefinitionId);
+    final SourceDefinitionRead sourceDefinitionRead = testHarness.getSourceDefinition(testHarness.getPostgresSourceDefinitionId());
     final String currentSourceDefintionVersion = sourceDefinitionRead.getDockerImageTag();
-
-    // Set the source to a version that does not support per-stream state
-    LOGGER.info("Setting source connector to pre-per-stream state version {}...",
-        AcceptanceTestHarness.POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
-    testHarness.updateSourceDefinitionVersion(sourceDefinitionId, AcceptanceTestHarness.POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
 
     catalog.getStreams().forEach(s -> s.getConfig()
         .syncMode(SyncMode.INCREMENTAL)
@@ -661,7 +649,7 @@ class SyncAcceptanceTests {
         false, WITHOUT_SCD_TABLE);
 
     // Set source to a version that supports per-stream state
-    testHarness.updateSourceDefinitionVersion(sourceDefinitionId, currentSourceDefintionVersion);
+    testHarness.updateSourceDefinitionVersion(customSourceDefinitionId, currentSourceDefintionVersion);
     LOGGER.info("Upgraded source connector per-stream state supported version {}.", currentSourceDefintionVersion);
 
     // add new records and run again.
@@ -734,21 +722,25 @@ class SyncAcceptanceTests {
                                  disabledReason = SLOW_TEST_IN_GKE)
   void testSyncAfterUpgradeToPerStreamStateWithNoNewData(final TestInfo testInfo) throws Exception {
     LOGGER.info("Starting {}", testInfo.getDisplayName());
-    final SourceRead source = testHarness.createPostgresSource();
-    final UUID sourceId = source.getSourceId();
-    final UUID sourceDefinitionId = source.getSourceDefinitionId();
+    // create custom source so that we don't share the source that is also being used by other tests
+    // Set the source to a version that does not support per-stream state
+    SourceDefinitionRead postgresSourceDefinition = testHarness.createPostgresSourceDefinition(workspaceId, POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
+    final SourceRead customPostgres =
+        testHarness.createSource("custom postgres", workspaceId, postgresSourceDefinition.getSourceDefinitionId(), testHarness.getSourceDbConfig());
+    final UUID sourceId = customPostgres.getSourceId();
+    final UUID customSourceDefinitionId = customPostgres.getSourceDefinitionId();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
     final AirbyteCatalog catalog = discoverResult.getCatalog();
 
     // Fetch the current/most recent source definition version
-    final SourceDefinitionRead sourceDefinitionRead = testHarness.getSourceDefinition(sourceDefinitionId);
+    final SourceDefinitionRead sourceDefinitionRead = testHarness.getSourceDefinition(testHarness.getPostgresSourceDefinitionId());
     final String currentSourceDefintionVersion = sourceDefinitionRead.getDockerImageTag();
 
     // Set the source to a version that does not support per-stream state
     LOGGER.info("Setting source connector to pre-per-stream state version {}...",
-        AcceptanceTestHarness.POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
-    testHarness.updateSourceDefinitionVersion(sourceDefinitionId, AcceptanceTestHarness.POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
+        POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
+    testHarness.updateSourceDefinitionVersion(customSourceDefinitionId, POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
 
     catalog.getStreams().forEach(s -> s.getConfig()
         .syncMode(SyncMode.INCREMENTAL)
@@ -774,7 +766,7 @@ class SyncAcceptanceTests {
         false, WITHOUT_SCD_TABLE);
 
     // Set source to a version that supports per-stream state
-    testHarness.updateSourceDefinitionVersion(sourceDefinitionId, currentSourceDefintionVersion);
+    testHarness.updateSourceDefinitionVersion(customSourceDefinitionId, currentSourceDefintionVersion);
     LOGGER.info("Upgraded source connector per-stream state supported version {}.", currentSourceDefintionVersion);
 
     // sync one more time. verify that nothing has been synced

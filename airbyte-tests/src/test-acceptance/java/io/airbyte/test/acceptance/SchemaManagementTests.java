@@ -43,13 +43,12 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +59,7 @@ import org.slf4j.LoggerFactory;
                                matches = "true")
 @Timeout(value = 2,
          unit = TimeUnit.MINUTES) // Default timeout of 2 minutes; individual tests should override if they need longer.
-@TestInstance(Lifecycle.PER_CLASS)
+@Execution(ExecutionMode.CONCURRENT)
 class SchemaManagementTests {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SchemaManagementTests.class);
@@ -73,15 +72,12 @@ class SchemaManagementTests {
   private static final String AIRBYTE_AUTH_HEADER = "eyJ1c2VyX2lkIjogImNsb3VkLWFwaSIsICJlbWFpbF92ZXJpZmllZCI6ICJ0cnVlIn0K";
   private static final String AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID = "AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID";
   private static final String AIRBYTE_SERVER_HOST = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001");
-  public static final int JITTER_MAX_INTERVAL_SECS = 10;
-  public static final int FINAL_INTERVAL_SECS = 60;
-  public static final int MAX_TRIES = 3;
   public static final String A_NEW_COLUMN = "a_new_column";
   public static final String FIELD_NAME = "name";
   private static final int DEFAULT_VALUE = 50;
-  private static AcceptanceTestHarness testHarness;
-  private static ConnectionRead createdConnection;
-  private static ConnectionRead createdConnectionWithSameSource;
+  private AcceptanceTestHarness testHarness;
+  private ConnectionRead createdConnection;
+  private ConnectionRead createdConnectionWithSameSource;
 
   private void createTestConnections() throws Exception {
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
@@ -118,8 +114,7 @@ class SchemaManagementTests {
             .build());
   }
 
-  @BeforeAll
-  static void init() throws ApiException, URISyntaxException, IOException, InterruptedException {
+  void init() throws ApiException, URISyntaxException, IOException, InterruptedException {
     // TODO(mfsiega-airbyte): clean up and centralize the way we do config.
     final boolean isGke = System.getenv().containsKey(IS_GKE);
     // Set up the API client.
@@ -153,6 +148,7 @@ class SchemaManagementTests {
 
   @BeforeEach
   void beforeEach() throws Exception {
+    init();
     LOGGER.debug("Executing test case setup");
     testHarness.setup();
     createTestConnections();

@@ -43,15 +43,9 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.TestInstance.Lifecycle;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,47 +69,29 @@ import org.slf4j.LoggerFactory;
   "PMD.AvoidDuplicateLiterals"})
 @DisabledIfEnvironmentVariable(named = "SKIP_BASIC_ACCEPTANCE_TESTS",
                                matches = "true")
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@TestInstance(Lifecycle.PER_CLASS)
 class ApiAcceptanceTests {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ApiAcceptanceTests.class);
 
-  private static final AcceptanceTestsResources testResources = new AcceptanceTestsResources();
-
-  static final String SLOW_TEST_IN_GKE =
-      "TODO(https://github.com/airbytehq/airbyte-platform-internal/issues/5181): re-enable slow tests in GKE";
-  static final String DUPLICATE_TEST_IN_GKE =
+  private static final String DUPLICATE_TEST_IN_GKE =
       "TODO(https://github.com/airbytehq/airbyte-platform-internal/issues/5182): eliminate test duplication";
-  static final String TYPE = "type";
-  static final String E2E_TEST_SOURCE = "E2E Test Source -";
-  static final String INFINITE_FEED = "INFINITE_FEED";
-  static final String MESSAGE_INTERVAL = "message_interval";
-  static final String MAX_RECORDS = "max_records";
-  static final String FIELD = "field";
-  static final String ID_AND_NAME = "id_and_name";
-  AcceptanceTestHarness testHarness;
-  UUID workspaceId;
 
-  @BeforeAll
-  void init() throws URISyntaxException, IOException, InterruptedException, ApiException {
+  private AcceptanceTestsResources testResources;
+  private AcceptanceTestHarness testHarness;
+  private UUID workspaceId;
+
+  @BeforeEach
+  void setup() throws SQLException, URISyntaxException, IOException, ApiException, InterruptedException {
+    testResources = new AcceptanceTestsResources();
     testResources.init();
     testHarness = testResources.getTestHarness();
     workspaceId = testResources.getWorkspaceId();
-  }
-
-  @BeforeEach
-  void setup() throws SQLException, URISyntaxException, IOException, ApiException {
     testResources.setup();
   }
 
   @AfterEach
   void tearDown() {
     testResources.tearDown();
-  }
-
-  @AfterAll
-  static void end() {
     testResources.end();
   }
 
