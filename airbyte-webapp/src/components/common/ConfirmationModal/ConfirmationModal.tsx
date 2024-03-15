@@ -1,3 +1,4 @@
+import isString from "lodash/isString";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
@@ -10,7 +11,7 @@ import useLoadingState from "../../../hooks/useLoadingState";
 export interface ConfirmationModalProps {
   onClose: () => void;
   title: string;
-  text: string;
+  text: string | React.ReactNode;
   textValues?: Record<string, string | number>;
   submitButtonText: string;
   onSubmit: () => void;
@@ -38,7 +39,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   return (
     <Modal onClose={onClose} title={<FormattedMessage id={title} />} testId="confirmationModal">
       <div className={styles.content}>
-        <FormattedMessage id={text} values={textValues} />
+        {isString(text) ? <FormattedMessage id={text} values={textValues} /> : text}
         {additionalContent}
         <div className={styles.buttonContent}>
           <Button

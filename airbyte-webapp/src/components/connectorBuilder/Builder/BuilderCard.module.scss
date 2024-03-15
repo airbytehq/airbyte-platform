@@ -54,3 +54,21 @@
     cursor: pointer;
   }
 }
+
+.yamlEditor {
+  min-height: 50px;
+  height: 200px;
+  overflow: hidden;
+  resize: vertical;
+}
+
+.yamlEditorToggle {
+  align-self: flex-end;
+}
+
+.discardYamlError {
+  overflow-x: auto;
+  background-color: colors.$grey-100;
+  padding: variables.$spacing-md;
+  border-radius: variables.$border-radius-xs;
+}

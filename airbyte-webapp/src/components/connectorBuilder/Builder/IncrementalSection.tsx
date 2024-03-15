@@ -42,7 +42,8 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
       docLink={links.connectorBuilderIncrementalSync}
       label={formatMessage({ id: "connectorBuilder.incremental.label" })}
       tooltip={formatMessage({ id: "connectorBuilder.incremental.tooltip" })}
-      toggleConfig={{
+      inputsConfig={{
+        toggleable: true,
         path: streamFieldPath("incrementalSync"),
         defaultValue: {
           datetime_format: "",
@@ -346,7 +347,7 @@ const CursorDatetimeFormatField = ({ streamFieldPath }: { streamFieldPath: Strea
   const detectedFormat = data?.inferred_datetime_formats?.[cursorField];
   return (
     <>
-      {!cursorDatetimeFormats.includes(detectedFormat) && cursorField && detectedFormat && (
+      {!cursorDatetimeFormats?.includes(detectedFormat) && cursorField && detectedFormat && (
         <Message
           type="info"
           text={

@@ -1,7 +1,10 @@
+import { load } from "js-yaml";
 import { JSONSchema7 } from "json-schema";
+import isString from "lodash/isString";
 import merge from "lodash/merge";
 import { FieldPath, useWatch } from "react-hook-form";
 import semver from "semver";
+import { match } from "ts-pattern";
 import * as yup from "yup";
 import { MixedSchema } from "yup/lib/mixed";
 
@@ -41,7 +44,6 @@ import {
   DeclarativeStreamTransformationsItem,
   HttpResponseFilter,
   DefaultPaginator,
-  DeclarativeComponentSchemaMetadata,
   SessionTokenAuthenticator,
   SessionTokenAuthenticatorType,
   SessionTokenRequestApiKeyAuthenticatorType,
@@ -208,6 +210,9 @@ export type BuilderRequestBody =
       value: string;
     };
 
+export type YamlString = string;
+export const isYamlString = (value: unknown): value is YamlString => isString(value);
+
 export interface BuilderStream {
   id: string;
   name: string;
@@ -216,16 +221,55 @@ export interface BuilderStream {
   primaryKey: string[];
   httpMethod: BuilderHttpMethod;
   requestOptions: BuilderRequestOptions;
-  paginator?: BuilderPaginator;
-  transformations?: BuilderTransformation[];
+  paginator?: BuilderPaginator | YamlString;
+  transformations?: BuilderTransformation[] | YamlString;
   incrementalSync?: BuilderIncrementalSync;
   parentStreams?: BuilderParentStream[];
   parameterizedRequests?: BuilderParameterizedRequests[];
-  errorHandler?: BuilderErrorHandler[];
+  errorHandler?: BuilderErrorHandler[] | YamlString;
   schema?: string;
   unsupportedFields?: Record<string, object>;
   autoImportSchema: boolean;
 }
+
+type StreamName = string;
+// todo: add more component names to this type as more components support in YAML
+export type YamlSupportedComponentName = "paginator" | "errorHandler" | "transformations";
+
+export interface BuilderMetadata {
+  autoImportSchema: Record<StreamName, boolean>;
+  yamlComponents?: {
+    streams: Record<StreamName, YamlSupportedComponentName[]>;
+  };
+}
+
+export type ManifestValuePerComponentPerStream = Record<StreamName, Record<YamlSupportedComponentName, unknown>>;
+export const getManifestValuePerComponentPerStream = (
+  manifest: ConnectorManifest
+): ManifestValuePerComponentPerStream => {
+  if (manifest.metadata === undefined) {
+    return {};
+  }
+  const metadata = manifest.metadata as BuilderMetadata;
+  if (metadata?.yamlComponents?.streams === undefined) {
+    return {};
+  }
+  return Object.fromEntries(
+    Object.entries(metadata?.yamlComponents?.streams).map(([streamName, yamlComponentNames]) => {
+      const stream = manifest.streams.find((stream) => stream.name === streamName);
+      const manifestValuePerComponent = Object.fromEntries(
+        yamlComponentNames.map((yamlComponentName) => {
+          return match(yamlComponentName)
+            .with("paginator", (name) => [name, stream?.retriever?.paginator])
+            .with("errorHandler", (name) => [name, stream?.retriever?.requester?.error_handler])
+            .with("transformations", (name) => [name, stream?.transformations])
+            .otherwise(() => []);
+        })
+      );
+      return [streamName, manifestValuePerComponent];
+    })
+  );
+};
 
 // 0.29.0 is the version where breaking changes got introduced - older states can't be supported
 export const OLDEST_SUPPORTED_CDK_VERSION = "0.29.0";
@@ -488,7 +532,7 @@ export function hasIncrementalSyncUserInput(
 ) {
   return streams.some(
     (stream) =>
-      stream.incrementalSync?.[key].type === "user_input" &&
+      stream.incrementalSync?.[key]?.type === "user_input" &&
       (key === "start_datetime" || stream.incrementalSync?.filter_mode === "range")
   );
 }
@@ -766,6 +810,25 @@ export const globalSchema = yup.object().shape({
   authenticator: authenticatorSchema,
 });
 
+const maybeYamlSchema = (schema: yup.BaseSchema) => {
+  return yup.lazy((val) =>
+    isYamlString(val)
+      ? // eslint-disable-next-line no-template-curly-in-string
+        yup.string().test("is-valid-yaml", "${path} is not valid YAML", (value) => {
+          if (!value) {
+            return true;
+          }
+          try {
+            load(value);
+            return true;
+          } catch {
+            return false;
+          }
+        })
+      : schema
+  );
+};
+
 export const streamSchema = yup.object().shape({
   name: yup.string().required(REQUIRED_ERROR),
   urlPath: yup.string().required(REQUIRED_ERROR),
@@ -774,61 +837,63 @@ export const streamSchema = yup.object().shape({
   httpMethod: httpMethodSchema,
   requestOptions: requestOptionsSchema,
   schema: jsonString,
-  paginator: yup
-    .object()
-    .shape({
-      pageSizeOption: yup.mixed().when("strategy.page_size", {
-        is: (val: number) => Boolean(val),
-        then: nonPathRequestOptionSchema,
-        otherwise: strip,
-      }),
-      pageTokenOption: yup
-        .object()
-        .shape({
-          inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value)),
-          field_name: yup.mixed().when("inject_into", {
-            is: "path",
-            then: strip,
-            otherwise: yup.string().required(REQUIRED_ERROR),
-          }),
-        })
-        .notRequired()
-        .default(undefined),
-      strategy: yup
-        .object({
-          page_size: yupNumberOrEmptyString,
-          cursor: yup.mixed().when("type", {
-            is: CURSOR_PAGINATION,
-            then: yup.object().shape({
-              cursor_value: yup.mixed().when("type", {
-                is: "custom",
-                then: yup.string().required(REQUIRED_ERROR),
-                otherwise: strip,
-              }),
-              stop_condition: yup.mixed().when("type", {
-                is: "custom",
-                then: yup.string(),
-                otherwise: strip,
-              }),
-              path: yup.mixed().when("type", {
-                is: (val: string) => val !== "custom",
-                then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
-                otherwise: strip,
-              }),
+  paginator: maybeYamlSchema(
+    yup
+      .object()
+      .shape({
+        pageSizeOption: yup.mixed().when("strategy.page_size", {
+          is: (val: number) => Boolean(val),
+          then: nonPathRequestOptionSchema,
+          otherwise: strip,
+        }),
+        pageTokenOption: yup
+          .object()
+          .shape({
+            inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value)),
+            field_name: yup.mixed().when("inject_into", {
+              is: "path",
+              then: strip,
+              otherwise: yup.string().required(REQUIRED_ERROR),
             }),
-            otherwise: strip,
-          }),
-          start_from_page: yup.mixed().when("type", {
-            is: PAGE_INCREMENT,
-            then: yupNumberOrEmptyString,
-            otherwise: strip,
-          }),
-        })
-        .notRequired()
-        .default(undefined),
-    })
-    .notRequired()
-    .default(undefined),
+          })
+          .notRequired()
+          .default(undefined),
+        strategy: yup
+          .object({
+            page_size: yupNumberOrEmptyString,
+            cursor: yup.mixed().when("type", {
+              is: CURSOR_PAGINATION,
+              then: yup.object().shape({
+                cursor_value: yup.mixed().when("type", {
+                  is: "custom",
+                  then: yup.string().required(REQUIRED_ERROR),
+                  otherwise: strip,
+                }),
+                stop_condition: yup.mixed().when("type", {
+                  is: "custom",
+                  then: yup.string(),
+                  otherwise: strip,
+                }),
+                path: yup.mixed().when("type", {
+                  is: (val: string) => val !== "custom",
+                  then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+                  otherwise: strip,
+                }),
+              }),
+              otherwise: strip,
+            }),
+            start_from_page: yup.mixed().when("type", {
+              is: PAGE_INCREMENT,
+              then: yupNumberOrEmptyString,
+              otherwise: strip,
+            }),
+          })
+          .notRequired()
+          .default(undefined),
+      })
+      .notRequired()
+      .default(undefined)
+  ),
   parentStreams: yup
     .array(
       yup.object().shape({
@@ -856,20 +921,22 @@ export const streamSchema = yup.object().shape({
     )
     .notRequired()
     .default(undefined),
-  transformations: yup
-    .array(
-      yup.object().shape({
-        path: yup.array(yup.string()).min(1, REQUIRED_ERROR),
-        value: yup.mixed().when("type", {
-          is: (val: string) => val === "add",
-          then: yup.string().required(REQUIRED_ERROR),
-          otherwise: strip,
-        }),
-      })
-    )
-    .notRequired()
-    .default(undefined),
-  errorHandler: errorHandlerSchema,
+  transformations: maybeYamlSchema(
+    yup
+      .array(
+        yup.object().shape({
+          path: yup.array(yup.string()).min(1, REQUIRED_ERROR),
+          value: yup.mixed().when("type", {
+            is: (val: string) => val === "add",
+            then: yup.string().required(REQUIRED_ERROR),
+            otherwise: strip,
+          }),
+        })
+      )
+      .notRequired()
+      .default(undefined)
+  ),
+  errorHandler: maybeYamlSchema(errorHandlerSchema),
   incrementalSync: yup
     .object()
     .shape({
@@ -945,6 +1012,16 @@ function splitUrl(url: string): { base: string; path: string } {
   return { base: leftSide, path: rightSide || "/" };
 }
 
+function convertOrLoadYamlString<BuilderInput, ManifestOutput>(
+  builderValue: BuilderInput | YamlString | undefined,
+  convertFn: (builderValue: BuilderInput | undefined) => ManifestOutput | undefined
+) {
+  if (isYamlString(builderValue)) {
+    return load(builderValue) as ManifestOutput;
+  }
+  return convertFn(builderValue);
+}
+
 function builderAuthenticatorToManifest(globalSettings: BuilderFormValues["global"]): HttpRequesterAuthenticator {
   if (globalSettings.authenticator.type === "OAuthAuthenticator") {
     return {
@@ -976,7 +1053,7 @@ function builderAuthenticatorToManifest(globalSettings: BuilderFormValues["globa
         url_base: base,
         path,
         authenticator: builderLoginRequester.authenticator,
-        error_handler: buildCompositeErrorHandler(builderLoginRequester.errorHandler),
+        error_handler: builderErrorHandlersToManifest(builderLoginRequester.errorHandler),
         http_method: builderLoginRequester.httpMethod,
         request_parameters: Object.fromEntries(builderLoginRequester.requestOptions.requestParameters),
         request_headers: Object.fromEntries(builderLoginRequester.requestOptions.requestHeaders),
@@ -1018,7 +1095,7 @@ function builderPaginationStrategyToManifest(
   };
 }
 
-function builderPaginatorToManifest(paginator: BuilderStream["paginator"]): SimpleRetrieverPaginator {
+export function builderPaginatorToManifest(paginator: BuilderPaginator | undefined): SimpleRetrieverPaginator {
   if (!paginator) {
     return { type: "NoPagination" };
   }
@@ -1154,7 +1231,9 @@ function builderStreamPartitionRouterToManifest(
   return [...(substreamPartitionRouters ?? []), ...(listPartitionRouters ?? [])];
 }
 
-function buildCompositeErrorHandler(errorHandlers: BuilderStream["errorHandler"]): CompositeErrorHandler | undefined {
+export function builderErrorHandlersToManifest(
+  errorHandlers: BuilderErrorHandler[] | undefined
+): CompositeErrorHandler | undefined {
   if (!errorHandlers || errorHandlers.length === 0) {
     return undefined;
   }
@@ -1172,7 +1251,7 @@ function buildCompositeErrorHandler(errorHandlers: BuilderStream["errorHandler"]
   };
 }
 
-function builderTransformationsToManifest(
+export function builderTransformationsToManifest(
   transformations: BuilderTransformation[] | undefined
 ): DeclarativeStreamTransformationsItem[] | undefined {
   if (!transformations) {
@@ -1254,7 +1333,7 @@ function builderStreamToDeclarativeSteam(
         request_parameters: Object.fromEntries(stream.requestOptions.requestParameters),
         request_headers: Object.fromEntries(stream.requestOptions.requestHeaders),
         authenticator: builderAuthenticatorToManifest(values.global),
-        error_handler: buildCompositeErrorHandler(stream.errorHandler),
+        error_handler: convertOrLoadYamlString(stream.errorHandler, builderErrorHandlersToManifest),
         ...builderRequestBodyToStreamRequestBody(stream.requestOptions.requestBody),
       },
       record_selector: {
@@ -1264,7 +1343,7 @@ function builderStreamToDeclarativeSteam(
           field_path: stream.fieldPointer,
         },
       },
-      paginator: builderPaginatorToManifest(stream.paginator),
+      paginator: convertOrLoadYamlString(stream.paginator, builderPaginatorToManifest),
       partition_router: builderStreamPartitionRouterToManifest(
         values,
         stream.parentStreams,
@@ -1272,7 +1351,7 @@ function builderStreamToDeclarativeSteam(
         [...visitedStreams, stream.id]
       ),
     },
-    transformations: builderTransformationsToManifest(stream.transformations),
+    transformations: convertOrLoadYamlString(stream.transformations, builderTransformationsToManifest),
     incremental_sync: builderIncrementalToManifest(stream.incrementalSync),
   };
 
@@ -1322,9 +1401,29 @@ export const orderInputs = (
     });
 };
 
-export const builderFormValuesToMetadata = (values: BuilderFormValues): DeclarativeComponentSchemaMetadata => {
+export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderMetadata => {
+  const componentNameIfString = (componentName: YamlSupportedComponentName, value: unknown) =>
+    isYamlString(value) ? [componentName] : [];
+
+  const yamlComponents: BuilderMetadata["yamlComponents"] = {
+    streams: Object.fromEntries(
+      values.streams.map((stream) => [
+        stream.name,
+        [
+          ...componentNameIfString("paginator", stream.paginator),
+          ...componentNameIfString("errorHandler", stream.errorHandler),
+          ...componentNameIfString("transformations", stream.transformations),
+        ],
+      ])
+    ),
+  };
+  const hasYamlComponents = Object.values(yamlComponents.streams).some(
+    (yamlComponents: YamlSupportedComponentName[]) => yamlComponents.length > 0
+  );
+
   return {
     autoImportSchema: Object.fromEntries(values.streams.map((stream) => [stream.name, stream.autoImportSchema])),
+    ...(hasYamlComponents && { yamlComponents }),
   };
 };
 
@@ -1363,7 +1462,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
   const correctedCheckStreams =
     validCheckStreamNames.length > 0 ? validCheckStreamNames : streamNames.length > 0 ? [streamNames[0]] : [];
 
-  return merge({
+  return {
     version: CDK_VERSION,
     type: "DeclarativeSource",
     check: {
@@ -1373,7 +1472,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     streams: manifestStreams,
     spec,
     metadata: builderFormValuesToMetadata(values),
-  });
+  };
 };
 
 export const DEFAULT_JSON_MANIFEST_VALUES: ConnectorManifest = convertToManifest(DEFAULT_BUILDER_FORM_VALUES);

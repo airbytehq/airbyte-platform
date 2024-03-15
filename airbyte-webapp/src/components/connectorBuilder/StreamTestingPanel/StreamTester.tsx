@@ -15,7 +15,10 @@ import { Text } from "components/ui/Text";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
-import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
+import {
+  useConnectorBuilderFormState,
+  useConnectorBuilderTestRead,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { GlobalRequestsDisplay } from "./GlobalRequestsDisplay";
 import { LogsDisplay } from "./LogsDisplay";
@@ -32,11 +35,8 @@ export const StreamTester: React.FC<{
   setTestingValuesInputOpen: (open: boolean) => void;
 }> = ({ hasTestingValuesErrors, setTestingValuesInputOpen }) => {
   const { formatMessage } = useIntl();
+  const { resolvedManifest, isResolving, resolveErrorMessage, resolveError } = useConnectorBuilderFormState();
   const {
-    resolvedManifest,
-    isResolving,
-    resolveErrorMessage,
-    resolveError,
     streamRead: {
       data: streamReadData,
       refetch: readStream,

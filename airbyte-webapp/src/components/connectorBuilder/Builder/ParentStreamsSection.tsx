@@ -33,7 +33,8 @@ export const ParentStreamsSection: React.FC<ParentStreamsSectionProps> = ({ stre
       docLink={links.connectorBuilderParentStream}
       label={formatMessage({ id: "connectorBuilder.parentStreams.label" })}
       tooltip={formatMessage({ id: "connectorBuilder.parentStreams.tooltip" })}
-      toggleConfig={{
+      inputsConfig={{
+        toggleable: true,
         path: streamFieldPath("parentStreams"),
         defaultValue: [EMPTY_PARENT_STREAM],
       }}
