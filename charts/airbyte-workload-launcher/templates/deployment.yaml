@@ -73,6 +73,12 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: CONFIG_ROOT
+        {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
+        - name: CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH
+          value: "/secrets/gcs-log-creds"
+        - name: CONTAINER_ORCHESTRATOR_SECRET_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.storage.storageSecretName }}
+        {{- end }}
         - name: DATABASE_HOST
           valueFrom:
             configMapKeyRef:
