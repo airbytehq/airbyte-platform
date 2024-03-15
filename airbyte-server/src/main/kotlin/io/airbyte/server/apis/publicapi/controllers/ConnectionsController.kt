@@ -288,9 +288,9 @@ open class ConnectionsController(
     // validate cron timing configurations
     trackingHelper.callWithTracker(
       {
-        AirbyteCatalogHelper.validateCronConfiguration(
-          connectionPatchRequest.schedule,
-        )
+        connectionPatchRequest.schedule?.let {
+          AirbyteCatalogHelper.validateCronConfiguration(it)
+        }
       },
       CONNECTIONS_WITH_ID_PATH,
       PUT,

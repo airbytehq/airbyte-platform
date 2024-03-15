@@ -729,7 +729,7 @@ public class AcceptanceTestHarness {
     return createNormalizationOperation(defaultWorkspaceId);
   }
 
-  private OperationRead createNormalizationOperation(final UUID workspaceId) {
+  public OperationRead createNormalizationOperation(final UUID workspaceId) {
     final OperatorConfiguration normalizationConfig = new OperatorConfiguration()
         .operatorType(OperatorType.NORMALIZATION).normalization(new OperatorNormalization().option(
             OperatorNormalization.OptionEnum.BASIC));
