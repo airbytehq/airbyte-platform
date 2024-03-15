@@ -24,6 +24,7 @@ import io.airbyte.api.client.model.generated.ConnectionScheduleType;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.api.client.model.generated.JobOptionalRead;
 import io.airbyte.api.client.model.generated.JobRead;
+import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -246,6 +247,17 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
   @Override
   public GetMaxAttemptOutput getMaxAttempt() {
     return new GetMaxAttemptOutput(syncJobMaxAttempts);
+  }
+
+  @Override
+  public Boolean isWorkspaceTombstone(UUID connectionId) {
+    try {
+      WorkspaceRead workspaceRead = workspaceApi.getWorkspaceByConnectionIdWithTombstone(new ConnectionIdRequestBody().connectionId(connectionId));
+      return workspaceRead.getTombstone();
+    } catch (ApiException e) {
+      log.warn("Fail to get the workspace.", e);
+      return false;
+    }
   }
 
   @Override

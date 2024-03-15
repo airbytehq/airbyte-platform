@@ -313,6 +313,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/workspaces/get_by_connection_id_with_tombstone:
+    post:
+      tags:
+        - workspace
+      summary: Find workspace by connection id including the tombstone ones
+      operationId: getWorkspaceByConnectionIdWithTombstone
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/workspaces/get_organization_info:
     post:
       tags:
@@ -6345,6 +6368,8 @@ components:
             $ref: "#/components/schemas/WebhookConfigRead"
         organizationId:
           $ref: "#/components/schemas/OrganizationId"
+        tombstone:
+          type: boolean
     WorkspaceOrganizationInfoRead:
       type: object
       description: Limited info about a workspace's organization that is safe to expose to workspace readers who are not members of the org.

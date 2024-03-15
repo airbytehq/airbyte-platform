@@ -129,7 +129,8 @@ public class WorkspacesHandler {
         .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
         .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
         .defaultGeography(Enums.convertTo(workspace.getDefaultGeography(), Geography.class))
-        .organizationId(workspace.getOrganizationId());
+        .organizationId(workspace.getOrganizationId())
+        .tombstone(workspace.getTombstone());
     // Add read-only webhook configs.
     if (workspace.getWebhookOperationConfigs() != null) {
       result.setWebhookConfigs(WorkspaceWebhookConfigsConverter.toApiReads(workspace.getWebhookOperationConfigs()));
@@ -363,8 +364,10 @@ public class WorkspacesHandler {
     return buildWorkspaceRead(workspace);
   }
 
-  public WorkspaceRead getWorkspaceByConnectionId(final ConnectionIdRequestBody connectionIdRequestBody) throws ConfigNotFoundException {
-    final StandardWorkspace workspace = configRepository.getStandardWorkspaceFromConnection(connectionIdRequestBody.getConnectionId(), false);
+  public WorkspaceRead getWorkspaceByConnectionId(final ConnectionIdRequestBody connectionIdRequestBody, boolean includeTombstone)
+      throws ConfigNotFoundException {
+    final StandardWorkspace workspace =
+        configRepository.getStandardWorkspaceFromConnection(connectionIdRequestBody.getConnectionId(), includeTombstone);
     return buildWorkspaceRead(workspace);
   }
 
