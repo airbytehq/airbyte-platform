@@ -135,16 +135,11 @@ jobs:
         uses: ./.github/actions/cache-build-artifacts
         with:
           cache-key: ${{ secrets.CACHE_VERSION }}
-          cache-python: "false"
 
       - uses: actions/setup-java@v3
         with:
           distribution: "zulu"
           java-version: "21"
-
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
 
       - uses: actions/setup-node@v3
         with:
@@ -189,11 +184,6 @@ jobs:
       #       This is only required on the usual github runner. The usual runner does not contain enough disk space for our use.
       #      - name: Get Docker Space
       #        run: docker run --rm busybox df -h
-
-      - uses: actions/setup-python@v4
-        if: always()
-        with:
-          python-version: "3.9"
 
   # In case of self-hosted EC2 errors, remove this block.
   stop-platform-build-runner:
