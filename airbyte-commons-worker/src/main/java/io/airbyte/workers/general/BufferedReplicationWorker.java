@@ -6,7 +6,6 @@ package io.airbyte.workers.general;
 
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
-import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.concurrency.BoundedConcurrentLinkedQueue;
 import io.airbyte.commons.concurrency.ClosableLinkedBlockingQueue;
@@ -82,9 +81,10 @@ public class BufferedReplicationWorker implements ReplicationWorker {
   private final Stopwatch readFromDestStopwatch;
   private final Stopwatch processFromDestStopwatch;
 
-  private static final int SRC_MAX_BUFFER_SIZE_DEFAULT = 1000;
-  private static final int DST_MAX_BUFFER_SIZE_DEFAULT = 1000;
-  private static final int EXECUTOR_SHUTDOWN_GRACE_PERIOD_IN_SECONDS = 10;
+  private static final int sourceMaxBufferSize = 1000;
+  private static final int destinationMaxBufferSize = 1000;
+  private static final int observabilityMetricsPeriodInSeconds = 1;
+  private static final int executorShutdownGracePeriodInSeconds = 10;
 
   public BufferedReplicationWorker(final String jobId,
                                    final int attempt,
@@ -97,18 +97,8 @@ public class BufferedReplicationWorker implements ReplicationWorker {
                                    final ReplicationWorkerHelper replicationWorkerHelper,
                                    final DestinationTimeoutMonitor destinationTimeoutMonitor,
                                    final BufferedReplicationWorkerType bufferedReplicationWorkerType) {
-    this(jobId,
-        attempt,
-        source,
-        destination,
-        syncPersistence,
-        recordSchemaValidator,
-        srcHeartbeatTimeoutChaperone,
-        replicationFeatureFlagReader,
-        replicationWorkerHelper,
-        destinationTimeoutMonitor,
-        bufferedReplicationWorkerType,
-        OptionalInt.empty());
+    this(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader,
+        replicationWorkerHelper, destinationTimeoutMonitor, bufferedReplicationWorkerType, OptionalInt.empty());
   }
 
   public BufferedReplicationWorker(final String jobId,
@@ -123,37 +113,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
                                    final DestinationTimeoutMonitor destinationTimeoutMonitor,
                                    final BufferedReplicationWorkerType bufferedReplicationWorkerType,
                                    final OptionalInt pollTimeOutDurationForQueue) {
-    this(jobId,
-        attempt,
-        source,
-        destination,
-        syncPersistence,
-        recordSchemaValidator,
-        srcHeartbeatTimeoutChaperone,
-        replicationFeatureFlagReader,
-        replicationWorkerHelper,
-        destinationTimeoutMonitor,
-        bufferedReplicationWorkerType,
-        pollTimeOutDurationForQueue,
-        OptionalInt.empty(),
-        OptionalInt.empty());
-  }
-
-  @VisibleForTesting
-  BufferedReplicationWorker(final String jobId,
-                            final int attempt,
-                            final AirbyteSource source,
-                            final AirbyteDestination destination,
-                            final SyncPersistence syncPersistence,
-                            final RecordSchemaValidator recordSchemaValidator,
-                            final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
-                            final ReplicationFeatureFlagReader replicationFeatureFlagReader,
-                            final ReplicationWorkerHelper replicationWorkerHelper,
-                            final DestinationTimeoutMonitor destinationTimeoutMonitor,
-                            final BufferedReplicationWorkerType bufferedReplicationWorkerType,
-                            final OptionalInt pollTimeOutDurationForQueue,
-                            final OptionalInt srcMaxBufferSize,
-                            final OptionalInt dstMaxBufferSize) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.source = source;
@@ -164,14 +123,12 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     this.recordSchemaValidator = recordSchemaValidator;
     this.syncPersistence = syncPersistence;
     this.srcHeartbeatTimeoutChaperone = srcHeartbeatTimeoutChaperone;
-    var resolvedSrcBufferSize = srcMaxBufferSize.orElse(SRC_MAX_BUFFER_SIZE_DEFAULT);
-    var resolvedDstBufferSize = dstMaxBufferSize.orElse(DST_MAX_BUFFER_SIZE_DEFAULT);
     this.messagesFromSourceQueue =
-        bufferedReplicationWorkerType == BufferedReplicationWorkerType.BUFFERED ? new BoundedConcurrentLinkedQueue<>(resolvedSrcBufferSize)
-            : new ClosableLinkedBlockingQueue<>(resolvedSrcBufferSize, pollTimeOutDurationForQueue);
+        bufferedReplicationWorkerType == BufferedReplicationWorkerType.BUFFERED ? new BoundedConcurrentLinkedQueue<>(sourceMaxBufferSize)
+            : new ClosableLinkedBlockingQueue<>(sourceMaxBufferSize, pollTimeOutDurationForQueue);
     this.messagesForDestinationQueue =
-        bufferedReplicationWorkerType == BufferedReplicationWorkerType.BUFFERED ? new BoundedConcurrentLinkedQueue<>(resolvedDstBufferSize)
-            : new ClosableLinkedBlockingQueue<>(resolvedDstBufferSize, pollTimeOutDurationForQueue);
+        bufferedReplicationWorkerType == BufferedReplicationWorkerType.BUFFERED ? new BoundedConcurrentLinkedQueue<>(destinationMaxBufferSize)
+            : new ClosableLinkedBlockingQueue<>(destinationMaxBufferSize, pollTimeOutDurationForQueue);
     // readFromSource + processMessage + writeToDestination + readFromDestination +
     // source heartbeat + dest timeout monitor + workload heartbeat = 7 threads
     this.executors = Executors.newFixedThreadPool(7);
@@ -233,7 +190,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
         try {
           // Best effort to mark as complete when the Worker is actually done.
-          executors.awaitTermination(EXECUTOR_SHUTDOWN_GRACE_PERIOD_IN_SECONDS, TimeUnit.SECONDS);
+          executors.awaitTermination(executorShutdownGracePeriodInSeconds, TimeUnit.SECONDS);
           if (!executors.isTerminated()) {
             final MetricClient metricClient = MetricClientFactory.getMetricClient();
             metricClient.count(OssMetricsRegistry.REPLICATION_WORKER_EXECUTOR_SHUTDOWN_ERROR, 1,
@@ -336,7 +293,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     LOGGER.info("Cancelling replication worker...");
     executors.shutdownNow();
     try {
-      executors.awaitTermination(EXECUTOR_SHUTDOWN_GRACE_PERIOD_IN_SECONDS, TimeUnit.SECONDS);
+      executors.awaitTermination(executorShutdownGracePeriodInSeconds, TimeUnit.SECONDS);
     } catch (final InterruptedException e) {
       wasInterrupted = true;
       ApmTraceUtils.addExceptionToTrace(e);
