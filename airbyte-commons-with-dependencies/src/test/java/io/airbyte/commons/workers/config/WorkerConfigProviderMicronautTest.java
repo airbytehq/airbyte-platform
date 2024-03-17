@@ -5,7 +5,6 @@
 package io.airbyte.commons.workers.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.ResourceRequirements;
@@ -59,7 +58,7 @@ class WorkerConfigProviderMicronautTest {
   @Test
   void testKubeConfigIsReadingAllTheFields() {
     assertEquals("check", checkKubeResourceConfig.getName());
-    assertEquals("check annotations", checkKubeResourceConfig.getAnnotations());
+    assertEquals("check_annotation_key=check_annotation_value", checkKubeResourceConfig.getAnnotations());
     assertEquals("check labels", checkKubeResourceConfig.getLabels());
     assertEquals("check node-selectors", checkKubeResourceConfig.getNodeSelectors());
     assertEquals("check cpu limit", checkKubeResourceConfig.getCpuLimit());
@@ -71,11 +70,11 @@ class WorkerConfigProviderMicronautTest {
   @Test
   void testDefaultFieldBehavior() {
     assertEquals("spec", specKubeResourceConfig.getName());
-    assertEquals("spec annotations", specKubeResourceConfig.getAnnotations());
+    assertEquals("", specKubeResourceConfig.getAnnotations());
     assertEquals("spec labels", specKubeResourceConfig.getLabels());
     assertEquals("spec node selectors", specKubeResourceConfig.getNodeSelectors());
-    assertNull(specKubeResourceConfig.getCpuLimit());
-    assertNull(specKubeResourceConfig.getCpuRequest());
+    assertEquals("", specKubeResourceConfig.getCpuLimit());
+    assertEquals("", specKubeResourceConfig.getCpuRequest());
     assertEquals("spec memory limit", specKubeResourceConfig.getMemoryLimit());
     assertEquals("", specKubeResourceConfig.getMemoryRequest());
   }
