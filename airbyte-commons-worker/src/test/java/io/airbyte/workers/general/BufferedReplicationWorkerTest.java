@@ -42,7 +42,9 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
         replicationWorkerHelper,
         destinationTimeoutMonitor,
         getQueueType(),
-        OptionalInt.of(1));
+        OptionalInt.of(1),
+        OptionalInt.of(100),
+        OptionalInt.of(100));
   }
 
   public BufferedReplicationWorkerType getQueueType() {
