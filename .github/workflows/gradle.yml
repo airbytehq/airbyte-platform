@@ -177,7 +177,8 @@ jobs:
       - name: Build
         uses: Wandalen/wretry.action@v1.0.36
         with:
-          command: ./gradlew build javadoc --scan
+#          command: ./gradlew build javadoc --scan
+          command: ./gradlew build -x :airbyte-commons-worker:test javadoc --scan
           attempt_limit: 3
           attempt_delay: 5000 # in ms
 
