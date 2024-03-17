@@ -6,20 +6,19 @@ package io.airbyte.commons.workers.config;
 
 import io.micronaut.context.annotation.EachProperty;
 import io.micronaut.context.annotation.Parameter;
-
 import java.util.Objects;
 import java.util.Optional;
 
 /**
  * Encapsulates the configuration that is specific to Kubernetes. This is meant for the
- * WorkerConfigsProvider to be reading configs, not for direct use as merge logic isn't
- * implemented here.
- * Important: we cannot distinguish between empty and non-existent environment variables
- * in this context, so we treat empty and non-existing strings as the same for our update
- * logic. We use the <EMPTY> literal to represent an empty string.
+ * WorkerConfigsProvider to be reading configs, not for direct use as merge logic isn't implemented
+ * here. Important: we cannot distinguish between empty and non-existent environment variables in
+ * this context, so we treat empty and non-existing strings as the same for our update logic. We use
+ * the "&lt;EMPTY&gt;" literal to represent an empty string.
  */
 @EachProperty("airbyte.worker.kube-job-configs")
 public final class KubeResourceConfig implements Cloneable {
+
   public static final String EMPTY_VALUE = "<EMPTY>";
 
   private final String name;
@@ -124,4 +123,5 @@ public final class KubeResourceConfig implements Cloneable {
     // Let's no return null values as it can be ambiguous
     return (Objects.equals(value, EMPTY_VALUE)) ? "" : Optional.ofNullable(value).orElse("");
   }
+
 }
