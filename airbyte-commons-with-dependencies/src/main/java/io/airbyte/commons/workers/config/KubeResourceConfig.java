@@ -17,7 +17,7 @@ import java.util.Optional;
  * the "&lt;EMPTY&gt;" literal to represent an empty string.
  */
 @EachProperty("airbyte.worker.kube-job-configs")
-public final class KubeResourceConfig implements Cloneable {
+public final class KubeResourceConfig {
 
   public static final String EMPTY_VALUE = "<EMPTY>";
 
@@ -34,25 +34,18 @@ public final class KubeResourceConfig implements Cloneable {
     this.name = name;
   }
 
-  public KubeResourceConfig clone() {
-    try {
-      return (KubeResourceConfig) super.clone();
-    } catch (final CloneNotSupportedException e) {
-      // Unlikely, but in the worst case, we will get this error when running tests.
-      throw new RuntimeException(e);
-    }
-  }
+  public KubeResourceConfig merge(KubeResourceConfig other) {
+    var merged = new KubeResourceConfig(name);
 
-  public KubeResourceConfig update(KubeResourceConfig other) {
-    annotations = useOtherIfEmpty(other.annotations, annotations);
-    labels = useOtherIfEmpty(other.labels, labels);
-    nodeSelectors = useOtherIfEmpty(other.nodeSelectors, nodeSelectors);
-    cpuLimit = useOtherIfEmpty(other.cpuLimit, cpuLimit);
-    cpuRequest = useOtherIfEmpty(other.cpuRequest, cpuRequest);
-    memoryLimit = useOtherIfEmpty(other.memoryLimit, memoryLimit);
-    memoryRequest = useOtherIfEmpty(other.memoryRequest, memoryRequest);
+    merged.setAnnotations(useOtherIfEmpty(annotations, other.annotations));
+    merged.setLabels(useOtherIfEmpty(labels, other.labels));
+    merged.setNodeSelectors(useOtherIfEmpty(nodeSelectors, other.nodeSelectors));
+    merged.setCpuLimit(useOtherIfEmpty(cpuLimit, other.cpuLimit));
+    merged.setCpuRequest(useOtherIfEmpty(cpuRequest, other.cpuRequest));
+    merged.setMemoryLimit(useOtherIfEmpty(memoryLimit, other.memoryLimit));
+    merged.setMemoryRequest(useOtherIfEmpty(memoryRequest, other.memoryRequest));
 
-    return this;
+    return merged;
   }
 
   public String getName() {

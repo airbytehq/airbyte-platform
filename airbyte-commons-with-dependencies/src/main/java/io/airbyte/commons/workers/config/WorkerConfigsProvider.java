@@ -282,7 +282,7 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
     if (defaultConfig.isEmpty()) {
       return variantConfig;
     }
-    return variantConfig.map(kubeResourceConfig -> defaultConfig.get().clone().update(kubeResourceConfig)).or(() -> defaultConfig);
+    return variantConfig.map(kubeResourceConfig -> kubeResourceConfig.merge(defaultConfig.get())).or(() -> defaultConfig);
   }
 
   private static Optional<KubeResourceConfig> getKubeResourceConfigByType(
@@ -301,7 +301,7 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
     if (defaultConfig.isEmpty()) {
       return typeConfig;
     }
-    return typeConfig.map(kubeResourceConfig -> defaultConfig.get().clone().update(kubeResourceConfig)).or(() -> defaultConfig);
+    return typeConfig.map(kubeResourceConfig -> kubeResourceConfig.merge(defaultConfig.get())).or(() -> defaultConfig);
   }
 
   private static Optional<KubeResourceConfig> getKubeResourceConfigBySubType(final Map<ResourceSubType, KubeResourceConfig> configBySubType,
@@ -319,7 +319,7 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
     if (defaultConfig.isEmpty()) {
       return subTypeConfig;
     }
-    return subTypeConfig.map(kubeResourceConfig -> defaultConfig.get().clone().update(kubeResourceConfig)).or(() -> defaultConfig);
+    return subTypeConfig.map(kubeResourceConfig -> kubeResourceConfig.merge(defaultConfig.get())).or(() -> defaultConfig);
   }
 
   private void validateIsolatedPoolConfigInitialization(final boolean useCustomNodeSelector, final Map<String, String> isolatedNodeSelectors) {
