@@ -165,7 +165,6 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
 
   @Singleton
   record WorkerConfigsDefaults(WorkerEnvironment workerEnvironment,
-                               @Named("default") KubeResourceConfig defaultKubeResourceConfig,
                                List<TolerationPOJO> jobKubeTolerations,
                                @Value("${airbyte.worker.isolated.kube.node-selectors}") String isolatedNodeSelectors,
                                @Value("${airbyte.worker.isolated.kube.use-custom-node-selector}") boolean useCustomNodeSelector,
@@ -231,22 +230,13 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
     final Map<String, String> isolatedNodeSelectors = splitKVPairsFromEnvString(workerConfigsDefaults.isolatedNodeSelectors);
     validateIsolatedPoolConfigInitialization(workerConfigsDefaults.useCustomNodeSelector(), isolatedNodeSelectors);
 
-    // if annotations are not defined for this specific resource, then fallback to the default
-    // resource's annotations
-    final Map<String, String> annotations;
-    if (Strings.isNullOrEmpty(kubeResourceConfig.getAnnotations())) {
-      annotations = splitKVPairsFromEnvString(workerConfigsDefaults.defaultKubeResourceConfig.getAnnotations());
-    } else {
-      annotations = splitKVPairsFromEnvString(kubeResourceConfig.getAnnotations());
-    }
-
     return new WorkerConfigs(
         workerConfigsDefaults.workerEnvironment(),
-        getResourceRequirementsFrom(kubeResourceConfig, workerConfigsDefaults.defaultKubeResourceConfig()),
+        getResourceRequirementsFrom(kubeResourceConfig),
         workerConfigsDefaults.jobKubeTolerations(),
         splitKVPairsFromEnvString(kubeResourceConfig.getNodeSelectors()),
         workerConfigsDefaults.useCustomNodeSelector() ? Optional.of(isolatedNodeSelectors) : Optional.empty(),
-        annotations,
+        splitKVPairsFromEnvString(kubeResourceConfig.getAnnotations()),
         splitKVPairsFromEnvString(kubeResourceConfig.getLabels()),
         workerConfigsDefaults.mainContainerImagePullSecret(),
         workerConfigsDefaults.mainContainerImagePullPolicy(),
@@ -279,18 +269,20 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
    * Look up resource configs given a key.
    * <p>
    * We are storing configs in a tree like structure. Look up should be handled as such. Keeping in
-   * mind that we have defaults we want to fallback to, we should perform a complete scan of the
-   * configs until we find a match to make sure we do not overlook a match.
+   * mind that we have defaults we want to merge with, we should perform a complete scan of the
+   * configs, so we can update our result config.
    */
   private Optional<KubeResourceConfig> getKubeResourceConfig(final KubeResourceKey key) {
-    // Look up by actual variant
-    final var resultWithVariant = getKubeResourceConfigByType(kubeResourceConfigs.get(key.variant), key);
-    if (resultWithVariant.isPresent()) {
-      return resultWithVariant;
+    var defaultConfig = getKubeResourceConfigByType(kubeResourceConfigs.get(DEFAULT_VARIANT), key);
+    if (Objects.equals(key.variant, DEFAULT_VARIANT)) { // fast track
+      return defaultConfig;
     }
 
-    // no match with exact variant found, try again with the default.
-    return getKubeResourceConfigByType(kubeResourceConfigs.get(DEFAULT_VARIANT), key);
+    final var variantConfig = getKubeResourceConfigByType(kubeResourceConfigs.get(key.variant), key);
+    if (defaultConfig.isEmpty()) {
+      return variantConfig;
+    }
+    return variantConfig.map(kubeResourceConfig -> defaultConfig.get().clone().update(kubeResourceConfig)).or(() -> defaultConfig);
   }
 
   private static Optional<KubeResourceConfig> getKubeResourceConfigByType(
@@ -300,14 +292,16 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
       return Optional.empty();
     }
 
-    // Look up by actual type
-    final var resultWithType = getKubeResourceConfigBySubType(configs.get(key.type), key);
-    if (resultWithType.isPresent()) {
-      return resultWithType;
+    var defaultConfig = getKubeResourceConfigBySubType(configs.get(ResourceType.DEFAULT), key);
+    if (Objects.equals(key.type, ResourceType.DEFAULT)) { // fast track
+      return defaultConfig;
     }
 
-    // no match with exact type found, try again with the default.
-    return getKubeResourceConfigBySubType(configs.get(ResourceType.DEFAULT), key);
+    final var typeConfig = getKubeResourceConfigBySubType(configs.get(key.type), key);
+    if (defaultConfig.isEmpty()) {
+      return typeConfig;
+    }
+    return typeConfig.map(kubeResourceConfig -> defaultConfig.get().clone().update(kubeResourceConfig)).or(() -> defaultConfig);
   }
 
   private static Optional<KubeResourceConfig> getKubeResourceConfigBySubType(final Map<ResourceSubType, KubeResourceConfig> configBySubType,
@@ -316,10 +310,16 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
       return Optional.empty();
     }
 
-    // Lookup by actual sub type
-    final var config = configBySubType.get(key.subType);
-    // if we didn't find a match, try again with the default
-    return Optional.ofNullable(config != null ? config : configBySubType.get(ResourceSubType.DEFAULT));
+    var defaultConfig = Optional.ofNullable(configBySubType.get(ResourceSubType.DEFAULT));
+    if (Objects.equals(key.subType, ResourceSubType.DEFAULT)) { // fast track
+      return defaultConfig;
+    }
+
+    final var subTypeConfig = Optional.ofNullable(configBySubType.get(key.subType));
+    if (defaultConfig.isEmpty()) {
+      return subTypeConfig;
+    }
+    return subTypeConfig.map(kubeResourceConfig -> defaultConfig.get().clone().update(kubeResourceConfig)).or(() -> defaultConfig);
   }
 
   private void validateIsolatedPoolConfigInitialization(final boolean useCustomNodeSelector, final Map<String, String> isolatedNodeSelectors) {
@@ -369,16 +369,12 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
         .collect(Collectors.toMap(s -> s[0].trim(), s -> s[1].trim()));
   }
 
-  private ResourceRequirements getResourceRequirementsFrom(final KubeResourceConfig kubeResourceConfig, final KubeResourceConfig defaultConfig) {
+  private ResourceRequirements getResourceRequirementsFrom(final KubeResourceConfig kubeResourceConfig) {
     return new ResourceRequirements()
-        .withCpuLimit(useDefaultIfEmpty(kubeResourceConfig.getCpuLimit(), defaultConfig.getCpuLimit()))
-        .withCpuRequest(useDefaultIfEmpty(kubeResourceConfig.getCpuRequest(), defaultConfig.getCpuRequest()))
-        .withMemoryLimit(useDefaultIfEmpty(kubeResourceConfig.getMemoryLimit(), defaultConfig.getMemoryLimit()))
-        .withMemoryRequest(useDefaultIfEmpty(kubeResourceConfig.getMemoryRequest(), defaultConfig.getMemoryRequest()));
-  }
-
-  private static String useDefaultIfEmpty(final String value, final String defaultValue) {
-    return (value == null || value.isBlank()) ? defaultValue : value;
+        .withCpuLimit(kubeResourceConfig.getCpuLimit())
+        .withCpuRequest(kubeResourceConfig.getCpuRequest())
+        .withMemoryLimit(kubeResourceConfig.getMemoryLimit())
+        .withMemoryRequest(kubeResourceConfig.getMemoryRequest());
   }
 
 }
