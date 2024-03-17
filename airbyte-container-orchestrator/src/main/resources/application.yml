@@ -105,6 +105,7 @@ airbyte:
     kube-job-configs:
       default:
         annotations: ${JOB_KUBE_ANNOTATIONS:}
+        labels: ${JOB_KUBE_LABELS:}
         node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:}
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
