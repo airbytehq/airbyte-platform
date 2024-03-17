@@ -173,6 +173,8 @@ jobs:
         uses: Wandalen/wretry.action@v1.0.36
         with:
           command: ./gradlew build javadoc --scan
+          attempt_limit: 3
+          attempt_delay: 5000 # in ms
 
       - name: Check documentation
         if: success() && github.ref == 'refs/heads/main'
