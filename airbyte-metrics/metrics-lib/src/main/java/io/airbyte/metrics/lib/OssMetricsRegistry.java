@@ -408,6 +408,14 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "destination_deserialization_error",
       "When a sync failed with a deserialization error from the destination"),
 
+  HEARTBEAT_EXCEPTION_OPEN_API_TYPE(MetricEmittingApps.ORCHESTRATOR,
+      "heartbeat_exception_open_api_type",
+      "When the heartbeat errors and the exception is the open api type"),
+
+  HEARTBEAT_EXCEPTION_GENERATED_TYPE(MetricEmittingApps.ORCHESTRATOR,
+      "heartbeat_exception_generated_type",
+      "When the heartbeat errors and the exception is the generated type"),
+
   SIDECAR_CHECK(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
       "sidecar_check",
       "Exit of the connetor sidecar"),
