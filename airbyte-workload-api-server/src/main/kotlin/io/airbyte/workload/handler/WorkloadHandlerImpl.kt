@@ -79,7 +79,7 @@ class WorkloadHandlerImpl(
     // Evaluating feature flag with UUID_ZERO because the client requires a context. This feature flag is intended to be used
     // as a global kill switch for validation.
     if (mutexKey != null && featureFlagClient.boolVariation(EnforceMutexKeyOnCreate, Connection(UUID_ZERO))) {
-      val activeWorkloadsWithMutexKey = workloadRepository.searchByMutexKeyAndStatuses(mutexKey, statuses = ACTIVE_STATUSES)
+      val activeWorkloadsWithMutexKey = workloadRepository.searchByMutexKeyAndStatusInList(mutexKey, statuses = ACTIVE_STATUSES)
       if (activeWorkloadsWithMutexKey.isNotEmpty()) {
         val workloadIds = activeWorkloadsWithMutexKey.joinToString(", ") { it.id }
         throw ConflictException("Non-terminal Workload with mutexKey $mutexKey already exists ($workloadIds)")
