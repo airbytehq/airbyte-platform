@@ -159,6 +159,7 @@ class ReplicationWorkerHelper(
             } else if (Duration.between(lastSuccessfulHeartbeat, Instant.now()) > heartbeatTimeoutDuration) {
               logger.warn(e) { "Have not been able to update heartbeat for more than the timeout duration, shutting down heartbeat" }
               markFailed()
+              abort()
               trackFailure(WorkloadHeartbeatException("Workload Heartbeat Error", e))
               return@Runnable
             }
