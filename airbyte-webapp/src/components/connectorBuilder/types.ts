@@ -298,8 +298,10 @@ export const SMALL_DURATION_OPTIONS = [
 ];
 
 export const DATETIME_FORMAT_OPTIONS = [
+  { value: "%s" },
   { value: "%Y-%m-%d" },
   { value: "%Y-%m-%d %H:%M:%S" },
+  { value: "%Y-%m-%dT%H:%M:%SZ" },
   { value: "%Y-%m-%d %H:%M:%S.%f+00:00" },
   { value: "%Y-%m-%dT%H:%M:%S.%f%z" },
 ];
