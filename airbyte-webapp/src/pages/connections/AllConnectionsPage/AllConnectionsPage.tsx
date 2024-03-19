@@ -1,4 +1,4 @@
-import React, { Suspense, useDeferredValue, useMemo, useState } from "react";
+import React, { Suspense, useDeferredValue, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
@@ -52,13 +52,13 @@ export const AllConnectionsPage: React.FC = () => {
   const connectionList = useConnectionList();
   const connections = useMemo(() => connectionList?.connections ?? [], [connectionList?.connections]);
 
-  const [searchFilter, setSearchFilter] = useState<string>("");
-  const debouncedSearchFilter = useDeferredValue(searchFilter);
   const [filterValues, setFilterValue, setFilters] = useFilters<FilterValues>({
+    search: "",
     status: null,
     source: null,
     destination: null,
   });
+  const debouncedSearchFilter = useDeferredValue(filterValues.search);
 
   const filteredConnections = useMemo(() => {
     const statusFilter = filterValues.status;
@@ -185,8 +185,8 @@ export const AllConnectionsPage: React.FC = () => {
               {isConnectionsSummaryEnabled && (
                 <ConnectionsFilters
                   connections={connections}
-                  searchFilter={searchFilter}
-                  setSearchFilter={setSearchFilter}
+                  searchFilter={filterValues.search}
+                  setSearchFilter={(search) => setFilterValue("search", search)}
                   filterValues={filterValues}
                   setFilterValue={setFilterValue}
                   setFilters={setFilters}
