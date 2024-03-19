@@ -59,7 +59,11 @@ export const useCreateUserInvitation = () => {
           text: formatMessage({ id: "userInvitations.create.success" }),
           id: "userInvitations.create.success",
         });
+        const keyScope = invitationCreate.scopeType === "workspace" ? SCOPE_WORKSPACE : SCOPE_ORGANIZATION;
+
+        // this endpoint will direct add users who are already within the org, so we want to invalidate both the invitations and the members lists
         queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
+        queryClient.invalidateQueries([keyScope, "userInvitations"]);
         return response;
       })
       .catch(() => {

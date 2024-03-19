@@ -1702,5 +1702,6 @@
   "userInvitations.create.modal.organizationAdminTooltip": "This user already has full access to this workspace.",
   "userInvitations.pendingInvitation": "Pending...",
   "userInvitations.pendingInvitation.tooltipMain": "This member has not yet accepted their invitation.",
-  "userInvitations.pendingInvitation.tooltipAdditionalInfo": "They do not yet have access to this workspace."
+  "userInvitations.pendingInvitation.tooltipAdditionalInfo": "They do not yet have access to this workspace.",
+  "userInvitations.create.modal.asRole": "As {role}"
 }

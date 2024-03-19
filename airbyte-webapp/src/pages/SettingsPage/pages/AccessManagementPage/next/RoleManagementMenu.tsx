@@ -8,6 +8,7 @@ import { Icon } from "components/ui/Icon";
 
 import { WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
 
+import { RoleManagementButton } from "./RoleManagementButton";
 import styles from "./RoleManagementMenu.module.scss";
 import { RoleManagementMenuBody } from "./RoleManagementMenuBody";
 import { getWorkspaceAccessLevel } from "../components/useGetAccessManagementData";
@@ -19,18 +20,6 @@ export interface RoleManagementMenuProps {
   user: WorkspaceUserAccessInfoRead;
   resourceType: ResourceType;
 }
-
-const RoleManagementButton = React.forwardRef<HTMLButtonElement | null, React.ButtonHTMLAttributes<HTMLButtonElement>>(
-  ({ children, ...props }, ref) => {
-    return (
-      <button className={styles.roleManagementMenu__popoverButton} ref={ref} {...props}>
-        {children}
-      </button>
-    );
-  }
-);
-
-RoleManagementButton.displayName = "RoleManagementButton";
 
 export const RoleManagementMenu: React.FC<RoleManagementMenuProps> = ({ user, resourceType }) => {
   const { x, y, reference, floating, strategy } = useFloating({
