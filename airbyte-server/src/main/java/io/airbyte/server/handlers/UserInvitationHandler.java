@@ -11,6 +11,7 @@ import io.airbyte.api.model.generated.UserInvitationCreateRequestBody;
 import io.airbyte.api.model.generated.UserInvitationCreateResponse;
 import io.airbyte.api.model.generated.UserInvitationListRequestBody;
 import io.airbyte.api.model.generated.UserInvitationRead;
+import io.airbyte.commons.server.errors.ConflictException;
 import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.config.ConfigSchema;
@@ -22,6 +23,7 @@ import io.airbyte.config.UserInvitation;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.InvitationStatusUnexpectedException;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.UserInvitationService;
 import io.airbyte.data.services.WorkspaceService;
@@ -32,6 +34,7 @@ import io.airbyte.server.handlers.api_domain_mapping.UserInvitationMapper;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -44,6 +47,8 @@ import lombok.extern.slf4j.Slf4j;
 public class UserInvitationHandler {
 
   static final String ACCEPT_INVITE_PATH = "/accept-invite?inviteCode=";
+
+  static final int INVITE_EXPIRATION_DAYS = 7;
 
   final UserInvitationService service;
   final UserInvitationMapper mapper;
@@ -214,6 +219,9 @@ public class UserInvitationHandler {
     // New UserInvitations are always created with a status of PENDING.
     model.setStatus(InvitationStatus.PENDING);
 
+    // For now, new UserInvitations are created with a fixed expiration timestamp.
+    model.setExpiresAt(OffsetDateTime.now().plusDays(INVITE_EXPIRATION_DAYS).toEpochSecond());
+
     final UserInvitation saved = service.createUserInvitation(model);
 
     log.info("created invitation {}", saved);
@@ -252,12 +260,12 @@ public class UserInvitationHandler {
       throw new OperationNotAllowedException("Invited email does not match current user email.");
     }
 
-    // TODO - ensure that only org-level invitation can be accepted by a user currently logged into that
-    // org. email is not enough, because a user can have multiple logins with the same associated email,
-    // ie if they sign in through both SSO and via email/password.
-    final UserInvitation accepted = service.acceptUserInvitation(req.getInviteCode(), currentUser.getUserId());
-
-    return mapper.toApi(accepted);
+    try {
+      final UserInvitation accepted = service.acceptUserInvitation(req.getInviteCode(), currentUser.getUserId());
+      return mapper.toApi(accepted);
+    } catch (final InvitationStatusUnexpectedException e) {
+      throw new ConflictException(e.getMessage());
+    }
   }
 
   // TODO implement `decline`

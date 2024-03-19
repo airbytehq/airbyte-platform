@@ -9,3 +9,4 @@ enum:
   - accepted
   - cancelled
   - declined
+  - expired
