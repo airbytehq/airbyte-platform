@@ -105,7 +105,7 @@ public class KubeProcessFactory implements ProcessFactory {
     this.serviceAccount = serviceAccount;
     this.fabricClient = fabricClient;
     this.kubeHeartbeatUrl = kubeHeartbeatUrl;
-    this.processRunnerHost = processRunnerHost;
+    this.processRunnerHost = processRunnerHost.contains(":") ? "[" + processRunnerHost + "]" : processRunnerHost;;
   }
 
   @Override
