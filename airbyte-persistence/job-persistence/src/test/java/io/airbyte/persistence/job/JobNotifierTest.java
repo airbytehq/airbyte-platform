@@ -144,7 +144,7 @@ class JobNotifierTest {
 
   @Test
   void testSuccessfulJobDoNotSendNotificationPerSettings()
-      throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, InterruptedException {
     List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
     jobNotifier.successJob(job, attemptStats);
     verify(notificationClient, never()).notifySuccess(ArgumentMatchers.any());
@@ -152,7 +152,7 @@ class JobNotifierTest {
 
   @Test
   void testSendOnSyncDisabledWarning()
-      throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, InterruptedException {
     List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
     jobNotifier.autoDisableConnectionWarning(job, attemptStats);
     verify(notificationClient, never()).notifyConnectionDisableWarning(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
