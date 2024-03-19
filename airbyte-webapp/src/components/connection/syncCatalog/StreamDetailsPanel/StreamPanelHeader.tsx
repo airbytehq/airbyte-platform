@@ -8,7 +8,6 @@ import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
 import { AirbyteStream, AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
-import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./StreamPanelHeader.module.scss";
 import { SyncModeSelect, SyncModeValue } from "../SyncModeSelect";
@@ -41,21 +40,9 @@ export const StreamProperty: React.FC<StreamPropertyProps> = ({ messageId, value
 );
 
 const NamespaceProperty: React.FC<{ namespace?: string }> = ({ namespace }) => {
-  const isSimplifiedCatalogRowEnabled = useExperiment("connection.syncCatalog.simplifiedCatalogRow", true);
-
-  if (isSimplifiedCatalogRowEnabled) {
-    return namespace ? (
-      <StreamProperty messageId="form.sourceNamespace" value={namespace} data-testid="stream-details-namespace" />
-    ) : null;
-  }
-
-  return (
-    <StreamProperty
-      messageId="form.namespace"
-      value={namespace ?? <FormattedMessage id="form.noNamespace" />}
-      data-testid="stream-details-namespace"
-    />
-  );
+  return namespace ? (
+    <StreamProperty messageId="form.sourceNamespace" value={namespace} data-testid="stream-details-namespace" />
+  ) : null;
 };
 
 export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
@@ -67,8 +54,6 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
   availableSyncModes,
   onSelectSyncMode,
 }) => {
-  const isSimplifiedCatalogRowEnabled = useExperiment("connection.syncCatalog.simplifiedCatalogRow", true);
-
   const syncSchema: SyncModeValue | undefined = useMemo(() => {
     if (!config) {
       return undefined;
@@ -76,14 +61,6 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
     const { syncMode, destinationSyncMode } = config;
     return { syncMode, destinationSyncMode };
   }, [config]);
-
-  const syncMode = (
-    <>
-      {config?.syncMode && <FormattedMessage id={`syncMode.${config.syncMode}`} />}
-      {` | `}
-      {config?.destinationSyncMode && <FormattedMessage id={`destinationSyncMode.${config.destinationSyncMode}`} />}
-    </>
-  );
 
   return (
     <Box pt="lg" pb="md" pr="sm" pl="md" className={styles.container}>
@@ -106,17 +83,13 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
           <NamespaceProperty namespace={stream?.namespace} />
           <StreamProperty messageId="form.streamName" value={stream?.name} data-testid="stream-details-stream-name" />
           <FlexItem className={styles.syncModeProperty} alignSelf="center">
-            {isSimplifiedCatalogRowEnabled ? (
-              <SyncModeSelect
-                options={availableSyncModes}
-                onChange={onSelectSyncMode}
-                value={syncSchema}
-                variant="grey"
-                disabled={disabled}
-              />
-            ) : (
-              <StreamProperty messageId="form.syncMode" value={syncMode} data-testid="stream-details-sync-mode" />
-            )}
+            <SyncModeSelect
+              options={availableSyncModes}
+              onChange={onSelectSyncMode}
+              value={syncSchema}
+              variant="grey"
+              disabled={disabled}
+            />
           </FlexItem>
         </FlexContainer>
         <FlexContainer className={styles.rightActions} justifyContent="flex-end">
