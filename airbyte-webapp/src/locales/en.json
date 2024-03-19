@@ -1494,6 +1494,8 @@
   "login.returnToLogin": "Return to login",
   "login.signup.submitButton": "Sign up",
   "login.loginTitle": "Log in to Airbyte",
+  "login.acceptInvite": "You've been invited to collaborate on Airbyte",
+  "login.acceptInvite.subtitle": "Log in or sign up to get started",
   "login.resendEmail": "Didn't receive the email? Send it again",
   "login.yourEmail": "Your work email*",
   "login.inviteEmail": "For security, re-enter your invite email*",
