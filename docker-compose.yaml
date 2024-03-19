@@ -6,16 +6,6 @@ x-logging: &default-logging
     max-file: "5"
   driver: json-file
 services:
-  docker-proxy:
-      image: alpine/socat
-      command: TCP-LISTEN:2375,fork,reuseaddr UNIX-CONNECT:/var/run/docker.sock
-      ports: 
-        - "2375"
-      user: root
-      volumes: 
-        - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
-      networks:
-        - airbyte_internal
   # hook in case we need to add init behavior
   # every root service (no depends_on) should depend on init
   init:
@@ -90,7 +80,6 @@ services:
       - DEPLOYMENT_MODE=${DEPLOYMENT_MODE}
       - DD_AGENT_HOST=${DD_AGENT_HOST}
       - DD_DOGSTATSD_PORT=${DD_DOGSTATSD_PORT}
-      - DOCKER_HOST=docker-proxy:2375
       - FEATURE_FLAG_CLIENT=${FEATURE_FLAG_CLIENT}
       - FIELD_SELECTION_WORKSPACES=${FIELD_SELECTION_WORKSPACES}
       - INTERNAL_API_HOST=${INTERNAL_API_HOST}
@@ -143,6 +132,7 @@ services:
     configs:
       - flags
     volumes:
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - workspace:${WORKSPACE_ROOT}
       - ${LOCAL_ROOT}:${LOCAL_ROOT}
     ports:

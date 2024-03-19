@@ -25,7 +25,7 @@ micronaut:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
   server:
-    port: 8081
+    port: 80
     cors:
       enabled: true
     netty:

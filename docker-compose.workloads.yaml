@@ -73,7 +73,6 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - DATABASE_USER=${DATABASE_USER}
       - DATA_PLANE_ID=local
-      - DOCKER_HOST=docker-proxy:2375
       - DOCKER_NETWORK=${COMPOSE_PROJECT_NAME}_airbyte_internal
       - DOCKER_SOCKET=${DOCKER_SOCKET}
       - DEPLOYMENT_MODE=${DEPLOYMENT_MODE}
@@ -109,6 +108,7 @@ services:
     configs:
       - flags
     volumes:
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - workspace:${WORKSPACE_ROOT}
       - data:${CONFIG_ROOT}
       - ${LOCAL_ROOT}:${LOCAL_ROOT}

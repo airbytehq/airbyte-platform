@@ -1,5 +1,4 @@
-ARG JAVA_WORKER_BASE_IMAGE_VERSION=2.1.0
-FROM airbyte/airbyte-base-java-worker-image:${JAVA_WORKER_BASE_IMAGE_VERSION}
+FROM airbyte/airbyte-base-java-worker-image:2.0.1
 
 ENV APPLICATION airbyte-workload-launcher
 ENV VERSION ${VERSION}
@@ -7,10 +6,7 @@ ENV VERSION ${VERSION}
 WORKDIR /app
 
 # This is automatically unzipped by Docker
-USER root
 ADD airbyte-app.tar /app
-RUN chown -R airbyte:airbyte /app
-USER airbyte:airbyte
 
 # 8016 is the port micronaut listens on
 # 5005 is the remote debug port

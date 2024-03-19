@@ -1,9 +1,8 @@
 ARG BUILD_IMAGE
-ARG NGINX_IMAGE=nginxinc/nginx-unprivileged:alpine3.18
-
 FROM ${BUILD_IMAGE} AS builder
 
-FROM ${NGINX_IMAGE}
+
+FROM nginx:alpine AS release 
 
 EXPOSE 80
 

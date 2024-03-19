@@ -16,8 +16,6 @@ projectDir=(
   "temporal"
   "webapp"
   "workers"
-  "workload-api-server"
-  "workload-launcher"
   "keycloak"
   "keycloak-setup"
   "api-server"
@@ -25,8 +23,8 @@ projectDir=(
 
 # Set default values to required vars. If set in env, values will be taken from there.
 # Primarily for testing.
-JDK_VERSION=${JDK_VERSION:-21.1.0}
-ALPINE_IMAGE=${ALPINE_IMAGE:-alpine:3.18}
+JDK_VERSION=${JDK_VERSION:-17.0.4}
+ALPINE_IMAGE=${ALPINE_IMAGE:-alpine:3.14}
 POSTGRES_IMAGE=${POSTGRES_IMAGE:-postgres:13-alpine}
 
 # Iterate over all directories in list to build one by one.
