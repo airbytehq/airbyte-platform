@@ -7,7 +7,8 @@ import { FormChangeTrackerServiceApi } from "./types";
 const changedForms = new Set<string>();
 const useHasFormChanges = createGlobalState<boolean>(false);
 
-export const useUniqueFormId = (formId?: string) => useMemo(() => formId ?? uniqueId("form_"), [formId]);
+export const useUniqueFormId = (formId?: string) => useMemo(() => formId ?? uniqueId("unique_form_"), [formId]);
+export const isGeneratedFormId = (id: string) => id.match(/^unique_form_\d+/);
 
 export const useFormChangeTrackerService = (): FormChangeTrackerServiceApi => {
   const [hasFormChanges, setHasFormChanges] = useHasFormChanges();
@@ -37,10 +38,13 @@ export const useFormChangeTrackerService = (): FormChangeTrackerServiceApi => {
     [setHasFormChanges]
   );
 
+  const getDirtyFormIds = useCallback(() => Array.from(changedForms), []);
+
   return {
     hasFormChanges,
     trackFormChange,
     clearFormChange,
     clearAllFormChanges,
+    getDirtyFormIds,
   };
 };

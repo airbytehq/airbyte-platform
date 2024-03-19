@@ -19,6 +19,7 @@ import { Text } from "components/ui/Text";
 
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
@@ -54,6 +55,7 @@ export const SimplifiedConnectionConfiguration: React.FC = () => {
 };
 
 const SimplifiedConnectionCreationReplication: React.FC = () => {
+  useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_SELECT_STREAMS);
   const { formatMessage } = useIntl();
   const { isDirty } = useFormState<FormConnectionFormValues>();
   const { trackFormChange } = useFormChangeTrackerService();
@@ -74,6 +76,7 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
 };
 
 const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
+  useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_CONFIGURE_CONNECTION);
   const { formatMessage } = useIntl();
   const { isDirty } = useFormState<FormConnectionFormValues>();
   const { trackFormChange } = useFormChangeTrackerService();
