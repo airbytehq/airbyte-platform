@@ -67,7 +67,6 @@ import java.util.Collections
 import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
 import io.airbyte.workload.api.client.generated.infrastructure.ClientException as GeneratedClientException
-import org.openapitools.client.infrastructure.ClientException as OpenApiClientException
 
 private val logger = KotlinLogging.logger { }
 
@@ -147,17 +146,13 @@ class ReplicationWorkerHelper(
              * Workload should stop because it is no longer expected to be running.
              * See [io.airbyte.workload.api.WorkloadApi.workloadHeartbeat]
              */
-            if (e is OpenApiClientException && e.statusCode == HttpStatus.GONE.code) {
-              logger.warn(e) { "Received kill response from API, shutting down heartbeat" }
-              metricClient.count(OssMetricsRegistry.HEARTBEAT_EXCEPTION_OPEN_API_TYPE, 1, *metricAttrs.toTypedArray())
-              markCancelled()
-              return@Runnable
-            } else if (e is GeneratedClientException && e.statusCode == HttpStatus.GONE.code) {
-              metricClient.count(OssMetricsRegistry.HEARTBEAT_EXCEPTION_GENERATED_TYPE, 1, *metricAttrs.toTypedArray())
+            if (e is GeneratedClientException && e.statusCode == HttpStatus.GONE.code) {
+              metricClient.count(OssMetricsRegistry.HEARTBEAT_TERMINAL_SHUTDOWN, 1, *metricAttrs.toTypedArray())
               markCancelled()
               return@Runnable
             } else if (Duration.between(lastSuccessfulHeartbeat, Instant.now()) > heartbeatTimeoutDuration) {
               logger.warn(e) { "Have not been able to update heartbeat for more than the timeout duration, shutting down heartbeat" }
+              metricClient.count(OssMetricsRegistry.HEARTBEAT_CONNECTIVITY_FAILURE_SHUTDOWN, 1, *metricAttrs.toTypedArray())
               markFailed()
               abort()
               trackFailure(WorkloadHeartbeatException("Workload Heartbeat Error", e))
