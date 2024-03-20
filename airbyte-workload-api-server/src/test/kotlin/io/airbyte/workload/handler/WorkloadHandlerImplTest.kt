@@ -1,6 +1,5 @@
 package io.airbyte.workload.handler
 
-import io.airbyte.featureflag.TestClient
 import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
@@ -619,7 +618,7 @@ class WorkloadHandlerImplTest {
 
   @Test
   fun `offsetDateTime method should always return current time`() {
-    val workloadHandlerImpl = WorkloadHandlerImpl(mockk<WorkloadRepository>(), TestClient())
+    val workloadHandlerImpl = WorkloadHandlerImpl(mockk<WorkloadRepository>())
     val offsetDateTime = workloadHandlerImpl.offsetDateTime()
     Thread.sleep(10)
     val offsetDateTimeAfter10Ms = workloadHandlerImpl.offsetDateTime()
@@ -630,7 +629,7 @@ class WorkloadHandlerImplTest {
     val workloadRepository = mockk<WorkloadRepository>()
     const val WORKLOAD_ID = "test"
     const val DATAPLANE_ID = "dataplaneId"
-    val workloadHandler = spyk(WorkloadHandlerImpl(workloadRepository, TestClient(mapOf("platform.enforce-mutex-key-on-create" to true))))
+    val workloadHandler = spyk(WorkloadHandlerImpl(workloadRepository))
 
     fun workload(
       id: String = WORKLOAD_ID,
