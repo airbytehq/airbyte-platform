@@ -1691,9 +1691,12 @@
 
   "userInvitations.accept.success": "Invitation accepted successfully",
   "userInvitations.accept.error": "Something went wrong accepting the invitation. Please check your link.",
+  "userInvitations.accept.error.email": "Current user's email address does not match invitation.",
+  "userInvitations.accept.error.expired": "This invitation has expired. Please request a new one.",
+  "userInvitations.accept.error.cancelled": "This invitation has been cancelled.",
+  "userInvitations.accept.warning.alreadyAccepted": "You have already accepted this invitation.",
   "userInvitations.create.modal.title": "Add a member to {workspace}",
   "userInvitations.create.modal.addNew": "Add new member",
-  "userInvitations.create.modal.existingMember": "This member already exists. Go to workspace settings to edit this user’s permissions.",
   "userInvitations.create.modal.search": "Type to add a new member",
   "userInvitations.create.success": "Invitation created successfully",
   "userInvitations.create.error": "There was an error inviting this user. Please try again.",
