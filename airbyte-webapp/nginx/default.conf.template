@@ -11,8 +11,8 @@ upstream keycloak {
 }
 
 server {
-    listen       80;
-    listen  [::]:80;
+    listen       ${NGINX_PORT};
+    listen  [::]:${NGINX_PORT};
     server_name  localhost;
 
     add_header Content-Security-Policy "script-src * 'unsafe-inline'; worker-src 'self' blob:;";
