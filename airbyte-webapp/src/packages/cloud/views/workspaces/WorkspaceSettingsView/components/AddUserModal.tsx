@@ -19,6 +19,7 @@ import {
 } from "core/api";
 import { PermissionType, WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
+import { useIntent } from "core/utils/rbac";
 
 import { AddUserModalBody } from "./AddUserModalBody";
 
@@ -46,7 +47,12 @@ export const AddUserModal: React.FC<{ closeModal: () => void }> = ({ closeModal 
   const { formatMessage } = useIntl();
   const workspaceId = useCurrentWorkspaceId();
   const organizationInfo = useCurrentOrganizationInfo();
-  const { users } = useListUsersInOrganization(organizationInfo?.organizationId);
+  const canListUsersInOrganization = useIntent("ListOrganizationMembers", {
+    organizationId: organizationInfo?.organizationId,
+  });
+  const { users } = useListUsersInOrganization(
+    canListUsersInOrganization ? organizationInfo?.organizationId : undefined
+  );
   const [searchValue, setSearchValue] = useState("");
   const deferredSearchValue = useDeferredValue(searchValue);
   const [selectedRow, setSelectedRow] = useState<string | null>(null);
