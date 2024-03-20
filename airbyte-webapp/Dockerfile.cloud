@@ -1,4 +1,4 @@
-ARG NGINX_IMAGE=nginx:alpine
+ARG NGINX_IMAGE=nginxinc/nginx-unprivileged:alpine3.18
 FROM ${NGINX_IMAGE}
 
 COPY build/app /usr/share/nginx/html

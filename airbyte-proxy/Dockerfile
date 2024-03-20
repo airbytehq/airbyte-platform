@@ -10,9 +10,9 @@ ENV VERSION ${VERSION}
 RUN apt-get update -y && apt-get install -y apache2-utils && rm -rf /var/lib/apt/lists/*
 
 # This variable can be used to update the destination containers that Nginx proxies to.
-ENV PROXY_PASS_WEB "http://airbyte-webapp:80"
+ENV PROXY_PASS_WEB "http://airbyte-webapp:8080"
 ENV PROXY_PASS_API "http://airbyte-server:8001"
-ENV CONNECTOR_BUILDER_SERVER_API "http://airbyte-connector-builder-server:80"
+ENV CONNECTOR_BUILDER_SERVER_API "http://airbyte-connector-builder-server:8080"
 ENV PROXY_PASS_AIRBYTE_API_SERVER "http://airbyte-api-server:8006"
 
 # Nginx config file
