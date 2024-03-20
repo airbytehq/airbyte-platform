@@ -3,12 +3,17 @@ import merge from "lodash/merge";
 import {
   ConnectorManifest,
   DeclarativeStream,
+  DeclarativeStreamIncrementalSync,
   HttpRequesterErrorHandler,
   SimpleRetrieverPaginator,
 } from "core/api/types/ConnectorManifest";
 import { removeEmptyProperties } from "core/utils/form";
 
-import { manifestErrorHandlerToBuilder, manifestPaginatorToBuilder } from "./convertManifestToBuilderForm";
+import {
+  manifestErrorHandlerToBuilder,
+  manifestIncrementalSyncToBuilder,
+  manifestPaginatorToBuilder,
+} from "./convertManifestToBuilderForm";
 import { DEFAULT_BUILDER_FORM_VALUES, DEFAULT_CONNECTOR_NAME, OLDEST_SUPPORTED_CDK_VERSION } from "./types";
 import { convertToBuilderFormValues } from "./useManifestToBuilderForm";
 import { formatJson } from "./utils";
@@ -316,19 +321,12 @@ describe("Conversion throws error when", () => {
 
   it("manifest has an incremental sync with an unsupported type", async () => {
     const convert = () => {
-      const manifest: ConnectorManifest = {
-        ...baseManifest,
-        streams: [
-          merge({}, stream1, {
-            incremental_sync: {
-              type: "UnsupportedIncrementalSync",
-            },
-          }),
-        ],
+      const incrementalSync = {
+        type: "UnsupportedIncrementalSync",
       };
-      return convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+      return manifestIncrementalSyncToBuilder(incrementalSync as DeclarativeStreamIncrementalSync);
     };
-    await expect(convert).rejects.toThrow("doesn't use a DatetimeBasedCursor");
+    expect(convert).toThrow("doesn't use a DatetimeBasedCursor");
   });
 });
 
