@@ -30,6 +30,7 @@ val DELETE = io.micronaut.http.HttpMethod.DELETE.name
 val PUT = io.micronaut.http.HttpMethod.PUT.name
 
 const val WORKSPACE_IDS = "workspaceIds"
+const val JOB_TYPE = "jobType"
 const val INCLUDE_DELETED = "includeDeleted"
 
 const val OAUTH_CALLBACK_PATH = "$ROOT_PATH/v1/oauth/callback"
