@@ -223,7 +223,7 @@ export interface BuilderStream {
   requestOptions: BuilderRequestOptions;
   paginator?: BuilderPaginator | YamlString;
   transformations?: BuilderTransformation[] | YamlString;
-  incrementalSync?: BuilderIncrementalSync;
+  incrementalSync?: BuilderIncrementalSync | YamlString;
   parentStreams?: BuilderParentStream[];
   parameterizedRequests?: BuilderParameterizedRequests[];
   errorHandler?: BuilderErrorHandler[] | YamlString;
@@ -234,7 +234,7 @@ export interface BuilderStream {
 
 type StreamName = string;
 // todo: add more component names to this type as more components support in YAML
-export type YamlSupportedComponentName = "paginator" | "errorHandler" | "transformations";
+export type YamlSupportedComponentName = "paginator" | "errorHandler" | "transformations" | "incrementalSync";
 
 export interface BuilderMetadata {
   autoImportSchema: Record<StreamName, boolean>;
@@ -263,6 +263,7 @@ export const getManifestValuePerComponentPerStream = (
             .with("paginator", (name) => [name, stream?.retriever?.paginator])
             .with("errorHandler", (name) => [name, stream?.retriever?.requester?.error_handler])
             .with("transformations", (name) => [name, stream?.transformations])
+            .with("incrementalSync", (name) => [name, stream?.incremental_sync])
             .otherwise(() => []);
         })
       );
@@ -538,6 +539,7 @@ export function hasIncrementalSyncUserInput(
 ) {
   return streams.some(
     (stream) =>
+      !isYamlString(stream.incrementalSync) &&
       stream.incrementalSync?.[key]?.type === "user_input" &&
       (key === "start_datetime" || stream.incrementalSync?.filter_mode === "range")
   );
@@ -943,45 +945,47 @@ export const streamSchema = yup.object().shape({
       .default(undefined)
   ),
   errorHandler: maybeYamlSchema(errorHandlerSchema),
-  incrementalSync: yup
-    .object()
-    .shape({
-      cursor_field: yup.string().required(REQUIRED_ERROR),
-      slicer: schemaIfNotDataFeed(
-        yup
-          .object()
-          .shape({
-            cursor_granularity: yup.string().required(REQUIRED_ERROR),
-            step: yup.string().required(REQUIRED_ERROR),
-          })
-          .default(undefined)
-      ),
-      start_datetime: yup.object().shape({
-        value: yup.mixed().when("type", {
-          is: (val: string) => val === "custom",
-          then: yup.string().required(REQUIRED_ERROR),
-          otherwise: strip,
-        }),
-      }),
-      end_datetime: schemaIfRangeFilter(
-        yup.object().shape({
+  incrementalSync: maybeYamlSchema(
+    yup
+      .object()
+      .shape({
+        cursor_field: yup.string().required(REQUIRED_ERROR),
+        slicer: schemaIfNotDataFeed(
+          yup
+            .object()
+            .shape({
+              cursor_granularity: yup.string().required(REQUIRED_ERROR),
+              step: yup.string().required(REQUIRED_ERROR),
+            })
+            .default(undefined)
+        ),
+        start_datetime: yup.object().shape({
           value: yup.mixed().when("type", {
             is: (val: string) => val === "custom",
             then: yup.string().required(REQUIRED_ERROR),
             otherwise: strip,
           }),
-        })
-      ),
-      datetime_format: yup.string().notRequired().default(undefined),
-      cursor_datetime_formats: yup.array(yup.string()).min(1, REQUIRED_ERROR).required(REQUIRED_ERROR),
-      start_time_option: schemaIfNotDataFeed(nonPathRequestOptionSchema),
-      end_time_option: schemaIfRangeFilter(nonPathRequestOptionSchema),
-      stream_state_field_start: yup.string(),
-      stream_state_field_end: yup.string(),
-      lookback_window: yup.string(),
-    })
-    .notRequired()
-    .default(undefined),
+        }),
+        end_datetime: schemaIfRangeFilter(
+          yup.object().shape({
+            value: yup.mixed().when("type", {
+              is: (val: string) => val === "custom",
+              then: yup.string().required(REQUIRED_ERROR),
+              otherwise: strip,
+            }),
+          })
+        ),
+        datetime_format: yup.string().notRequired().default(undefined),
+        cursor_datetime_formats: yup.array(yup.string()).min(1, REQUIRED_ERROR).required(REQUIRED_ERROR),
+        start_time_option: schemaIfNotDataFeed(nonPathRequestOptionSchema),
+        end_time_option: schemaIfRangeFilter(nonPathRequestOptionSchema),
+        stream_state_field_start: yup.string(),
+        stream_state_field_end: yup.string(),
+        lookback_window: yup.string(),
+      })
+      .notRequired()
+      .default(undefined)
+  ),
 });
 
 export const builderFormValidationSchema = yup.object().shape({
@@ -1126,7 +1130,9 @@ export function builderPaginatorToManifest(paginator: BuilderPaginator | undefin
   };
 }
 
-function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync"]): DatetimeBasedCursor | undefined {
+export function builderIncrementalSyncToManifest(
+  formValues: BuilderIncrementalSync | undefined
+): DatetimeBasedCursor | undefined {
   if (!formValues) {
     return undefined;
   }
@@ -1358,7 +1364,7 @@ function builderStreamToDeclarativeSteam(
       ),
     },
     transformations: convertOrLoadYamlString(stream.transformations, builderTransformationsToManifest),
-    incremental_sync: builderIncrementalToManifest(stream.incrementalSync),
+    incremental_sync: convertOrLoadYamlString(stream.incrementalSync, builderIncrementalSyncToManifest),
   };
 
   return merge({}, declarativeStream, stream.unsupportedFields);
@@ -1419,6 +1425,7 @@ export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderM
           ...componentNameIfString("paginator", stream.paginator),
           ...componentNameIfString("errorHandler", stream.errorHandler),
           ...componentNameIfString("transformations", stream.transformations),
+          ...componentNameIfString("incrementalSync", stream.incrementalSync),
         ],
       ])
     ),

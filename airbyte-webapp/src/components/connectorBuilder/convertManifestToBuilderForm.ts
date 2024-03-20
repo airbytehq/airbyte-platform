@@ -206,7 +206,13 @@ const manifestStreamToBuilder = (
       stream.name,
       metadata
     ),
-    incrementalSync: manifestIncrementalSyncToBuilder(stream.incremental_sync, stream.name),
+    incrementalSync: convertOrDumpAsString(
+      stream.incremental_sync,
+      manifestIncrementalSyncToBuilder,
+      "incrementalSync",
+      stream.name,
+      metadata
+    ),
     parentStreams,
     parameterizedRequests,
     schema: manifestSchemaLoaderToBuilderSchema(stream.schema_loader),
@@ -460,7 +466,7 @@ function isFormatSupported(
   return getFormat(format, manifestIncrementalSync) === INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT;
 }
 
-function manifestIncrementalSyncToBuilder(
+export function manifestIncrementalSyncToBuilder(
   manifestIncrementalSync: DeclarativeStreamIncrementalSync | undefined,
   streamName?: string
 ): BuilderStream["incrementalSync"] | undefined {
