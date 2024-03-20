@@ -1,5 +1,4 @@
-ARG JAVA_WORKER_BASE_IMAGE_VERSION=2.1.0
-FROM airbyte/airbyte-base-java-worker-image:${JAVA_WORKER_BASE_IMAGE_VERSION}
+FROM amazoncorretto:21 AS connector-sidecar
 
 ARG DOCKER_BUILD_ARCH=amd64
 
@@ -9,13 +8,12 @@ ARG VERSION=dev
 ENV APPLICATION airbyte-connector-sidecar
 ENV VERSION=${VERSION}
 
-USER root
+WORKDIR /app
+
 COPY WellKnownTypes.json /app
 
 # Move connector-sidecar app
 ADD airbyte-app.tar /app
-RUN chown -R airbyte:airbyte /app
-USER airbyte:airbyte
 
 # wait for upstream dependencies to become available before starting server
 ENTRYPOINT ["/bin/bash", "-c", "/app/airbyte-app/bin/${APPLICATION}"]
