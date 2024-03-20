@@ -261,6 +261,10 @@ extraSelectorLabels: {}
 extraLabels: {}
 
 
+## deploymentStrategyType [string] - deployment strategy type for airbyte-server deployment.
+## Defaults to Recreate since the pod is using pvc
+deploymentStrategyType: Recreate
+
 ## workloadApi:
 ##   bearerTokenSecretName: workload-api-bearer-token-name kubernetes secret name where bearer token is stored
 ##   bearerTokenSecretKey: workload-api-bearer-token-key kubernetes secret key where bearer token is stored

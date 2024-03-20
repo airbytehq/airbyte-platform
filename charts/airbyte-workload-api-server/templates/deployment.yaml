@@ -13,10 +13,7 @@ spec:
       {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
       {{- end }}
   strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 100%
+    type: {{ .Values.deploymentStrategyType }}
   template:
     metadata:
       labels:
