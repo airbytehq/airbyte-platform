@@ -1,6 +1,9 @@
 package io.airbyte.workload.handler
 
 import io.airbyte.config.WorkloadType
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.EnforceMutexKeyOnCreate
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.errors.ConflictException
@@ -21,8 +24,10 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class WorkloadHandlerImpl(
   private val workloadRepository: WorkloadRepository,
+  private val featureFlagClient: FeatureFlagClient,
 ) : WorkloadHandler {
   companion object {
+    val UUID_ZERO: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000")
     val ACTIVE_STATUSES: List<WorkloadStatus> =
       listOf(WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING)
   }
@@ -73,7 +78,7 @@ class WorkloadHandlerImpl(
 
     // Evaluating feature flag with UUID_ZERO because the client requires a context. This feature flag is intended to be used
     // as a global kill switch for validation.
-    if (mutexKey != null) {
+    if (mutexKey != null && featureFlagClient.boolVariation(EnforceMutexKeyOnCreate, Connection(UUID_ZERO))) {
       val activeWorkloadsWithMutexKey = workloadRepository.searchByMutexKeyAndStatusInList(mutexKey, statuses = ACTIVE_STATUSES)
       if (activeWorkloadsWithMutexKey.isNotEmpty()) {
         val workloadIds = activeWorkloadsWithMutexKey.joinToString(", ") { it.id }
