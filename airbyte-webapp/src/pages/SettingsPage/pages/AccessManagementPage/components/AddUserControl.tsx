@@ -103,6 +103,7 @@ const AddUserForm: React.FC<{
           submitKey="form.add"
           onCancelClickCallback={() => setIsEditMode(false)}
           allowNonDirtyCancel
+          allowNonDirtySubmit
         />
       </FlexContainer>
     </Form>

@@ -5,29 +5,24 @@ import { ExternalLink, Link } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 
 import { useCurrentWorkspace } from "core/api";
-import { useGetCloudWorkspace } from "core/api/cloud";
+import { useGetCloudWorkspace, useResendEmailVerification } from "core/api/cloud";
 import { CloudWorkspaceReadCreditStatus, CloudWorkspaceReadWorkspaceTrialStatus } from "core/api/types/CloudApi";
-import { AuthSendEmailVerification, useAuthService } from "core/services/auth";
+import { useAuthService } from "core/services/auth";
 import { links } from "core/utils/links";
 import { useExperiment } from "hooks/services/Experiment";
 
 const LOW_BALANCE_CREDIT_THRESHOLD = 20;
 
-interface EmailVerificationHintProps {
-  sendEmailVerification: AuthSendEmailVerification;
-}
-
-export const EmailVerificationHint: React.FC<EmailVerificationHintProps> = ({ sendEmailVerification }) => {
-  const onResendVerificationMail = async () => {
-    return sendEmailVerification();
-  };
+export const EmailVerificationHint: React.FC = () => {
+  const { mutateAsync: resendEmailVerification, isLoading } = useResendEmailVerification();
 
   return (
     <Message
       type="info"
       text={<FormattedMessage id="credits.emailVerificationRequired" />}
       actionBtnText={<FormattedMessage id="credits.emailVerification.resend" />}
-      onAction={onResendVerificationMail}
+      actionBtnProps={{ isLoading }}
+      onAction={resendEmailVerification}
     />
   );
 };
@@ -99,15 +94,13 @@ const LowCreditBalanceHint: React.FC = () => {
 };
 
 export const BillingBanners: React.FC = () => {
-  const { sendEmailVerification, emailVerified } = useAuthService();
+  const { emailVerified } = useAuthService();
 
   const isAutoRechargeEnabled = useExperiment("billing.autoRecharge", false);
 
   return (
     <FlexContainer direction="column">
-      {!emailVerified && sendEmailVerification && (
-        <EmailVerificationHint sendEmailVerification={sendEmailVerification} />
-      )}
+      {!emailVerified && <EmailVerificationHint />}
       {isAutoRechargeEnabled ? <AutoRechargeEnabledBanner /> : <LowCreditBalanceHint />}
     </FlexContainer>
   );

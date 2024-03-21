@@ -1,21 +1,12 @@
 import classNames from "classnames";
-import { FormattedMessage } from "react-intl";
-
-import { Box } from "components/ui/Box";
-import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
-import { Text } from "components/ui/Text";
 
 import { useCreatePermission, useCurrentOrganizationInfo, useCurrentWorkspace, useUpdatePermissions } from "core/api";
 import { PermissionType, WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 
 import styles from "./ChangeRoleMenuItem.module.scss";
-import {
-  ResourceType,
-  permissionStringDictionary,
-  permissionDescriptionDictionary,
-} from "../components/useGetAccessManagementData";
+import { ChangeRoleMenuItemContent } from "./ChangeRoleMenuItemContent";
+import { ResourceType } from "../components/useGetAccessManagementData";
 
 const useCreateOrUpdateRole = (
   user: WorkspaceUserAccessInfoRead,
@@ -115,26 +106,11 @@ export const ChangeRoleMenuItem: React.FC<RoleMenuItemProps> = ({ user, permissi
         [styles["changeRoleMenuItem__button--active"]]: roleIsActive,
       })}
     >
-      <Box px="md" py="lg">
-        <FlexContainer alignItems="center" justifyContent="space-between">
-          <FlexItem>
-            <Text color={roleIsInvalid ? "grey300" : undefined}>
-              <FormattedMessage id={permissionStringDictionary[permissionType].role} />
-            </Text>
-            <Text color={roleIsInvalid ? "grey300" : "grey"}>
-              <FormattedMessage
-                id={permissionDescriptionDictionary[permissionType].id}
-                values={permissionDescriptionDictionary[permissionType].values}
-              />
-            </Text>
-          </FlexItem>
-          {roleIsActive && (
-            <FlexItem>
-              <Icon type="check" color="primary" size="md" />
-            </FlexItem>
-          )}
-        </FlexContainer>
-      </Box>
+      <ChangeRoleMenuItemContent
+        roleIsActive={roleIsActive}
+        roleIsInvalid={roleIsInvalid}
+        permissionType={permissionType}
+      />
     </button>
   );
 };

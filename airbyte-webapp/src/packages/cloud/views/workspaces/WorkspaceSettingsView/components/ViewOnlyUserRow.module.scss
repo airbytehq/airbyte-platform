@@ -1,0 +1,13 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.existingUserRow {
+  padding-left: variables.$spacing-md;
+  padding-right: variables.$spacing-md;
+  height: 60px;
+  border-bottom: variables.$border-thin solid colors.$grey-50;
+
+  &__content {
+    height: 100%;
+  }
+}

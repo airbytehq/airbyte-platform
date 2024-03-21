@@ -22,12 +22,12 @@ data:
   CONFIG_ROOT: /configs
   CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: "0.35.15.001"
   DATA_DOCKER_MOUNT: airbyte_data
+  DB_DOCKER_MOUNT: airbyte_db
   DATABASE_DB: {{ include "airbyte.database.name" . }}
   DATABASE_HOST: {{ include "airbyte.database.host" . }} # todo: database information into secrets
   DATABASE_PORT: {{ include "airbyte.database.port" . | quote }}
   DATABASE_URL: {{ include "airbyte.database.url" . | quote }}
   KEYCLOAK_DATABASE_URL: {{ include "keycloak.database.url" . | quote }}
-  DB_DOCKER_MOUNT: airbyte_db
   GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.gcpLogCredentialsPath" . | quote }}
   INTERNAL_API_HOST: {{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
 {{- if eq (index .Values "workload-api-server" "enabled") true }}
@@ -46,7 +46,11 @@ data:
   KEYCLOAK_INTERNAL_HOST: localhost # just a placeholder so that nginx template is valid - shouldn't be used when edition isn't "pro"
 {{- end }}
   CONNECTOR_BUILDER_API_HOST: {{ .Release.Name }}-airbyte-connector-builder-server-svc:{{ index .Values "connector-builder-server" "service" "port" }}
-  AIRBYTE_API_HOST: {{ printf "%s/api/public/v1" (index $airbyteYmlDict "webapp-url") | quote }}
+{{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+  AIRBYTE_API_HOST: {{ printf "%s/api/public" (index $airbyteYmlDict "webapp-url") | quote }}
+{{- else }}
+  AIRBYTE_API_HOST: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}/api/public
+{{- end }}
 {{- if $.Values.global.jobs.kube.annotations }}
   JOB_KUBE_ANNOTATIONS: {{ $.Values.global.jobs.kube.annotations | include "airbyte.flattenMap" | quote }}
 {{- end }}

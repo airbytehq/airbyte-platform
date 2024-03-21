@@ -112,7 +112,7 @@ const Panels = React.memo(() => {
               </>
             ),
             className: styles.leftPanel,
-            minWidth: 550,
+            minWidth: 350,
           },
           {
             children: <StreamTestingPanel />,

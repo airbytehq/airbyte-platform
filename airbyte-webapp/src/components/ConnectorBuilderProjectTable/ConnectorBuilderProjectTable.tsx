@@ -1,13 +1,13 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import classNames from "classnames";
 import { useCallback, useMemo, useState } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
-import { Modal, ModalBody } from "components/ui/Modal";
+import { ModalBody } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
@@ -23,6 +23,7 @@ import {
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 import { getEditPath } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 
@@ -37,7 +38,7 @@ const DELETE_PROJECT_ERROR_ID = "connectorBuilder.deleteProject.error";
 const CHANGED_VERSION_SUCCESS_ID = "connectorBuilder.changeVersion.success";
 const CHANGED_VERSION_ERROR_ID = "connectorBuilder.changeVersion.error";
 
-const VersionChangeModal: React.FC<{
+const VersionChangeModalContent: React.FC<{
   project: BuilderProject;
   onClose: () => void;
 }> = ({ onClose, project }) => {
@@ -93,53 +94,49 @@ const VersionChangeModal: React.FC<{
   }
 
   return (
-    <Modal
-      size="sm"
-      title={<FormattedMessage id="connectorBuilder.changeVersionModal.title" values={{ name: project.name }} />}
-      onClose={onClose}
-    >
-      <ModalBody className={styles.modalStreamListContainer}>
-        {isLoadingVersionList ? (
-          <FlexContainer justifyContent="center">
-            <Spinner size="md" />
-          </FlexContainer>
-        ) : (
-          <FlexContainer direction="column" data-testid="versions-list">
-            {(versions || []).map((version, index) => (
-              <button
-                key={index}
-                onClick={() => {
-                  onSelect(version.version);
-                }}
-                className={classNames(styles.versionItem, { [styles["versionItem--active"]]: version.isActive })}
-              >
-                <FlexContainer alignItems="baseline">
-                  <Text size="md" as="span">
-                    v{version.version}{" "}
+    <ModalBody>
+      {isLoadingVersionList ? (
+        <FlexContainer justifyContent="center">
+          <Spinner size="md" />
+        </FlexContainer>
+      ) : (
+        <FlexContainer direction="column" data-testid="versions-list">
+          {(versions || []).map((version, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                onSelect(version.version);
+              }}
+              className={classNames(styles.versionItem, { [styles["versionItem--active"]]: version.isActive })}
+            >
+              <FlexContainer alignItems="baseline">
+                <Text size="md" as="span">
+                  v{version.version}{" "}
+                </Text>
+                <FlexItem grow>
+                  <Text size="sm" as="span" color="grey">
+                    {version.description}
                   </Text>
-                  <FlexItem grow>
-                    <Text size="sm" as="span" color="grey">
-                      {version.description}
-                    </Text>
-                  </FlexItem>
-                  {version.isActive && (
-                    <Text className={styles.activeVersion} size="xs" as="span">
-                      <FormattedMessage id="connectorBuilder.changeVersionModal.activeVersion" />
-                    </Text>
-                  )}
-                  {isLoading && version.version === selectedVersion && <Spinner size="xs" />}
-                </FlexContainer>
-              </button>
-            ))}
-          </FlexContainer>
-        )}
-      </ModalBody>
-    </Modal>
+                </FlexItem>
+                {version.isActive && (
+                  <Text className={styles.activeVersion} size="xs" as="span">
+                    <FormattedMessage id="connectorBuilder.changeVersionModal.activeVersion" />
+                  </Text>
+                )}
+                {isLoading && version.version === selectedVersion && <Spinner size="xs" />}
+              </FlexContainer>
+            </button>
+          ))}
+        </FlexContainer>
+      )}
+    </ModalBody>
   );
 };
 
 const VersionChanger = ({ project, canUpdateConnector }: { project: BuilderProject; canUpdateConnector: boolean }) => {
-  const [changeInProgress, setChangeInProgress] = useState(false);
+  const { openModal } = useModalService();
+  const { formatMessage } = useIntl();
+
   if (project.version === "draft") {
     return (
       <Tooltip
@@ -153,22 +150,27 @@ const VersionChanger = ({ project, canUpdateConnector }: { project: BuilderProje
       </Tooltip>
     );
   }
+
+  const openVersionChangeModal = async () =>
+    await openModal<"versionIsChanged">({
+      title: formatMessage({ id: "connectorBuilder.changeVersionModal.title" }, { name: project.name }),
+      size: "sm",
+      content: ({ onClose }) => (
+        <VersionChangeModalContent project={project} onClose={() => onClose("versionIsChanged")} />
+      ),
+    });
+
   return (
-    <>
-      <Button
-        disabled={!canUpdateConnector}
-        variant="clear"
-        onClick={() => {
-          setChangeInProgress(true);
-        }}
-        icon="chevronDown"
-        iconPosition="right"
-        data-testid={`version-changer-${project.name}`}
-      >
-        <Text>v{project.version}</Text>
-      </Button>
-      {changeInProgress && <VersionChangeModal onClose={() => setChangeInProgress(false)} project={project} />}
-    </>
+    <Button
+      disabled={!canUpdateConnector}
+      variant="clear"
+      onClick={openVersionChangeModal}
+      icon="chevronDown"
+      iconPosition="right"
+      data-testid={`version-changer-${project.name}`}
+    >
+      <Text>v{project.version}</Text>
+    </Button>
   );
 };
 

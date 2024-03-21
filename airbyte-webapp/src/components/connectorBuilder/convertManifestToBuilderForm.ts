@@ -2,6 +2,7 @@ import { dump } from "js-yaml";
 import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 import pick from "lodash/pick";
+import { match } from "ts-pattern";
 
 import {
   ConnectorManifest,
@@ -205,7 +206,13 @@ const manifestStreamToBuilder = (
       stream.name,
       metadata
     ),
-    incrementalSync: manifestIncrementalSyncToBuilder(stream.incremental_sync, stream.name),
+    incrementalSync: convertOrDumpAsString(
+      stream.incremental_sync,
+      manifestIncrementalSyncToBuilder,
+      "incrementalSync",
+      stream.name,
+      metadata
+    ),
     parentStreams,
     parameterizedRequests,
     schema: manifestSchemaLoaderToBuilderSchema(stream.schema_loader),
@@ -350,13 +357,26 @@ export function manifestErrorHandlerToBuilder(
   if (!errorHandler) {
     return undefined;
   }
-  const handlers = errorHandler.type === "CompositeErrorHandler" ? errorHandler.error_handlers : [errorHandler];
-  if (handlers.some((handler) => handler.type === "CustomErrorHandler")) {
-    throw new ManifestCompatibilityError(streamName, "custom error handler used");
-  }
-  if (handlers.some((handler) => handler.type === "CompositeErrorHandler")) {
-    throw new ManifestCompatibilityError(streamName, "nested composite error handler used");
-  }
+  const handlers: HttpRequesterErrorHandler[] =
+    errorHandler.type === "CompositeErrorHandler" ? errorHandler.error_handlers : [errorHandler];
+
+  handlers.forEach((handler) => {
+    match(handler.type)
+      .with("DefaultErrorHandler", () => {})
+      .with("CustomErrorHandler", () => {
+        throw new ManifestCompatibilityError(streamName, "custom error handler used");
+      })
+      .with("CompositeErrorHandler", () => {
+        throw new ManifestCompatibilityError(streamName, "nested composite error handler used");
+      })
+      .otherwise(() => {
+        throw new ManifestCompatibilityError(
+          streamName,
+          "error handler type is unsupported; only CompositeErrorHandler and DefaultErrorHandler are supported"
+        );
+      });
+  });
+
   const defaultHandlers = handlers as DefaultErrorHandler[];
   return defaultHandlers.map((handler) => {
     if (handler.backoff_strategies && handler.backoff_strategies.length > 1) {
@@ -446,7 +466,7 @@ function isFormatSupported(
   return getFormat(format, manifestIncrementalSync) === INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT;
 }
 
-function manifestIncrementalSyncToBuilder(
+export function manifestIncrementalSyncToBuilder(
   manifestIncrementalSync: DeclarativeStreamIncrementalSync | undefined,
   streamName?: string
 ): BuilderStream["incrementalSync"] | undefined {
@@ -456,6 +476,7 @@ function manifestIncrementalSyncToBuilder(
   if (manifestIncrementalSync.type === "CustomIncrementalSync") {
     throw new ManifestCompatibilityError(streamName, "incremental sync uses a custom implementation");
   }
+  assertType(manifestIncrementalSync, "DatetimeBasedCursor", streamName);
 
   if (manifestIncrementalSync.partition_field_start || manifestIncrementalSync.partition_field_end) {
     throw new ManifestCompatibilityError(
@@ -582,6 +603,7 @@ export function manifestPaginatorToBuilder(
   if (manifestPaginator === undefined || manifestPaginator.type === "NoPagination") {
     return undefined;
   }
+  assertType(manifestPaginator, "DefaultPaginator", streamName);
 
   if (manifestPaginator.pagination_strategy.type === "CustomPaginationStrategy") {
     throw new ManifestCompatibilityError(streamName, "paginator.pagination_strategy uses a CustomPaginationStrategy");

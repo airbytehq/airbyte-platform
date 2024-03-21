@@ -88,7 +88,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
           {
             key: "schema",
             title: (
-              <FlexContainer direction="row" justifyContent="center">
+              <FlexContainer direction="row" justifyContent="center" alignItems="center" gap="sm">
                 <FormattedMessage id="connectorBuilder.schemaTab" />
                 {mode === "ui" && schemaDifferences && !autoImportSchema && (
                   <SchemaConflictIndicator errors={incompatibleSchemaErrors} />

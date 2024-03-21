@@ -1,74 +1,74 @@
 pluginManagement {
-    repositories {
-        // uncomment for local dev
-        // maven {
-        //     name = "localPluginRepo"
-        //     url = uri("../.gradle-plugins-local")
-        // }
-        maven(url = "https://airbyte.mycloudrepo.io/public/repositories/airbyte-public-jars")
-        gradlePluginPortal()
-        maven(url = "https://oss.sonatype.org/content/repositories/snapshots")
+  repositories {
+    // uncomment for local dev
+    // maven {
+    //     name = "localPluginRepo"
+    //     url = uri("../.gradle-plugins-local")
+    // }
+    maven(url = "https://airbyte.mycloudrepo.io/public/repositories/airbyte-public-jars")
+    gradlePluginPortal()
+    maven(url = "https://oss.sonatype.org/content/repositories/snapshots")
+  }
+  resolutionStrategy {
+    eachPlugin {
+      // We're using the 6.1.0-SNAPSHOT version of openapi-generator which contains a fix for generating nullable arrays (https://github.com/OpenAPITools/openapi-generator/issues/13025)
+      // The snapshot version isn"t available in the main Gradle Plugin Portal, so we added the Sonatype snapshot repository above.
+      // The useModule command below allows us to map from the plugin id, `org.openapi.generator`, to the underlying module (https://oss.sonatype.org/content/repositories/snapshots/org/openapitools/openapi-generator-gradle-plugin/6.1.0-SNAPSHOT/_
+      if (requested.id.id == "org.openapi.generator") {
+        useModule("org.openapitools:openapi-generator-gradle-plugin:${requested.version}")
+      }
     }
-    resolutionStrategy {
-        eachPlugin {
-            // We're using the 6.1.0-SNAPSHOT version of openapi-generator which contains a fix for generating nullable arrays (https://github.com/OpenAPITools/openapi-generator/issues/13025)
-            // The snapshot version isn"t available in the main Gradle Plugin Portal, so we added the Sonatype snapshot repository above.
-            // The useModule command below allows us to map from the plugin id, `org.openapi.generator`, to the underlying module (https://oss.sonatype.org/content/repositories/snapshots/org/openapitools/openapi-generator-gradle-plugin/6.1.0-SNAPSHOT/_
-            if (requested.id.id == "org.openapi.generator") {
-                useModule("org.openapitools:openapi-generator-gradle-plugin:${requested.version}")
-            }
-        }
-    }
+  }
 }
 
 // Configure the gradle enterprise plugin to enable build scans. Enabling the plugin at the top of the settings file allows the build scan to record
 // as much information as possible.
 plugins {
-    id("com.gradle.enterprise") version "3.15.1"
-    id("com.github.burrunan.s3-build-cache") version "1.5"
+  id("com.gradle.enterprise") version "3.15.1"
+  id("com.github.burrunan.s3-build-cache") version "1.5"
 }
 
 gradleEnterprise {
-    buildScan {
-        termsOfServiceUrl = "https://gradle.com/terms-of-service"
-        termsOfServiceAgree = "yes"
-    }
+  buildScan {
+    termsOfServiceUrl = "https://gradle.com/terms-of-service"
+    termsOfServiceAgree = "yes"
+  }
 }
 
 val isCiServer = System.getenv().containsKey("CI")
 
 gradleEnterprise {
-    buildScan {
-        isUploadInBackground = !isCiServer // Disable async upload so that the containers doesn't terminate the upload
-        buildScanPublished {
-            file("scan-journal.log").writeText("${java.util.Date()} - $buildScanId - ${buildScanUri}\n")
-        }
+  buildScan {
+    isUploadInBackground = !isCiServer // Disable async upload so that the containers doesn't terminate the upload
+    buildScanPublished {
+      file("scan-journal.log").writeText("${java.util.Date()} - $buildScanId - ${buildScanUri}\n")
     }
+  }
 }
 
 buildCache {
-    remote<com.github.burrunan.s3cache.AwsS3BuildCache> {
-        region = "us-west-2"
-        bucket = "ab-ci-cache"
-        prefix = "platform-ci-cache/"
-        isPush = isCiServer
-        isEnabled = System.getenv().containsKey("S3_BUILD_CACHE_ACCESS_KEY_ID")
-    }
+  remote<com.github.burrunan.s3cache.AwsS3BuildCache> {
+    region = "us-west-2"
+    bucket = "ab-ci-cache"
+    prefix = "platform-ci-cache/"
+    isPush = isCiServer
+    isEnabled = System.getenv().containsKey("S3_BUILD_CACHE_ACCESS_KEY_ID")
+  }
 }
 
 rootProject.name = "airbyte"
 
 // definition for dependency resolution
 dependencyResolutionManagement {
-    repositories {
-        maven(url = "https://airbyte.mycloudrepo.io/public/repositories/airbyte-public-jars/")
-    }
+  repositories {
+    maven(url = "https://airbyte.mycloudrepo.io/public/repositories/airbyte-public-jars/")
+  }
 
-    versionCatalogs {
-        create("libs") {
-            from(files("deps.toml"))
-        }
+  versionCatalogs {
+    create("libs") {
+      from(files("deps.toml"))
     }
+  }
 }
 
 // todo (cgardens) - alphabetize

@@ -48,16 +48,9 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
     deadline: OffsetDateTime,
   ): List<Workload>
 
-  @Query(
-    """
-      SELECT * FROM workload
-      WHERE (:mutexKey) = mutex_key
-      AND ((:statuses) IS NULL OR status = ANY(CAST(ARRAY[:statuses] AS workload_status[])))
-    """,
-  )
-  fun searchByMutexKeyAndStatuses(
+  fun searchByMutexKeyAndStatusInList(
     mutexKey: String,
-    @Expandable statuses: List<WorkloadStatus>?,
+    statuses: List<WorkloadStatus>,
   ): List<Workload>
 
   @Query(

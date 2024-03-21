@@ -11,12 +11,15 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.UUID
 
 @MicronautTest
 internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserInvitationRepository>(UserInvitationRepository::class) {
   companion object {
     const val INVITE_CODE = "some-code"
+    val EXPIRES_AT = OffsetDateTime.now(ZoneOffset.UTC).plusDays(7).truncatedTo(java.time.temporal.ChronoUnit.SECONDS)
 
     val userInvitation =
       UserInvitation(
@@ -27,6 +30,7 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
         scopeType = ScopeType.workspace,
         permissionType = PermissionType.workspace_admin,
         status = InvitationStatus.pending,
+        expiresAt = EXPIRES_AT,
       )
 
     @BeforeAll

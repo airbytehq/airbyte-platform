@@ -10,21 +10,26 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.model.generated.InviteCodeRequestBody;
 import io.airbyte.api.model.generated.PermissionCreate;
 import io.airbyte.api.model.generated.PermissionType;
 import io.airbyte.api.model.generated.UserInvitationCreateRequestBody;
 import io.airbyte.api.model.generated.UserInvitationCreateResponse;
 import io.airbyte.api.model.generated.UserInvitationListRequestBody;
 import io.airbyte.api.model.generated.UserInvitationRead;
+import io.airbyte.commons.server.errors.ConflictException;
+import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.config.InvitationStatus;
 import io.airbyte.config.ScopeType;
@@ -34,6 +39,7 @@ import io.airbyte.config.UserInvitation;
 import io.airbyte.config.UserPermission;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.UserPersistence;
+import io.airbyte.data.services.InvitationStatusUnexpectedException;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.UserInvitationService;
 import io.airbyte.data.services.WorkspaceService;
@@ -174,6 +180,9 @@ public class UserInvitationHandlerTest {
         assertNotNull(capturedUserInvitation.getInviteCode());
         assertEquals(InvitationStatus.PENDING, capturedUserInvitation.getStatus());
 
+        // make sure an expiration time was set on the invitation
+        assertNotNull(capturedUserInvitation.getExpiresAt());
+
         // make sure the email sender was called with the correct inputs.
         final ArgumentCaptor<CustomerIoEmailConfig> emailConfigCaptor = ArgumentCaptor.forClass(CustomerIoEmailConfig.class);
         final ArgumentCaptor<String> inviteLinkCaptor = ArgumentCaptor.forClass(String.class);
@@ -235,53 +244,116 @@ public class UserInvitationHandlerTest {
         verifyPermissionAddedResult(Set.of(matchingUserInOrg1.getUserId(), matchingUserInOrg2.getUserId()), result);
       }
 
-    }
+      private void verifyPermissionAddedResult(final Set<UUID> expectedUserIds, final UserInvitationCreateResponse result) throws Exception {
+        // capture and verify the permissions that are created by the permission handler.
+        final ArgumentCaptor<PermissionCreate> permissionCreateCaptor = ArgumentCaptor.forClass(PermissionCreate.class);
+        verify(permissionHandler, times(expectedUserIds.size())).createPermission(permissionCreateCaptor.capture());
+        verifyNoMoreInteractions(permissionHandler);
 
-    private void verifyPermissionAdded(final UUID userId) throws Exception {
-      // capture and verify the permission that is created by the permission handler.
-      final ArgumentCaptor<PermissionCreate> permissionCreateCaptor = ArgumentCaptor.forClass(PermissionCreate.class);
-      verify(permissionHandler, times(1)).createPermission(permissionCreateCaptor.capture());
-      final PermissionCreate capturedPermissionCreate = permissionCreateCaptor.getValue();
+        // verify one captured permissionCreate per expected userId.
+        final List<PermissionCreate> capturedPermissionCreateValues = permissionCreateCaptor.getAllValues();
+        assertEquals(expectedUserIds.size(), capturedPermissionCreateValues.size());
 
-      assertEquals(userId, capturedPermissionCreate.getUserId());
-      assertEquals(WORKSPACE_ID, capturedPermissionCreate.getWorkspaceId());
-      assertEquals(PermissionType.WORKSPACE_ADMIN, capturedPermissionCreate.getPermissionType());
-    }
+        for (final PermissionCreate capturedPermissionCreate : capturedPermissionCreateValues) {
+          assertEquals(WORKSPACE_ID, capturedPermissionCreate.getWorkspaceId());
+          assertEquals(PermissionType.WORKSPACE_ADMIN, capturedPermissionCreate.getPermissionType());
+          assertTrue(expectedUserIds.contains(capturedPermissionCreate.getUserId()));
+        }
 
-    private void verifyPermissionAddedResult(final Set<UUID> expectedUserIds, final UserInvitationCreateResponse result) throws Exception {
-      // capture and verify the permissions that are created by the permission handler.
-      final ArgumentCaptor<PermissionCreate> permissionCreateCaptor = ArgumentCaptor.forClass(PermissionCreate.class);
-      verify(permissionHandler, times(expectedUserIds.size())).createPermission(permissionCreateCaptor.capture());
-      verifyNoMoreInteractions(permissionHandler);
+        // make sure the email sender was called with the correct inputs.
+        final ArgumentCaptor<CustomerIoEmailConfig> emailConfigCaptor = ArgumentCaptor.forClass(CustomerIoEmailConfig.class);
+        verify(customerIoEmailNotificationSender, times(1)).sendNotificationOnInvitingExistingUser(
+            emailConfigCaptor.capture(),
+            eq(CURRENT_USER.getName()),
+            eq(WORKSPACE_NAME));
 
-      // verify one captured permissionCreate per expected userId.
-      final List<PermissionCreate> capturedPermissionCreateValues = permissionCreateCaptor.getAllValues();
-      assertEquals(expectedUserIds.size(), capturedPermissionCreateValues.size());
+        assertEquals(INVITED_EMAIL, emailConfigCaptor.getValue().getTo());
 
-      for (final PermissionCreate capturedPermissionCreate : capturedPermissionCreateValues) {
-        assertEquals(WORKSPACE_ID, capturedPermissionCreate.getWorkspaceId());
-        assertEquals(PermissionType.WORKSPACE_ADMIN, capturedPermissionCreate.getPermissionType());
-        assertTrue(expectedUserIds.contains(capturedPermissionCreate.getUserId()));
+        // make sure no other emails are sent.
+        verifyNoMoreInteractions(customerIoEmailNotificationSender);
+
+        // make sure we never created a user invitation, because the add-permission path was taken instead.
+        verify(service, times(0)).createUserInvitation(any());
+
+        // make sure the final result is correct
+        assertTrue(result.getDirectlyAdded());
+        assertNull(result.getInviteCode());
       }
 
-      // make sure the email sender was called with the correct inputs.
-      final ArgumentCaptor<CustomerIoEmailConfig> emailConfigCaptor = ArgumentCaptor.forClass(CustomerIoEmailConfig.class);
-      verify(customerIoEmailNotificationSender, times(1)).sendNotificationOnInvitingExistingUser(
-          emailConfigCaptor.capture(),
-          eq(CURRENT_USER.getName()),
-          eq(WORKSPACE_NAME));
+    }
 
-      assertEquals(INVITED_EMAIL, emailConfigCaptor.getValue().getTo());
+  }
 
-      // make sure no other emails are sent.
-      verifyNoMoreInteractions(customerIoEmailNotificationSender);
+  @Nested
+  class AcceptInvitation {
 
-      // make sure we never created a user invitation, because the add-permission path was taken instead.
-      verify(service, times(0)).createUserInvitation(any());
+    private static final String INVITE_CODE = "invite-code";
+    private static final InviteCodeRequestBody INVITE_CODE_REQUEST_BODY = new InviteCodeRequestBody().inviteCode(INVITE_CODE);
+    private static final String CURRENT_USER_EMAIL = "current@airbyte.io";
+    private static final User CURRENT_USER = new User().withUserId(UUID.randomUUID()).withEmail(CURRENT_USER_EMAIL);
 
-      // make sure the final result is correct
-      assertTrue(result.getDirectlyAdded());
-      assertNull(result.getInviteCode());
+    @Test
+    void testEmailMatches() throws Exception {
+      final UserInvitation invitation = new UserInvitation()
+          .withInviteCode(INVITE_CODE)
+          .withInvitedEmail(CURRENT_USER_EMAIL);
+
+      final UserInvitationRead invitationRead = mock(UserInvitationRead.class);
+
+      when(service.getUserInvitationByInviteCode(INVITE_CODE)).thenReturn(invitation);
+      when(service.acceptUserInvitation(INVITE_CODE, CURRENT_USER.getUserId()))
+          .thenReturn(invitation);
+
+      when(mapper.toApi(invitation)).thenReturn(invitationRead);
+
+      final UserInvitationRead result = handler.accept(INVITE_CODE_REQUEST_BODY, CURRENT_USER);
+
+      verify(service, times(1)).acceptUserInvitation(INVITE_CODE, CURRENT_USER.getUserId());
+      verifyNoMoreInteractions(service);
+
+      // make sure the result is whatever the mapper outputs.
+      assertEquals(invitationRead, result);
+    }
+
+    @Test
+    void testEmailDoesNotMatch() throws Exception {
+      final UserInvitation invitation = new UserInvitation()
+          .withInviteCode(INVITE_CODE)
+          .withInvitedEmail("different@airbyte.io");
+
+      when(service.getUserInvitationByInviteCode(INVITE_CODE)).thenReturn(invitation);
+
+      assertThrows(OperationNotAllowedException.class, () -> handler.accept(INVITE_CODE_REQUEST_BODY, CURRENT_USER));
+
+      // make sure the service method to accept the invitation was never called.
+      verify(service, times(0)).acceptUserInvitation(any(), any());
+    }
+
+    @Test
+    void testInvitationStatusUnexpected() throws Exception {
+      final UserInvitation invitation = new UserInvitation()
+          .withInviteCode(INVITE_CODE)
+          .withInvitedEmail(CURRENT_USER_EMAIL);
+
+      when(service.getUserInvitationByInviteCode(INVITE_CODE)).thenReturn(invitation);
+
+      doThrow(new InvitationStatusUnexpectedException("not pending"))
+          .when(service).acceptUserInvitation(INVITE_CODE, CURRENT_USER.getUserId());
+
+      assertThrows(ConflictException.class, () -> handler.accept(INVITE_CODE_REQUEST_BODY, CURRENT_USER));
+    }
+
+    @Test
+    void testInvitationExpired() throws Exception {
+      final UserInvitation invitation = new UserInvitation()
+          .withInviteCode(INVITE_CODE)
+          .withInvitedEmail(CURRENT_USER_EMAIL);
+
+      when(service.getUserInvitationByInviteCode(INVITE_CODE)).thenReturn(invitation);
+      doThrow(new InvitationStatusUnexpectedException("expired"))
+          .when(service).acceptUserInvitation(INVITE_CODE, CURRENT_USER.getUserId());
+
+      assertThrows(ConflictException.class, () -> handler.accept(INVITE_CODE_REQUEST_BODY, CURRENT_USER));
     }
 
   }

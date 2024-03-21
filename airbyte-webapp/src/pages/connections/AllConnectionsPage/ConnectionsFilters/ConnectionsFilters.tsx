@@ -12,6 +12,7 @@ import styles from "./ConnectionsFilters.module.scss";
 import { getAvailableDestinationOptions, getAvailableSourceOptions, statusFilterOptions } from "./filterOptions";
 
 export interface FilterValues {
+  search: string;
   status: string | null;
   source: string | null;
   destination: string | null;
@@ -89,11 +90,11 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
               <ClearFiltersButton
                 onClick={() => {
                   setFilters({
+                    search: "",
                     status: null,
                     source: null,
                     destination: null,
                   });
-                  setSearchFilter("");
                 }}
               />
             </FlexItem>

@@ -299,6 +299,7 @@ internal fun GcsStorageConfig.gcsClient(): Storage {
  */
 internal fun MinioStorageConfig.s3Client(): S3Client =
   S3Client.builder()
+    .serviceConfiguration { it.pathStyleAccessEnabled(true) }
     .credentialsProvider { AwsBasicCredentials.create(this@s3Client.accessKey, this@s3Client.secretAccessKey) }
     .endpointOverride(URI(this@s3Client.endpoint))
     // The region isn't actually used but is required. Set to us-east-1 based on https://github.com/minio/minio/discussions/15063.

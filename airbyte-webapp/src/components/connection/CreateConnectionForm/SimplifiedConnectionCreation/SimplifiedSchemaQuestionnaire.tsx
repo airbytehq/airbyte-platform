@@ -14,6 +14,7 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import styles from "./SimplifiedSchemaQuestionnaire.module.scss";
@@ -98,6 +99,7 @@ export const getEnforcedIncrementOrRefresh = (supportedSyncModes: SyncMode[]) =>
 };
 
 export const SimplifiedSchemaQuestionnaire = () => {
+  const analyticsService = useAnalyticsService();
   const {
     connection,
     destDefinitionSpecification: { supportedDestinationSyncModes },
@@ -139,17 +141,38 @@ export const SimplifiedSchemaQuestionnaire = () => {
   const enforcedIncrementOrRefresh = getEnforcedIncrementOrRefresh(supportedSyncModes);
 
   const [selectedDelivery, _setSelectedDelivery] = useState<Delivery | undefined>(enforcedSelectedDelivery);
-  const [selectedIncrementOrRefresh, setSelectedIncrementOrRefresh] = useState<IncrementOrRefresh | undefined>(
+  const [selectedIncrementOrRefresh, _setSelectedIncrementOrRefresh] = useState<IncrementOrRefresh | undefined>(
     enforcedIncrementOrRefresh
   );
 
   const setSelectedDelivery: typeof _setSelectedDelivery = (value) => {
+    analyticsService.track(Namespace.SYNC_QUESTIONNAIRE, Action.ANSWERED, {
+      actionDescription: "First question has been answered",
+      question: "delivery",
+      answer: value,
+    });
+
     _setSelectedDelivery(value);
     if (value === "mirrorSource") {
       // clear any user-provided answer for the second question when switching to mirrorSource
       // this is purely a UX decision
-      setSelectedIncrementOrRefresh(enforcedIncrementOrRefresh);
+      setSelectedIncrementOrRefresh(enforcedIncrementOrRefresh, { automatedAction: true });
     }
+  };
+
+  const setSelectedIncrementOrRefresh = (
+    value: SyncMode | undefined,
+    { automatedAction }: { automatedAction?: boolean } = { automatedAction: false }
+  ) => {
+    if (!automatedAction) {
+      analyticsService.track(Namespace.SYNC_QUESTIONNAIRE, Action.ANSWERED, {
+        actionDescription: "Second question has been answered",
+        question: "all_or_some",
+        answer: value,
+      });
+    }
+
+    _setSelectedIncrementOrRefresh(value);
   };
 
   const selectedModes = useMemo<SyncModeValue[]>(() => {
@@ -208,16 +231,41 @@ export const SimplifiedSchemaQuestionnaire = () => {
     });
     setValue("syncCatalog.streams", nextFields);
     trigger("syncCatalog.streams");
-  }, [setValue, trigger, getValues, selectedDelivery, selectedIncrementOrRefresh, selectedModes]);
 
+    analyticsService.track(Namespace.SYNC_QUESTIONNAIRE, Action.APPLIED, {
+      actionDescription: "Questionnaire has applied a sync mode",
+      delivery: selectedDelivery,
+      all_or_some: selectedIncrementOrRefresh,
+    });
+  }, [setValue, trigger, getValues, selectedDelivery, selectedIncrementOrRefresh, selectedModes, analyticsService]);
+
+  const showFirstQuestion = enforcedSelectedDelivery == null;
   const showSecondQuestion = enforcedIncrementOrRefresh == null && selectedDelivery === "appendChanges";
+
+  useEffect(() => {
+    if (showFirstQuestion) {
+      analyticsService.track(Namespace.SYNC_QUESTIONNAIRE, Action.DISPLAYED, {
+        actionDescription: "First question has been shown to the user",
+        question: "delivery",
+      });
+    }
+  }, [showFirstQuestion, analyticsService]);
+
+  useEffect(() => {
+    if (showSecondQuestion) {
+      analyticsService.track(Namespace.SYNC_QUESTIONNAIRE, Action.DISPLAYED, {
+        actionDescription: "Second question has been shown to the user",
+        question: "all_or_some",
+      });
+    }
+  }, [showSecondQuestion, analyticsService]);
 
   return (
     <FlexContainer
       direction="column"
       gap={showSecondQuestion ? "xl" : "md" /* maintain consistent spacing between the first question & message */}
     >
-      {enforcedSelectedDelivery == null && (
+      {showFirstQuestion && (
         <FormFieldLayout alignItems="flex-start" nextSizing>
           <ControlLabels
             label={

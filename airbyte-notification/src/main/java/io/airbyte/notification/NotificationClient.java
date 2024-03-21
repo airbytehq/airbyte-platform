@@ -11,7 +11,6 @@ import io.airbyte.notification.messages.SchemaUpdateNotification;
 import io.airbyte.notification.messages.SyncSummary;
 import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Client for trigger notifications (regardless of notification type e.g. slack or email).
@@ -28,20 +27,12 @@ public abstract class NotificationClient {
                                            final String receiverEmail)
       throws IOException, InterruptedException;
 
-  public abstract boolean notifyConnectionDisabled(String receiverEmail,
-                                                   String sourceConnector,
-                                                   String destinationConnector,
-                                                   String jobDescription,
-                                                   UUID workspaceId,
-                                                   UUID connectionId)
+  public abstract boolean notifyConnectionDisabled(final SyncSummary summary,
+                                                   final String receiverEmail)
       throws IOException, InterruptedException;
 
-  public abstract boolean notifyConnectionDisableWarning(String receiverEmail,
-                                                         String sourceConnector,
-                                                         String destinationConnector,
-                                                         String jobDescription,
-                                                         UUID workspaceId,
-                                                         UUID connectionId)
+  public abstract boolean notifyConnectionDisableWarning(final SyncSummary summary,
+                                                         final String receiverEmail)
       throws IOException, InterruptedException;
 
   public abstract boolean notifyBreakingChangeWarning(List<String> receiverEmails,

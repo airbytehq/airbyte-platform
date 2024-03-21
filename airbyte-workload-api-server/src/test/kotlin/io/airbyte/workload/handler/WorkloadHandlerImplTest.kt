@@ -86,7 +86,7 @@ class WorkloadHandlerImplTest {
     val workloadLabels = mutableListOf(workloadLabel1, workloadLabel2)
 
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(false)
-    every { workloadRepository.searchByMutexKeyAndStatuses("mutex-this", WorkloadHandlerImpl.ACTIVE_STATUSES) }.returns(listOf())
+    every { workloadRepository.searchByMutexKeyAndStatusInList("mutex-this", WorkloadHandlerImpl.ACTIVE_STATUSES) }.returns(listOf())
     every { workloadRepository.save(any()) }.returns(
       Fixtures.workload(),
     )
@@ -134,7 +134,12 @@ class WorkloadHandlerImplTest {
   @Test
   fun `test create workload mutex conflict`() {
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(false)
-    every { workloadRepository.searchByMutexKeyAndStatuses("mutex-this", WorkloadHandlerImpl.ACTIVE_STATUSES) }.returns(listOf(Fixtures.workload()))
+    every {
+      workloadRepository.searchByMutexKeyAndStatusInList(
+        "mutex-this",
+        WorkloadHandlerImpl.ACTIVE_STATUSES,
+      )
+    }.returns(listOf(Fixtures.workload()))
     assertThrows<ConflictException> {
       workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now)
     }

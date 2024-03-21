@@ -6,6 +6,7 @@ import io.airbyte.data.repositories.PermissionRepository
 import io.airbyte.data.repositories.UserInvitationRepository
 import io.airbyte.data.repositories.entities.Permission
 import io.airbyte.data.repositories.entities.UserInvitation
+import io.airbyte.data.services.InvitationStatusUnexpectedException
 import io.airbyte.data.services.impls.data.mappers.EntityInvitationStatus
 import io.airbyte.data.services.impls.data.mappers.EntityPermissionType
 import io.airbyte.data.services.impls.data.mappers.EntityScopeType
@@ -42,6 +43,7 @@ internal class UserInvitationServiceDataImplTest {
       status = EntityInvitationStatus.pending,
       createdAt = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
       updatedAt = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
+      expiresAt = OffsetDateTime.now(ZoneOffset.UTC).plusDays(7).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
     )
 
   @BeforeEach
@@ -81,7 +83,11 @@ internal class UserInvitationServiceDataImplTest {
   @Test
   fun `test accept user invitation`() {
     val invitedUserId = UUID.randomUUID()
-    val expectedUpdatedInvitation = invitation.copy(status = EntityInvitationStatus.accepted)
+    val expectedUpdatedInvitation =
+      invitation.copy(
+        status = EntityInvitationStatus.accepted,
+        acceptedByUserId = invitedUserId,
+      )
 
     every { userInvitationRepository.findByInviteCode(invitation.inviteCode) } returns Optional.of(invitation)
     every { userInvitationRepository.update(expectedUpdatedInvitation) } returns expectedUpdatedInvitation
@@ -117,9 +123,27 @@ internal class UserInvitationServiceDataImplTest {
 
     every { userInvitationRepository.findByInviteCode(invitation.inviteCode) } returns Optional.of(invitation)
 
-    assertThrows<IllegalStateException> { userInvitationService.acceptUserInvitation(invitation.inviteCode, invitedUserId) }
+    assertThrows<InvitationStatusUnexpectedException> { userInvitationService.acceptUserInvitation(invitation.inviteCode, invitedUserId) }
 
     verify(exactly = 0) { userInvitationRepository.update(any()) }
+  }
+
+  @Test
+  fun `test accept user invitation fails if expired`() {
+    val invitedUserId = UUID.randomUUID()
+    val expiredInvitation =
+      invitation.copy(
+        status = EntityInvitationStatus.pending,
+        expiresAt = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1),
+      )
+    val expectedUpdatedInvitation = expiredInvitation.copy(status = EntityInvitationStatus.expired)
+
+    every { userInvitationRepository.findByInviteCode(expiredInvitation.inviteCode) } returns Optional.of(expiredInvitation)
+    every { userInvitationRepository.update(expectedUpdatedInvitation) } returns expectedUpdatedInvitation
+
+    assertThrows<InvitationStatusUnexpectedException> { userInvitationService.acceptUserInvitation(expiredInvitation.inviteCode, invitedUserId) }
+
+    verify { userInvitationRepository.update(expectedUpdatedInvitation) }
   }
 
   @Test

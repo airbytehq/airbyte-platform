@@ -9,7 +9,7 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { Form, FormControl } from "components/forms";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
-import { FlexContainer } from "components/ui/Flex";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
@@ -56,6 +56,7 @@ export const LoginPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [keycloakAuthEnabled] = useLocalStorage("airbyte_keycloak-auth-ui", false);
   const loginRedirectString = searchParams.get("loginRedirect");
+  const isAcceptingInvitation = loginRedirectString?.includes("accept-invite");
 
   const navigate = useNavigate();
 
@@ -98,9 +99,18 @@ export const LoginPage: React.FC = () => {
   return (
     <FlexContainer direction="column" gap="xl" className={styles.container}>
       <HeadTitle titles={[{ id: "login.login" }]} />
-      <Heading as="h1" size="xl" color="blue">
-        <FormattedMessage id="login.loginTitle" />
-      </Heading>
+      <FlexItem>
+        <Heading as="h1" size="xl" color="blue">
+          <FormattedMessage id={isAcceptingInvitation ? "login.acceptInvite" : "login.loginTitle"} />
+        </Heading>
+        {isAcceptingInvitation && (
+          <Box pt="md">
+            <Heading as="h2" size="md" color="darkBlue">
+              <FormattedMessage id="login.acceptInvite.subtitle" />
+            </Heading>
+          </Box>
+        )}
+      </FlexItem>
 
       {loginWithOAuth && (
         <>
