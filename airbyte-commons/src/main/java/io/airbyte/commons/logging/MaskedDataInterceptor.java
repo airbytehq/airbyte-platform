@@ -11,9 +11,11 @@ import io.airbyte.commons.constants.AirbyteSecretConstants;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.yaml.Yamls;
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.Logger;
@@ -42,10 +44,17 @@ public class MaskedDataInterceptor implements RewritePolicy {
 
   protected static final Logger logger = StatusLogger.getLogger();
 
+  // This is a little circuitous, but it gets the regex syntax highlighting in intelliJ to work.
+  private static final String DESTINATION_ERROR_PREFIX = Pattern.compile("^(?<destinationPrefix>.*destination\\s+>\\s+ERROR.+)").pattern();
+
   /**
    * The pattern used to determine if a message contains sensitive data.
    */
   private final Optional<String> pattern;
+
+  private static final List<Pattern> KNOWN_PII_PATTERNS = List.of(
+      Pattern.compile(DESTINATION_ERROR_PREFIX + "(?<messagePrefix>Received\\s+invalid\\s+message:)(.+)$"),
+      Pattern.compile(DESTINATION_ERROR_PREFIX + "(?<messagePrefix>org\\.jooq\\.exception\\.DataAccessException: SQL.+values\\s+\\()(.+)$"));
 
   @PluginFactory
   public static MaskedDataInterceptor createPolicy(
@@ -82,11 +91,21 @@ public class MaskedDataInterceptor implements RewritePolicy {
    * @return The possibly masked log message.
    */
   private String applyMask(final String message) {
-    if (pattern.isPresent()) {
-      return message.replaceAll(pattern.get(), "\"$1\":\"" + AirbyteSecretConstants.SECRETS_MASK + "\"");
-    } else {
-      return message;
-    }
+    final String piiScrubbedMessage = removeKnownPii(message);
+    return pattern.map(s -> piiScrubbedMessage.replaceAll(s, "\"$1\":\"" + AirbyteSecretConstants.SECRETS_MASK + "\""))
+        .orElse(piiScrubbedMessage);
+  }
+
+  /**
+   * Removes known PII from the message.
+   *
+   * @param message the log line
+   * @return a redacted log line
+   */
+  private static String removeKnownPii(final String message) {
+    return KNOWN_PII_PATTERNS.stream()
+        .reduce(message, (msg, pattern) -> pattern.matcher(msg).replaceAll(
+            "${destinationPrefix}${messagePrefix}" + AirbyteSecretConstants.SECRETS_MASK), (a, b) -> a);
   }
 
   /**
