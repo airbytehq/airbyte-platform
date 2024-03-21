@@ -59,8 +59,8 @@ public class WorkloadBasicAcceptanceTests {
                                  matches = TRUE,
                                  disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
   void testSyncWithWorkload() throws Exception {
-    // Create workspace with static ID for test which is used in the flags.yaml to perform an override
-    // in order to exercise the workload path.
+    // Create workspace with static ID for test which is used in the flags.yaml to perform an
+    // override in order to exercise the workload path.
     testResources.getTestHarness().createWorkspaceWithId(RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID);
 
     testResources.runSmallSyncForAWorkspaceId(RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID);
