@@ -5,7 +5,7 @@ import { NavigateFunction, useNavigate } from "react-router-dom";
 import { useLocation } from "react-use";
 import { LocationSensorState } from "react-use/lib/useLocation";
 
-import { CommonRequestError, isVersionError } from "core/api";
+import { CommonRequestError } from "core/api";
 import { isFormBuildError } from "core/form/FormBuildError";
 import { trackError } from "core/utils/datadog";
 import { TrackErrorFn } from "hooks/services/AppMonitoringService";
@@ -23,7 +23,6 @@ interface ApiErrorBoundaryState {
 }
 
 enum ErrorId {
-  VersionMismatch = "version.mismatch",
   FormBuild = "form.build",
   ServerUnavailable = "server.unavailable",
   UnknownError = "unknown",
@@ -51,11 +50,6 @@ class ApiErrorBoundaryComponent extends React.Component<
   };
 
   static getDerivedStateFromError(error: { message: string; status?: number; __type?: string }): ApiErrorBoundaryState {
-    // Update state so the next render will show the fallback UI.
-    if (isVersionError(error)) {
-      return { errorId: ErrorId.VersionMismatch, message: error.message };
-    }
-
     if (isFormBuildError(error)) {
       return { errorId: ErrorId.FormBuild, message: error.message };
     }
@@ -102,10 +96,6 @@ class ApiErrorBoundaryComponent extends React.Component<
   render(): React.ReactNode {
     const { navigate, children } = this.props;
     const { errorId, didRetry, message, retryDelay } = this.state;
-
-    if (errorId === ErrorId.VersionMismatch) {
-      return <ErrorOccurredView message={message} />;
-    }
 
     if (errorId === ErrorId.FormBuild) {
       return (
