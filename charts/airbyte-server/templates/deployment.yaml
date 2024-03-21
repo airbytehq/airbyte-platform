@@ -65,6 +65,11 @@ spec:
         {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
         - name: API_AUTHORIZATION_ENABLED
           value: "true"
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
+              key: KEYCLOAK_ADMIN_PASSWORD
         {{- end }}
         {{- if eq .Values.global.deploymentMode "oss"  }}
         - name: AIRBYTE_API_HOST
