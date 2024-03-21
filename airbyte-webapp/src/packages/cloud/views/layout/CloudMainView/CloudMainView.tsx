@@ -14,7 +14,6 @@ import { SideBar } from "views/layout/SideBar/SideBar";
 
 import { CloudHelpDropdown } from "./CloudHelpDropdown";
 import styles from "./CloudMainView.module.scss";
-import { InsufficientPermissionsErrorBoundary } from "./InsufficientPermissionsErrorBoundary";
 import { WorkspaceStatusBanner } from "./WorkspaceStatusBanner";
 
 const CloudMainView: React.FC<React.PropsWithChildren> = (props) => {
@@ -25,17 +24,15 @@ const CloudMainView: React.FC<React.PropsWithChildren> = (props) => {
 
   return (
     <FlexContainer className={classNames(styles.wrapper)} direction="column" gap="none">
-      <InsufficientPermissionsErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
-        {cloudWorkspace && <WorkspaceStatusBanner cloudWorkspace={cloudWorkspace} />}
-        <FlexContainer className={styles.mainViewContainer} gap="none">
-          <SideBar workspaceFetcher={useListCloudWorkspacesInfinite} bottomSlot={<CloudHelpDropdown />} />
-          <div className={styles.content}>
-            <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
-              <React.Suspense fallback={<LoadingPage />}>{props.children ?? <Outlet />}</React.Suspense>
-            </ResourceNotFoundErrorBoundary>
-          </div>
-        </FlexContainer>
-      </InsufficientPermissionsErrorBoundary>
+      {cloudWorkspace && <WorkspaceStatusBanner cloudWorkspace={cloudWorkspace} />}
+      <FlexContainer className={styles.mainViewContainer} gap="none">
+        <SideBar workspaceFetcher={useListCloudWorkspacesInfinite} bottomSlot={<CloudHelpDropdown />} />
+        <div className={styles.content}>
+          <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
+            <React.Suspense fallback={<LoadingPage />}>{props.children ?? <Outlet />}</React.Suspense>
+          </ResourceNotFoundErrorBoundary>
+        </div>
+      </FlexContainer>
     </FlexContainer>
   );
 };
