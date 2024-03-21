@@ -215,7 +215,7 @@ const InputModal = ({
           id={inputInEditing.isNew ? "connectorBuilder.inputModal.newTitle" : "connectorBuilder.inputModal.editTitle"}
         />
       }
-      onClose={onClose}
+      onCancel={onClose}
     >
       <form
         className={styles.inputForm}

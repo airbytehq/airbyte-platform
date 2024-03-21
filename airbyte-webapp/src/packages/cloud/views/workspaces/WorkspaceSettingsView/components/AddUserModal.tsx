@@ -1,8 +1,8 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import { SchemaOf } from "yup";
 import * as yup from "yup";
+import { SchemaOf } from "yup";
 
 import { Form } from "components/forms";
 import { Box } from "components/ui/Box";
@@ -43,7 +43,7 @@ const SubmissionButton: React.FC = () => {
   );
 };
 
-export const AddUserModal: React.FC<{ closeModal: () => void }> = ({ closeModal }) => {
+export const AddUserModal: React.FC<{ onSubmit: () => void }> = ({ onSubmit }) => {
   const { formatMessage } = useIntl();
   const workspaceId = useCurrentWorkspaceId();
   const organizationInfo = useCurrentOrganizationInfo();
@@ -72,7 +72,7 @@ export const AddUserModal: React.FC<{ closeModal: () => void }> = ({ closeModal 
       scopeType: "workspace",
       scopeId: workspaceId,
     });
-    closeModal();
+    onSubmit();
   };
 
   /*      Before the user begins typing an email address, the list of users should only be users

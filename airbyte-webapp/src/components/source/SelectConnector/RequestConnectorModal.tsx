@@ -10,8 +10,6 @@ import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 import useRequestConnector from "hooks/services/useRequestConnector";
 
-import { Values } from "./types";
-
 interface ConnectorRequest {
   connectorType: "source" | "destination";
   name: string;
@@ -20,7 +18,8 @@ interface ConnectorRequest {
 }
 
 interface RequestConnectorModalProps {
-  onClose: () => void;
+  onSubmit: () => void;
+  onCancel: () => void;
   connectorType: ConnectorRequest["connectorType"];
   workspaceEmail?: string;
   searchedConnectorName?: string;
@@ -35,8 +34,9 @@ const validationSchema = yup.object().shape({
 
 const RequestControl = FormControl<ConnectorRequest>;
 
-const RequestConnectorModal: React.FC<RequestConnectorModalProps> = ({
-  onClose,
+export const RequestConnectorModal: React.FC<RequestConnectorModalProps> = ({
+  onSubmit,
+  onCancel,
   connectorType,
   searchedConnectorName,
   workspaceEmail,
@@ -45,14 +45,14 @@ const RequestConnectorModal: React.FC<RequestConnectorModalProps> = ({
   const notificationService = useNotificationService();
   const { requestConnector } = useRequestConnector();
 
-  const onSubmit = (values: Values) => {
+  const onSubmitBtnClick = async (values: ConnectorRequest) => {
     requestConnector(values);
     notificationService.registerNotification({
       id: "connector.requestConnector.success",
       text: formatMessage({ id: "connector.request.success" }),
       type: "success",
     });
-    onClose();
+    onSubmit();
   };
 
   return (
@@ -64,9 +64,7 @@ const RequestConnectorModal: React.FC<RequestConnectorModalProps> = ({
         email: workspaceEmail ?? "",
       }}
       schema={validationSchema}
-      onSubmit={async (values) => {
-        onSubmit(values);
-      }}
+      onSubmit={onSubmitBtnClick}
       trackDirtyChanges
     >
       <ModalBody>
@@ -96,7 +94,7 @@ const RequestConnectorModal: React.FC<RequestConnectorModalProps> = ({
         <ModalFormSubmissionButtons
           submitKey="connector.request"
           cancelKey="form.cancel"
-          onCancelClickCallback={onClose}
+          onCancelClickCallback={onCancel}
         />
       </ModalFooter>
     </Form>
@@ -119,5 +117,3 @@ const NameControl = () => {
     />
   );
 };
-
-export default RequestConnectorModal;

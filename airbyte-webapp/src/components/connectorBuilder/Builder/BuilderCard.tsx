@@ -1,7 +1,7 @@
 import classNames from "classnames";
 import { dump, load, YAMLException } from "js-yaml";
 import debounce from "lodash/debounce";
-import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FieldPath, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -383,7 +383,7 @@ const CopyToModal: React.FC<{
   const streams = useBuilderWatch("formValues.streams");
   const [selectMap, setSelectMap] = useState<Record<string, boolean>>({});
   return (
-    <Modal size="sm" title={title} onClose={onCancel}>
+    <Modal size="sm" title={title} onCancel={onCancel}>
       <form
         onSubmit={() => {
           onApply(
@@ -430,7 +430,7 @@ const CopyFromModal: React.FC<{
 }> = ({ onCancel, onSelect, title, currentStreamIndex }) => {
   const streams = useBuilderWatch("formValues.streams");
   return (
-    <Modal size="sm" title={title} onClose={onCancel}>
+    <Modal size="sm" title={title} onCancel={onCancel}>
       <ModalBody className={styles.modalStreamListContainer}>
         {streams.map((stream, index) =>
           currentStreamIndex === index ? null : (

@@ -101,7 +101,7 @@ const TestReadLimitsModal: React.FC<Pick<TestReadLimitsProps, "setIsOpen"> & Tes
   return (
     <Modal
       size="sm"
-      onClose={() => setIsOpen(false)}
+      onCancel={() => setIsOpen(false)}
       title={formatMessage({ id: "connectorBuilder.testReadSettings.modalTitle" })}
     >
       <form

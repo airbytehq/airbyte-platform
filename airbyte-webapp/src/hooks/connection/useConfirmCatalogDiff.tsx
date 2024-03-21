@@ -20,8 +20,8 @@ export const useConfirmCatalogDiff = () => {
         preventCancel: true,
         size: "md",
         testId: "catalog-diff-modal",
-        content: ({ onClose }) => (
-          <CatalogDiffModal catalogDiff={catalogDiff} catalog={syncCatalog} onClose={onClose} />
+        content: ({ onComplete }) => (
+          <CatalogDiffModal catalogDiff={catalogDiff} catalog={syncCatalog} onComplete={onComplete} />
         ),
       });
     }

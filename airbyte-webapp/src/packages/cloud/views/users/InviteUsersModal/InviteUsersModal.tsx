@@ -11,7 +11,6 @@ import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { useUserHook } from "core/api/cloud";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { trackError } from "core/utils/datadog";
-import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 
@@ -35,17 +34,18 @@ const requestConnectorValidationSchema: SchemaOf<InviteUsersFormValues> = yup.ob
 
 export const InviteUsersModal: React.FC<{
   invitedFrom: "source" | "destination" | "user.settings";
-}> = ({ invitedFrom }) => {
+  onSubmit: () => void;
+  onCancel: () => void;
+}> = ({ invitedFrom, onSubmit, onCancel }) => {
   const { formatMessage } = useIntl();
   const { workspaceId } = useCurrentWorkspace();
   const { inviteUserLogic } = useUserHook();
   const { mutateAsync: invite } = inviteUserLogic;
-  const { closeModal } = useModalService();
 
   const { registerNotification } = useNotificationService();
   const analyticsService = useAnalyticsService();
 
-  const onSubmit = async (values: InviteUsersFormValues) => {
+  const onSubmitBtnClick = async (values: InviteUsersFormValues) => {
     await invite({ users: values.users, workspaceId });
 
     analyticsService.track(Namespace.USER, Action.INVITE, {
@@ -59,7 +59,7 @@ export const InviteUsersModal: React.FC<{
       text: formatMessage({ id: "inviteUsers.invitationsSentSuccess" }),
       type: "success",
     });
-    closeModal();
+    onSubmit();
   };
 
   const onError = (e: Error, { users }: InviteUsersFormValues) => {
@@ -84,7 +84,7 @@ export const InviteUsersModal: React.FC<{
     <Form<InviteUsersFormValues>
       schema={requestConnectorValidationSchema}
       defaultValues={formDefaultValues}
-      onSubmit={onSubmit}
+      onSubmit={onSubmitBtnClick}
       onSuccess={onSuccess}
       onError={onError}
     >
@@ -94,7 +94,7 @@ export const InviteUsersModal: React.FC<{
         </FlexContainer>
       </ModalBody>
       <ModalFooter>
-        <ModalFormSubmissionButtons onCancelClickCallback={closeModal} />
+        <ModalFormSubmissionButtons onCancelClickCallback={onCancel} />
       </ModalFooter>
     </Form>
   );

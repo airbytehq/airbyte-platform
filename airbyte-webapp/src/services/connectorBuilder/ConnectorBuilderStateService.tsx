@@ -13,11 +13,11 @@ import { WaitForSavingModal } from "components/connectorBuilder/Builder/WaitForS
 import { convertToBuilderFormValuesSync } from "components/connectorBuilder/convertManifestToBuilderForm";
 import {
   BuilderState,
+  convertToManifest,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_JSON_MANIFEST_VALUES,
-  convertToManifest,
-  useBuilderWatch,
   getManifestValuePerComponentPerStream,
+  useBuilderWatch,
 } from "components/connectorBuilder/types";
 import { useManifestToBuilderForm } from "components/connectorBuilder/useManifestToBuilderForm";
 import { formatJson } from "components/connectorBuilder/utils";
@@ -30,14 +30,14 @@ import {
   CommonRequestError,
   NewVersionBody,
   useBuilderProject,
-  usePublishBuilderProject,
-  useReleaseNewBuilderProjectVersion,
-  useUpdateBuilderProject,
+  useBuilderProjectReadStream,
+  useBuilderProjectUpdateTestingValues,
   useBuilderResolvedManifest,
   useBuilderResolvedManifestSuspense,
   useCurrentWorkspace,
-  useBuilderProjectReadStream,
-  useBuilderProjectUpdateTestingValues,
+  usePublishBuilderProject,
+  useReleaseNewBuilderProjectVersion,
+  useUpdateBuilderProject,
 } from "core/api";
 import { useIsForeignWorkspace } from "core/api/cloud";
 import {
@@ -584,9 +584,7 @@ function useBlockOnSavingState(savingState: SavingState) {
             closeConfirmationModal();
             blocker.proceed();
           },
-          onClose: () => {
-            setBlockedOnInvalidState(false);
-          },
+          onCancel: () => setBlockedOnInvalidState(false),
         });
       } else {
         setPendingBlocker(blocker);

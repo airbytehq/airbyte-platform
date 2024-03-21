@@ -16,10 +16,10 @@ import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
 import { RoutePaths } from "pages/routePaths";
 
+import { AddNewConnectorButton } from "./AddNewConnectorButton";
 import { ConnectorCell } from "./ConnectorCell";
 import styles from "./ConnectorsView.module.scss";
 import { ConnectorsViewContext } from "./ConnectorsViewContext";
-import CreateConnector from "./CreateConnector";
 import ImageCell from "./ImageCell";
 import { UpdateDestinationConnectorVersionCell } from "./UpdateDestinationConnectorVersionCell";
 import { UpdateSourceConnectorVersionCell } from "./UpdateSourceConnectorVersionCell";
@@ -237,7 +237,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
                 </FlexItem>
                 {index === 0 && (
                   <FlexContainer>
-                    <CreateConnector type={type} />
+                    <AddNewConnectorButton type={type} />
                     {allowUpdateConnectors && <UpgradeAllButton connectorType={type} />}
                   </FlexContainer>
                 )}

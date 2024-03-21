@@ -19,18 +19,14 @@ export const ModalServiceProvider: React.FC<React.PropsWithChildren<unknown>> = 
 
   const service: ModalServiceContext = useMemo(
     () => ({
-      openModal: (options) => {
+      openModal: async (options) => {
         resultSubjectRef.current = new Subject();
         setModalOptions(options);
 
-        return firstValueFrom(resultSubjectRef.current).then((reason) => {
-          setModalOptions(undefined);
-          resultSubjectRef.current = undefined;
-          return reason;
-        });
-      },
-      closeModal: () => {
-        resultSubjectRef.current?.next({ type: "canceled" });
+        const reason = await firstValueFrom(resultSubjectRef.current);
+        setModalOptions(undefined);
+        resultSubjectRef.current = undefined;
+        return reason;
       },
     }),
     []
@@ -45,11 +41,10 @@ export const ModalServiceProvider: React.FC<React.PropsWithChildren<unknown>> = 
           size={modalOptions.size}
           testId={modalOptions.testId}
           onCancel={modalOptions.preventCancel ? undefined : () => resultSubjectRef.current?.next({ type: "canceled" })}
-          onClose={(reason) => resultSubjectRef.current?.next({ type: "closed", reason })}
         >
           <modalOptions.content
             onCancel={() => resultSubjectRef.current?.next({ type: "canceled" })}
-            onClose={(reason) => resultSubjectRef.current?.next({ type: "closed", reason })}
+            onComplete={(result) => resultSubjectRef.current?.next({ type: "completed", reason: result })}
           />
         </Modal>
       )}

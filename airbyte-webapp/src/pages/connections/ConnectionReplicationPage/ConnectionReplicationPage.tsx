@@ -185,7 +185,7 @@ export const ConnectionReplicationPage: React.FC = () => {
             size: "md",
             content: (props) => <ResetWarningModal {...props} stateType={stateType} />,
           });
-          if (result.type === "closed" && isBoolean(result.reason)) {
+          if (result.type === "completed" && isBoolean(result.reason)) {
             // Save the connection taking into account the correct skipReset value from the dialog choice.
             await saveConnection(values, !result.reason /* skipReset */);
           } else {
