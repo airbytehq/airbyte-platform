@@ -10,7 +10,7 @@ import useLoadingState from "hooks/useLoadingState";
 import styles from "./ConfirmationModal.module.scss";
 
 export interface ConfirmationModalProps {
-  title: string;
+  title: string | React.ReactNode;
   text: string | React.ReactNode;
   textValues?: Record<string, string | number>;
   onCancel: () => void;
@@ -38,7 +38,11 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   const onSubmitBtnClick = () => startAction({ action: async () => onSubmit() });
 
   return (
-    <Modal onCancel={onCancel} title={<FormattedMessage id={title} />} testId="confirmationModal">
+    <Modal
+      onCancel={onCancel}
+      title={isString(title) ? <FormattedMessage id={title} /> : title}
+      testId="confirmationModal"
+    >
       <div className={styles.content}>
         {isString(text) ? <FormattedMessage id={text} values={textValues} /> : text}
         {additionalContent}
