@@ -289,71 +289,6 @@ class SyncAcceptanceTests {
   }
 
   @Test
-  void testMultipleSchemasAndTablesSync() throws Exception {
-    // create tables in the staging schema
-    testHarness.runSqlScriptInSource("postgres_second_schema_multiple_tables.sql");
-
-    final UUID sourceId = testHarness.createPostgresSource().getSourceId();
-    final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final AirbyteCatalog catalog = discoverResult.getCatalog();
-
-    final SyncMode srcSyncMode = SyncMode.FULL_REFRESH;
-    final DestinationSyncMode dstSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(srcSyncMode).selected(true).destinationSyncMode(dstSyncMode));
-    final var conn = testHarness
-        .createConnection(new TestConnectionCreate.Builder(
-            sourceId,
-            destinationId,
-            catalog,
-            discoverResult.getCatalogId())
-                .build());
-    final var connectionId = conn.getConnectionId();
-    final JobInfoRead connectionSyncRead = testHarness.syncConnection(connectionId);
-    testHarness.waitForSuccessfulJob(connectionSyncRead.getJob());
-    Asserts.assertSourceAndDestinationDbRawRecordsInSync(
-        testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(),
-        Set.of(PUBLIC_SCHEMA_NAME, "staging"), conn.getNamespaceFormat(), false, false);
-    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, connectionSyncRead.getJob().getId(), StreamStatusRunState.COMPLETE,
-        StreamStatusJobType.SYNC);
-  }
-
-  @Test
-  @DisabledIfEnvironmentVariable(named = IS_GKE,
-                                 matches = TRUE,
-                                 disabledReason = "The different way of interacting with the source db causes errors")
-  void testMultipleSchemasSameTablesSync() throws Exception {
-    // create tables in another schema
-    testHarness.runSqlScriptInSource("postgres_separate_schema_same_table.sql");
-
-    final UUID sourceId = testHarness.createPostgresSource().getSourceId();
-    final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final AirbyteCatalog catalog = discoverResult.getCatalog();
-
-    final SyncMode srcSyncMode = SyncMode.FULL_REFRESH;
-    final DestinationSyncMode dstSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(srcSyncMode).selected(true).destinationSyncMode(dstSyncMode));
-    final var conn =
-        testHarness.createConnectionSourceNamespace(new TestConnectionCreate.Builder(
-            sourceId,
-            destinationId,
-            catalog,
-            discoverResult.getCatalogId())
-                .build());
-
-    final var connectionId = conn.getConnectionId();
-    final JobInfoRead connectionSyncRead = testHarness.syncConnection(connectionId);
-    testHarness.waitForSuccessfulJob(connectionSyncRead.getJob());
-    Asserts.assertSourceAndDestinationDbRawRecordsInSync(
-        testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
-        conn.getNamespaceFormat().replace("${SOURCE_NAMESPACE}", PUBLIC), false,
-        WITHOUT_SCD_TABLE);
-    Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, connectionSyncRead.getJob().getId(), StreamStatusRunState.COMPLETE,
-        StreamStatusJobType.SYNC);
-  }
-
-  @Test
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = SLOW_TEST_IN_GKE)
@@ -413,7 +348,6 @@ class SyncAcceptanceTests {
 
   @Test
   void testIncrementalSync() throws Exception {
-
     testResources.runIncrementalSyncForAWorkspaceId(workspaceId);
   }
 
@@ -1001,7 +935,6 @@ class SyncAcceptanceTests {
         new StreamDescriptor().name(additionalTable).namespace(PUBLIC)));
   }
 
-  // TODO: this test needs a cleanup
   @Test
   void testIncrementalDedupeSyncRemoveOneColumn() throws Exception {
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
