@@ -55,6 +55,8 @@ public class WorkloadBasicAcceptanceTests {
   }
 
   @Test
+  @EnabledIfEnvironmentVariable(named = KUBE,
+                                matches = TRUE)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
