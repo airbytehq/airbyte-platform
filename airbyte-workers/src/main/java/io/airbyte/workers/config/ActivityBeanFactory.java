@@ -6,6 +6,8 @@ package io.airbyte.workers.config;
 
 import io.airbyte.commons.temporal.TemporalConstants;
 import io.airbyte.commons.temporal.config.WorkerMode;
+import io.airbyte.commons.temporal.utils.PayloadChecker;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivity;
@@ -86,6 +88,11 @@ public class ActivityBeanFactory {
         checkRunProgressActivity,
         retryStatePersistenceActivity,
         appendToAttemptLogActivity);
+  }
+
+  @Singleton
+  public PayloadChecker payloadChecker(final MetricClient metricClient) {
+    return new PayloadChecker(metricClient);
   }
 
   @Singleton

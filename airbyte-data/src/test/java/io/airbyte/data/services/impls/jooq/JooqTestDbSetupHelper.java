@@ -15,6 +15,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
+import io.airbyte.config.Organization;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -26,6 +27,7 @@ import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
@@ -44,10 +46,14 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
   private final SourceServiceJooqImpl sourceServiceJooqImpl;
   private final DestinationServiceJooqImpl destinationServiceJooqImpl;
   private final WorkspaceServiceJooqImpl workspaceServiceJooqImpl;
+  private final OrganizationServiceJooqImpl organizationServiceJooqImpl;
   private final TestClient featureFlagClient;
+  private final UUID ORGANIZATION_ID = UUID.randomUUID();
   private final UUID WORKSPACE_ID = UUID.randomUUID();
   private final UUID SOURCE_DEFINITION_ID = UUID.randomUUID();
   private final UUID DESTINATION_DEFINITION_ID = UUID.randomUUID();
+  @Getter
+  private Organization organization;
   @Getter
   private StandardWorkspace workspace;
   @Getter
@@ -73,12 +79,13 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     final ConnectionService connectionService = mock(ConnectionService.class);
+    final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
 
     when(featureFlagClient.stringVariation(eq(HeartbeatMaxSecondsBetweenMessages.INSTANCE), any(SourceDefinition.class))).thenReturn("3600");
 
     final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
-        new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService);
+        new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
     this.destinationServiceJooqImpl = new DestinationServiceJooqImpl(database,
         featureFlagClient,
         secretsRepositoryReader,
@@ -98,9 +105,14 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService);
+    this.organizationServiceJooqImpl = new OrganizationServiceJooqImpl(database);
   }
 
   public void setupForVersionUpgradeTest() throws IOException, JsonValidationException, ConfigNotFoundException {
+    // Create org
+    organization = createBaseOrganization();
+    organizationServiceJooqImpl.writeOrganization(organization);
+
     // Create workspace
     workspace = createBaseWorkspace();
     workspaceServiceJooqImpl.writeStandardWorkspaceNoSecrets(createBaseWorkspace());
@@ -179,9 +191,19 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         .withName("source");
   }
 
+  private Organization createBaseOrganization() {
+    return new Organization()
+        .withOrganizationId(ORGANIZATION_ID)
+        .withName("organization")
+        .withEmail("org@airbyte.io")
+        .withPba(false)
+        .withOrgLevelBilling(false);
+  }
+
   private StandardWorkspace createBaseWorkspace() {
     return new StandardWorkspace()
         .withWorkspaceId(WORKSPACE_ID)
+        .withOrganizationId(ORGANIZATION_ID)
         .withName("default")
         .withSlug("workspace-slug")
         .withInitialSetupComplete(false)

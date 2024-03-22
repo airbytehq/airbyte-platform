@@ -29,14 +29,17 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
 
   private final JobsApi jobsApi;
 
+  private final PayloadChecker payloadChecker;
+
   @SuppressWarnings("ParameterName")
-  public GenerateInputActivityImpl(final JobsApi jobsApi) {
+  public GenerateInputActivityImpl(final JobsApi jobsApi, final PayloadChecker payloadChecker) {
     this.jobsApi = jobsApi;
+    this.payloadChecker = payloadChecker;
   }
 
   @Override
   public SyncJobCheckConnectionInputs getCheckConnectionInputs(final SyncInputWithAttemptNumber input) {
-    return PayloadChecker.validatePayloadSize(Jsons.convertValue(AirbyteApiClient.retryWithJitter(
+    return payloadChecker.validatePayloadSize(Jsons.convertValue(AirbyteApiClient.retryWithJitter(
         () -> jobsApi.getCheckInput(new io.airbyte.api.client.model.generated.CheckInput().jobId(input.getJobId())
             .attemptNumber(input.getAttemptNumber())),
         "Create check job input."), SyncJobCheckConnectionInputs.class));
@@ -45,7 +48,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public JobInput getSyncWorkflowInput(final SyncInput input) {
-    return PayloadChecker.validatePayloadSize(Jsons.convertValue(AirbyteApiClient.retryWithJitter(
+    return payloadChecker.validatePayloadSize(Jsons.convertValue(AirbyteApiClient.retryWithJitter(
         () -> jobsApi.getJobInput(new io.airbyte.api.client.model.generated.SyncInput().jobId(input.getJobId())
             .attemptNumber(input.getAttemptId())),
         "Create job input."), JobInput.class));

@@ -1,3 +1,4 @@
+import Keycloak from "keycloak-js";
 import isEqual from "lodash/isEqual";
 import { User, WebStorageStateStore, UserManager } from "oidc-client-ts";
 import {
@@ -31,6 +32,8 @@ export type KeycloakServiceContext = {
   accessTokenRef: MutableRefObject<string | null>;
   redirectToSignInWithGoogle: () => Promise<void>;
   redirectToSignInWithGithub: () => Promise<void>;
+  redirectToSignInWithPassword: () => Promise<void>;
+  redirectToRegistrationWithPassword: () => Promise<void>;
 } & KeycloakAuthState;
 
 const keycloakServiceContext = createContext<KeycloakServiceContext | undefined>(undefined);
@@ -215,6 +218,25 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
     await newUserManager.signinRedirect({ extraQueryParams: { kc_idp_hint: "github" } });
   }, []);
 
+  const redirectToSignInWithPassword = useCallback(async () => {
+    const newUserManager = createUserManager(AIRBYTE_CLOUD_REALM);
+    await newUserManager.signinRedirect();
+  }, []);
+
+  /**
+   * Using the keycloak-js library here instead of oidc-ts, because keycloak-js knows how to route us directly to Keycloak's registration page.
+   * oidc-ts does not (because that's not part of the OIDC spec) and recreating the logic to set the correct state, code_challenge, etc. would be complicated to maintain.
+   */
+  const redirectToRegistrationWithPassword = useCallback(async () => {
+    const keycloak = new Keycloak({
+      url: `${config.keycloakBaseUrl}/auth`,
+      realm: AIRBYTE_CLOUD_REALM,
+      clientId: DEFAULT_KEYCLOAK_CLIENT_ID,
+    });
+    await keycloak.init({});
+    keycloak.register({ redirectUri: createRedirectUri(AIRBYTE_CLOUD_REALM) });
+  }, []);
+
   const contextValue = useMemo(() => {
     const value = {
       ...authState,
@@ -226,24 +248,36 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
       accessTokenRef: keycloakAccessTokenRef,
       redirectToSignInWithGoogle,
       redirectToSignInWithGithub,
+      redirectToSignInWithPassword,
+      redirectToRegistrationWithPassword,
     };
     return value;
-  }, [authState, userManager, changeRealmAndRedirectToSignin, redirectToSignInWithGoogle, redirectToSignInWithGithub]);
+  }, [
+    authState,
+    userManager,
+    changeRealmAndRedirectToSignin,
+    redirectToSignInWithGoogle,
+    redirectToSignInWithGithub,
+    redirectToSignInWithPassword,
+    redirectToRegistrationWithPassword,
+  ]);
 
   return <keycloakServiceContext.Provider value={contextValue}>{children}</keycloakServiceContext.Provider>;
 };
 
-function createUserManager(realm: string) {
+function createRedirectUri(realm: string) {
   const searchParams = new URLSearchParams(window.location.search);
   searchParams.set("realm", realm);
-  const redirect_uri = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}`;
-  const userManager = new UserManager({
+  return `${window.location.origin}${window.location.pathname}?${searchParams.toString()}`;
+}
+
+function createUserManager(realm: string) {
+  return new UserManager({
     userStore: new WebStorageStateStore({ store: window.localStorage }),
     authority: `${config.keycloakBaseUrl}/auth/realms/${realm}`,
     client_id: DEFAULT_KEYCLOAK_CLIENT_ID,
-    redirect_uri,
+    redirect_uri: createRedirectUri(realm),
   });
-  return userManager;
 }
 
 export function initializeUserManager() {

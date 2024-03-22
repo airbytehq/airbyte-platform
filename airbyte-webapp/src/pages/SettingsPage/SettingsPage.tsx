@@ -9,7 +9,8 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { PageHeader } from "components/ui/PageHeader";
 
-import { useCurrentWorkspace } from "core/api";
+import { useCurrentWorkspace, useGetInstanceConfiguration } from "core/api";
+import { InstanceConfigurationResponseTrackingStrategy } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
@@ -17,6 +18,7 @@ import { SettingsRoutePaths } from "pages/routePaths";
 
 export const SettingsPage: React.FC = () => {
   const { organizationId, workspaceId } = useCurrentWorkspace();
+  const { trackingStrategy } = useGetInstanceConfiguration();
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const apiTokenManagement = useFeature(FeatureItem.APITokenManagement);
@@ -86,14 +88,16 @@ export const SettingsPage: React.FC = () => {
                 name={formatMessage({ id: "settings.notifications" })}
                 to={SettingsRoutePaths.Notifications}
               />
-              <SettingsLink
-                iconType="chart"
-                name={formatMessage({ id: "settings.metrics" })}
-                to={SettingsRoutePaths.Metrics}
-              />
+              {trackingStrategy === InstanceConfigurationResponseTrackingStrategy.segment && (
+                <SettingsLink
+                  iconType="chart"
+                  name={formatMessage({ id: "settings.metrics" })}
+                  to={SettingsRoutePaths.Metrics}
+                />
+              )}
             </SettingsNavigationBlock>
           )}
-          {(canViewOrganizationSettings || canViewWorkspaceSettings) && (
+          {multiWorkspaceUI && (canViewOrganizationSettings || canViewWorkspaceSettings) && (
             <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
               {multiWorkspaceUI && canViewOrganizationSettings && (
                 <SettingsLink

@@ -7,7 +7,7 @@ import { ModalBody } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationInfo } from "core/api";
-import { WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
+import { PermissionType, WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
 
 import { AddUserFormValues } from "./AddUserModal";
 import styles from "./AddUserModalBody.module.scss";
@@ -34,22 +34,21 @@ export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
 
   // handle when the selected option is no longer visible
   useEffect(() => {
-    // user had selected to invite a new user, then changed the search value so that option is no longer valid, clear form value
-    if (selectedRow === "inviteNewUser" && !showInviteNewUser) {
-      setSelectedRow(null);
-      setValue("email", "", { shouldValidate: true });
-    }
+    const resetPredicates = [
+      // user had selected to invite a new user, then changed the search value so that option is no longer valid
+      selectedRow === "inviteNewUser" && !showInviteNewUser,
 
-    // user had selected to invite a new user, then changed the search value to another valid option, clear form value and deselect
-    if (selectedRow === "inviteNewUser" && deferredSearchValue !== getValues("email")) {
-      setSelectedRow(null);
-      setValue("email", "", { shouldValidate: true });
-    }
+      // user had selected to invite a new user, then changed the search value to another valid email
+      selectedRow === "inviteNewUser" && deferredSearchValue !== getValues("email"),
 
-    // user had selected a user and that user is no longer visible, clear it
-    if (selectedRow && selectedRow !== "inviteNewUser" && !usersToList.find((user) => user.userId === selectedRow)) {
+      // user had selected a user and that user is no longer visible
+      selectedRow && selectedRow !== "inviteNewUser" && !usersToList.find((user) => user.userId === selectedRow),
+    ];
+
+    if (resetPredicates.some(Boolean)) {
       setSelectedRow(null);
       setValue("email", "", { shouldValidate: true });
+      setValue("permission", PermissionType.workspace_admin, { shouldValidate: true });
     }
   }, [usersToList, showInviteNewUser, selectedRow, setSelectedRow, setValue, deferredSearchValue, getValues]);
 
@@ -81,10 +80,7 @@ export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
                   email={user.userEmail}
                   selectedRow={selectedRow}
                   setSelectedRow={setSelectedRow}
-                  permissions={{
-                    organizationPermission: user.organizationPermission,
-                    workspacePermission: user.workspacePermission,
-                  }}
+                  user={user}
                 />
               </li>
             );

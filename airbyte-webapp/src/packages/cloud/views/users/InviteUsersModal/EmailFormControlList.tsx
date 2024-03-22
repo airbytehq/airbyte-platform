@@ -5,7 +5,6 @@ import { FormattedMessage } from "react-intl";
 import { FormControl } from "components/forms";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 
 import { InviteUsersFormValues } from "./InviteUsersModal";
 
@@ -34,7 +33,7 @@ export const EmailFormControlList: React.FC = () => {
             disabled={fields.length < 2}
             onClick={() => remove(index)}
             variant="secondary"
-            icon={<Icon type="cross" />}
+            icon="cross"
           />
         </FlexContainer>
       ))}

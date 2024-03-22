@@ -2,7 +2,6 @@ import React, { Suspense, useState } from "react";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
 import { ListBox } from "components/ui/ListBox";
 
@@ -75,6 +74,7 @@ interface PermissionQueryResultProps {
   role: RbacRole;
   permissions: RbacQuery[];
 }
+
 const PermissionQueryResult: React.FC<PermissionQueryResultProps> = ({
   resourceType,
   resourceId,
@@ -177,7 +177,7 @@ const PermisisonTestViewInner = () => {
           User permissions{" "}
           <Button
             variant="secondary"
-            icon={<Icon type="plus" />}
+            icon="plus"
             onClick={() => {
               setPermissions([
                 ...permissions,
@@ -206,7 +206,7 @@ const PermisisonTestViewInner = () => {
             &nbsp;
             <Button
               variant="secondary"
-              icon={<Icon type="cross" />}
+              icon="cross"
               onClick={() => {
                 const nextPermissions = [...permissions];
                 nextPermissions.splice(index, 1);

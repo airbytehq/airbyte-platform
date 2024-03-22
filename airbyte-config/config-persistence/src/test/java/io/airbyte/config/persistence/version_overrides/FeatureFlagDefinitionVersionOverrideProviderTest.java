@@ -24,6 +24,7 @@ import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.SuggestedStreams;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
 import io.airbyte.featureflag.ConnectorVersionOverride;
 import io.airbyte.featureflag.Context;
@@ -108,7 +109,7 @@ class FeatureFlagDefinitionVersionOverrideProviderTest {
 
   @Test
   void testGetVersionNoOverride() {
-    final Optional<ActorDefinitionVersion> optResult =
+    final Optional<ActorDefinitionVersionWithOverrideStatus> optResult =
         overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
     assertTrue(optResult.isEmpty());
 
@@ -122,11 +123,13 @@ class FeatureFlagDefinitionVersionOverrideProviderTest {
     when(mActorDefinitionVersionResolver.resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2))
         .thenReturn(Optional.of(OVERRIDE_VERSION));
 
-    final Optional<ActorDefinitionVersion> optResult =
+    final Optional<ActorDefinitionVersionWithOverrideStatus> optResult =
         overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID,
             DEFAULT_VERSION);
 
-    assertEquals(OVERRIDE_VERSION, optResult.orElse(null));
+    assertTrue(optResult.isPresent());
+    assertEquals(OVERRIDE_VERSION, optResult.get().actorDefinitionVersion());
+    assertTrue(optResult.get().isOverrideApplied());
     verify(mActorDefinitionVersionResolver).resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2);
     verifyNoMoreInteractions(mActorDefinitionVersionResolver);
   }
@@ -138,7 +141,7 @@ class FeatureFlagDefinitionVersionOverrideProviderTest {
     when(mActorDefinitionVersionResolver.resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2))
         .thenReturn(Optional.empty());
 
-    final Optional<ActorDefinitionVersion> optResult =
+    final Optional<ActorDefinitionVersionWithOverrideStatus> optResult =
         overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID,
             DEFAULT_VERSION);
 

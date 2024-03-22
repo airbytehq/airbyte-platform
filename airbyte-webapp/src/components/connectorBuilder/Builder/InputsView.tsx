@@ -1,10 +1,10 @@
-import { DndContext, closestCenter, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { closestCenter, DndContext, DragEndEvent, useSensor, useSensors } from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
   useSortable,
+  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import React, { useMemo, useState } from "react";
@@ -78,7 +78,7 @@ export const InputsView: React.FC = () => {
           onClick={() => {
             setInputInEditing(newInputInEditing());
           }}
-          icon={<Icon type="plus" />}
+          icon="plus"
           iconPosition="left"
           variant="secondary"
           type="button"

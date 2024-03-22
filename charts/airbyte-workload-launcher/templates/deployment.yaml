@@ -15,6 +15,8 @@ spec:
       {{- if .Values.extraSelectorLabels }}
       {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
       {{- end }}
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
@@ -73,6 +75,12 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: CONFIG_ROOT
+        {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
+        - name: CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH
+          value: "/secrets/gcs-log-creds"
+        - name: CONTAINER_ORCHESTRATOR_SECRET_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.storage.storageSecretName }}
+        {{- end }}
         - name: DATABASE_HOST
           valueFrom:
             configMapKeyRef:
@@ -399,7 +407,7 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKLOAD_LAUNCHER_PARALLELISM
-       {{- if eq .Values.global.edition "pro" }}
+        {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
         - name: AIRBYTE_API_AUTH_HEADER_NAME
           value: "X-Airbyte-Auth"
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
@@ -619,7 +627,7 @@ spec:
         securityContext: {{- toYaml .Values.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
-        {{- if eq .Values.global.deploymentMode "oss" }}
+        {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
         - name: gcs-log-creds-volume
           mountPath: /secrets/gcs-log-creds
           readOnly: true
@@ -637,7 +645,7 @@ spec:
       {{ toYaml .Values.global.extraContainers | nindent 6 }}
       {{- end }}
       volumes:
-      {{- if eq .Values.global.deploymentMode "oss" }}
+      {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
       - name: gcs-log-creds-volume
         secret:
           secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) (.Values.global.credVolumeOverride) (eq .Values.global.deploymentMode "oss") }}

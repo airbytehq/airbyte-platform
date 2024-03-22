@@ -4,12 +4,14 @@
 
 package io.airbyte.server.apis;
 
-import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
-import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_ADMIN;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_ADMIN;
 
 import io.airbyte.api.generated.UserInvitationApi;
 import io.airbyte.api.model.generated.InviteCodeRequestBody;
 import io.airbyte.api.model.generated.UserInvitationCreateRequestBody;
+import io.airbyte.api.model.generated.UserInvitationCreateResponse;
+import io.airbyte.api.model.generated.UserInvitationListRequestBody;
 import io.airbyte.api.model.generated.UserInvitationRead;
 import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.User;
@@ -17,10 +19,12 @@ import io.airbyte.server.handlers.UserInvitationHandler;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
+import io.micronaut.http.annotation.Post;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -37,7 +41,7 @@ public class UserInvitationApiController implements UserInvitationApi {
   }
 
   @Get
-  @Path("/{inviteCode}")
+  @Path("/by_code/{inviteCode}")
   @Override
   public UserInvitationRead getUserInvitation(@PathParam("inviteCode") final String inviteCode) {
     return ApiHelper.execute(() -> {
@@ -49,13 +53,21 @@ public class UserInvitationApiController implements UserInvitationApi {
     });
   }
 
+  @Post
+  @Path("/list_pending")
   @Override
-  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
-  public UserInvitationRead createUserInvitation(@Body final UserInvitationCreateRequestBody invitationCreateRequestBody) {
+  @Secured({WORKSPACE_ADMIN, ORGANIZATION_ADMIN})
+  public List<UserInvitationRead> listPendingInvitations(@Body final UserInvitationListRequestBody invitationListRequestBody) {
+    return userInvitationHandler.getPendingInvitations(invitationListRequestBody);
+  }
+
+  @Override
+  @Secured({WORKSPACE_ADMIN, ORGANIZATION_ADMIN})
+  public UserInvitationCreateResponse createUserInvitation(@Body final UserInvitationCreateRequestBody invitationCreateRequestBody) {
     return ApiHelper.execute(() -> {
       final User currentUser = currentUserService.getCurrentUser();
 
-      return userInvitationHandler.create(invitationCreateRequestBody, currentUser);
+      return userInvitationHandler.createInvitationOrPermission(invitationCreateRequestBody, currentUser);
     });
   }
 

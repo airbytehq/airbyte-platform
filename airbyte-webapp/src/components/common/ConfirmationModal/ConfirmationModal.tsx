@@ -1,31 +1,33 @@
+import isString from "lodash/isString";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { Modal } from "components/ui/Modal";
 
+import useLoadingState from "hooks/useLoadingState";
+
 import styles from "./ConfirmationModal.module.scss";
-import useLoadingState from "../../../hooks/useLoadingState";
 
 export interface ConfirmationModalProps {
-  onClose: () => void;
   title: string;
-  text: string;
+  text: string | React.ReactNode;
   textValues?: Record<string, string | number>;
-  submitButtonText: string;
+  onCancel: () => void;
   onSubmit: () => void;
-  submitButtonDataId?: string;
   cancelButtonText?: string;
+  submitButtonText: string;
+  submitButtonDataId?: string;
   additionalContent?: React.ReactNode;
   submitButtonVariant?: "danger" | "primary";
 }
 
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
-  onClose,
   title,
   text,
   additionalContent,
   textValues,
+  onCancel,
   onSubmit,
   submitButtonText,
   submitButtonDataId,
@@ -36,14 +38,14 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   const onSubmitBtnClick = () => startAction({ action: async () => onSubmit() });
 
   return (
-    <Modal onClose={onClose} title={<FormattedMessage id={title} />} testId="confirmationModal">
+    <Modal onCancel={onCancel} title={<FormattedMessage id={title} />} testId="confirmationModal">
       <div className={styles.content}>
-        <FormattedMessage id={text} values={textValues} />
+        {isString(text) ? <FormattedMessage id={text} values={textValues} /> : text}
         {additionalContent}
         <div className={styles.buttonContent}>
           <Button
             className={styles.buttonWithMargin}
-            onClick={onClose}
+            onClick={onCancel}
             type="button"
             variant="secondary"
             disabled={isLoading}

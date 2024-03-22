@@ -172,9 +172,15 @@ class CustomerioNotificationClientTest {
   void testNotifyConnectionDisabled() throws IOException, InterruptedException {
     mockWebServer.enqueue(new MockResponse());
 
+    SyncSummary summary = SyncSummary.builder()
+        .workspace(WorkspaceInfo.builder().id(WORKSPACE_ID).build())
+        .destination(DestinationInfo.builder().name(RANDOM_INPUT).build())
+        .source(SourceInfo.builder().name(RANDOM_INPUT).build())
+        .connection(ConnectionInfo.builder().id(CONNECTION_ID).build())
+        .errorMessage(RANDOM_INPUT)
+        .build();
     final boolean result =
-        customerioNotificationClient.notifyConnectionDisabled(WORKSPACE.getEmail(), RANDOM_INPUT, RANDOM_INPUT, RANDOM_INPUT, WORKSPACE_ID,
-            CONNECTION_ID);
+        customerioNotificationClient.notifyConnectionDisabled(summary, WORKSPACE.getEmail());
 
     assertTrue(result);
 

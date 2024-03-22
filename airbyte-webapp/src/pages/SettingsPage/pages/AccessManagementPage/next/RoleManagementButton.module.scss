@@ -1,0 +1,13 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.roleManagementButton {
+  border: none;
+  border-radius: variables.$border-radius-sm;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.roleManagementButton:hover {
+  background-color: colors.$grey-100;
+}

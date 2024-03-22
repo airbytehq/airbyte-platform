@@ -22,28 +22,3 @@
   line-height: 15px;
   padding: 10px;
 }
-
-.advancedSettings {
-  cursor: pointer;
-  background: transparent;
-  border: none;
-  text-decoration: underline;
-  color: colors.$blue;
-  font-weight: 600;
-  padding: 0;
-}
-
-.hideOverflow {
-  // keep the hr under advanced settings from overflowing
-  overflow-x: hidden;
-}
-
-.hr {
-  border-width: 0;
-  border-top: 1px solid colors.$grey-100;
-  transform: scaleX(2); // expand out of its container to the card edge
-}
-
-.hidden {
-  display: none;
-}

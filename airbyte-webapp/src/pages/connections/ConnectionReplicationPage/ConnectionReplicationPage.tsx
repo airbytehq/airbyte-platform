@@ -34,6 +34,7 @@ import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./ConnectionReplicationPage.module.scss";
@@ -153,19 +154,21 @@ export const ConnectionReplicationPage: React.FC = () => {
         return agg;
       }, {});
 
-      const hasUserChangesInEnabledStreamsRequiringReset = values.syncCatalog.streams.some((_stream) => {
-        const formStream = structuredClone(_stream);
-        const connectionStream = structuredClone(lookupConnectionValuesStreamById[getStreamId(formStream)]);
+      const hasUserChangesInEnabledStreamsRequiringReset = values.syncCatalog.streams
+        .filter((streamNode) => streamNode.config?.selected)
+        .some((streamNode) => {
+          const formStream = structuredClone(streamNode);
+          const connectionStream = structuredClone(lookupConnectionValuesStreamById[getStreamId(formStream)]);
 
-        return !compareObjectsByFields<AirbyteStreamConfiguration>(formStream.config, connectionStream.config, [
-          "cursorField",
-          "destinationSyncMode",
-          "primaryKey",
-          "selectedFields",
-          "syncMode",
-          "aliasName",
-        ]);
-      });
+          return !compareObjectsByFields<AirbyteStreamConfiguration>(formStream.config, connectionStream.config, [
+            "cursorField",
+            "destinationSyncMode",
+            "primaryKey",
+            "selectedFields",
+            "syncMode",
+            "aliasName",
+          ]);
+        });
 
       const catalogChangesRequireReset = hasCatalogDiffInEnabledStream || hasUserChangesInEnabledStreamsRequiringReset;
 
@@ -182,7 +185,7 @@ export const ConnectionReplicationPage: React.FC = () => {
             size: "md",
             content: (props) => <ResetWarningModal {...props} stateType={stateType} />,
           });
-          if (result.type === "closed" && isBoolean(result.reason)) {
+          if (result.type === "completed" && isBoolean(result.reason)) {
             // Save the connection taking into account the correct skipReset value from the dialog choice.
             await saveConnection(values, !result.reason /* skipReset */);
           } else {
@@ -220,6 +223,8 @@ export const ConnectionReplicationPage: React.FC = () => {
     }
   }, [refreshSchema, state]);
 
+  const isSimpliedCreation = useExperiment("connection.simplifiedCreation", false);
+
   return (
     <FlexContainer direction="column" className={styles.content}>
       {schemaError && !schemaRefreshing ? (
@@ -235,7 +240,7 @@ export const ConnectionReplicationPage: React.FC = () => {
           <FlexContainer direction="column">
             <SchemaChangeMessage />
             <SchemaChangeBackdrop>
-              <ConnectionConfigurationCard />
+              {!isSimpliedCreation && <ConnectionConfigurationCard />}
               <SyncCatalogCard />
               <div className={styles.editControlsContainer}>
                 <UpdateConnectionFormControls onCancel={discardRefreshedSchema} />

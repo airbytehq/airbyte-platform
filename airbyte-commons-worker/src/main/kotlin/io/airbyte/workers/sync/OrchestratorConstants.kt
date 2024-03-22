@@ -80,6 +80,7 @@ object OrchestratorConstants {
           EnvVar.AWS_SECRET_ACCESS_KEY,
           EnvVar.DD_AGENT_HOST,
           EnvVar.DD_DOGSTATSD_PORT,
+          EnvVar.DOCKER_HOST,
           EnvVar.GOOGLE_APPLICATION_CREDENTIALS,
           EnvVar.JOB_DEFAULT_ENV_MAP,
           EnvVar.JOB_ISOLATED_KUBE_NODE_SELECTORS,

@@ -1,7 +1,5 @@
 import { FormattedMessage } from "react-intl";
 
-import { Icon } from "components/ui/Icon";
-
 import { RoutePaths } from "pages/routePaths";
 
 import { MenuContent } from "./components/MenuContent";
@@ -13,27 +11,27 @@ export const MainNavItems: React.FC = () => {
     <MenuContent data-testid="navMainItems">
       <NavItem
         label={<FormattedMessage id="sidebar.connections" />}
-        icon={<Icon type="connection" />}
+        icon="connection"
         to={RoutePaths.Connections}
         testId="connectionsLink"
       />
 
       <NavItem
         label={<FormattedMessage id="sidebar.sources" />}
-        icon={<Icon type="source" />}
+        icon="source"
         to={RoutePaths.Source}
         testId="sourcesLink"
       />
 
       <NavItem
         label={<FormattedMessage id="sidebar.destinations" />}
-        icon={<Icon type="destination" />}
+        icon="destination"
         testId="destinationsLink"
         to={RoutePaths.Destination}
       />
       <NavItem
         label={<FormattedMessage id="sidebar.builder" />}
-        icon={<Icon type="wrench" />}
+        icon="wrench"
         testId="builderLink"
         to={RoutePaths.ConnectorBuilder}
         className={styles.beta}

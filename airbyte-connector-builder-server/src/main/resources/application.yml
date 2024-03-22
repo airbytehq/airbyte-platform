@@ -1,6 +1,15 @@
 micronaut:
   application:
     name: airbyte-connector-builder-server
+  caches:
+    # used by the analytics tracking client to cache calls to resolve the deployment and identity (workspace) for
+    # track events
+    analytics-tracking-deployments:
+      charset: "UTF-8"
+      expire-after-access: 10m
+    analytics-tracking-identity:
+      charset: "UTF-8"
+      expire-after-access: 10m
   env:
     cloud-deduction: true
   metrics:
@@ -16,7 +25,7 @@ micronaut:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
   server:
-    port: 80
+    port: 8080
     cors:
       enabled: true
     netty:
@@ -75,6 +84,9 @@ airbyte:
 
 endpoints:
   beans:
+    enabled: true
+    sensitive: false
+  caches:
     enabled: true
     sensitive: false
   env:

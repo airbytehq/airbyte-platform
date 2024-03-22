@@ -79,7 +79,7 @@ manifest should match snapshot:
     data:
       fileContents: |2-
         path
-    kind: ConfigMap
+    kind: secret 
     metadata:
       annotations:
         helm.sh/hook: pre-install,pre-upgrade

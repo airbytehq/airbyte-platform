@@ -31,6 +31,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
@@ -124,9 +125,10 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
     final ConnectionService connectionService = mock(ConnectionService.class);
+    final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
-        new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService);
+        new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
     configRepository = spy(
         new ConfigRepository(
             new ActorDefinitionServiceJooqImpl(database),

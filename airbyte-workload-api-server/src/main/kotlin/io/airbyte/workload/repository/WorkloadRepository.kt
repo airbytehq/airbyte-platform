@@ -48,6 +48,11 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
     deadline: OffsetDateTime,
   ): List<Workload>
 
+  fun searchByMutexKeyAndStatusInList(
+    mutexKey: String,
+    statuses: List<WorkloadStatus>,
+  ): List<Workload>
+
   @Query(
     """
       SELECT * FROM workload

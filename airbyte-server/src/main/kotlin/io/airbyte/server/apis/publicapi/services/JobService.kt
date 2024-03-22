@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package services
+package io.airbyte.server.apis.publicapi.services
 
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.JobConfigType
@@ -24,7 +24,6 @@ import io.airbyte.server.apis.publicapi.filters.JobsFilter
 import io.airbyte.server.apis.publicapi.mappers.JobResponseMapper
 import io.airbyte.server.apis.publicapi.mappers.JobsResponseMapper
 import io.airbyte.server.apis.publicapi.problems.UnprocessableEntityProblem
-import io.airbyte.server.apis.publicapi.services.UserService
 import io.micronaut.context.annotation.Secondary
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
@@ -104,9 +103,11 @@ class JobServiceImpl(
   override fun cancelJob(jobId: Long): JobResponse {
     val jobIdRequestBody = JobIdRequestBody().id(jobId)
     val result =
-      kotlin.runCatching { schedulerHandler.cancelJob(jobIdRequestBody) }
+      kotlin.runCatching {
+        schedulerHandler.cancelJob(jobIdRequestBody)
+      }
         .onFailure {
-          log.error("reset job error $it")
+          log.error("cancel job error $it")
           ConfigClientErrorHandler.handleError(it, jobId.toString())
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)

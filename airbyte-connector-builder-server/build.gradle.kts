@@ -24,6 +24,7 @@ dependencies {
     implementation(libs.guava)
     implementation(platform(libs.micronaut.platform))
     implementation(libs.bundles.micronaut)
+    implementation(libs.bundles.micronaut.cache)
     implementation(libs.micronaut.http)
     implementation(libs.micronaut.security)
     implementation(libs.jakarta.annotation.api)

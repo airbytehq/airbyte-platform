@@ -16,7 +16,6 @@ import {
   SyncMode,
   SchemaChangeBackfillPreference,
 } from "core/api/types/AirbyteClient";
-import { ConnectionFormMode } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { dbtOperationReadOrCreateSchema } from "../TransformationForm";
 
@@ -184,15 +183,13 @@ export const namespaceFormatSchema = yup.string().when("namespaceDefinition", {
  * generate yup schema for the create connection form
  */
 export const createConnectionValidationSchema = (
-  mode: ConnectionFormMode,
   allowSubOneHourCronExpressions: boolean,
   allowAutoDetectSchema: boolean
 ) =>
   yup
     .object({
-      // The connection name during Editing is handled separately from the form
-      name: mode === "create" ? yup.string().required("form.empty.error") : yup.string().notRequired(),
-      // scheduleType can't de 'undefined', make it required()
+      name: yup.string().required("form.empty.error"),
+      // scheduleType can't be 'undefined', make it required()
       scheduleType: yup.mixed<ConnectionScheduleType>().oneOf(Object.values(ConnectionScheduleType)).required(),
       scheduleData: getScheduleDataSchema(allowSubOneHourCronExpressions),
       namespaceDefinition: namespaceDefinitionSchema.required("form.empty.error"),

@@ -144,7 +144,7 @@ class JobNotifierTest {
 
   @Test
   void testSuccessfulJobDoNotSendNotificationPerSettings()
-      throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, InterruptedException {
     List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
     jobNotifier.successJob(job, attemptStats);
     verify(notificationClient, never()).notifySuccess(ArgumentMatchers.any());
@@ -152,13 +152,11 @@ class JobNotifierTest {
 
   @Test
   void testSendOnSyncDisabledWarning()
-      throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, InterruptedException {
     List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
     jobNotifier.autoDisableConnectionWarning(job, attemptStats);
-    verify(notificationClient, never()).notifyConnectionDisableWarning(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
-        ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
-    verify(customerIoNotificationClient).notifyConnectionDisableWarning(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
-        ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
+    verify(notificationClient, never()).notifyConnectionDisableWarning(ArgumentMatchers.any(), ArgumentMatchers.any());
+    verify(customerIoNotificationClient).notifyConnectionDisableWarning(ArgumentMatchers.any(), ArgumentMatchers.any());
   }
 
   @Test
@@ -166,10 +164,8 @@ class JobNotifierTest {
       throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
     List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
     jobNotifier.autoDisableConnection(job, attemptStats);
-    verify(notificationClient).notifyConnectionDisabled(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
-        ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
-    verify(customerIoNotificationClient).notifyConnectionDisabled(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(),
-        ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
+    verify(notificationClient).notifyConnectionDisabled(ArgumentMatchers.any(), ArgumentMatchers.any());
+    verify(customerIoNotificationClient).notifyConnectionDisabled(ArgumentMatchers.any(), ArgumentMatchers.any());
   }
 
   @Test

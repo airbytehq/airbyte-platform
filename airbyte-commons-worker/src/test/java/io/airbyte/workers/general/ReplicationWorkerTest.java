@@ -1137,12 +1137,21 @@ abstract class ReplicationWorkerTest {
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.SOURCE);
     failureReason = ReplicationWorkerHelper.getFailureReason(new DestinationException(""), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.DESTINATION);
-    failureReason = ReplicationWorkerHelper.getFailureReason(new HeartbeatTimeoutChaperone.HeartbeatTimeoutException(10, 15), jobId, attempt);
+    failureReason = ReplicationWorkerHelper.getFailureReason(new HeartbeatTimeoutChaperone.HeartbeatTimeoutException(10000, 15000), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.SOURCE);
     assertEquals(failureReason.getFailureType(), FailureReason.FailureType.HEARTBEAT_TIMEOUT);
+    assertEquals(
+        "Airbyte detected that the Source didn't send any records in the last 15 seconds, exceeding the configured 10 seconds threshold. Airbyte will try reading again on the next sync. Please see https://docs.airbyte.com/understanding-airbyte/heartbeats for more info.",
+        failureReason.getExternalMessage());
+    assertEquals("Last record saw 15 seconds ago, exceeding the threshold of 10 seconds.", failureReason.getInternalMessage());
     failureReason = ReplicationWorkerHelper.getFailureReason(new RuntimeException(), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.REPLICATION);
-    failureReason = ReplicationWorkerHelper.getFailureReason(new TimeoutException(10, 15), jobId, attempt);
+    failureReason = ReplicationWorkerHelper.getFailureReason(new TimeoutException(10000, 15000), jobId, attempt);
+    assertEquals(
+        "Airbyte detected that the Destination didn't make progress in the last 15 seconds, exceeding the configured 10 seconds threshold. Airbyte will try reading again on the next sync. Please see https://docs.airbyte.com/understanding-airbyte/heartbeats for more info.",
+        failureReason.getExternalMessage());
+    assertEquals("Last action 15 seconds ago, exceeding the threshold of 10 seconds.", failureReason.getInternalMessage());
+    System.out.println(failureReason.getInternalMessage());
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.DESTINATION);
     assertEquals(failureReason.getFailureType(), FailureType.DESTINATION_TIMEOUT);
   }

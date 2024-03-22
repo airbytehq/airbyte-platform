@@ -18,10 +18,8 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.UUID;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
@@ -34,19 +32,15 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
  */
 public class WorkloadBasicAcceptanceTests {
 
-  static final AcceptanceTestsResources testResources = new AcceptanceTestsResources();
+  AcceptanceTestsResources testResources = new AcceptanceTestsResources();
 
   static final UUID RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID = UUID.fromString("3d2985a0-a412-45f4-9124-e15800b739be");
   static final UUID RUN_CHECK_WITH_WORKLOAD_WORKSPACE_ID = UUID.fromString("1bdcfb61-219b-4290-be4f-12f9ac5461be");
   static final UUID RUN_DISCOVER_WITH_WORKLOAD_WORKSPACE_ID = UUID.fromString("3851861d-ac0b-440c-bd60-408cf9e7fc0e");
 
-  @BeforeAll
-  static void init() throws URISyntaxException, IOException, InterruptedException, ApiException {
-    testResources.init();
-  }
-
   @BeforeEach
-  void setup() throws SQLException, URISyntaxException, IOException, ApiException {
+  void setup() throws SQLException, URISyntaxException, IOException, ApiException, InterruptedException {
+    testResources.init();
     testResources.setup();
   }
 
@@ -55,18 +49,20 @@ public class WorkloadBasicAcceptanceTests {
     testResources.tearDown();
   }
 
-  @AfterAll
-  static void end() {
+  @AfterEach
+  void end() {
     testResources.end();
   }
 
   @Test
+  @EnabledIfEnvironmentVariable(named = KUBE,
+                                matches = TRUE)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
   void testSyncWithWorkload() throws Exception {
-    // Create workspace with static ID for test which is used in the flags.yaml to perform an override
-    // in order to exercise the workload path.
+    // Create workspace with static ID for test which is used in the flags.yaml to perform an
+    // override in order to exercise the workload path.
     testResources.getTestHarness().createWorkspaceWithId(RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID);
 
     testResources.runSmallSyncForAWorkspaceId(RUN_WITH_WORKLOAD_WITHOUT_DOC_STORE_WORKSPACE_ID);

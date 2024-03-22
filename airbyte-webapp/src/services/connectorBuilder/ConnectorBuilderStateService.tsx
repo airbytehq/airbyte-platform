@@ -2,6 +2,7 @@ import { UseMutateAsyncFunction, UseQueryResult } from "@tanstack/react-query";
 import { dump } from "js-yaml";
 import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
+import toPath from "lodash/toPath";
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext, UseFormReturn } from "react-hook-form";
 import { useIntl } from "react-intl";
@@ -12,9 +13,10 @@ import { WaitForSavingModal } from "components/connectorBuilder/Builder/WaitForS
 import { convertToBuilderFormValuesSync } from "components/connectorBuilder/convertManifestToBuilderForm";
 import {
   BuilderState,
+  convertToManifest,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_JSON_MANIFEST_VALUES,
-  convertToManifest,
+  getManifestValuePerComponentPerStream,
   useBuilderWatch,
 } from "components/connectorBuilder/types";
 import { useManifestToBuilderForm } from "components/connectorBuilder/useManifestToBuilderForm";
@@ -28,14 +30,14 @@ import {
   CommonRequestError,
   NewVersionBody,
   useBuilderProject,
-  usePublishBuilderProject,
-  useReleaseNewBuilderProjectVersion,
-  useUpdateBuilderProject,
+  useBuilderProjectReadStream,
+  useBuilderProjectUpdateTestingValues,
   useBuilderResolvedManifest,
   useBuilderResolvedManifestSuspense,
   useCurrentWorkspace,
-  useBuilderProjectReadStream,
-  useBuilderProjectUpdateTestingValues,
+  usePublishBuilderProject,
+  useReleaseNewBuilderProjectVersion,
+  useUpdateBuilderProject,
 } from "core/api";
 import { useIsForeignWorkspace } from "core/api/cloud";
 import {
@@ -79,6 +81,10 @@ interface FormStateContext {
   previousManifestDraft: DeclarativeComponentSchema | undefined;
   displayedVersion: number | undefined;
   formValuesValid: boolean;
+  resolvedManifest: ConnectorManifest;
+  resolveErrorMessage: string | undefined;
+  resolveError: CommonRequestError<KnownExceptionInfo> | null;
+  isResolving: boolean;
   setDisplayedVersion: (value: number | undefined, manifest: DeclarativeComponentSchema) => void;
   updateJsonManifest: (jsonValue: ConnectorManifest) => void;
   setYamlIsValid: (value: boolean) => void;
@@ -103,9 +109,6 @@ interface TestReadLimits {
 }
 
 export interface TestReadContext {
-  resolvedManifest: ConnectorManifest;
-  resolveErrorMessage: string | undefined;
-  resolveError: CommonRequestError<KnownExceptionInfo> | null;
   streamRead: UseQueryResult<StreamRead, unknown>;
   testReadLimits: {
     recordLimit: number;
@@ -116,7 +119,6 @@ export interface TestReadContext {
     setSliceLimit: (newSliceLimit: number) => void;
     defaultLimits: TestReadLimits;
   };
-  isResolving: boolean;
   schemaWarnings: {
     schemaDifferences: boolean;
     incompatibleSchemaErrors: string[] | undefined;
@@ -128,7 +130,7 @@ interface FormManagementStateContext {
   setTestingValuesInputOpen: (open: boolean) => void;
   isTestReadSettingsOpen: boolean;
   setTestReadSettingsOpen: (open: boolean) => void;
-  scrollToField: string | undefined;
+  handleScrollToField: (ref: React.RefObject<HTMLDivElement>, path: string) => void;
   setScrollToField: (field: string | undefined) => void;
   stateKey: number;
   setStateKey: React.Dispatch<React.SetStateAction<number>>;
@@ -166,6 +168,7 @@ function convertJsonToYaml(json: object): string {
 export const InternalConnectorBuilderFormStateProvider: React.FC<
   React.PropsWithChildren<{ permission: ConnectorBuilderPermission }>
 > = ({ children, permission }) => {
+  const { formatMessage } = useIntl();
   const { projectId, builderProject, updateProject, updateError } = useInitializedBuilderProject();
 
   const currentProject: BuilderProject = useMemo(
@@ -198,9 +201,47 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const [yamlEditorIsMounted, setYamlEditorIsMounted] = useState(true);
   const [formValuesValid, setFormValuesValid] = useState(true);
 
+  const workspaceId = useCurrentWorkspaceId();
+
   const { setValue, getValues } = useFormContext();
   const mode = useBuilderWatch("mode");
   const name = useBuilderWatch("name");
+
+  const manifestValuePerComponentPerStream = useMemo(
+    () => getManifestValuePerComponentPerStream(jsonManifest),
+    [jsonManifest]
+  );
+
+  const {
+    data: resolveData,
+    isError: isResolveError,
+    error: resolveError,
+    isFetching: isResolving,
+  } = useBuilderResolvedManifest(
+    {
+      manifest: jsonManifest,
+      workspace_id: workspaceId,
+      project_id: projectId,
+      form_generated_manifest: mode === "ui",
+    },
+    mode,
+    manifestValuePerComponentPerStream,
+    // In UI mode, we only need to call resolve if we have YAML components
+    mode === "yaml" || (mode === "ui" && !!jsonManifest.metadata?.yamlComponents)
+  );
+  const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
+  const resolveErrorMessage = isResolveError
+    ? resolveError instanceof Error
+      ? resolveError.message || unknownErrorMessage
+      : unknownErrorMessage
+    : undefined;
+
+  // In UI mode, we can treat the jsonManifest as resolved, since the resolve call is only used to check for invalid YAML
+  // components in that case.
+  // Using the resolve data manifest as the resolved manifest would introduce an unnecessary lag effect in UI mode, where
+  // test reads would use the old manifest until the resolve call completes.
+  const resolvedManifest =
+    mode === "ui" ? jsonManifest : ((resolveData?.manifest ?? DEFAULT_JSON_MANIFEST_VALUES) as ConnectorManifest);
 
   useEffect(() => {
     if (name !== currentProject.name) {
@@ -353,10 +394,12 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     [sendNewVersionRequest]
   );
 
+  const formAndResolveValid = useMemo(() => formValuesValid && resolveError === null, [formValuesValid, resolveError]);
+
   const savingState = getSavingState(
     jsonManifest,
     yamlIsValid,
-    formValuesValid,
+    formAndResolveValid,
     mode,
     name,
     persistedState,
@@ -377,13 +420,13 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       return;
     }
     // do not save invalid ui-based manifest (e.g. no streams), but always save yaml-based manifest
-    if (modeRef.current === "ui" && !formValuesValid) {
+    if (modeRef.current === "ui" && !formAndResolveValid) {
       return;
     }
     const newProject: BuilderProjectWithManifest = { name, manifest: jsonManifest };
     await updateProject(newProject);
     setPersistedState(newProject);
-  }, [permission, name, formValuesValid, jsonManifest, updateProject]);
+  }, [permission, name, formAndResolveValid, jsonManifest, updateProject]);
 
   useDebounce(
     () => {
@@ -421,6 +464,10 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     previousManifestDraft,
     displayedVersion,
     formValuesValid,
+    resolvedManifest,
+    resolveError,
+    resolveErrorMessage,
+    isResolving,
     setDisplayedVersion: setToVersion,
     updateJsonManifest,
     setYamlIsValid,
@@ -537,9 +584,7 @@ function useBlockOnSavingState(savingState: SavingState) {
             closeConfirmationModal();
             blocker.proceed();
           },
-          onClose: () => {
-            setBlockedOnInvalidState(false);
-          },
+          onCancel: () => setBlockedOnInvalidState(false),
         });
       } else {
         setPendingBlocker(blocker);
@@ -562,7 +607,7 @@ function useBlockOnSavingState(savingState: SavingState) {
 function getSavingState(
   currentJsonManifest: ConnectorManifest,
   yamlIsValid: boolean,
-  formValuesValid: boolean,
+  formAndResolveValid: boolean,
   mode: BuilderState["mode"],
   name: string | undefined,
   persistedState: { name: string; manifest?: DeclarativeComponentSchema },
@@ -576,7 +621,7 @@ function getSavingState(
   if (name === undefined) {
     return "invalid";
   }
-  if (mode === "ui" && !formValuesValid) {
+  if (mode === "ui" && !formAndResolveValid) {
     return "invalid";
   }
   if (mode === "yaml" && !yamlIsValid) {
@@ -595,37 +640,12 @@ function getSavingState(
 }
 
 export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
-  const { formatMessage } = useIntl();
   const workspaceId = useCurrentWorkspaceId();
-  const { jsonManifest, projectId } = useConnectorBuilderFormState();
+  const { projectId, resolvedManifest } = useConnectorBuilderFormState();
   const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
   const view = useBuilderWatch("view");
   const testStreamIndex = useBuilderWatch("testStreamIndex");
-
-  const manifest = jsonManifest ?? DEFAULT_JSON_MANIFEST_VALUES;
-
-  const {
-    data,
-    isError: isResolveError,
-    error: resolveError,
-    isFetching: isResolving,
-  } = useBuilderResolvedManifest(
-    {
-      manifest,
-      workspace_id: workspaceId,
-      project_id: projectId,
-      form_generated_manifest: mode === "ui",
-    },
-    // don't need to resolve manifest in UI mode since it doesn't use $refs or $parameters
-    mode === "yaml"
-  );
-  const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
-  const resolveErrorMessage = isResolveError
-    ? resolveError instanceof Error
-      ? resolveError.message || unknownErrorMessage
-      : unknownErrorMessage
-    : undefined;
 
   useEffect(() => {
     if (typeof view === "number") {
@@ -633,8 +653,6 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     }
   }, [setValue, view]);
 
-  const resolvedManifest =
-    mode === "ui" ? manifest : ((data?.manifest ?? DEFAULT_JSON_MANIFEST_VALUES) as ConnectorManifest);
   const testStream = resolvedManifest.streams[testStreamIndex];
   const filteredManifest = {
     ...resolvedManifest,
@@ -685,12 +703,8 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const schemaWarnings = useSchemaWarnings(streamRead, testStreamIndex, streamName);
 
   const ctx = {
-    resolvedManifest,
-    resolveErrorMessage,
-    resolveError,
     streamRead,
     testReadLimits,
-    isResolving,
     schemaWarnings,
   };
 
@@ -768,7 +782,7 @@ export const useConnectorBuilderFormState = (): FormStateContext => {
 export const useSelectedPageAndSlice = () => {
   const {
     resolvedManifest: { streams },
-  } = useConnectorBuilderTestRead();
+  } = useConnectorBuilderFormState();
   const testStreamIndex = useBuilderWatch("testStreamIndex");
 
   const selectedStreamName = streams[testStreamIndex]?.name ?? "";
@@ -795,6 +809,11 @@ export const useSelectedPageAndSlice = () => {
   return { selectedSlice, selectedPage, setSelectedSlice, setSelectedPage };
 };
 
+// check whether paths are equal, normalizing [] and . notation
+function arePathsEqual(path1: string, path2: string) {
+  return isEqual(toPath(path1), toPath(path2));
+}
+
 export const ConnectorBuilderFormManagementStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({
   children,
 }) => {
@@ -803,18 +822,28 @@ export const ConnectorBuilderFormManagementStateProvider: React.FC<React.PropsWi
   const [scrollToField, setScrollToField] = useState<string | undefined>(undefined);
   const [stateKey, setStateKey] = useState(0);
 
+  const handleScrollToField = useCallback(
+    (ref: React.RefObject<HTMLDivElement>, path: string) => {
+      if (ref.current && scrollToField && arePathsEqual(path, scrollToField)) {
+        ref.current.scrollIntoView({ block: "center" });
+        setScrollToField(undefined);
+      }
+    },
+    [scrollToField]
+  );
+
   const ctx = useMemo(
     () => ({
       isTestingValuesInputOpen,
       setTestingValuesInputOpen,
       isTestReadSettingsOpen,
       setTestReadSettingsOpen,
-      scrollToField,
+      handleScrollToField,
       setScrollToField,
       stateKey,
       setStateKey,
     }),
-    [isTestingValuesInputOpen, isTestReadSettingsOpen, scrollToField, stateKey]
+    [isTestingValuesInputOpen, isTestReadSettingsOpen, handleScrollToField, stateKey]
   );
 
   return (

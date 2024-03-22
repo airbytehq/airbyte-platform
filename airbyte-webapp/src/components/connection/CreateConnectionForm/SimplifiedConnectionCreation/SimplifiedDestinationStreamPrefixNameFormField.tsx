@@ -12,7 +12,7 @@ import { Text } from "components/ui/Text";
 
 import { InputContainer } from "./InputContainer";
 
-export const SimplifiedDestinationStreamPrefixNameFormField = () => {
+export const SimplifiedDestinationStreamPrefixNameFormField: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
   const { formatMessage } = useIntl();
   const { control } = useFormContext<FormConnectionFormValues>();
   const [controlId] = useState(`input-control-${uniqueId()}`);
@@ -45,6 +45,7 @@ export const SimplifiedDestinationStreamPrefixNameFormField = () => {
               inline={false}
               value={field.value}
               onChange={field.onChange}
+              disabled={disabled}
             />
           </InputContainer>
           {prefix && (

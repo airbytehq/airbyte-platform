@@ -27,6 +27,7 @@ import io.airbyte.server.apis.publicapi.helpers.getActorDefinitionIdFromActorNam
 import io.airbyte.server.apis.publicapi.helpers.removeDestinationType
 import io.airbyte.server.apis.publicapi.mappers.DESTINATION_NAME_TO_DEFINITION_ID
 import io.airbyte.server.apis.publicapi.problems.UnprocessableEntityProblem
+import io.airbyte.server.apis.publicapi.services.DestinationService
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Patch
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -34,7 +35,6 @@ import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.core.Response
-import services.DestinationService
 import java.util.UUID
 
 @Controller(DESTINATIONS_PATH)

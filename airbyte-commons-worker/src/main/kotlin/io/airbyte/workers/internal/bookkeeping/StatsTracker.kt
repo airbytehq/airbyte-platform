@@ -1,7 +1,6 @@
 package io.airbyte.workers.internal.bookkeeping
 
 import com.google.common.hash.HashFunction
-import com.google.common.hash.Hashing
 import com.google.common.util.concurrent.AtomicDouble
 import io.airbyte.commons.json.Jsons
 import io.airbyte.metrics.lib.MetricClient
@@ -10,6 +9,7 @@ import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair
+import io.airbyte.workers.models.StateWithId
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
@@ -72,7 +72,7 @@ data class EmittedStatsCounters(
  * state.
  */
 private data class StagedStats(
-  val stateHash: Int,
+  val stateId: Int,
   val stateMessage: AirbyteStateMessage,
   val emittedStatsCounters: EmittedStatsCounters,
   val receivedTime: LocalDateTime,
@@ -96,8 +96,7 @@ class StreamStatsTracker(
   private val metricClient: MetricClient,
 ) {
   val streamStats = StreamStatsCounters()
-  private val hashFunction = Hashing.murmur3_32_fixed()
-  private val stateHashes = ConcurrentHashMap.newKeySet<Int>()
+  private val stateIds = ConcurrentHashMap.newKeySet<Int>()
   private val stagedStatsList = ConcurrentLinkedQueue<StagedStats>()
   private var emittedStats = EmittedStatsCounters()
   private var previousEmittedStats = EmittedStatsCounters()
@@ -149,8 +148,8 @@ class StreamStatsTracker(
       return
     }
 
-    val stateHash: Int = stateMessage.getStateHashCode(hashFunction)
-    if (!stateHashes.add(stateHash)) {
+    val stateId: Int = stateMessage.getStateIdForStatsTracking()
+    if (!this.stateIds.add(stateId)) {
       // State collision detected, it means that state tracking is compromised for this stream.
       // Rather than reporting incorrect data, we skip all operations that involve state tracking.
       streamStats.unreliableStateOperations.set(true)
@@ -168,7 +167,7 @@ class StreamStatsTracker(
     previousEmittedStats = emittedStats
     emittedStats = EmittedStatsCounters()
 
-    stagedStatsList.add(StagedStats(stateHash, stateMessage, previousEmittedStats, currentTime))
+    stagedStatsList.add(StagedStats(stateId, stateMessage, previousEmittedStats, currentTime))
 
     // Updating state checkpointing metrics
     // previousStateMessageReceivedAt is null when it's the first state message of a stream.
@@ -208,12 +207,12 @@ class StreamStatsTracker(
       return
     }
 
-    val stateHash: Int = stateMessage.getStateHashCode(hashFunction)
-    if (!stateHashes.contains(stateHash)) {
+    val stateId: Int = stateMessage.getStateIdForStatsTracking()
+    if (!stateIds.contains(stateId)) {
       metricClient.count(OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, 1)
       logger.warn {
         "Unexpected state from destination for stream ${nameNamespacePair.namespace}:${nameNamespacePair.name}, " +
-          "$stateHash not found in the stored stateHashes"
+          "$stateId not found in the stored stateIds"
       }
       return
     } else if (stagedStatsList.isEmpty()) {
@@ -225,27 +224,27 @@ class StreamStatsTracker(
       return
     }
 
-    logger.info { "Hash of the state message received from the destination $stateHash" }
+    logger.debug { "Id of the state message received from the destination $stateId" }
 
     var stagedStats: StagedStats? = null
     // un-stage stats until the stateMessage
     while (!stagedStatsList.isEmpty()) {
       stagedStats = stagedStatsList.poll()
-      logger.info {
-        "removing ${stagedStats.stateHash} from the stored stateHashes for the stream " +
+      logger.debug {
+        "removing ${stagedStats.stateId} from the stored stateIds for the stream " +
           "${nameNamespacePair.namespace}:${nameNamespacePair.name}, " +
           "state received time ${stagedStats.receivedTime}" +
           "stagedStatsList size after poll: ${stagedStatsList.size}, " +
-          "stateHashes size before removal ${stateHashes.size}"
+          "stateIds size before removal ${stateIds.size}"
       }
-      // Cleaning up stateHashes as we go to avoid un-staging on duplicate or our of order state messages
-      stateHashes.remove(stagedStats.stateHash)
+      // Cleaning up stateIds as we go to avoid un-staging on duplicate or our of order state messages
+      stateIds.remove(stagedStats.stateId)
 
       // Increment committed stats as we are un-staging stats
       streamStats.committedBytesCount.addAndGet(stagedStats.emittedStatsCounters.emittedBytesCount.get())
       streamStats.committedRecordsCount.addAndGet(stagedStats.emittedStatsCounters.remittedRecordsCount.get())
 
-      if (stagedStats.stateHash == stateHash) {
+      if (stagedStats.stateId == stateId) {
         break
       }
     }
@@ -277,10 +276,10 @@ class StreamStatsTracker(
   }
 
   fun getTrackedCommittedRecordsSinceLastStateMessage(stateMessage: AirbyteStateMessage): Long {
-    val stateHashCode = stateMessage.getStateHashCode(hashFunction)
-    val stagedStats: StagedStats? = stagedStatsList.find { it.stateHash == stateHashCode }
+    val stateId = stateMessage.getStateIdForStatsTracking()
+    val stagedStats: StagedStats? = stagedStatsList.find { it.stateId == stateId }
     if (stagedStats == null) {
-      logger.warn { "Could not find the state message with hash $stateHashCode in the stagedStatsList" }
+      logger.warn { "Could not find the state message with id $stateId in the stagedStatsList" }
     }
     return stagedStats?.emittedStatsCounters?.remittedRecordsCount?.get() ?: 0
   }
@@ -297,6 +296,8 @@ fun AirbyteStateMessage.getStateHashCode(hashFunction: HashFunction): Int =
     // state type is legacy
     else -> hashFunction.hashBytes(Jsons.serialize(data).toByteArray()).hashCode()
   }
+
+fun AirbyteStateMessage.getStateIdForStatsTracking(): Int = StateWithId.getIdFromStateMessage(this)
 
 private fun updateMean(
   previousMean: Double,

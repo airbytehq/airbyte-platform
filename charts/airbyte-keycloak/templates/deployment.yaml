@@ -1,5 +1,5 @@
-# if Cloud or Pro, render the keycloak deployment template.
-{{- if or (eq .Values.global.deploymentMode "cloud") (eq .Values.global.edition "pro") }}
+# if Cloud or Pro/Enterprise, render the keycloak deployment template.
+{{- if or (eq .Values.global.deploymentMode "cloud") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:

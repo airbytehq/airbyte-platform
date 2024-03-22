@@ -12,6 +12,10 @@
 
 .advancedButton {
   margin-top: variables.$spacing-md;
+
+  &.alignStart {
+    align-self: flex-start;
+  }
 }
 
 .advancedPanel {

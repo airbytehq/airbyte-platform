@@ -41,7 +41,7 @@ export const EditorRow: React.FC<EditorRowProps> = ({ name, id, description, onE
           arial-label={formatMessage({ id: "form.edit" })}
           onClick={() => onEdit(index)}
           disabled={disabled}
-          icon={<Icon type="pencil" />}
+          icon="pencil"
         />
         <Button
           size="xs"
@@ -50,7 +50,7 @@ export const EditorRow: React.FC<EditorRowProps> = ({ name, id, description, onE
           aria-label={formatMessage({ id: "form.delete" })}
           onClick={() => onRemove(index)}
           disabled={disabled}
-          icon={<Icon type="cross" />}
+          icon="cross"
         />
       </FlexContainer>
     </FlexContainer>

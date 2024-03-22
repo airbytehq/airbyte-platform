@@ -31,6 +31,10 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
   private final String python;
   private final String cdkEntrypoint;
 
+  // `:` separated path to the modules that will be imported by the Python executable
+  // Custom components must be in one of these modules to be loaded
+  private final String pythonPath;
+
   private static final Logger LOGGER = LoggerFactory.getLogger(SynchronousPythonCdkCommandRunner.class);
 
   @Inject
@@ -38,11 +42,13 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
                                            final AirbyteFileWriter writer,
                                            final AirbyteStreamFactory streamFactory,
                                            final String python,
-                                           final String cdkEntrypoint) {
+                                           final String cdkEntrypoint,
+                                           final String pythonPath) {
     this.writer = writer;
     this.streamFactory = streamFactory;
     this.python = python;
     this.cdkEntrypoint = cdkEntrypoint;
+    this.pythonPath = pythonPath;
   }
 
   /**
@@ -84,16 +90,22 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
         catalog.getFilepath());
     LOGGER.debug("Preparing command for {}: {}", cdkCommand, Joiner.on(" ").join(command));
     final ProcessBuilder processBuilder = new ProcessBuilder(command);
+    addPythonPathToSubprocessEnvironment(processBuilder);
+
     final AirbyteCdkPythonProcess cdkProcess = new AirbyteCdkPythonProcess(
         writer, config, catalog, processBuilder);
     cdkProcess.start();
     return cdkProcess;
   }
 
-  AirbyteArgument write(final String name, final String contents) throws IOException {
+  private AirbyteArgument write(final String name, final String contents) throws IOException {
     final AirbyteArgument arg = new AirbyteArgument(this.writer);
     arg.setUpArg(name, contents);
     return arg;
+  }
+
+  private void addPythonPathToSubprocessEnvironment(ProcessBuilder processBuilder) {
+    processBuilder.environment().put("PYTHONPATH", this.pythonPath);
   }
 
 }

@@ -18,7 +18,6 @@ import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
-import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { useListWorkspaces } from "core/api";
@@ -105,7 +104,7 @@ export const WorkspacesCreateControl: React.FC<OrganizationWorkspacesCreateContr
             variant="secondary"
             data-testid="workspaces.createNew"
             size="lg"
-            icon={<Icon type="plus" />}
+            icon="plus"
             className={styles.createButton}
           >
             <FormattedMessage id={isFirstWorkspace ? "workspaces.createFirst" : "workspaces.createNew"} />

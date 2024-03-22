@@ -8,6 +8,7 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +54,8 @@ public interface ActorDefinitionService {
   void setActorDefaultVersions(List<UUID> actorId, UUID actorDefinitionVersionId) throws IOException;
 
   Set<UUID> getActorsWithDefaultVersionId(UUID defaultVersionId) throws IOException;
+
+  List<ActorWorkspaceOrganizationIds> getActorIdsForDefinition(UUID actorDefinitionId) throws IOException;
 
   List<ActorDefinitionBreakingChange> listBreakingChangesForActorDefinition(UUID actorDefinitionId) throws IOException;
 

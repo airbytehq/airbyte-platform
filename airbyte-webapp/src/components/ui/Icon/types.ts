@@ -4,8 +4,8 @@ export type IconType =
   | "arrowRight"
   | "article"
   | "bell"
-  | "calendarCheck"
   | "calendar"
+  | "calendarCheck"
   | "caretDown"
   | "cast"
   | "certified"
@@ -34,9 +34,10 @@ export type IconType =
   | "docker"
   | "docs"
   | "download"
-  | "duplicate"
   | "drag"
+  | "duplicate"
   | "earth"
+  | "envelope"
   | "equal"
   | "errorFilled"
   | "errorOutline"
@@ -67,8 +68,8 @@ export type IconType =
   | "location"
   | "lock"
   | "menu"
-  | "minusCircle"
   | "minus"
+  | "minusCircle"
   | "modification"
   | "monitor"
   | "moon"
@@ -117,7 +118,6 @@ export type IconType =
   | "sync"
   | "table"
   | "target"
-  | "ticket"
   | "trash"
   | "unlock"
   | "unsorted"
@@ -127,11 +127,12 @@ export type IconType =
   | "wrench";
 
 export type IconColor = "primary" | "disabled" | "action" | "success" | "error" | "warning" | "affordance";
+export type IconSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 export interface IconProps {
   type: IconType;
   className?: string;
-  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  size?: IconSize;
   color?: IconColor;
   withBackground?: boolean;
   title?: string;

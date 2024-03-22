@@ -31,6 +31,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.config.specs.LocalDefinitionsProvider;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
+import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
@@ -96,8 +97,8 @@ class BootloaderTest {
 
   // ⚠️ This line should change with every new migration to show that you meant to make a new
   // migration to the prod database
-  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.50.41.008";
-  private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.50.4.001";
+  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.50.41.012";
+  private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.50.4.003";
   private static final String CDK_VERSION = "1.2.3";
 
   @BeforeEach
@@ -147,7 +148,12 @@ class BootloaderTest {
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     val connectionService = new ConnectionServiceJooqImpl(configDatabase);
     val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
-    val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService);
+    val scopedConfigurationService = mock(ScopedConfigurationService.class);
+    val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
+        featureFlagClient,
+        connectionService,
+        actorDefinitionService,
+        scopedConfigurationService);
     val destinationService = new DestinationServiceJooqImpl(configDatabase,
         featureFlagClient,
         secretsRepositoryReader,
@@ -249,7 +255,12 @@ class BootloaderTest {
     val jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
     val connectionService = new ConnectionServiceJooqImpl(configDatabase);
     val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
-    val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService);
+    val scopedConfigurationService = mock(ScopedConfigurationService.class);
+    val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
+        featureFlagClient,
+        connectionService,
+        actorDefinitionService,
+        scopedConfigurationService);
     val configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(configDatabase),
         new CatalogServiceJooqImpl(configDatabase),
@@ -391,7 +402,12 @@ class BootloaderTest {
     val jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
     val connectionService = new ConnectionServiceJooqImpl(configDatabase);
     val actorDefinitionService = new ActorDefinitionServiceJooqImpl(configDatabase);
-    val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService);
+    val scopedConfigurationService = mock(ScopedConfigurationService.class);
+    val actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
+        featureFlagClient,
+        connectionService,
+        actorDefinitionService,
+        scopedConfigurationService);
     val configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(configDatabase),
         new CatalogServiceJooqImpl(configDatabase),

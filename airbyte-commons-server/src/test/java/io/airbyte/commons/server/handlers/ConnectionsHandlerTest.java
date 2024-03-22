@@ -111,6 +111,7 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
@@ -138,7 +139,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -212,6 +215,7 @@ class ConnectionsHandlerTest {
   private ConnectionHelper connectionHelper;
   private TestClient featureFlagClient;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
 
   private JsonSchemaValidator validator;
@@ -322,6 +326,7 @@ class ConnectionsHandlerTest {
     eventRunner = mock(EventRunner.class);
     connectionHelper = mock(ConnectionHelper.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
     connectorDefinitionSpecificationHandler = mock(ConnectorDefinitionSpecificationHandler.class);
     validator = mock(JsonSchemaValidator.class);
     secretsProcessor = mock(JsonSecretsProcessor.class);
@@ -348,7 +353,8 @@ class ConnectionsHandlerTest {
             actorDefinitionVersionHelper,
             destinationService,
             featureFlagClient,
-            actorDefinitionHandlerHelper);
+            actorDefinitionHandlerHelper,
+            actorDefinitionVersionUpdater);
     sourceHandler = new SourceHandler(configRepository,
         secretsRepositoryReader,
         validator,
@@ -358,7 +364,8 @@ class ConnectionsHandlerTest {
         configurationUpdate,
         oAuthConfigSupplier,
         actorDefinitionVersionHelper, featureFlagClient, sourceService, workspaceService, secretPersistenceConfigService,
-        actorDefinitionHandlerHelper);
+        actorDefinitionHandlerHelper,
+        actorDefinitionVersionUpdater);
 
     matchSearchHandler = new MatchSearchHandler(configRepository, destinationHandler, sourceHandler);
     jobNotifier = mock(JobNotifier.class);
@@ -1584,8 +1591,13 @@ class ConnectionsHandlerTest {
       @DisplayName("Aggregates data correctly")
       void testDataHistoryAggregation() throws IOException {
         final UUID connectionId = UUID.randomUUID();
-        final Instant endTime = Instant.now();
-        final Instant startTime = endTime.minus(29, ChronoUnit.DAYS);
+
+        final ZonedDateTime endTimeZoned = ZonedDateTime.now(ZoneId.of(TIMEZONE_LOS_ANGELES)).with(LocalTime.MAX);
+        final Instant endTime = endTimeZoned.toInstant();
+
+        final ZonedDateTime startTimeZoned = endTimeZoned.minusDays(29).with(LocalTime.MIN);
+        final Instant startTime = startTimeZoned.toInstant();
+
         final long attempt1Records = 100L;
         final long attempt2Records = 150L;
         final long attempt3Records = 200L;
@@ -1608,7 +1620,7 @@ class ConnectionsHandlerTest {
             attempt.getJobInfo().getId(),
             attempt.getAttempt().getOutput().map(output -> output.getSync().getStandardSyncSummary().getTotalStats().getRecordsCommitted())
                 .orElse(0L),
-            attempt.getAttempt().getEndedAtInSecond().map(endedAt -> endedAt).orElse(0L))).toList();
+            attempt.getAttempt().getEndedAtInSecond().orElse(0L))).toList();
 
         when(jobPersistence.listRecordsCommittedForConnectionAfterTimestamp(eq(connectionId), any(Instant.class)))
             .thenReturn(jobsAndRecords);
@@ -1637,10 +1649,9 @@ class ConnectionsHandlerTest {
       @DisplayName("Handles empty history response")
       void testStreamHistoryWithEmptyResponse() throws IOException {
         final UUID connectionId = UUID.randomUUID();
-        final String timezone = "America/Los_Angeles";
         final ConnectionStreamHistoryRequestBody requestBody = new ConnectionStreamHistoryRequestBody()
             .connectionId(connectionId)
-            .timezone(timezone);
+            .timezone(TIMEZONE_LOS_ANGELES);
 
         when(jobPersistence.listAttemptsForConnectionAfterTimestamp(eq(connectionId), eq(ConfigType.SYNC), any(Instant.class)))
             .thenReturn(Collections.emptyList());

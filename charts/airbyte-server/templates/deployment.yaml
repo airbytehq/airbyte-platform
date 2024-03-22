@@ -62,7 +62,16 @@ spec:
         - name: JAVA_TOOL_OPTIONS
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end}}
+        {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+        - name: API_AUTHORIZATION_ENABLED
+          value: "true"
+        {{- end }}
         {{- if eq .Values.global.deploymentMode "oss"  }}
+        - name: AIRBYTE_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: AIRBYTE_API_HOST
         - name: AIRBYTE_VERSION
           valueFrom:
             configMapKeyRef:
@@ -280,6 +289,7 @@ spec:
         {{- if eq (lower (default "" .Values.global.storage.type)) "local" }}
         - name: LOCAL_ROOT
           valueFrom:
+            configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: LOCAL_ROOT
         {{- end }}
@@ -414,12 +424,15 @@ spec:
         {{- end }}
         volumeMounts:
         {{- if eq .Values.global.deploymentMode "oss" }}
+          {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
         - name: gcs-log-creds-volume
           mountPath: /secrets/gcs-log-creds
           readOnly: true
+          {{- end }}
         - name: airbyte-yml-volume
           mountPath: /app/configs/airbyte.yml
           subPath: fileContents
+          readOnly: true
         {{- end }}
 
         {{- if .Values.extraVolumeMounts }}
@@ -436,12 +449,14 @@ spec:
       {{- end }}
       volumes:
       {{- if eq .Values.global.deploymentMode "oss" }}
+        {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
       - name: gcs-log-creds-volume
         secret:
-          secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) (.Values.global.credVolumeOverride) (eq .Values.global.deploymentMode "oss") }}
+          secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) .Values.global.storage.storageSecretName (not ((.Values.global.storage).storageSecretName)) }}
+        {{- end }}
       - name: airbyte-yml-volume
-        configMap:
-          name: {{ .Release.Name }}-airbyte-yml
+        secret:
+          secretName: {{ .Release.Name }}-airbyte-yml
       {{- end }}
       {{- if .Values.extraVolumes }}
 {{ toYaml .Values.extraVolumes | nindent 6 }}

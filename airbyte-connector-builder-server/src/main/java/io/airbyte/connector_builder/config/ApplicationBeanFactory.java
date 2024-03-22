@@ -12,6 +12,11 @@ import io.airbyte.connector_builder.file_writer.AirbyteFileWriterImpl;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.micronaut.context.annotation.Factory;
 import jakarta.inject.Singleton;
+import java.io.File;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Defines the instantiation of handler classes.
@@ -45,7 +50,36 @@ public class ApplicationBeanFactory {
         // This should eventually be constructed via DI.
         VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(true),
         this.getPython(),
-        this.getCdkEntrypoint());
+        this.getCdkEntrypoint(),
+        this.getPythonPath());
+  }
+
+  private String getPythonPath() {
+    String pathToConnectors = getPathToConnectors();
+    List<String> subdirectories = listSubdirectories(pathToConnectors);
+    return createPythonPathFromListOfPaths(pathToConnectors, subdirectories);
+  }
+
+  private String getPathToConnectors() {
+    return "/connectors";
+  }
+
+  private static List<String> listSubdirectories(String path) {
+    File file = new File(path);
+    String[] directories = file.list((current, name) -> new File(current, name).isDirectory());
+    return Optional.ofNullable(directories).stream()
+        .flatMap(Arrays::stream)
+        .collect(Collectors.toList());
+  }
+
+  static String createPythonPathFromListOfPaths(String path, List<String> subdirectories) {
+    /*
+     * Creates a `:`-separated path of all connector directories. The connector directories that contain
+     * a python module can then be imported.
+     */
+    return subdirectories.stream()
+        .map(subdirectory -> path + "/" + subdirectory)
+        .collect(Collectors.joining(":"));
   }
 
 }

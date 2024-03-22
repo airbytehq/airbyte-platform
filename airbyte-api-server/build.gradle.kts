@@ -31,6 +31,7 @@ dependencies {
     implementation(libs.log4j.slf4j2.impl)
     implementation(libs.bundles.jackson)
     implementation(libs.bundles.micronaut)
+    implementation(libs.bundles.micronaut.cache)
     implementation(libs.bundles.micronaut.data.jdbc)
     implementation(libs.bundles.micronaut.metrics)
     implementation(libs.micronaut.jaxrs.server)

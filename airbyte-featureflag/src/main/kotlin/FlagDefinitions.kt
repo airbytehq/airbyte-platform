@@ -111,6 +111,8 @@ object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", 
 
 object AutoRechargeEnabled : Permanent<Boolean>(key = "billing.autoRecharge", default = false)
 
+object UseBreakingChangeScopedConfigs : Temporary<Boolean>(key = "connectors.useBreakingChangeScopedConfigs", default = false)
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {
@@ -191,3 +193,5 @@ object BillingCronScopeChangeTimestamp : Permanent<String>(key = "platform.billi
 object UseWorkloadApiForDiscover : Temporary<Boolean>(key = "platform.use-workload-api-for-discover", default = false)
 
 object UseWorkloadApiForSpec : Temporary<Boolean>(key = "platform.use-workload-api-for-spec", default = false)
+
+object EnforceMutexKeyOnCreate : Temporary<Boolean>(key = "platform.enforce-mutex-key-on-create", default = false)

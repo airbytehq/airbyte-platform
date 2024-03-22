@@ -1,7 +1,6 @@
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
-import { Icon } from "components/ui/Icon";
 
 import { useCurrentWorkspace } from "core/api";
 import { useIntent } from "core/utils/rbac";
@@ -15,16 +14,18 @@ export const FirebaseInviteUserButton: React.FC = () => {
   const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId });
 
   const onOpenInviteUsersModal = () =>
-    openModal({
+    openModal<void>({
       title: formatMessage({ id: "modals.addUser.title" }),
-      content: () => <InviteUsersModal invitedFrom="user.settings" />,
+      content: ({ onComplete, onCancel }) => (
+        <InviteUsersModal invitedFrom="user.settings" onSubmit={onComplete} onCancel={onCancel} />
+      ),
       size: "md",
     });
 
   return (
     <Button
       onClick={onOpenInviteUsersModal}
-      icon={<Icon type="plus" />}
+      icon="plus"
       data-testid="userSettings.button.addNewUser"
       disabled={!canUpdateWorkspacePermissions}
     >

@@ -1,6 +1,8 @@
+import { dump } from "js-yaml";
 import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 import pick from "lodash/pick";
+import { match } from "ts-pattern";
 
 import {
   ConnectorManifest,
@@ -24,7 +26,6 @@ import {
   BearerAuthenticator,
   OAuthAuthenticator,
   DefaultPaginator,
-  CursorPagination,
   DeclarativeComponentSchemaMetadata,
   HttpRequesterErrorHandler,
   NoAuth,
@@ -37,6 +38,7 @@ import {
   authTypeToKeyToInferredInput,
   BASIC_AUTHENTICATOR,
   BEARER_AUTHENTICATOR,
+  BuilderErrorHandler,
   BuilderFormAuthenticator,
   BuilderFormValues,
   BuilderIncrementalSync,
@@ -58,6 +60,8 @@ import {
   OAUTH_TOKEN_EXPIRY_DATE_INPUT,
   RequestOptionOrPathInject,
   SESSION_TOKEN_AUTHENTICATOR,
+  YamlString,
+  YamlSupportedComponentName,
 } from "./types";
 import { formatJson } from "./utils";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
@@ -195,13 +199,37 @@ const manifestStreamToBuilder = (
       requestBody: requesterToRequestBody(requester),
     },
     primaryKey: manifestPrimaryKeyToBuilder(stream),
-    paginator: manifestPaginatorToBuilder(retriever.paginator, stream.name),
-    incrementalSync: manifestIncrementalSyncToBuilder(stream.incremental_sync, stream.name),
+    paginator: convertOrDumpAsString(
+      retriever.paginator,
+      manifestPaginatorToBuilder,
+      "paginator",
+      stream.name,
+      metadata
+    ),
+    incrementalSync: convertOrDumpAsString(
+      stream.incremental_sync,
+      manifestIncrementalSyncToBuilder,
+      "incrementalSync",
+      stream.name,
+      metadata
+    ),
     parentStreams,
     parameterizedRequests,
     schema: manifestSchemaLoaderToBuilderSchema(stream.schema_loader),
-    errorHandler: manifestErrorHandlerToBuilder(stream.name, requester.error_handler),
-    transformations: manifestTransformationsToBuilder(stream.name, stream.transformations),
+    errorHandler: convertOrDumpAsString(
+      requester.error_handler,
+      manifestErrorHandlerToBuilder,
+      "errorHandler",
+      stream.name,
+      metadata
+    ),
+    transformations: convertOrDumpAsString(
+      stream.transformations,
+      manifestTransformationsToBuilder,
+      "transformations",
+      stream.name,
+      metadata
+    ),
     unsupportedFields: {
       retriever: {
         record_selector: {
@@ -322,24 +350,37 @@ function manifestPartitionRouterToBuilder(
   throw new ManifestCompatibilityError(streamName, "partition_router type is unsupported");
 }
 
-function manifestErrorHandlerToBuilder(
-  streamName: string | undefined,
-  errorHandler: HttpRequesterErrorHandler | undefined
-): BuilderStream["errorHandler"] {
+export function manifestErrorHandlerToBuilder(
+  errorHandler: HttpRequesterErrorHandler | undefined,
+  streamName?: string
+): BuilderErrorHandler[] | undefined {
   if (!errorHandler) {
     return undefined;
   }
-  const handlers = errorHandler.type === "CompositeErrorHandler" ? errorHandler.error_handlers : [errorHandler];
-  if (handlers.some((handler) => handler.type === "CustomErrorHandler")) {
-    throw new ManifestCompatibilityError(streamName, "custom error handler used");
-  }
-  if (handlers.some((handler) => handler.type === "CompositeErrorHandler")) {
-    throw new ManifestCompatibilityError(streamName, "nested composite error handler used");
-  }
+  const handlers: HttpRequesterErrorHandler[] =
+    errorHandler.type === "CompositeErrorHandler" ? errorHandler.error_handlers : [errorHandler];
+
+  handlers.forEach((handler) => {
+    match(handler.type)
+      .with("DefaultErrorHandler", () => {})
+      .with("CustomErrorHandler", () => {
+        throw new ManifestCompatibilityError(streamName, "custom error handler used");
+      })
+      .with("CompositeErrorHandler", () => {
+        throw new ManifestCompatibilityError(streamName, "nested composite error handler used");
+      })
+      .otherwise(() => {
+        throw new ManifestCompatibilityError(
+          streamName,
+          "error handler type is unsupported; only CompositeErrorHandler and DefaultErrorHandler are supported"
+        );
+      });
+  });
+
   const defaultHandlers = handlers as DefaultErrorHandler[];
   return defaultHandlers.map((handler) => {
     if (handler.backoff_strategies && handler.backoff_strategies.length > 1) {
-      throw new ManifestCompatibilityError(streamName, "more than one backoff strategy");
+      throw new ManifestCompatibilityError(streamName, "more than one backoff strategy per handler");
     }
     const backoffStrategy = handler.backoff_strategies?.[0];
     if (backoffStrategy?.type === "CustomBackoffStrategy") {
@@ -375,9 +416,9 @@ function manifestPrimaryKeyToBuilder(manifestStream: DeclarativeStream): Builder
   }
 }
 
-function manifestTransformationsToBuilder(
-  name: string | undefined,
-  transformations: DeclarativeStreamTransformationsItem[] | undefined
+export function manifestTransformationsToBuilder(
+  transformations: DeclarativeStreamTransformationsItem[] | undefined,
+  streamName?: string
 ): BuilderTransformation[] | undefined {
   if (!transformations) {
     return undefined;
@@ -386,7 +427,7 @@ function manifestTransformationsToBuilder(
 
   transformations.forEach((transformation) => {
     if (transformation.type === "CustomTransformation") {
-      throw new ManifestCompatibilityError(name, "custom transformation used");
+      throw new ManifestCompatibilityError(streamName, "custom transformation used");
     }
     if (transformation.type === "AddFields") {
       builderTransformations.push(
@@ -425,7 +466,7 @@ function isFormatSupported(
   return getFormat(format, manifestIncrementalSync) === INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT;
 }
 
-function manifestIncrementalSyncToBuilder(
+export function manifestIncrementalSyncToBuilder(
   manifestIncrementalSync: DeclarativeStreamIncrementalSync | undefined,
   streamName?: string
 ): BuilderStream["incrementalSync"] | undefined {
@@ -435,6 +476,7 @@ function manifestIncrementalSyncToBuilder(
   if (manifestIncrementalSync.type === "CustomIncrementalSync") {
     throw new ManifestCompatibilityError(streamName, "incremental sync uses a custom implementation");
   }
+  assertType(manifestIncrementalSync, "DatetimeBasedCursor", streamName);
 
   if (manifestIncrementalSync.partition_field_start || manifestIncrementalSync.partition_field_end) {
     throw new ManifestCompatibilityError(
@@ -533,7 +575,12 @@ function manifestPaginatorStrategyToBuilder(
   if (strategy.type === "OffsetIncrement" || strategy.type === "PageIncrement") {
     return strategy;
   }
-  const { cursor_value, stop_condition, ...rest } = strategy as CursorPagination;
+
+  if (strategy.type !== "CursorPagination") {
+    throw new ManifestCompatibilityError(undefined, "paginator.pagination_strategy uses an unsupported type");
+  }
+
+  const { cursor_value, stop_condition, ...rest } = strategy;
 
   const path = safeJinjaAccessToPath(cursor_value, stop_condition || "");
 
@@ -549,13 +596,14 @@ function manifestPaginatorStrategyToBuilder(
   };
 }
 
-function manifestPaginatorToBuilder(
+export function manifestPaginatorToBuilder(
   manifestPaginator: SimpleRetrieverPaginator | undefined,
-  streamName: string | undefined
+  streamName?: string
 ): BuilderPaginator | undefined {
   if (manifestPaginator === undefined || manifestPaginator.type === "NoPagination") {
     return undefined;
   }
+  assertType(manifestPaginator, "DefaultPaginator", streamName);
 
   if (manifestPaginator.pagination_strategy.type === "CustomPaginationStrategy") {
     throw new ManifestCompatibilityError(streamName, "paginator.pagination_strategy uses a CustomPaginationStrategy");
@@ -722,7 +770,7 @@ function manifestAuthenticatorToBuilder(
           requestHeaders: Object.entries(manifestLoginRequester.request_headers ?? {}),
           requestBody: requesterToRequestBody(manifestLoginRequester),
         },
-        errorHandler: manifestErrorHandlerToBuilder(undefined, manifestLoginRequester.error_handler),
+        errorHandler: manifestErrorHandlerToBuilder(manifestLoginRequester.error_handler),
       },
     };
   } else {
@@ -843,4 +891,25 @@ export class ManifestCompatibilityError extends Error {
 
 export function isManifestCompatibilityError(error: { __type?: string }): error is ManifestCompatibilityError {
   return error.__type === "connectorBuilder.manifestCompatibility";
+}
+
+function convertOrDumpAsString<ManifestInput, BuilderOutput>(
+  manifestValue: ManifestInput,
+  convertFn: (manifestValue: ManifestInput, streamName?: string) => BuilderOutput | undefined,
+  componentName: YamlSupportedComponentName,
+  streamName?: string | undefined,
+  metadata?: DeclarativeComponentSchemaMetadata
+): BuilderOutput | YamlString | undefined {
+  if (streamName && metadata?.yamlComponents?.streams?.[streamName]?.includes(componentName)) {
+    return dump(manifestValue);
+  }
+
+  try {
+    return convertFn(manifestValue, streamName);
+  } catch (e) {
+    if (e instanceof ManifestCompatibilityError) {
+      return dump(manifestValue);
+    }
+    throw e;
+  }
 }

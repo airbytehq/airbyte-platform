@@ -46,32 +46,32 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
         <MenuContent data-testid="navMainItems">
           <NavItem
             label={<FormattedMessage id="sidebar.connections" />}
-            icon={<Icon type="connection" />}
+            icon="connection"
             to={RoutePaths.Connections}
             testId="connectionsLink"
           />
           <NavItem
             label={<FormattedMessage id="sidebar.sources" />}
-            icon={<Icon type="source" />}
+            icon="source"
             to={RoutePaths.Source}
             testId="sourcesLink"
           />
           <NavItem
             label={<FormattedMessage id="sidebar.destinations" />}
-            icon={<Icon type="destination" />}
+            icon="destination"
             testId="destinationsLink"
             to={RoutePaths.Destination}
           />
           <NavItem
             label={<FormattedMessage id="sidebar.builder" />}
-            icon={<Icon type="wrench" />}
+            icon="wrench"
             testId="builderLink"
             to={RoutePaths.ConnectorBuilder}
             withBadge="beta"
           />
           <IfFeatureEnabled feature={FeatureItem.Billing}>
             <NavItem
-              icon={<Icon type="credits" />}
+              icon="credits"
               label={<FormattedMessage id="sidebar.billing" />}
               to={CloudRoutes.Billing}
               testId="creditsButton"
@@ -79,7 +79,7 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
           </IfFeatureEnabled>
           <NavItem
             label={<FormattedMessage id="sidebar.settings" />}
-            icon={<Icon type="gear" />}
+            icon="gear"
             to={RoutePaths.Settings}
             withNotification={settingHighlight}
           />
@@ -110,7 +110,7 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({
                   "data-testid": "sidebar.signout",
                 },
               ]}
-              icon={<Icon type="user" />}
+              icon="user"
               label={user.name}
             />
           )}

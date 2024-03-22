@@ -40,6 +40,8 @@ object ConnectionsResponseMapper {
       PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(CONNECTIONS_PATH))
         .queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
         .queryParam(INCLUDE_DELETED, includeDeleted)
+
+    if (workspaceIds.isNotEmpty()) uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
     val connectionsResponse = ConnectionsResponse()
     connectionsResponse.next = PaginationMapper.getNextUrl(connectionReadList.connections, limit, offset, uriBuilder)
     connectionsResponse.previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder)

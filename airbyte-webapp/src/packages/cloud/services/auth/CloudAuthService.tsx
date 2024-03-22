@@ -30,7 +30,6 @@ import { useGetOrCreateUser } from "core/api";
 import { useCreateKeycloakUser, useResendSigninLink, useRevokeUserSession, useUpdateUser } from "core/api/cloud";
 import { AuthProvider, UserRead } from "core/api/types/AirbyteClient";
 import { AuthContext, AuthContextApi, OAuthLoginState } from "core/services/auth";
-import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useNotificationService } from "hooks/services/Notification";
 import { SignupFormValues } from "packages/cloud/views/auth/SignupPage/components/SignupForm";
 import { useAuth } from "packages/firebaseReact";
@@ -53,7 +52,6 @@ export enum FirebaseAuthMessageId {
 // Checks for a valid auth session with either keycloak or firebase, and returns the user if found.
 export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
   const passwordRef = useRef<undefined | string>(undefined);
-  const [, setSpeedyConnectionTimestamp] = useLocalStorage("exp-speedy-connection-timestamp", "");
   const [logoutInProgress, setLogoutInProgress] = useState(false);
   const queryClient = useQueryClient();
   const { registerNotification } = useNotificationService();
@@ -188,38 +186,7 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
             console.error("sendEmailVerifiedLink should be used within auth flow");
             throw new Error("Cannot send verification email if firebaseUser is null.");
           }
-          return sendEmailVerification(firebaseUser)
-            .then(() => {
-              registerNotification({
-                id: "workspace.emailVerificationResendSuccess",
-                text: <FormattedMessage id="credits.emailVerification.resendConfirmation" />,
-                type: "success",
-              });
-            })
-            .catch((error) => {
-              switch (error.code) {
-                case AuthErrorCodes.NETWORK_REQUEST_FAILED:
-                  registerNotification({
-                    id: error.code,
-                    text: <FormattedMessage id={FirebaseAuthMessageId.NetworkFailure} />,
-                    type: "error",
-                  });
-                  break;
-                case AuthErrorCodes.TOO_MANY_ATTEMPTS_TRY_LATER:
-                  registerNotification({
-                    id: error.code,
-                    text: <FormattedMessage id={FirebaseAuthMessageId.TooManyRequests} />,
-                    type: "warning",
-                  });
-                  break;
-                default:
-                  registerNotification({
-                    id: error.code,
-                    text: <FormattedMessage id={FirebaseAuthMessageId.DefaultError} />,
-                    type: "error",
-                  });
-              }
-            });
+          return sendEmailVerification(firebaseUser);
         },
         verifyEmail: verifyFirebaseEmail,
       };
@@ -232,7 +199,7 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
         user: keycloakAuth.airbyteUser,
         authProvider: AuthProvider.keycloak,
         displayName: keycloakAuth.keycloakUser?.profile.name ?? null,
-        emailVerified: true,
+        emailVerified: keycloakAuth.keycloakUser?.profile.email_verified ?? false,
         email: keycloakAuth.keycloakUser?.profile.email ?? null,
         getAccessToken: () => Promise.resolve(keycloakAuth.accessTokenRef?.current),
         logout,
@@ -334,11 +301,6 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
 
           // Send verification mail via firebase
           await sendEmailVerification(user);
-
-          // exp-speedy-connection
-          if (firebaseAuth.currentUser) {
-            setSpeedyConnectionTimestamp(String(new Date(new Date().getTime() + 24 * 60 * 60 * 1000)));
-          }
         } catch (err) {
           // Clear the password ref if the user creation fails
           passwordRef.current = undefined;
@@ -396,9 +358,7 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
     getAirbyteUser,
     keycloakAuth,
     logout,
-    registerNotification,
     resendWithSignInLink,
-    setSpeedyConnectionTimestamp,
     updateAirbyteUser,
     verifyFirebaseEmail,
   ]);

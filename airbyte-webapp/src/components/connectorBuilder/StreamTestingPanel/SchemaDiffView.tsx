@@ -14,7 +14,7 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { StreamReadInferredSchema } from "core/api/types/ConnectorBuilderClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./SchemaDiffView.module.scss";
 import { SchemaConflictMessage } from "../SchemaConflictMessage";
@@ -65,7 +65,7 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
   const analyticsService = useAnalyticsService();
   const {
     resolvedManifest: { streams },
-  } = useConnectorBuilderTestRead();
+  } = useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
   const testStreamIndex = useBuilderWatch("testStreamIndex");
   const { setValue } = useFormContext();

@@ -5,11 +5,15 @@ import { useSearchParams } from "react-router-dom";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import { useCurrentOrganizationInfo, useCurrentWorkspace, useListWorkspaceAccessUsers } from "core/api";
+import {
+  useCurrentOrganizationInfo,
+  useCurrentWorkspace,
+  useListUserInvitations,
+  useListWorkspaceAccessUsers,
+} from "core/api";
 import { useIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
@@ -17,6 +21,7 @@ import { AddUserModal } from "packages/cloud/views/workspaces/WorkspaceSettingsV
 import { FirebaseInviteUserButton } from "packages/cloud/views/workspaces/WorkspaceSettingsView/components/FirebaseInviteUserButton";
 
 import { AddUserControl } from "./components/AddUserControl";
+import { UnifiedWorkspaceUserModel, unifyWorkspaceUserData } from "./components/useGetAccessManagementData";
 import styles from "./WorkspaceAccessManagementSection.module.scss";
 import { WorkspaceUsersTable } from "./WorkspaceUsersTable";
 
@@ -27,9 +32,15 @@ const WorkspaceAccessManagementSection: React.FC = () => {
   const organization = useCurrentOrganizationInfo();
   const canViewOrgMembers = useIntent("ListOrganizationMembers", { organizationId: organization?.organizationId });
   const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId: workspace.workspaceId });
-  const { openModal, closeModal } = useModalService();
+  const { openModal } = useModalService();
 
   const usersWithAccess = useListWorkspaceAccessUsers(workspace.workspaceId).usersWithAccess;
+
+  const pendingInvitations = useListUserInvitations({
+    scopeType: "workspace",
+    scopeId: workspace.workspaceId,
+  });
+  const unifiedWorkspaceUsers = unifyWorkspaceUserData(usersWithAccess, pendingInvitations);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const filterParam = searchParams.get("search");
@@ -42,9 +53,9 @@ const WorkspaceAccessManagementSection: React.FC = () => {
   const invitationSystemv2 = useExperiment("settings.invitationSystemv2", false);
 
   const onOpenInviteUsersModal = () =>
-    openModal({
+    openModal<void>({
       title: formatMessage({ id: "userInvitations.create.modal.title" }, { workspace: workspace.name }),
-      content: () => <AddUserModal closeModal={closeModal} />,
+      content: ({ onComplete }) => <AddUserModal onSubmit={onComplete} />,
       size: "md",
     });
 
@@ -57,7 +68,7 @@ const WorkspaceAccessManagementSection: React.FC = () => {
     setSearchParams(searchParams);
   }, [debouncedUserFilter, searchParams, setSearchParams]);
 
-  const filteredUsersWithAccess = (usersWithAccess ?? []).filter((user) => {
+  const filteredWorkspaceUsers: UnifiedWorkspaceUserModel[] = (unifiedWorkspaceUsers ?? []).filter((user) => {
     return (
       user.userName?.toLowerCase().includes(filterParam?.toLowerCase() ?? "") ||
       user.userEmail?.toLowerCase().includes(filterParam?.toLowerCase() ?? "")
@@ -81,17 +92,13 @@ const WorkspaceAccessManagementSection: React.FC = () => {
             {showAddUserButton && <AddUserControl />}
           </>
         ) : (
-          <Button
-            onClick={onOpenInviteUsersModal}
-            disabled={!canUpdateWorkspacePermissions}
-            icon={<Icon type="plus" />}
-          >
+          <Button onClick={onOpenInviteUsersModal} disabled={!canUpdateWorkspacePermissions} icon="plus">
             <FormattedMessage id="userInvitations.newMember" />
           </Button>
         )}
       </FlexContainer>
-      {filteredUsersWithAccess && filteredUsersWithAccess.length > 0 ? (
-        <WorkspaceUsersTable users={filteredUsersWithAccess} />
+      {filteredWorkspaceUsers && filteredWorkspaceUsers.length > 0 ? (
+        <WorkspaceUsersTable users={filteredWorkspaceUsers} />
       ) : (
         <Box py="xl" pl="lg">
           <Text color="grey" italicized>

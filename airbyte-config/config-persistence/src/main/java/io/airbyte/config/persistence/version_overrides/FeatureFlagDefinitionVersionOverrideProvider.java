@@ -8,6 +8,7 @@ import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
 import io.airbyte.featureflag.ConnectorVersionOverride;
 import io.airbyte.featureflag.Context;
@@ -85,11 +86,11 @@ public class FeatureFlagDefinitionVersionOverrideProvider implements DefinitionV
   }
 
   @Override
-  public Optional<ActorDefinitionVersion> getOverride(final ActorType actorType,
-                                                      final UUID actorDefinitionId,
-                                                      final UUID workspaceId,
-                                                      @Nullable final UUID actorId,
-                                                      final ActorDefinitionVersion defaultVersion) {
+  public Optional<ActorDefinitionVersionWithOverrideStatus> getOverride(final ActorType actorType,
+                                                                        final UUID actorDefinitionId,
+                                                                        final UUID workspaceId,
+                                                                        @Nullable final UUID actorId,
+                                                                        final ActorDefinitionVersion defaultVersion) {
     final List<Context> contexts = getContexts(actorType, actorDefinitionId, workspaceId, actorId);
     final String overrideTag = featureFlagClient.stringVariation(ConnectorVersionOverride.INSTANCE, new Multi(contexts));
 
@@ -111,7 +112,7 @@ public class FeatureFlagDefinitionVersionOverrideProvider implements DefinitionV
         }
         LOGGER.info("Using connector version override for definition {} with tag {}", actorDefinitionId, overrideTag);
       }
-      return version;
+      return version.map(v -> new ActorDefinitionVersionWithOverrideStatus(v, true));
 
     } catch (final IOException e) {
       LOGGER.error("Failed to read or persist actor definition version for definition {} with tag {}", actorDefinitionId,

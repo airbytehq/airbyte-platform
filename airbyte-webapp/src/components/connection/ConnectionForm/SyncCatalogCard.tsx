@@ -11,7 +11,6 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { Icon } from "components/ui/Icon";
 import { LoadingBackdrop } from "components/ui/LoadingBackdrop";
 
 import { naturalComparatorBy } from "core/utils/objects";
@@ -101,7 +100,7 @@ export const SyncCatalogCard: React.FC = () => {
               variant="secondary"
               data-testid="refresh-source-schema-btn"
               disabled={isSubmitting}
-              icon={<Icon type="sync" />}
+              icon="sync"
             >
               <FormattedMessage id="connection.updateSchema" />
             </Button>

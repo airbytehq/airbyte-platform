@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.config.persistence.ConfigNotFoundException.NO_ORGANIZATION_FOR_WORKSPACE;
+
 import com.github.slugify.Slugify;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -127,7 +129,8 @@ public class WorkspacesHandler {
         .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
         .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
         .defaultGeography(Enums.convertTo(workspace.getDefaultGeography(), Geography.class))
-        .organizationId(workspace.getOrganizationId());
+        .organizationId(workspace.getOrganizationId())
+        .tombstone(workspace.getTombstone());
     // Add read-only webhook configs.
     if (workspace.getWebhookOperationConfigs() != null) {
       result.setWebhookConfigs(WorkspaceWebhookConfigsConverter.toApiReads(workspace.getWebhookOperationConfigs()));
@@ -349,7 +352,7 @@ public class WorkspacesHandler {
     final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
     final Optional<Organization> organization = organizationPersistence.getOrganizationByWorkspaceId(workspaceId);
     if (organization.isEmpty()) {
-      throw new ConfigNotFoundException("ORGANIZATION_FOR_WORKSPACE", workspaceId.toString());
+      throw new ConfigNotFoundException(NO_ORGANIZATION_FOR_WORKSPACE, workspaceId.toString());
     }
     return buildWorkspaceOrganizationInfoRead(organization.get());
   }
@@ -361,8 +364,10 @@ public class WorkspacesHandler {
     return buildWorkspaceRead(workspace);
   }
 
-  public WorkspaceRead getWorkspaceByConnectionId(final ConnectionIdRequestBody connectionIdRequestBody) throws ConfigNotFoundException {
-    final StandardWorkspace workspace = configRepository.getStandardWorkspaceFromConnection(connectionIdRequestBody.getConnectionId(), false);
+  public WorkspaceRead getWorkspaceByConnectionId(final ConnectionIdRequestBody connectionIdRequestBody, boolean includeTombstone)
+      throws ConfigNotFoundException {
+    final StandardWorkspace workspace =
+        configRepository.getStandardWorkspaceFromConnection(connectionIdRequestBody.getConnectionId(), includeTombstone);
     return buildWorkspaceRead(workspace);
   }
 

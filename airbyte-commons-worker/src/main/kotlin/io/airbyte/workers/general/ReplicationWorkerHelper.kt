@@ -53,12 +53,12 @@ import io.airbyte.workers.internal.bookkeeping.getTotalStats
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
+import io.airbyte.workers.models.StateWithId.attachIdToStateMessageFromSource
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpStatus
 import org.apache.commons.io.FileUtils
-import org.openapitools.client.infrastructure.ClientException
 import org.slf4j.MDC
 import java.nio.file.Path
 import java.time.Duration
@@ -66,6 +66,7 @@ import java.time.Instant
 import java.util.Collections
 import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
+import io.airbyte.workload.api.client.generated.infrastructure.ClientException as GeneratedClientException
 
 private val logger = KotlinLogging.logger { }
 
@@ -145,13 +146,15 @@ class ReplicationWorkerHelper(
              * Workload should stop because it is no longer expected to be running.
              * See [io.airbyte.workload.api.WorkloadApi.workloadHeartbeat]
              */
-            if (e is ClientException && e.statusCode == HttpStatus.GONE.code) {
-              logger.warn(e) { "Received kill response from API, shutting down heartbeat" }
+            if (e is GeneratedClientException && e.statusCode == HttpStatus.GONE.code) {
+              metricClient.count(OssMetricsRegistry.HEARTBEAT_TERMINAL_SHUTDOWN, 1, *metricAttrs.toTypedArray())
               markCancelled()
               return@Runnable
             } else if (Duration.between(lastSuccessfulHeartbeat, Instant.now()) > heartbeatTimeoutDuration) {
               logger.warn(e) { "Have not been able to update heartbeat for more than the timeout duration, shutting down heartbeat" }
+              metricClient.count(OssMetricsRegistry.HEARTBEAT_CONNECTIVITY_FAILURE_SHUTDOWN, 1, *metricAttrs.toTypedArray())
               markFailed()
+              abort()
               trackFailure(WorkloadHeartbeatException("Workload Heartbeat Error", e))
               return@Runnable
             }
@@ -417,7 +420,8 @@ class ReplicationWorkerHelper(
     // internally we always want to deal with the state message we got from the
     // source, so we only modify the state message after processing it, right before we send it to the
     // destination
-    return internalProcessMessageFromSource(sourceRawMessage)
+    return attachIdToStateMessageFromSource(sourceRawMessage)
+      .let { internalProcessMessageFromSource(it) }
       .let { mapper.mapMessage(it) }
       .let { Optional.of(it) }
   }

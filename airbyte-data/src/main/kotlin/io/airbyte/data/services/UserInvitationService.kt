@@ -1,5 +1,6 @@
 package io.airbyte.data.services
 
+import io.airbyte.config.ScopeType
 import io.airbyte.config.UserInvitation
 import java.util.UUID
 
@@ -13,6 +14,14 @@ interface UserInvitationService {
   fun getUserInvitationByInviteCode(inviteCode: String): UserInvitation
 
   /**
+   * Get a list of pending invitations for a given scope type and scope id.
+   */
+  fun getPendingInvitations(
+    scopeType: ScopeType,
+    scopeId: UUID,
+  ): List<UserInvitation>
+
+  /**
    * Create a new user invitation.
    */
   fun createUserInvitation(invitation: UserInvitation): UserInvitation
@@ -20,9 +29,10 @@ interface UserInvitationService {
   /**
    * Accept a user invitation and create resulting permission record.
    */
+  @Throws(InvitationStatusUnexpectedException::class)
   fun acceptUserInvitation(
     inviteCode: String,
-    invitedUserId: UUID,
+    acceptingUserId: UUID,
   ): UserInvitation
 
   /**
@@ -38,3 +48,9 @@ interface UserInvitationService {
    */
   fun cancelUserInvitation(inviteCode: String): UserInvitation
 }
+
+/**
+ * Exception thrown when an operation on an invitation cannot be performed because it has an
+ * unexpected status. For instance, trying to accept an invitation that is not pending.
+ */
+class InvitationStatusUnexpectedException(message: String) : Exception(message)

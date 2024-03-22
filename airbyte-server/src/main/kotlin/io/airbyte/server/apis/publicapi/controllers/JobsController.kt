@@ -4,10 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByFieldEnum
-import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByMethodEnum
 import io.airbyte.api.model.generated.PermissionType
-import io.airbyte.commons.enums.Enums
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.public_api.generated.PublicJobsApi
@@ -24,9 +21,10 @@ import io.airbyte.server.apis.publicapi.constants.JOBS_PATH
 import io.airbyte.server.apis.publicapi.constants.JOBS_WITH_ID_PATH
 import io.airbyte.server.apis.publicapi.constants.POST
 import io.airbyte.server.apis.publicapi.filters.JobsFilter
-import io.airbyte.server.apis.publicapi.problems.BadRequestProblem
+import io.airbyte.server.apis.publicapi.helpers.orderByToFieldAndMethod
 import io.airbyte.server.apis.publicapi.problems.UnprocessableEntityProblem
 import io.airbyte.server.apis.publicapi.services.ConnectionService
+import io.airbyte.server.apis.publicapi.services.JobService
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
@@ -36,7 +34,6 @@ import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.core.Response
-import services.JobService
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -285,24 +282,5 @@ open class JobsController(
       .status(Response.Status.OK.statusCode)
       .entity(jobsResponse)
       .build()
-  }
-
-  private fun orderByToFieldAndMethod(orderBy: String?): Pair<OrderByFieldEnum, OrderByMethodEnum> {
-    var field: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT
-    var method: OrderByMethodEnum = OrderByMethodEnum.ASC
-    if (orderBy != null) {
-      val pattern: java.util.regex.Pattern = java.util.regex.Pattern.compile("([a-zA-Z0-9]+)|(ASC|DESC)")
-      val matcher: java.util.regex.Matcher = pattern.matcher(orderBy)
-      if (!matcher.find()) {
-        throw BadRequestProblem("Invalid order by clause provided: $orderBy")
-      }
-      field =
-        Enums.toEnum(matcher.group(1), OrderByFieldEnum::class.java)
-          .orElseThrow { BadRequestProblem("Invalid order by clause provided: $orderBy") }
-      method =
-        Enums.toEnum(matcher.group(2), OrderByMethodEnum::class.java)
-          .orElseThrow { BadRequestProblem("Invalid order by clause provided: $orderBy") }
-    }
-    return Pair(field, method)
   }
 }

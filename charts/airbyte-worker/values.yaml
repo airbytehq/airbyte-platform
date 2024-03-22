@@ -1,6 +1,6 @@
 global:
-  
   serviceAccountName: &service-account-name "airbyte-admin"
+  edition: community
   credVolumeOverride: ""
   secretName: ""
   extraContainers: []

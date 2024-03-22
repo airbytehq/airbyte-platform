@@ -131,7 +131,7 @@ class TrackingHelper(private val trackingClient: TrackingClient) {
     trackingClient.track(
       userId,
       AIRBYTE_API_CALL,
-      payload as Map<String?, Any?>?,
+      payload.toMap(),
     )
   }
 

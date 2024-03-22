@@ -188,7 +188,14 @@ class SlackNotificationClientTest {
     server.createContext(TEST_PATH, new ServerHandler(expectedNotificationMessage));
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
-    assertTrue(client.notifyConnectionDisabled("", SOURCE_TEST, DESTINATION_TEST, "job description.", WORKSPACE_ID, CONNECTION_ID));
+    SyncSummary summary = SyncSummary.builder()
+        .workspace(WorkspaceInfo.builder().id(WORKSPACE_ID).build())
+        .destination(DestinationInfo.builder().name(DESTINATION_TEST).build())
+        .source(SourceInfo.builder().name(SOURCE_TEST).build())
+        .connection(ConnectionInfo.builder().id(CONNECTION_ID).build())
+        .errorMessage("job description.")
+        .build();
+    assertTrue(client.notifyConnectionDisabled(summary, ""));
   }
 
   @SuppressWarnings("LineLength")
@@ -208,7 +215,14 @@ class SlackNotificationClientTest {
     server.createContext(TEST_PATH, new ServerHandler(expectedNotificationWarningMessage));
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
-    assertTrue(client.notifyConnectionDisableWarning("", SOURCE_TEST, DESTINATION_TEST, "job description.", WORKSPACE_ID, CONNECTION_ID));
+    SyncSummary summary = SyncSummary.builder()
+        .workspace(WorkspaceInfo.builder().id(WORKSPACE_ID).build())
+        .destination(DestinationInfo.builder().name(DESTINATION_TEST).build())
+        .source(SourceInfo.builder().name(SOURCE_TEST).build())
+        .connection(ConnectionInfo.builder().id(CONNECTION_ID).build())
+        .errorMessage("job description.")
+        .build();
+    assertTrue(client.notifyConnectionDisableWarning(summary, ""));
   }
 
   @Test

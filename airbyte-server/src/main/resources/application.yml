@@ -1,6 +1,15 @@
 micronaut:
   application:
     name: airbyte-server
+  caches:
+    # used by the analytics tracking client to cache calls to resolve the deployment and identity (workspace) for
+    # track events
+    analytics-tracking-deployments:
+      charset: "UTF-8"
+      expire-after-access: 10m
+    analytics-tracking-identity:
+      charset: "UTF-8"
+      expire-after-access: 10m
   env:
     cloud-deduction: true
   executors:
@@ -342,6 +351,9 @@ datasources:
 
 endpoints:
   beans:
+    enabled: true
+    sensitive: false
+  caches:
     enabled: true
     sensitive: false
   env:

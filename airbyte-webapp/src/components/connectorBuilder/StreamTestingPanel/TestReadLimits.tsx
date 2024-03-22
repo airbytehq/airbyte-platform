@@ -6,12 +6,11 @@ import * as yup from "yup";
 import { ControlLabels } from "components/LabeledControl";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useConnectorBuilderTestRead, TestReadContext } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { TestReadContext, useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./TestReadLimits.module.scss";
 
@@ -52,7 +51,7 @@ export const TestReadLimits: React.FC<TestReadLimitsProps> = ({ isOpen, setIsOpe
             data-testid="test-read-settings"
             disabled={isFetching}
             onClick={() => setIsOpen(true)}
-            icon={<Icon type="gear" />}
+            icon="gear"
           />
         }
       >
@@ -102,7 +101,7 @@ const TestReadLimitsModal: React.FC<Pick<TestReadLimitsProps, "setIsOpen"> & Tes
   return (
     <Modal
       size="sm"
-      onClose={() => setIsOpen(false)}
+      onCancel={() => setIsOpen(false)}
       title={formatMessage({ id: "connectorBuilder.testReadSettings.modalTitle" })}
     >
       <form

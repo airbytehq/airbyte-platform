@@ -1,8 +1,8 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { useFormState } from "react-hook-form";
-import { FormattedMessage } from "react-intl";
-import { SchemaOf } from "yup";
+import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
+import { SchemaOf } from "yup";
 
 import { Form } from "components/forms";
 import { Box } from "components/ui/Box";
@@ -19,6 +19,7 @@ import {
 } from "core/api";
 import { PermissionType, WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
+import { useIntent } from "core/utils/rbac";
 
 import { AddUserModalBody } from "./AddUserModalBody";
 
@@ -42,10 +43,16 @@ const SubmissionButton: React.FC = () => {
   );
 };
 
-export const AddUserModal: React.FC<{ closeModal: () => void }> = ({ closeModal }) => {
+export const AddUserModal: React.FC<{ onSubmit: () => void }> = ({ onSubmit }) => {
+  const { formatMessage } = useIntl();
   const workspaceId = useCurrentWorkspaceId();
   const organizationInfo = useCurrentOrganizationInfo();
-  const { users } = useListUsersInOrganization(organizationInfo?.organizationId);
+  const canListUsersInOrganization = useIntent("ListOrganizationMembers", {
+    organizationId: organizationInfo?.organizationId,
+  });
+  const { users } = useListUsersInOrganization(
+    canListUsersInOrganization ? organizationInfo?.organizationId : undefined
+  );
   const [searchValue, setSearchValue] = useState("");
   const deferredSearchValue = useDeferredValue(searchValue);
   const [selectedRow, setSelectedRow] = useState<string | null>(null);
@@ -65,7 +72,7 @@ export const AddUserModal: React.FC<{ closeModal: () => void }> = ({ closeModal 
       scopeType: "workspace",
       scopeId: workspaceId,
     });
-    closeModal();
+    onSubmit();
   };
 
   /*      Before the user begins typing an email address, the list of users should only be users
@@ -74,7 +81,7 @@ export const AddUserModal: React.FC<{ closeModal: () => void }> = ({ closeModal 
           When they begin typing, we filter a list that is a superset of workspaceAccessUsers + organization users.  We want to prefer the workspaceAccessUsers
           object for a given user (if present) because it contains all relevant permissions for the user.  
           
-          Then, we enrich that from the list of organization_member who don't have a permission to this workspace.
+          Then, we enrich that from the list of organization_members who don't have a permission to this workspace.
       */
   const userMap = new Map();
 
@@ -95,9 +102,10 @@ export const AddUserModal: React.FC<{ closeModal: () => void }> = ({ closeModal 
     });
 
   users.forEach((user) => {
-    // the first check here is important only for the "empty search value" case, where we want to show all users who don't have a workspace permission
-    // for other cases, it is at worst slightly redundant
-    if (user.permissionType === "organization_member" && !userMap.has(user.userId)) {
+    if (
+      user.permissionType === "organization_member" && // they are an organization_member
+      !usersWithAccess.some((u) => u.userId === user.userId) // they don't have a workspace permission (they may not be listed)
+    ) {
       userMap.set(user.userId, {
         userId: user.userId,
         userName: user.name,
@@ -132,7 +140,11 @@ export const AddUserModal: React.FC<{ closeModal: () => void }> = ({ closeModal 
       onSubmit={onInviteSubmit}
     >
       <Box p="md">
-        <SearchInput value={searchValue} onChange={(e) => setSearchValue(e.target.value)} />
+        <SearchInput
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          placeholder={formatMessage({ id: "userInvitations.create.modal.search" })}
+        />
       </Box>
       <AddUserModalBody
         usersToList={usersToList}

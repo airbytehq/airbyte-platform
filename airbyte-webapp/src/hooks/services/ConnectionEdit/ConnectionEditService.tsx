@@ -13,6 +13,7 @@ import {
 import {
   AirbyteCatalog,
   ConnectionStatus,
+  SchemaChange,
   WebBackendConnectionRead,
   WebBackendConnectionUpdate,
 } from "core/api/types/AirbyteClient";
@@ -52,31 +53,6 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
   const [connection, setConnection] = useState(useGetConnection(connectionId));
   const [catalog, setCatalog] = useState<ConnectionCatalog>(() => getConnectionCatalog(connection));
   const [schemaHasBeenRefreshed, setSchemaHasBeenRefreshed] = useState(false);
-
-  const [{ loading: schemaRefreshing, error: schemaError }, refreshSchema] = useAsyncFn(async () => {
-    unregisterNotificationById("connection.noDiff");
-
-    const refreshedConnection = await getConnectionQuery({ connectionId, withRefreshedCatalog: true });
-
-    if (refreshedConnection.catalogDiff && refreshedConnection.catalogDiff.transforms?.length > 0) {
-      setConnection(refreshedConnection);
-      setSchemaHasBeenRefreshed(true);
-    } else {
-      setConnection((connection) => ({
-        ...connection,
-        schemaChange: refreshedConnection.schemaChange,
-        /**
-         * set refreshed syncCatalog since the stream(AirbyteStream) data might have changed
-         * (eg. new sync mode is available)
-         */
-        syncCatalog: refreshedConnection.syncCatalog,
-      }));
-      registerNotification({
-        id: "connection.noDiff",
-        text: formatMessage({ id: "connection.updateSchema.noDiff" }),
-      });
-    }
-  });
 
   const discardRefreshedSchema = useCallback(() => {
     setConnection((connection) => ({
@@ -119,6 +95,52 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
     },
     [updateConnectionAction]
   );
+
+  const [{ loading: schemaRefreshing, error: schemaError }, refreshSchema] = useAsyncFn(async () => {
+    unregisterNotificationById("connection.noDiff");
+
+    const refreshedConnection = await getConnectionQuery({ connectionId, withRefreshedCatalog: true });
+
+    /**
+     * (BE issue) fix for "non-breaking" schema change and empty catalogDiff
+     * Issue: https://github.com/airbytehq/airbyte-internal-issues/issues/4867
+     */
+    if (
+      refreshedConnection.schemaChange === SchemaChange.non_breaking &&
+      !refreshedConnection?.catalogDiff?.transforms?.length
+    ) {
+      await updateConnection({
+        connectionId: refreshedConnection.connectionId,
+        sourceCatalogId: refreshedConnection.catalogId,
+      });
+      registerNotification({
+        id: "connection.updateAutomaticallyApplied",
+        type: "success",
+        text: formatMessage({ id: "connection.updateSchema.updateAutomaticallyApplied" }),
+      });
+      return;
+    }
+
+    if (refreshedConnection.catalogDiff && refreshedConnection.catalogDiff.transforms?.length > 0) {
+      setConnection(refreshedConnection);
+      setSchemaHasBeenRefreshed(true);
+    } else {
+      setConnection((connection) => ({
+        ...connection,
+        schemaChange: refreshedConnection.schemaChange,
+        /**
+         * set refreshed syncCatalog since the stream(AirbyteStream) data might have changed
+         * (eg. new sync mode is available)
+         */
+        syncCatalog: refreshedConnection.syncCatalog,
+      }));
+
+      registerNotification({
+        id: "connection.noDiff",
+        text: formatMessage({ id: "connection.updateSchema.noDiff" }),
+      });
+    }
+  });
 
   return {
     connection,

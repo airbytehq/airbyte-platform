@@ -6,7 +6,6 @@ import { useEffectOnce } from "react-use";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
@@ -117,7 +116,7 @@ export const RemainingCredits: React.FC = () => {
             size="xs"
             onClick={showCreditsModal}
             isLoading={isWaitingForCredits}
-            icon={<Icon type="plus" />}
+            icon="plus"
           >
             <FormattedMessage id="credits.buyCredits" />
           </Button>

@@ -38,6 +38,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitio
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.UseIconUrlInApiResponse;
@@ -69,6 +70,7 @@ class DestinationHandlerTest {
   private ConnectorSpecification connectorSpecification;
   private OAuthConfigSupplier oAuthConfigSupplier;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private TestClient featureFlagClient;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
 
@@ -93,6 +95,7 @@ class DestinationHandlerTest {
     destinationService = mock(DestinationService.class);
     featureFlagClient = mock(TestClient.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
+    actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
 
     when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS)))
         .thenReturn(true);
@@ -129,7 +132,8 @@ class DestinationHandlerTest {
             actorDefinitionVersionHelper,
             destinationService,
             featureFlagClient,
-            actorDefinitionHandlerHelper);
+            actorDefinitionHandlerHelper,
+            actorDefinitionVersionUpdater);
 
     when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
         destinationConnection.getDestinationId())).thenReturn(destinationDefinitionVersionWithOverrideStatus);
@@ -243,19 +247,15 @@ class DestinationHandlerTest {
   void testUpgradeDestinationVersion() throws IOException, JsonValidationException, ConfigNotFoundException {
     final DestinationIdRequestBody requestBody = new DestinationIdRequestBody().destinationId(destinationConnection.getDestinationId());
 
-    final UUID newDefaultVersionId = UUID.randomUUID();
-    final StandardDestinationDefinition destinationDefinitionWithNewVersion = Jsons.clone(standardDestinationDefinition)
-        .withDefaultVersionId(newDefaultVersionId);
-
     when(configRepository.getDestinationConnection(destinationConnection.getDestinationId()))
         .thenReturn(destinationConnection);
-    when(configRepository.getStandardDestinationDefinition(destinationDefinitionWithNewVersion.getDestinationDefinitionId()))
-        .thenReturn(destinationDefinitionWithNewVersion);
+    when(configRepository.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId()))
+        .thenReturn(standardDestinationDefinition);
 
     destinationHandler.upgradeDestinationVersion(requestBody);
 
-    // validate that we set the actor version to the actor definition (global) default version
-    verify(configRepository).setActorDefaultVersion(destinationConnection.getDestinationId(), newDefaultVersionId);
+    // validate that we call the actorDefinitionVersionUpdater to upgrade the version to global default
+    verify(actorDefinitionVersionUpdater).upgradeActorVersion(destinationConnection, standardDestinationDefinition);
   }
 
   @Test

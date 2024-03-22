@@ -1,8 +1,8 @@
-ARG BASE_IMAGE=airbyte/airbyte-base-java-python-image:1.1.0
-FROM ${BASE_IMAGE} AS connector-builder-server
+ARG JAVA_PYTHON_BASE_IMAGE_VERSION=2.1.0
+FROM airbyte/airbyte-base-java-python-image:${JAVA_PYTHON_BASE_IMAGE_VERSION} AS connector-builder-server
 
 # Set up CDK requirements
-ARG CDK_VERSION=0.65.0
+ARG CDK_VERSION=0.73.0
 ENV CDK_PYTHON=${PYENV_ROOT}/versions/${PYTHON_VERSION}/bin/python
 ENV CDK_ENTRYPOINT ${PYENV_ROOT}/versions/${PYTHON_VERSION}/lib/python3.9/site-packages/airbyte_cdk/connector_builder/main.py
 # Set up CDK
@@ -18,7 +18,10 @@ ENV VERSION ${VERSION}
 WORKDIR /app
 
 # This is automatically unzipped by Docker
+USER root
 ADD airbyte-app.tar /app
+RUN chown -R airbyte:airbyte /app
+USER airbyte:airbyte
 
 # wait for upstream dependencies to become available before starting server
 ENTRYPOINT ["/bin/bash", "-c", "airbyte-app/bin/${APPLICATION}"]

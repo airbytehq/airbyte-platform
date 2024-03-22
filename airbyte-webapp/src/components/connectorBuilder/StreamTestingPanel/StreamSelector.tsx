@@ -9,7 +9,7 @@ import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./StreamSelector.module.scss";
 import { useBuilderWatch } from "../types";
@@ -40,7 +40,7 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
 
   const {
     resolvedManifest: { streams },
-  } = useConnectorBuilderTestRead();
+  } = useConnectorBuilderFormState();
 
   if (streams.length === 0) {
     return (

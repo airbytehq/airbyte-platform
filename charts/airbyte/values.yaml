@@ -22,8 +22,6 @@ global:
   # todo: remove so there is no need to create secrets for gcs if not using gcs
   storage:
     type: minio # default storage used
-    gcs:
-      credentialsJson: ""
 
   metrics:
     # -- The metric client to configure globally. Supports "otel"
@@ -129,12 +127,12 @@ webapp:
   podLabels: {}
 
   # -- Security context for the container
-  ## Examples:
-  ## containerSecurityContext:
-  ##    runAsNonRoot: true
-  ##    runAsUser: 1000
-  ##    readOnlyRootFilesystem: true
-  containerSecurityContext: {}
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    runAsUser: 101
+    runAsGroup: 101
+    readOnlyRootFilesystem: false
 
   ## Configure extra options for the webapp containers' liveness and readiness probes,
   ## see https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
@@ -344,13 +342,13 @@ pod-sweeper:
   # -- Add extra labels to the podSweeper pod
   podLabels: {}
 
-  ## Examples:
-  ## containerSecurityContext:
-  ##    runAsNonRoot: true
-  ##    runAsUser: 1000
-  ##    readOnlyRootFilesystem: true
   # -- Security context for the container
-  containerSecurityContext: {}
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    runAsUser: 1001
+    runAsGroup: 1001
+    readOnlyRootFilesystem: false
 
   livenessProbe:
     # -- Enable livenessProbe on the podSweeper
@@ -442,13 +440,13 @@ server:
   # -- Add extra labels to the server pods
   podLabels: {}
 
-  ## Examples:
-  ## containerSecurityContext:
-  ##    runAsNonRoot: true
-  ##    runAsUser: 1000
-  ##    readOnlyRootFilesystem: true
   # -- Security context for the container
-  containerSecurityContext: {}
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
 
   ## Configure extra options for the server containers' liveness and readiness probes
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
@@ -614,13 +612,13 @@ worker:
   # -- Add extra labels to the worker pods
   podLabels: {}
 
-  ## Examples:
-  ## containerSecurityContext:
-  ##    runAsNonRoot: true
-  ##    runAsUser: 1000
-  ##    readOnlyRootFilesystem: true
   # -- Security context for the container
-  containerSecurityContext: {}
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
 
   livenessProbe:
     # -- Enable livenessProbe on the worker
@@ -743,13 +741,13 @@ workload-launcher:
   # -- Add extra labels to the workload launcher pods
   podLabels: {}
 
-  ## Examples:
-  ## containerSecurityContext:
-  ##    runAsNonRoot: true
-  ##    runAsUser: 1000
-  ##    readOnlyRootFilesystem: true
   # -- Security context for the container
-  containerSecurityContext: {}
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
 
   livenessProbe:
     # -- Enable livenessProbe on the workload launcher
@@ -875,13 +873,13 @@ metrics:
   # -- Add extra labels to the metrics-reporter pod
   podLabels: {}
 
-  ## Examples:
-  ## containerSecurityContext:
-  ##    runAsNonRoot: true
-  ##    runAsUser: 1000
-  ##    readOnlyRootFilesystem: true
   # -- Security context for the container
-  containerSecurityContext: {}
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
 
   ## metrics-reporter app resource requests and limits
   ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
@@ -986,6 +984,14 @@ airbyte-bootloader:
   # -- Affinity and anti-affinity for bootloader pod assignment, see
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+
+  # -- Security context for the container
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
 
   ## Example: (With default env vars and values taken from generated config map)
   ## extraEnv:
@@ -1100,13 +1106,13 @@ temporal:
   # -- Add extra labels to the temporal pod
   podLabels: {}
 
-  ## Examples:
-  ## containerSecurityContext:
-  ##    runAsNonRoot: true
-  ##    runAsUser: 1000
-  ##    readOnlyRootFilesystem: true
   # -- Security context for the container
-  containerSecurityContext: {}
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
 
   ## Examples (when using `temporal.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraInitContainers:
@@ -1307,13 +1313,13 @@ cron:
   # -- Add extra labels to the cron pods
   podLabels: {}
 
-  ## Examples:
-  ## containerSecurityContext:
-  ##    runAsNonRoot: true
-  ##    runAsUser: 1000
-  ##    readOnlyRootFilesystem: true
   # -- Security context for the container
-  containerSecurityContext: {}
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
 
   livenessProbe:
     # -- Enable livenessProbe on the cron
@@ -1468,6 +1474,14 @@ connector-builder-server:
     # -- The pull policy to use for the airbyte connector-builder-server image
     pullPolicy: IfNotPresent
 
+  # -- Security context for the container
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+
   livenessProbe:
     # -- Enable livenessProbe on the server
     enabled: true
@@ -1534,6 +1548,14 @@ airbyte-api-server:
     repository: airbyte/airbyte-api-server
     # -- The pull policy to use for the airbyte airbyte-api-server image
     pullPolicy: IfNotPresent
+
+  # -- Security context for the container
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
 
   livenessProbe:
     # -- Enable livenessProbe on the server
@@ -1614,16 +1636,31 @@ airbyte-api-server:
     #   - chart-example.local
 
 keycloak:
-  enabled: false
+  enabled: true
   env_vars: {}
 
   auth:
     adminUsername: airbyteAdmin
     adminPassword: keycloak123
 
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+
 keycloak-setup:
-  enabled: false
+  enabled: true
   env_vars: {}
+
+  # -- Security context for the container
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
 
 workload-api-server:
   enabled: false
@@ -1638,6 +1675,14 @@ workload-api-server:
     repository: airbyte/workload-api-server
     # -- The pull policy to use for the airbyte-workload-api-server image
     pullPolicy: IfNotPresent
+
+  # -- Security context for the container
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
 
   livenessProbe:
     # -- Enable livenessProbe on the server

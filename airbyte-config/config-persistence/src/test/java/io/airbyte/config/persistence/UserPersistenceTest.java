@@ -149,6 +149,16 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     }
 
     @Test
+    void getUsersByEmailTest() throws IOException {
+      for (final User user : MockData.dupEmailUsers()) {
+        userPersistence.writeUser(user);
+      }
+
+      final List<User> usersWithSameEmail = userPersistence.getUsersByEmail(MockData.DUP_EMAIL);
+      Assertions.assertEquals(new HashSet<>(MockData.dupEmailUsers()), new HashSet<>(usersWithSameEmail));
+    }
+
+    @Test
     void deleteUserByIdTest() throws IOException {
       userPersistence.deleteUserById(MockData.CREATOR_USER_ID_1);
       Assertions.assertEquals(Optional.empty(), userPersistence.getUser(MockData.CREATOR_USER_ID_1));

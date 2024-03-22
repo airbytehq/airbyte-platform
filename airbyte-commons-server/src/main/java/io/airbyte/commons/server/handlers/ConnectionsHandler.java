@@ -105,6 +105,7 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -923,7 +924,7 @@ public class ConnectionsHandler {
     final ZoneId requestZone = ZoneId.of(connectionDataHistoryRequestBody.getTimezone());
 
     // Start time in designated timezone
-    final ZonedDateTime endTimeInUserTimeZone = Instant.now().atZone(ZoneId.of(connectionDataHistoryRequestBody.getTimezone()));
+    final ZonedDateTime endTimeInUserTimeZone = Instant.now().atZone(requestZone).toLocalDate().atTime(LocalTime.MAX).atZone(requestZone);
     final ZonedDateTime startTimeInUserTimeZone = endTimeInUserTimeZone.toLocalDate().atStartOfDay(requestZone).minusDays(29);
     // Convert start time to UTC (since that's what the database uses)
     final Instant startTimeInUTC = startTimeInUserTimeZone.toInstant();
