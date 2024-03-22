@@ -188,7 +188,11 @@ public class KubePodProcess implements KubePod {
     if (pod == null) {
       throw new RuntimeException(prependPodInfo("Error: unable to find pod!", podNamespace, podName));
     }
-    return pod.getStatus().getPodIP();
+    if (pod.getStatus().getPodIP().contains(":")) {
+      return "[" + pod.getStatus().getPodIP() + "]";
+    } else {
+      return pod.getStatus().getPodIP();
+    }
   }
 
   private static Container getInit(final boolean usesStdin,
