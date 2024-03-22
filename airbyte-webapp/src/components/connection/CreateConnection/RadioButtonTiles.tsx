@@ -14,6 +14,7 @@ interface RadioButtonTilesOption<T> {
   label: string;
   labelValues?: ComponentProps<typeof FormattedMessage>["values"];
   description: string;
+  descriptionValues?: ComponentProps<typeof FormattedMessage>["values"];
   extra?: React.ReactNode;
   disabled?: boolean;
 }
@@ -65,7 +66,7 @@ export const RadioButtonTiles = <T extends string>({
                 </Text>
               </Box>
               <Text size="sm" color={option.disabled ? "grey" : "darkBlue"}>
-                {formatMessage({ id: option.description })}
+                {formatMessage({ id: option.description }, option.descriptionValues)}
               </Text>
               {option.extra && <Box mt="sm">{option.extra}</Box>}
             </div>

@@ -45,7 +45,7 @@ public class MaskedDataInterceptor implements RewritePolicy {
   protected static final Logger logger = StatusLogger.getLogger();
 
   // This is a little circuitous, but it gets the regex syntax highlighting in intelliJ to work.
-  private static final String DESTINATION_ERROR_PREFIX = Pattern.compile("^(?<destinationPrefix>.*destination\\s+>\\s+ERROR.+)").pattern();
+  private static final String DESTINATION_ERROR_PREFIX = Pattern.compile("^(?<destinationPrefix>.*destination.*\\s+>\\s+ERROR.+)").pattern();
 
   /**
    * The pattern used to determine if a message contains sensitive data.
