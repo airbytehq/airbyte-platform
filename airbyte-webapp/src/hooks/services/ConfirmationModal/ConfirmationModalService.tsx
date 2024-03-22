@@ -4,7 +4,7 @@ import { ConfirmationModal } from "components/common/ConfirmationModal";
 
 import useTypesafeReducer from "hooks/useTypesafeReducer";
 
-import { actions, initialState, confirmationModalServiceReducer } from "./reducer";
+import { actions, confirmationModalServiceReducer, initialState } from "./reducer";
 import { ConfirmationModalOptions, ConfirmationModalServiceApi, ConfirmationModalState } from "./types";
 
 const ConfirmationModalServiceContext = React.createContext<ConfirmationModalServiceApi | undefined>(undefined);
@@ -52,9 +52,9 @@ export const ConfirmationModalService = ({ children }: { children: React.ReactNo
     [closeConfirmationModal, openConfirmationModal]
   );
 
-  const onClose = useCallback(() => {
+  const onCancel = useCallback(() => {
     closeConfirmationModal();
-    state.confirmationModal?.onClose?.();
+    state.confirmationModal?.onCancel?.();
   }, [closeConfirmationModal, state.confirmationModal]);
 
   return (
@@ -64,11 +64,11 @@ export const ConfirmationModalService = ({ children }: { children: React.ReactNo
       </ConfirmationModalServiceContext.Provider>
       {state.isOpen && state.confirmationModal ? (
         <ConfirmationModal
-          onClose={onClose}
-          additionalContent={state.confirmationModal.additionalContent}
           title={state.confirmationModal.title}
           text={state.confirmationModal.text}
           textValues={state.confirmationModal.textValues}
+          additionalContent={state.confirmationModal.additionalContent}
+          onCancel={onCancel}
           onSubmit={state.confirmationModal.onSubmit}
           submitButtonText={state.confirmationModal.submitButtonText}
           submitButtonDataId={state.confirmationModal.submitButtonDataId}

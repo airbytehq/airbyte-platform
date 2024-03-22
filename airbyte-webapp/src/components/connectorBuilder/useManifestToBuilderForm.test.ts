@@ -1,8 +1,19 @@
 import merge from "lodash/merge";
 
-import { ConnectorManifest, DeclarativeStream } from "core/api/types/ConnectorManifest";
+import {
+  ConnectorManifest,
+  DeclarativeStream,
+  DeclarativeStreamIncrementalSync,
+  HttpRequesterErrorHandler,
+  SimpleRetrieverPaginator,
+} from "core/api/types/ConnectorManifest";
 import { removeEmptyProperties } from "core/utils/form";
 
+import {
+  manifestErrorHandlerToBuilder,
+  manifestIncrementalSyncToBuilder,
+  manifestPaginatorToBuilder,
+} from "./convertManifestToBuilderForm";
 import { DEFAULT_BUILDER_FORM_VALUES, DEFAULT_CONNECTOR_NAME, OLDEST_SUPPORTED_CDK_VERSION } from "./types";
 import { convertToBuilderFormValues } from "./useManifestToBuilderForm";
 import { formatJson } from "./utils";
@@ -284,6 +295,38 @@ describe("Conversion throws error when", () => {
     await expect(convert).rejects.toThrow(
       "SessionTokenAuthenticator login_requester.authenticator must have one of the following types"
     );
+  });
+
+  it("manifest has a paginator with an unsupported type", async () => {
+    const convert = () => {
+      const paginator = {
+        type: "UnsupportedPaginatorHandler",
+      };
+      return manifestPaginatorToBuilder(paginator as SimpleRetrieverPaginator);
+    };
+    expect(convert).toThrow("doesn't use a DefaultPaginato");
+  });
+
+  it("manifest has an error handler with an unsupported type", async () => {
+    const convert = () => {
+      const errorHandler = {
+        type: "UnsupportedErrorHandler",
+      };
+      return manifestErrorHandlerToBuilder(errorHandler as HttpRequesterErrorHandler);
+    };
+    expect(convert).toThrow(
+      "error handler type is unsupported; only CompositeErrorHandler and DefaultErrorHandler are supported"
+    );
+  });
+
+  it("manifest has an incremental sync with an unsupported type", async () => {
+    const convert = () => {
+      const incrementalSync = {
+        type: "UnsupportedIncrementalSync",
+      };
+      return manifestIncrementalSyncToBuilder(incrementalSync as DeclarativeStreamIncrementalSync);
+    };
+    expect(convert).toThrow("doesn't use a DatetimeBasedCursor");
   });
 });
 

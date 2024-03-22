@@ -133,7 +133,7 @@ const SCHEMA =
   '   "$schema": "http://json-schema.org/schema#",\n' +
   '   "properties": {\n' +
   '     "name": {\n' +
-  '       "type": "string"\n' +
+  '       "type": [\n         "string",\n         "null"\n       ]\n' +
   "     }\n" +
   "   },\n" +
   '   "type": "object"\n' +

@@ -430,7 +430,11 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   SPEC(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
       "spec",
-      "Result of the spec operation");
+      "Result of the spec operation"),
+
+  PAYLOAD_SIZE_EXCEEDED(MetricEmittingApps.WORKER,
+      "payload_size_exceeded",
+      "Detected payload size was over 4mb Temporal limit");
 
   private final MetricEmittingApp application;
   private final String metricName;

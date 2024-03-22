@@ -12,9 +12,11 @@ import io.airbyte.commons.server.errors.problems.AbstractThrowableProblem
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.public_api.model.generated.ConnectionCreateRequest
 import io.airbyte.server.apis.publicapi.constants.MESSAGE
+import io.airbyte.server.apis.publicapi.exceptions.OAuthCallbackException
 import io.airbyte.server.apis.publicapi.problems.BadRequestProblem
 import io.airbyte.server.apis.publicapi.problems.ConflictProblem
 import io.airbyte.server.apis.publicapi.problems.InvalidApiKeyProblem
+import io.airbyte.server.apis.publicapi.problems.OAuthCallbackFailureProblem
 import io.airbyte.server.apis.publicapi.problems.ResourceNotFoundProblem
 import io.airbyte.server.apis.publicapi.problems.SyncConflictProblem
 import io.airbyte.server.apis.publicapi.problems.UnexpectedProblem
@@ -107,6 +109,10 @@ object ConfigClientErrorHandler {
       is IOException -> {
         val message = Jsons.serialize(mapOf(MESSAGE to (throwable.message ?: DEFAULT_UNPROCESSABLE_ENTITY_MESSAGE)))
         throw UnprocessableEntityProblem(message)
+      }
+
+      is OAuthCallbackException -> {
+        throw OAuthCallbackFailureProblem(throwable.message)
       }
 
       else -> {

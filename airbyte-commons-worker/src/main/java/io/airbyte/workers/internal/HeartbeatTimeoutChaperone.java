@@ -100,7 +100,8 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
    * @throws ExecutionException - throw is the runnable throw an exception
    */
   public void runWithHeartbeatThread(final CompletableFuture<Void> runnableFuture) throws ExecutionException {
-    LOGGER.info("Starting source heartbeat check. Will check every {} minutes.", timeoutCheckDuration.toMinutes());
+    LOGGER.info("Starting source heartbeat check. Will check threshold of {} seconds, every {} minutes.",
+        heartbeatMonitor.getHeartbeatFreshnessThreshold().toSeconds(), timeoutCheckDuration.toMinutes());
     final CompletableFuture<Void> heartbeatFuture = CompletableFuture.runAsync(customMonitor.orElse(this::monitor), getLazyExecutorService());
 
     try {
@@ -127,9 +128,9 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
             new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
             new MetricAttribute(MetricTags.KILLED, "true"),
             new MetricAttribute(MetricTags.SOURCE_IMAGE, sourceDockerImage));
-        final var threshold = heartbeatMonitor.getHeartbeatFreshnessThreshold().getSeconds();
-        final var timeBetweenLastRecord = heartbeatMonitor.getTimeSinceLastBeat().orElse(Duration.ZERO).getSeconds();
-        throw new HeartbeatTimeoutException(threshold, timeBetweenLastRecord);
+        final var thresholdMs = heartbeatMonitor.getHeartbeatFreshnessThreshold().toMillis();
+        final var timeBetweenLastRecordMs = heartbeatMonitor.getTimeSinceLastBeat().orElse(Duration.ZERO).toMillis();
+        throw new HeartbeatTimeoutException(thresholdMs, timeBetweenLastRecordMs);
       } else {
         LOGGER.info("Do not terminate as feature flag is disable");
         metricClient.count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
@@ -188,12 +189,12 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
     public final String humanReadableThreshold;
     public final String humanReadableTimeSinceLastRec;
 
-    public HeartbeatTimeoutException(final long threshold, final long timeBetweenLastRecord) {
+    public HeartbeatTimeoutException(final long thresholdMs, final long timeBetweenLastRecordMs) {
       super(String.format("Last record saw %s ago, exceeding the threshold of %s.",
-          DurationFormatUtils.formatDurationWords(timeBetweenLastRecord, true, true),
-          DurationFormatUtils.formatDurationWords(threshold, true, true)));
-      this.humanReadableThreshold = DurationFormatUtils.formatDurationWords(threshold, true, true);
-      this.humanReadableTimeSinceLastRec = DurationFormatUtils.formatDurationWords(threshold, true, true);
+          DurationFormatUtils.formatDurationWords(timeBetweenLastRecordMs, true, true),
+          DurationFormatUtils.formatDurationWords(thresholdMs, true, true)));
+      this.humanReadableThreshold = DurationFormatUtils.formatDurationWords(thresholdMs, true, true);
+      this.humanReadableTimeSinceLastRec = DurationFormatUtils.formatDurationWords(timeBetweenLastRecordMs, true, true);
     }
 
   }

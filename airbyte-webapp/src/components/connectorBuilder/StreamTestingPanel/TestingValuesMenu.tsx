@@ -89,7 +89,7 @@ export const TestingValuesMenu: React.FC<TestingValuesMenuProps> = ({ testingVal
       {isOpen && spec && (
         <Modal
           size="lg"
-          onClose={() => setIsOpen(false)}
+          onCancel={() => setIsOpen(false)}
           title={<FormattedMessage id="connectorBuilder.testingValuesMenuTitle" />}
         >
           <ModalBody>

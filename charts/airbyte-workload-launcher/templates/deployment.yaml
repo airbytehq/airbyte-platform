@@ -15,6 +15,8 @@ spec:
       {{- if .Values.extraSelectorLabels }}
       {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
       {{- end }}
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:

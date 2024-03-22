@@ -21,7 +21,7 @@ import { AddUserModal } from "packages/cloud/views/workspaces/WorkspaceSettingsV
 import { FirebaseInviteUserButton } from "packages/cloud/views/workspaces/WorkspaceSettingsView/components/FirebaseInviteUserButton";
 
 import { AddUserControl } from "./components/AddUserControl";
-import { unifyWorkspaceUserData, UnifiedWorkspaceUserModel } from "./components/useGetAccessManagementData";
+import { UnifiedWorkspaceUserModel, unifyWorkspaceUserData } from "./components/useGetAccessManagementData";
 import styles from "./WorkspaceAccessManagementSection.module.scss";
 import { WorkspaceUsersTable } from "./WorkspaceUsersTable";
 
@@ -32,7 +32,7 @@ const WorkspaceAccessManagementSection: React.FC = () => {
   const organization = useCurrentOrganizationInfo();
   const canViewOrgMembers = useIntent("ListOrganizationMembers", { organizationId: organization?.organizationId });
   const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId: workspace.workspaceId });
-  const { openModal, closeModal } = useModalService();
+  const { openModal } = useModalService();
 
   const usersWithAccess = useListWorkspaceAccessUsers(workspace.workspaceId).usersWithAccess;
 
@@ -53,9 +53,9 @@ const WorkspaceAccessManagementSection: React.FC = () => {
   const invitationSystemv2 = useExperiment("settings.invitationSystemv2", false);
 
   const onOpenInviteUsersModal = () =>
-    openModal({
+    openModal<void>({
       title: formatMessage({ id: "userInvitations.create.modal.title" }, { workspace: workspace.name }),
-      content: () => <AddUserModal closeModal={closeModal} />,
+      content: ({ onComplete }) => <AddUserModal onSubmit={onComplete} />,
       size: "md",
     });
 

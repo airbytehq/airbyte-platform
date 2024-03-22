@@ -29,9 +29,11 @@ export const InviteUsersHint: React.FC<InviteUsersHintProps> = ({ connectorType 
   }
 
   const onOpenInviteUsersModal = () =>
-    openModal({
+    openModal<void>({
       title: formatMessage({ id: "modals.addUser.title" }),
-      content: () => <InviteUsersModal invitedFrom={connectorType} />,
+      content: ({ onComplete, onCancel }) => (
+        <InviteUsersModal invitedFrom={connectorType} onSubmit={onComplete} onCancel={onCancel} />
+      ),
       size: "md",
     });
 

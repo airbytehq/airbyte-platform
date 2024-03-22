@@ -157,7 +157,7 @@ describe("catalog diff modal", () => {
           <CatalogDiffModal
             catalogDiff={mockCatalogDiff}
             catalog={mockCatalog}
-            onClose={() => {
+            onComplete={() => {
               return null;
             }}
           />
@@ -206,7 +206,7 @@ describe("catalog diff modal", () => {
           <CatalogDiffModal
             catalogDiff={mockCatalogDiff}
             catalog={mockCatalog}
-            onClose={() => {
+            onComplete={() => {
               return null;
             }}
           />
@@ -227,7 +227,7 @@ describe("catalog diff modal", () => {
           <CatalogDiffModal
             catalogDiff={mockCatalogDiff}
             catalog={mockCatalog}
-            onClose={() => {
+            onComplete={() => {
               return null;
             }}
           />
@@ -248,7 +248,7 @@ describe("catalog diff modal", () => {
           <CatalogDiffModal
             catalogDiff={mockCatalogDiff}
             catalog={mockCatalog}
-            onClose={() => {
+            onComplete={() => {
               return null;
             }}
           />

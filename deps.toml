@@ -1,5 +1,5 @@
 [versions]
-airbyte-protocol = "0.5.1"
+airbyte-protocol = "0.8.0"
 bouncycastle = "1.70"
 commons_io = "2.7"
 connectors-testcontainers = "1.15.3"
@@ -162,8 +162,8 @@ quartz-scheduler = { module = "org.quartz-scheduler:quartz", version = "2.3.2" }
 reactor-core = { module = "io.projectreactor:reactor-core", version.ref = "reactor" }
 reactor-kotlin-extensions = { module = "io.projectreactor.kotlin:reactor-kotlin-extensions", version = "1.2.2" }
 reactor-test = { module = "io.projectreactor:reactor-test", version.ref = "reactor" }
-s3 = { module = "software.amazon.awssdk:s3", version = "2.16.84" }
-sts = { module = "software.amazon.awssdk:sts", version = "2.20.162" }
+s3 = { module = "software.amazon.awssdk:s3", version = "2.23.17" }
+sts = { module = "software.amazon.awssdk:sts", version = "2.23.17" }
 segment-java-analytics = { module = "com.segment.analytics.java:analytics", version.ref = "segment" }
 sendgrid-java = { module = "com.sendgrid:sendgrid-java", version = "4.0.1" }
 sentry-java = { module = "io.sentry:sentry", version.ref = "sentry" }

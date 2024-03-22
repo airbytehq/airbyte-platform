@@ -17,10 +17,10 @@ import { useModalService } from "hooks/services/Modal";
 
 import styles from "./StreamsConfigTableHeader.module.scss";
 import { FormConnectionFormValues } from "../../ConnectionForm/formConfig";
-import { DestinationNamespaceModal, DestinationNamespaceFormValues } from "../../DestinationNamespaceModal";
+import { DestinationNamespaceFormValues, DestinationNamespaceModal } from "../../DestinationNamespaceModal";
 import {
-  DestinationStreamNamesModal,
   DestinationStreamNamesFormValues,
+  DestinationStreamNamesModal,
   StreamNameDefinitionValueType,
 } from "../../DestinationStreamNamesModal";
 import { CellText, CellTextProps } from "../CellText";
@@ -49,7 +49,7 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
   prefix,
 }) => {
   const { mode } = useConnectionFormService();
-  const { openModal, closeModal } = useModalService();
+  const { openModal } = useModalService();
   const { setValue } = useFormContext<FormConnectionFormValues>();
 
   const destinationNamespaceChange = (value: DestinationNamespaceFormValues) => {
@@ -108,17 +108,20 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
           variant="clear"
           disabled={mode === "readonly"}
           onClick={() =>
-            openModal({
+            openModal<void>({
               size: "lg",
               title: <FormattedMessage id="connectionForm.modal.destinationNamespace.title" />,
-              content: () => (
+              content: ({ onComplete, onCancel }) => (
                 <DestinationNamespaceModal
                   initialValues={{
                     namespaceDefinition,
                     namespaceFormat,
                   }}
-                  onCloseModal={closeModal}
-                  onSubmit={destinationNamespaceChange}
+                  onCancel={onCancel}
+                  onSubmit={async (values) => {
+                    destinationNamespaceChange(values);
+                    onComplete();
+                  }}
                 />
               ),
             })
@@ -134,16 +137,19 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
           variant="clear"
           disabled={mode === "readonly"}
           onClick={() =>
-            openModal({
+            openModal<void>({
               size: "sm",
               title: <FormattedMessage id="connectionForm.modal.destinationStreamNames.title" />,
-              content: () => (
+              content: ({ onComplete, onCancel }) => (
                 <DestinationStreamNamesModal
                   initialValues={{
                     prefix,
                   }}
-                  onCloseModal={closeModal}
-                  onSubmit={destinationStreamNameChange}
+                  onCancel={onCancel}
+                  onSubmit={async (values) => {
+                    destinationStreamNameChange(values);
+                    onComplete();
+                  }}
                 />
               ),
             })

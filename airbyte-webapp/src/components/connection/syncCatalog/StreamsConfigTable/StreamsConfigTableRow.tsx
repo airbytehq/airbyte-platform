@@ -53,7 +53,14 @@ const StreamsConfigTableRowInner: React.FC<StreamsConfigTableRowInnerProps & { c
   configErrors,
   className,
 }) => {
-  const { primaryKey, cursorField, syncMode, destinationSyncMode, selectedFields } = stream.config ?? {};
+  const {
+    primaryKey,
+    cursorField,
+    syncMode,
+    destinationSyncMode,
+    selectedFields,
+    selected: isStreamSelectedForSync,
+  } = stream.config ?? {};
 
   const pathDisplayName = (path: Path): string => path.join(".");
 
@@ -173,7 +180,7 @@ const StreamsConfigTableRowInner: React.FC<StreamsConfigTableRowInnerProps & { c
       <CellText size="fixed" className={styles.syncCell} data-noexpand>
         <Switch
           size="sm"
-          checked={stream.config?.selected} // stream sync enabled or disabled
+          checked={isStreamSelectedForSync}
           onChange={onSelectStream}
           disabled={disabled}
           data-testid="selected-switch"
@@ -189,16 +196,18 @@ const StreamsConfigTableRowInner: React.FC<StreamsConfigTableRowInnerProps & { c
         <TextWithOverflowTooltip size="md">{destName}</TextWithOverflowTooltip>
       </CellText>
       <CellText className={styles.syncModeCell}>
-        <SyncModeSelect
-          options={availableSyncModes}
-          onChange={onSelectSyncMode}
-          value={syncSchema}
-          variant={pillButtonVariant}
-          disabled={disabled}
-        />
+        {isStreamSelectedForSync && (
+          <SyncModeSelect
+            options={availableSyncModes}
+            onChange={onSelectSyncMode}
+            value={syncSchema}
+            variant={pillButtonVariant}
+            disabled={disabled}
+          />
+        )}
       </CellText>
       <CellText>
-        {(cursorType || pkType) && (
+        {isStreamSelectedForSync && (cursorType || pkType) && (
           <FlexContainer direction="column" gap="xs">
             {cursorType && (
               <FlexContainer direction="row" gap="xs" alignItems="baseline" data-testid="cursor-field-cell">
@@ -234,11 +243,13 @@ const StreamsConfigTableRowInner: React.FC<StreamsConfigTableRowInnerProps & { c
         )}
       </CellText>
       <CellText size="fixed" className={styles.fieldsCell}>
-        <FieldSelectionStatus
-          selectedFieldCount={selectedFieldCount}
-          totalFieldCount={fieldCount}
-          variant={pillButtonVariant as FieldSelectionStatusVariant}
-        />
+        {isStreamSelectedForSync && (
+          <FieldSelectionStatus
+            selectedFieldCount={selectedFieldCount}
+            totalFieldCount={fieldCount}
+            variant={pillButtonVariant as FieldSelectionStatusVariant}
+          />
+        )}
       </CellText>
     </FlexContainer>
   );

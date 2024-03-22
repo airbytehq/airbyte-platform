@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
@@ -9,38 +9,34 @@ import { Icon } from "components/ui/Icon";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCreateDestinationDefinition, useCreateSourceDefinition } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
+import { useModalService } from "hooks/services/Modal";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { DestinationPaths, RoutePaths, SourcePaths } from "pages/routePaths";
 
-import CreateConnectorModal from "./CreateConnectorModal";
+import { AddCustomDockerImageConnectorModal } from "./AddCustomDockerImageConnectorModal";
 
-interface IProps {
+interface AddNewConnectorButtonProps {
   type: "sources" | "destinations";
 }
 
-interface ICreateProps {
+interface ConnectorDefinitionProps {
   name: string;
   documentationUrl: string;
   dockerImageTag: string;
   dockerRepository: string;
 }
 
-const CreateConnector: React.FC<IProps> = ({ type }) => {
+export const AddNewConnectorButton: React.FC<AddNewConnectorButtonProps> = ({ type }) => {
+  const { formatMessage } = useIntl();
+  const allowUploadCustomDockerImage = useFeature(FeatureItem.AllowUploadCustomImage);
   const navigate = useNavigate();
   const workspaceId = useCurrentWorkspaceId();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const onChangeModalState = () => {
-    setIsModalOpen(!isModalOpen);
-  };
-  const allowUploadCustomImage = useFeature(FeatureItem.AllowUploadCustomImage);
-
-  const { formatMessage } = useIntl();
+  const { openModal } = useModalService();
 
   const { mutateAsync: createSourceDefinition } = useCreateSourceDefinition();
-
   const { mutateAsync: createDestinationDefinition } = useCreateDestinationDefinition();
 
-  const onSubmitSource = async (sourceDefinition: ICreateProps) => {
+  const onSubmitSource = async (sourceDefinition: ConnectorDefinitionProps) => {
     const result = await createSourceDefinition(sourceDefinition);
 
     navigate({
@@ -48,7 +44,7 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
     });
   };
 
-  const onSubmitDestination = async (destinationDefinition: ICreateProps) => {
+  const onSubmitDestination = async (destinationDefinition: ConnectorDefinitionProps) => {
     const result = await createDestinationDefinition(destinationDefinition);
 
     navigate({
@@ -56,17 +52,33 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
     });
   };
 
-  const onSubmit = (values: ICreateProps) =>
+  const onSubmit = (values: ConnectorDefinitionProps) =>
     type === "sources" ? onSubmitSource(values) : onSubmitDestination(values);
 
-  if (type === "destinations" && !allowUploadCustomImage) {
+  const openAddCustomDockerImageConnectorModal = () =>
+    openModal<void>({
+      title: formatMessage({ id: "admin.addNewConnector" }),
+      content: ({ onComplete, onCancel }) => (
+        <AddCustomDockerImageConnectorModal
+          onCancel={onCancel}
+          onSubmit={async (values: ConnectorDefinitionProps) => {
+            await onSubmit(values);
+            onComplete();
+          }}
+        />
+      ),
+    });
+
+  if (type === "destinations" && !allowUploadCustomDockerImage) {
     return null;
   }
 
   return (
     <>
-      {type === "destinations" && allowUploadCustomImage ? (
-        <NewConnectorButton onClick={onChangeModalState} />
+      {type === "destinations" && allowUploadCustomDockerImage ? (
+        <Button size="xs" icon="plus" onClick={openAddCustomDockerImageConnectorModal}>
+          <FormattedMessage id="admin.newConnector" />
+        </Button>
       ) : (
         <DropdownMenu
           placement="bottom-end"
@@ -78,7 +90,7 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
               displayName: formatMessage({ id: "admin.newConnector.build" }),
               internal: true,
             },
-            ...(allowUploadCustomImage
+            ...(allowUploadCustomDockerImage
               ? [
                   {
                     as: "button" as const,
@@ -89,28 +101,17 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
                 ]
               : []),
           ]}
-          onChange={(data: DropdownMenuOptionType) => data.value === "docker" && onChangeModalState()}
+          onChange={(data: DropdownMenuOptionType) =>
+            data.value === "docker" && openAddCustomDockerImageConnectorModal()
+          }
         >
-          {() => <NewConnectorButton />}
+          {() => (
+            <Button size="xs" icon="plus">
+              <FormattedMessage id="admin.newConnector" />
+            </Button>
+          )}
         </DropdownMenu>
       )}
-
-      {isModalOpen && <CreateConnectorModal onClose={onChangeModalState} onSubmit={onSubmit} />}
     </>
   );
 };
-
-interface NewConnectorButtonProps {
-  onClick?: () => void;
-}
-
-const NewConnectorButton = React.forwardRef<HTMLButtonElement, NewConnectorButtonProps>(({ onClick }, ref) => {
-  return (
-    <Button size="xs" icon="plus" onClick={onClick} ref={ref}>
-      <FormattedMessage id="admin.newConnector" />
-    </Button>
-  );
-});
-NewConnectorButton.displayName = "NewConnectorButton";
-
-export default CreateConnector;
