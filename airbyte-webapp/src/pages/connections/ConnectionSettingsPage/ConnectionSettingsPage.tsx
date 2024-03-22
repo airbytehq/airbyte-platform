@@ -257,7 +257,8 @@ const SimplifiedConnectionSettingsPage = () => {
       >
         <SimplifiedConnectionsSettingsCard
           title={formatMessage({ id: "sources.settings" })}
-          sourceName={connection.source.name}
+          source={connection.source}
+          destination={connection.destination}
           isCreating={false}
           isDeprecated={isDeprecated}
         />

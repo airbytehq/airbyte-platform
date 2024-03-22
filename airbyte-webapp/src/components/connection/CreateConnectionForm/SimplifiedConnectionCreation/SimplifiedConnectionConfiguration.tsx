@@ -82,6 +82,7 @@ const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
   const { trackFormChange } = useFormChangeTrackerService();
 
   const source = useGetSourceFromSearchParams();
+  const destination = useGetDestinationFromSearchParams();
 
   // if the user is navigating from the first step the form may be dirty
   useMount(() => {
@@ -91,7 +92,8 @@ const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
   return (
     <SimplifiedConnectionsSettingsCard
       title={formatMessage({ id: "connectionForm.configureConnection" })}
-      sourceName={source.name}
+      source={source}
+      destination={destination}
       isCreating
     />
   );
@@ -99,8 +101,8 @@ const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
 
 const FirstNav: React.FC = () => {
   const createLink = useCurrentWorkspaceLink();
-  const source = useGetSourceFromSearchParams();
   const destination = useGetDestinationFromSearchParams();
+  const source = useGetSourceFromSearchParams();
 
   const { isValid, errors } = useFormState<FormConnectionFormValues>();
   const { trigger } = useFormContext<FormConnectionFormValues>();
