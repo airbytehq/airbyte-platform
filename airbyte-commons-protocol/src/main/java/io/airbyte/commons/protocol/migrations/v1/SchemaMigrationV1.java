@@ -286,12 +286,6 @@ public class SchemaMigrationV1 {
       case "string" -> {
         if (schemaNode.hasNonNull("format")) {
           yield getFormat(schemaNode);
-        } else if (schemaNode.hasNonNull("contentEncoding")) {
-          if ("base64".equals(schemaNode.get("contentEncoding").asText())) {
-            yield JsonSchemaReferenceTypes.BINARY_DATA_REFERENCE;
-          } else {
-            yield JsonSchemaReferenceTypes.STRING_REFERENCE;
-          }
         } else {
           yield JsonSchemaReferenceTypes.STRING_REFERENCE;
         }
