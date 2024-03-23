@@ -1622,7 +1622,7 @@ keycloak:
 
   auth:
     adminUsername: airbyteAdmin
-    adminPassword: keycloak123
+    adminPassword: (randAlphaNum 24 | nospace)
 
   containerSecurityContext:
     allowPrivilegeEscalation: false 
