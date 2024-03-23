@@ -50,6 +50,8 @@ spec:
           value: "{{ .Values.timeToDeletePods.succeeded }}"
         - name: UNSUCCESSFUL_TTL_MINUTES
           value: "{{ .Values.timeToDeletePods.unsuccessful }}"
+        - name: ERROR_TTL_MINUTES
+          value: "{{ .Values.timeToDeletePods.error }}"
         {{- if .Values.containerSecurityContext }}
         securityContext: {{- toYaml .Values.containerSecurityContext | nindent 10 }}
         {{- end }}
