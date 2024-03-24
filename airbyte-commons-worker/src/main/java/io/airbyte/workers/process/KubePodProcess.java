@@ -188,7 +188,11 @@ public class KubePodProcess implements KubePod {
     if (pod == null) {
       throw new RuntimeException(prependPodInfo("Error: unable to find pod!", podNamespace, podName));
     }
-    return pod.getStatus().getPodIP();
+    if (pod.getStatus().getPodIP().contains(":")) {
+      return "[" + pod.getStatus().getPodIP() + "]";
+    } else {
+      return pod.getStatus().getPodIP();
+    }
   }
 
   private static Container getInit(final boolean usesStdin,
@@ -517,7 +521,7 @@ public class KubePodProcess implements KubePod {
       final Container remoteStdin = new ContainerBuilder()
           .withName("remote-stdin")
           .withImage(socatImage)
-          .withCommand("sh", "-c", "socat -d -d TCP-L:9001 STDOUT > " + STDIN_PIPE_FILE)
+          .withCommand("sh", "-c", "socat -d -d TCP6-L:9001 STDOUT > " + STDIN_PIPE_FILE)
           .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
           .withResources(getResourceRequirementsBuilder(podResourceRequirements.stdIn()).build())
           .withImagePullPolicy(sidecarImagePullPolicy)
@@ -526,7 +530,7 @@ public class KubePodProcess implements KubePod {
       final Container relayStdout = new ContainerBuilder()
           .withName("relay-stdout")
           .withImage(socatImage)
-          .withCommand("sh", "-c", String.format("cat %s | socat -d -d -t 60 - TCP:%s:%s", STDOUT_PIPE_FILE, processRunnerHost, stdoutLocalPort))
+          .withCommand("sh", "-c", String.format("cat %s | socat -d -d -t 60 - TCP6:%s:%s", STDOUT_PIPE_FILE, processRunnerHost, stdoutLocalPort))
           .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
           .withResources(getResourceRequirementsBuilder(podResourceRequirements.stdOut()).build())
           .withImagePullPolicy(sidecarImagePullPolicy)
@@ -535,7 +539,7 @@ public class KubePodProcess implements KubePod {
       final Container relayStderr = new ContainerBuilder()
           .withName("relay-stderr")
           .withImage(socatImage)
-          .withCommand("sh", "-c", String.format("cat %s | socat -d -d -t 60 - TCP:%s:%s", STDERR_PIPE_FILE, processRunnerHost, stderrLocalPort))
+          .withCommand("sh", "-c", String.format("cat %s | socat -d -d -t 60 - TCP6:%s:%s", STDERR_PIPE_FILE, processRunnerHost, stderrLocalPort))
           .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
           .withResources(getResourceRequirementsBuilder(podResourceRequirements.stdErr()).build())
           .withImagePullPolicy(sidecarImagePullPolicy)
@@ -547,9 +551,9 @@ public class KubePodProcess implements KubePod {
       if (runSocatInMainContainer) {
         socatContainers = List.of();
 
-        final var socatStdinCmd = usesStdin ? String.format("socat -d -d TCP-L:9001 STDOUT > %s &", STDIN_PIPE_FILE) : "";
-        final var socatStdoutCmd = String.format("(cat %s | socat -d -d -t 60 - TCP:%s:%s &)", STDOUT_PIPE_FILE, processRunnerHost, stdoutLocalPort);
-        final var socatStderrCmd = String.format("(cat %s | socat -d -d -t 60 - TCP:%s:%s &)", STDERR_PIPE_FILE, processRunnerHost, stderrLocalPort);
+        final var socatStdinCmd = usesStdin ? String.format("socat -d -d TCP6-L:9001 STDOUT > %s &", STDIN_PIPE_FILE) : "";
+        final var socatStdoutCmd = String.format("(cat %s | socat -d -d -t 60 - TCP6:%s:%s &)", STDOUT_PIPE_FILE, processRunnerHost, stdoutLocalPort);
+        final var socatStderrCmd = String.format("(cat %s | socat -d -d -t 60 - TCP6:%s:%s &)", STDERR_PIPE_FILE, processRunnerHost, stderrLocalPort);
 
         socatCommands = String.join(System.lineSeparator(), socatStdinCmd, socatStdoutCmd, socatStderrCmd);
 
