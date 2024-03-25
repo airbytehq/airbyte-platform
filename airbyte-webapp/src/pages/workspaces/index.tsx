@@ -1,3 +1,1 @@
-import WorkspacesPage from "./WorkspacesPage";
-
-export default WorkspacesPage;
+export { WorkspacesPage as default } from "./WorkspacesPage";
