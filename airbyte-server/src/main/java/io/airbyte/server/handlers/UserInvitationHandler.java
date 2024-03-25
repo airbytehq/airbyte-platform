@@ -23,6 +23,7 @@ import io.airbyte.config.UserInvitation;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.InvitationDuplicateException;
 import io.airbyte.data.services.InvitationStatusUnexpectedException;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.UserInvitationService;
@@ -113,8 +114,12 @@ public class UserInvitationHandler {
       return new UserInvitationCreateResponse().directlyAdded(true);
     }
 
-    final UserInvitation invitation = createUserInvitationForNewOrgEmail(req, currentUser);
-    return new UserInvitationCreateResponse().directlyAdded(false).inviteCode(invitation.getInviteCode());
+    try {
+      final UserInvitation invitation = createUserInvitationForNewOrgEmail(req, currentUser);
+      return new UserInvitationCreateResponse().directlyAdded(false).inviteCode(invitation.getInviteCode());
+    } catch (final InvitationDuplicateException e) {
+      throw new ConflictException(e.getMessage());
+    }
   }
 
   /**
@@ -206,7 +211,8 @@ public class UserInvitationHandler {
    * this method only handles the path where the invited email address is not already associated with
    * a User inside the relevant organization.
    */
-  private UserInvitation createUserInvitationForNewOrgEmail(final UserInvitationCreateRequestBody req, final User currentUser) {
+  private UserInvitation createUserInvitationForNewOrgEmail(final UserInvitationCreateRequestBody req, final User currentUser)
+      throws InvitationDuplicateException {
     final UserInvitation model = mapper.toDomain(req);
 
     model.setInviterUserId(currentUser.getUserId());
@@ -268,8 +274,15 @@ public class UserInvitationHandler {
     }
   }
 
-  // TODO implement `decline`
+  public UserInvitationRead cancel(final InviteCodeRequestBody req) {
+    try {
+      final UserInvitation canceled = service.cancelUserInvitation(req.getInviteCode());
+      return mapper.toApi(canceled);
+    } catch (final InvitationStatusUnexpectedException e) {
+      throw new ConflictException(e.getMessage());
+    }
+  }
 
-  // TODO implement `cancel`
+  // TODO implement `decline`
 
 }

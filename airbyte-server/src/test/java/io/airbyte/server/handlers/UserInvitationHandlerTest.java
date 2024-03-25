@@ -39,6 +39,7 @@ import io.airbyte.config.UserInvitation;
 import io.airbyte.config.UserPermission;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.UserPersistence;
+import io.airbyte.data.services.InvitationDuplicateException;
 import io.airbyte.data.services.InvitationStatusUnexpectedException;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.UserInvitationService;
@@ -114,15 +115,20 @@ public class UserInvitationHandlerTest {
           .withScopeId(WORKSPACE_ID)
           .withPermissionType(WORKSPACE_ADMIN);
 
+      private void setupSendInvitationMocks() throws Exception {
+        when(webUrlHelper.getBaseUrl()).thenReturn(WEBAPP_BASE_URL);
+        when(service.createUserInvitation(USER_INVITATION)).thenReturn(USER_INVITATION);
+      }
+
       @BeforeEach
       void setup() {
-        when(webUrlHelper.getBaseUrl()).thenReturn(WEBAPP_BASE_URL);
         when(mapper.toDomain(USER_INVITATION_CREATE_REQUEST_BODY)).thenReturn(USER_INVITATION);
-        when(service.createUserInvitation(USER_INVITATION)).thenReturn(USER_INVITATION);
       }
 
       @Test
       void testNewEmailWorkspaceInOrg() throws Exception {
+        setupSendInvitationMocks();
+
         // the workspace is in an org.
         when(workspaceService.getOrganizationIdFromWorkspaceId(WORKSPACE_ID)).thenReturn(Optional.of(ORG_ID));
 
@@ -138,6 +144,8 @@ public class UserInvitationHandlerTest {
 
       @Test
       void testWorkspaceNotInAnyOrg() throws Exception {
+        setupSendInvitationMocks();
+
         // the workspace is not in any org.
         when(workspaceService.getOrganizationIdFromWorkspaceId(WORKSPACE_ID)).thenReturn(Optional.empty());
 
@@ -150,6 +158,8 @@ public class UserInvitationHandlerTest {
 
       @Test
       void testExistingEmailButNotInWorkspaceOrg() throws Exception {
+        setupSendInvitationMocks();
+
         // the workspace is in an org.
         when(workspaceService.getOrganizationIdFromWorkspaceId(WORKSPACE_ID)).thenReturn(Optional.of(ORG_ID));
 
@@ -166,6 +176,13 @@ public class UserInvitationHandlerTest {
 
         // make sure correct invite was created, email was sent, and result is correct.
         verifyInvitationCreatedAndEmailSentResult(result);
+      }
+
+      @Test
+      void testThrowsConflictExceptionOnDuplicateInvitation() throws Exception {
+        when(service.createUserInvitation(USER_INVITATION)).thenThrow(new InvitationDuplicateException("duplicate"));
+
+        assertThrows(ConflictException.class, () -> handler.createInvitationOrPermission(USER_INVITATION_CREATE_REQUEST_BODY, CURRENT_USER));
       }
 
       private void verifyInvitationCreatedAndEmailSentResult(final UserInvitationCreateResponse result) throws Exception {
@@ -354,6 +371,40 @@ public class UserInvitationHandlerTest {
           .when(service).acceptUserInvitation(INVITE_CODE, CURRENT_USER.getUserId());
 
       assertThrows(ConflictException.class, () -> handler.accept(INVITE_CODE_REQUEST_BODY, CURRENT_USER));
+    }
+
+  }
+
+  @Nested
+  class CancelInvitation {
+
+    @Test
+    void testCancelInvitationCallsService() throws Exception {
+      final String inviteCode = "invite-code";
+      final InviteCodeRequestBody req = new InviteCodeRequestBody().inviteCode(inviteCode);
+
+      final UserInvitation cancelledInvitation = new UserInvitation()
+          .withInviteCode(inviteCode)
+          .withInvitedEmail("invited@airbyte.io")
+          .withStatus(InvitationStatus.CANCELLED);
+
+      when(service.cancelUserInvitation(inviteCode)).thenReturn(cancelledInvitation);
+      when(mapper.toApi(cancelledInvitation)).thenReturn(mock(UserInvitationRead.class));
+
+      final UserInvitationRead result = handler.cancel(req);
+
+      verify(service, times(1)).cancelUserInvitation(inviteCode);
+      verifyNoMoreInteractions(service);
+    }
+
+    @Test
+    void testCancelInvitationThrowsConflictExceptionOnUnexpectedStatus() throws Exception {
+      final String inviteCode = "invite-code";
+      final InviteCodeRequestBody req = new InviteCodeRequestBody().inviteCode(inviteCode);
+
+      when(service.cancelUserInvitation(inviteCode)).thenThrow(new InvitationStatusUnexpectedException("unexpected status"));
+
+      assertThrows(ConflictException.class, () -> handler.cancel(req));
     }
 
   }

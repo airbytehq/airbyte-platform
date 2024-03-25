@@ -7,10 +7,12 @@ import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.PermissionRepository
 import io.airbyte.data.repositories.UserInvitationRepository
 import io.airbyte.data.repositories.entities.Permission
+import io.airbyte.data.services.InvitationDuplicateException
 import io.airbyte.data.services.InvitationStatusUnexpectedException
 import io.airbyte.data.services.UserInvitationService
 import io.airbyte.data.services.impls.data.mappers.EntityInvitationStatus
 import io.airbyte.data.services.impls.data.mappers.EntityScopeType
+import io.airbyte.data.services.impls.data.mappers.EntityUserInvitation
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
 import io.micronaut.transaction.annotation.Transactional
@@ -41,6 +43,21 @@ open class UserInvitationServiceDataImpl(
   }
 
   override fun createUserInvitation(invitation: UserInvitation): UserInvitation {
+    // throw an exception if a pending invitation already exists for the same email and scope
+    val existingInvitations =
+      userInvitationRepository.findByStatusAndScopeTypeAndScopeIdAndInvitedEmail(
+        EntityInvitationStatus.pending,
+        invitation.scopeType.toEntity(),
+        invitation.scopeId,
+        invitation.invitedEmail,
+      )
+    if (existingInvitations.isNotEmpty()) {
+      throw InvitationDuplicateException(
+        "A pending invitation already exists for InvitedEmail: ${invitation.invitedEmail}, ScopeType: ${invitation.scopeType} " +
+          "and ScopeId: ${invitation.scopeId}",
+      )
+    }
+
     return userInvitationRepository.save(invitation.toEntity()).toConfigModel()
   }
 
@@ -63,12 +80,7 @@ open class UserInvitationServiceDataImpl(
 
     // throw an exception if the invitation is not pending. Note that this will also
     // catch the case where the invitation is expired.
-    if (invitation.status != EntityInvitationStatus.pending) {
-      throw InvitationStatusUnexpectedException(
-        "Expected invitation for ScopeType: ${invitation.scopeType} and ScopeId: ${invitation.scopeId} to " +
-          "be PENDING, but instead it had Status: ${invitation.status}",
-      )
-    }
+    throwIfNotPending(invitation)
 
     // create a new permission record according to the invitation
     Permission(
@@ -98,6 +110,25 @@ open class UserInvitationServiceDataImpl(
   }
 
   override fun cancelUserInvitation(inviteCode: String): UserInvitation {
-    TODO("Not yet implemented")
+    val invitation =
+      userInvitationRepository.findByInviteCode(inviteCode).orElseThrow {
+        ConfigNotFoundException(ConfigSchema.USER_INVITATION, inviteCode)
+      }
+
+    throwIfNotPending(invitation)
+
+    invitation.status = EntityInvitationStatus.cancelled
+    val updatedInvitation = userInvitationRepository.update(invitation)
+
+    return updatedInvitation.toConfigModel()
+  }
+
+  private fun throwIfNotPending(invitation: EntityUserInvitation) {
+    if (invitation.status != EntityInvitationStatus.pending) {
+      throw InvitationStatusUnexpectedException(
+        "Expected invitation for ScopeType: ${invitation.scopeType} and ScopeId: ${invitation.scopeId} to " +
+          "be PENDING, but instead it had Status: ${invitation.status}",
+      )
+    }
   }
 }

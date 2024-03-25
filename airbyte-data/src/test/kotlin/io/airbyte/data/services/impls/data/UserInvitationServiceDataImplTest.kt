@@ -6,6 +6,7 @@ import io.airbyte.data.repositories.PermissionRepository
 import io.airbyte.data.repositories.UserInvitationRepository
 import io.airbyte.data.repositories.entities.Permission
 import io.airbyte.data.repositories.entities.UserInvitation
+import io.airbyte.data.services.InvitationDuplicateException
 import io.airbyte.data.services.InvitationStatusUnexpectedException
 import io.airbyte.data.services.impls.data.mappers.EntityInvitationStatus
 import io.airbyte.data.services.impls.data.mappers.EntityPermissionType
@@ -72,12 +73,22 @@ internal class UserInvitationServiceDataImplTest {
 
   @Test
   fun `test create user invitation`() {
+    every { userInvitationRepository.findByStatusAndScopeTypeAndScopeIdAndInvitedEmail(any(), any(), any(), any()) } returns emptyList()
     every { userInvitationRepository.save(invitation) } returns invitation
 
     val result = userInvitationService.createUserInvitation(invitation.toConfigModel())
     assert(result == invitation.toConfigModel())
 
     verify { userInvitationRepository.save(invitation) }
+  }
+
+  @Test
+  fun `test create duplicate user invitation throws`() {
+    every { userInvitationRepository.findByStatusAndScopeTypeAndScopeIdAndInvitedEmail(any(), any(), any(), any()) } returns listOf(invitation)
+
+    assertThrows<InvitationDuplicateException> { userInvitationService.createUserInvitation(invitation.toConfigModel()) }
+
+    verify(exactly = 0) { userInvitationRepository.save(invitation) }
   }
 
   @Test
@@ -173,5 +184,16 @@ internal class UserInvitationServiceDataImplTest {
 
     assert(workspaceResult == mockWorkspaceInvitations.map { it.toConfigModel() })
     assert(organizationResult == mockOrganizationInvitations.map { it.toConfigModel() })
+  }
+
+  @Test
+  fun `test cancel invitation`() {
+    val expectedUpdatedInvitation = invitation.copy(status = EntityInvitationStatus.cancelled)
+    every { userInvitationRepository.findByInviteCode(invitation.inviteCode) } returns Optional.of(invitation)
+    every { userInvitationRepository.update(expectedUpdatedInvitation) } returns expectedUpdatedInvitation
+
+    userInvitationService.cancelUserInvitation(invitation.inviteCode)
+
+    verify { userInvitationRepository.update(expectedUpdatedInvitation) }
   }
 }
