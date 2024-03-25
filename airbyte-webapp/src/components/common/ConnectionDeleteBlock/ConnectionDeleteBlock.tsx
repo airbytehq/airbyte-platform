@@ -6,30 +6,30 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
+import { useDeleteConnection } from "core/api";
+import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useDeleteModal } from "hooks/useDeleteModal";
 
-import styles from "./DeleteBlock.module.scss";
+import styles from "./ConnectionDeleteBlock.module.scss";
 
-interface DeleteBlockProps {
-  type: "source" | "destination" | "connection";
-  onDelete: () => Promise<unknown>;
-  modalAdditionalContent?: React.ReactNode;
-}
-
-export const DeleteBlock: React.FC<DeleteBlockProps> = ({ type, onDelete }) => {
+export const ConnectionDeleteBlock: React.FC = () => {
   const { mode } = useConnectionFormService();
-  const onDeleteButtonClick = useDeleteModal(type, onDelete);
+  const { connection } = useConnectionEditService();
+  const { mutateAsync: deleteConnection } = useDeleteConnection();
+  const onDelete = () => deleteConnection(connection);
+
+  const onDeleteButtonClick = useDeleteModal("connection", onDelete, undefined, connection.name);
 
   return (
     <Card>
       <FlexContainer direction="row" justifyContent="space-between" alignItems="center" className={styles.text}>
         <FlexContainer direction="column">
           <Text size="lg">
-            <FormattedMessage id={`tables.${type}Delete.title`} />
+            <FormattedMessage id="tables.connectionDelete.title" />
           </Text>
           <Text size="xs" color="grey">
-            <FormattedMessage id={`tables.${type}DataDelete`} />
+            <FormattedMessage id="tables.connectionDataDelete" />
           </Text>
         </FlexContainer>
         <Button
@@ -38,7 +38,7 @@ export const DeleteBlock: React.FC<DeleteBlockProps> = ({ type, onDelete }) => {
           data-id="open-delete-modal"
           disabled={mode === "readonly"}
         >
-          <FormattedMessage id={`tables.${type}Delete`} />
+          <FormattedMessage id="tables.connectionDelete" />
         </Button>
       </FlexContainer>
     </Card>

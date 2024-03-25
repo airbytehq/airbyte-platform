@@ -1498,6 +1498,7 @@
   "auth.authError": "An error occurred during authentication: {errorMessage}",
 
   "modal.closeButtonLabel": "Close dialog",
+  "modal.confirmationTextDescription": "Type {confirmationText} below to confirm this action.",
 
   "copyButton.title": "Copy",
 
