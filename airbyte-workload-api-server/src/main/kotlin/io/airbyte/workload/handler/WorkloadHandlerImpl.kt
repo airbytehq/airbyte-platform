@@ -76,16 +76,8 @@ class WorkloadHandlerImpl(
       throw ConflictException("Workload with id: $workloadId already exists")
     }
 
-    // Evaluating feature flag with UUID_ZERO because the client requires a context. This feature flag is intended to be used
-    // as a global kill switch for validation.
-    if (mutexKey != null && featureFlagClient.boolVariation(EnforceMutexKeyOnCreate, Connection(UUID_ZERO))) {
-      val activeWorkloadsWithMutexKey = workloadRepository.searchByMutexKeyAndStatusInList(mutexKey, statuses = ACTIVE_STATUSES)
-      if (activeWorkloadsWithMutexKey.isNotEmpty()) {
-        val workloadIds = activeWorkloadsWithMutexKey.joinToString(", ") { it.id }
-        throw ConflictException("Non-terminal Workload with mutexKey $mutexKey already exists ($workloadIds)")
-      }
-    }
-
+    // Create the workload and then check for mutexKey uniqueness.
+    // This will lead to a more deterministic concurrency resolution in the event of concurrent create calls.
     val domainWorkload =
       DomainWorkload(
         id = workloadId,
@@ -100,8 +92,27 @@ class WorkloadHandlerImpl(
         autoId = autoId,
         deadline = deadline,
       )
-
     workloadRepository.save(domainWorkload).toApi()
+
+    // Evaluating feature flag with UUID_ZERO because the client requires a context. This feature flag is intended to be used
+    // as a global kill switch for validation.
+    if (mutexKey != null && featureFlagClient.boolVariation(EnforceMutexKeyOnCreate, Connection(UUID_ZERO))) {
+      // Keep the most recent workload by creation date with mutexKey, fail the others.
+      workloadRepository
+        .searchByMutexKeyAndStatusInList(mutexKey, statuses = ACTIVE_STATUSES)
+        .sortedByDescending { it.createdAt }
+        .drop(1)
+        .forEach {
+          try {
+            logger.info { "${it.id} violates the $mutexKey uniqueness constraint, failing in favor of $workloadId before continuing." }
+            failWorkload(it.id, source = "workload-api", reason = "Superseded by $workloadId")
+          } catch (_: InvalidStatusTransitionException) {
+            // This edge case happens if the workload reached a terminal state through another path.
+            // This would be unusual but not actionable so we're logging a message rather than failing the call.
+            logger.info { "${it.id} was completed before being superseded by $workloadId" }
+          }
+        }
+    }
   }
 
   override fun claimWorkload(
