@@ -605,7 +605,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testReplicationRunnableDestinationFailureViaTraceMessage() throws Exception {
     final FailureReason failureReason = FailureHelper.destinationFailure(ERROR_TRACE_MESSAGE, Long.valueOf(JOB_ID), JOB_ATTEMPT);
-    when(messageTracker.errorTraceMessageFailure(Long.parseLong(JOB_ID), JOB_ATTEMPT)).thenReturn(failureReason);
+    when(messageTracker.errorTraceMessageFailure(Long.parseLong(JOB_ID), JOB_ATTEMPT)).thenReturn(List.of(failureReason));
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
 

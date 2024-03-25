@@ -5,7 +5,7 @@
 package io.airbyte.workers.internal.bookkeeping;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -18,6 +18,9 @@ import io.airbyte.protocol.models.Config;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -193,8 +196,12 @@ class AirbyteMessageTrackerTest {
     messageTracker.acceptFromDestination(dstMsg1);
     messageTracker.acceptFromDestination(dstMsg2);
 
-    final FailureReason failureReason = FailureHelper.sourceFailure(srcMsg1.getTrace(), Long.valueOf(123), 1);
-    assertEquals(messageTracker.errorTraceMessageFailure(123L, 1), failureReason);
+    List<FailureReason> failureReasons = new ArrayList<>();
+    failureReasons.addAll(
+        Stream.of(srcMsg1, srcMsg2).map(m -> FailureHelper.sourceFailure(m.getTrace(), Long.valueOf(123), 1)).toList());
+    failureReasons.addAll(
+        Stream.of(dstMsg1, dstMsg2).map(m -> FailureHelper.destinationFailure(m.getTrace(), Long.valueOf(123), 1)).toList());
+    assertEquals(messageTracker.errorTraceMessageFailure(123L, 1), failureReasons);
   }
 
   @Test
@@ -203,12 +210,12 @@ class AirbyteMessageTrackerTest {
     messageTracker.acceptFromDestination(destMessage);
 
     final FailureReason failureReason = FailureHelper.destinationFailure(destMessage.getTrace(), Long.valueOf(123), 1);
-    assertEquals(messageTracker.errorTraceMessageFailure(123L, 1), failureReason);
+    assertEquals(messageTracker.errorTraceMessageFailure(123L, 1), List.of(failureReason));
   }
 
   @Test
   void testErrorTraceMessageFailureWithNoTraceErrors() {
-    assertNull(messageTracker.errorTraceMessageFailure(123L, 1));
+    assertTrue(messageTracker.errorTraceMessageFailure(123L, 1).isEmpty());
   }
 
 }
