@@ -7,10 +7,9 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { ConnectionConfiguration } from "area/connector/types";
-import { useGetDestinationDefinitionSpecificationAsync, LogsRequestError } from "core/api";
+import { useGetDestinationDefinitionSpecificationAsync } from "core/api";
 import { DestinationDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector } from "core/domain/connector";
-import { FormError } from "core/utils/errorStatusMessage";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm";
 
@@ -24,7 +23,6 @@ export interface DestinationFormValues {
 interface DestinationFormProps {
   onSubmit: (values: DestinationFormValues) => Promise<void>;
   destinationDefinitions: DestinationDefinitionRead[];
-  error?: FormError | null;
   selectedDestinationDefinitionId?: string;
 }
 
@@ -39,7 +37,6 @@ const hasDestinationDefinitionId = (state: unknown): state is { destinationDefin
 export const DestinationForm: React.FC<DestinationFormProps> = ({
   onSubmit,
   destinationDefinitions,
-  error,
   selectedDestinationDefinitionId,
 }) => {
   const location = useLocation();
@@ -95,7 +92,6 @@ export const DestinationForm: React.FC<DestinationFormProps> = ({
       selectedConnectorDefinitionSpecification={destinationDefinitionSpecification}
       selectedConnectorDefinitionId={destinationDefinitionId}
       onSubmit={onSubmitForm}
-      jobInfo={LogsRequestError.extractJobInfo(error)}
       supportLevel={selectedDestinationDefinition?.supportLevel}
     />
   );
