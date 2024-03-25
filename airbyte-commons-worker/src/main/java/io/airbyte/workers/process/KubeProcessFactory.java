@@ -161,6 +161,9 @@ public class KubeProcessFactory implements ProcessFactory {
 
       final Context featureFlagContext = createFeatureFlagContext(connectionId, workspaceId, imageName);
 
+      final String registry = workerConfigs.getJobImageRegistry();
+      final String image = null == registry || imageName.startsWith(registry) ? imageName : registry + "/" + imageName;
+
       return new KubePodProcess(
           processRunnerHost,
           fabricClient,
@@ -170,7 +173,7 @@ public class KubeProcessFactory implements ProcessFactory {
           namespace,
           serviceAccount,
           schedulerName.isBlank() ? null : schedulerName,
-          imageName,
+          image,
           workerConfigs.getJobImagePullPolicy(),
           workerConfigs.getSidecarImagePullPolicy(),
           stdoutLocalPort,
