@@ -80,7 +80,7 @@ const OrganizationSettingsForm = ({ organizationId }: { organizationId: string }
         name="email"
         labelTooltip={formatMessage({ id: "settings.organizationSettings.email.description" })}
       />
-      {canUpdateOrganization && <FormSubmissionButtons justify="flex-start" submitKey="form.saveChanges" />}
+      {canUpdateOrganization && <FormSubmissionButtons noCancel justify="flex-start" submitKey="form.saveChanges" />}
     </Form>
   );
 };

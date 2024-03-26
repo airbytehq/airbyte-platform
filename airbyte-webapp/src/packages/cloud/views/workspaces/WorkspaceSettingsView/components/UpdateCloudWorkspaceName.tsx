@@ -75,7 +75,7 @@ export const UpdateCloudWorkspaceName: React.FC = () => {
           id: "settings.workspaceSettings.updateWorkspaceNameForm.name.placeholder",
         })}
       />
-      {canUpdateWorkspace && <FormSubmissionButtons justify="flex-start" submitKey="form.saveChanges" />}
+      {canUpdateWorkspace && <FormSubmissionButtons noCancel justify="flex-start" submitKey="form.saveChanges" />}
     </Form>
   );
 };

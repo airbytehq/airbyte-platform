@@ -2,8 +2,8 @@
 @use "scss/variables";
 
 .settingsNavigation {
-  min-width: 165px;
-  max-width: 200px;
+  width: 200px;
+  padding: variables.$spacing-xl;
 
   &__blockTitle {
     text-transform: uppercase;

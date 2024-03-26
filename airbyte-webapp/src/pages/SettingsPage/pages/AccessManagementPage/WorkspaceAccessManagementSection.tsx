@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
@@ -78,9 +79,9 @@ const WorkspaceAccessManagementSection: React.FC = () => {
   return (
     <FlexContainer direction="column" gap="md">
       <FlexContainer justifyContent="space-between" alignItems="baseline">
-        <Text size="lg">
+        <Heading as="h2" size="sm">
           <FormattedMessage id="settings.accessManagement.members" />
-        </Text>
+        </Heading>
       </FlexContainer>
       <FlexContainer justifyContent="space-between" alignItems="center">
         <FlexItem className={styles.searchInputWrapper}>
