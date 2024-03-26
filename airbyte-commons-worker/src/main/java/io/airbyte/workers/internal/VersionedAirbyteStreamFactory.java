@@ -401,7 +401,9 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   private void handleCannotDeserialize(final String line) {
     try (final MdcScope ignored = containerLogMdcBuilder.build()) {
       if (line.length() >= MAXIMUM_CHARACTERS_ALLOWED) {
-        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1);
+        connectionId.ifPresentOrElse(c -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1,
+            new MetricAttribute(MetricTags.CONNECTION_ID, c.toString())),
+            () -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1));
         MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.TOO_LONG_LINES_DISTRIBUTION, line.length());
         if (invalidLineFailureConfiguration.printLongRecordPks) {
           LOGGER.warn("[LARGE RECORD] A record is too long with size: " + line.length());
@@ -422,12 +424,16 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
         // Connectors can sometimes log error messages from failing to parse an AirbyteRecordMessage.
         // Filter on record into debug to try and prevent such cases. Though this catches non-record
         // messages, this is ok as we rather be safe than sorry.
+        logger.warn("Could not parse the string received from source, it seems to be a record message");
         connectionId.ifPresentOrElse(c -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1,
             new MetricAttribute(MetricTags.CONNECTION_ID, c.toString())),
             () -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1));
         logger.debug(line);
       } else {
-        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_AIRBYTE_MESSAGE_LOG_LINE, 1);
+        connectionId.ifPresentOrElse(
+            c -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_AIRBYTE_MESSAGE_LOG_LINE, 1,
+                new MetricAttribute(MetricTags.CONNECTION_ID, c.toString())),
+            () -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_AIRBYTE_MESSAGE_LOG_LINE, 1));
         logger.info(line);
       }
     } catch (final Exception e) {
