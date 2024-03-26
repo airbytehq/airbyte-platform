@@ -36,6 +36,7 @@ export const AdvancedSettingsPage: React.FC = () => {
   const { formatMessage } = useIntl();
   const [workspaceInTitle, setWorkspaceInTitle] = useLocalStorage("airbyte_workspace-in-title", false);
   const [attemptsStats, setAttemptsStats] = useLocalStorage("airbyte_extended-attempts-stats", false);
+  const [connectionDetails, setConnectionDetails] = useLocalStorage("airbyte_connection-additional-details", false);
 
   return (
     <FlexContainer gap="xl" direction="column">
@@ -54,6 +55,13 @@ export const AdvancedSettingsPage: React.FC = () => {
         onCheckedChange={(checked) => setAttemptsStats(checked)}
         label={formatMessage({ id: "settings.advancedSettings.attemptStats" })}
         description={formatMessage({ id: "settings.advancedSettings.attemptStatsDescription" })}
+      />
+      <SwitchSetting
+        id="connection-additional-details"
+        checked={connectionDetails}
+        onCheckedChange={(checked) => setConnectionDetails(checked)}
+        label={formatMessage({ id: "settings.advancedSettings.connectionDetails" })}
+        description={formatMessage({ id: "settings.advancedSettings.connectionDetailsDescription" })}
       />
     </FlexContainer>
   );

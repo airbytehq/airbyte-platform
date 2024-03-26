@@ -12,6 +12,7 @@ import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
 import { ConnectionStatus, SupportLevel } from "core/api/types/AirbyteClient";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -26,12 +27,14 @@ interface ConnectorBlockProps {
   supportLevel?: SupportLevel;
   custom?: boolean;
   type: "source" | "destination";
+  version: string;
 }
 
-const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, supportLevel, custom, type }) => {
+const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, supportLevel, custom, type, version }) => {
   const params = useParams<{ workspaceId: string; connectionId: string; "*": ConnectionRoutePaths }>();
   const basePath = `/${RoutePaths.Workspaces}/${params.workspaceId}`;
   const connectorTypePath = type === "source" ? RoutePaths.Source : RoutePaths.Destination;
+  const [connectionDetails] = useLocalStorage("airbyte_connection-additional-details", false);
 
   return (
     <Link to={`${basePath}/${connectorTypePath}/${id}`} className={styles.link}>
@@ -39,6 +42,7 @@ const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, support
         <ConnectorIcon icon={icon} />
         <Text color="grey" size="lg">
           {name}
+          {connectionDetails && <> (v{version})</>}
         </Text>
         <SupportLevelBadge supportLevel={supportLevel} custom={custom} />
       </FlexContainer>
@@ -70,6 +74,7 @@ export const ConnectionTitleBlock = () => {
             id={source.sourceId}
             supportLevel={sourceDefinitionVersion.supportLevel}
             custom={sourceDefinition.custom}
+            version={sourceDefinitionVersion.dockerImageTag}
             type="source"
           />
           <Icon type="arrowRight" />
@@ -79,16 +84,13 @@ export const ConnectionTitleBlock = () => {
             id={destination.destinationId}
             supportLevel={destDefinitionVersion.supportLevel}
             custom={destDefinition.custom}
+            version={destDefinitionVersion.dockerImageTag}
             type="destination"
           />
         </FlexContainer>
       </FlexContainer>
       {status === ConnectionStatus.deprecated && (
-        <Message
-          className={styles.connectionDeleted}
-          type="warning"
-          text={<FormattedMessage id="connection.connectionDeletedView" />}
-        />
+        <Message type="warning" text={<FormattedMessage id="connection.connectionDeletedView" />} />
       )}
     </FlexContainer>
   );
