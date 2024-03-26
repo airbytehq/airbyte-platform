@@ -127,6 +127,9 @@ webapp:
   podLabels: {}
 
   # -- Security context for the container
+  podSecurityContext:
+    fsGroup: 101
+
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
@@ -343,6 +346,9 @@ pod-sweeper:
   podLabels: {}
 
   # -- Security context for the container
+  podSecurityContext:
+    fsGroup: 1001
+
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
@@ -441,6 +447,9 @@ server:
   podLabels: {}
 
   # -- Security context for the container
+  podSecurityContext:
+    fsGroup: 1000
+
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
@@ -613,6 +622,9 @@ worker:
   podLabels: {}
 
   # -- Security context for the container
+  podSecurityContext:
+    fsGroup: 1000
+
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
@@ -742,6 +754,9 @@ workload-launcher:
   podLabels: {}
 
   # -- Security context for the container
+  podSecurityContext:
+    fsGroup: 1000
+
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
@@ -874,6 +889,9 @@ metrics:
   podLabels: {}
 
   # -- Security context for the container
+  podSecurityContext:
+    fsGroup: 1000
+
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
@@ -986,6 +1004,9 @@ airbyte-bootloader:
   affinity: {}
 
   # -- Security context for the container
+  podSecurityContext:
+    fsGroup: 1000
+
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
@@ -1107,6 +1128,9 @@ temporal:
   podLabels: {}
 
   # -- Security context for the container
+  podSecurityContext:
+    fsGroup: 1000
+
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
@@ -1295,6 +1319,9 @@ cron:
   podLabels: {}
 
   # -- Security context for the container
+  podSecurityContext:
+    fsGroup: 1000
+
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
@@ -1456,6 +1483,9 @@ connector-builder-server:
     pullPolicy: IfNotPresent
 
   # -- Security context for the container
+  podSecurityContext:
+    fsGroup: 1000
+
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
@@ -1531,6 +1561,9 @@ airbyte-api-server:
     pullPolicy: IfNotPresent
 
   # -- Security context for the container
+  podSecurityContext:
+    fsGroup: 1000
+
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
@@ -1624,6 +1657,10 @@ keycloak:
     adminUsername: airbyteAdmin
     adminPassword: keycloak123
 
+  # -- Security context for the container
+  podSecurityContext:
+    fsGroup: 1000
+
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
@@ -1636,6 +1673,9 @@ keycloak-setup:
   env_vars: {}
 
   # -- Security context for the container
+  podSecurityContext:
+    fsGroup: 1000
+
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
@@ -1658,6 +1698,9 @@ workload-api-server:
     pullPolicy: IfNotPresent
 
   # -- Security context for the container
+  podSecurityContext:
+    fsGroup: 1000
+
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true

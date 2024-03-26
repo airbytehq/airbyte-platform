@@ -584,6 +584,7 @@ spec:
       {{- if .Values.global.extraContainers }}
       {{ toYaml .Values.global.extraContainers | nindent 6 }}
       {{- end }}
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
       volumes:
       {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
       - name: gcs-log-creds-volume
