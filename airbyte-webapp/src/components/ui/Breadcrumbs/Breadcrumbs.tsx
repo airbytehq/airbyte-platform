@@ -18,9 +18,9 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ data }) => {
   return (
     <>
       {data.length && (
-        <FlexContainer className={styles.container}>
+        <FlexContainer gap="sm">
           {data.map((item, index) => (
-            <Fragment key={item.label}>
+            <Fragment key={index}>
               <FlexItem>
                 {item.to ? (
                   <Link to={item.to} className={styles.link}>

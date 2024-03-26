@@ -1,4 +1,5 @@
 import classNames from "classnames";
+import { JSONSchema7Type } from "json-schema";
 import pick from "lodash/pick";
 import React, { useCallback, useMemo } from "react";
 import { get, useFormContext, useFormState, useWatch } from "react-hook-form";
@@ -10,7 +11,7 @@ import { RadioButton } from "components/ui/RadioButton";
 import { Text } from "components/ui/Text";
 import { TextWithHTML } from "components/ui/TextWithHTML";
 
-import { FormConditionItem } from "core/form/types";
+import { FormConditionItem, FormGroupItem } from "core/form/types";
 import { useOptionalDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 
 import styles from "./ConditionSection.module.scss";
@@ -33,7 +34,10 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
   const setFocusedField = useOptionalDocumentationPanelContext()?.setFocusedField;
   const value = useWatch({ name: path });
 
-  const { conditions, selectionConstValues } = formField;
+  const { conditions, selectionConstValues } = useMemo(
+    () => getVisibleConditionsAndConstValues(formField),
+    [formField]
+  );
   const currentSelectionValue = useWatch({ name: `${path}.${formField.selectionKey}` });
   let currentlySelectedCondition: number | undefined = selectionConstValues.indexOf(currentSelectionValue);
   if (currentlySelectedCondition === -1) {
@@ -131,4 +135,23 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
       </GroupControls>
     </SectionContainer>
   );
+};
+
+const getVisibleConditionsAndConstValues = (
+  formField: FormConditionItem
+): { conditions: FormGroupItem[]; selectionConstValues: JSONSchema7Type[] } => {
+  const conditions: FormGroupItem[] = [];
+  const selectionConstValues: JSONSchema7Type[] = [];
+
+  formField.conditions.forEach((condition, index) => {
+    if (!condition.airbyte_hidden) {
+      conditions.push(condition);
+      selectionConstValues.push(formField.selectionConstValues[index]);
+    }
+  });
+
+  return {
+    conditions,
+    selectionConstValues,
+  };
 };

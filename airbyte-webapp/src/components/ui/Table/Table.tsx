@@ -30,6 +30,7 @@ export interface TableProps<T> {
   testId?: string;
   columnVisibility?: VisibilityState;
   sorting?: boolean;
+  stickyHeaders?: boolean;
   getRowClassName?: (data: T) => string | undefined;
   initialSortBy?: Array<{ id: string; desc: boolean }>;
   /**
@@ -56,6 +57,7 @@ export const Table = <T,>({
   expandedRow,
   columnVisibility,
   getRowClassName,
+  stickyHeaders = true,
   sorting = true,
   initialSortBy,
   virtualized = false,
@@ -89,7 +91,7 @@ export const Table = <T,>({
   );
 
   const TableHead: TableComponents["TableHead"] = React.forwardRef((props, ref) => (
-    <thead ref={ref} className={styles.thead} {...props} />
+    <thead ref={ref} className={classNames({ [styles["thead--sticky"]]: stickyHeaders })} {...props} />
   ));
   TableHead.displayName = "TableHead";
 
@@ -210,7 +212,7 @@ export const Table = <T,>({
       })}
       data-testid={testId}
     >
-      <thead className={styles.thead}>{headerContent()}</thead>
+      <thead className={classNames({ [styles["thead--sticky"]]: stickyHeaders })}>{headerContent()}</thead>
       <tbody>
         {rows.map((row) => (
           <TableRow key={`table-row-${row.id}`} row={row} />

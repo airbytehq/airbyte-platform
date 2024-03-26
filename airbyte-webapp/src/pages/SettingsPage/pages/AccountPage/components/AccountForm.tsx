@@ -56,7 +56,7 @@ export const AccountForm: React.FC = () => {
       defaultValues={{ email: workspace.email ?? "" }}
     >
       <FormControl<AccountFormValues> label={formatMessage({ id: "form.yourEmail" })} fieldType="input" name="email" />
-      <FormSubmissionButtons submitKey="form.saveChanges" />
+      <FormSubmissionButtons noCancel justify="flex-start" submitKey="form.saveChanges" />
     </Form>
   );
 };

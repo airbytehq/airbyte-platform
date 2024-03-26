@@ -1,9 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
+import { useIntl } from "react-intl";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useAuthService, useCurrentUser } from "core/services/auth";
 import { trackAction } from "core/utils/datadog";
 import { AppActionCodes } from "hooks/services/AppMonitoringService";
+import { useNotificationService } from "hooks/services/Notification";
 
 import {
   webBackendRevokeUserFromWorkspace,
@@ -13,6 +16,7 @@ import {
   updateUser,
   webBackendRevokeUserSession,
   createKeycloakUser,
+  sendVerificationEmail,
 } from "../../generated/CloudApi";
 import { SCOPE_WORKSPACE } from "../../scopes";
 import { CreateKeycloakUserRequestBody, UserUpdate } from "../../types/CloudApi";
@@ -174,4 +178,39 @@ export const useCreateKeycloakUser = () => {
         console.warn("Failed to create keycloak user");
       })
   );
+};
+
+const RESEND_EMAIL_TOAST_ID = "resendEmail";
+export const useResendEmailVerification = () => {
+  const { userId } = useCurrentUser();
+  const requestOptions = useRequestOptions();
+  const { sendEmailVerification } = useAuthService();
+  const { registerNotification } = useNotificationService();
+  const { formatMessage } = useIntl();
+
+  const sendEmail = useMemo(() => {
+    // The old way to send a verification email with Firebase, via the AuthContext
+    if (sendEmailVerification) {
+      return sendEmailVerification;
+    }
+    // The new way to send a verification email with Keycloak via our API
+    return () => sendVerificationEmail({ userId }, requestOptions);
+  }, [sendEmailVerification, userId, requestOptions]);
+
+  return useMutation(sendEmail, {
+    onSuccess: () => {
+      registerNotification({
+        id: RESEND_EMAIL_TOAST_ID,
+        type: "success",
+        text: formatMessage({ id: "credits.emailVerification.resendConfirmation" }),
+      });
+    },
+    onError: () => {
+      registerNotification({
+        id: RESEND_EMAIL_TOAST_ID,
+        type: "error",
+        text: formatMessage({ id: "credits.emailVerification.resendConfirmationError" }),
+      });
+    },
+  });
 };

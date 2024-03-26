@@ -13,6 +13,7 @@ import { Link } from "components/ui/Link";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useConnectionList, useDestinationList } from "core/api";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useExperiment } from "hooks/services/Experiment";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
@@ -29,6 +30,7 @@ export const DESTINATION_TYPE_PARAM = "destinationType";
 export const DESTINATION_ID_PARAM = "destinationId";
 
 export const SelectDestination: React.FC = () => {
+  useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_DEFINE_DESTINATION);
   const { destinations } = useDestinationList();
   const connectionList = useConnectionList();
   const [searchParams, setSearchParams] = useSearchParams();

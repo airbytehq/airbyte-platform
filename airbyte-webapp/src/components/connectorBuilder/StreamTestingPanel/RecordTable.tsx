@@ -52,7 +52,7 @@ export const RecordTable = React.memo(({ records }: { records: StreamReadSlicesI
         }}
       />
       {modalValue !== undefined && (
-        <Modal onClose={() => setModalValue(undefined)} title={modalValue.key}>
+        <Modal onCancel={() => setModalValue(undefined)} title={modalValue.key}>
           <ModalBody>
             <Pre>{toString(modalValue.value, 2)}</Pre>
           </ModalBody>

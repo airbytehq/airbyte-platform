@@ -13,6 +13,7 @@ required:
   - scopeType
   - permissionType
   - status
+  - expiresAt
 additionalProperties: true
 properties:
   id:
@@ -29,6 +30,10 @@ properties:
     description: Email address of the user who is being invited
     type: string
     format: email
+  acceptedByUserId:
+    description: ID of the user who accepted the invitation
+    type: string
+    format: uuid
   scopeId:
     description: ID of the workspace/organization that the user is being invited to
     type: string
@@ -48,5 +53,9 @@ properties:
     format: int64
   updatedAt:
     description: last updated timestamp of the invitation
+    type: integer
+    format: int64
+  expiresAt:
+    description: Timestamp at which the invitation will expire
     type: integer
     format: int64

@@ -1,0 +1,11 @@
+@use "scss/colors";
+
+.streamActionsMenu {
+  &__clearDataModalStreamName {
+    font-style: italic;
+  }
+
+  &__clearDataLabel > p {
+    color: colors.$red;
+  }
+}

@@ -30,6 +30,10 @@ export const SimplifiedDestinationStreamPrefixNameFormField: React.FC<{ disabled
               <FlexContainer direction="column" gap="sm">
                 <Text bold>
                   <FormattedMessage id="form.prefixNext" />
+                  &nbsp;
+                  <Text as="span" size="sm" color="grey" italicized>
+                    <FormattedMessage id="form.optional" />
+                  </Text>
                 </Text>
                 <Text size="sm" color="grey" italicized>
                   <FormattedMessage id="form.prefix.subtitle" />

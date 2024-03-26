@@ -1,14 +1,14 @@
 import {
+  createNewConnectionViaApi,
   createPostgresDestinationViaApi,
   createPostgresSourceViaApi,
-  createNewConnectionViaApi,
 } from "@cy/commands/connection";
 import {
-  WebBackendConnectionRead,
   DestinationRead,
   DestinationSyncMode,
-  SyncMode,
   SourceRead,
+  SyncMode,
+  WebBackendConnectionRead,
 } from "@src/core/api/types/AirbyteClient";
 import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "commands/api";
 import { runDbQuery } from "commands/db/db";
@@ -103,9 +103,15 @@ describe("Connection - Stream details", () => {
       const fieldTypes = ["String", "Integer", "String", "Datetime"];
 
       streamDetails.isSyncStreamDisabled();
+      streamDetails.isSelectSyncModeHidden();
       streamDetails.isNamespace("public");
       streamDetails.isStreamName("users");
       streamDetails.areFieldsValid({ names: fieldNames, dataTypes: fieldTypes });
+    });
+
+    it("show sync mode dropdown if stream is enabled", () => {
+      streamDetails.enableSyncStream();
+      streamDetails.isSelectSyncModeVisible();
     });
 
     it("closes", () => {
@@ -147,6 +153,8 @@ describe("Connection - Stream details", () => {
       const cursor = "created_at";
       const primaryKeys = ["car_id", "user_id"];
 
+      userCarsStreamRow.toggleStreamSync();
+      userCarsStreamRow.isStreamSyncEnabled(true);
       userCarsStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
       userCarsStreamRow.showStreamDetails();
 
@@ -162,10 +170,13 @@ describe("Connection - Stream details", () => {
 
   describe("sync mode", () => {
     const userCarsStreamRow = new StreamRowPageObject("public", "user_cars");
+
     it("can select cursor and primary key", () => {
       const cursor = "created_at";
       const primaryKeys = ["car_id", "user_id"];
 
+      userCarsStreamRow.toggleStreamSync();
+      userCarsStreamRow.isStreamSyncEnabled(true);
       userCarsStreamRow.showStreamDetails();
 
       streamDetails.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
@@ -184,6 +195,8 @@ describe("Connection - Stream details", () => {
     const columnsStreamRow = new StreamRowPageObject("public", "columns");
 
     it("selects cursors for stream with many fields", () => {
+      columnsStreamRow.toggleStreamSync();
+      columnsStreamRow.isStreamSyncEnabled(true);
       columnsStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append);
       columnsStreamRow.showStreamDetails();
 

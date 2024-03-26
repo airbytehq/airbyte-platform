@@ -1,0 +1,14 @@
+@use "scss/variables";
+
+.originalCasing,
+%originalCasing {
+  text-transform: unset;
+}
+
+.sourceNamespace {
+  @extend %originalCasing;
+
+  &:not(:first-child) {
+    margin-left: variables.$spacing-xs;
+  }
+}

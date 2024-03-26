@@ -205,7 +205,12 @@ public class WorkspaceApiController implements WorkspaceApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceRead getWorkspaceByConnectionId(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
-    return ApiHelper.execute(() -> workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody));
+    return ApiHelper.execute(() -> workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody, false));
+  }
+
+  @Override
+  public WorkspaceRead getWorkspaceByConnectionIdWithTombstone(ConnectionIdRequestBody connectionIdRequestBody) {
+    return ApiHelper.execute(() -> workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody, true));
   }
 
   @Override

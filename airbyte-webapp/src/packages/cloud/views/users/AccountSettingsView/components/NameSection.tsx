@@ -4,7 +4,6 @@ import * as yup from "yup";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
-import { Card } from "components/ui/Card";
 
 import { AuthChangeName, useCurrentUser } from "core/services/auth";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
@@ -46,24 +45,22 @@ export const NameSection: React.FC<NameSectionProps> = ({ updateName }) => {
   };
 
   return (
-    <Card>
-      <Form<NameFormValues>
-        onSubmit={({ name }) => updateName(name)}
-        onError={onError}
-        onSuccess={onSuccess}
-        schema={nameFormSchema}
-        defaultValues={{ name: user.name }}
-      >
-        <FormControl<NameFormValues>
-          label={formatMessage({ id: "settings.accountSettings.name" })}
-          fieldType="input"
-          name="name"
-          placeholder={formatMessage({
-            id: "settings.accountSettings.name.placeholder",
-          })}
-        />
-        <FormSubmissionButtons submitKey="settings.accountSettings.updateName" />
-      </Form>
-    </Card>
+    <Form<NameFormValues>
+      onSubmit={({ name }) => updateName(name)}
+      onError={onError}
+      onSuccess={onSuccess}
+      schema={nameFormSchema}
+      defaultValues={{ name: user.name }}
+    >
+      <FormControl<NameFormValues>
+        label={formatMessage({ id: "settings.accountSettings.name" })}
+        fieldType="input"
+        name="name"
+        placeholder={formatMessage({
+          id: "settings.accountSettings.name.placeholder",
+        })}
+      />
+      <FormSubmissionButtons noCancel justify="flex-start" submitKey="settings.accountSettings.updateName" />
+    </Form>
   );
 };

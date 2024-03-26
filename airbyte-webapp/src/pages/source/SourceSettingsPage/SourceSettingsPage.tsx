@@ -74,7 +74,7 @@ export const SourceSettingsPage: React.FC = () => {
     );
   }, [connectionsWithSource]);
 
-  const onDeleteClick = useDeleteModal("source", onDelete, modalAdditionalContent);
+  const onDeleteClick = useDeleteModal("source", onDelete, modalAdditionalContent, source.name);
 
   return (
     <div className={styles.content}>

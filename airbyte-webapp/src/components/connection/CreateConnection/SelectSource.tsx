@@ -10,6 +10,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { useSourceDefinitionList, useSourceList } from "core/api";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 
 import { CreateNewSource, SOURCE_DEFINITION_PARAM } from "./CreateNewSource";
 import { RadioButtonTiles } from "./RadioButtonTiles";
@@ -23,6 +24,7 @@ export const SOURCE_TYPE_PARAM = "sourceType";
 export const SOURCE_ID_PARAM = "sourceId";
 
 export const SelectSource: React.FC = () => {
+  useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_DEFINE_SOURCE);
   const { sources } = useSourceList();
   const { sourceDefinitionMap } = useSourceDefinitionList();
   const [searchParams, setSearchParams] = useSearchParams();

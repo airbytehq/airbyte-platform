@@ -77,7 +77,7 @@ export const DestinationSettingsPage: React.FC = () => {
     );
   }, [connectionsWithDestination]);
 
-  const onDeleteClick = useDeleteModal("destination", onDelete, modalAdditionalContent);
+  const onDeleteClick = useDeleteModal("destination", onDelete, modalAdditionalContent, destination.name);
 
   return (
     <div className={styles.content}>

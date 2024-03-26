@@ -67,6 +67,6 @@ export const deleteSource = (name: string) => {
   cy.intercept("/api/v1/sources/delete").as("deleteSource");
   goToSourcePage();
   openConnectorPage(name);
-  deleteEntity();
+  deleteEntity("Test source cypress");
   cy.wait("@deleteSource");
 };

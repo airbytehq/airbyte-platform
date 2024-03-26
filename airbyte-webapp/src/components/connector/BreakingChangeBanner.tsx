@@ -198,7 +198,7 @@ const ConfirmUpdateModal = ({
   return (
     <Modal
       title={<FormattedMessage id="connector.breakingChange.upgradeModal.title" values={{ type: connectorType }} />}
-      onClose={onClose}
+      onCancel={onClose}
       size="md"
     >
       <ModalBody>

@@ -1,10 +1,9 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
-import { Box } from "components/ui/Box";
-import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Separator } from "components/ui/Separator";
 
 import { useCurrentWorkspace } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
@@ -22,32 +21,31 @@ export const WorkspaceSettingsView: React.FC = () => {
   const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
   return (
     <FlexContainer direction="column" gap="xl">
-      <Box>
-        <Heading as="h2" size="md">
-          <FormattedMessage id="settings.members" />
-        </Heading>
-      </Box>
-      <Card>
-        <UpdateCloudWorkspaceName />
-      </Card>
+      <Heading as="h1" size="md">
+        <FormattedMessage id="settings.workspace.general.title" />
+      </Heading>
+      <UpdateCloudWorkspaceName />
+
       {isAccessManagementEnabled && (
-        <Card>
+        <>
+          <Separator />
           <FlexContainer direction="column" gap="xl">
             <WorkspaceAccessManagementSection />
           </FlexContainer>
-        </Card>
+        </>
       )}
       {canDeleteWorkspace && (
-        <Card>
+        <>
+          <Separator />
           <FlexContainer direction="column">
-            <Heading as="h3" size="sm">
+            <Heading as="h2" size="sm">
               <FormattedMessage id="settings.general.danger" />
             </Heading>
             <FlexContainer>
               <DeleteCloudWorkspace />
             </FlexContainer>
           </FlexContainer>
-        </Card>
+        </>
       )}
     </FlexContainer>
   );

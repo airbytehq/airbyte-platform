@@ -8,7 +8,7 @@ if (!process.env.CLOUD_ENV) {
   return;
 }
 
-const envFile = path.resolve(__dirname, "../../../cloud-webapp/development", `.env.${process.env.CLOUD_ENV}`);
+const envFile = path.resolve(__dirname, "../../../cloud/cloud-webapp/development", `.env.${process.env.CLOUD_ENV}`);
 
 if (!fs.existsSync(envFile)) {
   console.error(

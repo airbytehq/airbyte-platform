@@ -28,7 +28,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Comparator;
 import java.util.List;
-import java.util.UUID;
 import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -141,20 +140,16 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifyConnectionDisabled(final String receiverEmail,
-                                          final String sourceConnector,
-                                          final String destinationConnector,
-                                          final String jobDescription,
-                                          final UUID workspaceId,
-                                          final UUID connectionId)
+  public boolean notifyConnectionDisabled(final SyncSummary summary,
+                                          final String receiverEmail)
       throws IOException, InterruptedException {
     final String message = renderTemplate(
         "slack/auto_disable_slack_notification_template.txt",
-        sourceConnector,
-        destinationConnector,
-        jobDescription,
-        workspaceId.toString(),
-        connectionId.toString());
+        summary.getSource().getName(),
+        summary.getDestination().getName(),
+        summary.getErrorMessage(),
+        summary.getWorkspace().getId().toString(),
+        summary.getConnection().getId().toString());
 
     final String webhookUrl = config.getWebhook();
     if (!Strings.isEmpty(webhookUrl)) {
@@ -164,20 +159,16 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifyConnectionDisableWarning(final String receiverEmail,
-                                                final String sourceConnector,
-                                                final String destinationConnector,
-                                                final String jobDescription,
-                                                final UUID workspaceId,
-                                                final UUID connectionId)
+  public boolean notifyConnectionDisableWarning(final SyncSummary summary,
+                                                final String receiverEmail)
       throws IOException, InterruptedException {
     final String message = renderTemplate(
         "slack/auto_disable_warning_slack_notification_template.txt",
-        sourceConnector,
-        destinationConnector,
-        jobDescription,
-        workspaceId.toString(),
-        connectionId.toString());
+        summary.getSource().getName(),
+        summary.getDestination().getName(),
+        summary.getErrorMessage(),
+        summary.getWorkspace().getId().toString(),
+        summary.getConnection().getId().toString());
 
     final String webhookUrl = config.getWebhook();
     if (!Strings.isEmpty(webhookUrl)) {

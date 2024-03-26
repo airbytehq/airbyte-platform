@@ -17,7 +17,12 @@ const routes: Routes = {
   connection: `../../../${RoutePaths.Connections}`,
 };
 
-export function useDeleteModal(entity: Entity, onDelete: () => Promise<unknown>, additionalContent?: React.ReactNode) {
+export function useDeleteModal(
+  entity: Entity,
+  onDelete: () => Promise<unknown>,
+  additionalContent?: React.ReactNode,
+  confirmationText?: string
+) {
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const navigate = useNavigate();
 
@@ -26,6 +31,7 @@ export function useDeleteModal(entity: Entity, onDelete: () => Promise<unknown>,
       text: `tables.${entity}DeleteModalText`,
       additionalContent,
       title: `tables.${entity}DeleteConfirm`,
+      confirmationText,
       submitButtonText: "form.delete",
       onSubmit: async () => {
         await onDelete();
@@ -34,5 +40,5 @@ export function useDeleteModal(entity: Entity, onDelete: () => Promise<unknown>,
       },
       submitButtonDataId: "delete",
     });
-  }, [openConfirmationModal, entity, additionalContent, onDelete, closeConfirmationModal, navigate]);
+  }, [openConfirmationModal, entity, additionalContent, confirmationText, onDelete, closeConfirmationModal, navigate]);
 }

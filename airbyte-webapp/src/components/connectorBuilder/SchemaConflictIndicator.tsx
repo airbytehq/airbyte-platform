@@ -11,6 +11,7 @@ export const SchemaConflictIndicator: React.FC<{ errors?: string[] }> = ({ error
     control={
       <Icon
         type="warningOutline"
+        size="sm"
         className={classNames({
           [styles.schemaConflictWarningIcon]: !errors,
           [styles.schemaConflictErrorIcon]: errors,

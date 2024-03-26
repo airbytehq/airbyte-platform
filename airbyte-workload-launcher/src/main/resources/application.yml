@@ -51,7 +51,7 @@ airbyte:
         max: ${KUBERNETES_CLIENT_MAX_RETRIES:5}
     resource-check-rate: ${WORKLOAD_LAUNCHER_POD_PENDING_RESOURCE_CHECK_RATE:PT30S}
   docker:
-    docker-socket: ${DOCKER_SOCKET:/var/run/docker.sock}
+    docker-socket: ${DOCKER_SOCKET:}
     network: ${DOCKER_NETWORK:host}
     workspace-mount-name: ${WORKSPACE_DOCKER_MOUNT:}
     workspace-mount-path: ${WORKSPACE_ROOT}

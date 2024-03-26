@@ -27,7 +27,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -159,28 +158,22 @@ public class CustomerioNotificationClient extends NotificationClient {
   // airbyte-config/models/src/main/resources/types/CustomerioNotificationConfiguration.yaml
   // instead of being passed in
   @Override
-  public boolean notifyConnectionDisabled(final String receiverEmail,
-                                          final String sourceConnector,
-                                          final String destinationConnector,
-                                          final String jobDescription,
-                                          final UUID workspaceId,
-                                          final UUID connectionId)
+  public boolean notifyConnectionDisabled(final SyncSummary summary,
+                                          final String receiverEmail)
       throws IOException {
     final String requestBody = renderTemplate(AUTO_DISABLE_NOTIFICATION_TEMPLATE_PATH, AUTO_DISABLE_TRANSACTION_MESSAGE_ID, receiverEmail,
-        receiverEmail, sourceConnector, destinationConnector, jobDescription, workspaceId.toString(), connectionId.toString());
+        receiverEmail, summary.getSource().getName(), summary.getDestination().getName(), summary.getErrorMessage(),
+        summary.getWorkspace().getId().toString(), summary.getConnection().getId().toString());
     return notifyByEmail(requestBody);
   }
 
   @Override
-  public boolean notifyConnectionDisableWarning(final String receiverEmail,
-                                                final String sourceConnector,
-                                                final String destinationConnector,
-                                                final String jobDescription,
-                                                final UUID workspaceId,
-                                                final UUID connectionId)
+  public boolean notifyConnectionDisableWarning(final SyncSummary summary,
+                                                final String receiverEmail)
       throws IOException {
     final String requestBody = renderTemplate(AUTO_DISABLE_NOTIFICATION_TEMPLATE_PATH, AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID, receiverEmail,
-        receiverEmail, sourceConnector, destinationConnector, jobDescription, workspaceId.toString(), connectionId.toString());
+        receiverEmail, summary.getSource().getName(), summary.getDestination().getName(), summary.getErrorMessage(),
+        summary.getWorkspace().getId().toString(), summary.getConnection().getId().toString());
     return notifyByEmail(requestBody);
   }
 

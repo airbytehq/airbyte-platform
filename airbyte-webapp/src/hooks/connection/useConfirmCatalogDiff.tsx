@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useIntl } from "react-intl";
 
-import { CatalogDiffModal } from "components/connection/CatalogDiffModal/CatalogDiffModal";
+import { CatalogDiffModal } from "components/connection/CatalogDiffModal";
 
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useModalService } from "hooks/services/Modal";
@@ -20,8 +20,8 @@ export const useConfirmCatalogDiff = () => {
         preventCancel: true,
         size: "md",
         testId: "catalog-diff-modal",
-        content: ({ onClose }) => (
-          <CatalogDiffModal catalogDiff={catalogDiff} catalog={syncCatalog} onClose={onClose} />
+        content: ({ onComplete }) => (
+          <CatalogDiffModal catalogDiff={catalogDiff} catalog={syncCatalog} onComplete={onComplete} />
         ),
       });
     }

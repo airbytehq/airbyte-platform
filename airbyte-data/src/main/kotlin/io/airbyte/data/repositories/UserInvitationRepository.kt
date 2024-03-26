@@ -18,4 +18,11 @@ interface UserInvitationRepository : PageableRepository<UserInvitation, UUID> {
     scopeType: EntityScopeType,
     scopeId: UUID,
   ): List<UserInvitation>
+
+  fun findByStatusAndScopeTypeAndScopeIdAndInvitedEmail(
+    status: EntityInvitationStatus,
+    scopeType: EntityScopeType,
+    scopeId: UUID,
+    invitedEmail: String,
+  ): List<UserInvitation>
 }

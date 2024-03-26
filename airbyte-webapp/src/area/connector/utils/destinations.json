@@ -13,6 +13,7 @@
   "DatabricksLakehouse": "072d5540-f236-4294-ba7c-ade8fd918496",
   "DynamoDb": "8ccd8909-4e99-4141-b48d-4984b70b2d89",
   "E2ETesting": "2eb65e87-983a-4fd7-b3e3-9d9dc6eb8537",
+  "EndToEndTesting": "a7bcc9d8-13b3-4e49-b80d-d020b90045e3",
   "ElasticSearch": "68f351a7-2745-4bef-ad7f-996b8e51bb8c",
   "Firebolt": "18081484-02a5-4662-8dba-b270b582f321",
   "GoogleCloudStorageGcs": "ca8f6566-e555-4b40-943a-545bf123117a",
@@ -22,12 +23,14 @@
   "Kinesis": "6d1d66d4-26ab-4602-8d32-f85894b04955",
   "LocalCsv": "8be1cf83-fde1-477f-a4ad-318d23c9f3c6",
   "LocalJson": "a625d593-bba5-4a1c-a53d-2d246268a816",
+  "Milvus": "65de8962-48c9-11ee-be56-0242ac120002",
   "Mqtt": "f3802bc4-5406-4752-9e8d-01e504ca8194",
   "MsSqlServer": "d4353156-9217-4cad-8dd7-c108fd4f74cf",
   "MeiliSearch": "af7c921e-5892-4ff2-b6c1-4a5ab258fb7e",
   "MongoDb": "8b746512-8c2e-6ac1-4adc-b59faafd473c",
   "MySql": "ca81ee7c-3163-4246-af40-094cc31e5e42",
   "Oracle": "3986776d-2319-4de9-8af8-db14c0996e72",
+  "Pinecone": "3d2b6f84-7f0d-4e3f-a5e5-7c7d4b50eabd",
   "Postgres": "25c5221d-dce2-4163-ade9-739ef790f503",
   "Pulsar": "2340cbba-358e-11ec-8d3d-0242ac130203",
   "RabbitMq": "e06ad785-ad6f-4647-b2e8-3027a5c59454",
@@ -46,5 +49,6 @@
   "LocalSqLite": "b76be0a6-27dc-4560-95f6-2623da0bd7b6",
   "TiDb": "06ec60c7-7468-45c0-91ac-174f6e1a788b",
   "Typesense": "36be8dc6-9851-49af-b776-9d4c30e4ab6a",
-  "YugabyteDb": "2300fdcf-a532-419f-9f24-a014336e7966"
+  "YugabyteDb": "2300fdcf-a532-419f-9f24-a014336e7966",
+  "Weaviate": "7b7d7a0d-954c-45a0-bcfc-39a634b97736"
 }

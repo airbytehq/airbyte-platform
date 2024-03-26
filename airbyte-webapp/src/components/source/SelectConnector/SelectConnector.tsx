@@ -16,10 +16,10 @@ import { isSourceDefinition } from "core/domain/connector/source";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useModalService } from "hooks/services/Modal";
-import RequestConnectorModal from "views/Connector/RequestConnectorModal";
 
 import { ConnectorGrid } from "./ConnectorGrid";
 import { FilterSupportLevel } from "./FilterSupportLevel";
+import { RequestConnectorModal } from "./RequestConnectorModal";
 import styles from "./SelectConnector.module.scss";
 import { useTrackSelectConnector } from "./useTrackSelectConnector";
 
@@ -46,7 +46,7 @@ const SelectConnectorSupportLevel: React.FC<SelectConnectorProps> = ({
 }) => {
   const { formatMessage } = useIntl();
   const { email } = useCurrentWorkspace();
-  const { openModal, closeModal } = useModalService();
+  const { openModal } = useModalService();
   const trackSelectConnector = useTrackSelectConnector(connectorType);
   const [searchTerm, setSearchTerm] = useState("");
   const [supportLevelsInLocalStorage, setSelectedSupportLevels] = useLocalStorage(
@@ -81,14 +81,15 @@ const SelectConnectorSupportLevel: React.FC<SelectConnectorProps> = ({
   };
 
   const onOpenRequestConnectorModal = () =>
-    openModal({
+    openModal<void>({
       title: formatMessage({ id: "connector.requestConnector" }),
-      content: () => (
+      content: ({ onComplete, onCancel }) => (
         <RequestConnectorModal
           connectorType={connectorType}
           workspaceEmail={email}
           searchedConnectorName={searchTerm}
-          onClose={closeModal}
+          onSubmit={onComplete}
+          onCancel={onCancel}
         />
       ),
       size: "sm",

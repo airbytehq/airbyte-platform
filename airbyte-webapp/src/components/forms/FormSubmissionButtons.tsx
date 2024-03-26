@@ -10,17 +10,21 @@ interface FormSubmissionButtonsProps {
   submitKey?: string;
   cancelKey?: string;
   allowNonDirtyCancel?: boolean;
+  allowNonDirtySubmit?: boolean;
   onCancelClickCallback?: () => void;
   justify?: "flex-start" | "flex-end";
   reversed?: boolean;
+  noCancel?: boolean;
 }
 
 export const FormSubmissionButtons: React.FC<FormSubmissionButtonsProps> = ({
   submitKey = "form.submit",
   cancelKey = "form.cancel",
   allowNonDirtyCancel = false,
+  allowNonDirtySubmit = false,
   onCancelClickCallback,
   justify = "flex-end",
+  noCancel,
   reversed = false,
 }) => {
   // get isSubmitting from useFormState to avoid re-rendering of whole form if they change
@@ -30,18 +34,20 @@ export const FormSubmissionButtons: React.FC<FormSubmissionButtonsProps> = ({
 
   return (
     <FlexContainer justifyContent={justify} className={reversed ? styles.reversed : undefined}>
-      <Button
-        type="button"
-        variant="secondary"
-        disabled={(!isDirty && !allowNonDirtyCancel) || isSubmitting}
-        onClick={() => {
-          reset();
-          onCancelClickCallback?.();
-        }}
-      >
-        <FormattedMessage id={cancelKey} />
-      </Button>
-      <Button type="submit" isLoading={isSubmitting} disabled={!isValid || !isDirty}>
+      {!noCancel && (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={(!isDirty && !allowNonDirtyCancel) || isSubmitting}
+          onClick={() => {
+            reset();
+            onCancelClickCallback?.();
+          }}
+        >
+          <FormattedMessage id={cancelKey} />
+        </Button>
+      )}
+      <Button type="submit" isLoading={isSubmitting} disabled={!isValid || (!isDirty && !allowNonDirtySubmit)}>
         <FormattedMessage id={submitKey} />
       </Button>
     </FlexContainer>

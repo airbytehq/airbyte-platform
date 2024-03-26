@@ -277,7 +277,8 @@ class WorkspacesHandlerTest {
         .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
         .defaultGeography(GEOGRAPHY_US)
         .webhookConfigs(List.of(new WebhookConfigRead().id(uuid).name(TEST_NAME)))
-        .organizationId(ORGANIZATION_ID);
+        .organizationId(ORGANIZATION_ID)
+        .tombstone(false);
 
     assertEquals(expectedRead, actualRead);
   }
@@ -326,7 +327,8 @@ class WorkspacesHandlerTest {
         .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
         .defaultGeography(GEOGRAPHY_US)
         .webhookConfigs(List.of(new WebhookConfigRead().id(uuid).name(TEST_NAME)))
-        .organizationId(ORGANIZATION_ID);
+        .organizationId(ORGANIZATION_ID)
+        .tombstone(false);
 
     assertEquals(expectedRead, actualRead);
     assertEquals(expectedRead, secondActualRead);
@@ -360,7 +362,8 @@ class WorkspacesHandlerTest {
         .notifications(List.of())
         .notificationSettings(generateDefaultApiNotificationSettings())
         .defaultGeography(GEOGRAPHY_AUTO)
-        .webhookConfigs(Collections.emptyList());
+        .webhookConfigs(Collections.emptyList())
+        .tombstone(false);
 
     assertEquals(expectedRead, actualRead);
   }
@@ -401,7 +404,8 @@ class WorkspacesHandlerTest {
         .notifications(Collections.emptyList())
         .notificationSettings(generateDefaultApiNotificationSettings())
         .defaultGeography(GEOGRAPHY_AUTO)
-        .webhookConfigs(Collections.emptyList());
+        .webhookConfigs(Collections.emptyList())
+        .tombstone(false);
 
     assertTrue(actualRead.getSlug().startsWith(workspace.getSlug()));
     assertNotEquals(workspace.getSlug(), actualRead.getSlug());
@@ -463,7 +467,8 @@ class WorkspacesHandlerTest {
         .notifications(List.of(generateApiNotification()))
         .notificationSettings(generateApiNotificationSettings())
         .defaultGeography(GEOGRAPHY_AUTO)
-        .organizationId(ORGANIZATION_ID);
+        .organizationId(ORGANIZATION_ID)
+        .tombstone(false);
 
     final WorkspaceRead expectedWorkspaceRead2 = new WorkspaceRead()
         .workspaceId(workspace2.getWorkspaceId())
@@ -479,7 +484,8 @@ class WorkspacesHandlerTest {
         .notifications(List.of(generateApiNotification()))
         .notificationSettings(generateApiNotificationSettings())
         .defaultGeography(GEOGRAPHY_AUTO)
-        .organizationId(ORGANIZATION_ID);
+        .organizationId(ORGANIZATION_ID)
+        .tombstone(false);
 
     final WorkspaceReadList actualWorkspaceReadList = workspacesHandler.listWorkspaces();
 
@@ -509,31 +515,18 @@ class WorkspacesHandlerTest {
         .notificationSettings(generateApiNotificationSettings())
         .defaultGeography(GEOGRAPHY_AUTO)
         .webhookConfigs(List.of(new WebhookConfigRead().id(WEBHOOK_CONFIG_ID).name(TEST_NAME)))
-        .organizationId(ORGANIZATION_ID);
+        .organizationId(ORGANIZATION_ID)
+        .tombstone(false);
 
     assertEquals(workspaceRead, workspacesHandler.getWorkspace(workspaceIdRequestBody));
   }
 
   @Test
-  void testGetWorkspaceBySlug() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetWorkspaceBySlug() throws ConfigNotFoundException, IOException {
     when(configRepository.getWorkspaceBySlug("default", false)).thenReturn(workspace);
 
     final SlugRequestBody slugRequestBody = new SlugRequestBody().slug("default");
-    final WorkspaceRead workspaceRead = new WorkspaceRead()
-        .workspaceId(workspace.getWorkspaceId())
-        .customerId(workspace.getCustomerId())
-        .email(TEST_EMAIL)
-        .name(workspace.getName())
-        .slug(workspace.getSlug())
-        .initialSetupComplete(workspace.getInitialSetupComplete())
-        .displaySetupWizard(workspace.getDisplaySetupWizard())
-        .news(workspace.getNews())
-        .anonymousDataCollection(workspace.getAnonymousDataCollection())
-        .securityUpdates(workspace.getSecurityUpdates())
-        .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
-        .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
-        .defaultGeography(GEOGRAPHY_AUTO)
-        .organizationId(ORGANIZATION_ID);
+    final WorkspaceRead workspaceRead = getWorkspaceReadPerWorkspace(workspace);
 
     assertEquals(workspaceRead, workspacesHandler.getWorkspaceBySlug(slugRequestBody));
   }
@@ -543,7 +536,13 @@ class WorkspacesHandlerTest {
     final UUID connectionId = UUID.randomUUID();
     when(configRepository.getStandardWorkspaceFromConnection(connectionId, false)).thenReturn(workspace);
     final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(connectionId);
-    final WorkspaceRead workspaceRead = new WorkspaceRead()
+    final WorkspaceRead workspaceRead = getWorkspaceReadPerWorkspace(workspace);
+
+    assertEquals(workspaceRead, workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody, false));
+  }
+
+  private WorkspaceRead getWorkspaceReadPerWorkspace(StandardWorkspace workspace) {
+    return new WorkspaceRead()
         .workspaceId(workspace.getWorkspaceId())
         .customerId(workspace.getCustomerId())
         .email(TEST_EMAIL)
@@ -557,9 +556,8 @@ class WorkspacesHandlerTest {
         .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
         .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
         .defaultGeography(GEOGRAPHY_AUTO)
-        .organizationId(ORGANIZATION_ID);
-
-    assertEquals(workspaceRead, workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody));
+        .organizationId(ORGANIZATION_ID)
+        .tombstone(workspace.getTombstone());
   }
 
   @Test
@@ -568,7 +566,7 @@ class WorkspacesHandlerTest {
     when(configRepository.getStandardWorkspaceFromConnection(connectionId, false))
         .thenThrow(new ConfigNotFoundException("something", connectionId.toString()));
     final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(connectionId);
-    assertThrows(ConfigNotFoundException.class, () -> workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody));
+    assertThrows(ConfigNotFoundException.class, () -> workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody, false));
   }
 
   @ParameterizedTest
@@ -660,7 +658,8 @@ class WorkspacesHandlerTest {
         .notificationSettings(generateApiNotificationSettings())
         .defaultGeography(GEOGRAPHY_US)
         .webhookConfigs(List.of(new WebhookConfigRead().name(TEST_NAME).id(WEBHOOK_CONFIG_ID)))
-        .organizationId(ORGANIZATION_ID);
+        .organizationId(ORGANIZATION_ID)
+        .tombstone(false);
 
     final StandardWorkspace expectedWorkspaceWithSecrets = new StandardWorkspace()
         .withWorkspaceId(workspace.getWorkspaceId())
@@ -678,7 +677,8 @@ class WorkspacesHandlerTest {
         .withNotificationSettings(generateNotificationSettings())
         .withDefaultGeography(Geography.US)
         .withWebhookOperationConfigs(SECRET_WEBHOOK_CONFIGS)
-        .withOrganizationId(ORGANIZATION_ID);
+        .withOrganizationId(ORGANIZATION_ID)
+        .withTombstone(false);
 
     verify(workspaceService).writeWorkspaceWithSecrets(expectedWorkspaceWithSecrets);
 
@@ -766,7 +766,8 @@ class WorkspacesHandlerTest {
         .notifications(List.of(generateApiNotification()))
         .notificationSettings(generateApiNotificationSettings())
         .defaultGeography(GEOGRAPHY_AUTO)
-        .organizationId(ORGANIZATION_ID);
+        .organizationId(ORGANIZATION_ID)
+        .tombstone(false);
 
     verify(configRepository).writeStandardWorkspaceNoSecrets(expectedWorkspace);
 
@@ -801,7 +802,8 @@ class WorkspacesHandlerTest {
         .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
         .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
         .defaultGeography(GEOGRAPHY_AUTO)
-        .organizationId(newOrgId);
+        .organizationId(newOrgId)
+        .tombstone(false);
 
     final WorkspaceRead actualWorkspaceRead = workspacesHandler.updateWorkspaceOrganization(workspaceUpdateOrganization);
     verify(workspaceService).writeStandardWorkspaceNoSecrets(expectedWorkspace);
@@ -836,7 +838,8 @@ class WorkspacesHandlerTest {
         .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
         .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
         .defaultGeography(GEOGRAPHY_AUTO)
-        .organizationId(ORGANIZATION_ID);
+        .organizationId(ORGANIZATION_ID)
+        .tombstone(false);
 
     final WorkspaceRead actualWorkspaceRead = workspacesHandler.updateWorkspace(workspaceUpdate);
     verify(configRepository).writeStandardWorkspaceNoSecrets(expectedWorkspace);
@@ -890,7 +893,8 @@ class WorkspacesHandlerTest {
         .notifications(List.of(generateApiNotification()))
         .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
         .defaultGeography(GEOGRAPHY_US)
-        .webhookConfigs(Collections.emptyList());
+        .webhookConfigs(Collections.emptyList())
+        .tombstone(false);
 
     assertEquals(expectedRead, actualRead);
     verify(workspaceService, times(1)).writeWorkspaceWithSecrets(any());

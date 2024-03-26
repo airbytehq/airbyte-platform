@@ -13,6 +13,7 @@ import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderRequestInjection } from "./BuilderRequestInjection";
 import { ToggleGroupField } from "./ToggleGroupField";
+import { manifestPaginatorToBuilder } from "../convertManifestToBuilderForm";
 import {
   BuilderCursorPagination,
   BuilderPaginator,
@@ -21,6 +22,7 @@ import {
   PAGE_INCREMENT,
   StreamPathFn,
   useBuilderWatch,
+  builderPaginatorToManifest,
 } from "../types";
 
 interface PaginationSectionProps {
@@ -39,7 +41,8 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
       docLink={links.connectorBuilderPagination}
       label={formatMessage({ id: "connectorBuilder.pagination.label" })}
       tooltip={formatMessage({ id: "connectorBuilder.pagination.tooltip" })}
-      toggleConfig={{
+      inputsConfig={{
+        toggleable: true,
         path: streamFieldPath("paginator"),
         defaultValue: {
           strategy: {
@@ -55,6 +58,10 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
             inject_into: "request_parameter",
             field_name: "",
           },
+        },
+        yamlConfig: {
+          builderToManifest: builderPaginatorToManifest,
+          manifestToBuilder: manifestPaginatorToBuilder,
         },
       }}
       copyConfig={{

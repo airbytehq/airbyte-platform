@@ -25,6 +25,7 @@ import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.REPLICATION
+import io.airbyte.workload.launcher.config.OrchestratorEnvSingleton
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
@@ -44,9 +45,9 @@ class PayloadKubeInputMapper(
   private val serializer: ObjectSerializer,
   private val labeler: PodLabeler,
   private val podNameGenerator: PodNameGenerator,
+  private val orchestratorEnvSingleton: OrchestratorEnvSingleton,
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String?,
   @Named("orchestratorKubeContainerInfo") private val orchestratorKubeContainerInfo: KubeContainerInfo,
-  @Named("orchestratorEnvMap") private val envMap: Map<String, String>,
   @Named("connectorAwsAssumedRoleSecretEnv") private val connectorAwsAssumedRoleSecretEnvList: List<EnvVar>,
   @Named("replicationWorkerConfigs") private val replicationWorkerConfigs: WorkerConfigs,
   @Named("checkWorkerConfigs") private val checkWorkerConfigs: WorkerConfigs,
@@ -255,7 +256,7 @@ class PayloadKubeInputMapper(
       mapOf(
         OrchestratorConstants.INIT_FILE_INPUT to serializer.serialize(input),
         OrchestratorConstants.INIT_FILE_APPLICATION to REPLICATION,
-        OrchestratorConstants.INIT_FILE_ENV_MAP to serializer.serialize(envMap),
+        OrchestratorConstants.INIT_FILE_ENV_MAP to serializer.serialize(orchestratorEnvSingleton.orchestratorEnvMap(input.connectionId)),
         OrchestratorConstants.WORKLOAD_ID_FILE to workloadId,
         INIT_FILE_SOURCE_LAUNCHER_CONFIG to serializer.serialize(input.sourceLauncherConfig),
         INIT_FILE_DESTINATION_LAUNCHER_CONFIG to serializer.serialize(input.destinationLauncherConfig),

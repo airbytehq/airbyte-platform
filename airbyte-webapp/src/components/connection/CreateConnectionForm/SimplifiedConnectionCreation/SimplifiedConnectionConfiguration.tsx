@@ -19,6 +19,7 @@ import { Text } from "components/ui/Text";
 
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
@@ -54,6 +55,7 @@ export const SimplifiedConnectionConfiguration: React.FC = () => {
 };
 
 const SimplifiedConnectionCreationReplication: React.FC = () => {
+  useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_SELECT_STREAMS);
   const { formatMessage } = useIntl();
   const { isDirty } = useFormState<FormConnectionFormValues>();
   const { trackFormChange } = useFormChangeTrackerService();
@@ -74,11 +76,13 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
 };
 
 const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
+  useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_CONFIGURE_CONNECTION);
   const { formatMessage } = useIntl();
   const { isDirty } = useFormState<FormConnectionFormValues>();
   const { trackFormChange } = useFormChangeTrackerService();
 
   const source = useGetSourceFromSearchParams();
+  const destination = useGetDestinationFromSearchParams();
 
   // if the user is navigating from the first step the form may be dirty
   useMount(() => {
@@ -88,7 +92,8 @@ const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
   return (
     <SimplifiedConnectionsSettingsCard
       title={formatMessage({ id: "connectionForm.configureConnection" })}
-      sourceName={source.name}
+      source={source}
+      destination={destination}
       isCreating
     />
   );
@@ -96,8 +101,8 @@ const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
 
 const FirstNav: React.FC = () => {
   const createLink = useCurrentWorkspaceLink();
-  const source = useGetSourceFromSearchParams();
   const destination = useGetDestinationFromSearchParams();
+  const source = useGetSourceFromSearchParams();
 
   const { isValid, errors } = useFormState<FormConnectionFormValues>();
   const { trigger } = useFormContext<FormConnectionFormValues>();

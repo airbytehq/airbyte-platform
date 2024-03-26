@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { Badge } from "components/ui/Badge";
 import { Box } from "components/ui/Box";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
 import { SearchInput } from "components/ui/SearchInput";
@@ -49,9 +50,9 @@ export const OrganizationAccessManagementSection: React.FC = () => {
   return (
     <FlexContainer direction="column" gap="md">
       <FlexContainer justifyContent="space-between" alignItems="baseline">
-        <Text size="lg">
+        <Heading as="h2" size="sm">
           <FormattedMessage id="settings.accessManagement.members" />
-        </Text>
+        </Heading>
       </FlexContainer>
       <FlexContainer justifyContent="space-between" alignItems="center">
         <FlexItem className={styles.searchInputWrapper}>

@@ -16,22 +16,24 @@ export const CreateApplicationControl = () => {
   const { formatMessage } = useIntl();
   const { mutateAsync: createApplication } = useCreateApplication();
   const { applications } = useListApplications();
-  const { openModal, closeModal } = useModalService();
+  const { openModal } = useModalService();
 
   const schema = yup.object().shape({
     name: yup.string().required("form.empty.error"),
   });
 
-  const onCreateApplicationSubmission = async (values: ApplicationCreate) => {
-    await createApplication(values);
-    closeModal();
-  };
-
-  const onAddApplicationButtonClick = async () => {
-    openModal({
+  const onAddApplicationButtonClick = () =>
+    openModal<void>({
       title: formatMessage({ id: "settings.application.create" }),
-      content: () => (
-        <Form<ApplicationCreate> schema={schema} defaultValues={{ name: "" }} onSubmit={onCreateApplicationSubmission}>
+      content: ({ onComplete, onCancel }) => (
+        <Form<ApplicationCreate>
+          schema={schema}
+          defaultValues={{ name: "" }}
+          onSubmit={async (values: ApplicationCreate) => {
+            await createApplication(values);
+            onComplete();
+          }}
+        >
           <Box px="xl" py="md">
             <FormControl
               fieldType="input"
@@ -41,13 +43,12 @@ export const CreateApplicationControl = () => {
             />
           </Box>
           <ModalFooter>
-            <FormSubmissionButtons />
+            <FormSubmissionButtons onCancelClickCallback={onCancel} />
           </ModalFooter>
         </Form>
       ),
       size: "md",
     });
-  };
 
   return (
     <>

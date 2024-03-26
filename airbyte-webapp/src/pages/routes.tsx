@@ -49,7 +49,7 @@ const SourceSettingsPage = React.lazy(() => import("./source/SourceSettingsPage"
 const SourceConnectionsPage = React.lazy(() => import("./source/SourceConnectionsPage"));
 const AdvancedSettingsPage = React.lazy(() => import("./SettingsPage/pages/AdvancedSettingsPage"));
 
-const WorkspacesPage = React.lazy(() => import("./workspaces/WorkspacesPage"));
+const WorkspacesPage = React.lazy(() => import("./workspaces"));
 
 const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
   const analyticsContext = useMemo(

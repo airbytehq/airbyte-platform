@@ -63,9 +63,9 @@ open class ConnectionsController(
     )
 
     trackingHelper.callWithTracker({
-      AirbyteCatalogHelper.validateCronConfiguration(
-        connectionCreateRequest.schedule,
-      )
+      connectionCreateRequest.schedule?.let {
+        AirbyteCatalogHelper.validateCronConfiguration(it)
+      }
     }, CONNECTIONS_PATH, POST, userId)
 
     // get destination response to retrieve workspace id as well as input for destination sync modes
@@ -288,9 +288,9 @@ open class ConnectionsController(
     // validate cron timing configurations
     trackingHelper.callWithTracker(
       {
-        AirbyteCatalogHelper.validateCronConfiguration(
-          connectionPatchRequest.schedule,
-        )
+        connectionPatchRequest.schedule?.let {
+          AirbyteCatalogHelper.validateCronConfiguration(it)
+        }
       },
       CONNECTIONS_WITH_ID_PATH,
       PUT,

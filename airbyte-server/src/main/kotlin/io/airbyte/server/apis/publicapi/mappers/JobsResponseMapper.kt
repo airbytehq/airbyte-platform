@@ -11,6 +11,8 @@ import io.airbyte.public_api.model.generated.JobResponse
 import io.airbyte.public_api.model.generated.JobTypeEnum
 import io.airbyte.public_api.model.generated.JobsResponse
 import io.airbyte.server.apis.publicapi.constants.JOBS_PATH
+import io.airbyte.server.apis.publicapi.constants.JOB_TYPE
+import io.airbyte.server.apis.publicapi.constants.WORKSPACE_IDS
 import io.airbyte.server.apis.publicapi.helpers.removePublicApiPathPrefix
 import java.util.UUID
 
@@ -47,7 +49,7 @@ object JobsResponseMapper {
       }.map { obj: JobWithAttemptsRead? -> JobResponseMapper.from(obj!!) }.toList()
     val uriBuilder =
       PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(JOBS_PATH))
-        .queryParam("jobType", jobType)
+        .queryParam(JOB_TYPE, jobType)
         .queryParam("connectionId", connectionId)
     val jobsResponse = JobsResponse()
     jobsResponse.next = PaginationMapper.getNextUrl(jobs, limit, offset, uriBuilder)
@@ -69,7 +71,7 @@ object JobsResponseMapper {
    */
   fun from(
     jobsList: JobReadList,
-    workspaceIds: List<UUID?>?,
+    workspaceIds: List<UUID>,
     jobType: JobTypeEnum?,
     limit: Int,
     offset: Int,
@@ -81,10 +83,12 @@ object JobsResponseMapper {
           j.job!!.configType,
         )
       }.map { obj: JobWithAttemptsRead? -> JobResponseMapper.from(obj!!) }.toList()
+
     val uriBuilder =
       PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(JOBS_PATH))
-        .queryParam("jobType", jobType)
-        .queryParam("workspaceIds", workspaceIds)
+        .queryParam(JOB_TYPE, jobType)
+    if (workspaceIds.isNotEmpty()) uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+
     val jobsResponse = JobsResponse()
     jobsResponse.next = PaginationMapper.getNextUrl(jobs, limit, offset, uriBuilder)
     jobsResponse.previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder)

@@ -50,8 +50,7 @@ export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, re
     organizationId: organizationInfo?.organizationId,
   });
   const cannotDemoteUser = resourceType === "workspace" && orgPermissionType === "organization_admin";
-  const shouldHidePopover =
-    cannotDemoteUser || !canEditPermissions || user.id === currentUser.userId || user.invitationStatus === "pending";
+  const shouldHidePopover = cannotDemoteUser || !canEditPermissions || user.id === currentUser.userId;
 
   const tooltipContent =
     cannotDemoteUser && canEditPermissions
@@ -71,10 +70,7 @@ export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, re
           <ViewOnlyRoleBox highestPermissionType={highestPermissionType} />
         )
       ) : (
-        <RoleManagementMenu
-          user={{ ...user, userId: user.id, userName: user.userName ?? user.userEmail, workspaceId }}
-          resourceType={resourceType}
-        />
+        <RoleManagementMenu user={user} highestPermissionType={highestPermissionType} resourceType={resourceType} />
       )}
       {user.organizationPermission?.permissionType === "organization_admin" && resourceType === "workspace" && (
         <Badge variant="grey">

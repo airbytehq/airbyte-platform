@@ -9,7 +9,7 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { Builder } from "components/connectorBuilder/Builder/Builder";
 import { StreamTestingPanel } from "components/connectorBuilder/StreamTestingPanel";
 import { BuilderState, builderStateValidationSchema, useBuilderWatch } from "components/connectorBuilder/types";
-import { YamlEditor } from "components/connectorBuilder/YamlEditor";
+import { YamlManifestEditor } from "components/connectorBuilder/YamlEditor";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 
 import {
@@ -103,10 +103,16 @@ const Panels = React.memo(() => {
         panels={[
           {
             children: (
-              <>{mode === "yaml" ? <YamlEditor /> : <Builder hasMultipleStreams={formValues.streams.length > 1} />}</>
+              <>
+                {mode === "yaml" ? (
+                  <YamlManifestEditor />
+                ) : (
+                  <Builder hasMultipleStreams={formValues.streams.length > 1} />
+                )}
+              </>
             ),
             className: styles.leftPanel,
-            minWidth: 550,
+            minWidth: 350,
           },
           {
             children: <StreamTestingPanel />,

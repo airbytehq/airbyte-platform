@@ -8,6 +8,7 @@ import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toMap;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.core.util.Separators;
@@ -45,8 +46,18 @@ import java.util.stream.StreamSupport;
 @SuppressWarnings({"PMD.AvoidReassigningParameters", "PMD.AvoidCatchingThrowable"})
 public class Jsons {
 
+  private static final StreamReadConstraints STREAM_READ_CONSTRAINTS = StreamReadConstraints
+      .builder()
+      .maxStringLength(Integer.MAX_VALUE)
+      .build();
+
   // Object Mapper is thread-safe
   private static final ObjectMapper OBJECT_MAPPER = MoreMappers.initMapper();
+
+  static {
+    OBJECT_MAPPER.getFactory().setStreamReadConstraints(STREAM_READ_CONSTRAINTS);
+  }
+
   /**
    * Exact ObjectMapper preserves float information by using the Java Big Decimal type.
    */
@@ -55,6 +66,7 @@ public class Jsons {
   static {
     OBJECT_MAPPER_EXACT = MoreMappers.initMapper();
     OBJECT_MAPPER_EXACT.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
+    OBJECT_MAPPER_EXACT.getFactory().setStreamReadConstraints(STREAM_READ_CONSTRAINTS);
   }
 
   private static final ObjectWriter OBJECT_WRITER = OBJECT_MAPPER.writer(new JsonPrettyPrinter());

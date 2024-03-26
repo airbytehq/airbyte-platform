@@ -21,7 +21,7 @@ import {
 export const DestinationStreamPrefixNameFormField = () => {
   const { formatMessage } = useIntl();
   const { setValue, control } = useFormContext<FormConnectionFormValues>();
-  const { openModal, closeModal } = useModalService();
+  const { openModal } = useModalService();
   const prefix = useWatch({ name: "prefix", control });
 
   const destinationStreamNamesChange = useCallback(
@@ -39,20 +39,23 @@ export const DestinationStreamPrefixNameFormField = () => {
 
   const openDestinationStreamNamesModal = useCallback(
     () =>
-      openModal({
+      openModal<void>({
         size: "sm",
         title: <FormattedMessage id="connectionForm.modal.destinationStreamNames.title" />,
-        content: () => (
+        content: ({ onComplete, onCancel }) => (
           <DestinationStreamNamesModal
             initialValues={{
               prefix,
             }}
-            onCloseModal={closeModal}
-            onSubmit={destinationStreamNamesChange}
+            onCancel={onCancel}
+            onSubmit={async (values) => {
+              destinationStreamNamesChange(values);
+              onComplete();
+            }}
           />
         ),
       }),
-    [closeModal, destinationStreamNamesChange, openModal, prefix]
+    [destinationStreamNamesChange, openModal, prefix]
   );
 
   return (

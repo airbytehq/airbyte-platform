@@ -36,7 +36,7 @@ export const VersionModal: React.FC<{
   }, [data, isLoading, onClose, selectedVersion, setDisplayedVersion]);
 
   return (
-    <Modal size="sm" title={<FormattedMessage id="connectorBuilder.versionModal.title" />} onClose={onClose}>
+    <Modal size="sm" title={<FormattedMessage id="connectorBuilder.versionModal.title" />} onCancel={onClose}>
       <ModalBody>
         {isLoadingVersionList ? (
           <FlexContainer justifyContent="center">

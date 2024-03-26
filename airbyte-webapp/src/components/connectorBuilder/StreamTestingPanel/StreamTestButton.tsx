@@ -48,7 +48,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   let showWarningIcon = false;
   let tooltipContent = undefined;
 
-  if (isResolving && mode === "yaml") {
+  if (isResolving) {
     buttonDisabled = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.resolvingStreamList" />;
   }

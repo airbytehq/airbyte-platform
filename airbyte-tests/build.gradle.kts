@@ -61,8 +61,12 @@ fun registerTestSuite(name: String, type: String, dirName: String, deps: JvmComp
 
             targets.all {
                 testTask.configure {
+
+                    val parallelExecutionEnabled =  System.getenv()["TESTS_PARALLEL_EXECUTION_ENABLED"] ?: "true"
+                    systemProperties = mapOf("junit.jupiter.execution.parallel.enabled" to parallelExecutionEnabled)
+
                     testLogging {
-                        events = setOf(TestLogEvent.PASSED, TestLogEvent.FAILED)
+                        events = setOf(TestLogEvent.PASSED, TestLogEvent.FAILED, TestLogEvent.STARTED, TestLogEvent.SKIPPED)
                     }
                     shouldRunAfter(suites.named("test"))
                     // Ensure they re-run since these are integration tests.

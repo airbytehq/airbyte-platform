@@ -13,14 +13,15 @@ import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 import { AirbyteStreamAndConfiguration, NamespaceDefinitionType } from "core/api/types/AirbyteClient";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./StreamsConfigTableHeader.module.scss";
 import { FormConnectionFormValues } from "../../ConnectionForm/formConfig";
-import { DestinationNamespaceModal, DestinationNamespaceFormValues } from "../../DestinationNamespaceModal";
+import { DestinationNamespaceFormValues, DestinationNamespaceModal } from "../../DestinationNamespaceModal";
 import {
-  DestinationStreamNamesModal,
   DestinationStreamNamesFormValues,
+  DestinationStreamNamesModal,
   StreamNameDefinitionValueType,
 } from "../../DestinationStreamNamesModal";
 import { CellText, CellTextProps } from "../CellText";
@@ -49,8 +50,9 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
   prefix,
 }) => {
   const { mode } = useConnectionFormService();
-  const { openModal, closeModal } = useModalService();
+  const { openModal } = useModalService();
   const { setValue } = useFormContext<FormConnectionFormValues>();
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
 
   const destinationNamespaceChange = (value: DestinationNamespaceFormValues) => {
     setValue("namespaceDefinition", value.namespaceDefinition, { shouldDirty: true });
@@ -102,23 +104,26 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
         </Text>
       </CellText>
       <HeaderCell size="fixed" className={styles.dataDestinationCell}>
-        <FormattedMessage id="form.dataDestination" />
+        <FormattedMessage id={isSimplifiedCreation ? "form.namespace" : "form.dataDestination"} />
         <Button
           type="button"
           variant="clear"
           disabled={mode === "readonly"}
           onClick={() =>
-            openModal({
+            openModal<void>({
               size: "lg",
               title: <FormattedMessage id="connectionForm.modal.destinationNamespace.title" />,
-              content: () => (
+              content: ({ onComplete, onCancel }) => (
                 <DestinationNamespaceModal
                   initialValues={{
                     namespaceDefinition,
                     namespaceFormat,
                   }}
-                  onCloseModal={closeModal}
-                  onSubmit={destinationNamespaceChange}
+                  onCancel={onCancel}
+                  onSubmit={async (values) => {
+                    destinationNamespaceChange(values);
+                    onComplete();
+                  }}
                 />
               ),
             })
@@ -134,16 +139,19 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
           variant="clear"
           disabled={mode === "readonly"}
           onClick={() =>
-            openModal({
+            openModal<void>({
               size: "sm",
               title: <FormattedMessage id="connectionForm.modal.destinationStreamNames.title" />,
-              content: () => (
+              content: ({ onComplete, onCancel }) => (
                 <DestinationStreamNamesModal
                   initialValues={{
                     prefix,
                   }}
-                  onCloseModal={closeModal}
-                  onSubmit={destinationStreamNameChange}
+                  onCancel={onCancel}
+                  onSubmit={async (values) => {
+                    destinationStreamNameChange(values);
+                    onComplete();
+                  }}
                 />
               ),
             })

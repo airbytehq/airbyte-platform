@@ -26,7 +26,7 @@ import styles from "./WorkspacesPage.module.scss";
 
 export const WORKSPACE_LIST_LENGTH = 50;
 
-const WorkspacesPage: React.FC = () => {
+export const WorkspacesPage: React.FC = () => {
   const { isLoading: isLogoutLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
   useTrackPage(PageTrackingCodes.WORKSPACES);
   const [searchValue, setSearchValue] = useState("");
@@ -120,5 +120,3 @@ const WorkspacesPage: React.FC = () => {
     </>
   );
 };
-
-export default WorkspacesPage;

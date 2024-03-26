@@ -186,38 +186,7 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
             console.error("sendEmailVerifiedLink should be used within auth flow");
             throw new Error("Cannot send verification email if firebaseUser is null.");
           }
-          return sendEmailVerification(firebaseUser)
-            .then(() => {
-              registerNotification({
-                id: "workspace.emailVerificationResendSuccess",
-                text: <FormattedMessage id="credits.emailVerification.resendConfirmation" />,
-                type: "success",
-              });
-            })
-            .catch((error) => {
-              switch (error.code) {
-                case AuthErrorCodes.NETWORK_REQUEST_FAILED:
-                  registerNotification({
-                    id: error.code,
-                    text: <FormattedMessage id={FirebaseAuthMessageId.NetworkFailure} />,
-                    type: "error",
-                  });
-                  break;
-                case AuthErrorCodes.TOO_MANY_ATTEMPTS_TRY_LATER:
-                  registerNotification({
-                    id: error.code,
-                    text: <FormattedMessage id={FirebaseAuthMessageId.TooManyRequests} />,
-                    type: "warning",
-                  });
-                  break;
-                default:
-                  registerNotification({
-                    id: error.code,
-                    text: <FormattedMessage id={FirebaseAuthMessageId.DefaultError} />,
-                    type: "error",
-                  });
-              }
-            });
+          return sendEmailVerification(firebaseUser);
         },
         verifyEmail: verifyFirebaseEmail,
       };
@@ -389,7 +358,6 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
     getAirbyteUser,
     keycloakAuth,
     logout,
-    registerNotification,
     resendWithSignInLink,
     updateAirbyteUser,
     verifyFirebaseEmail,

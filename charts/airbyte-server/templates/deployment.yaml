@@ -67,6 +67,11 @@ spec:
           value: "true"
         {{- end }}
         {{- if eq .Values.global.deploymentMode "oss"  }}
+        - name: AIRBYTE_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: AIRBYTE_API_HOST
         - name: AIRBYTE_VERSION
           valueFrom:
             configMapKeyRef:

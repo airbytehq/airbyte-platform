@@ -23,6 +23,7 @@ import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ScopeType;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
+import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
@@ -308,6 +309,18 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
         .stream()
         .map(r -> r.get(ACTOR.ID))
         .collect(Collectors.toSet()));
+  }
+
+  @Override
+  public List<ActorWorkspaceOrganizationIds> getActorIdsForDefinition(final UUID actorDefinitionId) throws IOException {
+    return database.query(ctx -> ctx.select(ACTOR.ID, ACTOR.WORKSPACE_ID, WORKSPACE.ORGANIZATION_ID)
+        .from(ACTOR)
+        .join(WORKSPACE).on(ACTOR.WORKSPACE_ID.eq(WORKSPACE.ID))
+        .where(ACTOR.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
+        .fetch()
+        .stream()
+        .map(record -> new ActorWorkspaceOrganizationIds(record.get(ACTOR.ID), record.get(ACTOR.WORKSPACE_ID), record.get(WORKSPACE.ORGANIZATION_ID)))
+        .toList());
   }
 
   @Override

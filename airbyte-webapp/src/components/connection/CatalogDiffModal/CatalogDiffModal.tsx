@@ -14,10 +14,10 @@ import { getSortedDiff } from "./utils";
 interface CatalogDiffModalProps {
   catalogDiff: CatalogDiff;
   catalog: AirbyteCatalog;
-  onClose: () => void;
+  onComplete: () => void;
 }
 
-export const CatalogDiffModal: React.FC<CatalogDiffModalProps> = ({ catalogDiff, catalog, onClose }) => {
+export const CatalogDiffModal: React.FC<CatalogDiffModalProps> = ({ catalogDiff, catalog, onComplete }) => {
   const { newItems, removedItems, changedItems } = useMemo(
     () => getSortedDiff(catalogDiff.transforms),
     [catalogDiff.transforms]
@@ -33,7 +33,7 @@ export const CatalogDiffModal: React.FC<CatalogDiffModalProps> = ({ catalogDiff,
         </div>
       </ModalBody>
       <ModalFooter>
-        <Button onClick={() => onClose()} data-testid="update-schema-confirm-btn">
+        <Button onClick={onComplete} data-testid="update-schema-confirm-btn">
           <FormattedMessage id="connection.updateSchema.confirm" />
         </Button>
       </ModalFooter>

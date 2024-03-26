@@ -3,8 +3,6 @@ package io.airbyte.workload.launcher.pods
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
-import io.airbyte.featureflag.Connection
-import io.airbyte.featureflag.ContainerOrchestratorJavaOpts
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -63,16 +61,15 @@ class KubePodClient(
 
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, inputWithLabels, sharedLabels)
 
-    val injectedJavaOpts: String = featureFlagClient.stringVariation(ContainerOrchestratorJavaOpts, Connection(replicationInput.connectionId))
-    val additionalEnvVars = if (injectedJavaOpts.isNotEmpty()) mapOf("JAVA_OPTS" to injectedJavaOpts) else mapOf()
     var pod =
       orchestratorPodFactory.create(
+        replicationInput.connectionId,
         kubeInput.orchestratorLabels,
         kubeInput.resourceReqs,
         kubeInput.nodeSelectors,
         kubeInput.kubePodInfo,
         kubeInput.annotations,
-        additionalEnvVars,
+        mapOf(),
       )
     try {
       pod =

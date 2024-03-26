@@ -9,6 +9,7 @@ import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.client.HttpClient;
 import jakarta.inject.Singleton;
+import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -23,14 +24,17 @@ public class KeycloakSetup {
   private final HttpClient httpClient;
   private final KeycloakServer keycloakServer;
   private final AirbyteKeycloakConfiguration keycloakConfiguration;
+  private final ConfigDbResetHelper configDbResetHelper;
 
   public KeycloakSetup(
                        final HttpClient httpClient,
                        final KeycloakServer keycloakServer,
-                       final AirbyteKeycloakConfiguration keycloakConfiguration) {
+                       final AirbyteKeycloakConfiguration keycloakConfiguration,
+                       final ConfigDbResetHelper configDbResetHelper) {
     this.httpClient = httpClient;
     this.keycloakServer = keycloakServer;
     this.keycloakConfiguration = keycloakConfiguration;
+    this.configDbResetHelper = configDbResetHelper;
   }
 
   public void run() {
@@ -44,6 +48,15 @@ public class KeycloakSetup {
 
       if (keycloakConfiguration.getResetRealm()) {
         keycloakServer.recreateAirbyteRealm();
+        log.info("Successfully recreated Airbyte Realm. Now deleting Airbyte User/Permission records...");
+        try {
+          configDbResetHelper.deleteConfigDbUsers();
+        } catch (SQLException e) {
+          log.error("Encountered an error while cleaning up Airbyte User/Permission records. "
+              + "You likely need to re-run this KEYCLOAK_RESET_REALM operation.", e);
+          throw new RuntimeException(e);
+        }
+        log.info("Successfully cleaned existing Airbyte User/Permission records. Reset finished successfully.");
       } else {
         keycloakServer.createAirbyteRealm();
       }

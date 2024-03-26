@@ -1,17 +1,47 @@
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
+import { useNavigate } from "react-router-dom";
 
 import { Button } from "components/ui/Button";
 
-import { useConfirmWorkspaceDeletionModal } from "area/workspace/utils/useConfirmWorkspaceDeletionModal";
 import { useCurrentWorkspace, useDeleteWorkspace } from "core/api";
+import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { useNotificationService } from "hooks/services/Notification";
+import { RoutePaths } from "pages/routePaths";
 
 export const DeleteWorkspace: React.FC = () => {
   const workspace = useCurrentWorkspace();
   const { mutateAsync: deleteWorkspace, isLoading: isDeletingWorkspace } = useDeleteWorkspace();
-  const confirmWorkspaceDeletion = useConfirmWorkspaceDeletionModal(workspace, deleteWorkspace);
+  const { registerNotification } = useNotificationService();
+  const navigate = useNavigate();
+  const { formatMessage } = useIntl();
+  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
+
+  const onRemoveWorkspaceClick = () =>
+    openConfirmationModal({
+      text: `settings.workspaceSettings.deleteWorkspace.confirmation.text`,
+      title: (
+        <FormattedMessage
+          id="settings.workspaceSettings.deleteWorkspace.confirmation.title"
+          values={{ name: workspace.name }}
+        />
+      ),
+      submitButtonText: "settings.workspaceSettings.delete.confirmation.submitButtonText",
+      confirmationText: workspace.name,
+      onSubmit: async () => {
+        await deleteWorkspace(workspace.workspaceId);
+        registerNotification({
+          id: "settings.workspace.delete.success",
+          text: formatMessage({ id: "settings.workspaceSettings.delete.success" }),
+          type: "success",
+        });
+        navigate(`/${RoutePaths.Workspaces}`);
+        closeConfirmationModal();
+      },
+      submitButtonDataId: "reset",
+    });
 
   return (
-    <Button isLoading={isDeletingWorkspace} variant="danger" onClick={confirmWorkspaceDeletion}>
+    <Button isLoading={isDeletingWorkspace} variant="danger" onClick={onRemoveWorkspaceClick}>
       <FormattedMessage id="settings.workspaceSettings.deleteLabel" />
     </Button>
   );

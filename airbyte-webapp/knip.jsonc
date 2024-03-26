@@ -1,0 +1,30 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "typescript": true,
+  "vite": true,
+  "project": [
+    "src/**/*.{js,ts,tsx}!"
+  ],
+  "ignore": [
+    // Ignore all generated files
+    "src/core/api/generated/**",
+    // Ignore storybook files
+    "**/*.stories.tsx",
+    "**/*.docs.tsx",
+    "**/*.docs-utils.{ts,tsx}",
+    // Ignore test specific files
+    "src/test-utils/**",
+    "**/__mocks__/**",
+    "**/*.mocks.{ts,tsx}",
+    
+    // Debug utility meant to be used only temporary for local debugging
+    "src/core/utils/useMemoDebug.ts"
+  ],
+  "ignoreDependencies": [
+    // Knip doesn't detect the import to this from a SASS file
+    "normalize.css",
+    // Knip does not detect the pure `/// <reference />` import for this
+    "@types/segment-analytics"
+  ],
+  "include": ["files", "dependencies"]
+}

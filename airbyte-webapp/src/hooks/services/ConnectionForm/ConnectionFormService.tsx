@@ -11,7 +11,6 @@ import {
   useGetDestinationDefinitionSpecification,
   useSourceDefinition,
   useDestinationDefinition,
-  SchemaError,
 } from "core/api";
 import {
   ActorDefinitionVersionRead,
@@ -34,7 +33,7 @@ export type ConnectionOrPartialConnection =
 interface ConnectionServiceProps {
   connection: ConnectionOrPartialConnection;
   mode: ConnectionFormMode;
-  schemaError?: SchemaError | null;
+  schemaError?: Error | null;
   refreshSchema: () => Promise<void>;
 }
 
@@ -48,7 +47,7 @@ interface ConnectionFormHook {
   destDefinitionVersion: ActorDefinitionVersionRead;
   destDefinitionSpecification: DestinationDefinitionSpecificationRead;
   initialValues: FormConnectionFormValues;
-  schemaError?: SchemaError;
+  schemaError?: Error | null;
   refreshSchema: () => Promise<void>;
   setSubmitError: (submitError: FormError | null) => void;
   getErrorMessage: (formValid: boolean, errors?: FieldErrors<FormConnectionFormValues>) => string | JSX.Element | null;

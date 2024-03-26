@@ -132,6 +132,9 @@ public class MockData {
   static final UUID CREATOR_USER_ID_3 = UUID.randomUUID();
   static final UUID CREATOR_USER_ID_4 = UUID.randomUUID();
   static final UUID CREATOR_USER_ID_5 = UUID.randomUUID();
+  static final UUID DUP_EMAIL_USER_ID_1 = UUID.randomUUID();
+  static final UUID DUP_EMAIL_USER_ID_2 = UUID.randomUUID();
+  static final String DUP_EMAIL = "dup-email@airbyte.io";
 
   // Permission
   static final UUID PERMISSION_ID_1 = UUID.randomUUID();
@@ -293,6 +296,34 @@ public class MockData {
         .withUiMetadata(null);
 
     return Arrays.asList(user1, user2, user3, user4, user5);
+  }
+
+  public static List<User> dupEmailUsers() {
+    final User dupEmailUser1 = new User()
+        .withUserId(DUP_EMAIL_USER_ID_1)
+        .withName("dup-email-user-1")
+        .withAuthUserId(DUP_EMAIL_USER_ID_1.toString())
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+        .withDefaultWorkspaceId(null)
+        .withStatus(User.Status.REGISTERED)
+        .withCompanyName("dup-user-company")
+        .withEmail(DUP_EMAIL)
+        .withNews(true)
+        .withUiMetadata(null);
+
+    final User dupEmailUser2 = new User()
+        .withUserId(DUP_EMAIL_USER_ID_2)
+        .withName("dup-email-user-2")
+        .withAuthUserId(DUP_EMAIL_USER_ID_2.toString())
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+        .withDefaultWorkspaceId(null)
+        .withStatus(User.Status.REGISTERED)
+        .withCompanyName("dup-user-company")
+        .withEmail(DUP_EMAIL)
+        .withNews(true)
+        .withUiMetadata(null);
+
+    return Arrays.asList(dupEmailUser1, dupEmailUser2);
   }
 
   public static List<Permission> permissions() {

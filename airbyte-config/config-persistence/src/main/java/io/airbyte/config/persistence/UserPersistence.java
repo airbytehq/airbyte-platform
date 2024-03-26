@@ -279,6 +279,19 @@ public class UserPersistence {
   }
 
   /**
+   * Fetch all users with a given email address.
+   */
+  public List<User> getUsersByEmail(final String email) throws IOException {
+    return database.query(ctx -> ctx
+        .select(asterisk())
+        .from(USER)
+        .where(USER.EMAIL.eq(email)).fetch())
+        .stream()
+        .map(this::createUserFromRecord)
+        .toList();
+  }
+
+  /**
    * Get the default user if it exists by looking up the hardcoded default user id.
    */
   public Optional<User> getDefaultUser() throws IOException {

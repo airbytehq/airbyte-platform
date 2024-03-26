@@ -19,7 +19,7 @@ export const UserRoleText: React.FC<{ highestPermissionType?: RbacRole }> = ({ h
       : "role.member";
 
   return (
-    <Text color="grey" align="center" size="sm">
+    <Text color="grey" align="center" size="sm" as="span">
       <FormattedMessage id={roleId} />
     </Text>
   );

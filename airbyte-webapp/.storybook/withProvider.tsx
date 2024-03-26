@@ -7,7 +7,6 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 
 import messages from "../src/locales/en.json";
 import { FeatureService } from "../src/core/services/features";
-import { ConfigServiceProvider, config } from "../src/core/config";
 import { DocumentationPanelProvider } from "../src/views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 import { AppMonitoringServiceProvider } from "../src/hooks/services/AppMonitoringService";
 import { AirbyteThemeProvider } from "../src/hooks/theme/useAirbyteTheme";
@@ -33,13 +32,11 @@ export const withProviders = (getStory: Parameters<Decorator>[0]) => (
               b: (chunk) => <strong>{chunk}</strong>,
             }}
           >
-            <ConfigServiceProvider config={config}>
-              <DocumentationPanelProvider>
-                <AppMonitoringServiceProvider>
-                  <FeatureService features={[]}>{getStory()}</FeatureService>
-                </AppMonitoringServiceProvider>
-              </DocumentationPanelProvider>
-            </ConfigServiceProvider>
+            <DocumentationPanelProvider>
+              <AppMonitoringServiceProvider>
+                <FeatureService features={[]}>{getStory()}</FeatureService>
+              </AppMonitoringServiceProvider>
+            </DocumentationPanelProvider>
           </IntlProvider>
         </MemoryRouter>
       </QueryClientProvider>

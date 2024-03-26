@@ -14,11 +14,11 @@ import { useModalService } from "hooks/services/Modal";
 import { FormConnectionFormValues } from "./formConfig";
 import { FormFieldLayout } from "./FormFieldLayout";
 import { namespaceDefinitionOptions } from "./types";
-import { DestinationNamespaceModal, DestinationNamespaceFormValues } from "../DestinationNamespaceModal";
+import { DestinationNamespaceFormValues, DestinationNamespaceModal } from "../DestinationNamespaceModal";
 
 export const NamespaceDefinitionFormField = () => {
   const { setValue, control } = useFormContext<FormConnectionFormValues>();
-  const { openModal, closeModal } = useModalService();
+  const { openModal } = useModalService();
 
   const namespaceDefinition = useWatch({ name: "namespaceDefinition", control });
   const namespaceFormat = useWatch({ name: "namespaceFormat", control });
@@ -38,21 +38,24 @@ export const NamespaceDefinitionFormField = () => {
 
   const openDestinationNamespaceModal = useCallback(
     () =>
-      openModal({
+      openModal<void>({
         size: "lg",
         title: <FormattedMessage id="connectionForm.modal.destinationNamespace.title" />,
-        content: () => (
+        content: ({ onComplete, onCancel }) => (
           <DestinationNamespaceModal
             initialValues={{
               namespaceDefinition,
               namespaceFormat,
             }}
-            onCloseModal={closeModal}
-            onSubmit={destinationNamespaceChange}
+            onCancel={onCancel}
+            onSubmit={async (values) => {
+              destinationNamespaceChange(values);
+              onComplete();
+            }}
           />
         ),
       }),
-    [closeModal, destinationNamespaceChange, namespaceDefinition, namespaceFormat, openModal]
+    [destinationNamespaceChange, namespaceDefinition, namespaceFormat, openModal]
   );
 
   return (

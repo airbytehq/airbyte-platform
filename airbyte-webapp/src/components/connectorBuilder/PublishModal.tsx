@@ -80,7 +80,7 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
             id={currentProject.sourceDefinitionId ? "connectorBuilder.releaseNewVersion" : "connectorBuilder.publish"}
           />
         }
-        onClose={onClose}
+        onCancel={onClose}
       >
         <ModalBody>
           <FlexContainer justifyContent="center">
@@ -153,7 +153,7 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
             id={currentProject.sourceDefinitionId ? "connectorBuilder.releaseNewVersion" : "connectorBuilder.publish"}
           />
         }
-        onClose={onClose}
+        onCancel={onClose}
       >
         <form onSubmit={methods.handleSubmit(handleSubmit)}>
           <ModalBody>

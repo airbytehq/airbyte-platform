@@ -11,6 +11,7 @@ import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.sync.ReplicationLauncherWorker
+import io.airbyte.workload.launcher.config.OrchestratorEnvSingleton
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
@@ -30,7 +31,7 @@ import java.util.UUID
 @Requires(notEnv = [Environment.KUBERNETES])
 class DockerPodClient(
   private val serializer: ObjectSerializer,
-  @Named("orchestratorEnvMap") private val orchestratorEnvMap: Map<String, String>,
+  private val orchestratorEnvSingleton: OrchestratorEnvSingleton,
   private val podLauncher: DockerPodLauncher,
   @Named("orchestratorKubeContainerInfo") private val orchestratorInfo: KubeContainerInfo,
   private val podNameGenerator: PodNameGenerator,
@@ -47,7 +48,7 @@ class DockerPodClient(
         name = launcherInput.autoId.toString(),
         imageName = orchestratorInfo.image,
         mutex = launcherInput.mutexKey,
-        envMap = orchestratorEnvMap,
+        envMap = orchestratorEnvSingleton.orchestratorEnvMap(replicationInput.connectionId),
         fileMap = buildFileMap(launcherInput.workloadId, replicationInput, replicationInput.jobRunConfig),
         orchestratorReqs = replicationInput.getOrchestratorResourceReqs(),
       )
@@ -88,7 +89,7 @@ class DockerPodClient(
     jobRunConfig: JobRunConfig,
   ): Map<String, String> {
     return mapOf(
-      OrchestratorConstants.INIT_FILE_ENV_MAP to serializer.serialize(orchestratorEnvMap),
+      OrchestratorConstants.INIT_FILE_ENV_MAP to serializer.serialize(orchestratorEnvSingleton.orchestratorEnvMap(input.connectionId)),
       OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG to serializer.serialize(jobRunConfig),
       AsyncOrchestratorPodProcess.KUBE_POD_INFO to
         serializer.serialize(

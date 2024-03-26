@@ -262,11 +262,11 @@ public class OAuthHandler {
 
   public CompleteOAuthResponse completeSourceOAuthHandleReturnSecret(final CompleteSourceOauthRequest completeSourceOauthRequest)
       throws JsonValidationException, ConfigNotFoundException, IOException {
-    final CompleteOAuthResponse oAuthTokens = completeSourceOAuth(completeSourceOauthRequest);
-    if (oAuthTokens != null && completeSourceOauthRequest.getReturnSecretCoordinate()) {
-      return writeOAuthResponseSecret(completeSourceOauthRequest.getWorkspaceId(), oAuthTokens);
+    final CompleteOAuthResponse completeOAuthResponse = completeSourceOAuth(completeSourceOauthRequest);
+    if (completeOAuthResponse != null && completeSourceOauthRequest.getReturnSecretCoordinate()) {
+      return writeOAuthResponseSecret(completeSourceOauthRequest.getWorkspaceId(), completeOAuthResponse);
     } else {
-      return oAuthTokens;
+      return completeOAuthResponse;
     }
   }
 

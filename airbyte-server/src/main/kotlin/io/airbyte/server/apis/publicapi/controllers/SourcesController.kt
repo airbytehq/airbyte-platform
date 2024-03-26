@@ -189,7 +189,7 @@ open class SourcesController(
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
     airbyteApiAuthorizationHelper.checkWorkspacePermissions(
-      workspaceIds?.map { toString() } ?: emptyList(),
+      workspaceIds?.map { it.toString() } ?: emptyList(),
       Scope.WORKSPACES,
       userId,
       PermissionType.WORKSPACE_READER,

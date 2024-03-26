@@ -5,8 +5,8 @@ import * as yup from "yup";
 import { Form } from "components/forms";
 import { DataResidencyDropdown } from "components/forms/DataResidencyDropdown";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
-import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
@@ -26,16 +26,6 @@ const schema = yup.object().shape({
 interface DefaultDataResidencyFormValues {
   defaultGeography?: Geography;
 }
-
-const fieldDescription = (
-  <FormattedMessage
-    id="settings.geographyDescription"
-    values={{
-      lnk: (node: React.ReactNode) => <ExternalLink href={links.cloudAllowlistIPsLink}>{node}</ExternalLink>,
-      request: (node: React.ReactNode) => <ExternalLink href={links.dataResidencySurvey}>{node}</ExternalLink>,
-    }}
-  />
-);
 
 export const DataResidencyView: React.FC = () => {
   const workspace = useCurrentWorkspace();
@@ -70,35 +60,33 @@ export const DataResidencyView: React.FC = () => {
   };
 
   return (
-    <Card title={formatMessage({ id: "settings.defaultDataResidency" })} titleWithBottomBorder>
-      <FlexContainer direction="column">
-        <Text color="grey300" size="sm">
-          <FormattedMessage
-            id="settings.defaultDataResidencyDescription"
-            values={{
-              lnk: (node: React.ReactNode) => <ExternalLink href={links.cloudAllowlistIPsLink}>{node}</ExternalLink>,
-            }}
-          />
-        </Text>
-        <Form<DefaultDataResidencyFormValues>
-          defaultValues={{
-            defaultGeography: workspace.defaultGeography,
+    <FlexContainer direction="column" gap="xl">
+      <Heading as="h1">{formatMessage({ id: "settings.defaultDataResidency" })}</Heading>
+      <Text size="sm">
+        <FormattedMessage
+          id="settings.defaultDataResidencyDescription"
+          values={{
+            lnk: (node: React.ReactNode) => <ExternalLink href={links.cloudAllowlistIPsLink}>{node}</ExternalLink>,
+            request: (node: React.ReactNode) => <ExternalLink href={links.dataResidencySurvey}>{node}</ExternalLink>,
           }}
-          schema={schema}
-          onSubmit={handleSubmit}
-          onSuccess={onSuccess}
-          onError={onError}
-          disabled={!canUpdateWorkspace}
-        >
-          <DataResidencyDropdown<DefaultDataResidencyFormValues>
-            labelId="settings.defaultGeography"
-            description={fieldDescription}
-            name="defaultGeography"
-            inline
-          />
-          <FormSubmissionButtons submitKey="form.saveChanges" />
-        </Form>
-      </FlexContainer>
-    </Card>
+        />
+      </Text>
+      <Form<DefaultDataResidencyFormValues>
+        defaultValues={{
+          defaultGeography: workspace.defaultGeography,
+        }}
+        schema={schema}
+        onSubmit={handleSubmit}
+        onSuccess={onSuccess}
+        onError={onError}
+        disabled={!canUpdateWorkspace}
+      >
+        <DataResidencyDropdown<DefaultDataResidencyFormValues>
+          labelId="settings.defaultGeography"
+          name="defaultGeography"
+        />
+        <FormSubmissionButtons noCancel justify="flex-start" submitKey="form.saveChanges" />
+      </Form>
+    </FlexContainer>
   );
 };

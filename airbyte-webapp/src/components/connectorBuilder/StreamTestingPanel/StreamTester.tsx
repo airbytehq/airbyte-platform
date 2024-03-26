@@ -15,7 +15,10 @@ import { Text } from "components/ui/Text";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
-import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
+import {
+  useConnectorBuilderFormState,
+  useConnectorBuilderTestRead,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { GlobalRequestsDisplay } from "./GlobalRequestsDisplay";
 import { LogsDisplay } from "./LogsDisplay";
@@ -32,11 +35,8 @@ export const StreamTester: React.FC<{
   setTestingValuesInputOpen: (open: boolean) => void;
 }> = ({ hasTestingValuesErrors, setTestingValuesInputOpen }) => {
   const { formatMessage } = useIntl();
+  const { streamNames, isResolving, resolveErrorMessage, resolveError } = useConnectorBuilderFormState();
   const {
-    resolvedManifest,
-    isResolving,
-    resolveErrorMessage,
-    resolveError,
     streamRead: {
       data: streamReadData,
       refetch: readStream,
@@ -56,8 +56,7 @@ export const StreamTester: React.FC<{
   const auxiliaryRequests = streamReadData?.auxiliary_requests;
   const autoImportSchema = useAutoImportSchema(testStreamIndex);
 
-  const resolvedStreams = resolvedManifest.streams;
-  const streamName = resolvedStreams[testStreamIndex]?.name;
+  const streamName = streamNames[testStreamIndex];
 
   const analyticsService = useAnalyticsService();
 
@@ -119,10 +118,9 @@ export const StreamTester: React.FC<{
 
   const testDataWarnings = useTestWarnings();
 
-  const currentStream = resolvedStreams[testStreamIndex];
   return (
     <div className={styles.container}>
-      {!currentStream && isResolving && (
+      {streamName === undefined && isResolving && (
         <Text size="lg" align="center">
           <FormattedMessage id="connectorBuilder.loadingStreamList" />
         </Text>

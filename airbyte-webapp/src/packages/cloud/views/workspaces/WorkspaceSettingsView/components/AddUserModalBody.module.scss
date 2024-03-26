@@ -1,5 +1,8 @@
+@use "scss/variables";
+
 .addUserModalBody {
   height: 400px;
+  padding: variables.$spacing-md;
 
   &__list,
   &__listItem {

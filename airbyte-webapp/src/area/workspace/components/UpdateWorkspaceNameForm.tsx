@@ -64,7 +64,7 @@ export const UpdateWorkspaceNameForm = () => {
         fieldType="input"
         label={formatMessage({ id: "settings.workspaceSettings.updateWorkspaceNameForm.name.label" })}
       />
-      {canUpdateWorkspace && <FormSubmissionButtons justify="flex-start" submitKey="form.saveChanges" />}
+      {canUpdateWorkspace && <FormSubmissionButtons noCancel justify="flex-start" submitKey="form.saveChanges" />}
     </Form>
   );
 };

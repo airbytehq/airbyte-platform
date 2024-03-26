@@ -22,6 +22,7 @@ import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.TestClient;
@@ -36,11 +37,12 @@ import org.junit.jupiter.api.Test;
 
 class ActorDefinitionServiceJooqImplTest extends BaseConfigDatabaseTest {
 
+  private JooqTestDbSetupHelper jooqTestDbSetupHelper;
   private SourceService sourceService;
   private ActorDefinitionServiceJooqImpl actorDefinitionService;
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws JsonValidationException, ConfigNotFoundException, IOException {
     this.actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
 
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
@@ -55,13 +57,13 @@ class ActorDefinitionServiceJooqImplTest extends BaseConfigDatabaseTest {
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService);
     this.sourceService = new SourceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
         secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater);
+
+    jooqTestDbSetupHelper = new JooqTestDbSetupHelper();
+    jooqTestDbSetupHelper.setupForVersionUpgradeTest();
   }
 
   @Test
-  void testSetActorDefaultVersions() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final JooqTestDbSetupHelper jooqTestDbSetupHelper = new JooqTestDbSetupHelper();
-    jooqTestDbSetupHelper.setupForVersionUpgradeTest();
-
+  void testSetActorDefaultVersions() throws IOException {
     final UUID actorId = jooqTestDbSetupHelper.getSource().getSourceId();
     final UUID otherActorId = UUID.randomUUID();
     final SourceConnection otherSource = Jsons.clone(jooqTestDbSetupHelper.getSource()).withSourceId(otherActorId);
@@ -82,10 +84,7 @@ class ActorDefinitionServiceJooqImplTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testGetActorsWithDefaultVersionId() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final JooqTestDbSetupHelper jooqTestDbSetupHelper = new JooqTestDbSetupHelper();
-    jooqTestDbSetupHelper.setupForVersionUpgradeTest();
-
+  void testGetActorsWithDefaultVersionId() throws IOException {
     final UUID actorId = jooqTestDbSetupHelper.getSource().getSourceId();
     final Set<UUID> actorIds = actorDefinitionService.getActorsWithDefaultVersionId(jooqTestDbSetupHelper.getInitialSourceDefaultVersionId());
     assertEquals(Set.of(actorId), actorIds);
@@ -93,9 +92,6 @@ class ActorDefinitionServiceJooqImplTest extends BaseConfigDatabaseTest {
 
   @Test
   void updateActorDefinitionDefaultVersionId() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final JooqTestDbSetupHelper jooqTestDbSetupHelper = new JooqTestDbSetupHelper();
-    jooqTestDbSetupHelper.setupForVersionUpgradeTest();
-
     final UUID actorDefinitionId = jooqTestDbSetupHelper.getSourceDefinition().getSourceDefinitionId();
     final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(actorDefinitionId);
     assertEquals(sourceDefinition.getDefaultVersionId(), jooqTestDbSetupHelper.getInitialSourceDefaultVersionId());
@@ -108,6 +104,18 @@ class ActorDefinitionServiceJooqImplTest extends BaseConfigDatabaseTest {
 
     final StandardSourceDefinition updatedSourceDefinition = sourceService.getStandardSourceDefinition(actorDefinitionId);
     assertEquals(updatedSourceDefinition.getDefaultVersionId(), newVersion.getVersionId());
+  }
+
+  @Test
+  void testGetActorIdsForDefinition() throws IOException {
+    final UUID actorDefinitionId = jooqTestDbSetupHelper.getSourceDefinition().getSourceDefinitionId();
+
+    final UUID sourceActorId = jooqTestDbSetupHelper.getSource().getSourceId();
+    final UUID workspaceId = jooqTestDbSetupHelper.getWorkspace().getWorkspaceId();
+    final UUID organizationId = jooqTestDbSetupHelper.getOrganization().getOrganizationId();
+
+    final List<ActorWorkspaceOrganizationIds> actorIds = actorDefinitionService.getActorIdsForDefinition(actorDefinitionId);
+    assertEquals(List.of(new ActorWorkspaceOrganizationIds(sourceActorId, workspaceId, organizationId)), actorIds);
   }
 
 }

@@ -64,7 +64,7 @@ public class CheckConnectionWorkflowImpl implements CheckConnectionWorkflow {
               .withFailureOrigin(connectionConfiguration.getActorType() == ActorType.SOURCE ? FailureReason.FailureOrigin.SOURCE
                   : FailureReason.FailureOrigin.DESTINATION)
               .withExternalMessage("The check connection failed because of an internal error")
-              .withInternalMessage(e.getMessage())
+              .withInternalMessage("The check connection failed because of an internal error in the scheduler used by airbyte.")
               .withStacktrace(e.toString()));
     }
 

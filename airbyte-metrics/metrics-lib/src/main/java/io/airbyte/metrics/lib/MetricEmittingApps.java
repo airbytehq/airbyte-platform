@@ -24,6 +24,7 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public enum MetricEmittingApps implements MetricEmittingApp {
 
+  BILLING("billing"),
   BOOTLOADER("bootloader"),
   CRON("cron"),
   METRICS_REPORTER("metrics-reporter"),

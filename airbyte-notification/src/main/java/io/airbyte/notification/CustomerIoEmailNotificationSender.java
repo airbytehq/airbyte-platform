@@ -5,6 +5,7 @@
 package io.airbyte.notification;
 
 import io.airbyte.commons.resources.MoreResources;
+import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
@@ -26,6 +27,7 @@ import org.jetbrains.annotations.NotNull;
 @Singleton
 @Requires(property = "airbyte.notification.customerio.apikey",
           notEquals = "")
+@Replaces(FakeCustomerIoEmailNotificationSender.class)
 public class CustomerIoEmailNotificationSender implements NotificationSender<CustomerIoEmailConfig> {
 
   public static final MediaType JSON = MediaType.get("application/json; charset=utf-8");

@@ -10,6 +10,9 @@ export const enum Namespace {
   SCHEMA = "Schema",
   ERD = "ERD",
   SETTINGS = "Settings",
+  SYNC_QUESTIONNAIRE = "SyncQuestionnaire",
+  STREAM_SELECTION = "StreamSelection",
+  FORM = "Form",
 }
 
 export const enum Action {
@@ -39,6 +42,11 @@ export const enum Action {
   DOWNLOAD_SCHEDULER_LOGS = "DownloadSchedulerLogs",
   UPGRADE_VERSION = "UpgradeVersion",
   DISCOVER_SCHEMA = "DiscoverSchema",
+  DISPLAYED = "Displayed",
+  ANSWERED = "Answered",
+  APPLIED = "Applied",
+  SET_SYNC_MODE = "SetSyncMode",
+  DISMISSED_CHANGES_MODAL = "DismissedChangesModal",
 
   // Connector Builder Actions
   CONNECTOR_BUILDER_START = "ConnectorBuilderStart",

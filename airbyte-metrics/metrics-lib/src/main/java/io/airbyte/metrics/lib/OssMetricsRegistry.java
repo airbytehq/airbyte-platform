@@ -122,6 +122,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.CRON, // Actually `cron` or `bootloader` based on which metric client calls the code
       "connector_registry_definition_processed",
       "increments when a connector registry definition is processed by the ApplyDefinitionsHelper"),
+  CONNECTOR_BREAKING_CHANGE_PIN_SERVED(
+      MetricEmittingApps.SERVER,
+      "connector_breaking_change_pin_served",
+      "increments when a breaking change pin is served"),
   EST_NUM_METRICS_EMITTED_BY_REPORTER(
       MetricEmittingApps.METRICS_REPORTER,
       "est_num_metrics_emitted_by_reporter",
@@ -408,6 +412,14 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "destination_deserialization_error",
       "When a sync failed with a deserialization error from the destination"),
 
+  HEARTBEAT_TERMINAL_SHUTDOWN(MetricEmittingApps.ORCHESTRATOR,
+      "heartbeat_terminal_shutdown",
+      "When the heartbeat receives a terminal response from the server, and we shut down the orchestrator"),
+
+  HEARTBEAT_CONNECTIVITY_FAILURE_SHUTDOWN(MetricEmittingApps.ORCHESTRATOR,
+      "heartbeat_connectivity_failure_shutdown",
+      "When the heartbeat cannot communicate with the server, and we shut down the orchestrator"),
+
   SIDECAR_CHECK(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
       "sidecar_check",
       "Exit of the connetor sidecar"),
@@ -418,7 +430,11 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   SPEC(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
       "spec",
-      "Result of the spec operation");
+      "Result of the spec operation"),
+
+  PAYLOAD_SIZE_EXCEEDED(MetricEmittingApps.WORKER,
+      "payload_size_exceeded",
+      "Detected payload size was over 4mb Temporal limit");
 
   private final MetricEmittingApp application;
   private final String metricName;

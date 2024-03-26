@@ -118,7 +118,11 @@ class ParallelStreamStatsTracker(
       else -> {
         val statsTracker = getOrCreateStreamStatsTracker(getNameNamespacePair(stateMessage))
         statsTracker.trackStateFromSource(stateMessage)
-        updateChecksumValidationStatus(statsTracker.areStreamStatsReliable(), AirbyteMessageOrigin.SOURCE, getNameNamespacePair(stateMessage))
+        updateChecksumValidationStatus(
+          statsTracker.areStreamStatsReliable(),
+          AirbyteMessageOrigin.SOURCE,
+          getNameNamespacePair(stateMessage),
+        )
         validateStateChecksum(
           stateMessage,
           statsTracker.getTrackedEmittedRecordsSinceLastStateMessage().toDouble(),
@@ -307,15 +311,18 @@ class ParallelStreamStatsTracker(
       if (!shouldEmitStateStatsToSegment(stateMessage)) {
         return
       }
-      val payload: MutableMap<String?, Any?> = HashMap()
-      payload["connection_id"] = connectionId.toString()
-      payload["job_id"] = jobId.toString()
-      payload["attempt_number"] = attemptNumber.toString()
-      payload["state_origin"] = stateOrigin
-      payload["record_count"] = recordCount.toString()
-      payload["valid_data"] = checksumValidationEnabled.toString()
-      payload["state_type"] = stateMessage.type.toString()
-      payload["state_hash"] = stateMessage.getStateHashCode(Hashing.murmur3_32_fixed()).toString()
+      val payload: MutableMap<String?, Any?> =
+        mutableMapOf(
+          "connection_id" to connectionId.toString(),
+          "job_id" to jobId.toString(),
+          "attempt_number" to attemptNumber.toString(),
+          "state_origin" to stateOrigin,
+          "record_count" to recordCount.toString(),
+          "valid_data" to checksumValidationEnabled.toString(),
+          "state_type" to stateMessage.type.toString(),
+          "state_hash" to stateMessage.getStateHashCode(Hashing.murmur3_32_fixed()).toString(),
+        )
+
       if (stateMessage.type == AirbyteStateMessage.AirbyteStateType.STREAM) {
         val nameNamespacePair = getNameNamespacePair(stateMessage)
         if (nameNamespacePair.namespace != null) {

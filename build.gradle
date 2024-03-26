@@ -25,11 +25,11 @@ buildscript {
 plugins {
     id "base"
     id "com.dorongold.task-tree" version "2.1.1"
-    id "io.airbyte.gradle.jvm" version "0.28.0" apply false
-    id "io.airbyte.gradle.jvm.app" version "0.28.0" apply false
-    id "io.airbyte.gradle.jvm.lib" version "0.28.0" apply false
-    id "io.airbyte.gradle.docker" version "0.28.0" apply false
-    id "io.airbyte.gradle.publish" version "0.28.0" apply false
+    id "io.airbyte.gradle.jvm" version "0.31.0" apply false
+    id "io.airbyte.gradle.jvm.app" version "0.31.0" apply false
+    id "io.airbyte.gradle.jvm.lib" version "0.31.0" apply false
+    id "io.airbyte.gradle.docker" version "0.31.0" apply false
+    id "io.airbyte.gradle.publish" version "0.31.0" apply false
     // uncomment for testing plugin locally
     // id "io.airbyte.gradle.jvm" version "local-test" apply false
     // id "io.airbyte.gradle.jvm.app" version "local-test" apply false
@@ -158,17 +158,15 @@ subprojects { sp ->
         def buildArch = System.getenv('DOCKER_BUILD_ARCH') ?: isArm64 ? 'arm64' : 'amd64'
         def buildPlatform = System.getenv('DOCKER_BUILD_PLATFORM') ?: isArm64 ? 'linux/arm64' : 'linux/amd64'
         def alpineImage = System.getenv('ALPINE_IMAGE') ?: isArm64 ? 'arm64v8/alpine:3.14' : 'amd64/alpine:3.14'
-        def nginxImage = System.getenv('NGINX_IMAGE') ?: isArm64 ? 'arm64v8/nginx:alpine' : 'amd64/nginx:alpine'
 
         // Used by the platform -- Must be an Amazon Corretto-based image for build to work without modification to Dockerfile instructions
-        def openjdkImage = System.getenv('JDK_IMAGE') ?: 'airbyte/airbyte-base-java-image:3.0.1'
+        def openjdkImage = System.getenv('JDK_IMAGE') ?: 'airbyte/airbyte-base-java-image:3.1.0'
 
         platform = buildPlatform
         images.add("airbyte/$sp.dockerImageName:$rootProject.ext.image_tag")
         buildArgs.put('JDK_VERSION', jdkVersion)
         buildArgs.put('DOCKER_BUILD_ARCH', buildArch)
         buildArgs.put('ALPINE_IMAGE', alpineImage)
-        buildArgs.put('NGINX_IMAGE', nginxImage)
         buildArgs.put('JDK_IMAGE', openjdkImage)
         buildArgs.put('VERSION', rootProject.ext.version)
 

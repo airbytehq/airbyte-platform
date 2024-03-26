@@ -14,9 +14,11 @@ export const FirebaseInviteUserButton: React.FC = () => {
   const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId });
 
   const onOpenInviteUsersModal = () =>
-    openModal({
+    openModal<void>({
       title: formatMessage({ id: "modals.addUser.title" }),
-      content: () => <InviteUsersModal invitedFrom="user.settings" />,
+      content: ({ onComplete, onCancel }) => (
+        <InviteUsersModal invitedFrom="user.settings" onSubmit={onComplete} onCancel={onCancel} />
+      ),
       size: "md",
     });
 

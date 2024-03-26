@@ -17,7 +17,6 @@ import {
 import { mockTheme } from "test-utils/mock-data/mockTheme";
 import { mocked, TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
-import type { SchemaError } from "core/api";
 import { useDiscoverSchema } from "core/api";
 import { defaultOssFeatures, FeatureItem } from "core/services/features";
 
@@ -46,7 +45,7 @@ jest.mock("core/api", () => ({
   useSourceDefinition: () => mockSourceDefinition,
   useDestinationDefinition: () => mockDestinationDefinition,
   useDiscoverSchema: jest.fn(() => mockBaseUseDiscoverSchema),
-  LogsRequestError: jest.requireActual("core/api/errors").LogsRequestError,
+  ErrorWithJobInfo: jest.requireActual("core/api/errors").ErrorWithJobInfo,
 }));
 
 jest.mock("area/connector/utils", () => ({
@@ -101,7 +100,7 @@ describe("CreateConnectionForm", () => {
   it("should render with an error", async () => {
     mocked(useDiscoverSchema).mockImplementationOnce(() => ({
       ...mockBaseUseDiscoverSchema,
-      schemaErrorStatus: new Error("Test Error") as SchemaError,
+      schemaErrorStatus: new Error("Test Error"),
     }));
 
     const renderResult = await render();

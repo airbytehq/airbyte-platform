@@ -19,6 +19,7 @@ import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderOptional } from "./BuilderOptional";
 import { BuilderRequestInjection } from "./BuilderRequestInjection";
 import { ToggleGroupField } from "./ToggleGroupField";
+import { manifestIncrementalSyncToBuilder } from "../convertManifestToBuilderForm";
 import {
   BuilderIncrementalSync,
   DATETIME_FORMAT_OPTIONS,
@@ -26,6 +27,7 @@ import {
   LARGE_DURATION_OPTIONS,
   SMALL_DURATION_OPTIONS,
   StreamPathFn,
+  builderIncrementalSyncToManifest,
   useBuilderWatch,
 } from "../types";
 
@@ -42,7 +44,8 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
       docLink={links.connectorBuilderIncrementalSync}
       label={formatMessage({ id: "connectorBuilder.incremental.label" })}
       tooltip={formatMessage({ id: "connectorBuilder.incremental.tooltip" })}
-      toggleConfig={{
+      inputsConfig={{
+        toggleable: true,
         path: streamFieldPath("incrementalSync"),
         defaultValue: {
           datetime_format: "",
@@ -63,6 +66,10 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
             field_name: "",
             type: "RequestOption",
           },
+        },
+        yamlConfig: {
+          builderToManifest: builderIncrementalSyncToManifest,
+          manifestToBuilder: manifestIncrementalSyncToBuilder,
         },
       }}
       copyConfig={{
@@ -346,7 +353,7 @@ const CursorDatetimeFormatField = ({ streamFieldPath }: { streamFieldPath: Strea
   const detectedFormat = data?.inferred_datetime_formats?.[cursorField];
   return (
     <>
-      {!cursorDatetimeFormats.includes(detectedFormat) && cursorField && detectedFormat && (
+      {!cursorDatetimeFormats?.includes(detectedFormat) && cursorField && detectedFormat && (
         <Message
           type="info"
           text={

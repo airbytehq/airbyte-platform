@@ -16,7 +16,7 @@ $border-radius: variables.$border-radius-lg;
   }
 }
 
-.thead {
+.thead--sticky {
   position: sticky;
   top: 0;
   z-index: z-indices.$tableScroll;

@@ -410,9 +410,9 @@ describe("Connection Configuration", () => {
       createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
         connection = connectionResponse;
         visit(connection);
+        connectionSettings.goToSettingsPage();
+        deleteEntity(connection.name);
       });
-      connectionSettings.goToSettingsPage();
-      deleteEntity();
     });
   });
 

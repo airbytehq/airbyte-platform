@@ -12,15 +12,15 @@ const TestComponent: React.FC<{ onModalResult?: (result: ModalResult<unknown>) =
   useEffectOnce(() => {
     openModal({
       title: "Test Modal Title",
-      content: ({ onCancel, onClose }) => (
+      content: ({ onComplete, onCancel }) => (
         <div data-testid="testModalContent">
           <button onClick={onCancel} data-testid="cancel">
             Cancel
           </button>
-          <button onClick={() => onClose("reason1")} data-testid="close-reason1">
+          <button onClick={() => onComplete("reason1")} data-testid="close-reason1">
             Close Reason 1
           </button>
-          <button onClick={() => onClose("reason2")} data-testid="close-reason2">
+          <button onClick={() => onComplete("reason2")} data-testid="close-reason2">
             Close Reason 2
           </button>
         </div>
@@ -80,7 +80,7 @@ describe("ModalService", () => {
     await waitFor(() => userEvent.click(rendered.getByTestId("close-reason1")));
 
     expect(rendered.queryByTestId("testModalContent")).toBeFalsy();
-    expect(resultCallback).toHaveBeenCalledWith({ type: "closed", reason: "reason1" });
+    expect(resultCallback).toHaveBeenCalledWith({ type: "completed", reason: "reason1" });
 
     resultCallback.mockReset();
     rendered = renderModal(resultCallback);
@@ -88,6 +88,6 @@ describe("ModalService", () => {
     await waitFor(() => userEvent.click(rendered.getByTestId("close-reason2")));
 
     expect(rendered.queryByTestId("testModalContent")).toBeFalsy();
-    expect(resultCallback).toHaveBeenCalledWith({ type: "closed", reason: "reason2" });
+    expect(resultCallback).toHaveBeenCalledWith({ type: "completed", reason: "reason2" });
   });
 });

@@ -4,8 +4,8 @@
 
 package io.airbyte.server.apis.publicapi.services
 
-import io.airbyte.api.client.model.generated.WorkspaceReadList
 import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody
+import io.airbyte.api.model.generated.WorkspaceReadList
 import io.airbyte.commons.server.handlers.UserHandler
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
@@ -42,7 +42,7 @@ open class UserServiceImpl(
         }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
-    val workspaceReadList: WorkspaceReadList = result.getOrDefault(WorkspaceReadList().workspaces(emptyList())) as WorkspaceReadList
+    val workspaceReadList: WorkspaceReadList = result.getOrDefault(WorkspaceReadList().workspaces(emptyList()))
     return workspaceReadList.workspaces.map { it.workspaceId }
   }
 }

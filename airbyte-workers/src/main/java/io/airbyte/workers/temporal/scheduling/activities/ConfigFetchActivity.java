@@ -79,4 +79,7 @@ public interface ConfigFetchActivity {
   @ActivityMethod
   GetMaxAttemptOutput getMaxAttempt();
 
+  @ActivityMethod
+  Boolean isWorkspaceTombstone(UUID connectionId);
+
 }

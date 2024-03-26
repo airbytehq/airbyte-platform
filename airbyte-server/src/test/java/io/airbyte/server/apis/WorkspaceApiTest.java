@@ -4,6 +4,8 @@
 
 package io.airbyte.server.apis;
 
+import static org.mockito.ArgumentMatchers.anyBoolean;
+
 import io.airbyte.api.model.generated.PermissionCheckRead;
 import io.airbyte.api.model.generated.PermissionCheckRead.StatusEnum;
 import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
@@ -199,7 +201,7 @@ class WorkspaceApiTest extends BaseControllerTest {
 
   @Test
   void testGetWorkspaceByConnectionId() throws ConfigNotFoundException {
-    Mockito.when(workspacesHandler.getWorkspaceByConnectionId(Mockito.any()))
+    Mockito.when(workspacesHandler.getWorkspaceByConnectionId(Mockito.any(), anyBoolean()))
         .thenReturn(new WorkspaceRead())
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/workspaces/get_by_connection_id";

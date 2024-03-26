@@ -22,3 +22,8 @@ global.ResizeObserver = jest.fn().mockImplementation(() => ({
   unobserve: jest.fn(),
   disconnect: jest.fn(),
 }));
+
+// retry failed tests when configured to (e.g. `test:ci`)
+if (process.env.JEST_RETRIES) {
+  jest.retryTimes(parseInt(process.env.JEST_RETRIES, 10));
+}

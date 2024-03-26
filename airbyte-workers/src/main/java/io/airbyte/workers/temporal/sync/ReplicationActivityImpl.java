@@ -79,6 +79,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final OrchestratorHandleFactory orchestratorHandleFactory;
   private final MetricClient metricClient;
   private final FeatureFlagClient featureFlagClient;
+  private final PayloadChecker payloadChecker;
 
   public ReplicationActivityImpl(final SecretsRepositoryReader secretsRepositoryReader,
                                  @Named("workspaceRoot") final Path workspaceRoot,
@@ -91,7 +92,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final WorkloadIdGenerator workloadIdGenerator,
                                  final OrchestratorHandleFactory orchestratorHandleFactory,
                                  final MetricClient metricClient,
-                                 final FeatureFlagClient featureFlagClient) {
+                                 final FeatureFlagClient featureFlagClient,
+                                 final PayloadChecker payloadChecker) {
     this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient.getConnectionApi(),
         airbyteApiClient.getJobsApi(),
         airbyteApiClient.getStateApi(),
@@ -108,6 +110,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.orchestratorHandleFactory = orchestratorHandleFactory;
     this.metricClient = metricClient;
     this.featureFlagClient = featureFlagClient;
+    this.payloadChecker = payloadChecker;
   }
 
   /**
@@ -192,7 +195,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           }
           BackfillHelper.markBackfilledStreams(streamsToBackfill, standardSyncOutput);
           LOGGER.info("sync summary after backfill: {}", standardSyncOutput);
-          return PayloadChecker.validatePayloadSize(standardSyncOutput);
+          return payloadChecker.validatePayloadSize(standardSyncOutput);
         },
         context);
   }

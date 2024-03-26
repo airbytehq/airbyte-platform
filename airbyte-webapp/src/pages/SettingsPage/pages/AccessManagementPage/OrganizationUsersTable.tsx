@@ -76,5 +76,5 @@ export const OrganizationUsersTable: React.FC<{
     [columnHelper, currentUserId]
   );
 
-  return <Table data={users} columns={columns} initialSortBy={[{ id: "name", desc: false }]} />;
+  return <Table data={users} columns={columns} initialSortBy={[{ id: "name", desc: false }]} stickyHeaders={false} />;
 };

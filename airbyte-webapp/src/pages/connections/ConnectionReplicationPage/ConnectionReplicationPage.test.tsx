@@ -47,7 +47,7 @@ jest.mock("core/api", () => ({
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
   useSourceDefinition: () => mockSourceDefinition,
   useDestinationDefinition: () => mockDestinationDefinition,
-  LogsRequestError: jest.requireActual("core/api/errors").LogsRequestError,
+  ErrorWithJobInfo: jest.requireActual("core/api/errors").ErrorWithJobInfo,
 }));
 
 jest.mock("core/utils/rbac", () => ({

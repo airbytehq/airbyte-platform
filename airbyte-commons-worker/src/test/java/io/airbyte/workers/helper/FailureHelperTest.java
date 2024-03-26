@@ -73,6 +73,14 @@ class FailureHelperTest {
   }
 
   @Test
+  void testFailureWithTransientFailureType() {
+    final AirbyteTraceMessage traceMessage =
+        AirbyteMessageUtils.createErrorTraceMessage("sample trace message", 10.0, AirbyteErrorTraceMessage.FailureType.TRANSIENT_ERROR);
+    final FailureReason reason = FailureHelper.genericFailure(traceMessage, 1034L, 0);
+    assertEquals(FailureType.TRANSIENT_ERROR, reason.getFailureType());
+  }
+
+  @Test
   void testGenericFailureFromTraceNoFailureType() throws Exception {
     final FailureReason failureReason = FailureHelper.genericFailure(TRACE_MESSAGE, Long.valueOf(12345), 1);
     assertEquals(failureReason.getFailureType(), FailureType.SYSTEM_ERROR);

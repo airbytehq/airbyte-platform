@@ -185,7 +185,7 @@ export const NotificationSettingsForm: React.FC = () => {
         )}
       </div>
       <Box mt="lg">
-        <FormSubmissionButtons submitKey="form.saveChanges" />
+        <FormSubmissionButtons noCancel justify="flex-start" submitKey="form.saveChanges" />
       </Box>
     </Form>
   );

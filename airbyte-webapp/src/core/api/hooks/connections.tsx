@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { getFrequencyFromScheduleData, useAnalyticsService, Action, Namespace } from "core/services/analytics";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { RoutePaths } from "pages/routePaths";
@@ -218,6 +219,7 @@ export const useCreateConnection = () => {
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
   const invalidateWorkspaceSummary = useInvalidateWorkspaceStateQuery();
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
 
   return useMutation(
     async ({
@@ -253,6 +255,8 @@ export const useCreateConnection = () => {
         available_streams: values.syncCatalog.streams.length,
         enabled_streams: enabledStreams.length,
         enabled_streams_list: JSON.stringify(enabledStreams),
+        connection_id: response.connectionId,
+        is_simplified_creation: isSimplifiedCreation,
       });
 
       return response;

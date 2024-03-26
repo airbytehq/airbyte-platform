@@ -23,6 +23,11 @@ ij_json_spaces_within_braces = false
 ij_json_spaces_within_brackets = false
 ij_json_wrap_long_lines = false
 
+[*.{kt,kts}]
+indent_size = 2
+max_line_length = 150
+ij_kotlin_packages_to_use_import_on_demand = unset
+
 [{*.markdown,*.md}]
 ij_markdown_force_one_space_after_blockquote_symbol = true
 ij_markdown_force_one_space_after_header_symbol = true

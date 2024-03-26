@@ -241,7 +241,7 @@ class VersionedAirbyteStreamFactoryTest {
         longStringBuilder.append("a");
       }
       final String messageLine = String.format(VALID_MESSAGE_TEMPLATE, longStringBuilder);
-      Assertions.assertThat(getFactory(false).toAirbyteMessage(messageLine)).isEmpty();
+      Assertions.assertThat(getFactory(false).toAirbyteMessage(messageLine)).isNotEmpty();
     }
 
     private Stream<AirbyteMessage> stringToMessageStream(final String inputString) {

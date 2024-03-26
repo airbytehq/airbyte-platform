@@ -224,13 +224,13 @@ class StreamStatsTracker(
       return
     }
 
-    logger.info { "Id of the state message received from the destination $stateId" }
+    logger.debug { "Id of the state message received from the destination $stateId" }
 
     var stagedStats: StagedStats? = null
     // un-stage stats until the stateMessage
     while (!stagedStatsList.isEmpty()) {
       stagedStats = stagedStatsList.poll()
-      logger.info {
+      logger.debug {
         "removing ${stagedStats.stateId} from the stored stateIds for the stream " +
           "${nameNamespacePair.namespace}:${nameNamespacePair.name}, " +
           "state received time ${stagedStats.receivedTime}" +

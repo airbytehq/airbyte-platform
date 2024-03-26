@@ -30,8 +30,9 @@ export const openConnectorPage = (name: string) => {
   cy.get("div").contains(name).click();
 };
 
-export const deleteEntity = () => {
+export const deleteEntity = (confirmationText: string) => {
   cy.get("button[data-id='open-delete-modal']").click();
+  cy.get("input[id='confirmation-text").type(confirmationText);
   cy.get("button[data-id='delete']").click();
 };
 

@@ -1,49 +1,89 @@
+import isString from "lodash/isString";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
+import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
+import { Input } from "components/ui/Input";
 import { Modal } from "components/ui/Modal";
+import { Text } from "components/ui/Text";
+
+import useLoadingState from "hooks/useLoadingState";
 
 import styles from "./ConfirmationModal.module.scss";
-import useLoadingState from "../../../hooks/useLoadingState";
 
 export interface ConfirmationModalProps {
-  onClose: () => void;
-  title: string;
-  text: string;
+  title: string | React.ReactNode;
+  text: string | React.ReactNode;
   textValues?: Record<string, string | number>;
-  submitButtonText: string;
+  onCancel: () => void;
   onSubmit: () => void;
-  submitButtonDataId?: string;
   cancelButtonText?: string;
+  confirmationText?: string;
+  submitButtonText: string;
+  submitButtonDataId?: string;
   additionalContent?: React.ReactNode;
   submitButtonVariant?: "danger" | "primary";
 }
 
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
-  onClose,
   title,
   text,
   additionalContent,
   textValues,
+  onCancel,
   onSubmit,
   submitButtonText,
   submitButtonDataId,
   cancelButtonText,
+  confirmationText,
   submitButtonVariant = "danger",
 }) => {
   const { isLoading, startAction } = useLoadingState();
   const onSubmitBtnClick = () => startAction({ action: async () => onSubmit() });
+  const [confirmationValue, setConfirmationValue] = React.useState("");
 
   return (
-    <Modal onClose={onClose} title={<FormattedMessage id={title} />} testId="confirmationModal">
+    <Modal
+      onCancel={onCancel}
+      title={isString(title) ? <FormattedMessage id={title} /> : title}
+      testId="confirmationModal"
+    >
       <div className={styles.content}>
-        <FormattedMessage id={text} values={textValues} />
+        {isString(text) ? <FormattedMessage id={text} values={textValues} /> : text}
         {additionalContent}
+        {confirmationText && (
+          <Box pt="lg">
+            <FlexContainer direction="column">
+              {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- eslint loses the input even though it has an "htmlFor" */}
+              <label htmlFor="confirmation-text">
+                <Text>
+                  <FormattedMessage
+                    id="modal.confirmationTextDescription"
+                    values={{
+                      confirmationText: (
+                        <Text as="span" bold>
+                          {confirmationText}
+                        </Text>
+                      ),
+                    }}
+                  />
+                </Text>
+              </label>
+              <Input
+                id="confirmation-text"
+                placeholder={confirmationText}
+                onChange={(event) => setConfirmationValue(event.target.value)}
+                value={confirmationValue}
+              />
+            </FlexContainer>
+          </Box>
+        )}
         <div className={styles.buttonContent}>
           <Button
             className={styles.buttonWithMargin}
-            onClick={onClose}
+            onClick={onCancel}
             type="button"
             variant="secondary"
             disabled={isLoading}
@@ -54,6 +94,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             variant={submitButtonVariant}
             onClick={onSubmitBtnClick}
             data-id={submitButtonDataId}
+            disabled={!!confirmationText && confirmationValue !== confirmationText}
             isLoading={isLoading}
           >
             <FormattedMessage id={submitButtonText} />

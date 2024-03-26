@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
@@ -21,7 +22,7 @@ import { AddUserModal } from "packages/cloud/views/workspaces/WorkspaceSettingsV
 import { FirebaseInviteUserButton } from "packages/cloud/views/workspaces/WorkspaceSettingsView/components/FirebaseInviteUserButton";
 
 import { AddUserControl } from "./components/AddUserControl";
-import { unifyWorkspaceUserData, UnifiedWorkspaceUserModel } from "./components/useGetAccessManagementData";
+import { UnifiedWorkspaceUserModel, unifyWorkspaceUserData } from "./components/useGetAccessManagementData";
 import styles from "./WorkspaceAccessManagementSection.module.scss";
 import { WorkspaceUsersTable } from "./WorkspaceUsersTable";
 
@@ -32,7 +33,7 @@ const WorkspaceAccessManagementSection: React.FC = () => {
   const organization = useCurrentOrganizationInfo();
   const canViewOrgMembers = useIntent("ListOrganizationMembers", { organizationId: organization?.organizationId });
   const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId: workspace.workspaceId });
-  const { openModal, closeModal } = useModalService();
+  const { openModal } = useModalService();
 
   const usersWithAccess = useListWorkspaceAccessUsers(workspace.workspaceId).usersWithAccess;
 
@@ -53,9 +54,9 @@ const WorkspaceAccessManagementSection: React.FC = () => {
   const invitationSystemv2 = useExperiment("settings.invitationSystemv2", false);
 
   const onOpenInviteUsersModal = () =>
-    openModal({
+    openModal<void>({
       title: formatMessage({ id: "userInvitations.create.modal.title" }, { workspace: workspace.name }),
-      content: () => <AddUserModal closeModal={closeModal} />,
+      content: ({ onComplete }) => <AddUserModal onSubmit={onComplete} />,
       size: "md",
     });
 
@@ -78,9 +79,9 @@ const WorkspaceAccessManagementSection: React.FC = () => {
   return (
     <FlexContainer direction="column" gap="md">
       <FlexContainer justifyContent="space-between" alignItems="baseline">
-        <Text size="lg">
+        <Heading as="h2" size="sm">
           <FormattedMessage id="settings.accessManagement.members" />
-        </Text>
+        </Heading>
       </FlexContainer>
       <FlexContainer justifyContent="space-between" alignItems="center">
         <FlexItem className={styles.searchInputWrapper}>

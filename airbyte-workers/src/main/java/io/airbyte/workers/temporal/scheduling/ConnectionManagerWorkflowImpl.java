@@ -115,6 +115,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private static final String SYNC_TASK_QUEUE_ROUTE_RENAME_TAG = "sync_task_queue_route_rename";
   private static final int GENERATE_CHECK_INPUT_CURRENT_VERSION = 1;
   private static final int SYNC_TASK_QUEUE_ROUTE_RENAME_CURRENT_VERSION = 1;
+  private static final String CHECK_WORKSPACE_TOMBSTONE_TAG = "check_workspace_tombstone";
+  private static final int CHECK_WORKSPACE_TOMBSTONE_CURRENT_VERSION = 1;
 
   private final WorkflowState workflowState = new WorkflowState(UUID.randomUUID(), new NoopStateListener());
 
@@ -160,6 +162,11 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   @Override
   public void run(final ConnectionUpdaterInput connectionUpdaterInput) throws RetryableException {
     try {
+
+      if (isTombstone(connectionUpdaterInput.getConnectionId())) {
+        return;
+      }
+
       /*
        * Always ensure that the connection ID is set from the input before performing any additional work.
        * Failure to set the connection ID before performing any work in this workflow could result in
@@ -213,6 +220,16 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       reportFailure(connectionUpdaterInput, null, FailureCause.UNKNOWN);
       prepareForNextRunAndContinueAsNew(connectionUpdaterInput);
     }
+  }
+
+  private boolean isTombstone(UUID connectionId) {
+    final int checkTombstoneVersion =
+        Workflow.getVersion(CHECK_WORKSPACE_TOMBSTONE_TAG, Workflow.DEFAULT_VERSION, CHECK_WORKSPACE_TOMBSTONE_CURRENT_VERSION);
+    if (checkTombstoneVersion == Workflow.DEFAULT_VERSION || connectionId == null) {
+      return false;
+    }
+
+    return configFetchActivity.isWorkspaceTombstone(connectionId);
   }
 
   @SuppressWarnings("PMD.UnusedLocalVariable")

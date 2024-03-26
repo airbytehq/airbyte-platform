@@ -10,7 +10,6 @@ import {
   InstanceConfigurationResponseEdition,
   InstanceConfigurationResponseTrackingStrategy,
 } from "core/api/types/AirbyteClient";
-import { config, ConfigServiceProvider } from "core/config";
 import { AnalyticsProvider } from "core/services/analytics";
 import { OSSAuthService } from "core/services/auth";
 import { defaultOssFeatures, defaultEnterpriseFeatures, FeatureService } from "core/services/features";
@@ -66,13 +65,11 @@ const App: React.FC = () => {
           <QueryProvider>
             <BlockerService>
               <Suspense fallback={<LoadingPage />}>
-                <ConfigServiceProvider config={config}>
-                  <ApiErrorBoundary>
-                    <Services>
-                      <Routing />
-                    </Services>
-                  </ApiErrorBoundary>
-                </ConfigServiceProvider>
+                <ApiErrorBoundary>
+                  <Services>
+                    <Routing />
+                  </Services>
+                </ApiErrorBoundary>
               </Suspense>
             </BlockerService>
           </QueryProvider>

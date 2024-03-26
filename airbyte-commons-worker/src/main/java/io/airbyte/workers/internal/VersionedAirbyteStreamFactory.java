@@ -78,7 +78,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   private static final int BUFFER_READ_AHEAD_LIMIT = 2 * 1024 * 1024; // 2 megabytes
   private static final int MESSAGES_LOOK_AHEAD_FOR_DETECTION = 10;
   private static final String TYPE_FIELD_NAME = "type";
-  private static final int MAXIMUM_CHARACTERS_ALLOWED = 5_000_000;
+  private static final int MAXIMUM_CHARACTERS_ALLOWED = 20_000_000;
 
   // BASIC PROCESSING FIELDS
   protected final Logger logger;
@@ -366,6 +366,8 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
    * 3. upgrade the message to the platform version, if needed.
    */
   protected Stream<AirbyteMessage> toAirbyteMessage(final String line) {
+    handleCannotDeserialize(line);
+
     Optional<AirbyteMessage> m = deserializer.deserializeExact(line);
 
     if (m.isPresent()) {
@@ -379,7 +381,6 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
       return upgradeMessage(m.get());
     }
 
-    handleCannotDeserialize(line);
     return m.stream();
   }
 
@@ -400,13 +401,15 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   private void handleCannotDeserialize(final String line) {
     try (final MdcScope ignored = containerLogMdcBuilder.build()) {
       if (line.length() >= MAXIMUM_CHARACTERS_ALLOWED) {
-        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1);
+        connectionId.ifPresentOrElse(c -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1,
+            new MetricAttribute(MetricTags.CONNECTION_ID, c.toString())),
+            () -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1));
         MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.TOO_LONG_LINES_DISTRIBUTION, line.length());
         if (invalidLineFailureConfiguration.printLongRecordPks) {
-          LOGGER.error("[LARGE RECORD] A record is too long with size: " + line.length());
+          LOGGER.warn("[LARGE RECORD] A record is too long with size: " + line.length());
           configuredAirbyteCatalog.ifPresent(
               airbyteCatalog -> LOGGER
-                  .error("[LARGE RECORD] The primary keys of the long record are: " + gsonPksExtractor.extractPks(airbyteCatalog, line)));
+                  .warn("[LARGE RECORD] The primary keys of the long record are: " + gsonPksExtractor.extractPks(airbyteCatalog, line)));
         }
         if (invalidLineFailureConfiguration.failTooLongRecords) {
           if (exceptionClass.isPresent()) {
@@ -421,12 +424,16 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
         // Connectors can sometimes log error messages from failing to parse an AirbyteRecordMessage.
         // Filter on record into debug to try and prevent such cases. Though this catches non-record
         // messages, this is ok as we rather be safe than sorry.
+        logger.warn("Could not parse the string received from source, it seems to be a record message");
         connectionId.ifPresentOrElse(c -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1,
             new MetricAttribute(MetricTags.CONNECTION_ID, c.toString())),
             () -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1));
         logger.debug(line);
       } else {
-        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_AIRBYTE_MESSAGE_LOG_LINE, 1);
+        connectionId.ifPresentOrElse(
+            c -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_AIRBYTE_MESSAGE_LOG_LINE, 1,
+                new MetricAttribute(MetricTags.CONNECTION_ID, c.toString())),
+            () -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_AIRBYTE_MESSAGE_LOG_LINE, 1));
         logger.info(line);
       }
     } catch (final Exception e) {

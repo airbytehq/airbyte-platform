@@ -137,6 +137,7 @@ class KubePodClientTest {
 
     every {
       orchestratorPodFactory.create(
+        any(),
         replKubeInput.orchestratorLabels,
         replKubeInput.resourceReqs,
         replKubeInput.nodeSelectors,
@@ -175,6 +176,7 @@ class KubePodClientTest {
 
     every {
       orchestratorPodFactory.create(
+        any(),
         replKubeInput.orchestratorLabels,
         replKubeInput.resourceReqs,
         replKubeInput.nodeSelectors,
@@ -210,6 +212,7 @@ class KubePodClientTest {
 
     every {
       orchestratorPodFactory.create(
+        any(),
         replKubeInput.orchestratorLabels,
         replKubeInput.resourceReqs,
         replKubeInput.nodeSelectors,

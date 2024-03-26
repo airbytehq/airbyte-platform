@@ -85,7 +85,7 @@ export const unifyWorkspaceUserData = (
 
   const normalizedInvitations = workspaceInvitations.map((invitation) => {
     return {
-      id: invitation.id,
+      id: invitation.inviteCode,
       userEmail: invitation.invitedEmail,
       invitationStatus: invitation.status,
       invitationPermissionType: invitation.permissionType,

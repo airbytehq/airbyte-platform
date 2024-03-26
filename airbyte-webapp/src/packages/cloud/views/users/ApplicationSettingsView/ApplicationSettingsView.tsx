@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
-import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Table } from "components/ui/Table";
@@ -85,10 +84,10 @@ export const ApplicationSettingsView = () => {
   }, [columnHelper]);
 
   return (
-    <Card>
+    <>
       <FlexContainer direction="row" justifyContent="space-between">
         <FlexContainer gap="none">
-          <Heading as="h2">
+          <Heading as="h1">
             <FormattedMessage id="settings.applications" />
           </Heading>
           <InfoTooltip>
@@ -101,7 +100,7 @@ export const ApplicationSettingsView = () => {
       </FlexContainer>
       <Box py="lg">
         {applications.length ? (
-          <Table columns={columns} data={applications} variant="light" />
+          <Table columns={columns} data={applications} />
         ) : (
           <Box p="lg">
             <Text color="grey400" italicized>
@@ -110,6 +109,6 @@ export const ApplicationSettingsView = () => {
           </Box>
         )}
       </Box>
-    </Card>
+    </>
   );
 };

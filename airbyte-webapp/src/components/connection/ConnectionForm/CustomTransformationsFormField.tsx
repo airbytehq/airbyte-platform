@@ -17,7 +17,7 @@ export const CustomTransformationsFormField: React.FC = () => {
   const { fields, append, remove, update, move } = useFieldArray<CustomTransformationsFormValues>({
     name: "transformations",
   });
-  const { openModal, closeModal } = useModalService();
+  const { openModal } = useModalService();
 
   const defaultTransformation: OperationCreate = useMemo(
     () => ({
@@ -36,10 +36,10 @@ export const CustomTransformationsFormField: React.FC = () => {
   );
 
   const openEditModal = (transformationItemIndex?: number) =>
-    openModal({
+    openModal<void>({
       size: "xl",
       title: <FormattedMessage id={isDefined(transformationItemIndex) ? "form.edit" : "form.add"} />,
-      content: () => (
+      content: ({ onComplete, onCancel }) => (
         <TransformationForm
           transformation={
             isDefined(transformationItemIndex)
@@ -50,9 +50,9 @@ export const CustomTransformationsFormField: React.FC = () => {
             isDefined(transformationItemIndex)
               ? update(transformationItemIndex, transformation)
               : append(transformation);
-            closeModal();
+            onComplete();
           }}
-          onCancel={closeModal}
+          onCancel={onCancel}
         />
       ),
     });

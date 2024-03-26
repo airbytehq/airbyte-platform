@@ -7,6 +7,7 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseCustomK8sScheduler
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.KubePodProcess
+import io.airbyte.workload.launcher.config.OrchestratorEnvSingleton
 import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.ContainerPort
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -17,17 +18,19 @@ import io.fabric8.kubernetes.api.model.VolumeMount
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import java.util.UUID
 
 @Singleton
 class OrchestratorPodFactory(
   private val featureFlagClient: FeatureFlagClient,
+  private val orchestratorEnvSingleton: OrchestratorEnvSingleton,
   @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
-  @Named("orchestratorEnvVars") private val sharedEnvVars: List<EnvVar>,
   @Named("orchestratorContainerPorts") private val containerPorts: List<ContainerPort>,
   private val volumeFactory: VolumeFactory,
   private val initContainerFactory: InitContainerFactory,
 ) {
   fun create(
+    connectionId: UUID,
     allLabels: Map<String, String>,
     resourceRequirements: ResourceRequirements?,
     nodeSelectors: Map<String, String>,
@@ -66,7 +69,7 @@ class OrchestratorPodFactory(
         .withImage(kubePodInfo.mainContainerInfo.image)
         .withImagePullPolicy(kubePodInfo.mainContainerInfo.pullPolicy)
         .withResources(containerResources)
-        .withEnv(sharedEnvVars + extraKubeEnv)
+        .withEnv(orchestratorEnvSingleton.orchestratorEnvVars(connectionId) + extraKubeEnv)
         .withPorts(containerPorts)
         .withVolumeMounts(volumeMounts)
         .build()

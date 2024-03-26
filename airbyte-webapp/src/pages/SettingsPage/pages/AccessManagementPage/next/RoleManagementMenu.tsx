@@ -6,39 +6,32 @@ import { Box } from "components/ui/Box";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 
-import { WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
+import { RbacRole } from "core/utils/rbac/rbacPermissionsQuery";
 
+import { RoleManagementButton } from "./RoleManagementButton";
 import styles from "./RoleManagementMenu.module.scss";
 import { RoleManagementMenuBody } from "./RoleManagementMenuBody";
-import { getWorkspaceAccessLevel } from "../components/useGetAccessManagementData";
+import { UnifiedWorkspaceUserModel } from "../components/useGetAccessManagementData";
 import { UserRoleText } from "../components/UserRoleText";
 
 type ResourceType = "workspace" | "organization" | "instance";
 
 export interface RoleManagementMenuProps {
-  user: WorkspaceUserAccessInfoRead;
+  user: UnifiedWorkspaceUserModel;
   resourceType: ResourceType;
+  highestPermissionType: RbacRole;
 }
 
-const RoleManagementButton = React.forwardRef<HTMLButtonElement | null, React.ButtonHTMLAttributes<HTMLButtonElement>>(
-  ({ children, ...props }, ref) => {
-    return (
-      <button className={styles.roleManagementMenu__popoverButton} ref={ref} {...props}>
-        {children}
-      </button>
-    );
-  }
-);
-
-RoleManagementButton.displayName = "RoleManagementButton";
-
-export const RoleManagementMenu: React.FC<RoleManagementMenuProps> = ({ user, resourceType }) => {
+export const RoleManagementMenu: React.FC<RoleManagementMenuProps> = ({
+  user,
+  resourceType,
+  highestPermissionType,
+}) => {
   const { x, y, reference, floating, strategy } = useFloating({
     middleware: [offset(5), flip()],
     whileElementsMounted: autoUpdate,
     placement: "bottom-start",
   });
-  const highestPermissionType = getWorkspaceAccessLevel(user);
 
   return (
     <Popover>

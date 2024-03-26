@@ -2,7 +2,6 @@ import { trackError } from "core/utils/datadog";
 import { shortUuid } from "core/utils/uuid";
 
 import { CommonRequestError } from "./errors/CommonRequestError";
-import { VersionError } from "./errors/VersionError";
 
 export interface ApiCallOptions {
   getAccessToken: () => Promise<string | null>;
@@ -82,13 +81,7 @@ async function parseResponse<T>(response: Response, requestUrl: string, response
   }
 
   if (response.headers.get("content-type") === "application/json") {
-    const jsonError = await response.json();
-
-    if (jsonError?.error?.startsWith("Version mismatch between")) {
-      throw new VersionError(jsonError.error);
-    }
-
-    throw new CommonRequestError(response, jsonError);
+    throw new CommonRequestError(response, await response.json());
   }
 
   let responseText: string | undefined;

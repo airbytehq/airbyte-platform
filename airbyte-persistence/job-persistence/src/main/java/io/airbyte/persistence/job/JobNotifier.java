@@ -7,7 +7,6 @@ package io.airbyte.persistence.job;
 import static io.airbyte.metrics.lib.MetricTags.NOTIFICATION_CLIENT;
 import static io.airbyte.metrics.lib.MetricTags.NOTIFICATION_TRIGGER;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import io.airbyte.analytics.TrackingClient;
@@ -138,8 +137,8 @@ public class JobNotifier {
           }
         }
       }
-      final NotificationItem notificationItem = createAndSend(notificationSettings, action, connectionId,
-          destinationDefinition, job, reason, sourceDefinition, standardSync, workspace, source, destination,
+      final NotificationItem notificationItem = createAndSend(notificationSettings, action,
+          job, reason, standardSync, workspace, source, destination,
           syncStats);
 
       if (notificationItem != null) {
@@ -276,21 +275,14 @@ public class JobNotifier {
 
   private NotificationItem createAndSend(final NotificationSettings notificationSettings,
                                          final String action,
-                                         final UUID connectionId,
-                                         final StandardDestinationDefinition destinationDefinition,
                                          final Job job,
                                          final String reason,
-                                         final StandardSourceDefinition sourceDefinition,
                                          final StandardSync standardSync,
                                          final StandardWorkspace workspace,
                                          final SourceConnection source,
                                          final DestinationConnection destination,
                                          final SyncStats syncStats) {
     NotificationItem notificationItem = null;
-    final String sourceConnector = sourceDefinition.getName();
-    final String destinationConnector = destinationDefinition.getName();
-    final String failReason = Strings.isNullOrEmpty(reason) ? "" : String.format(", as the %s", reason);
-    final String jobDescription = getJobDescription(job, failReason);
     final UUID workspaceId = workspace.getWorkspaceId();
 
     SyncSummary.SyncSummaryBuilder summaryBuilder = SyncSummary.builder()
@@ -335,13 +327,11 @@ public class JobNotifier {
       } else if (CONNECTION_DISABLED_NOTIFICATION.equalsIgnoreCase(action)) {
         notificationItem = notificationSettings.getSendOnSyncDisabled();
         sendNotification(notificationItem, CONNECTION_DISABLED_NOTIFICATION,
-            (notificationClient) -> notificationClient.notifyConnectionDisabled(workspace.getEmail(),
-                sourceConnector, destinationConnector, jobDescription, workspace.getWorkspaceId(), connectionId));
+            (notificationClient) -> notificationClient.notifyConnectionDisabled(summary, workspace.getEmail()));
       } else if (CONNECTION_DISABLED_WARNING_NOTIFICATION.equalsIgnoreCase(action)) {
         notificationItem = notificationSettings.getSendOnSyncDisabledWarning();
         sendNotification(notificationItem, CONNECTION_DISABLED_WARNING_NOTIFICATION,
-            (notificationClient) -> notificationClient.notifyConnectionDisableWarning(workspace.getEmail(),
-                sourceConnector, destinationConnector, jobDescription, workspace.getWorkspaceId(), connectionId));
+            (notificationClient) -> notificationClient.notifyConnectionDisableWarning(summary, workspace.getEmail()));
       }
     } else {
       LOGGER.warn("Unable to send notification:  notification settings are not present.");

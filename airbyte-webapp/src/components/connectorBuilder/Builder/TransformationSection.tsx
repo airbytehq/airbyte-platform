@@ -9,7 +9,8 @@ import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderList } from "./BuilderList";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
-import { BuilderTransformation } from "../types";
+import { manifestTransformationsToBuilder } from "../convertManifestToBuilderForm";
+import { BuilderTransformation, builderTransformationsToManifest } from "../types";
 
 interface TransformationSectionProps {
   streamFieldPath: <T extends string>(fieldPath: T) => `formValues.streams.${number}.${T}`;
@@ -63,7 +64,8 @@ export const TransformationSection: React.FC<TransformationSectionProps> = ({
       docLink={links.connectorBuilderTransformations}
       label={getLabelByManifest("DeclarativeStream.properties.transformations")}
       tooltip={getDescriptionByManifest("DeclarativeStream.properties.transformations")}
-      toggleConfig={{
+      inputsConfig={{
+        toggleable: true,
         path: streamFieldPath("transformations"),
         defaultValue: [
           {
@@ -71,6 +73,10 @@ export const TransformationSection: React.FC<TransformationSectionProps> = ({
             path: [],
           },
         ],
+        yamlConfig: {
+          builderToManifest: builderTransformationsToManifest,
+          manifestToBuilder: manifestTransformationsToBuilder,
+        },
       }}
       copyConfig={{
         path: "transformations",

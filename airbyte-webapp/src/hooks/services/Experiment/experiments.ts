@@ -13,6 +13,7 @@ export interface Experiments {
   "billing.early-sync-enabled": boolean;
   "billing.autoRecharge": boolean;
   "connections.summaryView": boolean;
+  "connection.clearNotReset": boolean;
   "connection.columnSelection": boolean;
   "connection.simplifiedCreation": boolean;
   "connection.onboarding.destinations": string;
@@ -21,7 +22,6 @@ export interface Experiments {
   "connection.streamCentricUI.lateMultiplier": number;
   "connection.streamCentricUI.v2": boolean;
   "connection.streamCentricUI.historicalOverview": boolean;
-  "connection.syncCatalog.simplifiedCatalogRow": boolean;
   "connector.airbyteCloudIpAddresses": string;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;

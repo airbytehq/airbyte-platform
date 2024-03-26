@@ -1,4 +1,4 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
+import { ComponentMeta, ComponentStory } from "@storybook/react";
 import { FormattedMessage } from "react-intl";
 
 import { Modal } from "components/ui/Modal";
@@ -17,7 +17,7 @@ const Template: ComponentStory<typeof CatalogDiffModal> = (args) => {
   return (
     <ModalServiceProvider>
       <Modal size="md" title={<FormattedMessage id="connection.updateSchema.completed" />}>
-        <CatalogDiffModal catalogDiff={args.catalogDiff} catalog={args.catalog} onClose={() => null} />
+        <CatalogDiffModal catalogDiff={args.catalogDiff} catalog={args.catalog} onComplete={() => null} />
       </Modal>
     </ModalServiceProvider>
   );

@@ -10,6 +10,7 @@ import io.airbyte.api.model.generated.WorkspaceCreate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
 import io.airbyte.public_api.model.generated.WorkspaceCreateRequest
 import io.airbyte.public_api.model.generated.WorkspaceOAuthCredentialsRequest
 import io.airbyte.public_api.model.generated.WorkspaceResponse
@@ -91,7 +92,13 @@ open class WorkspaceServiceImpl(
    * Creates a workspace.
    */
   override fun createWorkspace(workspaceCreateRequest: WorkspaceCreateRequest): WorkspaceResponse {
-    val workspaceCreate = WorkspaceCreate().name(workspaceCreateRequest.name)
+    // For now this should always be true in OSS.
+    val organizationId = DEFAULT_ORGANIZATION_ID
+
+    val workspaceCreate =
+      WorkspaceCreate().name(
+        workspaceCreateRequest.name,
+      ).email(currentUserService.currentUser.email).organizationId(organizationId)
     val result =
       kotlin.runCatching { workspacesHandler.createWorkspace(workspaceCreate) }
         .onFailure {

@@ -24,14 +24,16 @@ interface UserInvitationService {
   /**
    * Create a new user invitation.
    */
+  @Throws(InvitationDuplicateException::class)
   fun createUserInvitation(invitation: UserInvitation): UserInvitation
 
   /**
    * Accept a user invitation and create resulting permission record.
    */
+  @Throws(InvitationStatusUnexpectedException::class)
   fun acceptUserInvitation(
     inviteCode: String,
-    invitedUserId: UUID,
+    acceptingUserId: UUID,
   ): UserInvitation
 
   /**
@@ -45,5 +47,18 @@ interface UserInvitationService {
   /**
    * Cancel a user invitation.
    */
+  @Throws(InvitationStatusUnexpectedException::class)
   fun cancelUserInvitation(inviteCode: String): UserInvitation
 }
+
+/**
+ * Exception thrown when an operation on an invitation cannot be performed because it has an
+ * unexpected status. For instance, trying to accept an invitation that is not pending.
+ */
+class InvitationStatusUnexpectedException(message: String) : Exception(message)
+
+/**
+ * Exception thrown when trying to create a duplicate invitation, ie creating new invitation with
+ * the same email and scope as an existing pending invitation.
+ */
+class InvitationDuplicateException(message: String) : Exception(message)

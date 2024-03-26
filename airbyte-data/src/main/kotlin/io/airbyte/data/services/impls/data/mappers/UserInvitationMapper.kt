@@ -32,6 +32,7 @@ fun EntityInvitationStatus.toConfigModel(): ModelInvitationStatus {
     EntityInvitationStatus.accepted -> ModelInvitationStatus.ACCEPTED
     EntityInvitationStatus.cancelled -> ModelInvitationStatus.CANCELLED
     EntityInvitationStatus.declined -> ModelInvitationStatus.DECLINED
+    EntityInvitationStatus.expired -> ModelInvitationStatus.EXPIRED
   }
 }
 
@@ -41,6 +42,7 @@ fun ModelInvitationStatus.toEntity(): EntityInvitationStatus {
     ModelInvitationStatus.ACCEPTED -> EntityInvitationStatus.accepted
     ModelInvitationStatus.CANCELLED -> EntityInvitationStatus.cancelled
     ModelInvitationStatus.DECLINED -> EntityInvitationStatus.declined
+    ModelInvitationStatus.EXPIRED -> EntityInvitationStatus.expired
   }
 }
 
@@ -50,12 +52,14 @@ fun EntityUserInvitation.toConfigModel(): ModelUserInvitation {
     .withInviteCode(this.inviteCode)
     .withInviterUserId(this.inviterUserId)
     .withInvitedEmail(this.invitedEmail)
+    .withAcceptedByUserId(this.acceptedByUserId)
     .withScopeId(this.scopeId)
     .withScopeType(this.scopeType.toConfigModel())
     .withPermissionType(this.permissionType.toConfigModel())
     .withStatus(this.status.toConfigModel())
     .withCreatedAt(this.createdAt?.toEpochSecond())
     .withUpdatedAt(this.updatedAt?.toEpochSecond())
+    .withExpiresAt(this.expiresAt.toEpochSecond())
 }
 
 fun ModelUserInvitation.toEntity(): EntityUserInvitation {
@@ -64,11 +68,13 @@ fun ModelUserInvitation.toEntity(): EntityUserInvitation {
     inviteCode = this.inviteCode,
     inviterUserId = this.inviterUserId,
     invitedEmail = this.invitedEmail,
+    acceptedByUserId = this.acceptedByUserId,
     scopeId = this.scopeId,
     scopeType = this.scopeType.toEntity(),
     permissionType = this.permissionType.toEntity(),
     status = this.status.toEntity(),
     createdAt = this.createdAt?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
     updatedAt = this.updatedAt?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
+    expiresAt = OffsetDateTime.ofInstant(Instant.ofEpochSecond(this.expiresAt), ZoneOffset.UTC),
   )
 }

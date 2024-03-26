@@ -157,6 +157,18 @@ export class StreamDetailsPageObject {
     });
   }
 
+  isSelectSyncModeVisible() {
+    cy.get(streamDetailsPanel).within(() => {
+      cy.get(syncModeSelectButton).should("be.visible");
+    });
+  }
+
+  isSelectSyncModeHidden() {
+    cy.get(streamDetailsPanel).within(() => {
+      cy.get(syncModeSelectButton).should("not.exist");
+    });
+  }
+
   selectCursor(fieldName: string) {
     getRowByFieldName(fieldName).within(() => {
       cy.get(cursorRadioButton).parent().click({ scrollBehavior: false });

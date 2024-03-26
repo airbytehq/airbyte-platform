@@ -24,6 +24,7 @@ import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.sync.ReplicationLauncherWorker
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
+import io.airbyte.workload.launcher.config.OrchestratorEnvSingleton
 import io.airbyte.workload.launcher.model.getActorType
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
@@ -52,7 +53,9 @@ class PayloadKubeInputMapperTest {
     val namespace = "test-namespace"
     val podNameGenerator = PodNameGenerator(namespace = namespace)
     val containerInfo = KubeContainerInfo("img-name", "pull-policy")
-    val envMap: Map<String, String> = mapOf()
+    val orchestratorEnvSingleton: OrchestratorEnvSingleton = mockk()
+    every { orchestratorEnvSingleton.orchestratorEnvVars(any()) } returns emptyList()
+    every { orchestratorEnvSingleton.orchestratorEnvMap(any()) } returns emptyMap()
     val awsAssumedRoleEnv: List<EnvVar> = listOf()
     val replSelectors = mapOf("test-selector" to "normal-repl")
     val replCustomSelectors = mapOf("test-selector" to "custom-repl")
@@ -69,9 +72,9 @@ class PayloadKubeInputMapperTest {
         serializer,
         labeler,
         podNameGenerator,
+        orchestratorEnvSingleton,
         namespace,
         containerInfo,
-        envMap,
         awsAssumedRoleEnv,
         replConfigs,
         checkConfigs,
@@ -150,7 +153,9 @@ class PayloadKubeInputMapperTest {
     val podNameGenerator: PodNameGenerator = mockk()
     every { podNameGenerator.getCheckPodName(any(), any(), any()) } returns podName
     val orchestratorContainerInfo = KubeContainerInfo("img-name", "pull-policy")
-    val orchestratorEnvMap: Map<String, String> = mapOf()
+    val orchestratorEnvSingleton: OrchestratorEnvSingleton = mockk()
+    every { orchestratorEnvSingleton.orchestratorEnvVars(any()) } returns emptyList()
+    every { orchestratorEnvSingleton.orchestratorEnvMap(any()) } returns emptyMap()
     val awsAssumedRoleEnv: List<EnvVar> = listOf(EnvVar("aws-assumed-role", "value", null))
     val checkSelectors = mapOf("test-selector" to "normal-check")
     val pullPolicy = "pull-policy"
@@ -171,9 +176,9 @@ class PayloadKubeInputMapperTest {
         serializer,
         labeler,
         podNameGenerator,
+        orchestratorEnvSingleton,
         namespace,
         orchestratorContainerInfo,
-        orchestratorEnvMap,
         awsAssumedRoleEnv,
         replConfigs,
         checkConfigs,
@@ -268,7 +273,9 @@ class PayloadKubeInputMapperTest {
     val podNameGenerator: PodNameGenerator = mockk()
     every { podNameGenerator.getDiscoverPodName(any(), any(), any()) } returns podName
     val orchestratorContainerInfo = KubeContainerInfo("img-name", "pull-policy")
-    val orchestratorEnvMap: Map<String, String> = mapOf()
+    val orchestratorEnvSingleton: OrchestratorEnvSingleton = mockk()
+    every { orchestratorEnvSingleton.orchestratorEnvVars(any()) } returns emptyList()
+    every { orchestratorEnvSingleton.orchestratorEnvMap(any()) } returns emptyMap()
     val awsAssumedRoleEnv: List<EnvVar> = listOf(EnvVar("aws-assumed-role", "value", null))
     val checkSelectors = mapOf("test-selector" to "normal-check")
     val pullPolicy = "pull-policy"
@@ -289,9 +296,9 @@ class PayloadKubeInputMapperTest {
         serializer,
         labeler,
         podNameGenerator,
+        orchestratorEnvSingleton,
         namespace,
         orchestratorContainerInfo,
-        orchestratorEnvMap,
         awsAssumedRoleEnv,
         replConfigs,
         checkConfigs,
@@ -377,7 +384,9 @@ class PayloadKubeInputMapperTest {
     val podNameGenerator: PodNameGenerator = mockk()
     every { podNameGenerator.getSpecPodName(any(), any(), any()) } returns podName
     val orchestratorContainerInfo = KubeContainerInfo("img-name", "pull-policy")
-    val orchestratorEnvMap: Map<String, String> = mapOf()
+    val orchestratorEnvSingleton: OrchestratorEnvSingleton = mockk()
+    every { orchestratorEnvSingleton.orchestratorEnvVars(any()) } returns emptyList()
+    every { orchestratorEnvSingleton.orchestratorEnvMap(any()) } returns emptyMap()
     val awsAssumedRoleEnv: List<EnvVar> = listOf(EnvVar("aws-assumed-role", "value", null))
     val checkSelectors = mapOf("test-selector" to "normal-check")
     val pullPolicy = "pull-policy"
@@ -396,9 +405,9 @@ class PayloadKubeInputMapperTest {
         serializer,
         labeler,
         podNameGenerator,
+        orchestratorEnvSingleton,
         namespace,
         orchestratorContainerInfo,
-        orchestratorEnvMap,
         awsAssumedRoleEnv,
         replConfigs,
         checkConfigs,

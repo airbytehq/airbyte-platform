@@ -280,12 +280,12 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
     public final String humanReadableThreshold;
     public final String humanReadableTimeSinceLastAction;
 
-    public TimeoutException(final long threshold, final long timeSinceLastAction) {
+    public TimeoutException(final long thresholdMs, final long timeSinceLastActionMs) {
       super(String.format("Last action %s ago, exceeding the threshold of %s.",
-          DurationFormatUtils.formatDurationWords(timeSinceLastAction, true, true),
-          DurationFormatUtils.formatDurationWords(threshold, true, true)));
-      this.humanReadableThreshold = DurationFormatUtils.formatDurationWords(threshold, true, true);
-      this.humanReadableTimeSinceLastAction = DurationFormatUtils.formatDurationWords(threshold, true, true);
+          DurationFormatUtils.formatDurationWords(timeSinceLastActionMs, true, true),
+          DurationFormatUtils.formatDurationWords(thresholdMs, true, true)));
+      this.humanReadableThreshold = DurationFormatUtils.formatDurationWords(thresholdMs, true, true);
+      this.humanReadableTimeSinceLastAction = DurationFormatUtils.formatDurationWords(timeSinceLastActionMs, true, true);
     }
 
   }

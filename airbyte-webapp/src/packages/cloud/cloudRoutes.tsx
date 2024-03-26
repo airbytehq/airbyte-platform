@@ -181,7 +181,7 @@ export const Routing: React.FC = () => {
   })}`;
 
   const loginRedirectTo =
-    loggedOut && (originalPathname === "/" || originalPathname.includes("/settings/account"))
+    loggedOut && originalPathname === "/"
       ? { pathname: CloudRoutes.Login }
       : { pathname: CloudRoutes.Login, search: loginRedirectSearchParam };
 

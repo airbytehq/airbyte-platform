@@ -10,8 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.github.dockerjava.api.DockerClient;
-import com.github.dockerjava.api.model.Network;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
@@ -133,7 +131,6 @@ import org.jooq.SQLDialect;
 import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.shaded.org.apache.commons.lang3.RandomStringUtils;
 import org.testcontainers.utility.DockerImageName;
@@ -200,8 +197,6 @@ public class AcceptanceTestHarness {
 
   private static final String KUBE_PROCESS_RUNNER_HOST = java.util.Optional.ofNullable(System.getenv("KUBE_PROCESS_RUNNER_HOST")).orElse("");
 
-  private static final String DOCKER_NETWORK = java.util.Optional.ofNullable(System.getenv("DOCKER_NETWORK")).orElse("bridge");
-
   private static boolean isKube;
   private static boolean isMinikube;
   private static boolean isGke;
@@ -258,21 +253,12 @@ public class AcceptanceTestHarness {
       throw new RuntimeException("KUBE Flag should also be enabled if GKE flag is enabled");
     }
     if (!isGke) {
-      // we attach the container to the appropriate network since there are environments where we use one
-      // other than the default
-      final DockerClient dockerClient = DockerClientFactory.lazyClient();
-      final List<Network> dockerNetworks = dockerClient.listNetworksCmd().withNameFilter(DOCKER_NETWORK).exec();
-      final Network dockerNetwork = dockerNetworks.get(0);
-      final org.testcontainers.containers.Network containerNetwork =
-          org.testcontainers.containers.Network.builder().id(dockerNetwork.getId()).build();
-      sourcePsql = (PostgreSQLContainer) new PostgreSQLContainer(SOURCE_POSTGRES_IMAGE_NAME)
-          .withNetwork(containerNetwork);
+      sourcePsql = new PostgreSQLContainer(SOURCE_POSTGRES_IMAGE_NAME);
       sourcePsql.withUsername(SOURCE_USERNAME)
           .withPassword(SOURCE_PASSWORD);
       sourcePsql.start();
 
-      destinationPsql = (PostgreSQLContainer) new PostgreSQLContainer(DESTINATION_POSTGRES_IMAGE_NAME)
-          .withNetwork(containerNetwork);
+      destinationPsql = new PostgreSQLContainer(DESTINATION_POSTGRES_IMAGE_NAME);
       destinationPsql.start();
     }
 
@@ -336,9 +322,6 @@ public class AcceptanceTestHarness {
     } else {
       PostgreSQLContainerHelper.runSqlScript(MountableFile.forClasspathResource(postgresSqlInitFile), sourcePsql);
 
-      destinationPsql = new PostgreSQLContainer("postgres:13-alpine");
-      destinationPsql.start();
-
       sourceDataSource = Databases.createDataSource(sourcePsql);
       destinationDataSource = Databases.createDataSource(destinationPsql);
     }
@@ -381,6 +364,7 @@ public class AcceptanceTestHarness {
         DataSourceFactory.close(destinationDataSource);
       } else {
         destinationPsql.stop();
+        sourcePsql.stop();
       }
       // TODO(mfsiega-airbyte): clean up created source definitions.
     } catch (final Exception e) {
@@ -745,7 +729,7 @@ public class AcceptanceTestHarness {
     return createNormalizationOperation(defaultWorkspaceId);
   }
 
-  private OperationRead createNormalizationOperation(final UUID workspaceId) {
+  public OperationRead createNormalizationOperation(final UUID workspaceId) {
     final OperatorConfiguration normalizationConfig = new OperatorConfiguration()
         .operatorType(OperatorType.NORMALIZATION).normalization(new OperatorNormalization().option(
             OperatorNormalization.OptionEnum.BASIC));
@@ -814,9 +798,7 @@ public class AcceptanceTestHarness {
                                           final boolean hiddenPassword,
                                           final boolean withSchema) {
     final Map<Object, Object> dbConfig = new HashMap<>();
-    // don't use psql.getHost() directly since the ip we need differs depending on environment
-    // NOTE: Use the container ip IFF we aren't on the "bridge" network
-    dbConfig.put(JdbcUtils.HOST_KEY, DOCKER_NETWORK.equals("bridge") ? getHostname() : psql.getHost());
+    dbConfig.put(JdbcUtils.HOST_KEY, getHostname());
 
     if (hiddenPassword) {
       dbConfig.put(JdbcUtils.PASSWORD_KEY, "**********");
@@ -872,6 +854,20 @@ public class AcceptanceTestHarness {
                 .name("E2E Test Source")
                 .dockerRepository("airbyte/source-e2e-test")
                 .dockerImageTag(SOURCE_E2E_TEST_CONNECTOR_VERSION)
+                .documentationUrl(URI.create("https://example.com")))),
+        "create customer source definition", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+    sourceDefinitionIds.add(sourceDefinitionRead.getSourceDefinitionId());
+    return sourceDefinitionRead;
+  }
+
+  public SourceDefinitionRead createPostgresSourceDefinition(final UUID workspaceId, final String dockerImageTag) throws Exception {
+    final var sourceDefinitionRead = AirbyteApiClient.retryWithJitterThrows(
+        () -> apiClient.getSourceDefinitionApi().createCustomSourceDefinition(new CustomSourceDefinitionCreate()
+            .workspaceId(workspaceId)
+            .sourceDefinition(new SourceDefinitionCreate()
+                .name("Custom Postgres Source")
+                .dockerRepository("airbyte/source-postgres")
+                .dockerImageTag(dockerImageTag)
                 .documentationUrl(URI.create("https://example.com")))),
         "create customer source definition", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
     sourceDefinitionIds.add(sourceDefinitionRead.getSourceDefinitionId());

@@ -1,0 +1,9 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.separator {
+  margin: 0 auto;
+  border: none;
+  width: 100%;
+  border-bottom: variables.$border-thin solid colors.$grey-100;
+}

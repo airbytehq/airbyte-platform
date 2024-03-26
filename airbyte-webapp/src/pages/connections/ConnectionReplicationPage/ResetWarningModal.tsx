@@ -9,12 +9,12 @@ import { Text } from "components/ui/Text";
 import { ConnectionStateType } from "core/api/types/AirbyteClient";
 
 interface ResetWarningModalProps {
-  onClose: (withReset: boolean) => void;
+  onComplete: (withReset: boolean) => void;
   onCancel: () => void;
   stateType: ConnectionStateType;
 }
 
-export const ResetWarningModal: React.FC<ResetWarningModalProps> = ({ onCancel, onClose, stateType }) => {
+export const ResetWarningModal: React.FC<ResetWarningModalProps> = ({ onCancel, onComplete, stateType }) => {
   const { formatMessage } = useIntl();
   const [withReset, setWithReset] = useState(true);
   const requireFullReset = stateType === ConnectionStateType.legacy;
@@ -42,7 +42,7 @@ export const ResetWarningModal: React.FC<ResetWarningModalProps> = ({ onCancel, 
         <Button onClick={onCancel} variant="secondary" data-testid="resetModal-cancel">
           <FormattedMessage id="form.cancel" />
         </Button>
-        <Button onClick={() => onClose(withReset)} data-testid="resetModal-save">
+        <Button onClick={() => onComplete(withReset)} data-testid="resetModal-save">
           <FormattedMessage id="connection.save" />
         </Button>
       </ModalFooter>
