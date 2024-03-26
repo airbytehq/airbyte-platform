@@ -48,3 +48,6 @@ properties:
     type: boolean
   timestamp:
     type: integer
+  streamDescriptor:
+    description: The name of the stream that caused the failure when available.
+    "$ref": StreamDescriptor.yaml
