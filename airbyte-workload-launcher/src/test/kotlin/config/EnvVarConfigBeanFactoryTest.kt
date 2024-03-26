@@ -10,11 +10,15 @@ import io.airbyte.workload.launcher.config.EnvVarConfigBeanFactory
 import io.airbyte.workload.launcher.config.EnvVarConfigBeanFactory.Companion.AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR
 import io.airbyte.workload.launcher.config.EnvVarConfigBeanFactory.Companion.AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR
 import io.airbyte.workload.launcher.config.EnvVarConfigBeanFactory.Companion.WORKLOAD_API_BEARER_TOKEN_ENV_VAR
+import io.airbyte.workload.launcher.config.OrchestratorEnvSingleton
 import io.fabric8.kubernetes.api.model.EnvVarSource
 import io.fabric8.kubernetes.api.model.SecretKeySelector
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
+import java.util.UUID
 
 class EnvVarConfigBeanFactoryTest {
   companion object {
@@ -114,11 +118,19 @@ class EnvVarConfigBeanFactoryTest {
 
   @Test
   fun `test final env vars contain secret env vars an non-secret env vars`() {
-    val factory = EnvVarConfigBeanFactory()
+    val factory: OrchestratorEnvSingleton = mockk()
+    every { factory.orchestratorEnvMap(any()) } returns (mapOf(Pair(ENV_VAR_NAME1, ENV_VAR_VALUE1), Pair(ENV_VAR_NAME2, ENV_VAR_VALUE2)))
+    every {
+      factory.secretEnvMap()
+    } returns (
+      mapOf(
+        Pair(ENV_VAR_NAME3, EnvVarSource(null, null, null, SecretKeySelector(BEARER_TOKEN_SECRET_KEY, BEARER_TOKEN_SECRET_NAME, false))),
+      )
+    )
+    every { factory.orchestratorEnvVars(any()) } answers { callOriginal() }
     val orchestratorEnvVars =
       factory.orchestratorEnvVars(
-        mapOf(Pair(ENV_VAR_NAME1, ENV_VAR_VALUE1), Pair(ENV_VAR_NAME2, ENV_VAR_VALUE2)),
-        mapOf(Pair(ENV_VAR_NAME3, EnvVarSource(null, null, null, SecretKeySelector(BEARER_TOKEN_SECRET_KEY, BEARER_TOKEN_SECRET_NAME, false)))),
+        UUID.randomUUID(),
       ).sortedBy { it.name }
 
     assertEquals(ENV_VAR_NAME1, orchestratorEnvVars[0].name)
