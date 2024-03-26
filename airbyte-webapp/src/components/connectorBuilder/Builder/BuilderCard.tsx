@@ -16,7 +16,6 @@ import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
-import { SimpleRetrieverPaginator } from "core/api/types/ConnectorManifest";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import {
   useConnectorBuilderFormManagementState,
@@ -238,7 +237,7 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
 
             let builderFormValue;
             try {
-              const manifestValue = load(formValue) as SimpleRetrieverPaginator;
+              const manifestValue = load(formValue);
               builderFormValue = manifestToBuilder(manifestValue);
             } catch (e) {
               const isKnownError = e instanceof ManifestCompatibilityError || e instanceof YAMLException;

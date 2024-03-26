@@ -85,6 +85,7 @@ interface FormStateContext {
   resolveErrorMessage: string | undefined;
   resolveError: CommonRequestError<KnownExceptionInfo> | null;
   isResolving: boolean;
+  streamNames: string[];
   setDisplayedVersion: (value: number | undefined, manifest: DeclarativeComponentSchema) => void;
   updateJsonManifest: (jsonValue: ConnectorManifest) => void;
   setYamlIsValid: (value: boolean) => void;
@@ -159,9 +160,38 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
   );
 };
 
-function convertJsonToYaml(json: object): string {
-  return dump(json, {
+const MANIFEST_KEY_ORDER: Array<keyof ConnectorManifest> = [
+  "version",
+  "type",
+  "check",
+  "definitions",
+  "streams",
+  "spec",
+  "metadata",
+  "schemas",
+];
+export function convertJsonToYaml(json: ConnectorManifest): string {
+  const yamlString = dump(json, {
     noRefs: true,
+    sortKeys: (a: keyof ConnectorManifest, b: keyof ConnectorManifest) => {
+      const orderA = MANIFEST_KEY_ORDER.indexOf(a);
+      const orderB = MANIFEST_KEY_ORDER.indexOf(b);
+      if (orderA === -1 && orderB === -1) {
+        return 0;
+      }
+      if (orderA === -1) {
+        return 1;
+      }
+      if (orderB === -1) {
+        return -1;
+      }
+      return orderA - orderB;
+    },
+  });
+
+  // add newlines between root-level fields
+  return yamlString.replace(/^\S+.*/gm, (match, offset) => {
+    return offset > 0 ? `\n${match}` : match;
   });
 }
 
@@ -208,8 +238,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const name = useBuilderWatch("name");
 
   const manifestValuePerComponentPerStream = useMemo(
-    () => getManifestValuePerComponentPerStream(jsonManifest),
-    [jsonManifest]
+    () => (mode === "ui" ? getManifestValuePerComponentPerStream(jsonManifest) : undefined),
+    [jsonManifest, mode]
   );
 
   const {
@@ -224,10 +254,9 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       project_id: projectId,
       form_generated_manifest: mode === "ui",
     },
-    mode,
-    manifestValuePerComponentPerStream,
     // In UI mode, we only need to call resolve if we have YAML components
-    mode === "yaml" || (mode === "ui" && !!jsonManifest.metadata?.yamlComponents)
+    mode === "yaml" || (mode === "ui" && !!jsonManifest.metadata?.yamlComponents),
+    manifestValuePerComponentPerStream
   );
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const resolveErrorMessage = isResolveError
@@ -242,6 +271,10 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   // test reads would use the old manifest until the resolve call completes.
   const resolvedManifest =
     mode === "ui" ? jsonManifest : ((resolveData?.manifest ?? DEFAULT_JSON_MANIFEST_VALUES) as ConnectorManifest);
+
+  const streams = useBuilderWatch("formValues.streams");
+  const streamNames =
+    mode === "ui" ? streams.map((stream) => stream.name) : resolvedManifest.streams.map((stream) => stream.name ?? "");
 
   useEffect(() => {
     if (name !== currentProject.name) {
@@ -270,12 +303,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const toggleUI = useCallback(
     async (newMode: BuilderState["mode"]) => {
       if (newMode === "yaml") {
-        setValue(
-          "yaml",
-          dump(jsonManifest, {
-            noRefs: true,
-          })
-        );
+        setValue("yaml", convertJsonToYaml(jsonManifest));
         setYamlIsValid(true);
         setValue("mode", "yaml");
       } else {
@@ -468,6 +496,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     resolveError,
     resolveErrorMessage,
     isResolving,
+    streamNames,
     setDisplayedVersion: setToVersion,
     updateJsonManifest,
     setYamlIsValid,
@@ -539,23 +568,21 @@ export function useInitializedBuilderProject() {
   }
   const builderProject = useBuilderProject(projectId);
   const { mutateAsync: updateProject, error: updateError } = useUpdateBuilderProject(projectId);
+  const persistedManifest =
+    (builderProject.declarativeManifest?.manifest as ConnectorManifest) ?? DEFAULT_JSON_MANIFEST_VALUES;
   const resolvedManifest = useBuilderResolvedManifestSuspense(builderProject.declarativeManifest?.manifest, projectId);
   const [initialFormValues, failedInitialFormValueConversion, initialYaml] = useMemo(() => {
     if (!resolvedManifest) {
       // could not resolve manifest, use default form values
-      return [
-        DEFAULT_BUILDER_FORM_VALUES,
-        true,
-        convertJsonToYaml(builderProject.declarativeManifest?.manifest ?? DEFAULT_JSON_MANIFEST_VALUES),
-      ];
+      return [DEFAULT_BUILDER_FORM_VALUES, true, convertJsonToYaml(persistedManifest)];
     }
     try {
-      return [convertToBuilderFormValuesSync(resolvedManifest), false, convertJsonToYaml(resolvedManifest)];
+      return [convertToBuilderFormValuesSync(resolvedManifest), false, convertJsonToYaml(persistedManifest)];
     } catch (e) {
       // could not convert to form values, use default form values
-      return [DEFAULT_BUILDER_FORM_VALUES, true, convertJsonToYaml(resolvedManifest)];
+      return [DEFAULT_BUILDER_FORM_VALUES, true, convertJsonToYaml(persistedManifest)];
     }
-  }, [builderProject.declarativeManifest?.manifest, resolvedManifest]);
+  }, [persistedManifest, resolvedManifest]);
 
   return {
     projectId,
@@ -646,6 +673,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const mode = useBuilderWatch("mode");
   const view = useBuilderWatch("view");
   const testStreamIndex = useBuilderWatch("testStreamIndex");
+  const streams = useBuilderWatch("formValues.streams");
 
   useEffect(() => {
     if (typeof view === "number") {
@@ -658,7 +686,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     ...resolvedManifest,
     streams: [testStream],
   };
-  const streamName = testStream?.name ?? "";
+  const streamName = mode === "ui" ? streams[testStreamIndex]?.name : testStream?.name ?? "";
 
   const DEFAULT_PAGE_LIMIT = 5;
   const DEFAULT_SLICE_LIMIT = 5;

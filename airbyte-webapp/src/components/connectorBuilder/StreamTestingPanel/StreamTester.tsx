@@ -35,7 +35,7 @@ export const StreamTester: React.FC<{
   setTestingValuesInputOpen: (open: boolean) => void;
 }> = ({ hasTestingValuesErrors, setTestingValuesInputOpen }) => {
   const { formatMessage } = useIntl();
-  const { resolvedManifest, isResolving, resolveErrorMessage, resolveError } = useConnectorBuilderFormState();
+  const { streamNames, isResolving, resolveErrorMessage, resolveError } = useConnectorBuilderFormState();
   const {
     streamRead: {
       data: streamReadData,
@@ -56,8 +56,7 @@ export const StreamTester: React.FC<{
   const auxiliaryRequests = streamReadData?.auxiliary_requests;
   const autoImportSchema = useAutoImportSchema(testStreamIndex);
 
-  const resolvedStreams = resolvedManifest.streams;
-  const streamName = resolvedStreams[testStreamIndex]?.name;
+  const streamName = streamNames[testStreamIndex];
 
   const analyticsService = useAnalyticsService();
 
@@ -119,10 +118,9 @@ export const StreamTester: React.FC<{
 
   const testDataWarnings = useTestWarnings();
 
-  const currentStream = resolvedStreams[testStreamIndex];
   return (
     <div className={styles.container}>
-      {!currentStream && isResolving && (
+      {streamName === undefined && isResolving && (
         <Text size="lg" align="center">
           <FormattedMessage id="connectorBuilder.loadingStreamList" />
         </Text>
