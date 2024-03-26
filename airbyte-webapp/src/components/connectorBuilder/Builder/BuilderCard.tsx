@@ -84,7 +84,7 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
                 <CardToggle path={inputsConfig.path} defaultValue={inputsConfig.defaultValue} />
               )}
               <ControlLabels
-                className={classNames({ [styles.toggleLabel]: inputsConfig?.toggleable })}
+                className={classNames(styles.label, { [styles.toggleLabel]: inputsConfig?.toggleable })}
                 label={label}
                 infoTooltipContent={tooltip}
                 htmlFor={inputsConfig ? String(inputsConfig.path) : undefined}
