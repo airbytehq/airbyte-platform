@@ -190,7 +190,7 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
     public final String humanReadableTimeSinceLastRec;
 
     public HeartbeatTimeoutException(final long thresholdMs, final long timeBetweenLastRecordMs) {
-      super(String.format("Last record saw %s ago, exceeding the threshold of %s.",
+      super(String.format("Last record seen %s ago, exceeding the threshold of %s.",
           DurationFormatUtils.formatDurationWords(timeBetweenLastRecordMs, true, true),
           DurationFormatUtils.formatDurationWords(thresholdMs, true, true)));
       this.humanReadableThreshold = DurationFormatUtils.formatDurationWords(thresholdMs, true, true);

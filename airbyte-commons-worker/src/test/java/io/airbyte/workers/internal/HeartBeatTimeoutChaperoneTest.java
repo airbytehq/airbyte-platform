@@ -61,7 +61,7 @@ class HeartBeatTimeoutChaperoneTest {
           }
         })));
 
-    assertEquals("Last record saw 0 seconds ago, exceeding the threshold of 1 second.", thrown.getMessage());
+    assertEquals("Last record seen 0 seconds ago, exceeding the threshold of 1 second.", thrown.getMessage());
 
     verify(metricClient, times(1)).count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
         new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),

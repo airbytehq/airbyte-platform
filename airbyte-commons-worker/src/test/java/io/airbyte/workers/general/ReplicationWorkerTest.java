@@ -1143,7 +1143,7 @@ abstract class ReplicationWorkerTest {
     assertEquals(
         "Airbyte detected that the Source didn't send any records in the last 15 seconds, exceeding the configured 10 seconds threshold. Airbyte will try reading again on the next sync. Please see https://docs.airbyte.com/understanding-airbyte/heartbeats for more info.",
         failureReason.getExternalMessage());
-    assertEquals("Last record saw 15 seconds ago, exceeding the threshold of 10 seconds.", failureReason.getInternalMessage());
+    assertEquals("Last record seen 15 seconds ago, exceeding the threshold of 10 seconds.", failureReason.getInternalMessage());
     failureReason = ReplicationWorkerHelper.getFailureReason(new RuntimeException(), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.REPLICATION);
     failureReason = ReplicationWorkerHelper.getFailureReason(new TimeoutException(10000, 15000), jobId, attempt);
