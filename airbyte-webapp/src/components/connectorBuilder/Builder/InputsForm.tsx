@@ -106,12 +106,25 @@ export const InputForm = ({
     () =>
       yup.object().shape({
         // make sure key can only occur once
-        key: yup
-          .string()
-          .notOneOf(
-            inputInEditing?.isNew ? usedKeys : usedKeys.filter((key) => key !== inputInEditing?.key),
-            "connectorBuilder.duplicateFieldID"
-          ),
+        key: yup.string().notOneOf(
+          inputInEditing?.isNew
+            ? usedKeys
+            : [
+                // We need to catch the case where an inferred input is auto-created with
+                // the same key as an existing input, but we don't want to show an error
+                // if this input is the only one with this key and the user just decided
+                // to set the key back to its initial value.
+                // So, we take n-1 duplicate keys for comparison. I.e. if there is only 1
+                // "foo" key, we add 1-1=0 copies of "foo" to the notOneOf array and
+                // avoid incorrectly flagging it as a duplicate; but if there are 2 "foo"
+                // keys, we add 2-1=1 copies of "foo" to the notOneOf array and we *do*
+                // catch the duplicate.
+                ...usedKeys.filter((key) => key === inputInEditing?.key).slice(1),
+                // and we still need to compare against the other keys
+                ...usedKeys.filter((key) => key !== inputInEditing?.key),
+              ],
+          "connectorBuilder.duplicateFieldID"
+        ),
         required: yup.bool(),
         definition: yup.object().shape({
           title: yup.string().required("form.empty.error"),
@@ -229,8 +242,8 @@ const InputModal = ({
           <BuilderField
             path="definition.title"
             type="string"
-            onChange={(newValue) => {
-              if (!isInferredInputOverride) {
+            onBlur={(newValue) => {
+              if (!isInferredInputOverride && !inputInEditing.key) {
                 setValue("key", sluggify(newValue || ""), { shouldValidate: true });
               }
             }}
@@ -240,7 +253,7 @@ const InputModal = ({
           <BuilderField
             path="key"
             type="string"
-            readOnly
+            readOnly={isInferredInputOverride}
             label={formatMessage({ id: "connectorBuilder.inputModal.fieldId" })}
             tooltip={formatMessage(
               { id: "connectorBuilder.inputModal.fieldIdTooltip" },
