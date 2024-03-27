@@ -147,7 +147,6 @@ class JobNotifierTest {
       throws IOException, InterruptedException {
     List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
     jobNotifier.successJob(job, attemptStats);
-    verify(notificationClient, never()).notifySuccess(ArgumentMatchers.any());
   }
 
   @Test

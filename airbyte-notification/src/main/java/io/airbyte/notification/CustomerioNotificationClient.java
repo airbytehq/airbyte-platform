@@ -33,7 +33,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHeaders;
 import org.commonmark.node.Node;
@@ -204,16 +203,6 @@ public class CustomerioNotificationClient extends NotificationClient {
         "connector_version_new", breakingChange.getVersion().serialize(),
         "connector_version_change_description", convertMarkdownToHtml(breakingChange.getMessage()),
         "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl()));
-  }
-
-  @Override
-  public boolean notifySuccess(final String message) {
-    throw new NotImplementedException();
-  }
-
-  @Override
-  public boolean notifyFailure(final String message) {
-    throw new NotImplementedException();
   }
 
   @Override

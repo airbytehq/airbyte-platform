@@ -346,24 +346,6 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifySuccess(final String message) throws IOException, InterruptedException {
-    final String webhookUrl = config.getWebhook();
-    if (!Strings.isEmpty(webhookUrl)) {
-      return notify(message);
-    }
-    return false;
-  }
-
-  @Override
-  public boolean notifyFailure(final String message) throws IOException, InterruptedException {
-    final String webhookUrl = config.getWebhook();
-    if (!Strings.isEmpty(webhookUrl)) {
-      return notify(message);
-    }
-    return false;
-  }
-
-  @Override
   public String getNotificationClientType() {
     return SLACK_CLIENT;
   }
