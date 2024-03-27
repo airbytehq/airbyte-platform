@@ -232,6 +232,7 @@ class ParallelStreamStatsTracker(
               val errorMessage =
                 "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: " +
                   "state source record count $sourceRecordCount does not equal state destination record count $destinationRecordCount" +
+                  ". Please note that the destination count matches the platform count" +
                   if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
               logger.error { errorMessage }
               emitChecksumMetrics(CHECKSUM_PLATFORM_DESTINATION_MISMATCH)
@@ -245,6 +246,11 @@ class ParallelStreamStatsTracker(
                 } state message checksum is valid" +
                   if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
               }
+            }
+          } else {
+            logger.info {
+              "Source state count is not available for comparison with destination count, " +
+                "but destination count matches the platform count."
             }
           }
         } else {
