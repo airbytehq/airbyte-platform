@@ -327,6 +327,7 @@ class ParallelStreamStatsTracker(
           "valid_data" to checksumValidationEnabled.toString(),
           "state_type" to stateMessage.type.toString(),
           "state_hash" to stateMessage.getStateHashCode(Hashing.murmur3_32_fixed()).toString(),
+          "state_id" to stateMessage.getStateIdForStatsTracking().toString(),
         )
 
       if (stateMessage.type == AirbyteStateMessage.AirbyteStateType.STREAM) {
