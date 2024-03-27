@@ -39,6 +39,7 @@ server {
         proxy_read_timeout 1h;
         client_max_body_size 200M;
         proxy_pass http://api-server/api/;
+        proxy_http_version 1.1;
 
         # Unset X-Airbyte-Auth header so that it cannot be used by external requests for authentication
         proxy_set_header X-Airbyte-Auth "";
@@ -49,6 +50,7 @@ server {
         proxy_read_timeout 1h;
         client_max_body_size 200M;
         proxy_pass http://connector-builder-server/;
+        proxy_http_version 1.1;
     }
 
     location /auth/ {
