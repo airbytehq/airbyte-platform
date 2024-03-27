@@ -78,7 +78,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   private static final int BUFFER_READ_AHEAD_LIMIT = 2 * 1024 * 1024; // 2 megabytes
   private static final int MESSAGES_LOOK_AHEAD_FOR_DETECTION = 10;
   private static final String TYPE_FIELD_NAME = "type";
-  private static final int MAXIMUM_CHARACTERS_ALLOWED = 20_000_000;
+  private static final int MAXIMUM_CHARACTERS_ALLOWED = 5_000_000;
 
   // BASIC PROCESSING FIELDS
   protected final Logger logger;
@@ -366,8 +366,6 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
    * 3. upgrade the message to the platform version, if needed.
    */
   protected Stream<AirbyteMessage> toAirbyteMessage(final String line) {
-    handleCannotDeserialize(line);
-
     Optional<AirbyteMessage> m = deserializer.deserializeExact(line);
 
     if (m.isPresent()) {
@@ -381,6 +379,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
       return upgradeMessage(m.get());
     }
 
+    handleCannotDeserialize(line);
     return m.stream();
   }
 
@@ -406,10 +405,10 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
             () -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1));
         MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.TOO_LONG_LINES_DISTRIBUTION, line.length());
         if (invalidLineFailureConfiguration.printLongRecordPks) {
-          LOGGER.warn("[LARGE RECORD] A record is too long with size: " + line.length());
+          LOGGER.error("[LARGE RECORD] A record is too long with size: " + line.length());
           configuredAirbyteCatalog.ifPresent(
               airbyteCatalog -> LOGGER
-                  .warn("[LARGE RECORD] The primary keys of the long record are: " + gsonPksExtractor.extractPks(airbyteCatalog, line)));
+                  .error("[LARGE RECORD] The primary keys of the long record are: " + gsonPksExtractor.extractPks(airbyteCatalog, line)));
         }
         if (invalidLineFailureConfiguration.failTooLongRecords) {
           if (exceptionClass.isPresent()) {
