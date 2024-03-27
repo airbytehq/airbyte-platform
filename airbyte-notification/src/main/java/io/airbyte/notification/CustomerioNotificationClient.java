@@ -61,8 +61,8 @@ public class CustomerioNotificationClient extends NotificationClient {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CustomerioNotificationClient.class);
 
-  private static final String AUTO_DISABLE_TRANSACTION_MESSAGE_ID = "7";
-  private static final String AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID = "8";
+  private static final String AUTO_DISABLE_TRANSACTION_MESSAGE_ID = "29";
+  private static final String AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID = "30";
   private static final String BREAKING_CHANGE_WARNING_BROADCAST_ID = "32";
   private static final String BREAKING_CHANGE_SYNCS_DISABLED_BROADCAST_ID = "33";
   private static final String SCHEMA_CHANGE_TRANSACTION_ID = "25";
@@ -75,7 +75,6 @@ public class CustomerioNotificationClient extends NotificationClient {
   private static final String CUSTOMERIO_EMAIL_API_ENDPOINT = "v1/send/email";
   private static final String CAMPAIGNS_PATH_SEGMENT = "campaigns";
   private static final String CUSTOMERIO_BROADCAST_API_ENDPOINT_TEMPLATE = "v1/" + CAMPAIGNS_PATH_SEGMENT + "/%s/triggers";
-  private static final String AUTO_DISABLE_NOTIFICATION_TEMPLATE_PATH = "customerio/auto_disable_notification_template.json";
 
   private static final String CUSTOMERIO_TYPE = "customerio";
 
@@ -160,20 +159,18 @@ public class CustomerioNotificationClient extends NotificationClient {
   public boolean notifyConnectionDisabled(final SyncSummary summary,
                                           final String receiverEmail)
       throws IOException {
-    final String requestBody = renderTemplate(AUTO_DISABLE_NOTIFICATION_TEMPLATE_PATH, AUTO_DISABLE_TRANSACTION_MESSAGE_ID, receiverEmail,
-        receiverEmail, summary.getSource().getName(), summary.getDestination().getName(), summary.getErrorMessage(),
-        summary.getWorkspace().getId().toString(), summary.getConnection().getId().toString());
-    return notifyByEmail(requestBody);
+    ObjectNode node = buildSyncCompletedJson(summary, receiverEmail, AUTO_DISABLE_TRANSACTION_MESSAGE_ID);
+    String payload = Jsons.serialize(node);
+    return notifyByEmail(payload);
   }
 
   @Override
   public boolean notifyConnectionDisableWarning(final SyncSummary summary,
                                                 final String receiverEmail)
       throws IOException {
-    final String requestBody = renderTemplate(AUTO_DISABLE_NOTIFICATION_TEMPLATE_PATH, AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID, receiverEmail,
-        receiverEmail, summary.getSource().getName(), summary.getDestination().getName(), summary.getErrorMessage(),
-        summary.getWorkspace().getId().toString(), summary.getConnection().getId().toString());
-    return notifyByEmail(requestBody);
+    ObjectNode node = buildSyncCompletedJson(summary, receiverEmail, AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID);
+    String payload = Jsons.serialize(node);
+    return notifyByEmail(payload);
   }
 
   @Override
