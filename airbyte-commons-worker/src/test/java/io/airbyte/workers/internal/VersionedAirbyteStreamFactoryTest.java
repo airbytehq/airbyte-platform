@@ -11,6 +11,7 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.logging.MdcScope.Builder;
@@ -42,6 +43,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -50,6 +52,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.commons.util.ClassLoaderUtils;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class VersionedAirbyteStreamFactoryTest {
 
@@ -68,7 +71,12 @@ class VersionedAirbyteStreamFactoryTest {
 
     @BeforeEach
     void setup() {
-      logger = mock(Logger.class);
+      logger = spy(LoggerFactory.getLogger(VersionedAirbyteStreamFactoryTest.class));
+    }
+
+    @AfterEach()
+    void afterEach() {
+      verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -79,7 +87,6 @@ class VersionedAirbyteStreamFactoryTest {
       final Stream<AirbyteMessage> expectedStream = Stream.of(record1);
 
       assertEquals(expectedStream.collect(Collectors.toList()), messageStream.collect(Collectors.toList()));
-      verify(logger).info("Reading messages from protocol version {}{}", "0.2.0", "");
     }
 
     @Test
@@ -169,6 +176,7 @@ class VersionedAirbyteStreamFactoryTest {
                   new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false), gsonPksExtractor)
               .create(bufferedReader);
 
+      verifyStreamHeader();
       assertThrows(RuntimeException.class, () -> messageStream.toList());
     }
 
@@ -184,6 +192,7 @@ class VersionedAirbyteStreamFactoryTest {
       "{\"type\": \"record\", \"record\": {\"stream\": \"transactions\", \"data\": {\"transaction_id\": Infinity }}}"})
     void testMalformedRecordShouldOnlyDebugLog(final String invalidRecord) {
       stringToMessageStream(invalidRecord).collect(Collectors.toList());
+      verifyBlankedRecordRecordWarning();
       verify(logger).debug(invalidRecord);
     }
 
@@ -207,14 +216,17 @@ class VersionedAirbyteStreamFactoryTest {
 
     @Test
     void testToAirbyteMessageRandomLog() {
-      Assertions.assertThat(getFactory(false).toAirbyteMessage("I should not be send on the same channel than the airbyte messages"))
+      final String randomLog = "I should not be send on the same channel than the airbyte messages";
+      Assertions.assertThat(getFactory(false).toAirbyteMessage(randomLog))
           .isEmpty();
+      verify(logger).info(randomLog);
     }
 
     @Test
     void testToAirbyteMessageMixedUpRecordShouldOnlyDebugLog() {
       final String messageLine = "It shouldn't be here" + String.format(VALID_MESSAGE_TEMPLATE, "hello");
       getFactory(false).toAirbyteMessage(messageLine);
+      verifyBlankedRecordRecordWarning();
       verify(logger).debug(messageLine);
     }
 
@@ -222,6 +234,8 @@ class VersionedAirbyteStreamFactoryTest {
     void testToAirbyteMessageMixedUpRecordFailureDisable() {
       final String messageLine = "It shouldn't be here" + String.format(VALID_MESSAGE_TEMPLATE, "hello");
       Assertions.assertThat(getFactory(false).toAirbyteMessage(messageLine)).isEmpty();
+      verifyBlankedRecordRecordWarning();
+      verify(logger).debug(messageLine);
     }
 
     @Test
@@ -241,17 +255,28 @@ class VersionedAirbyteStreamFactoryTest {
         longStringBuilder.append("a");
       }
       final String messageLine = String.format(VALID_MESSAGE_TEMPLATE, longStringBuilder);
-      Assertions.assertThat(getFactory(false).toAirbyteMessage(messageLine)).isEmpty();
+      Assertions.assertThat(getFactory(false).toAirbyteMessage(messageLine)).isNotEmpty();
     }
 
     private Stream<AirbyteMessage> stringToMessageStream(final String inputString) {
       final InputStream inputStream = new ByteArrayInputStream(inputString.getBytes(StandardCharsets.UTF_8));
       final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-      return VersionedAirbyteStreamFactory
+
+      final var stream = VersionedAirbyteStreamFactory
           .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 100000L,
               new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false),
               gsonPksExtractor)
           .create(bufferedReader);
+      verifyStreamHeader();
+      return stream;
+    }
+
+    private void verifyBlankedRecordRecordWarning() {
+      verify(logger).warn("Could not parse the string received from source, it seems to be a record message");
+    }
+
+    private void verifyStreamHeader() {
+      verify(logger).info("Reading messages from protocol version {}{}", "0.2.0", "");
     }
 
   }
