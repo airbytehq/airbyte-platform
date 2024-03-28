@@ -19,7 +19,6 @@ import {
   getManifestValuePerComponentPerStream,
   useBuilderWatch,
 } from "components/connectorBuilder/types";
-import { useManifestToBuilderForm } from "components/connectorBuilder/useManifestToBuilderForm";
 import { formatJson } from "components/connectorBuilder/utils";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
@@ -216,7 +215,6 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
 
   const { setStateKey } = useConnectorBuilderFormManagementState();
   const { setStoredMode } = useConnectorBuilderLocalStorage();
-  const { convertToBuilderFormValues } = useManifestToBuilderForm();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const analyticsService = useAnalyticsService();
 
@@ -307,22 +305,10 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
         setYamlIsValid(true);
         setValue("mode", "yaml");
       } else {
-        try {
-          if (jsonManifest === DEFAULT_JSON_MANIFEST_VALUES) {
-            setValue("mode", "ui");
-            return;
-          }
-          const convertedFormValues = await convertToBuilderFormValues(jsonManifest, projectId);
-          const convertedManifest = removeEmptyProperties(convertToManifest(convertedFormValues));
-          // set jsonManifest first so that a save isn't triggered
-          setJsonManifest(convertedManifest);
-          setPersistedState({ name: currentProject.name, manifest: convertedManifest });
-          setValue("formValues", convertedFormValues, { shouldValidate: true });
-          setValue("mode", "ui");
-        } catch (e) {
+        const confirmDiscard = (errorMessage: string) =>
           openConfirmationModal({
             text: "connectorBuilder.toggleModal.text",
-            textValues: { error: e.message as string },
+            textValues: { error: errorMessage },
             title: "connectorBuilder.toggleModal.title",
             submitButtonText: "connectorBuilder.toggleModal.submitButton",
             onSubmit: () => {
@@ -333,6 +319,25 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
               });
             },
           });
+
+        try {
+          if (jsonManifest === DEFAULT_JSON_MANIFEST_VALUES) {
+            setValue("mode", "ui");
+            return;
+          }
+          if (isResolveError) {
+            confirmDiscard(resolveErrorMessage!);
+            return;
+          }
+          const convertedFormValues = convertToBuilderFormValuesSync(resolvedManifest);
+          const convertedManifest = removeEmptyProperties(convertToManifest(convertedFormValues));
+          // set jsonManifest first so that a save isn't triggered
+          setJsonManifest(convertedManifest);
+          setPersistedState({ name: currentProject.name, manifest: convertedManifest });
+          setValue("formValues", convertedFormValues, { shouldValidate: true });
+          setValue("mode", "ui");
+        } catch (e) {
+          confirmDiscard(e.message);
           analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.YAML_TO_UI_CONVERSION_FAILURE, {
             actionDescription: "Failure occured when converting from YAML to UI",
             error_message: e.message,
@@ -343,11 +348,12 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     [
       analyticsService,
       closeConfirmationModal,
-      convertToBuilderFormValues,
       currentProject.name,
+      isResolveError,
       jsonManifest,
       openConfirmationModal,
-      projectId,
+      resolveErrorMessage,
+      resolvedManifest,
       setValue,
     ]
   );
