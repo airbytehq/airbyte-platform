@@ -27,7 +27,7 @@ import {
 import { CellText, CellTextProps } from "../CellText";
 
 const HeaderCell: React.FC<React.PropsWithChildren<CellTextProps>> = ({ children, ...tableCellProps }) => (
-  <CellText {...tableCellProps} withOverflow>
+  <CellText {...tableCellProps}>
     <Text size="sm" color="grey300">
       {children}
     </Text>
@@ -89,7 +89,7 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
       className={styles.headerContainer}
       data-testid="catalog-tree-table-header"
     >
-      <CellText size="fixed" className={styles.syncCell} withOverflow>
+      <CellText size="fixed" className={styles.syncCell}>
         <Switch
           size="sm"
           indeterminate={isPartOfStreamsSyncEnabled()}
