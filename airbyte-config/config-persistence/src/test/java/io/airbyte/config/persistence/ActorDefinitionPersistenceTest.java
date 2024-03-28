@@ -58,6 +58,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
+  private static final String TEST_DEFAULT_MAX_SECONDS = "3600";
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final String DOCKER_IMAGE_TAG = "0.0.1";
 
@@ -68,7 +69,8 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     truncateAllTables();
 
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
-    when(featureFlagClient.stringVariation(eq(HeartbeatMaxSecondsBetweenMessages.INSTANCE), any(SourceDefinition.class))).thenReturn("3600");
+    when(featureFlagClient.stringVariation(eq(HeartbeatMaxSecondsBetweenMessages.INSTANCE), any(SourceDefinition.class)))
+        .thenReturn(TEST_DEFAULT_MAX_SECONDS);
 
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
@@ -132,8 +134,19 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testSourceDefinitionMaxSeconds() throws JsonValidationException, ConfigNotFoundException, IOException {
-    assertReturnsSrcDef(createBaseSourceDefWithoutMaxSecondsBetweenMessages().withMaxSecondsBetweenMessages(1L));
+  void testSourceDefinitionMaxSecondsGreaterThenDefaultShouldReturnConfigured() throws JsonValidationException, ConfigNotFoundException, IOException {
+    assertReturnsSrcDef(
+        createBaseSourceDefWithoutMaxSecondsBetweenMessages().withMaxSecondsBetweenMessages(Long.parseLong(TEST_DEFAULT_MAX_SECONDS) + 1));
+  }
+
+  @Test
+  void testSourceDefinitionMaxSecondsLessThenDefaultShouldReturnDefault() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final var def = createBaseSourceDefWithoutMaxSecondsBetweenMessages().withMaxSecondsBetweenMessages(1L);
+    final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(def.getSourceDefinitionId());
+    configRepository.writeConnectorMetadata(def, actorDefinitionVersion);
+    final var exp =
+        def.withDefaultVersionId(actorDefinitionVersion.getVersionId()).withMaxSecondsBetweenMessages(Long.parseLong(TEST_DEFAULT_MAX_SECONDS));
+    assertEquals(exp, configRepository.getStandardSourceDefinition(def.getSourceDefinitionId()));
   }
 
   private void assertReturnsSrcDef(final StandardSourceDefinition srcDef) throws ConfigNotFoundException, IOException, JsonValidationException {
