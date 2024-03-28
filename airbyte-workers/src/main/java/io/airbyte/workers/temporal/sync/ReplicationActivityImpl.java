@@ -137,6 +137,11 @@ public class ReplicationActivityImpl implements ReplicationActivity {
             SOURCE_DOCKER_IMAGE_KEY, replicationActivityInput.getSourceLauncherConfig().getDockerImage());
     ApmTraceUtils
         .addTagsToTrace(traceAttributes);
+
+    final MetricAttribute[] metricAttributes = traceAttributes.entrySet().stream()
+        .map(e -> new MetricAttribute(ApmTraceUtils.formatTag(e.getKey()), e.getValue().toString()))
+        .collect(Collectors.toSet()).toArray(new MetricAttribute[] {});
+
     if (replicationActivityInput.getIsReset()) {
       metricClient.count(OssMetricsRegistry.RESET_REQUEST, 1);
     }
@@ -178,7 +183,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                   Optional.ofNullable(replicationActivityInput.getTaskQueue()));
 
           final ReplicationOutput attemptOutput = temporalAttempt.get();
-          final StandardSyncOutput standardSyncOutput = reduceReplicationOutput(attemptOutput, traceAttributes);
+          final StandardSyncOutput standardSyncOutput = reduceReplicationOutput(attemptOutput, metricAttributes);
 
           final String standardSyncOutputString = standardSyncOutput.toString();
           LOGGER.info("sync summary: {}", standardSyncOutputString);
@@ -195,12 +200,12 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           }
           BackfillHelper.markBackfilledStreams(streamsToBackfill, standardSyncOutput);
           LOGGER.info("sync summary after backfill: {}", standardSyncOutput);
-          return payloadChecker.validatePayloadSize(standardSyncOutput);
+          return payloadChecker.validatePayloadSize(standardSyncOutput, metricAttributes);
         },
         context);
   }
 
-  private StandardSyncOutput reduceReplicationOutput(final ReplicationOutput output, final Map<String, Object> metricAttributes) {
+  private StandardSyncOutput reduceReplicationOutput(final ReplicationOutput output, final MetricAttribute[] metricAttributes) {
     final StandardSyncOutput standardSyncOutput = new StandardSyncOutput();
     final StandardSyncSummary syncSummary = new StandardSyncSummary();
     final ReplicationAttemptSummary replicationSummary = output.getReplicationAttemptSummary();
@@ -233,22 +238,19 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     }
   }
 
-  private void traceReplicationSummary(final ReplicationAttemptSummary replicationSummary, final Map<String, Object> metricAttributes) {
+  private void traceReplicationSummary(final ReplicationAttemptSummary replicationSummary, final MetricAttribute[] metricAttributes) {
     if (replicationSummary == null) {
       return;
     }
 
-    final MetricAttribute[] attributes = metricAttributes.entrySet().stream()
-        .map(e -> new MetricAttribute(ApmTraceUtils.formatTag(e.getKey()), e.getValue().toString()))
-        .collect(Collectors.toSet()).toArray(new MetricAttribute[] {});
     final Map<String, Object> tags = new HashMap<>();
     if (replicationSummary.getBytesSynced() != null) {
       tags.put(REPLICATION_BYTES_SYNCED_KEY, replicationSummary.getBytesSynced());
-      metricClient.count(OssMetricsRegistry.REPLICATION_BYTES_SYNCED, replicationSummary.getBytesSynced(), attributes);
+      metricClient.count(OssMetricsRegistry.REPLICATION_BYTES_SYNCED, replicationSummary.getBytesSynced(), metricAttributes);
     }
     if (replicationSummary.getRecordsSynced() != null) {
       tags.put(REPLICATION_RECORDS_SYNCED_KEY, replicationSummary.getRecordsSynced());
-      metricClient.count(OssMetricsRegistry.REPLICATION_RECORDS_SYNCED, replicationSummary.getRecordsSynced(), attributes);
+      metricClient.count(OssMetricsRegistry.REPLICATION_RECORDS_SYNCED, replicationSummary.getRecordsSynced(), metricAttributes);
     }
     if (replicationSummary.getStatus() != null) {
       tags.put(REPLICATION_STATUS_KEY, replicationSummary.getStatus().value());
