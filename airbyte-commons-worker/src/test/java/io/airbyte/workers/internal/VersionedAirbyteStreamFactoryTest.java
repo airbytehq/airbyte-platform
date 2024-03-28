@@ -239,18 +239,9 @@ class VersionedAirbyteStreamFactoryTest {
     }
 
     @Test
-    void testToAirbyteMessageVeryLongMessageFail() {
-      final StringBuilder longStringBuilder = new StringBuilder(5_000_000);
-      for (int i = 0; i < 25_000_000; i++) {
-        longStringBuilder.append("a");
-      }
-      final String messageLine = String.format(VALID_MESSAGE_TEMPLATE, longStringBuilder);
-      assertThrows(RuntimeException.class, () -> getFactory(true).toAirbyteMessage(messageLine));
-    }
-
-    @Test
     void testToAirbyteMessageVeryLongMessageDontFail() {
-      final StringBuilder longStringBuilder = new StringBuilder(5_000_000);
+      // This roughly corresponds to a 25_000_000 * 2 bytes string.
+      final StringBuilder longStringBuilder = new StringBuilder(25_000_000);
       for (int i = 0; i < 25_000_000; i++) {
         longStringBuilder.append("a");
       }

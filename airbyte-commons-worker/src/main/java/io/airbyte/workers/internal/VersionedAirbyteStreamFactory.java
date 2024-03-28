@@ -61,8 +61,6 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
 
   public record InvalidLineFailureConfiguration(boolean failTooLongRecords, boolean printLongRecordPks) {}
 
-  public static final String RECORD_TOO_LONG = "Record is too long, the size is: ";
-
   private static final Logger DEFAULT_LOGGER = LoggerFactory.getLogger(VersionedAirbyteStreamFactory.class);
   private static final double MAX_SIZE_RATIO = 0.8;
 
@@ -368,7 +366,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
    * 3. upgrade the message to the platform version, if needed.
    */
   protected Stream<AirbyteMessage> toAirbyteMessage(final String line) {
-    handleCannotDeserialize(line);
+    logLargeRecordWarning(line);
 
     Optional<AirbyteMessage> m = deserializer.deserializeExact(line);
 
@@ -387,21 +385,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     return m.stream();
   }
 
-  /**
-   * If a line cannot be deserialized into an AirbyteMessage, either:
-   * <p>
-   * 1) We ran into serialization errors, e.g. too big, garbled etc. The most common error being too
-   * big.
-   * <p>
-   * 2) It is a log message that should be an Airbyte Log Message. Currently, the protocol allows for
-   * connectors to log to standard out. This is not ideal as it makes it difficult to distinguish
-   * between proper and garbled messages. However, since all Java connectors (both source and
-   * destination) currently do this, we cannot change this behaviour today, though in the long term we
-   * want to amend the Protocol and strictly enforce this.
-   * <p>
-   *
-   */
-  private void handleCannotDeserialize(final String line) {
+  private void logLargeRecordWarning(final String line) {
     try (final MdcScope ignored = containerLogMdcBuilder.build()) {
       if (line.length() >= MAXIMUM_CHARACTERS_ALLOWED) {
         connectionId.ifPresentOrElse(c -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1,
@@ -409,17 +393,10 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
             () -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1));
         MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.TOO_LONG_LINES_DISTRIBUTION, line.length());
         if (invalidLineFailureConfiguration.printLongRecordPks) {
-          logger.warn("[LARGE RECORD] A record is too long with size: " + line.length());
+          logger.warn("[LARGE RECORD] Risk of Destinations not being able to properly handle: " + line.length());
           configuredAirbyteCatalog.ifPresent(
               airbyteCatalog -> logger
                   .warn("[LARGE RECORD] The primary keys of the long record are: " + gsonPksExtractor.extractPks(airbyteCatalog, line)));
-        }
-        if (invalidLineFailureConfiguration.failTooLongRecords) {
-          if (exceptionClass.isPresent()) {
-            throwExceptionClass("One record is too big and can't be processed, the sync will be failed");
-          } else {
-            throw new IllegalStateException(RECORD_TOO_LONG + line.length());
-          }
         }
       }
     } catch (final Exception e) {
