@@ -2,6 +2,8 @@ plugins {
     id("io.airbyte.gradle.jvm.lib")
     id("io.airbyte.gradle.publish")
     `java-test-fixtures`
+    kotlin("jvm")
+    kotlin("kapt")
 }
 
 configurations.all {
@@ -12,6 +14,9 @@ dependencies {
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
     annotationProcessor(libs.bundles.micronaut.annotation.processor)
+
+    kapt(platform(libs.micronaut.platform))
+    kapt(libs.bundles.micronaut.annotation.processor)
 
     api(libs.bundles.micronaut.annotation)
 
@@ -30,6 +35,8 @@ dependencies {
     implementation(libs.google.cloud.storage)
     implementation(libs.commons.io)
     implementation(libs.jackson.databind)
+    implementation(libs.bundles.micronaut.data.jdbc)
+    implementation(libs.bundles.micronaut.kotlin)
 
     testImplementation(libs.hamcrest.all)
     testImplementation(libs.platform.testcontainers.postgresql)
@@ -39,6 +46,11 @@ dependencies {
     testImplementation(libs.bundles.junit)
     testImplementation(libs.assertj.core)
     testImplementation(libs.junit.pioneer)
+    testImplementation(libs.bundles.micronaut.test)
+    testImplementation(libs.mockk)
+
+    kaptTest(platform(libs.micronaut.platform))
+    kaptTest(libs.bundles.micronaut.test.annotation.processor)
 
     testRuntimeOnly(libs.junit.jupiter.engine)
 
@@ -53,4 +65,13 @@ dependencies {
     testFixturesApi(libs.airbyte.protocol)
     testFixturesApi(libs.lombok)
     testFixturesAnnotationProcessor(libs.lombok)
+}
+
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.)
+// Kapt, by default, runs all annotation(processors and disables annotation(processing by javac, however)
+// this default behavior(breaks the lombok java annotation(processor.  To avoid(lombok breaking, ksp(has)
+// keepJavacAnnotationProcessors enabled, which causes duplicate META-INF files to be generated.)
+// Once lombok has been removed, this can also be removed.)
+tasks.withType<Jar>().configureEach {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
