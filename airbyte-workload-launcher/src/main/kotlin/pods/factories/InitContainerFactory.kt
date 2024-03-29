@@ -1,9 +1,14 @@
 package io.airbyte.workload.launcher.pods.factories
 
+import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.workers.process.KubePodProcess
+import io.fabric8.kubernetes.api.model.CapabilitiesBuilder
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.ResourceRequirements
+import io.fabric8.kubernetes.api.model.SeccompProfileBuilder
+import io.fabric8.kubernetes.api.model.SecurityContext
+import io.fabric8.kubernetes.api.model.SecurityContextBuilder
 import io.fabric8.kubernetes.api.model.VolumeMount
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
@@ -50,6 +55,22 @@ class InitContainerFactory(
       )
       .withResources(resourceReqs)
       .withVolumeMounts(volumeMounts)
+      .withSecurityContext(containerSecurityContext())
       .build()
   }
 }
+
+private fun containerSecurityContext(): SecurityContext? =
+  when (EnvVar.ROOTLESS_WORKLOAD.fetch(default = "false").toBoolean()) {
+    true ->
+      SecurityContextBuilder()
+        .withAllowPrivilegeEscalation(false)
+        .withRunAsUser(1000L)
+        .withRunAsGroup(1000L)
+        .withReadOnlyRootFilesystem(false)
+        .withRunAsNonRoot(true)
+        .withCapabilities(CapabilitiesBuilder().addAllToDrop(listOf("ALL")).build())
+        .withSeccompProfile(SeccompProfileBuilder().withType("RuntimeDefault").build())
+        .build()
+    false -> null
+  }
