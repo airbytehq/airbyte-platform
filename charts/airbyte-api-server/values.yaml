@@ -155,7 +155,7 @@ tolerations: []
 affinity: {}
 
 ## Configure the ingress resource that allows you to access the Airbyte API.
-## ref: http://kubernetes.io/docs/user-guide/ingress/
+## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/
 ##  webapp.ingress.enabled Set to true to enable ingress record generation
 ##  webapp.ingress.className Specifies ingressClassName for clusters >= 1.18+
 ##  webapp.ingress.annotations [object] Ingress annotations done as key:value pairs

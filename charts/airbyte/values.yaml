@@ -213,7 +213,7 @@ webapp:
   affinity: {}
 
   ## Configure the ingress resource that allows you to access the Airbyte installation.
-  ## ref: http://kubernetes.io/docs/user-guide/ingress/
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/
   ingress:
     # -- Set to true to enable ingress record generation
     enabled: false
@@ -1718,7 +1718,7 @@ airbyte-api-server:
   service:
     port: 80
 
-  # - Configure the ingress resource that allows you to access the Airbyte API, see http://kubernetes.io/docs/user-guide/ingress/
+  # - Configure the ingress resource that allows you to access the Airbyte API, see https://kubernetes.io/docs/concepts/services-networking/ingress/
   ingress:
     # -- Set to true to enable ingress record generation
     enabled: false
@@ -1903,7 +1903,7 @@ workload-api-server:
   service:
     port: 8007
 
-  # Configure the ingress resource that allows you to access the Airbyte Workload API, see http://kubernetes.io/docs/user-guide/ingress/
+  # Configure the ingress resource that allows you to access the Airbyte Workload API, see https://kubernetes.io/docs/concepts/services-networking/ingress/
   ingress:
     # -- Set to true to enable ingress record generation
     enabled: false
