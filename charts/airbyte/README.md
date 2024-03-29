@@ -64,7 +64,7 @@ Helm chart to deploy airbyte
 | airbyte-bootloader.extraVolumes | list | `[]` | Additional volumes for server pods |
 | airbyte-bootloader.image.pullPolicy | string | `"IfNotPresent"` | The pull policy to use for the airbyte bootloader image |
 | airbyte-bootloader.image.repository | string | `"airbyte/bootloader"` | The repository to use for the airbyte bootloader image. |
-| airbyte-bootloader.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/ |
+| airbyte-bootloader.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/ |
 | airbyte-bootloader.podAnnotations | object | `{}` | Add extra annotations to the bootloader pod |
 | airbyte-bootloader.podLabels | object | `{}` | Add extra labels to the bootloader pod |
 | airbyte-bootloader.resources.limits | object | `{}` | The resources limits for the airbyte bootloader image |
@@ -110,7 +110,7 @@ Helm chart to deploy airbyte
 | cron.livenessProbe.successThreshold | int | `1` | Success threshold for livenessProbe |
 | cron.livenessProbe.timeoutSeconds | int | `1` | Timeout seconds for livenessProbe |
 | cron.log.level | string | `"INFO"` | The log level to log at. |
-| cron.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/ |
+| cron.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/ |
 | cron.podAnnotations | object | `{}` | Add extra annotations to the cron pods |
 | cron.podLabels | object | `{}` | Add extra labels to the cron pods |
 | cron.readinessProbe.enabled | bool | `true` | Enable readinessProbe on the cron |
@@ -187,7 +187,7 @@ Helm chart to deploy airbyte
 | metrics.extraVolumes | list | `[]` | Additional volumes for metrics-reporter pods |
 | metrics.image.pullPolicy | string | `"IfNotPresent"` | The pull policy to use for the airbyte metrics-reporter image |
 | metrics.image.repository | string | `"airbyte/metrics-reporter"` | The repository to use for the airbyte metrics-reporter image. |
-| metrics.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/ |
+| metrics.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/ |
 | metrics.podAnnotations | object | `{}` | Add extra annotations to the metrics-reporter pod |
 | metrics.podLabels | object | `{}` | Add extra labels to the metrics-reporter pod |
 | metrics.replicaCount | int | `1` | Number of metrics-reporter replicas |
@@ -202,7 +202,7 @@ Helm chart to deploy airbyte
 | minio.endpoint | string | `"http://airbyte-minio-svc:9000"` |  |
 | minio.image.repository | string | `"minio/minio"` | Minio image used by Minio helm chart |
 | minio.image.tag | string | `"RELEASE.2023-11-20T22-40-07Z"` | Minio tag image |
-| minio.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/ # |
+| minio.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/ # |
 | minio.storage.volumeClaimValue | string | `"500Mi"` |  |
 | minio.tolerations | list | `[]` | Tolerations for minio pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ # |
 | nameOverride | string | `""` | String to partially override airbyte.fullname template with a string (will prepend the release name) |
@@ -220,7 +220,7 @@ Helm chart to deploy airbyte
 | pod-sweeper.livenessProbe.periodSeconds | int | `30` | Period seconds for livenessProbe |
 | pod-sweeper.livenessProbe.successThreshold | int | `1` | Success threshold for livenessProbe |
 | pod-sweeper.livenessProbe.timeoutSeconds | int | `1` | Timeout seconds for livenessProbe |
-| pod-sweeper.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/ |
+| pod-sweeper.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/ |
 | pod-sweeper.podAnnotations | object | `{}` | Add extra annotations to the podSweeper pod |
 | pod-sweeper.podLabels | object | `{}` | Add extra labels to the podSweeper pod |
 | pod-sweeper.readinessProbe.enabled | bool | `true` | Enable readinessProbe on the podSweeper |
@@ -239,7 +239,7 @@ Helm chart to deploy airbyte
 | postgresql.enabled | bool | `true` | Switch to enable or disable the PostgreSQL helm chart |
 | postgresql.existingSecret | string | `""` | Name of an existing secret containing the PostgreSQL password ('postgresql-password' key) |
 | postgresql.image.repository | string | `"airbyte/db"` |  |
-| postgresql.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/ |
+| postgresql.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/ |
 | postgresql.postgresqlDatabase | string | `"db-airbyte"` | Airbyte Postgresql database |
 | postgresql.postgresqlPassword | string | `"airbyte"` | Airbyte Postgresql password |
 | postgresql.postgresqlUsername | string | `"airbyte"` | Airbyte Postgresql username |
@@ -262,7 +262,7 @@ Helm chart to deploy airbyte
 | server.livenessProbe.successThreshold | int | `1` | Success threshold for livenessProbe |
 | server.livenessProbe.timeoutSeconds | int | `10` | Timeout seconds for livenessProbe |
 | server.log.level | string | `"INFO"` | The log level to log at |
-| server.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/ |
+| server.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/ |
 | server.podAnnotations | object | `{}` | Add extra annotations to the server pods |
 | server.podLabels | object | `{}` | Add extra labels to the server pods |
 | server.readinessProbe.enabled | bool | `true` | Enable readinessProbe on the server |
@@ -291,7 +291,7 @@ Helm chart to deploy airbyte
 | temporal.image.repository | string | `"temporalio/auto-setup"` | The temporal image repository to use |
 | temporal.image.tag | string | `"1.20.1"` | The temporal image tag to use |
 | temporal.livenessProbe.enabled | bool | `false` | Enable livenessProbe on the temporal |
-| temporal.nodeSelector | object | `{}` | Node labels for temporal pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/ |
+| temporal.nodeSelector | object | `{}` | Node labels for temporal pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/ |
 | temporal.podAnnotations | object | `{}` | Add extra annotations to the temporal pod |
 | temporal.podLabels | object | `{}` | Add extra labels to the temporal pod |
 | temporal.readinessProbe.enabled | bool | `false` | Enable readinessProbe on the temporal |
@@ -328,7 +328,7 @@ Helm chart to deploy airbyte
 | webapp.livenessProbe.periodSeconds | int | `10` | Period seconds for livenessProbe |
 | webapp.livenessProbe.successThreshold | int | `1` | Success threshold for livenessProbe |
 | webapp.livenessProbe.timeoutSeconds | int | `1` | Timeout seconds for livenessProbe |
-| webapp.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/ |
+| webapp.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/ |
 | webapp.podAnnotations | object | `{}` | Add extra annotations to the webapp pods |
 | webapp.podLabels | object | `{}` | webapp.podLabels [object] Add extra labels to the webapp pods |
 | webapp.readinessProbe.enabled | bool | `true` | Enable readinessProbe on the webapp |
@@ -368,7 +368,7 @@ Helm chart to deploy airbyte
 | worker.livenessProbe.timeoutSeconds | int | `1` | Timeout seconds for livenessProbe |
 | worker.log.level | string | `"INFO"` |  |
 | worker.maxNotifyWorkers | int | `5` |  |
-| worker.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/ |
+| worker.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/ |
 | worker.podAnnotations | object | `{}` | Add extra annotations to the worker pods |
 | worker.podLabels | object | `{}` | Add extra labels to the worker pods |
 | worker.readinessProbe.enabled | bool | `true` | Enable readinessProbe on the worker |
@@ -433,7 +433,7 @@ Helm chart to deploy airbyte
 | workload-launcher.livenessProbe.timeoutSeconds | int | `1` | Timeout seconds for livenessProbe |
 | workload-launcher.log.level | string | `"INFO"` | The log level to log at |
 | workload-launcher.maxNotifyWorkers | int | `5` |  |
-| workload-launcher.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/ |
+| workload-launcher.nodeSelector | object | `{}` | Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/ |
 | workload-launcher.podAnnotations | object | `{}` | Add extra annotations to the workload launcher pods |
 | workload-launcher.podLabels | object | `{}` | Add extra labels to the workload launcher pods |
 | workload-launcher.readinessProbe.enabled | bool | `true` | Enable readinessProbe on the workload launcher |

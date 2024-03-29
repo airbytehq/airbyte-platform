@@ -248,7 +248,7 @@ webapp:
     requests: {}
 
   ##  webapp.nodeSelector [object] Node labels for pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   ##
   nodeSelector: {}
 
@@ -474,7 +474,7 @@ pod-sweeper:
     requests: {}
 
   ##  podSweeper.nodeSelector [object] Node labels for pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   ##
   nodeSelector: {}
 
@@ -576,7 +576,7 @@ server:
     requests: {}
 
   ##  server.nodeSelector [object] Node labels for pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   ##
   nodeSelector: {}
 
@@ -764,7 +764,7 @@ worker:
     requests: {}
 
   ##  worker.nodeSelector [object] Node labels for pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   ##
   nodeSelector: {}
 
@@ -899,7 +899,7 @@ workload-launcher:
     requests: {}
 
   ##  workload-launcher.nodeSelector [object] Node labels for pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   ##
   nodeSelector: {}
 
@@ -1004,7 +1004,7 @@ metrics:
     requests: {}
 
   ##  metrics.nodeSelector [object] Node labels for pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   ##
   nodeSelector: {}
 
@@ -1068,7 +1068,7 @@ airbyte-bootloader:
   podLabels: {}
 
   ##  nodeSelector [object] Node labels for pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   ##
   nodeSelector: {}
 
@@ -1267,7 +1267,7 @@ temporal:
     enabled: false
 
   ##  temporal.nodeSelector [object] Node labels for temporal pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   ##
   nodeSelector: {}
 
@@ -1480,7 +1480,7 @@ cron:
     requests: {}
 
   ##  cron.nodeSelector [object] Node labels for pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   ##
   nodeSelector: {}
 

@@ -94,7 +94,7 @@ readinessProbe:
   successThreshold: 1
 
 ##  temporal.nodeSelector [object] Node labels for temporal pod assignment
-## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
 ##
 nodeSelector: {}
 

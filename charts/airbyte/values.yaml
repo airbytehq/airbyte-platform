@@ -202,7 +202,7 @@ webapp:
     # -- The requested resources for the Web container
     requests: {}
 
-  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   nodeSelector: {}
 
   # -- Tolerations for webapp pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
@@ -418,7 +418,7 @@ pod-sweeper:
     # -- The requested resources for the podSweeper container
     requests: {}
 
-  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   nodeSelector: {}
 
   # -- Tolerations for pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
@@ -528,7 +528,7 @@ server:
     # -- The requested resources for the server container
     requests: {}
 
-  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   nodeSelector: {}
 
   # -- Tolerations for server pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
@@ -708,7 +708,7 @@ worker:
     # -- The requested resources for the worker container
     requests: {}
 
-  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   nodeSelector: {}
 
   # -- Tolerations for worker pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
@@ -847,7 +847,7 @@ workload-launcher:
     # -- The requested resources for the workload launcher container
     requests: {}
 
-  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   nodeSelector: {}
 
   # -- Tolerations for workload launcher pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
@@ -961,7 +961,7 @@ metrics:
     # -- The requested resources for the metrics-reporter container
     requests: {}
 
-  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   nodeSelector: {}
 
   # -- Tolerations for metrics-reporter pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
@@ -1015,7 +1015,7 @@ airbyte-bootloader:
   # -- Add extra labels to the bootloader pod
   podLabels: {}
 
-  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   nodeSelector: {}
 
   # -- Tolerations for worker pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
@@ -1217,7 +1217,7 @@ temporal:
     # -- Enable readinessProbe on the temporal
     enabled: false
 
-  # -- Node labels for temporal pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  # -- Node labels for temporal pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   nodeSelector: {}
 
   # -- Tolerations for temporal pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
@@ -1317,7 +1317,7 @@ postgresql:
     helm.sh/hook: pre-install
     # -- The order in which the hooks are executed. If weight is lower, it has higher priority
     helm.sh/hook-weight: "-1"
-  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   nodeSelector: {}
 
   # -- Tolerations for postgresql pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
@@ -1358,7 +1358,7 @@ minio:
   storage:
     volumeClaimValue: 500Mi
 
-  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   ##
   nodeSelector: {}
 
@@ -1454,7 +1454,7 @@ cron:
     # -- The requested resources for the cron container
     requests: {}
 
-  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   nodeSelector: {}
 
   # -- Tolerations for cron pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
