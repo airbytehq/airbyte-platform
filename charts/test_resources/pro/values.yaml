@@ -80,7 +80,7 @@ global:
     otelCollectorEndpoint: ""
   jobs:
     ## Jobs resource requests and limits
-    ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+    ## ref: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
     ## We usually recommend not to specify default resources and to leave this as a conscious
     ## choice for the user. This also increases chances charts run on environments with little
     ## resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -239,7 +239,7 @@ webapp:
     annotations: {}
 
   ## Web app resource requests and limits
-  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
   ## We usually recommend not to specify default resources and to leave this as a conscious
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -460,7 +460,7 @@ pod-sweeper:
     successThreshold: 1
 
   ## Pod Sweeper app resource requests and limits
-  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
   ## We usually recommend not to specify default resources and to leave this as a conscious
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -573,7 +573,7 @@ server:
     successThreshold: 1
 
   ## server resource requests and limits
-  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
   ## We usually recommend not to specify default resources and to leave this as a conscious
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -759,7 +759,7 @@ worker:
     successThreshold: 1
 
   ## worker resource requests and limits
-  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
   ## We usually recommend not to specify default resources and to leave this as a conscious
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -876,7 +876,7 @@ metrics:
   containerSecurityContext: {}
 
   ## metrics-reporter app resource requests and limits
-  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
   ## We usually recommend not to specify default resources and to leave this as a conscious
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -970,7 +970,7 @@ airbyte-bootloader:
   tolerations: []
 
   ## Bootloader resource requests and limits
-  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
   ## We usually recommend not to specify default resources and to leave this as a conscious
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -1202,7 +1202,7 @@ temporal:
   extraVolumes: []
 
   ## Temporal resource requests and limits
-  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
   ## We usually recommend not to specify default resources and to leave this as a conscious
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -1359,7 +1359,7 @@ cron:
     successThreshold: 1
 
   ## cron resource requests and limits
-  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
   ## We usually recommend not to specify default resources and to leave this as a conscious
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -1527,7 +1527,7 @@ connector-builder-server:
     successThreshold: 1
 
   ## connector-builder-server resource requests and limits
-  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
   ## We usually recommend not to specify default resources and to leave this as a conscious
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -1600,7 +1600,7 @@ airbyte-api-server:
     successThreshold: 1
 
   ## airbyte-api-server resource requests and limits
-  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
   ## We usually recommend not to specify default resources and to leave this as a conscious
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
