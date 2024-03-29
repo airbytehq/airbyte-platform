@@ -23,7 +23,10 @@ import { ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/Con
 import { useExperiment } from "hooks/services/Experiment";
 
 import { analyzeSyncCatalogBreakingChanges } from "./calculateInitialCatalog";
-import { BASIC_FREQUENCY_DEFAULT_VALUE } from "./ScheduleFormField/useBasicFrequencyDropdownData";
+import {
+  BASIC_FREQUENCY_DEFAULT_VALUE,
+  SOURCE_SPECIFIC_FREQUENCY_DEFAULT,
+} from "./ScheduleFormField/useBasicFrequencyDropdownData";
 import { createConnectionValidationSchema } from "./schema";
 import { DbtOperationRead } from "../TransformationForm";
 
@@ -121,7 +124,10 @@ export const useInitialFormValues = (
         ? connection.scheduleData
         : connection.scheduleType === ConnectionScheduleType.manual
         ? undefined
-        : { basicSchedule: BASIC_FREQUENCY_DEFAULT_VALUE },
+        : {
+            basicSchedule:
+              SOURCE_SPECIFIC_FREQUENCY_DEFAULT[connection.source?.sourceDefinitionId] ?? BASIC_FREQUENCY_DEFAULT_VALUE,
+          },
       namespaceDefinition: connection.namespaceDefinition || NamespaceDefinitionType.destination,
       // set connection's namespaceFormat if it's defined, otherwise there is no need to set it
       ...{
@@ -151,9 +157,9 @@ export const useInitialFormValues = (
 
     return initialValues;
   }, [
-    isEditMode,
     connection.name,
     connection.source.name,
+    connection.source?.sourceDefinitionId,
     connection.destination.name,
     connection.scheduleType,
     connection.scheduleData,
@@ -168,6 +174,7 @@ export const useInitialFormValues = (
     defaultNonBreakingChangesPreference,
     workspace.defaultGeography,
     destDefinitionVersion.supportsDbt,
+    isEditMode,
     syncCatalog,
     catalogDiff,
     schemaChange,

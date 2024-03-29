@@ -6,9 +6,15 @@ import { MessageType } from "components/ui/Message";
 import { Notification, useNotificationService } from "hooks/services/Notification";
 
 import { workspaceKeys } from "./workspaces";
-import { acceptUserInvitation, createUserInvitation, listPendingInvitations } from "../generated/AirbyteClient";
+import {
+  acceptUserInvitation,
+  createUserInvitation,
+  listPendingInvitations,
+  cancelUserInvitation,
+} from "../generated/AirbyteClient";
 import { SCOPE_ORGANIZATION, SCOPE_USER, SCOPE_WORKSPACE } from "../scopes";
 import {
+  InviteCodeRequestBody,
   UserInvitationCreateRequestBody,
   UserInvitationListRequestBody,
   UserInvitationRead,
@@ -85,7 +91,16 @@ export const useCreateUserInvitation = () => {
         queryClient.invalidateQueries([keyScope, "userInvitations"]);
         return response;
       })
-      .catch(() => {
+      .catch((err) => {
+        if (err.status === 409) {
+          registerNotification({
+            type: "error",
+            text: formatMessage({ id: "userInvitations.create.error.duplicate" }),
+            id: "userInvitations.create.error.duplicate",
+          });
+          return null;
+        }
+
         registerNotification({
           type: "error",
           text: formatMessage({ id: "userInvitations.create.error" }),
@@ -101,5 +116,36 @@ export const useListUserInvitations = (userInvitationListRequestBody: UserInvita
   const keyScope = userInvitationListRequestBody.scopeType === "workspace" ? SCOPE_WORKSPACE : SCOPE_ORGANIZATION;
   return useSuspenseQuery([keyScope, "userInvitations"], () =>
     listPendingInvitations(userInvitationListRequestBody, requestOptions)
+  );
+};
+
+export const useCancelUserInvitation = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+  const { formatMessage } = useIntl();
+  const { registerNotification } = useNotificationService();
+
+  return useMutation(async (inviteCodeRequestBody: InviteCodeRequestBody) =>
+    cancelUserInvitation(inviteCodeRequestBody, requestOptions)
+      .then((res) => {
+        registerNotification({
+          type: "success",
+          text: formatMessage({ id: "userInvitations.cancel.success" }),
+          id: "userInvitations.cancel.success",
+        });
+
+        queryClient.invalidateQueries([
+          res.scopeType === "organization" ? SCOPE_ORGANIZATION : SCOPE_WORKSPACE,
+          "userInvitations",
+        ]);
+      })
+      .catch(() => {
+        registerNotification({
+          type: "error",
+          text: formatMessage({ id: "userInvitations.cancel.error" }),
+          id: "userInvitations.cancel.error",
+        });
+        return null;
+      })
   );
 };

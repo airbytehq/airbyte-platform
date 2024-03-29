@@ -39,7 +39,7 @@ class S3LogsTest {
     Objects.requireNonNull(region);
 
     LOG_CONFIGS = new LogConfigs(new S3StorageConfig(
-        new StorageBucketConfig(bucketLog, "state", "workload"),
+        new StorageBucketConfig(bucketLog, "state", "workload", "payload"),
         EnvVar.AWS_ACCESS_KEY_ID.fetch(),
         EnvVar.AWS_SECRET_ACCESS_KEY.fetch(),
         region));

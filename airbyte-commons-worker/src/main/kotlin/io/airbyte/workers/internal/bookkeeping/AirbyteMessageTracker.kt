@@ -10,6 +10,7 @@ import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.internal.stateaggregator.DefaultStateAggregator
 import io.airbyte.workers.internal.stateaggregator.StateAggregator
 import io.github.oshai.kotlinlogging.KotlinLogging
+import java.util.ArrayList
 
 private val logger = KotlinLogging.logger {}
 
@@ -72,17 +73,12 @@ class AirbyteMessageTracker(
   fun errorTraceMessageFailure(
     jobId: Long,
     attempt: Int,
-  ): FailureReason? {
-    val srcMsg = srcErrorTraceMsgs.firstOrNull()
-    val dstMsg = dstErrorTraceMsgs.firstOrNull()
-
-    return when {
-      srcMsg == null && dstMsg == null -> null
-      srcMsg != null && dstMsg == null -> FailureHelper.sourceFailure(srcMsg, jobId, attempt)
-      srcMsg == null && dstMsg != null -> FailureHelper.destinationFailure(dstMsg, jobId, attempt)
-      srcMsg != null && dstMsg != null && srcMsg.emittedAt <= dstMsg.emittedAt -> FailureHelper.sourceFailure(srcMsg, jobId, attempt)
-      else -> FailureHelper.destinationFailure(dstMsg, jobId, attempt)
-    }
+  ): List<FailureReason> {
+    val allErrors =
+      srcErrorTraceMsgs.map {
+        FailureHelper.sourceFailure(it, jobId, attempt)
+      } + dstErrorTraceMsgs.map { FailureHelper.destinationFailure(it, jobId, attempt) }
+    return allErrors.sortedBy { it.getTimestamp() }
   }
 
   /**

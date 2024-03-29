@@ -49,14 +49,13 @@ export const useBuilderReadStream = (
 
 export const useBuilderResolvedManifest = (
   params: ResolveManifestRequestBody,
-  mode: "ui" | "yaml",
-  manifestValuePerComponentPerStream: ManifestValuePerComponentPerStream,
-  enabled = true
+  enabled = true,
+  manifestValuePerComponentPerStream?: ManifestValuePerComponentPerStream
 ) => {
   const requestOptions = useRequestOptions();
 
   return useQuery<ResolveManifest, CommonRequestError<KnownExceptionInfo>>(
-    mode === "yaml"
+    manifestValuePerComponentPerStream === undefined
       ? connectorBuilderKeys.resolveYaml(params.manifest)
       : connectorBuilderKeys.resolveUi(manifestValuePerComponentPerStream),
     () => resolveManifest(params, requestOptions),

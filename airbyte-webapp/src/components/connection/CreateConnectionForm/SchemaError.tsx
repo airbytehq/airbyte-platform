@@ -5,7 +5,7 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 
-import { LogsRequestError, SchemaError as SchemaErrorType } from "core/api";
+import { ErrorWithJobInfo } from "core/api";
 
 import styles from "./SchemaError.module.scss";
 
@@ -13,10 +13,10 @@ export const SchemaError = ({
   schemaError,
   refreshSchema,
 }: {
-  schemaError: Exclude<SchemaErrorType, null>;
+  schemaError: Error;
   refreshSchema: () => Promise<void>;
 }) => {
-  const job = LogsRequestError.extractJobInfo(schemaError);
+  const job = ErrorWithJobInfo.getJobInfo(schemaError);
 
   return (
     <Card className={styles.card}>

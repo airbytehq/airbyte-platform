@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 
 import { CloudInviteUsersHint } from "components/CloudInviteUsersHint";
@@ -25,6 +25,7 @@ export const SOURCE_ID_PARAM = "sourceId";
 
 export const SelectSource: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_DEFINE_SOURCE);
+  const { formatMessage } = useIntl();
   const { sources } = useSourceList();
   const { sourceDefinitionMap } = useSourceDefinitionList();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -79,14 +80,14 @@ export const SelectSource: React.FC = () => {
                     options={[
                       {
                         value: EXISTING_SOURCE_TYPE,
-                        label: "connectionForm.sourceExisting",
-                        description: "connectionForm.sourceExistingDescription",
+                        label: formatMessage({ id: "connectionForm.sourceExisting" }),
+                        description: formatMessage({ id: "connectionForm.sourceExistingDescription" }),
                         disabled: sources.length === 0,
                       },
                       {
                         value: NEW_SOURCE_TYPE,
-                        label: "onboarding.sourceSetUp",
-                        description: "onboarding.sourceSetUp.description",
+                        label: formatMessage({ id: "onboarding.sourceSetUp" }),
+                        description: formatMessage({ id: "onboarding.sourceSetUp.description" }),
                       },
                     ]}
                     selectedValue={selectedSourceType}

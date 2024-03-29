@@ -16,6 +16,7 @@ import { partitionPermissionType } from "core/utils/rbac/rbacPermissionsQuery";
 import {
   getWorkspaceAccessLevel,
   permissionsByResourceType,
+  unifyWorkspaceUserData,
 } from "pages/SettingsPage/pages/AccessManagementPage/components/useGetAccessManagementData";
 import { UserRoleText } from "pages/SettingsPage/pages/AccessManagementPage/components/UserRoleText";
 import { disallowedRoles } from "pages/SettingsPage/pages/AccessManagementPage/next/ChangeRoleMenuItem";
@@ -35,6 +36,7 @@ interface InviteUserRowProps {
 }
 
 export const InviteUserRow: React.FC<InviteUserRowProps> = ({ id, name, email, selectedRow, setSelectedRow, user }) => {
+  const transformedUser = !!user ? unifyWorkspaceUserData([user], [])[0] : null;
   const allowAllRBACRoles = useFeature(FeatureItem.AllowAllRBACRoles);
 
   const [selectedPermissionType, setPermissionType] = useState<PermissionType>(PermissionType.workspace_admin);
@@ -128,7 +130,9 @@ export const InviteUserRow: React.FC<InviteUserRowProps> = ({ id, name, email, s
                         permissionType={optionPermissionType}
                         roleIsInvalid={
                           !!user
-                            ? disallowedRoles(user, "workspace", isCurrentUser).includes(optionPermissionType)
+                            ? disallowedRoles(transformedUser, "workspace", isCurrentUser).includes(
+                                optionPermissionType
+                              )
                             : false
                         }
                         roleIsActive={optionPermissionType === selectedPermissionType}

@@ -13,6 +13,7 @@ import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 import { AirbyteStreamAndConfiguration, NamespaceDefinitionType } from "core/api/types/AirbyteClient";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./StreamsConfigTableHeader.module.scss";
@@ -26,7 +27,7 @@ import {
 import { CellText, CellTextProps } from "../CellText";
 
 const HeaderCell: React.FC<React.PropsWithChildren<CellTextProps>> = ({ children, ...tableCellProps }) => (
-  <CellText {...tableCellProps} withOverflow>
+  <CellText {...tableCellProps}>
     <Text size="sm" color="grey300">
       {children}
     </Text>
@@ -51,6 +52,7 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
   const { mode } = useConnectionFormService();
   const { openModal } = useModalService();
   const { setValue } = useFormContext<FormConnectionFormValues>();
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
 
   const destinationNamespaceChange = (value: DestinationNamespaceFormValues) => {
     setValue("namespaceDefinition", value.namespaceDefinition, { shouldDirty: true });
@@ -87,7 +89,7 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
       className={styles.headerContainer}
       data-testid="catalog-tree-table-header"
     >
-      <CellText size="fixed" className={styles.syncCell} withOverflow>
+      <CellText size="fixed" className={styles.syncCell}>
         <Switch
           size="sm"
           indeterminate={isPartOfStreamsSyncEnabled()}
@@ -102,7 +104,7 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
         </Text>
       </CellText>
       <HeaderCell size="fixed" className={styles.dataDestinationCell}>
-        <FormattedMessage id="form.dataDestination" />
+        <FormattedMessage id={isSimplifiedCreation ? "form.namespace" : "form.dataDestination"} />
         <Button
           type="button"
           variant="clear"

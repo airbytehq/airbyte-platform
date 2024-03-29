@@ -7,6 +7,7 @@ package io.airbyte.commons.temporal.utils;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.exception.SizeLimitException;
+import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import java.util.HashMap;
@@ -44,10 +45,23 @@ public class PayloadChecker {
    * @throws SizeLimitException if payload size exceeds temporal limits.
    */
   public <T> T validatePayloadSize(final T data) {
+    return validatePayloadSize(data, new MetricAttribute[0]);
+  }
+
+  /**
+   * Validate the payload size fits within temporal message size limits.
+   *
+   * @param data to validate
+   * @param <T> type of data
+   * @param attrs for metric reporting
+   * @return data if size is valid
+   * @throws SizeLimitException if payload size exceeds temporal limits.
+   */
+  public <T> T validatePayloadSize(final T data, final MetricAttribute[] attrs) {
     final String serializedData = Jsons.serialize(data);
     if (serializedData.length() > MAX_PAYLOAD_SIZE_BYTES) {
       emitInspectionLog(data);
-      metricClient.count(OssMetricsRegistry.PAYLOAD_SIZE_EXCEEDED, 1);
+      metricClient.count(OssMetricsRegistry.PAYLOAD_SIZE_EXCEEDED, 1, attrs);
       throw new SizeLimitException(String.format("Complete result exceeds size limit (%s of %s)", serializedData.length(), MAX_PAYLOAD_SIZE_BYTES));
     }
     return data;

@@ -86,7 +86,10 @@ public class EnvConfigs implements Configs {
     final var buckets = new StorageBucketConfig(
         getEnsureEnv(EnvVar.STORAGE_BUCKET_LOG),
         getEnsureEnv(EnvVar.STORAGE_BUCKET_STATE),
-        getEnsureEnv(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT));
+        getEnsureEnv(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT),
+        // TODO (tryan): Add this to the charts in separate PR ->
+        // getEnsureEnv(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD)
+        "payload");
 
     return switch (getEnsureEnv(EnvVar.STORAGE_TYPE)) {
       case "GCS" -> new GcsStorageConfig(

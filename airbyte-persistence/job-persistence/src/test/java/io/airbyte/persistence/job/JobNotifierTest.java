@@ -4,6 +4,7 @@
 
 package io.airbyte.persistence.job;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -109,13 +110,13 @@ class JobNotifierTest {
         .thenReturn(new SourceConnection().withWorkspaceId(WORKSPACE_ID).withSourceId(SOURCE_ID).withName(SOURCE_NAME));
     when(configRepository.getDestinationConnection(DESTINATION_ID))
         .thenReturn(new DestinationConnection().withWorkspaceId(WORKSPACE_ID).withDestinationId(DESTINATION_ID).withName(DESTINATION_NAME));
-    when(configRepository.getSourceDefinitionFromConnection(ArgumentMatchers.any())).thenReturn(sourceDefinition);
-    when(configRepository.getDestinationDefinitionFromConnection(ArgumentMatchers.any())).thenReturn(destinationDefinition);
-    when(configRepository.getStandardSourceDefinition(ArgumentMatchers.any())).thenReturn(sourceDefinition);
-    when(configRepository.getStandardDestinationDefinition(ArgumentMatchers.any())).thenReturn(destinationDefinition);
+    when(configRepository.getSourceDefinitionFromConnection(any())).thenReturn(sourceDefinition);
+    when(configRepository.getDestinationDefinitionFromConnection(any())).thenReturn(destinationDefinition);
+    when(configRepository.getStandardSourceDefinition(any())).thenReturn(sourceDefinition);
+    when(configRepository.getStandardDestinationDefinition(any())).thenReturn(destinationDefinition);
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(getWorkspace());
     when(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.getId())).thenReturn(WORKSPACE_ID);
-    when(notificationClient.notifyJobFailure(ArgumentMatchers.any(), ArgumentMatchers.anyString())).thenReturn(true);
+    when(notificationClient.notifyJobFailure(any(), ArgumentMatchers.anyString())).thenReturn(true);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID)).thenReturn(actorDefinitionVersion);
     when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID)).thenReturn(actorDefinitionVersion);
   }
@@ -126,7 +127,7 @@ class JobNotifierTest {
     jobNotifier.failJob("JobNotifierTest was running", job, attemptStats);
     final DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL).withZone(ZoneId.systemDefault());
     SyncSummary summary = SyncSummary.builder().build();
-    verify(notificationClient).notifyJobFailure(ArgumentMatchers.any(), ArgumentMatchers.eq(null));
+    verify(notificationClient).notifyJobFailure(any(), ArgumentMatchers.eq(null));
 
     final Builder<String, Object> metadata = ImmutableMap.builder();
     metadata.put("connection_id", UUID.fromString(job.getScope()));
@@ -147,7 +148,25 @@ class JobNotifierTest {
       throws IOException, InterruptedException {
     List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
     jobNotifier.successJob(job, attemptStats);
-    verify(notificationClient, never()).notifySuccess(ArgumentMatchers.any());
+  }
+
+  @Test
+  void testSuccessfulJobSendNotification() throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
+
+    NotificationItem item = new NotificationItem()
+        .withNotificationType(List.of(NotificationType.SLACK))
+        .withSlackConfiguration(new SlackNotificationConfiguration()
+            .withWebhook("http://webhook"));
+    StandardWorkspace workspace = getWorkspace();
+    NotificationSettings sendNotificationOnSuccessSetting = new NotificationSettings()
+        .withSendOnSuccess(item);
+    workspace.setNotificationSettings(sendNotificationOnSuccessSetting);
+    when(jobNotifier.getNotificationClientsFromNotificationItem(item)).thenReturn(List.of(notificationClient));
+
+    when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(workspace);
+    List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
+    jobNotifier.successJob(job, attemptStats);
+    verify(notificationClient).notifyJobSuccess(any(), any());
   }
 
   @Test
@@ -155,8 +174,8 @@ class JobNotifierTest {
       throws IOException, InterruptedException {
     List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
     jobNotifier.autoDisableConnectionWarning(job, attemptStats);
-    verify(notificationClient, never()).notifyConnectionDisableWarning(ArgumentMatchers.any(), ArgumentMatchers.any());
-    verify(customerIoNotificationClient).notifyConnectionDisableWarning(ArgumentMatchers.any(), ArgumentMatchers.any());
+    verify(notificationClient, never()).notifyConnectionDisableWarning(any(), any());
+    verify(customerIoNotificationClient).notifyConnectionDisableWarning(any(), any());
   }
 
   @Test
@@ -164,8 +183,8 @@ class JobNotifierTest {
       throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
     List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
     jobNotifier.autoDisableConnection(job, attemptStats);
-    verify(notificationClient).notifyConnectionDisabled(ArgumentMatchers.any(), ArgumentMatchers.any());
-    verify(customerIoNotificationClient).notifyConnectionDisabled(ArgumentMatchers.any(), ArgumentMatchers.any());
+    verify(notificationClient).notifyConnectionDisabled(any(), any());
+    verify(customerIoNotificationClient).notifyConnectionDisabled(any(), any());
   }
 
   @Test

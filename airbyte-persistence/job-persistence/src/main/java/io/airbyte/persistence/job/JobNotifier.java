@@ -13,6 +13,7 @@ import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.FailureReason;
 import io.airbyte.config.Notification.NotificationType;
 import io.airbyte.config.NotificationItem;
 import io.airbyte.config.NotificationSettings;
@@ -35,6 +36,7 @@ import io.airbyte.notification.messages.DestinationInfo;
 import io.airbyte.notification.messages.SourceInfo;
 import io.airbyte.notification.messages.SyncSummary;
 import io.airbyte.notification.messages.WorkspaceInfo;
+import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.tracker.TrackingMetadata;
@@ -285,6 +287,15 @@ public class JobNotifier {
     NotificationItem notificationItem = null;
     final UUID workspaceId = workspace.getWorkspaceId();
 
+    // Error message we show in the notification is the first failure reason of the last attempt if
+    // available
+    // If it is not available, default to the provided reason string, it is usually less descriptive
+    final String failureMessage = job.getLastAttempt()
+        .flatMap(Attempt::getFailureSummary)
+        .flatMap(s -> s.getFailures().stream().findFirst())
+        .map(FailureReason::getExternalMessage)
+        .orElse(reason);
+
     SyncSummary.SyncSummaryBuilder summaryBuilder = SyncSummary.builder()
         .workspace(WorkspaceInfo.builder()
             .name(workspace.getName()).id(workspaceId).url(webUrlHelper.getWorkspaceUrl(workspaceId)).build())
@@ -300,7 +311,7 @@ public class JobNotifier {
         .finishedAt(Instant.ofEpochSecond(job.getUpdatedAtInSecond()))
         .isSuccess(job.getStatus() == JobStatus.SUCCEEDED)
         .jobId(job.getId())
-        .errorMessage(reason);
+        .errorMessage(failureMessage);
 
     if (syncStats != null) {
       long bytesEmitted = syncStats.getBytesEmitted() != null ? syncStats.getBytesEmitted() : 0;

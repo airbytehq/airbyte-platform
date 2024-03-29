@@ -12,6 +12,7 @@ import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.Metadata;
+import io.airbyte.config.StreamDescriptor;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
 import java.util.Comparator;
 import java.util.List;
@@ -102,11 +103,19 @@ public class FailureHelper {
         failureType = FailureType.SYSTEM_ERROR;
       }
     }
+    StreamDescriptor streamDescriptor = null;
+    if (m.getError().getStreamDescriptor() != null) {
+      streamDescriptor = new StreamDescriptor()
+          .withNamespace(m.getError().getStreamDescriptor().getNamespace())
+          .withName(m.getError().getStreamDescriptor().getName());
+    }
+
     return new FailureReason()
         .withInternalMessage(m.getError().getInternalMessage())
         .withExternalMessage(m.getError().getMessage())
         .withStacktrace(m.getError().getStackTrace())
         .withTimestamp(m.getEmittedAt().longValue())
+        .withStreamDescriptor(streamDescriptor)
         .withFailureType(failureType)
         .withMetadata(traceMessageMetadata(jobId, attemptNumber));
   }

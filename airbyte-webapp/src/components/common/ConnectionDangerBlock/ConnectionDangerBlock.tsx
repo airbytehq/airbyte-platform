@@ -18,8 +18,8 @@ interface DeleteBlockProps {
 }
 
 export const ConnectionDangerBlock: React.FC<DeleteBlockProps> = ({ onDelete, onReset }) => {
-  const { mode } = useConnectionFormService();
-  const onDeleteButtonClick = useDeleteModal("connection", onDelete);
+  const { mode, connection } = useConnectionFormService();
+  const onDeleteButtonClick = useDeleteModal("connection", onDelete, undefined, connection?.name);
 
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const resetWithModal = useCallback(() => {

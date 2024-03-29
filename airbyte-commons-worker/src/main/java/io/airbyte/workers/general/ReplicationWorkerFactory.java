@@ -9,7 +9,6 @@ import static io.airbyte.workers.general.BufferedReplicationWorkerType.BUFFERED_
 
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
@@ -86,7 +85,6 @@ public class ReplicationWorkerFactory {
   private final AirbyteIntegrationLauncherFactory airbyteIntegrationLauncherFactory;
   private final SourceApi sourceApi;
   private final SourceDefinitionApi sourceDefinitionApi;
-  private final DestinationApi destinationApi;
   private final SyncPersistenceFactory syncPersistenceFactory;
   private final AirbyteMessageDataExtractor airbyteMessageDataExtractor;
   private final FeatureFlagClient featureFlagClient;
@@ -102,7 +100,6 @@ public class ReplicationWorkerFactory {
                                   final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                   final SourceApi sourceApi,
                                   final SourceDefinitionApi sourceDefinitionApi,
-                                  final DestinationApi destinationApi,
                                   final SyncPersistenceFactory syncPersistenceFactory,
                                   final FeatureFlagClient featureFlagClient,
                                   final FeatureFlags featureFlags,
@@ -114,7 +111,6 @@ public class ReplicationWorkerFactory {
     this.airbyteIntegrationLauncherFactory = airbyteIntegrationLauncherFactory;
     this.sourceApi = sourceApi;
     this.sourceDefinitionApi = sourceDefinitionApi;
-    this.destinationApi = destinationApi;
     this.syncPersistenceFactory = syncPersistenceFactory;
     this.airbyteMessageDataExtractor = airbyteMessageDataExtractor;
     this.replicationAirbyteMessageEventPublishingHelper = replicationAirbyteMessageEventPublishingHelper;
@@ -222,10 +218,12 @@ public class ReplicationWorkerFactory {
     final Long maxSecondsBetweenMessages = sourceDefinitionId != null ? AirbyteApiClient.retryWithJitter(() -> sourceDefinitionApi
         .getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId)), "get the source definition")
         .getMaxSecondsBetweenMessages() : null;
+
     if (maxSecondsBetweenMessages != null) {
-      // reset jobs use an empty source to induce resetting all data in destination.
       return new HeartbeatMonitor(Duration.ofSeconds(maxSecondsBetweenMessages));
     }
+
+    // reset jobs use an empty source to induce resetting all data in destination.
     log.warn("An error occurred while fetch the max seconds between messages for this source. We are using a default of 24 hours");
     return new HeartbeatMonitor(Duration.ofSeconds(TimeUnit.HOURS.toSeconds(24)));
   }

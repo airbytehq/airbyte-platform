@@ -45,13 +45,13 @@ export const SimplfiedSchemaChangesFormField: React.FC<{ isCreating: boolean; di
     ];
     return supportedPreferences.map((value) => ({
       value,
-      label: isCreating
-        ? `connectionForm.nonBreakingChangesPreference.autopropagation.${value}.next`
-        : formatMessage({ id: `connectionForm.nonBreakingChangesPreference.autopropagation.${value}.next` }),
-      description: `connectionForm.nonBreakingChangesPreference.autopropagation.${value}.description`,
+      label: formatMessage({ id: `connectionForm.nonBreakingChangesPreference.autopropagation.${value}.next` }),
+      description: formatMessage({
+        id: `connectionForm.nonBreakingChangesPreference.autopropagation.${value}.description`,
+      }),
       "data-testid": value,
     }));
-  }, [isCreating, formatMessage]);
+  }, [formatMessage]);
 
   return (
     <Controller

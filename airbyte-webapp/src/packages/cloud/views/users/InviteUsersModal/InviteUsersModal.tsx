@@ -31,7 +31,11 @@ const requestConnectorValidationSchema: SchemaOf<InviteUsersFormValues> = yup.ob
     })
   ),
 });
-
+/**
+ *
+ * @deprecated This component is deprecated and should not be used in new code.
+ * @see AddUserModal
+ */
 export const InviteUsersModal: React.FC<{
   invitedFrom: "source" | "destination" | "user.settings";
   onSubmit: () => void;

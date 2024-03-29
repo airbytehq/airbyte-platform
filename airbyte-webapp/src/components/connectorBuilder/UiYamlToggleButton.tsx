@@ -1,7 +1,9 @@
 import classnames from "classnames";
+import { ReactNode } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Text } from "components/ui/Text";
+import { Tooltip } from "components/ui/Tooltip";
 
 import styles from "./UiYamlToggleButton.module.scss";
 
@@ -11,6 +13,7 @@ interface UiYamlToggleButtonProps {
   onClick: () => void;
   size: "xs" | "sm";
   disabled?: boolean;
+  tooltip?: ReactNode;
 }
 
 export const UiYamlToggleButton: React.FC<UiYamlToggleButtonProps> = ({
@@ -19,13 +22,14 @@ export const UiYamlToggleButton: React.FC<UiYamlToggleButtonProps> = ({
   onClick,
   size,
   disabled,
+  tooltip,
 }) => {
   const sizeStyles = {
     [styles.xs]: size === "xs",
     [styles.sm]: size === "sm",
   };
 
-  return (
+  const toggleButton = (
     <button
       type="button"
       className={classnames(styles.button, className, sizeStyles)}
@@ -53,5 +57,13 @@ export const UiYamlToggleButton: React.FC<UiYamlToggleButtonProps> = ({
         <FormattedMessage id="connectorBuilder.uiYamlToggle.yaml" />
       </Text>
     </button>
+  );
+
+  return tooltip ? (
+    <Tooltip containerClassName={styles.tooltipContainer} control={toggleButton}>
+      {tooltip}
+    </Tooltip>
+  ) : (
+    toggleButton
   );
 };
