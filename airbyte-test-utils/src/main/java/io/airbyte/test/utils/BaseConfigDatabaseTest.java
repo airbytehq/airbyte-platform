@@ -135,6 +135,7 @@ public class BaseConfigDatabaseTest {
               schema_management,
               state,
               stream_reset,
+              stream_refreshes,
               \"user\",
               user_invitation,
               sso_config,

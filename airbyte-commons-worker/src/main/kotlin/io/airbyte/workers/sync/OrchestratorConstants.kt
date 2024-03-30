@@ -108,6 +108,7 @@ object OrchestratorConstants {
           EnvVar.MINIO_ENDPOINT,
           EnvVar.OTEL_COLLECTOR_ENDPOINT,
           EnvVar.PUBLISH_METRICS,
+          EnvVar.ROOTLESS_WORKLOAD,
           EnvVar.SOCAT_KUBE_CPU_LIMIT,
           EnvVar.SOCAT_KUBE_CPU_REQUEST,
           EnvVar.STORAGE_BUCKET_LOG,

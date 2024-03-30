@@ -19,7 +19,7 @@ import { DestinationRead, NamespaceDefinitionType, SourceRead } from "core/api/t
 import { links } from "core/utils/links";
 import { naturalComparator } from "core/utils/objects";
 
-import { SourceNamespaceConfiguration, DestinationNamespaceConfiguration } from "./ConnectorNamespaceConfiguration";
+import { DestinationNamespaceConfiguration, SourceNamespaceConfiguration } from "./ConnectorNamespaceConfiguration";
 import { InputContainer } from "./InputContainer";
 import styles from "./SimplifiedDestinationNamespaceFormField.module.scss";
 
@@ -104,7 +104,7 @@ export const SimplifiedDestinationNamespaceFormField: React.FC<{
           name="namespaceFormat"
           control={control}
           render={({ field, fieldState }) => (
-            <>
+            <Box mt="sm">
               <InputContainer>
                 <Input
                   name="namespaceFormat"
@@ -122,7 +122,7 @@ export const SimplifiedDestinationNamespaceFormField: React.FC<{
                   </Text>
                 </Box>
               )}
-            </>
+            </Box>
           )}
         />
         {namespaceFormat?.includes(SOURCE_NAMESPACE_REPLACEMENT_STRING) &&
@@ -139,27 +139,27 @@ export const SimplifiedDestinationNamespaceFormField: React.FC<{
   const destinationNamespaceOptions: ComponentProps<typeof RadioButtonTiles<NamespaceDefinitionType>>["options"] = [
     {
       value: NamespaceDefinitionType.customformat,
-      label: isCreating ? "connectionForm.customFormat" : formatMessage({ id: "connectionForm.customFormat" }),
-      description: "connectionForm.customFormatDescriptionNext",
+      label: formatMessage({ id: "connectionForm.customFormat" }),
+      description: formatMessage({ id: "connectionForm.customFormatDescriptionNext" }),
       extra: customFormatField,
     },
     {
       value: NamespaceDefinitionType.destination,
-      label: isCreating
-        ? "connectionForm.destinationFormatNext"
-        : formatMessage({ id: "connectionForm.destinationFormatNext" }),
-      description: "connectionForm.destinationFormatDescriptionNext",
-      descriptionValues: destinationDefinedDescriptionValues,
+      label: formatMessage({ id: "connectionForm.destinationFormatNext" }),
+      description: formatMessage(
+        { id: "connectionForm.destinationFormatDescriptionNext" },
+        destinationDefinedDescriptionValues
+      ),
     },
     ...(sourceNamespaceAbilities.supportsNamespaces
       ? [
           {
             value: NamespaceDefinitionType.source,
-            label: isCreating
-              ? "connectionForm.sourceFormatNext"
-              : formatMessage({ id: "connectionForm.sourceFormatNext" }),
-            description: "connectionForm.sourceFormatDescriptionNext",
-            descriptionValues: sourceDefinedDescriptionValues,
+            label: formatMessage({ id: "connectionForm.sourceFormatNext" }),
+            description: formatMessage(
+              { id: "connectionForm.sourceFormatDescriptionNext" },
+              sourceDefinedDescriptionValues
+            ),
           },
         ]
       : []),

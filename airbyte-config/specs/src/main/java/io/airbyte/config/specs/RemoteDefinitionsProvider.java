@@ -168,9 +168,9 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
   }
 
   @VisibleForTesting
-  URL getDocUrl(final String connectorRepository, final String version, final Boolean inapp) {
+  URL getDocUrl(final String connectorRepository, final String version) {
     try {
-      return remoteRegistryBaseUrl.resolve(String.format("metadata/%s/%s/doc%s", connectorRepository, version, inapp ? ".inapp.md" : ".md")).toURL();
+      return remoteRegistryBaseUrl.resolve(String.format("metadata/%s/%s/doc.md", connectorRepository, version)).toURL();
     } catch (final MalformedURLException e) {
       throw new RuntimeException("Invalid URL format", e);
     }
@@ -229,8 +229,8 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
    *
    * @return Optional containing the connector doc if it can be found, or empty otherwise.
    */
-  public Optional<String> getConnectorDocumentation(final String connectorRepository, final String version, final Boolean inapp) {
-    final URL docUrl = getDocUrl(connectorRepository, version, inapp);
+  public Optional<String> getConnectorDocumentation(final String connectorRepository, final String version) {
+    final URL docUrl = getDocUrl(connectorRepository, version);
     final Request request = new Request.Builder()
         .url(docUrl)
         .header(ACCEPT, MediaType.APPLICATION_JSON)
@@ -247,7 +247,7 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
       }
     } catch (final IOException e) {
       throw new RuntimeException(
-          String.format("Failed to fetch %s connector documentation for %s:%s", inapp ? "inapp" : "full", connectorRepository, version), e);
+          String.format("Failed to fetch connector documentation for %s:%s", connectorRepository, version), e);
     }
   }
 

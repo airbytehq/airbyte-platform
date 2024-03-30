@@ -321,6 +321,13 @@ create table "public"."state" (
   constraint "state_pkey" primary key ("id", "connection_id"),
   constraint "state__connection_id__stream_name__namespace__uq" unique ("connection_id", "stream_name", "namespace")
 );
+create table "public"."stream_refreshes" (
+  "connection_id" uuid not null,
+  "stream_name" varchar(2147483647) not null,
+  "stream_namespace" varchar(2147483647) not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "stream_refreshes_pkey" primary key ("connection_id", "stream_name", "stream_namespace")
+);
 create table "public"."stream_reset" (
   "id" uuid not null,
   "connection_id" uuid not null,
@@ -442,6 +449,7 @@ create index "permission_workspace_id_idx" on "public"."permission"("workspace_i
 create index "connection_idx" on "public"."schema_management"("connection_id" asc);
 create index "sso_config_keycloak_realm_idx" on "public"."sso_config"("keycloak_realm" asc);
 create index "sso_config_organization_id_idx" on "public"."sso_config"("organization_id" asc);
+create index "stream_refreshes_connection_id_idx" on "public"."stream_refreshes"("connection_id" asc);
 create index "connection_id_stream_name_namespace_idx" on "public"."stream_reset"("connection_id" asc, "stream_name" asc, "stream_namespace" asc);
 create index "user_auth_provider_auth_user_id_idx" on "public"."user"("auth_provider" asc, "auth_user_id" asc);
 create index "user_email_idx" on "public"."user"("email" asc);
@@ -486,6 +494,7 @@ alter table "public"."permission" add constraint "permission_workspace_id_fkey" 
 alter table "public"."schema_management" add constraint "schema_management_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."sso_config" add constraint "sso_config_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."state" add constraint "state_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
+alter table "public"."stream_refreshes" add constraint "stream_refreshes_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."user" add constraint "user_default_workspace_id_fkey" foreign key ("default_workspace_id") references "public"."workspace" ("id");
 alter table "public"."user_invitation" add constraint "user_invitation_accepted_by_user_id_fkey" foreign key ("accepted_by_user_id") references "public"."user" ("id");
 alter table "public"."user_invitation" add constraint "user_invitation_inviter_user_id_fkey" foreign key ("inviter_user_id") references "public"."user" ("id");
