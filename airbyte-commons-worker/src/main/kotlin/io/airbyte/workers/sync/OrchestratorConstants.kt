@@ -27,6 +27,9 @@ object OrchestratorConstants {
   const val SIDECAR_INPUT = "sidecarInput.json"
   const val WORKLOAD_ID_FILE = "workload.txt"
 
+  // See the application.yml of the container-orchestrator for value
+  const val SERVER_PORT = 9000
+
   // define two ports for stdout/stderr usage on the container orchestrator pod
   const val PORT1 = 9877
   const val PORT2 = 9878

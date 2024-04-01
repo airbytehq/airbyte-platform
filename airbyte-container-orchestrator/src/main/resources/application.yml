@@ -13,7 +13,7 @@ micronaut:
   env:
     cloud-deduction: true
   server:
-    port: 9000
+    port: 9000 # If this value is modified, update the SERVER_PORT constant in OrchestratorConstants.kt
   executors:
     control-message:
       type: fixed
