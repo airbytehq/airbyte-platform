@@ -537,15 +537,6 @@ describe("Connection Configuration", () => {
         });
       });
     });
-    describe("Transformations tab", () => {
-      it("cannot edit Custom transformations form settings", () => {
-        cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
-          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Transformation}`);
-
-          cy.get('form[data-testid="custom-transformation-form"]').children("fieldset").should("be.disabled");
-        });
-      });
-    });
   });
 
   describe("Disabled connection", () => {
