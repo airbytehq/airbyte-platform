@@ -12,6 +12,7 @@ import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody
 import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceUpdate
+import io.airbyte.commons.server.errors.problems.UnexpectedProblem
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.server.support.CurrentUserService
@@ -25,7 +26,6 @@ import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSA
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.mappers.SourceReadMapper
 import io.airbyte.server.apis.publicapi.mappers.SourcesResponseMapper
-import io.airbyte.server.apis.publicapi.problems.UnexpectedProblem
 import io.micronaut.context.annotation.Secondary
 import io.micronaut.context.annotation.Value
 import io.micronaut.http.HttpStatus
