@@ -111,6 +111,7 @@ object OrchestratorConstants {
           EnvVar.ROOTLESS_WORKLOAD,
           EnvVar.SOCAT_KUBE_CPU_LIMIT,
           EnvVar.SOCAT_KUBE_CPU_REQUEST,
+          EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD,
           EnvVar.STORAGE_BUCKET_LOG,
           EnvVar.STORAGE_BUCKET_STATE,
           EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT,

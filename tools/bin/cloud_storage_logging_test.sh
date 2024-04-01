@@ -13,6 +13,7 @@ set -e
 echo "Writing cloud storage credentials.."
 
 # Storage shared
+export STORAGE_BUCKET_ACTIVITY_PAYLOAD=unused
 export STORAGE_BUCKET_LOG=airbyte-kube-integration-logging-test
 export STORAGE_BUCKET_STATE=unused
 export STORAGE_BUCKET_WORKLOAD_OUTPUT=unused
