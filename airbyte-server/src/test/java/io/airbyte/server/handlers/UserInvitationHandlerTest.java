@@ -6,6 +6,7 @@ package io.airbyte.server.handlers;
 
 import static io.airbyte.config.Permission.PermissionType.WORKSPACE_ADMIN;
 import static io.airbyte.server.handlers.UserInvitationHandler.ACCEPT_INVITE_PATH;
+import static io.airbyte.server.handlers.UserInvitationHandler.USER_INVITED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -13,14 +14,17 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.model.generated.InviteCodeRequestBody;
 import io.airbyte.api.model.generated.PermissionCreate;
 import io.airbyte.api.model.generated.PermissionType;
@@ -82,13 +86,15 @@ public class UserInvitationHandlerTest {
   PermissionPersistence permissionPersistence;
   @Mock
   PermissionHandler permissionHandler;
+  @Mock
+  TrackingClient trackingClient;
 
   UserInvitationHandler handler;
 
   @BeforeEach
   void setup() {
     handler = new UserInvitationHandler(service, mapper, customerIoEmailNotificationSender, webUrlHelper, workspaceService, organizationService,
-        userPersistence, permissionPersistence, permissionHandler);
+        userPersistence, permissionPersistence, permissionHandler, trackingClient);
   }
 
   @Nested
@@ -118,6 +124,7 @@ public class UserInvitationHandlerTest {
       private void setupSendInvitationMocks() throws Exception {
         when(webUrlHelper.getBaseUrl()).thenReturn(WEBAPP_BASE_URL);
         when(service.createUserInvitation(USER_INVITATION)).thenReturn(USER_INVITATION);
+        when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, false)).thenReturn(new StandardWorkspace().withName(WORKSPACE_NAME));
       }
 
       @BeforeEach
@@ -224,6 +231,12 @@ public class UserInvitationHandlerTest {
         // make sure the final result is correct
         assertFalse(result.getDirectlyAdded());
         assertEquals(capturedUserInvitation.getInviteCode(), result.getInviteCode());
+
+        // verify we sent an invitation tracking event
+        verify(trackingClient, times(1)).track(
+            eq(WORKSPACE_ID),
+            eq(USER_INVITED),
+            anyMap());
       }
 
     }
@@ -295,6 +308,9 @@ public class UserInvitationHandlerTest {
         // make sure the final result is correct
         assertTrue(result.getDirectlyAdded());
         assertNull(result.getInviteCode());
+
+        // we don't send a "user invited" event when a user is directly added to a workspace.
+        verify(trackingClient, never()).track(any(), any(), any());
       }
 
     }
