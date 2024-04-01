@@ -2,13 +2,13 @@
  * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.db.instance;
+package io.airbyte.test.utils;
 
 import io.airbyte.db.Database;
 import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.factory.DataSourceFactory;
 import io.airbyte.db.init.DatabaseInitializationException;
-import io.airbyte.test.utils.Databases;
+import io.airbyte.db.instance.DatabaseMigrator;
 import java.io.IOException;
 import javax.sql.DataSource;
 import org.jooq.DSLContext;
