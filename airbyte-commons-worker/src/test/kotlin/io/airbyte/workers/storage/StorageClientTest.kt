@@ -35,7 +35,7 @@ private const val KEY = "a"
 private const val DOC1 = "hello"
 private const val DOC2 = "bye"
 
-private val buckets = StorageBucketConfig(log = "log", state = "state", workloadOutput = "workload")
+private val buckets = StorageBucketConfig(log = "log", state = "state", workloadOutput = "workload", activityPayload = "payload")
 
 class DocumentTypeTest {
   @Test

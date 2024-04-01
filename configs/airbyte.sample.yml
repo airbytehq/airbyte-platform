@@ -29,6 +29,7 @@ global:
     type: s3 # s3 | gcs | minio - default | (local)
     storageSecretName: airbyte-config-secrets
     bucket:
+      activityPayload: airbyte-storage
       log: airbyte-storage
       state: airbyte-storage
       workloadOutput: airbyte-storage

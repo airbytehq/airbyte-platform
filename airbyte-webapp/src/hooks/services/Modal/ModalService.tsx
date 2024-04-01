@@ -1,6 +1,7 @@
 import React, { useContext, useMemo, useRef, useState } from "react";
 import { firstValueFrom, Subject } from "rxjs";
 
+import { LoadingPage } from "components";
 import { Modal } from "components/ui/Modal";
 
 import { ModalOptions, ModalResult, ModalServiceContext } from "./types";
@@ -36,17 +37,21 @@ export const ModalServiceProvider: React.FC<React.PropsWithChildren<unknown>> = 
     <modalServiceContext.Provider value={service}>
       {children}
       {modalOptions && (
-        <Modal
-          title={modalOptions.title}
-          size={modalOptions.size}
-          testId={modalOptions.testId}
-          onCancel={modalOptions.preventCancel ? undefined : () => resultSubjectRef.current?.next({ type: "canceled" })}
-        >
-          <modalOptions.content
-            onCancel={() => resultSubjectRef.current?.next({ type: "canceled" })}
-            onComplete={(result) => resultSubjectRef.current?.next({ type: "completed", reason: result })}
-          />
-        </Modal>
+        <React.Suspense fallback={<LoadingPage />}>
+          <Modal
+            title={modalOptions.title}
+            size={modalOptions.size}
+            testId={modalOptions.testId}
+            onCancel={
+              modalOptions.preventCancel ? undefined : () => resultSubjectRef.current?.next({ type: "canceled" })
+            }
+          >
+            <modalOptions.content
+              onCancel={() => resultSubjectRef.current?.next({ type: "canceled" })}
+              onComplete={(result) => resultSubjectRef.current?.next({ type: "completed", reason: result })}
+            />
+          </Modal>
+        </React.Suspense>
       )}
     </modalServiceContext.Provider>
   );

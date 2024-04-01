@@ -6,5 +6,6 @@ airbyte:
         log: log
         state: state
         workload-output: workload
+        activity-payload: payload
       gcs:
         application-credentials: credz

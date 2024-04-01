@@ -137,6 +137,7 @@ manifest should match snapshot:
       TRACKING_STRATEGY: segment
       WEBAPP_URL: http://RELEASE-NAME-airbyte-webapp-svc:80
       WORKER_ENVIRONMENT: kubernetes
+      STORAGE_BUCKET_ACTIVITY_PAYLOAD: airbyte-state-storage
       STORAGE_BUCKET_LOG: airbyte-dev-logs
       STORAGE_BUCKET_STATE: airbyte-state-storage
       STORAGE_BUCKET_WORKLOAD_OUTPUT: airbyte-state-storage

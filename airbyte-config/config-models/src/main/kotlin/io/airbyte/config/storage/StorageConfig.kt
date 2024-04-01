@@ -64,6 +64,7 @@ data class GcsStorageConfig(
       put(EnvVar.STORAGE_BUCKET_LOG, buckets.log)
       put(EnvVar.STORAGE_BUCKET_STATE, buckets.state)
       put(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT, buckets.workloadOutput)
+      put(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
       put(EnvVar.STORAGE_TYPE, StorageType.GCS.name)
       put(EnvVar.GOOGLE_APPLICATION_CREDENTIALS, applicationCredentials)
     }.mapKeys { it.key.name }
@@ -91,6 +92,7 @@ data class S3StorageConfig(
       put(EnvVar.STORAGE_BUCKET_LOG, buckets.log)
       put(EnvVar.STORAGE_BUCKET_STATE, buckets.state)
       put(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT, buckets.workloadOutput)
+      put(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
       put(EnvVar.STORAGE_TYPE, StorageType.S3.name)
       accessKey?.let {
         put(EnvVar.AWS_ACCESS_KEY_ID, accessKey)
@@ -124,6 +126,7 @@ data class MinioStorageConfig(
       put(EnvVar.STORAGE_BUCKET_LOG, buckets.log)
       put(EnvVar.STORAGE_BUCKET_STATE, buckets.state)
       put(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT, buckets.workloadOutput)
+      put(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
       put(EnvVar.STORAGE_TYPE, StorageType.MINIO.name)
       put(EnvVar.AWS_ACCESS_KEY_ID, accessKey)
       put(EnvVar.AWS_SECRET_ACCESS_KEY, secretAccessKey)
@@ -149,6 +152,7 @@ class LocalStorageConfig(
       put(EnvVar.STORAGE_BUCKET_LOG, buckets.log)
       put(EnvVar.STORAGE_BUCKET_STATE, buckets.state)
       put(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT, buckets.workloadOutput)
+      put(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
       put(EnvVar.STORAGE_TYPE, StorageType.LOCAL.name)
       put(EnvVar.LOCAL_ROOT, root)
     }.mapKeys { it.key.name }
@@ -162,6 +166,7 @@ data class StorageBucketConfig(
   @Value("\${$STORAGE_BUCKET.log}") val log: String,
   @Value("\${$STORAGE_BUCKET.state}") val state: String,
   @Value("\${$STORAGE_BUCKET.workload-output}") val workloadOutput: String,
+  @Value("\${$STORAGE_BUCKET.activity-payload}") val activityPayload: String,
 )
 
 /**

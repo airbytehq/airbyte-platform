@@ -7,15 +7,13 @@ import { Text } from "components/ui/Text";
 
 import { TrackErrorFn } from "hooks/services/AppMonitoringService";
 
-import styles from "./DbtCloudErrorBoundary.module.scss";
-
 const DbtCloudErrorCard: React.FC<{ displayMessage?: string | null }> = ({ displayMessage }) => {
   const { formatMessage } = useIntl();
 
   return (
     <Card title={formatMessage({ id: "connection.dbtCloudJobs.cardTitle" })}>
       <FlexContainer alignItems="center" justifyContent="center">
-        <Text align="center" className={styles.cardBodyContainer}>
+        <Text align="center">
           {displayMessage ? (
             <FormattedMessage id="connection.dbtCloudJobs.dbtError" values={{ displayMessage }} />
           ) : (

@@ -2,7 +2,7 @@ package io.airbyte.server.apis.publicapi.helpers
 
 import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody
 import io.airbyte.commons.enums.Enums
-import io.airbyte.server.apis.publicapi.problems.BadRequestProblem
+import io.airbyte.commons.server.errors.problems.BadRequestProblem
 
 fun orderByToFieldAndMethod(
   orderBy: String?,

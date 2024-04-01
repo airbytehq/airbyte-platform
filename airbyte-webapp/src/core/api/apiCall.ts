@@ -15,7 +15,6 @@ export interface RequestOptions<DataType = unknown> {
   data?: DataType;
   headers?: HeadersInit;
   responseType?: "blob";
-  signal?: AbortSignal;
 }
 
 function getRequestBody<U>(data: U) {
@@ -30,7 +29,7 @@ function getRequestBody<U>(data: U) {
 }
 
 export const fetchApiCall = async <T, U = unknown>(
-  { url, method, params, data, headers, responseType, signal }: RequestOptions<U>,
+  { url, method, params, data, headers, responseType }: RequestOptions<U>,
   options: ApiCallOptions,
   apiUrl: string
 ): Promise<typeof responseType extends "blob" ? Blob : T> => {
@@ -56,7 +55,7 @@ export const fetchApiCall = async <T, U = unknown>(
     method,
     ...(data ? { body: getRequestBody(data) } : {}),
     headers: requestHeaders,
-    signal: signal ?? options.signal,
+    signal: options.signal,
   });
 
   return parseResponse(response, requestUrl, responseType);

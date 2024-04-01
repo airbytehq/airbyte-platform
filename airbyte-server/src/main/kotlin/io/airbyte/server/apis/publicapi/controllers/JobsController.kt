@@ -5,6 +5,9 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
+import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.server.errors.problems.UnprocessableEntityProblem
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.public_api.generated.PublicJobsApi
@@ -13,8 +16,6 @@ import io.airbyte.public_api.model.generated.JobCreateRequest
 import io.airbyte.public_api.model.generated.JobStatusEnum
 import io.airbyte.public_api.model.generated.JobTypeEnum
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
-import io.airbyte.server.apis.publicapi.authorization.AirbyteApiAuthorizationHelper
-import io.airbyte.server.apis.publicapi.authorization.Scope
 import io.airbyte.server.apis.publicapi.constants.DELETE
 import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.JOBS_PATH
@@ -22,7 +23,6 @@ import io.airbyte.server.apis.publicapi.constants.JOBS_WITH_ID_PATH
 import io.airbyte.server.apis.publicapi.constants.POST
 import io.airbyte.server.apis.publicapi.filters.JobsFilter
 import io.airbyte.server.apis.publicapi.helpers.orderByToFieldAndMethod
-import io.airbyte.server.apis.publicapi.problems.UnprocessableEntityProblem
 import io.airbyte.server.apis.publicapi.services.ConnectionService
 import io.airbyte.server.apis.publicapi.services.JobService
 import io.micronaut.http.annotation.Controller
@@ -43,7 +43,7 @@ open class JobsController(
   private val jobService: JobService,
   private val connectionService: ConnectionService,
   private val trackingHelper: TrackingHelper,
-  private val airbyteApiAuthorizationHelper: AirbyteApiAuthorizationHelper,
+  private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val currentUserService: CurrentUserService,
 ) : PublicJobsApi {
   @DELETE
@@ -53,7 +53,7 @@ open class JobsController(
     @PathParam("jobId") jobId: Long,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(jobId.toString()),
       Scope.JOB,
       userId,
@@ -86,7 +86,7 @@ open class JobsController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun publicCreateJob(jobCreateRequest: JobCreateRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(jobCreateRequest.connectionId.toString()),
       Scope.CONNECTION,
       userId,
@@ -165,7 +165,7 @@ open class JobsController(
     @PathParam("jobId") jobId: Long,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(jobId.toString()),
       Scope.JOB,
       userId,
@@ -211,14 +211,14 @@ open class JobsController(
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
     if (connectionId != null) {
-      airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+      apiAuthorizationHelper.checkWorkspacePermissions(
         listOf(connectionId.toString()),
         Scope.CONNECTION,
         userId,
         PermissionType.WORKSPACE_READER,
       )
     } else {
-      airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+      apiAuthorizationHelper.checkWorkspacePermissions(
         workspaceIds?.map { it.toString() } ?: emptyList(),
         Scope.WORKSPACES,
         userId,

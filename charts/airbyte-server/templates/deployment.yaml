@@ -269,6 +269,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: STORAGE_TYPE
+        - name: STORAGE_BUCKET_ACTIVITY_PAYLOAD
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STORAGE_BUCKET_ACTIVITY_PAYLOAD
         - name: STORAGE_BUCKET_LOG
           valueFrom:
             configMapKeyRef:

@@ -8,7 +8,6 @@ type Sizes = "xsmall" | "small" | "medium" | "large" | "fixed";
 export interface CellTextProps {
   size?: Sizes;
   className?: string;
-  withOverflow?: boolean;
 }
 
 // This lets us avoid the eslint complaint about unused styles
@@ -22,16 +21,12 @@ const STYLES_BY_SIZE: Readonly<Record<Sizes, string>> = {
 
 export const CellText: React.FC<React.PropsWithChildren<CellTextProps>> = ({
   size = "medium",
-  withOverflow,
   className,
   children,
   ...props
 }) => {
   return (
-    <div
-      className={classNames(styles.container, className, STYLES_BY_SIZE[size], { [styles.withOverflow]: withOverflow })}
-      {...props}
-    >
+    <div className={classNames(styles.container, className, STYLES_BY_SIZE[size])} {...props}>
       {children}
     </div>
   );

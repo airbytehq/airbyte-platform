@@ -67,6 +67,7 @@ enum class DocumentType(val prefix: Path) {
   LOGS(prefix = Path.of("/job-logging")),
   STATE(prefix = Path.of("/state")),
   WORKLOAD_OUTPUT(prefix = Path.of("/workload/output")),
+  ACTIVITY_PAYLOADS(prefix = Path.of("/activity-payloads")),
 }
 
 /**
@@ -332,4 +333,5 @@ fun StorageConfig.bucketName(type: DocumentType): String =
     DocumentType.STATE -> this.buckets.state
     DocumentType.WORKLOAD_OUTPUT -> this.buckets.workloadOutput
     DocumentType.LOGS -> this.buckets.log
+    DocumentType.ACTIVITY_PAYLOADS -> this.buckets.activityPayload
   }

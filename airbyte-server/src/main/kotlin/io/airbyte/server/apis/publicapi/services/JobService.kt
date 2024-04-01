@@ -12,6 +12,7 @@ import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByFie
 import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByMethodEnum
 import io.airbyte.api.model.generated.JobListRequestBody
 import io.airbyte.api.model.generated.Pagination
+import io.airbyte.commons.server.errors.problems.UnprocessableEntityProblem
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.support.CurrentUserService
@@ -23,7 +24,6 @@ import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.filters.JobsFilter
 import io.airbyte.server.apis.publicapi.mappers.JobResponseMapper
 import io.airbyte.server.apis.publicapi.mappers.JobsResponseMapper
-import io.airbyte.server.apis.publicapi.problems.UnprocessableEntityProblem
 import io.micronaut.context.annotation.Secondary
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton

@@ -8,3 +8,11 @@
 .textarea {
   overflow: auto;
 }
+
+.error {
+  color: colors.$red;
+}
+
+.light {
+  background-color: colors.$foreground;
+}

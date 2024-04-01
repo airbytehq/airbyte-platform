@@ -183,9 +183,9 @@ public class UserPersistence {
     return new User()
         .withUserId(record.get(USER.ID))
         .withName(record.get(USER.NAME))
-        .withAuthUserId(record.get(USER.AUTH_USER_ID))
-        .withAuthProvider(record.get(USER.AUTH_PROVIDER) == null ? null
-            : Enums.toEnum(record.get(USER.AUTH_PROVIDER, String.class), io.airbyte.config.AuthProvider.class).orElseThrow())
+        .withAuthUserId(record.get(AUTH_USER.AUTH_USER_ID))
+        .withAuthProvider(record.get(AUTH_USER.AUTH_PROVIDER) == null ? null
+            : Enums.toEnum(record.get(AUTH_USER.AUTH_PROVIDER, String.class), io.airbyte.config.AuthProvider.class).orElseThrow())
         .withDefaultWorkspaceId(record.get(USER.DEFAULT_WORKSPACE_ID))
         .withStatus(record.get(USER.STATUS) == null ? null : Enums.toEnum(record.get(USER.STATUS, String.class), User.Status.class).orElseThrow())
         .withCompanyName(record.get(USER.COMPANY_NAME))

@@ -26,33 +26,37 @@ type QuestionnaireOutcomes = Record<Delivery, Array<[SyncMode, DestinationSyncMo
 const deliveryOptions: ComponentProps<typeof RadioButtonTiles<Delivery>>["options"] = [
   {
     value: "mirrorSource",
-    label: "connectionForm.questionnaire.delivery.mirrorSource.title",
-    labelValues: {
-      badge: (
-        <Badge variant="blue" className={styles.badgeAlignment}>
-          Recommended
-        </Badge>
-      ),
-    },
-    description: "connectionForm.questionnaire.delivery.mirrorSource.subtitle",
+    label: (
+      <FormattedMessage
+        id="connectionForm.questionnaire.delivery.mirrorSource.title"
+        values={{
+          badge: (
+            <Badge variant="blue" className={styles.badgeAlignment}>
+              Recommended
+            </Badge>
+          ),
+        }}
+      />
+    ),
+    description: <FormattedMessage id="connectionForm.questionnaire.delivery.mirrorSource.subtitle" />,
   },
   {
     value: "appendChanges",
-    label: "connectionForm.questionnaire.delivery.appendChanges.title",
-    description: "connectionForm.questionnaire.delivery.appendChanges.subtitle",
+    label: <FormattedMessage id="connectionForm.questionnaire.delivery.appendChanges.title" />,
+    description: <FormattedMessage id="connectionForm.questionnaire.delivery.appendChanges.subtitle" />,
   },
 ];
 
 const deletionRecordsOptions: ComponentProps<typeof RadioButtonTiles<IncrementOrRefresh>>["options"] = [
   {
     value: SyncMode.incremental,
-    label: "connectionForm.questionnaire.incrementOrRefresh.increment.title",
-    description: "connectionForm.questionnaire.incrementOrRefresh.increment.subtitle",
+    label: <FormattedMessage id="connectionForm.questionnaire.incrementOrRefresh.increment.title" />,
+    description: <FormattedMessage id="connectionForm.questionnaire.incrementOrRefresh.increment.subtitle" />,
   },
   {
     value: SyncMode.full_refresh,
-    label: "connectionForm.questionnaire.incrementOrRefresh.refresh.title",
-    description: "connectionForm.questionnaire.incrementOrRefresh.refresh.subtitle",
+    label: <FormattedMessage id="connectionForm.questionnaire.incrementOrRefresh.refresh.title" />,
+    description: <FormattedMessage id="connectionForm.questionnaire.incrementOrRefresh.refresh.subtitle" />,
     extra: (
       <Text color="blue" size="sm">
         <FlexContainer alignItems="flex-end" gap="xs">

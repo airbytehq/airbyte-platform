@@ -17,13 +17,18 @@ import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.workers.storage.StorageClient;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.exception.DocStoreAccessException;
+import io.fabric8.kubernetes.api.model.CapabilitiesBuilder;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
+import io.fabric8.kubernetes.api.model.PodSecurityContextBuilder;
+import io.fabric8.kubernetes.api.model.SeccompProfileBuilder;
 import io.fabric8.kubernetes.api.model.SecretVolumeSourceBuilder;
+import io.fabric8.kubernetes.api.model.SecurityContext;
+import io.fabric8.kubernetes.api.model.SecurityContextBuilder;
 import io.fabric8.kubernetes.api.model.StatusDetails;
 import io.fabric8.kubernetes.api.model.Toleration;
 import io.fabric8.kubernetes.api.model.TolerationBuilder;
@@ -518,6 +523,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
                           """,
                 KubePodProcess.CONFIG_DIR,
                 KubePodProcess.SUCCESS_FILE_NAME)))
+        .withSecurityContext(containerSecurityContext())
         .build();
 
     final var mainContainer = new ContainerBuilder()
@@ -528,6 +534,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
         .withEnv(envVars)
         .withPorts(containerPorts)
         .withVolumeMounts(volumeMounts)
+        .withSecurityContext(containerSecurityContext())
         .build();
 
     final Pod podToCreate = new PodBuilder()
@@ -548,6 +555,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
         .withVolumes(volumes)
         .withNodeSelector(nodeSelectors)
         .withTolerations(buildPodTolerations(tolerations))
+        .withSecurityContext(new PodSecurityContextBuilder().withFsGroup(1000L).build())
         .endSpec()
         .build();
 
@@ -648,6 +656,26 @@ public class AsyncOrchestratorPodProcess implements KubePod {
         }
       }
     }
+  }
+
+  /**
+   * Returns a SecurityContext specific to containers.
+   *
+   * @return SecurityContext if ROOTLESS_WORKLOAD is enabled, null otherwise.
+   */
+  private SecurityContext containerSecurityContext() {
+    if (Boolean.parseBoolean(io.airbyte.commons.envvar.EnvVar.ROOTLESS_WORKLOAD.fetch("false"))) {
+      return new SecurityContextBuilder()
+          .withAllowPrivilegeEscalation(false)
+          .withRunAsGroup(1000L)
+          .withRunAsUser(1000L)
+          .withReadOnlyRootFilesystem(false)
+          .withRunAsNonRoot(true)
+          .withCapabilities(new CapabilitiesBuilder().addAllToDrop(List.of("ALL")).build())
+          .withSeccompProfile(new SeccompProfileBuilder().withType("RuntimeDefault").build())
+          .build();
+    }
+    return null;
   }
 
 }

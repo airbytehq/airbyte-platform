@@ -61,14 +61,14 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
 
   public record InvalidLineFailureConfiguration(boolean failTooLongRecords, boolean printLongRecordPks) {}
 
-  public static final String RECORD_TOO_LONG = "Record is too long, the size is: ";
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(VersionedAirbyteStreamFactory.class);
+  private static final Logger DEFAULT_LOGGER = LoggerFactory.getLogger(VersionedAirbyteStreamFactory.class);
   private static final double MAX_SIZE_RATIO = 0.8;
-  private static final long DEFAULT_MEMORY_LIMIT = Runtime.getRuntime().maxMemory();
-  private static final MdcScope.Builder DEFAULT_MDC_SCOPE = MdcScope.DEFAULT_BUILDER;
 
-  private static final Logger DEFAULT_LOGGER = LOGGER;
+  @VisibleForTesting
+  static final long DEFAULT_MEMORY_LIMIT = Runtime.getRuntime().maxMemory();
+  @VisibleForTesting
+  static final MdcScope.Builder DEFAULT_MDC_SCOPE = MdcScope.DEFAULT_BUILDER;
+
   private static final Version fallbackVersion = new Version("0.2.0");
 
   // Buffer size to use when detecting the protocol version.
@@ -109,7 +109,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
    */
   @VisibleForTesting
   public static VersionedAirbyteStreamFactory noMigrationVersionedAirbyteStreamFactory(final boolean failTooLongRecords) {
-    return noMigrationVersionedAirbyteStreamFactory(LOGGER, MdcScope.DEFAULT_BUILDER, Optional.empty(), Runtime.getRuntime().maxMemory(),
+    return noMigrationVersionedAirbyteStreamFactory(DEFAULT_LOGGER, MdcScope.DEFAULT_BUILDER, Optional.empty(), Runtime.getRuntime().maxMemory(),
         new InvalidLineFailureConfiguration(failTooLongRecords, false), new GsonPksExtractor());
   }
 
@@ -151,8 +151,8 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
                                        final Optional<Class<? extends RuntimeException>> exceptionClass,
                                        final InvalidLineFailureConfiguration invalidLineFailureConfiguration,
                                        final GsonPksExtractor gsonPksExtractor) {
-    this(serDeProvider, migratorFactory, protocolVersion, connectionId, configuredAirbyteCatalog, LOGGER, containerLogMdcBuilder, exceptionClass,
-        Runtime.getRuntime().maxMemory(), invalidLineFailureConfiguration, gsonPksExtractor);
+    this(serDeProvider, migratorFactory, protocolVersion, connectionId, configuredAirbyteCatalog, DEFAULT_LOGGER, containerLogMdcBuilder,
+        exceptionClass, Runtime.getRuntime().maxMemory(), invalidLineFailureConfiguration, gsonPksExtractor);
   }
 
   public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
@@ -366,7 +366,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
    * 3. upgrade the message to the platform version, if needed.
    */
   protected Stream<AirbyteMessage> toAirbyteMessage(final String line) {
-    handleCannotDeserialize(line);
+    logLargeRecordWarning(line);
 
     Optional<AirbyteMessage> m = deserializer.deserializeExact(line);
 
@@ -381,7 +381,27 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
       return upgradeMessage(m.get());
     }
 
+    logMalformedLogMessage(line);
     return m.stream();
+  }
+
+  private void logLargeRecordWarning(final String line) {
+    try (final MdcScope ignored = containerLogMdcBuilder.build()) {
+      if (line.length() >= MAXIMUM_CHARACTERS_ALLOWED) {
+        connectionId.ifPresentOrElse(c -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1,
+            new MetricAttribute(MetricTags.CONNECTION_ID, c.toString())),
+            () -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1));
+        MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.TOO_LONG_LINES_DISTRIBUTION, line.length());
+        if (invalidLineFailureConfiguration.printLongRecordPks) {
+          logger.warn("[LARGE RECORD] Risk of Destinations not being able to properly handle: " + line.length());
+          configuredAirbyteCatalog.ifPresent(
+              airbyteCatalog -> logger
+                  .warn("[LARGE RECORD] The primary keys of the long record are: " + gsonPksExtractor.extractPks(airbyteCatalog, line)));
+        }
+      }
+    } catch (final Exception e) {
+      throw e;
+    }
   }
 
   /**
@@ -398,28 +418,8 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
    * <p>
    *
    */
-  private void handleCannotDeserialize(final String line) {
+  private void logMalformedLogMessage(final String line) {
     try (final MdcScope ignored = containerLogMdcBuilder.build()) {
-      if (line.length() >= MAXIMUM_CHARACTERS_ALLOWED) {
-        connectionId.ifPresentOrElse(c -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1,
-            new MetricAttribute(MetricTags.CONNECTION_ID, c.toString())),
-            () -> MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1));
-        MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.TOO_LONG_LINES_DISTRIBUTION, line.length());
-        if (invalidLineFailureConfiguration.printLongRecordPks) {
-          LOGGER.warn("[LARGE RECORD] A record is too long with size: " + line.length());
-          configuredAirbyteCatalog.ifPresent(
-              airbyteCatalog -> LOGGER
-                  .warn("[LARGE RECORD] The primary keys of the long record are: " + gsonPksExtractor.extractPks(airbyteCatalog, line)));
-        }
-        if (invalidLineFailureConfiguration.failTooLongRecords) {
-          if (exceptionClass.isPresent()) {
-            throwExceptionClass("One record is too big and can't be processed, the sync will be failed");
-          } else {
-            throw new IllegalStateException(RECORD_TOO_LONG + line.length());
-          }
-        }
-      }
-
       if (line.toLowerCase().replaceAll("\\s", "").contains("{\"type\":\"record\",\"record\":")) {
         // Connectors can sometimes log error messages from failing to parse an AirbyteRecordMessage.
         // Filter on record into debug to try and prevent such cases. Though this catches non-record

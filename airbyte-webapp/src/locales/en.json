@@ -1287,7 +1287,7 @@
   "connectorBuilder.warnings.noRecords": "No records could be extracted from responses, make sure the record selector is set correctly.",
   "connectorBuilder.warnings.primaryKeyMissing": "In at least one record, the configured primary key is not set. Make sure it is always available.",
   "connectorBuilder.warnings.primaryKeyDuplicate": "Primary key is not unique - found <b>{duplicateKey}</b> more than once.",
-  "connectorBuilder.resolvingStreamList": "Checking configuration",
+  "connectorBuilder.resolvingStreamList": "Checking configuration…",
   "connectorBuilder.documentationLink": "Open documentation in separate tab",
   "connectorBuilder.interpolationHeading": "Variables available for interpolation",
   "connectorBuilder.interpolationMacros": "See macros available for interpolation <a>here</a>",
