@@ -92,7 +92,7 @@ class ConnectorMessageProcessor(
       val errorMessage: String = String.format("Lost connection to the connector")
       throw WorkerException(errorMessage, e)
     } catch (e: Exception) {
-      throw WorkerException("Unexpected error while getting checking connection.", e)
+      throw WorkerException("Unexpected error performing $operationType.", e)
     }
   }
 
