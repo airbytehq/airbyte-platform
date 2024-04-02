@@ -202,6 +202,18 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
         emailVerified: keycloakAuth.keycloakUser?.profile.email_verified ?? false,
         email: keycloakAuth.keycloakUser?.profile.email ?? null,
         getAccessToken: () => Promise.resolve(keycloakAuth.accessTokenRef?.current),
+        updateName: async (name: string) => {
+          const user = keycloakAuth.airbyteUser;
+          if (!user) {
+            throw new Error("Cannot change name, airbyteUser is null");
+          }
+          await updateAirbyteUser({
+            userUpdate: { userId: user.userId, name },
+            getAccessToken: async () => keycloakAuth.accessTokenRef?.current ?? "",
+          }).then(() => {
+            keycloakAuth.updateAirbyteUser({ ...user, name });
+          });
+        },
         logout,
         loggedOut: false,
         providers: null,
