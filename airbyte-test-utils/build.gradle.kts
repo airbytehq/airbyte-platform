@@ -26,6 +26,8 @@ dependencies {
     implementation(libs.bundles.kubernetes.client)
     implementation(libs.bundles.flyway)
     implementation(libs.temporal.sdk)
+    implementation(libs.google.cloud.api.client)
+    implementation(libs.google.cloud.sqladmin)
 
     api(libs.junit.jupiter.api)
 

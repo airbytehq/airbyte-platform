@@ -103,8 +103,6 @@ import io.airbyte.db.Database;
 import io.airbyte.db.factory.DataSourceFactory;
 import io.airbyte.db.jdbc.JdbcUtils;
 import io.airbyte.test.container.AirbyteTestContainer;
-import io.fabric8.kubernetes.client.DefaultKubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClient;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import java.io.File;
@@ -114,6 +112,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
+import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
@@ -179,9 +178,6 @@ public class AcceptanceTestHarness {
   private static final String SOURCE_USERNAME = "sourceusername";
   public static final String SOURCE_PASSWORD = "hunter2";
   public static final String PUBLIC_SCHEMA_NAME = "public";
-  public static final String STAGING_SCHEMA_NAME = "staging";
-  public static final String COOL_EMPLOYEES_TABLE_NAME = "cool_employees";
-  public static final String AWESOME_PEOPLE_TABLE_NAME = "awesome_people";
   public static final String PUBLIC = "public";
 
   private static final String DEFAULT_POSTGRES_INIT_SQL_FILE = "postgres_init.sql";
@@ -190,6 +186,8 @@ public class AcceptanceTestHarness {
   public static final int FINAL_INTERVAL_SECS = 60;
   public static final int MAX_TRIES = 5;
   public static final int MAX_ALLOWED_SECOND_PER_RUN = 120;
+
+  private static final String CLOUD_SQL_DATABASE_PREFIX = "acceptance_test_";
 
   // NOTE: we include `INCOMPLETE` here because the job may still retry; see
   // https://docs.airbyte.com/understanding-airbyte/jobs/.
@@ -203,6 +201,7 @@ public class AcceptanceTestHarness {
   private static boolean isMac;
   private static boolean useExternalDeployment;
   private static boolean ensureCleanSlate;
+  private CloudSqlDatabaseProvisioner cloudSqlDatabaseProvisioner;
 
   /**
    * When the acceptance tests are run against a local instance of docker-compose or KUBE then these
@@ -211,14 +210,15 @@ public class AcceptanceTestHarness {
    */
   private PostgreSQLContainer sourcePsql;
   private PostgreSQLContainer destinationPsql;
+  private String sourceDatabaseName;
+  private String destinationDatabaseName;
+
   private AirbyteTestContainer airbyteTestContainer;
   private AirbyteApiClient apiClient;
 
   private WebBackendApi webBackendApi;
   private final UUID defaultWorkspaceId;
   private final String postgresSqlInitFile;
-
-  private KubernetesClient kubernetesClient;
 
   private final List<UUID> sourceIds = Lists.newArrayList();
   private final List<UUID> connectionIds = Lists.newArrayList();
@@ -227,11 +227,13 @@ public class AcceptanceTestHarness {
   private final List<UUID> sourceDefinitionIds = Lists.newArrayList();
   private DataSource sourceDataSource;
   private DataSource destinationDataSource;
-  private String postgresPassword;
 
-  public KubernetesClient getKubernetesClient() {
-    return kubernetesClient;
-  }
+  private String gcpProjectId;
+  private String cloudSqlInstanceId;
+  private String cloudSqlInstanceUsername;
+  private String cloudSqlInstancePassword;
+  private String cloudSqlInstancePrivateIp;
+  private String cloudSqlInstancePublicIp;
 
   public void removeConnection(final UUID connection) {
     connectionIds.remove(connection);
@@ -241,7 +243,7 @@ public class AcceptanceTestHarness {
                                final WebBackendApi webBackendApi,
                                final UUID defaultWorkspaceId,
                                final String postgresSqlInitFile)
-      throws URISyntaxException, IOException, InterruptedException {
+      throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
     // reads env vars to assign static variables
     assignEnvVars();
     this.apiClient = apiClient;
@@ -260,12 +262,16 @@ public class AcceptanceTestHarness {
 
       destinationPsql = new PostgreSQLContainer(DESTINATION_POSTGRES_IMAGE_NAME);
       destinationPsql.start();
-    }
-
-    if (isKube && !isGke) {
-      // TODO(mfsiega-airbyte): get the Kube client to work with GKE tests. We don't use it yet but we
-      // will want to someday.
-      kubernetesClient = new DefaultKubernetesClient();
+    } else {
+      this.cloudSqlDatabaseProvisioner = new CloudSqlDatabaseProvisioner();
+      sourceDatabaseName = cloudSqlDatabaseProvisioner.createDatabase(
+          gcpProjectId,
+          cloudSqlInstanceId,
+          generateRandomCloudSqlDatabaseName());
+      destinationDatabaseName = cloudSqlDatabaseProvisioner.createDatabase(
+          gcpProjectId,
+          cloudSqlInstanceId,
+          generateRandomCloudSqlDatabaseName());
     }
 
     // by default use airbyte deployment governed by a test container.
@@ -289,7 +295,7 @@ public class AcceptanceTestHarness {
   }
 
   public AcceptanceTestHarness(final AirbyteApiClient apiClient, final WebBackendApi webBackendApi, final UUID defaultWorkspaceId)
-      throws URISyntaxException, IOException, InterruptedException {
+      throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
     this(apiClient, webBackendApi, defaultWorkspaceId, DEFAULT_POSTGRES_INIT_SQL_FILE);
   }
 
@@ -314,9 +320,17 @@ public class AcceptanceTestHarness {
   public void setup() throws SQLException, URISyntaxException, IOException, ApiException {
     if (isGke) {
       // Prepare the database data sources.
-      LOGGER.info("postgresPassword: {}", postgresPassword);
-      sourceDataSource = GKEPostgresConfig.getSourceDataSource(postgresPassword);
-      destinationDataSource = GKEPostgresConfig.getDestinationDataSource(postgresPassword);
+      LOGGER.info("postgresPassword: {}", cloudSqlInstancePassword);
+      sourceDataSource = GKEPostgresConfig.getDataSource(
+          cloudSqlInstanceUsername,
+          cloudSqlInstancePassword,
+          cloudSqlInstancePrivateIp,
+          sourceDatabaseName);
+      destinationDataSource = GKEPostgresConfig.getDataSource(
+          cloudSqlInstanceUsername,
+          cloudSqlInstancePassword,
+          cloudSqlInstancePrivateIp,
+          destinationDatabaseName);
       // seed database.
       GKEPostgresConfig.runSqlScript(Path.of(MoreResources.readResourceAsFile(postgresSqlInitFile).toURI()), getSourceDatabase());
     } else {
@@ -362,6 +376,15 @@ public class AcceptanceTestHarness {
       if (isGke) {
         DataSourceFactory.close(sourceDataSource);
         DataSourceFactory.close(destinationDataSource);
+
+        cloudSqlDatabaseProvisioner.deleteDatabase(
+            gcpProjectId,
+            cloudSqlInstanceId,
+            sourceDatabaseName);
+        cloudSqlDatabaseProvisioner.deleteDatabase(
+            gcpProjectId,
+            cloudSqlInstanceId,
+            destinationDatabaseName);
       } else {
         destinationPsql.stop();
         sourcePsql.stop();
@@ -432,9 +455,12 @@ public class AcceptanceTestHarness {
             && System.getenv("USE_EXTERNAL_DEPLOYMENT").equalsIgnoreCase("true");
     ensureCleanSlate = System.getenv("ENSURE_CLEAN_SLATE") != null
         && System.getenv("ENSURE_CLEAN_SLATE").equalsIgnoreCase("true");
-    postgresPassword = System.getenv("POSTGRES_PASSWORD") != null
-        ? System.getenv("POSTGRES_PASSWORD")
-        : "admin123";
+    gcpProjectId = System.getenv("GCP_PROJECT_ID");
+    cloudSqlInstanceId = System.getenv("CLOUD_SQL_INSTANCE_ID");
+    cloudSqlInstanceUsername = System.getenv("CLOUD_SQL_INSTANCE_USERNAME");
+    cloudSqlInstancePassword = System.getenv("CLOUD_SQL_INSTANCE_PASSWORD");
+    cloudSqlInstancePrivateIp = System.getenv("CLOUD_SQL_INSTANCE_PRIVATE_IP");
+    cloudSqlInstancePublicIp = System.getenv("CLOUD_SQL_INSTANCE_PUBLIC_IP");
   }
 
   private WorkflowClient getWorkflowClient() {
@@ -767,25 +793,29 @@ public class AcceptanceTestHarness {
   }
 
   public JsonNode getSourceDbConfig() {
-    return getDbConfig(sourcePsql, false, false, Type.SOURCE);
+    return getDbConfig(sourcePsql, false, false, sourceDatabaseName);
   }
 
   public JsonNode getDestinationDbConfig() {
-    return getDbConfig(destinationPsql, false, true, Type.DESTINATION);
+    return getDbConfig(destinationPsql, false, true, destinationDatabaseName);
   }
 
   public JsonNode getDestinationDbConfigWithHiddenPassword() {
-    return getDbConfig(destinationPsql, true, true, Type.DESTINATION);
+    return getDbConfig(destinationPsql, true, true, destinationDatabaseName);
   }
 
   public JsonNode getDbConfig(final PostgreSQLContainer psql,
                               final boolean hiddenPassword,
                               final boolean withSchema,
-                              final Type connectorType) {
+                              final String databaseName) {
     try {
       final Map<Object, Object> dbConfig =
-          (isKube && isGke) ? GKEPostgresConfig.dbConfig(connectorType, hiddenPassword ? null : postgresPassword, withSchema)
-              : localConfig(psql, hiddenPassword, withSchema);
+          (isKube && isGke) ? GKEPostgresConfig.dbConfig(
+              hiddenPassword ? null : cloudSqlInstancePassword,
+              withSchema,
+              cloudSqlInstanceUsername,
+              cloudSqlInstancePublicIp,
+              databaseName) : localConfig(psql, hiddenPassword, withSchema);
       final var config = Jsons.jsonNode(dbConfig);
       LOGGER.info("Using db config: {}", Jsons.toPrettyString(config));
       return config;
@@ -1227,14 +1257,6 @@ public class AcceptanceTestHarness {
         "get stream statuses", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 
-  /**
-   * Connector type.
-   */
-  public enum Type {
-    SOURCE,
-    DESTINATION
-  }
-
   public void setIncrementalAppendSyncMode(final AirbyteCatalog airbyteCatalog, final List<String> cursorField) {
     airbyteCatalog.getStreams().forEach(stream -> {
       stream.getConfig().syncMode(SyncMode.INCREMENTAL)
@@ -1301,6 +1323,10 @@ public class AcceptanceTestHarness {
             .config(expectedStreamConfig)));
 
     assertEquals(expected, actual);
+  }
+
+  private static String generateRandomCloudSqlDatabaseName() {
+    return CLOUD_SQL_DATABASE_PREFIX + UUID.randomUUID();
   }
 
 }
