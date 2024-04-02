@@ -3,13 +3,7 @@ import { createContext, useCallback, useContext, useState } from "react";
 import { useIntl } from "react-intl";
 import { useAsyncFn } from "react-use";
 
-import {
-  SchemaError,
-  useCurrentWorkspace,
-  useGetConnection,
-  useGetConnectionQuery,
-  useUpdateConnection,
-} from "core/api";
+import { useCurrentWorkspace, useGetConnection, useGetConnectionQuery, useUpdateConnection } from "core/api";
 import {
   AirbyteCatalog,
   ConnectionStatus,
@@ -170,7 +164,7 @@ export const ConnectionEditServiceProvider: React.FC<React.PropsWithChildren<Con
       <ConnectionFormServiceProvider
         mode={data.connection.status === ConnectionStatus.deprecated || !canEditConnection ? "readonly" : "edit"}
         connection={data.connection}
-        schemaError={schemaError as SchemaError}
+        schemaError={schemaError}
         refreshSchema={refreshSchema}
       >
         {children}

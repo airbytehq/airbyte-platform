@@ -41,6 +41,7 @@ val downloadSpecSecretMask = tasks.register<Download>("downloadSpecSecretMask") 
     src("https://connectors.airbyte.com/files/registries/v0/specs_secrets_mask.yaml")
     dest(File(projectDir, "src/main/resources/seed/specs_secrets_mask.yaml"))
     overwrite(true)
+    onlyIfModified(true)
 }
 
 tasks.named("processResources") {

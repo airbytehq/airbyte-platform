@@ -20,7 +20,6 @@ import {
   RequestOption,
   OAuthAuthenticator,
   HttpRequesterAuthenticator,
-  DeclarativeStreamSchemaLoader,
   PageIncrement,
   OffsetIncrement,
   CursorPagination,
@@ -50,6 +49,7 @@ import {
   SessionTokenRequestBearerAuthenticatorType,
   RequestOptionInjectInto,
   NoAuthType,
+  HttpRequester,
 } from "core/api/types/ConnectorManifest";
 import { naturalComparator } from "core/utils/objects";
 
@@ -256,16 +256,17 @@ export const getManifestValuePerComponentPerStream = (
   }
   return Object.fromEntries(
     Object.entries(metadata?.yamlComponents?.streams).map(([streamName, yamlComponentNames]) => {
-      const stream = manifest.streams.find((stream) => stream.name === streamName);
+      // this method is only called in UI mode, so we can assume full streams are found in definitions
+      const stream = manifest.definitions?.streams?.[streamName];
       const manifestValuePerComponent = Object.fromEntries(
-        yamlComponentNames.map((yamlComponentName) => {
-          return match(yamlComponentName)
+        yamlComponentNames.map((yamlComponentName) =>
+          match(yamlComponentName)
             .with("paginator", (name) => [name, stream?.retriever?.paginator])
             .with("errorHandler", (name) => [name, stream?.retriever?.requester?.error_handler])
             .with("transformations", (name) => [name, stream?.transformations])
             .with("incrementalSync", (name) => [name, stream?.incremental_sync])
-            .otherwise(() => []);
-        })
+            .otherwise(() => [])
+        )
       );
       return [streamName, manifestValuePerComponent];
     })
@@ -1026,13 +1027,21 @@ function convertOrLoadYamlString<BuilderInput, ManifestOutput>(
   builderValue: BuilderInput | YamlString | undefined,
   convertFn: (builderValue: BuilderInput | undefined) => ManifestOutput | undefined
 ) {
+  if (builderValue === undefined) {
+    return undefined;
+  }
   if (isYamlString(builderValue)) {
     return load(builderValue) as ManifestOutput;
   }
   return convertFn(builderValue);
 }
 
-function builderAuthenticatorToManifest(globalSettings: BuilderFormValues["global"]): HttpRequesterAuthenticator {
+function builderAuthenticatorToManifest(
+  globalSettings: BuilderFormValues["global"]
+): HttpRequesterAuthenticator | undefined {
+  if (globalSettings.authenticator.type === "NoAuth") {
+    return undefined;
+  }
   if (globalSettings.authenticator.type === "OAuthAuthenticator") {
     return {
       ...globalSettings.authenticator,
@@ -1105,9 +1114,11 @@ function builderPaginationStrategyToManifest(
   };
 }
 
-export function builderPaginatorToManifest(paginator: BuilderPaginator | undefined): SimpleRetrieverPaginator {
+export function builderPaginatorToManifest(
+  paginator: BuilderPaginator | undefined
+): SimpleRetrieverPaginator | undefined {
   if (!paginator) {
-    return { type: "NoPagination" };
+    return undefined;
   }
 
   let pageTokenOption: DefaultPaginatorPageTokenOption | undefined;
@@ -1223,7 +1234,7 @@ function builderStreamPartitionRouterToManifest(
             parent_key: parentStreamConfiguration.parent_key,
             request_option: parentStreamConfiguration.request_option,
             partition_field: parentStreamConfiguration.partition_field,
-            stream: builderStreamToDeclarativeSteam(values, parentStream, visitedStreams),
+            stream: streamRef(parentStream.name),
           },
         ],
       };
@@ -1240,7 +1251,8 @@ function builderStreamPartitionRouterToManifest(
     });
   }
 
-  return [...(substreamPartitionRouters ?? []), ...(listPartitionRouters ?? [])];
+  const combinedPartitionRouters = [...(substreamPartitionRouters ?? []), ...(listPartitionRouters ?? [])];
+  return combinedPartitionRouters.length > 0 ? combinedPartitionRouters : undefined;
 }
 
 export function builderErrorHandlersToManifest(
@@ -1291,62 +1303,61 @@ export function builderTransformationsToManifest(
   });
 }
 
-const EMPTY_SCHEMA = { type: "InlineSchemaLoader", schema: {} } as const;
-
-function parseSchemaString(schema?: string): DeclarativeStreamSchemaLoader {
-  if (!schema) {
-    return EMPTY_SCHEMA;
-  }
-  try {
-    return { type: "InlineSchemaLoader", schema: JSON.parse(schema) };
-  } catch {
-    return EMPTY_SCHEMA;
-  }
+function fromEntriesOrUndefined(...args: Parameters<typeof Object.fromEntries>) {
+  const obj = Object.fromEntries(...args);
+  return Object.keys(obj).length > 0 ? obj : undefined;
 }
 
 function builderRequestBodyToStreamRequestBody(builderRequestBody: BuilderRequestBody) {
   try {
-    return {
+    const requestBody = {
       request_body_json:
         builderRequestBody.type === "json_list"
-          ? Object.fromEntries(builderRequestBody.values)
+          ? fromEntriesOrUndefined(builderRequestBody.values)
           : builderRequestBody.type === "json_freeform"
-          ? JSON.parse(builderRequestBody.value)
+          ? ((parsedJson) => (Object.keys(parsedJson).length > 0 ? parsedJson : undefined))(
+              JSON.parse(builderRequestBody.value)
+            )
           : undefined,
       request_body_data:
         builderRequestBody.type === "form_list"
-          ? Object.fromEntries(builderRequestBody.values)
+          ? fromEntriesOrUndefined(builderRequestBody.values)
           : builderRequestBody.type === "string_freeform"
           ? builderRequestBody.value
           : undefined,
     };
+    return Object.keys(requestBody).length > 0 ? requestBody : undefined;
   } catch {
-    return {};
+    return undefined;
   }
 }
+
+type BaseRequester = Pick<HttpRequester, "type" | "url_base" | "authenticator">;
 
 function builderStreamToDeclarativeSteam(
   values: BuilderFormValues,
   stream: BuilderStream,
   visitedStreams: string[]
 ): DeclarativeStream {
+  // cast to tell typescript which properties will be present after resolving the ref
+  const requesterRef = {
+    $ref: "#/definitions/base_requester",
+  } as unknown as BaseRequester;
+
   const declarativeStream: DeclarativeStream = {
     type: "DeclarativeStream",
     name: stream.name,
-    primary_key: stream.primaryKey,
-    schema_loader: parseSchemaString(stream.schema),
+    primary_key: stream.primaryKey.length > 0 ? stream.primaryKey : undefined,
     retriever: {
       type: "SimpleRetriever",
       requester: {
-        type: "HttpRequester",
-        url_base: values.global?.urlBase?.trim(),
+        ...requesterRef,
         path: stream.urlPath?.trim(),
         http_method: stream.httpMethod,
-        request_parameters: Object.fromEntries(stream.requestOptions.requestParameters),
-        request_headers: Object.fromEntries(stream.requestOptions.requestHeaders),
-        authenticator: builderAuthenticatorToManifest(values.global),
-        error_handler: convertOrLoadYamlString(stream.errorHandler, builderErrorHandlersToManifest),
+        request_parameters: fromEntriesOrUndefined(stream.requestOptions.requestParameters),
+        request_headers: fromEntriesOrUndefined(stream.requestOptions.requestHeaders),
         ...builderRequestBodyToStreamRequestBody(stream.requestOptions.requestBody),
+        error_handler: convertOrLoadYamlString(stream.errorHandler, builderErrorHandlersToManifest),
       },
       record_selector: {
         type: "RecordSelector",
@@ -1363,8 +1374,9 @@ function builderStreamToDeclarativeSteam(
         [...visitedStreams, stream.id]
       ),
     },
-    transformations: convertOrLoadYamlString(stream.transformations, builderTransformationsToManifest),
     incremental_sync: convertOrLoadYamlString(stream.incrementalSync, builderIncrementalSyncToManifest),
+    transformations: convertOrLoadYamlString(stream.transformations, builderTransformationsToManifest),
+    schema_loader: { type: "InlineSchemaLoader", schema: schemaRef(stream.name) },
   };
 
   return merge({}, declarativeStream, stream.unsupportedFields);
@@ -1417,26 +1429,28 @@ export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderM
   const componentNameIfString = (componentName: YamlSupportedComponentName, value: unknown) =>
     isYamlString(value) ? [componentName] : [];
 
-  const yamlComponents: BuilderMetadata["yamlComponents"] = {
-    streams: Object.fromEntries(
-      values.streams.map((stream) => [
-        stream.name,
-        [
-          ...componentNameIfString("paginator", stream.paginator),
-          ...componentNameIfString("errorHandler", stream.errorHandler),
-          ...componentNameIfString("transformations", stream.transformations),
-          ...componentNameIfString("incrementalSync", stream.incrementalSync),
-        ],
-      ])
-    ),
-  };
-  const hasYamlComponents = Object.values(yamlComponents.streams).some(
-    (yamlComponents: YamlSupportedComponentName[]) => yamlComponents.length > 0
-  );
+  const yamlComponentsPerStream = {} as Record<string, YamlSupportedComponentName[]>;
+  values.streams.forEach((stream) => {
+    const yamlComponents = [
+      ...componentNameIfString("paginator", stream.paginator),
+      ...componentNameIfString("errorHandler", stream.errorHandler),
+      ...componentNameIfString("transformations", stream.transformations),
+      ...componentNameIfString("incrementalSync", stream.incrementalSync),
+    ];
+    if (yamlComponents.length > 0) {
+      yamlComponentsPerStream[stream.name] = yamlComponents;
+    }
+  });
+
+  const hasYamlComponents = Object.keys(yamlComponentsPerStream).length > 0;
 
   return {
     autoImportSchema: Object.fromEntries(values.streams.map((stream) => [stream.name, stream.autoImportSchema])),
-    ...(hasYamlComponents && { yamlComponents }),
+    ...(hasYamlComponents && {
+      yamlComponents: {
+        streams: yamlComponentsPerStream,
+      },
+    }),
   };
 };
 
@@ -1475,6 +1489,23 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
   const correctedCheckStreams =
     validCheckStreamNames.length > 0 ? validCheckStreamNames : streamNames.length > 0 ? [streamNames[0]] : [];
 
+  const streamNameToStream = Object.fromEntries(manifestStreams.map((stream) => [stream.name, stream]));
+  const streamRefs = manifestStreams.map((stream) => streamRef(stream.name!));
+
+  const streamNameToSchema = Object.fromEntries(
+    values.streams.map((stream) => {
+      const schema = stream.schema ? JSON.parse(stream.schema) : DEFAULT_SCHEMA;
+      schema.additionalProperties = true;
+      return [stream.name, schema];
+    })
+  );
+
+  const baseRequester: BaseRequester = {
+    type: "HttpRequester",
+    url_base: values.global?.urlBase?.trim(),
+    authenticator: builderAuthenticatorToManifest(values.global),
+  };
+
   return {
     version: CDK_VERSION,
     type: "DeclarativeSource",
@@ -1482,11 +1513,25 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
       type: "CheckStream",
       stream_names: correctedCheckStreams,
     },
-    streams: manifestStreams,
+    definitions: {
+      base_requester: baseRequester,
+      streams: streamNameToStream,
+    },
+    streams: streamRefs,
+    schemas: streamNameToSchema,
     spec,
     metadata: builderFormValuesToMetadata(values),
   };
 };
+
+function streamRef(streamName: string) {
+  // force cast to DeclarativeStream so that this still validates against the types
+  return { $ref: `#/definitions/streams/${streamName}` } as unknown as DeclarativeStream;
+}
+
+function schemaRef(streamName: string) {
+  return { $ref: `#/schemas/${streamName}` };
+}
 
 export const DEFAULT_JSON_MANIFEST_VALUES: ConnectorManifest = convertToManifest(DEFAULT_BUILDER_FORM_VALUES);
 

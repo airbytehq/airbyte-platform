@@ -10,7 +10,8 @@ ARG PROJECT_DIR
 RUN apt update && apt install -y \
     curl \
     git \
-    xxd
+    xxd \
+    jq
 
 COPY . /workspace
 WORKDIR ${PROJECT_DIR}

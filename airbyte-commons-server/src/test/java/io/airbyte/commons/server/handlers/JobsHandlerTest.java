@@ -211,7 +211,7 @@ public class JobsHandlerTest {
     verify(jobPersistence).failAttempt(JOB_ID, ATTEMPT_NUMBER);
     verify(jobPersistence).writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, failureSummary);
     verify(jobPersistence).cancelJob(JOB_ID);
-    verify(jobNotifier).failJob(eq("Job was cancelled"), eq(mockJob), any());
+    verify(jobNotifier).failJob(eq(mockJob), any());
     verify(helper).trackCompletion(any(), eq(JobStatus.FAILED));
   }
 
@@ -294,7 +294,7 @@ public class JobsHandlerTest {
             mSyncConfig.getState());
 
     verify(jobPersistence).failJob(JOB_ID);
-    verify(jobNotifier).failJob(eq(failureReason), Mockito.any(), any());
+    verify(jobNotifier).failJob(Mockito.any(), any());
     verify(jobErrorReporter).reportSyncJobFailure(CONNECTION_ID, failureSummary, expectedReportingContext, expectedAttemptConfig);
   }
 
@@ -324,7 +324,7 @@ public class JobsHandlerTest {
     jobsHandler.jobFailure(new JobFailureRequest().jobId(JOB_ID).attemptNumber(1).connectionId(CONNECTION_ID).reason(failureReason));
 
     verify(jobPersistence).failJob(JOB_ID);
-    verify(jobNotifier).failJob(eq(failureReason), Mockito.any(), any());
+    verify(jobNotifier).failJob(Mockito.any(), any());
     verify(jobErrorReporter).reportSyncJobFailure(eq(CONNECTION_ID), eq(failureSummary), Mockito.any(), Mockito.any());
   }
 

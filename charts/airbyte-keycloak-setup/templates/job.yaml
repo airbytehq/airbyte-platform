@@ -47,6 +47,8 @@ spec:
                 configMapKeyRef:
                   name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
                   key: KEYCLOAK_INTERNAL_HOST
+          securityContext: 
+            {{- toYaml .Values.initContainerSecurityContext | nindent 14 }}
         {{- if .Values.extraInitContainers }}
         {{- toYaml .Values.extraInitContainers | nindent 8 }}
         {{- end }}
@@ -71,6 +73,21 @@ spec:
                 configMapKeyRef:
                   name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
                   key: KEYCLOAK_INTERNAL_HOST
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.database.secretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
+                  key: {{ .Values.global.database.secretValue | default "DATABASE_PASSWORD" }}
+            - name: DATABASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-airbyte-env
+                  key: DATABASE_URL
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-airbyte-secrets
+                  key: DATABASE_USER
             # Values from secret
             {{- if .Values.secrets }}
             {{- range $k, $v := .Values.secrets }}
@@ -115,6 +132,7 @@ spec:
         {{- if .Values.global.extraContainers }}
         {{ toYaml .Values.global.extraContainers | nindent 8 }}
         {{- end }}
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 10 }}
       volumes:
         - name: airbyte-yml-volume
           secret:

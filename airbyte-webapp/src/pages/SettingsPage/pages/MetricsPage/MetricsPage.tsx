@@ -1,8 +1,8 @@
 import React from "react";
 import { useIntl } from "react-intl";
 
-import { HeadTitle } from "components/common/HeadTitle";
-import { Card } from "components/ui/Card";
+import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 
@@ -13,11 +13,9 @@ export const MetricsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_METRICS);
 
   return (
-    <>
-      <HeadTitle titles={[{ id: "sidebar.settings" }, { id: "settings.metrics" }]} />
-      <Card title={formatMessage({ id: "settings.metricsSettings" })} titleWithBottomBorder>
-        <MetricsForm />
-      </Card>
-    </>
+    <FlexContainer direction="column" gap="xl">
+      <Heading as="h1">{formatMessage({ id: "settings.metricsSettings" })}</Heading>
+      <MetricsForm />
+    </FlexContainer>
   );
 };

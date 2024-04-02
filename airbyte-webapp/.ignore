@@ -1,0 +1,4 @@
+# Allow VSCode to find some files that are gitignored in file search
+!.experiments.json
+!.env.*
+!src/core/api/generated/**

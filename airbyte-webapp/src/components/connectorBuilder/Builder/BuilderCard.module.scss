@@ -43,6 +43,10 @@
   color: colors.$blue-400;
 }
 
+.label {
+  max-width: fit-content;
+}
+
 .toggleContainer {
   display: flex;
   gap: variables.$spacing-md;

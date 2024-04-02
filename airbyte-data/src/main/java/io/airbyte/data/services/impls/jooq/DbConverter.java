@@ -253,6 +253,17 @@ public class DbConverter {
    * @return source definition
    */
   public static StandardSourceDefinition buildStandardSourceDefinition(final Record record, final long defaultMaxSecondsBetweenMessages) {
+    var maxSecondsBetweenMessage = record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES) == null
+        ? defaultMaxSecondsBetweenMessages
+        : record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES).longValue();
+
+    // All sources are starting to set this field according to their rate limits. As a
+    // safeguard for sources with rate limits that are too low e.g. minutes etc, we default to
+    // our defaults. One day, we'll relax this, be conservative for now.
+    if (maxSecondsBetweenMessage < defaultMaxSecondsBetweenMessages) {
+      maxSecondsBetweenMessage = defaultMaxSecondsBetweenMessages;
+    }
+
     return new StandardSourceDefinition()
         .withSourceDefinitionId(record.get(ACTOR_DEFINITION.ID))
         .withDefaultVersionId(record.get(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
@@ -267,9 +278,7 @@ public class DbConverter {
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
             ? null
             : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class))
-        .withMaxSecondsBetweenMessages(record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES) == null
-            ? defaultMaxSecondsBetweenMessages
-            : record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES).longValue());
+        .withMaxSecondsBetweenMessages(maxSecondsBetweenMessage);
   }
 
   /**

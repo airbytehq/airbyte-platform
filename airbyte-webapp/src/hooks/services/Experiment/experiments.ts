@@ -12,7 +12,7 @@ export interface Experiments {
   "authPage.signup.hideName": boolean;
   "billing.early-sync-enabled": boolean;
   "billing.autoRecharge": boolean;
-  "connections.summaryView": boolean;
+  "connection.clearNotReset": boolean;
   "connection.columnSelection": boolean;
   "connection.simplifiedCreation": boolean;
   "connection.onboarding.destinations": string;

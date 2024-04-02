@@ -33,21 +33,22 @@ class MaskedDataInterceptorTest {
   public static final String TEST_SPEC_SECRET_MASK_YAML = "/test_spec_secret_mask.yaml";
 
   public static final String TEST_LOGGED_RECORD_CONTENTS =
-      "2024-03-12 14:15:50 destination > ERROR i.a.c.i.b.Destination$ShimToSerializedAirbyteMessageConsumer(consumeMessage):120 Received invalid "
-          + "message: {\"type\":\"RECORD\",\"record\":{\"data\":\"{\\\"foo\\\":\\\"test\\\",\\\"other\\\":"
-          + "{\\\"prop\\\":\\\"value\\\",\\\"bar\\\":\\\"1234\\\"}}\"";
+      "2024-03-21 12:19:08 \u001B[43mdestination\u001B[0m > ERROR i.a.c.i.b.Destination$ShimToSerializedAirbyteMessageConsumer(consumeMessage):120 "
+          + "Received invalid message: {\"type\":\"RECORD\",\"record\":{\"namespace\":\"";
   public static final String REDACTED_LOGGED_RECORD_CONTENTS =
-      "2024-03-12 14:15:50 destination > ERROR i.a.c.i.b.Destination$ShimToSerializedAirbyteMessageConsumer(consumeMessage):120 "
+      "2024-03-21 12:19:08 \u001B[43mdestination\u001B[0m > ERROR i.a.c.i.b.Destination$ShimToSerializedAirbyteMessageConsumer(consumeMessage):120 "
           + "Received invalid message:"
           + AirbyteSecretConstants.SECRETS_MASK;
   public static final String TEST_LOGGED_SQL_VALUES =
-      "2024-03-19 20:03:43 destination > ERROR pool-4-thread-1 i.a.c.i.d.a.FlushWorkers(flush$lambda$6):192 Flush Worker (632c9) -- flush worker "
+      "2024-03-19 20:03:43 \u001B[43mdestination\u001B[0m > ERROR pool-4-thread-1 i.a.c.i.d.a.FlushWorkers(flush$lambda$6):192 Flush Worker (632c9) "
+          + "-- flush worker "
           + "error: java.lang.RuntimeException: org.jooq.exception.DataAccessException: SQL [insert into "
           + "\"airbyte_internal\".\"public_raw__stream_foo\" (_airbyte_raw_id, _airbyte_data, _airbyte_meta, _airbyte_extracted_at, "
           + "_airbyte_loaded_at) values ('UUID', a bunch of other stuff";
 
   public static final String REDACTED_LOGGED_SQL_VALUES =
-      "2024-03-19 20:03:43 destination > ERROR pool-4-thread-1 i.a.c.i.d.a.FlushWorkers(flush$lambda$6):192 Flush Worker (632c9) -- flush worker "
+      "2024-03-19 20:03:43 \u001B[43mdestination\u001B[0m > ERROR pool-4-thread-1 i.a.c.i.d.a.FlushWorkers(flush$lambda$6):192 Flush Worker (632c9) "
+          + "-- flush worker "
           + "error: java.lang.RuntimeException: org.jooq.exception.DataAccessException: SQL [insert into "
           + "\"airbyte_internal\".\"public_raw__stream_foo\" (_airbyte_raw_id, _airbyte_data, _airbyte_meta, _airbyte_extracted_at, "
           + "_airbyte_loaded_at) values ("

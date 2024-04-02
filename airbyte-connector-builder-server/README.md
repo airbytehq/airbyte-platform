@@ -33,16 +33,16 @@ Then run the server (You can also do this w/o build)
 ./gradlew -p oss airbyte-connector-builder-server:run
 ```
 
-The server is now reachable on localhost:80
+The server is now reachable on localhost:8080
 
 If you want to run the full platform with this local instance, you must edit the `.env` file as follows:
 
 ``` bash
 # replace this
-CONNECTOR_BUILDER_SERVER_API_HOST=http://airbyte-connector-builder-server:80
+CONNECTOR_BUILDER_SERVER_API_HOST=http://airbyte-connector-builder-server:8080
 
 # with this
-CONNECTOR_BUILDER_SERVER_API_HOST=http://host.docker.internal:80
+CONNECTOR_BUILDER_SERVER_API_HOST=http://host.docker.internal:8080
 ```
 
 Note: there are two different, but very similarly-named, environment variables; you must edit `CONNECTOR_BUILDER_SERVER_API_HOST`, not `CONNECTOR_BUILDER_API_HOST`.
@@ -70,15 +70,15 @@ Developing connectors that require 3rd party libraries can be done by running th
  - `CDK_PYTHON` should point to the virtual environment's python executable (example: `export CDK_PYTHON=~/code/airbyte/airbyte-cdk/python/.venv/bin/python`)
 3. export CDK_ENTRYPOINT=<path_to_CDK_connector_builder_main.py>
 4. ./gradlew -p oss airbyte-connector-builder-server:run
-    1. The server is now reachable on localhost:80
-5. Update the server to point to port 80 by editing .env and replacing
+    1. The server is now reachable on localhost:8080
+5. Update the server to point to port 8080 by editing .env and replacing
     
     ```
-    CONNECTOR_BUILDER_SERVER_API_HOST=http://airbyte-connector-builder-server:80
+    CONNECTOR_BUILDER_SERVER_API_HOST=http://airbyte-connector-builder-server:8080
     ```
     with
     ```
-    CONNECTOR_BUILDER_SERVER_API_HOST=http://host.docker.internal:80
+    CONNECTOR_BUILDER_SERVER_API_HOST=http://host.docker.internal:8080
     ```
     
 6. Follow the standard instructions

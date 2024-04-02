@@ -47,10 +47,6 @@ public abstract class NotificationClient {
                                                             final ActorDefinitionBreakingChange breakingChange)
       throws IOException, InterruptedException;
 
-  public abstract boolean notifySuccess(String message) throws IOException, InterruptedException;
-
-  public abstract boolean notifyFailure(String message) throws IOException, InterruptedException;
-
   public abstract boolean notifySchemaPropagated(final SchemaUpdateNotification notification,
                                                  final String recipient)
       throws IOException, InterruptedException;

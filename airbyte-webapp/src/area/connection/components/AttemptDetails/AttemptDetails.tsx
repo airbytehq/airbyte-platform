@@ -5,7 +5,7 @@ import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "re
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { AttemptRead, AttemptStatus, FailureReason, FailureType } from "core/api/types/AirbyteClient";
+import { AttemptRead, AttemptStats, AttemptStatus, FailureReason, FailureType } from "core/api/types/AirbyteClient";
 import { formatBytes } from "core/utils/numberHelper";
 
 import styles from "./AttemptDetails.module.scss";
@@ -23,6 +23,7 @@ interface AttemptDetailsProps {
   isPartialSuccess?: boolean;
   showEndedAt?: boolean;
   showFailureMessage?: boolean;
+  aggregatedAttemptStats?: AttemptStats;
 }
 
 export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
@@ -32,6 +33,7 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
   isPartialSuccess,
   showEndedAt = false,
   showFailureMessage = true,
+  aggregatedAttemptStats,
 }) => {
   const { formatMessage } = useIntl();
 
@@ -87,7 +89,7 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
           </>
         )}
         <Text as="span" color="grey" size="sm">
-          {formatBytes(attempt?.totalStats?.bytesEmitted)}
+          {formatBytes(aggregatedAttemptStats?.bytesEmitted || attempt?.totalStats?.bytesEmitted)}
         </Text>
         <Text as="span" color="grey" size="sm">
           |
@@ -95,7 +97,7 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
         <Text as="span" color="grey" size="sm">
           <FormattedMessage
             id="sources.countRecordsExtracted"
-            values={{ count: attempt.totalStats?.recordsEmitted || 0 }}
+            values={{ count: aggregatedAttemptStats?.recordsEmitted || attempt.totalStats?.recordsEmitted || 0 }}
           />
         </Text>
         <Text as="span" color="grey" size="sm">
@@ -104,7 +106,7 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
         <Text as="span" color="grey" size="sm">
           <FormattedMessage
             id="sources.countRecordsLoaded"
-            values={{ count: attempt.totalStats?.recordsCommitted || 0 }}
+            values={{ count: aggregatedAttemptStats?.recordsCommitted || attempt.totalStats?.recordsCommitted || 0 }}
           />
         </Text>
         <Text as="span" color="grey" size="sm">

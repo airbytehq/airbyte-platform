@@ -16,6 +16,7 @@ import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.Metadata;
 import io.airbyte.protocol.models.AirbyteErrorTraceMessage;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
+import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.FailureHelper.ConnectorCommand;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
@@ -24,6 +25,7 @@ import io.temporal.failure.ActivityFailure;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class FailureHelperTest {
@@ -84,6 +86,31 @@ class FailureHelperTest {
   void testGenericFailureFromTraceNoFailureType() throws Exception {
     final FailureReason failureReason = FailureHelper.genericFailure(TRACE_MESSAGE, Long.valueOf(12345), 1);
     assertEquals(failureReason.getFailureType(), FailureType.SYSTEM_ERROR);
+  }
+
+  @Test
+  void testExtractStreamDescriptor() {
+    String name = "users";
+    String namespace = "public";
+    final AirbyteTraceMessage traceMessage =
+        AirbyteMessageUtils.createErrorTraceMessage("a error with a stream", 80.0, AirbyteErrorTraceMessage.FailureType.SYSTEM_ERROR);
+    traceMessage.getError().setStreamDescriptor(new StreamDescriptor().withName(name).withNamespace(namespace));
+    final FailureReason failureReason = FailureHelper.genericFailure(traceMessage, 1934L, 0);
+    Assertions.assertNotNull(failureReason.getStreamDescriptor());
+    assertEquals(failureReason.getStreamDescriptor().getName(), name);
+    assertEquals(failureReason.getStreamDescriptor().getNamespace(), namespace);
+  }
+
+  @Test
+  void testExtractStreamDescriptorNoNamespace() {
+    String name = "users";
+    final AirbyteTraceMessage traceMessage =
+        AirbyteMessageUtils.createErrorTraceMessage("a error with a stream", 80.0, AirbyteErrorTraceMessage.FailureType.SYSTEM_ERROR);
+    traceMessage.getError().setStreamDescriptor(new StreamDescriptor().withName(name));
+    final FailureReason failureReason = FailureHelper.genericFailure(traceMessage, 1934L, 0);
+    Assertions.assertNotNull(failureReason.getStreamDescriptor());
+    assertEquals(failureReason.getStreamDescriptor().getName(), name);
+    assertNull(failureReason.getStreamDescriptor().getNamespace());
   }
 
   @Test

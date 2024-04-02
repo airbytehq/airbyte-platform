@@ -18,3 +18,16 @@ airbyte:
     username: ${KEYCLOAK_ADMIN_USER:}
     password: ${KEYCLOAK_ADMIN_PASSWORD:}
     reset-realm: ${KEYCLOAK_RESET_REALM:false}
+
+datasources:
+  config:
+    connection-test-query: SELECT 1
+    connection-timeout: 30000
+    maximum-pool-size: 10
+    minimum-idle: 0
+    idle-timeout: 600000
+    initialization-fail-timeout: -1 # Disable fail fast checking to avoid issues due to other pods not being started in time
+    url: ${DATABASE_URL}
+    driverClassName: org.postgresql.Driver
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}

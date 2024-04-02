@@ -84,6 +84,8 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.global.database.secretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
                   key: {{ .Values.global.database.secretValue | default "DATABASE_PASSWORD" }}
+          securityContext: 
+            {{- toYaml .Values.initContainerSecurityContext | nindent 14 }}
         {{- end }}
 
         {{- if .Values.extraInitContainers }}
@@ -201,6 +203,7 @@ spec:
       {{- if .Values.global.extraContainers }}
       {{ toYaml .Values.global.extraContainers | nindent 8 }}
       {{- end }}
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 10 }}
       volumes:
       {{- if .Values.extraVolumes }}
       {{ toYaml .Values.extraVolumes | nindent 8 }}

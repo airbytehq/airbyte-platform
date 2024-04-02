@@ -50,15 +50,7 @@ export const useConnectorDocumentation = (
   if (isDev && documentationUrl) {
     const localDocPath = documentationUrl.replace(DOCS_URL, LOCAL_DOCS_PATH);
     fetchDocumentation = () =>
-      fetch(`${localDocPath}.inapp.md`)
-        .then((response) => {
-          // try to fetch inapp doc first
-          if (response.ok) {
-            return response;
-          }
-          // if inapp doc is not found, try to fetch the full doc
-          return fetch(`${localDocPath}.md`);
-        })
+      fetch(`${localDocPath}.md`)
         .then((response) => response.text())
         .then((text) => {
           return {

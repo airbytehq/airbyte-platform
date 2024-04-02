@@ -422,15 +422,23 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   SIDECAR_CHECK(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
       "sidecar_check",
-      "Exit of the connetor sidecar"),
+      "Exit of the connector sidecar"),
 
   CATALOG_DISCOVERY(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
       "catalog_discover",
-      "Exit of the connetor sidecar"),
+      "Exit of the connector sidecar"),
 
   SPEC(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
       "spec",
       "Result of the spec operation"),
+
+  ACTIVITY_PAYLOAD_READ_FROM_DOC_STORE(MetricEmittingApps.WORKER,
+      "activity_payload_read_from_doc_store",
+      "An activity payload was read from the doc store."),
+
+  ACTIVITY_PAYLOAD_WRITTEN_TO_DOC_STORE(MetricEmittingApps.WORKER,
+      "activity_payload_written_to_doc_store",
+      "An activity payload was written to the doc store."),
 
   PAYLOAD_SIZE_EXCEEDED(MetricEmittingApps.WORKER,
       "payload_size_exceeded",

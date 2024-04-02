@@ -1,2 +1,2 @@
 export * from "./CommonRequestError";
-export * from "./LogsRequestError";
+export * from "./ErrorWithJobInfo";

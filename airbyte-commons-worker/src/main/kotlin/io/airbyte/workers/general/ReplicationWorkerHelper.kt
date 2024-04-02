@@ -452,8 +452,7 @@ class ReplicationWorkerHelper(
 
     val failures = mutableListOf<FailureReason>()
     // only .setFailures() if a failure occurred or if there is an AirbyteErrorTraceMessage
-    messageTracker.errorTraceMessageFailure(context.jobId, context.attempt)
-      ?.let { failures.add(it) }
+    failures.addAll(messageTracker.errorTraceMessageFailure(context.jobId, context.attempt))
 
     failures.addAll(replicationFailures)
 

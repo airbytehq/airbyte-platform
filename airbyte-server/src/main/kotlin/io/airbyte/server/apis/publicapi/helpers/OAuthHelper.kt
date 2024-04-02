@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.helpers
 
-import io.airbyte.server.apis.publicapi.problems.InvalidRedirectUrlProblem
+import io.airbyte.commons.server.errors.problems.InvalidRedirectUrlProblem
 import org.slf4j.LoggerFactory
 import java.net.URI
 

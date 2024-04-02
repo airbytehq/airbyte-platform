@@ -8,6 +8,7 @@ import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 import { Tabs, LinkTab } from "components/ui/Tabs";
 
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useExperiment } from "hooks/services/Experiment";
 import { RoutePaths, ConnectionRoutePaths } from "pages/routePaths";
 
 import { ConnectionTitleBlock } from "./ConnectionTitleBlock";
@@ -17,6 +18,7 @@ export const ConnectionPageHeader = () => {
   const basePath = `/${RoutePaths.Workspaces}/${params.workspaceId}/${RoutePaths.Connections}/${params.connectionId}`;
   const { formatMessage } = useIntl();
   const currentTab = params["*"] || ConnectionRoutePaths.Status;
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
 
   const { connection, schemaRefreshing } = useConnectionEditService();
   const breadcrumbsData = [
@@ -45,7 +47,7 @@ export const ConnectionPageHeader = () => {
         id: ConnectionRoutePaths.Replication,
         name: (
           <FlexContainer gap="sm" as="span">
-            <FormattedMessage id="connection.replication" />
+            <FormattedMessage id={isSimplifiedCreation ? "connection.schema" : "connection.replication"} />
             <ChangesStatusIcon schemaChange={connection.schemaChange} />
           </FlexContainer>
         ),
@@ -67,7 +69,7 @@ export const ConnectionPageHeader = () => {
     ];
 
     return tabs;
-  }, [basePath, connection.schemaChange, schemaRefreshing]);
+  }, [basePath, connection.schemaChange, schemaRefreshing, isSimplifiedCreation]);
 
   return (
     <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>

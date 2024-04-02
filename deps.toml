@@ -20,7 +20,7 @@ kotlin-logging = "5.1.0"
 kubernetes-client = "6.5.1"
 log4j = "2.22.1"
 lombok = "1.18.30"
-micronaut = "4.3.6"
+micronaut = "4.3.7"
 micronaut-cache = "4.2.2"
 micronaut-data = "4.6.1"
 micronaut-email = "2.4.0"
@@ -28,8 +28,8 @@ micronaut-jaxrs = "4.3.0"
 micronaut-jdbc = "5.5.1"
 micronaut-kotlin = "4.2.0"
 micronaut-micrometer = "5.4.0"
-micronaut-openapi = "6.5.1"
-micronaut-security = "4.6.7"
+micronaut-openapi = "6.6.3"
+micronaut-security = "4.6.9"
 micronaut-test = "4.2.0"
 moshi = "1.15.0"
 mockito = "5.8.0"
@@ -257,5 +257,5 @@ temporal-telemetry = ["temporal-opentracing"]
 [plugins]
 ksp = { id ="com.google.devtools.ksp", version = "1.9.22-1.0.17"}
 node-gradle = { id = "com.github.node-gradle.node", version = "3.4.0" }
-nu-studer-jooq = { id = "nu.studer.jooq", version = "8.2.1" }
+nu-studer-jooq = { id = "nu.studer.jooq", version = "9.0" }
 de-undercouch-download = { id = "de.undercouch.download", version = "5.5.0" }

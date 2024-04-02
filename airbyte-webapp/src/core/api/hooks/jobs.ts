@@ -1,16 +1,25 @@
-import { Updater, useInfiniteQuery, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Updater,
+  UseQueryOptions,
+  useInfiniteQuery,
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { jobStatusesIndicatingFinishedExecution } from "components/connection/ConnectionSync/ConnectionSyncContext";
 
 import {
   cancelJob,
+  getAttemptCombinedStats,
   getAttemptForJob,
   getJobDebugInfo,
   getJobInfoWithoutLogs,
   listJobsFor,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
-import { JobListRequestBody, JobReadList } from "../types/AirbyteClient";
+import { AttemptStats, JobListRequestBody, JobReadList } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -160,4 +169,22 @@ export const useAttemptForJob = (jobId: number, attemptNumber: number) => {
       },
     }
   );
+};
+
+export const useAttemptCombinedStatsForJob = (
+  jobId: number,
+  attemptNumber: number,
+  options?: Readonly<Omit<UseQueryOptions<AttemptStats>, "queryKey" | "queryFn" | "suspense">>
+) => {
+  const requestOptions = useRequestOptions();
+  // the endpoint returns a 404 if there aren't stats for this attempt
+  try {
+    return useSuspenseQuery(
+      [SCOPE_WORKSPACE, "jobs", "attemptCombinedStatsForJob", jobId, attemptNumber],
+      () => getAttemptCombinedStats({ jobId, attemptNumber }, requestOptions),
+      options
+    );
+  } catch (e) {
+    return undefined;
+  }
 };

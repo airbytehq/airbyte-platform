@@ -18,15 +18,16 @@ import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.SyncMode
+import io.airbyte.commons.server.errors.problems.ConnectionConfigurationProblem
+import io.airbyte.commons.server.errors.problems.ConnectionConfigurationProblem.Companion.duplicateStream
+import io.airbyte.commons.server.errors.problems.ConnectionConfigurationProblem.Companion.invalidStreamName
+import io.airbyte.commons.server.errors.problems.UnexpectedProblem
 import io.airbyte.public_api.model.generated.AirbyteApiConnectionSchedule
 import io.airbyte.public_api.model.generated.ConnectionSyncModeEnum
 import io.airbyte.public_api.model.generated.ScheduleTypeEnum
 import io.airbyte.public_api.model.generated.StreamConfiguration
 import io.airbyte.public_api.model.generated.StreamConfigurations
 import io.airbyte.server.apis.publicapi.mappers.ConnectionReadMapper
-import io.airbyte.server.apis.publicapi.problems.ConnectionConfigurationProblem.Companion.duplicateStream
-import io.airbyte.server.apis.publicapi.problems.ConnectionConfigurationProblem.Companion.invalidStreamName
-import io.airbyte.server.apis.publicapi.problems.UnexpectedProblem
 import io.micronaut.http.HttpStatus
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
@@ -123,7 +124,7 @@ object AirbyteCatalogHelper {
     if (connectionSchedule != null) {
       if (connectionSchedule.scheduleType != null && connectionSchedule.scheduleType === ScheduleTypeEnum.CRON) {
         if (connectionSchedule.cronExpression == null) {
-          throw io.airbyte.server.apis.publicapi.problems.ConnectionConfigurationProblem.missingCronExpression()
+          throw ConnectionConfigurationProblem.missingCronExpression()
         }
         try {
           if (connectionSchedule.cronExpression.endsWith("UTC")) {
@@ -141,13 +142,13 @@ object AirbyteCatalogHelper {
         } catch (e: NumberFormatException) {
           log.debug("Invalid cron expression: " + connectionSchedule.cronExpression)
           log.debug("NumberFormatException: $e")
-          throw io.airbyte.server.apis.publicapi.problems.ConnectionConfigurationProblem.invalidCronExpressionUnderOneHour(
+          throw ConnectionConfigurationProblem.invalidCronExpressionUnderOneHour(
             connectionSchedule.cronExpression,
           )
         } catch (e: IllegalArgumentException) {
           log.debug("Invalid cron expression: " + connectionSchedule.cronExpression)
           log.debug("IllegalArgumentException: $e")
-          throw io.airbyte.server.apis.publicapi.problems.ConnectionConfigurationProblem.invalidCronExpression(
+          throw ConnectionConfigurationProblem.invalidCronExpression(
             connectionSchedule.cronExpression,
             e.message,
           )
@@ -186,7 +187,7 @@ object AirbyteCatalogHelper {
     // validate that sync and destination modes are valid
     val validCombinedSyncModes: Set<ConnectionSyncModeEnum> = validCombinedSyncModes(airbyteStream.supportedSyncModes, validDestinationSyncModes)
     if (!validCombinedSyncModes.contains(streamConfiguration.syncMode)) {
-      throw io.airbyte.server.apis.publicapi.problems.ConnectionConfigurationProblem.handleSyncModeProblem(
+      throw ConnectionConfigurationProblem.handleSyncModeProblem(
         streamConfiguration.syncMode,
         streamConfiguration.name,
         validCombinedSyncModes,
@@ -228,7 +229,7 @@ object AirbyteCatalogHelper {
       if (!cursorField.isNullOrEmpty()) {
         // if cursor given is not empty and is NOT the same as the default, throw error
         if (java.util.Set.copyOf<String>(cursorField) != java.util.Set.copyOf<String>(airbyteStream.defaultCursorField)) {
-          throw io.airbyte.server.apis.publicapi.problems.ConnectionConfigurationProblem.sourceDefinedCursorFieldProblem(
+          throw ConnectionConfigurationProblem.sourceDefinedCursorFieldProblem(
             airbyteStream.name,
             airbyteStream.defaultCursorField!!,
           )
@@ -240,13 +241,13 @@ object AirbyteCatalogHelper {
         // validate cursor field
         val validCursorFields: List<List<String>> = getStreamFields(airbyteStream.jsonSchema!!)
         if (!validCursorFields.contains(cursorField)) {
-          throw io.airbyte.server.apis.publicapi.problems.ConnectionConfigurationProblem.invalidCursorField(airbyteStream.name, validCursorFields)
+          throw ConnectionConfigurationProblem.invalidCursorField(airbyteStream.name, validCursorFields)
         }
         config.cursorField = cursorField
       } else {
         // no default or given cursor field
         if (airbyteStream.defaultCursorField == null || airbyteStream.defaultCursorField!!.isEmpty()) {
-          throw io.airbyte.server.apis.publicapi.problems.ConnectionConfigurationProblem.missingCursorField(airbyteStream.name)
+          throw ConnectionConfigurationProblem.missingCursorField(airbyteStream.name)
         }
         config.cursorField = airbyteStream.defaultCursorField // this probably isn't necessary and should be already set
       }
@@ -267,17 +268,17 @@ object AirbyteCatalogHelper {
         // todo maybe check that they don't provide the same primary key twice?
         for (singlePrimaryKey in primaryKey) {
           if (!validPrimaryKey.contains(singlePrimaryKey)) { // todo double check if the .contains() for list of strings works as intended
-            throw io.airbyte.server.apis.publicapi.problems.ConnectionConfigurationProblem.invalidPrimaryKey(airbyteStream.name, validPrimaryKey)
+            throw ConnectionConfigurationProblem.invalidPrimaryKey(airbyteStream.name, validPrimaryKey)
           }
         }
         config.primaryKey = primaryKey
       } else {
-        throw io.airbyte.server.apis.publicapi.problems.ConnectionConfigurationProblem.missingPrimaryKey(airbyteStream.name)
+        throw ConnectionConfigurationProblem.missingPrimaryKey(airbyteStream.name)
       }
     } else {
       // source defined primary key exists
       if (!primaryKey.isNullOrEmpty()) {
-        throw io.airbyte.server.apis.publicapi.problems.ConnectionConfigurationProblem.primaryKeyAlreadyDefined(airbyteStream.name)
+        throw ConnectionConfigurationProblem.primaryKeyAlreadyDefined(airbyteStream.name)
       } else {
         config.primaryKey = airbyteStream.sourceDefinedPrimaryKey // this probably isn't necessary and should be already set
       }

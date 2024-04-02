@@ -24,7 +24,6 @@ import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.NormalizationSummary;
-import io.airbyte.config.OperatorDbtInput;
 import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.OperatorWebhookInput;
 import io.airbyte.config.ResourceRequirements;
@@ -82,7 +81,6 @@ class SyncWorkflowTest {
   private WorkflowClient client;
   private ReplicationActivityImpl replicationActivity;
   private NormalizationActivityImpl normalizationActivity;
-  private DbtTransformationActivityImpl dbtTransformationActivity;
   private NormalizationSummaryCheckActivityImpl normalizationSummaryCheckActivity;
   private WebhookOperationActivityImpl webhookOperationActivity;
   private RefreshSchemaActivityImpl refreshSchemaActivity;
@@ -118,7 +116,6 @@ class SyncWorkflowTest {
   private StandardSync sync;
   private StandardSyncInput syncInput;
   private NormalizationInput normalizationInput;
-  private OperatorDbtInput operatorDbtInput;
   private StandardSyncOutput replicationSuccessOutput;
   private StandardSyncOutput replicationFailOutput;
   private StandardSyncSummary standardSyncSummary;
@@ -157,16 +154,8 @@ class SyncWorkflowTest {
         .withWorkspaceId(syncInput.getWorkspaceId())
         .withConnectionContext(new ConnectionContext().withOrganizationId(ORGANIZATION_ID));
 
-    operatorDbtInput = new OperatorDbtInput()
-        .withDestinationConfiguration(syncInput.getDestinationConfiguration())
-        .withOperatorDbt(syncInput.getOperationSequence().get(1).getOperatorDbt())
-        .withConnectionId(syncInput.getConnectionId())
-        .withWorkspaceId(syncInput.getWorkspaceId())
-        .withConnectionContext(new ConnectionContext().withOrganizationId(ORGANIZATION_ID));
-
     replicationActivity = mock(ReplicationActivityImpl.class);
     normalizationActivity = mock(NormalizationActivityImpl.class);
-    dbtTransformationActivity = mock(DbtTransformationActivityImpl.class);
     normalizationSummaryCheckActivity = mock(NormalizationSummaryCheckActivityImpl.class);
     webhookOperationActivity = mock(WebhookOperationActivityImpl.class);
     refreshSchemaActivity = mock(RefreshSchemaActivityImpl.class);
@@ -241,8 +230,13 @@ class SyncWorkflowTest {
 
   // bundle up all the temporal worker setup / execution into one method.
   private StandardSyncOutput execute() {
-    syncWorker.registerActivitiesImplementations(replicationActivity, normalizationActivity, dbtTransformationActivity,
-        normalizationSummaryCheckActivity, webhookOperationActivity, refreshSchemaActivity, configFetchActivity, workloadFeatureFlagActivity);
+    syncWorker.registerActivitiesImplementations(replicationActivity,
+        normalizationActivity,
+        normalizationSummaryCheckActivity,
+        webhookOperationActivity,
+        refreshSchemaActivity,
+        configFetchActivity,
+        workloadFeatureFlagActivity);
     testEnv.start();
     final SyncWorkflow workflow =
         client.newWorkflowStub(SyncWorkflow.class, WorkflowOptions.newBuilder().setTaskQueue(SYNC_QUEUE).build());
@@ -263,7 +257,6 @@ class SyncWorkflowTest {
 
     verifyReplication(replicationActivity, syncInput);
     verifyNormalize(normalizationActivity, normalizationInput);
-    verifyDbtTransform(dbtTransformationActivity, null, operatorDbtInput);
     verifyShouldRefreshSchema(refreshSchemaActivity);
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     assertEquals(
@@ -287,7 +280,6 @@ class SyncWorkflowTest {
 
     verifyReplication(replicationActivity, syncInput, useWorkloadApi, false);
     verifyNormalize(normalizationActivity, normalizationInput);
-    verifyDbtTransform(dbtTransformationActivity, null, operatorDbtInput);
     verifyShouldRefreshSchema(refreshSchemaActivity);
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     assertEquals(
@@ -305,7 +297,6 @@ class SyncWorkflowTest {
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyReplication(replicationActivity, syncInput);
     verifyNoInteractions(normalizationActivity);
-    verifyNoInteractions(dbtTransformationActivity);
   }
 
   @Test
@@ -323,7 +314,6 @@ class SyncWorkflowTest {
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyReplication(replicationActivity, syncInput);
     verifyNormalize(normalizationActivity, normalizationInput);
-    verifyDbtTransform(dbtTransformationActivity, null, operatorDbtInput);
     assertEquals(
         replicationFailOutput.withNormalizationSummary(normalizationSummary).getStandardSyncSummary(),
         actualOutput.getStandardSyncSummary());
@@ -344,7 +334,6 @@ class SyncWorkflowTest {
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyReplication(replicationActivity, syncInput);
     verifyNormalize(normalizationActivity, normalizationInput);
-    verifyNoInteractions(dbtTransformationActivity);
   }
 
   @Test
@@ -360,7 +349,6 @@ class SyncWorkflowTest {
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyReplication(replicationActivity, syncInput);
     verifyNoInteractions(normalizationActivity);
-    verifyNoInteractions(dbtTransformationActivity);
   }
 
   @Test
@@ -381,7 +369,6 @@ class SyncWorkflowTest {
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyReplication(replicationActivity, syncInput);
     verifyNormalize(normalizationActivity, normalizationInput);
-    verifyNoInteractions(dbtTransformationActivity);
   }
 
   @Test
@@ -395,7 +382,6 @@ class SyncWorkflowTest {
     verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyReplication(replicationActivity, syncInput);
     verifyNoInteractions(normalizationActivity);
-    verifyDbtTransform(dbtTransformationActivity, null, operatorDbtInput);
   }
 
   @Test
@@ -495,16 +481,6 @@ class SyncWorkflowTest {
         JOB_RUN_CONFIG,
         DESTINATION_LAUNCHER_CONFIG,
         normalizationInput);
-  }
-
-  private static void verifyDbtTransform(final DbtTransformationActivity dbtTransformationActivity,
-                                         final ResourceRequirements resourceRequirements,
-                                         final OperatorDbtInput operatorDbtInput) {
-    verify(dbtTransformationActivity).run(
-        JOB_RUN_CONFIG,
-        DESTINATION_LAUNCHER_CONFIG,
-        resourceRequirements,
-        operatorDbtInput);
   }
 
   private static void verifyShouldRefreshSchema(final RefreshSchemaActivity refreshSchemaActivity) {

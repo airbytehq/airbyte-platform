@@ -1,15 +1,15 @@
 import classNames from "classnames";
 
 import { useCreatePermission, useCurrentOrganizationInfo, useCurrentWorkspace, useUpdatePermissions } from "core/api";
-import { PermissionType, WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
+import { PermissionType } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 
 import styles from "./ChangeRoleMenuItem.module.scss";
 import { ChangeRoleMenuItemContent } from "./ChangeRoleMenuItemContent";
-import { ResourceType } from "../components/useGetAccessManagementData";
+import { ResourceType, UnifiedWorkspaceUserModel } from "../components/useGetAccessManagementData";
 
 const useCreateOrUpdateRole = (
-  user: WorkspaceUserAccessInfoRead,
+  user: UnifiedWorkspaceUserModel,
   resourceType: ResourceType,
   permissionType: PermissionType
 ) => {
@@ -32,12 +32,12 @@ const useCreateOrUpdateRole = (
           throw new Error("Organization info not found");
         }
         return createPermission({
-          userId: user.userId,
+          userId: user.id,
           permissionType,
           organizationId: organizationInfo.organizationId,
         });
       }
-      return createPermission({ userId: user.userId, permissionType, workspaceId });
+      return createPermission({ userId: user.id, permissionType, workspaceId });
     }
 
     return updatePermission({ permissionId: existingPermissionIdForResourceType, permissionType });
@@ -45,7 +45,7 @@ const useCreateOrUpdateRole = (
 };
 
 export const disallowedRoles = (
-  user: WorkspaceUserAccessInfoRead,
+  user: UnifiedWorkspaceUserModel | null,
   targetResourceType: ResourceType,
   isCurrentUser: boolean
 ): PermissionType[] => {
@@ -65,7 +65,7 @@ export const disallowedRoles = (
     return [];
   }
 
-  const organizationRole = user.organizationPermission?.permissionType;
+  const organizationRole = user?.organizationPermission?.permissionType;
 
   if (organizationRole === "organization_editor") {
     return ["workspace_reader"];
@@ -78,7 +78,7 @@ export const disallowedRoles = (
 };
 
 interface RoleMenuItemProps {
-  user: WorkspaceUserAccessInfoRead;
+  user: UnifiedWorkspaceUserModel;
   permissionType: PermissionType;
   resourceType: ResourceType;
   onClose: () => void;
@@ -87,7 +87,7 @@ interface RoleMenuItemProps {
 export const ChangeRoleMenuItem: React.FC<RoleMenuItemProps> = ({ user, permissionType, resourceType, onClose }) => {
   const createOrUpdateRole = useCreateOrUpdateRole(user, resourceType, permissionType);
   const currentUser = useCurrentUser();
-  const isCurrentUser = currentUser.userId === user.userId;
+  const isCurrentUser = currentUser.userId === user.id;
 
   const roleIsActive =
     permissionType === user.workspacePermission?.permissionType ||

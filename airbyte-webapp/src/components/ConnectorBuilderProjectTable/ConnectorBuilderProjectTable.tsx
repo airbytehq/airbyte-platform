@@ -302,6 +302,7 @@ export const ConnectorBuilderProjectTable = ({
       data={projects}
       className={styles.table}
       sorting={false}
+      stickyHeaders={false}
       initialSortBy={[{ id: "name", desc: false }]}
     />
   );

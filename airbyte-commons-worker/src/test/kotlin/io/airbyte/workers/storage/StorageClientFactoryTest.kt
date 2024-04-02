@@ -25,7 +25,7 @@ import software.amazon.awssdk.services.s3.S3Client
  * When upgrading to Micronaut 4, the `@get:Primary` and `@get:Bean` annotations might be replaceable with @MockBean.
  */
 
-private val bucket = StorageBucketConfig(log = "log", state = "state", workloadOutput = "workload")
+private val bucket = StorageBucketConfig(log = "log", state = "state", workloadOutput = "workload", activityPayload = "payload")
 
 @MicronautTest
 @Property(name = STORAGE_TYPE, value = "local")

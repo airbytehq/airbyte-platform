@@ -98,7 +98,7 @@ class NormalizationActivityImplTest {
     mWorkerConfigs = mock(WorkerConfigs.class);
 
     mStorageConfigs = mock(GcsStorageConfig.class);
-    when(mStorageConfigs.getBuckets()).thenReturn(new StorageBucketConfig("unused", "unused", "unused"));
+    when(mStorageConfigs.getBuckets()).thenReturn(new StorageBucketConfig("unused", "unused", "unused", "unused"));
     when(mStorageConfigs.getApplicationCredentials()).thenReturn("unused");
 
     LOG_CONFIGS = new LogConfigs(mStorageConfigs);

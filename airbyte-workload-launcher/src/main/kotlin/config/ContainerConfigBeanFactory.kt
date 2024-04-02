@@ -78,11 +78,9 @@ class ContainerConfigBeanFactory {
 
   @Singleton
   @Named("orchestratorContainerPorts")
-  fun orchestratorContainerPorts(
-    @Value("\${micronaut.server.port}") serverPort: Int,
-  ): List<ContainerPort> {
+  fun orchestratorContainerPorts(): List<ContainerPort> {
     return listOf(
-      ContainerPortBuilder().withContainerPort(serverPort).build(),
+      ContainerPortBuilder().withContainerPort(OrchestratorConstants.SERVER_PORT).build(),
       ContainerPortBuilder().withContainerPort(OrchestratorConstants.PORT1).build(),
       ContainerPortBuilder().withContainerPort(OrchestratorConstants.PORT2).build(),
       ContainerPortBuilder().withContainerPort(OrchestratorConstants.PORT3).build(),

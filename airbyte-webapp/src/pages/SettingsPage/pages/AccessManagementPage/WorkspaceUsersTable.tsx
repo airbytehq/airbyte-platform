@@ -72,5 +72,7 @@ export const WorkspaceUsersTable: React.FC<{
     [areAllRbacRolesEnabled, columnHelper, currentUserId]
   );
 
-  return <Table data={users} columns={columns} initialSortBy={[{ id: "userName", desc: false }]} />;
+  return (
+    <Table data={users} columns={columns} initialSortBy={[{ id: "userName", desc: false }]} stickyHeaders={false} />
+  );
 };
