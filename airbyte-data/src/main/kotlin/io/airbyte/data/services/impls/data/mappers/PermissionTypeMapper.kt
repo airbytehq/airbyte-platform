@@ -12,12 +12,13 @@ fun EntityPermissionType.toConfigModel(): ModelPermissionType {
     EntityPermissionType.organization_editor -> ModelPermissionType.ORGANIZATION_EDITOR
     EntityPermissionType.organization_reader -> ModelPermissionType.ORGANIZATION_READER
     EntityPermissionType.organization_member -> ModelPermissionType.ORGANIZATION_MEMBER
-    else -> throw IllegalArgumentException("Unexpected permission type: $this")
+    EntityPermissionType.instance_admin -> ModelPermissionType.INSTANCE_ADMIN
   }
 }
 
 fun ModelPermissionType.toEntity(): EntityPermissionType {
   return when (this) {
+    ModelPermissionType.WORKSPACE_OWNER -> EntityPermissionType.workspace_admin
     ModelPermissionType.WORKSPACE_ADMIN -> EntityPermissionType.workspace_admin
     ModelPermissionType.WORKSPACE_EDITOR -> EntityPermissionType.workspace_editor
     ModelPermissionType.WORKSPACE_READER -> EntityPermissionType.workspace_reader
@@ -25,6 +26,6 @@ fun ModelPermissionType.toEntity(): EntityPermissionType {
     ModelPermissionType.ORGANIZATION_EDITOR -> EntityPermissionType.organization_editor
     ModelPermissionType.ORGANIZATION_READER -> EntityPermissionType.organization_reader
     ModelPermissionType.ORGANIZATION_MEMBER -> EntityPermissionType.organization_member
-    else -> throw IllegalArgumentException("Unexpected permission type: $this")
+    ModelPermissionType.INSTANCE_ADMIN -> EntityPermissionType.instance_admin
   }
 }

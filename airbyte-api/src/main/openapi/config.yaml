@@ -3784,12 +3784,8 @@ paths:
               $ref: "#/components/schemas/PermissionUpdate"
         required: true
       responses:
-        "200":
+        "204":
           description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PermissionRead"
         "403":
           $ref: "#/components/responses/ForbiddenResponse"
         "404":

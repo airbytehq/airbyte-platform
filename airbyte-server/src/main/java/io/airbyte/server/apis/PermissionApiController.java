@@ -81,10 +81,11 @@ public class PermissionApiController implements PermissionApi {
   @Secured({ORGANIZATION_ADMIN, WORKSPACE_ADMIN})
   @Post("/update")
   @Override
-  public PermissionRead updatePermission(@Body final PermissionUpdate permissionUpdate) {
-    return ApiHelper.execute(() -> {
+  public void updatePermission(@Body final PermissionUpdate permissionUpdate) {
+    ApiHelper.execute(() -> {
       validatePermissionUpdate(permissionUpdate);
-      return permissionHandler.updatePermission(permissionUpdate);
+      permissionHandler.updatePermission(permissionUpdate);
+      return null;
     });
   }
 

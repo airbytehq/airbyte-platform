@@ -50,6 +50,7 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.UserPersistence;
+import io.airbyte.data.services.PermissionService;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Arrays;
@@ -83,6 +84,7 @@ class UserHandlerTest {
   OrganizationsHandler organizationsHandler;
   JwtUserAuthenticationResolver jwtUserAuthenticationResolver;
   InitialUserConfiguration initialUserConfiguration;
+  PermissionService permissionService;
 
   private static final UUID USER_ID = UUID.randomUUID();
   private static final String USER_NAME = "user 1";
@@ -103,6 +105,7 @@ class UserHandlerTest {
   void setUp() {
     userPersistence = mock(UserPersistence.class);
     permissionPersistence = mock(PermissionPersistence.class);
+    permissionService = mock(PermissionService.class);
     permissionHandler = mock(PermissionHandler.class);
     workspacesHandler = mock(WorkspacesHandler.class);
     organizationPersistence = mock(OrganizationPersistence.class);
@@ -111,8 +114,9 @@ class UserHandlerTest {
     jwtUserAuthenticationResolver = mock(JwtUserAuthenticationResolver.class);
     initialUserConfiguration = mock(InitialUserConfiguration.class);
 
-    userHandler = new UserHandler(userPersistence, permissionPersistence, organizationPersistence, permissionHandler, workspacesHandler,
-        uuidSupplier, jwtUserAuthenticationResolver, Optional.of(initialUserConfiguration));
+    userHandler =
+        new UserHandler(userPersistence, permissionPersistence, permissionService, organizationPersistence, permissionHandler, workspacesHandler,
+            uuidSupplier, jwtUserAuthenticationResolver, Optional.of(initialUserConfiguration));
   }
 
   @Test
@@ -351,7 +355,8 @@ class UserHandlerTest {
         } else {
           // replace default user handler with one that doesn't use initial user config (ie to test what
           // happens in Cloud)
-          userHandler = new UserHandler(userPersistence, permissionPersistence, organizationPersistence, permissionHandler, workspacesHandler,
+          userHandler = new UserHandler(userPersistence, permissionPersistence, permissionService, organizationPersistence, permissionHandler,
+              workspacesHandler,
               uuidSupplier, jwtUserAuthenticationResolver, Optional.empty());
         }
 
@@ -443,17 +448,17 @@ class UserHandlerTest {
       }
 
       private void verifyInstanceAdminPermissionCreation(final String initialUserEmail, final boolean initialUserPresent)
-          throws IOException {
+          throws Exception {
         // instance_admin permissions should only ever be created when the initial user config is present
         // (which should never be true in Cloud).
         // also, if the initial user email is null or doesn't match the new user's email, no instance_admin
         // permission should be created
         if (!initialUserPresent || initialUserEmail == null || !initialUserEmail.equalsIgnoreCase(NEW_EMAIL)) {
-          verify(permissionPersistence, never())
-              .writePermission(argThat(permission -> permission.getPermissionType().equals(PermissionType.INSTANCE_ADMIN)));
+          verify(permissionService, never())
+              .createPermission(argThat(permission -> permission.getPermissionType().equals(PermissionType.INSTANCE_ADMIN)));
         } else {
           // otherwise, instance_admin permission should be created
-          verify(permissionPersistence).writePermission(argThat(
+          verify(permissionService).createPermission(argThat(
               permission -> permission.getPermissionType().equals(PermissionType.INSTANCE_ADMIN) && permission.getUserId().equals(NEW_USER_ID)));
         }
       }
