@@ -85,18 +85,17 @@ public class JobNotifier {
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
   }
 
-  private void notifyJob(final String reason, final String action, final Job job, List<JobPersistence.AttemptStats> attemptStats) {
+  private void notifyJob(final String action, final Job job, List<JobPersistence.AttemptStats> attemptStats) {
     try {
       final UUID workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.getId());
       final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);
-      notifyJob(reason, action, job, attemptStats, workspace);
+      notifyJob(action, job, attemptStats, workspace);
     } catch (final Exception e) {
       LOGGER.error("Unable to read configuration:", e);
     }
   }
 
-  private void notifyJob(final String reason,
-                         final String action,
+  private void notifyJob(final String action,
                          final Job job,
                          final List<JobPersistence.AttemptStats> attempts,
                          final StandardWorkspace workspace) {
@@ -140,7 +139,7 @@ public class JobNotifier {
         }
       }
       final NotificationItem notificationItem = createAndSend(notificationSettings, action,
-          job, reason, standardSync, workspace, source, destination,
+          job, standardSync, workspace, source, destination,
           syncStats);
 
       if (notificationItem != null) {
@@ -216,7 +215,7 @@ public class JobNotifier {
     try {
       final UUID workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.getId());
       final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);
-      notifyJob(reason, action, job, attemptStats, workspace);
+      notifyJob(action, job, attemptStats, workspace);
     } catch (final Exception e) {
       LOGGER.error("Unable to read configuration:", e);
     }
@@ -236,20 +235,20 @@ public class JobNotifier {
         formatter.format(jobStartedDate), durationString, reason);
   }
 
-  public void failJob(final String reason, final Job job, List<JobPersistence.AttemptStats> attemptStats) {
-    notifyJob(reason, FAILURE_NOTIFICATION, job, attemptStats);
+  public void failJob(final Job job, List<JobPersistence.AttemptStats> attemptStats) {
+    notifyJob(FAILURE_NOTIFICATION, job, attemptStats);
   }
 
   public void successJob(final Job job, List<JobPersistence.AttemptStats> attemptStats) {
-    notifyJob(null, SUCCESS_NOTIFICATION, job, attemptStats);
+    notifyJob(SUCCESS_NOTIFICATION, job, attemptStats);
   }
 
   public void autoDisableConnection(final Job job, List<JobPersistence.AttemptStats> attemptStats) {
-    notifyJob(null, CONNECTION_DISABLED_NOTIFICATION, job, attemptStats);
+    notifyJob(CONNECTION_DISABLED_NOTIFICATION, job, attemptStats);
   }
 
   public void autoDisableConnectionWarning(final Job job, List<JobPersistence.AttemptStats> attemptStats) {
-    notifyJob(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, job, attemptStats);
+    notifyJob(CONNECTION_DISABLED_WARNING_NOTIFICATION, job, attemptStats);
   }
 
   private void sendNotification(final NotificationItem notificationItem,
@@ -278,7 +277,6 @@ public class JobNotifier {
   private NotificationItem createAndSend(final NotificationSettings notificationSettings,
                                          final String action,
                                          final Job job,
-                                         final String reason,
                                          final StandardSync standardSync,
                                          final StandardWorkspace workspace,
                                          final SourceConnection source,
@@ -289,12 +287,12 @@ public class JobNotifier {
 
     // Error message we show in the notification is the first failure reason of the last attempt if
     // available
-    // If it is not available, default to the provided reason string, it is usually less descriptive
+    // If it is not available, default to null
     final String failureMessage = job.getLastAttempt()
         .flatMap(Attempt::getFailureSummary)
         .flatMap(s -> s.getFailures().stream().findFirst())
         .map(FailureReason::getExternalMessage)
-        .orElse(reason);
+        .orElse(null);
 
     SyncSummary.SyncSummaryBuilder summaryBuilder = SyncSummary.builder()
         .workspace(WorkspaceInfo.builder()

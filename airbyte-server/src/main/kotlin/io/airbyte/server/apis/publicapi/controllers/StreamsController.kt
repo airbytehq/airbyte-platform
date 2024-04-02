@@ -11,17 +11,17 @@ import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.SyncMode
+import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
+import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.server.errors.problems.UnexpectedProblem
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.public_api.generated.PublicStreamsApi
 import io.airbyte.public_api.model.generated.ConnectionSyncModeEnum
 import io.airbyte.public_api.model.generated.StreamProperties
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
-import io.airbyte.server.apis.publicapi.authorization.AirbyteApiAuthorizationHelper
-import io.airbyte.server.apis.publicapi.authorization.Scope
 import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.STREAMS_PATH
-import io.airbyte.server.apis.publicapi.problems.UnexpectedProblem
 import io.airbyte.server.apis.publicapi.services.DestinationService
 import io.airbyte.server.apis.publicapi.services.SourceService
 import io.micronaut.http.HttpStatus
@@ -40,7 +40,7 @@ class StreamsController(
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
   private val trackingHelper: TrackingHelper,
-  private val airbyteApiAuthorizationHelper: AirbyteApiAuthorizationHelper,
+  private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val currentUserService: CurrentUserService,
 ) : PublicStreamsApi {
   companion object {
@@ -55,13 +55,13 @@ class StreamsController(
   ): Response {
     // Check permission for source and destination
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(sourceId.toString()),
       Scope.SOURCE,
       userId,
       PermissionType.WORKSPACE_READER,
     )
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(destinationId!!.toString()),
       Scope.DESTINATION,
       userId,

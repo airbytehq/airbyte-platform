@@ -124,7 +124,7 @@ class JobNotifierTest {
   @Test
   void testFailJob() throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
     List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
-    jobNotifier.failJob("JobNotifierTest was running", job, attemptStats);
+    jobNotifier.failJob(job, attemptStats);
     final DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL).withZone(ZoneId.systemDefault());
     SyncSummary summary = SyncSummary.builder().build();
     verify(notificationClient).notifyJobFailure(any(), ArgumentMatchers.eq(null));

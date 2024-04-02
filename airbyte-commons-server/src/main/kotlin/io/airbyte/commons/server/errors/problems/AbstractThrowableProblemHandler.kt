@@ -1,10 +1,6 @@
-/*
-* Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
-*/
-package io.airbyte.server.apis.publicapi.errorHandlers
+package io.airbyte.commons.server.errors.problems
 
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.server.errors.problems.AbstractThrowableProblem
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse

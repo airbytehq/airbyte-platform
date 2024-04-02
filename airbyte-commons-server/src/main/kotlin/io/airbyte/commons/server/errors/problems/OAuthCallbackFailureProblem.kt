@@ -1,10 +1,6 @@
-/*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
- */
-package io.airbyte.server.apis.publicapi.problems
+package io.airbyte.commons.server.errors.problems
 
-import io.airbyte.commons.server.errors.problems.AbstractThrowableProblem
-import io.airbyte.server.apis.publicapi.constants.API_DOC_URL
+import io.airbyte.commons.server.API_DOC_URL
 import io.micronaut.http.HttpStatus
 import java.io.Serial
 import java.net.URI

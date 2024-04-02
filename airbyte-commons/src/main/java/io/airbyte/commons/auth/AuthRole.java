@@ -37,7 +37,7 @@ import java.util.stream.Stream;
  * so by definition they have some access to the instance.)</li>
  * </ul>
  */
-public enum AuthRole {
+public enum AuthRole implements AuthRoleInterface {
 
   OWNER(500, AuthRoleConstants.OWNER),
   ADMIN(400, AuthRoleConstants.ADMIN),

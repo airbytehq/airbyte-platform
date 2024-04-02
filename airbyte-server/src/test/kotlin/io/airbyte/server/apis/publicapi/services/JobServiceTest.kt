@@ -1,10 +1,10 @@
 package io.airbyte.server.apis.publicapi.services
 
 import io.airbyte.commons.server.errors.ValueConflictKnownException
+import io.airbyte.commons.server.errors.problems.ConflictProblem
+import io.airbyte.commons.server.errors.problems.SyncConflictProblem
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.server.apis.publicapi.errorHandlers.JOB_NOT_RUNNING_MESSAGE
-import io.airbyte.server.apis.publicapi.problems.ConflictProblem
-import io.airbyte.server.apis.publicapi.problems.SyncConflictProblem
 import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every

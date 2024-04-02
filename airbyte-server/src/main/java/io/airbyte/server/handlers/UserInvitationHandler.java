@@ -4,9 +4,12 @@
 
 package io.airbyte.server.handlers;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.model.generated.InviteCodeRequestBody;
 import io.airbyte.api.model.generated.PermissionCreate;
+import io.airbyte.api.model.generated.PermissionType;
 import io.airbyte.api.model.generated.UserInvitationCreateRequestBody;
 import io.airbyte.api.model.generated.UserInvitationCreateResponse;
 import io.airbyte.api.model.generated.UserInvitationListRequestBody;
@@ -48,8 +51,8 @@ import lombok.extern.slf4j.Slf4j;
 public class UserInvitationHandler {
 
   static final String ACCEPT_INVITE_PATH = "/accept-invite?inviteCode=";
-
   static final int INVITE_EXPIRATION_DAYS = 7;
+  static final String USER_INVITED = "User Invited";
 
   final UserInvitationService service;
   final UserInvitationMapper mapper;
@@ -60,6 +63,7 @@ public class UserInvitationHandler {
   final UserPersistence userPersistence;
   final PermissionPersistence permissionPersistence;
   final PermissionHandler permissionHandler;
+  final TrackingClient trackingClient;
 
   public UserInvitationHandler(final UserInvitationService service,
                                final UserInvitationMapper mapper,
@@ -69,7 +73,8 @@ public class UserInvitationHandler {
                                final OrganizationService organizationService,
                                final UserPersistence userPersistence,
                                final PermissionPersistence permissionPersistence,
-                               final PermissionHandler permissionHandler) {
+                               final PermissionHandler permissionHandler,
+                               final TrackingClient trackingClient) {
     this.service = service;
     this.mapper = mapper;
     this.webUrlHelper = webUrlHelper;
@@ -79,6 +84,7 @@ public class UserInvitationHandler {
     this.userPersistence = userPersistence;
     this.permissionPersistence = permissionPersistence;
     this.permissionHandler = permissionHandler;
+    this.trackingClient = trackingClient;
   }
 
   public UserInvitationRead getByInviteCode(final String inviteCode, final User currentUser) {
@@ -108,18 +114,60 @@ public class UserInvitationHandler {
   public UserInvitationCreateResponse createInvitationOrPermission(final UserInvitationCreateRequestBody req, final User currentUser)
       throws IOException, JsonValidationException, ConfigNotFoundException {
 
+    final UserInvitationCreateResponse response;
     final boolean wasDirectAdd = attemptDirectAddEmailToOrg(req, currentUser);
 
     if (wasDirectAdd) {
       return new UserInvitationCreateResponse().directlyAdded(true);
+    } else {
+      try {
+        final UserInvitation invitation = createUserInvitationForNewOrgEmail(req, currentUser);
+        response = new UserInvitationCreateResponse().directlyAdded(false).inviteCode(invitation.getInviteCode());
+        trackUserInvited(req, currentUser);
+        return response;
+      } catch (final InvitationDuplicateException e) {
+        throw new ConflictException(e.getMessage());
+      }
     }
+  }
 
+  private void trackUserInvited(final UserInvitationCreateRequestBody requestBody, final User currentUser) {
     try {
-      final UserInvitation invitation = createUserInvitationForNewOrgEmail(req, currentUser);
-      return new UserInvitationCreateResponse().directlyAdded(false).inviteCode(invitation.getInviteCode());
-    } catch (final InvitationDuplicateException e) {
-      throw new ConflictException(e.getMessage());
+      switch (requestBody.getScopeType()) {
+        case ORGANIZATION -> {
+          // Implement once we support org-level invitations
+        }
+        case WORKSPACE -> trackUserInvitedToWorkspace(requestBody.getScopeId(),
+            requestBody.getInvitedEmail(),
+            currentUser.getEmail(),
+            currentUser.getUserId(),
+            getInvitedResourceName(requestBody),
+            requestBody.getPermissionType());
+        default -> throw new IllegalArgumentException("Unexpected scope type: " + requestBody.getScopeType());
+      }
+    } catch (final Exception e) {
+      // log the error, but don't throw an exception to prevent a user-facing error
+      log.error("Failed to track user invited", e);
     }
+  }
+
+  private void trackUserInvitedToWorkspace(final UUID workspaceId,
+                                           final String email,
+                                           final String inviterUserEmail,
+                                           final UUID inviterUserId,
+                                           final String workspaceName,
+                                           final PermissionType permissionType) {
+    trackingClient.track(workspaceId,
+        USER_INVITED,
+        ImmutableMap.<String, Object>builder()
+            .put("email", email)
+            .put("inviter_user_email", inviterUserEmail)
+            .put("inviter_user_id", inviterUserId)
+            .put("role", permissionType)
+            .put("workspace_id", workspaceId)
+            .put("workspace_name", workspaceName)
+            .put("invited_from", "unspecified") // Note: currently we don't have a way to specify this, carryover from old cloud-only invite system
+            .build());
   }
 
   /**
