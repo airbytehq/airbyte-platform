@@ -75,9 +75,7 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
         VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(
             LOGGER,
             CONTAINER_LOG_MDC_BUILDER,
-            Optional.empty(),
-            Runtime.getRuntime().maxMemory(),
-            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false),
+            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false),
             new GsonPksExtractor()),
         new DefaultAirbyteMessageBufferedWriterFactory(),
         new DefaultProtocolSerializer(),

@@ -146,8 +146,6 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
 
 object RunSocatInConnectorContainer : Temporary<Boolean>(key = "platform.run-socat-in-connector-container", default = false)
 
-object FailSyncIfTooBig : Temporary<Boolean>(key = "platform.fail-sync-if-too-big", default = false)
-
 object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-default-org-for-new-workspace", default = false)
 
 object WorkloadHeartbeatRate : Permanent<Int>(key = "workload.heartbeat.rate", default = 5)

@@ -153,8 +153,7 @@ class ConnectorWatcher(
       },
       Optional.empty<UUID>(),
       Optional.empty<ConfiguredAirbyteCatalog>(),
-      Optional.empty<Class<out RuntimeException?>>(),
-      InvalidLineFailureConfiguration(false, false),
+      InvalidLineFailureConfiguration(false),
       gsonPksExtractor,
     )
   }
