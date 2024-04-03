@@ -411,7 +411,7 @@ describe("Connection Configuration", () => {
         connection = connectionResponse;
         visit(connection);
         connectionSettings.goToSettingsPage();
-        deleteEntity(connection.name);
+        deleteEntity();
       });
     });
   });
