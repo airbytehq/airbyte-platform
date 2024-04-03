@@ -2470,6 +2470,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/refresh:
+    post:
+      tags:
+        - connection
+      summary: refresh the data for specific streams in the connection. If no stream is specify or the list of stream is empy, all the streams will be refreshed. Resets any cursors back to initial state.
+      operationId: refreshConnectionStream
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionStreamRefreshRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BooleanRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connections/get_task_queue_name:
     post:
       tags:
@@ -7820,6 +7843,17 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConnectionStream"
+    ConnectionStreamRefreshRequestBody:
+      type: object
+      required:
+        - connectionId
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        streams:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionStream"
     DbMigrationRequestBody:
       type: object
       required:
@@ -9138,6 +9172,7 @@ components:
         - get_spec
         - sync
         - reset_connection
+        - refresh
     JobCreate:
       type: object
       required:

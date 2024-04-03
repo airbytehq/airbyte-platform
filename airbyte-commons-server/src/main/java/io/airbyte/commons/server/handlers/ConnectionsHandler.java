@@ -148,9 +148,10 @@ public class ConnectionsHandler {
   private final Integer maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
   private final Integer maxFailedJobsInARowBeforeConnectionDisable;
   private final int maxJobLookback = 10;
+  private final StreamRefreshesHandler streamRefreshesHandler;
 
   @Inject
-  public ConnectionsHandler(
+  public ConnectionsHandler(final StreamRefreshesHandler streamRefreshesHandler,
                             final JobPersistence jobPersistence,
                             final ConfigRepository configRepository,
                             @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
@@ -177,6 +178,7 @@ public class ConnectionsHandler {
     this.jobNotifier = jobNotifier;
     this.maxDaysOfOnlyFailedJobsBeforeConnectionDisable = maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
     this.maxFailedJobsInARowBeforeConnectionDisable = maxFailedJobsInARowBeforeConnectionDisable;
+    this.streamRefreshesHandler = streamRefreshesHandler;
   }
 
   /**
@@ -806,6 +808,7 @@ public class ConnectionsHandler {
   public void deleteConnection(final UUID connectionId) throws JsonValidationException, ConfigNotFoundException, IOException {
     connectionHelper.deleteConnection(connectionId);
     eventRunner.forceDeleteConnection(connectionId);
+    streamRefreshesHandler.deleteRefreshesForConnection(connectionId);
   }
 
   private ConnectionRead buildConnectionRead(final UUID connectionId)

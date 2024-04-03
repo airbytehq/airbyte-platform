@@ -17,6 +17,7 @@ properties:
       - getSpec
       - sync
       - resetConnection
+      - refresh
   checkConnection:
     "$ref": JobCheckConnectionConfig.yaml
   discoverCatalog:
@@ -27,3 +28,5 @@ properties:
     "$ref": JobSyncConfig.yaml
   resetConnection:
     "$ref": JobResetConnectionConfig.yaml
+  refresh:
+    "$ref": RefreshConfig.yaml
