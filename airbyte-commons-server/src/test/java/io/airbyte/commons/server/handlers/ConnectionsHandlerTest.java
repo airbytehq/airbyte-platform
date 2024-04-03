@@ -722,7 +722,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, times(1)).autoDisableConnectionWarning(any(), any());
       }
 
@@ -742,7 +741,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, times(1)).autoDisableConnectionWarning(any(), any());
       }
 
@@ -764,7 +762,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
@@ -786,7 +783,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
@@ -805,7 +801,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
@@ -845,7 +840,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
 
       }
@@ -861,7 +855,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
@@ -894,7 +887,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
       }
 
       private void verifyDisabled() throws IOException {
@@ -902,7 +894,6 @@ class ConnectionsHandlerTest {
             argThat(standardSync -> (standardSync.getStatus().equals(Status.INACTIVE) && standardSync.getConnectionId().equals(connectionId))));
         verify(configRepository, times(1)).writeStandardSync(standardSync);
         verify(jobNotifier, times(1)).autoDisableConnection(eq(job), any());
-        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), eq(job), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 

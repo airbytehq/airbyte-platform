@@ -5,8 +5,6 @@
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.commons.converters.ConnectionHelper.validateCatalogDoesntContainDuplicateStreamNames;
-import static io.airbyte.persistence.job.JobNotifier.CONNECTION_DISABLED_NOTIFICATION;
-import static io.airbyte.persistence.job.JobNotifier.CONNECTION_DISABLED_WARNING_NOTIFICATION;
 import static io.airbyte.persistence.job.models.Job.REPLICATION_TYPES;
 import static java.time.temporal.ChronoUnit.DAYS;
 
@@ -340,9 +338,6 @@ public class ConnectionsHandler {
     } else if (numFailures == maxFailedJobsInARowBeforeConnectionDisableWarning && !warningPreviouslySentForMaxDays) {
       // warn if number of consecutive failures hits 50% of MaxFailedJobsInARow
       jobNotifier.autoDisableConnectionWarning(optionalLastJob.get(), attemptStats);
-      // explicitly send to email if customer.io api key is set, since email notification cannot be set by
-      // configs through UI yet
-      jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, optionalLastJob.get(), attemptStats);
       return new InternalOperationResult().succeeded(false);
     }
 
@@ -374,9 +369,6 @@ public class ConnectionsHandler {
     if (firstReplicationOlderThanMaxDisableWarningDays && successOlderThanPrevFailureByMaxWarningDays) {
 
       jobNotifier.autoDisableConnectionWarning(optionalLastJob.get(), attemptStats);
-      // explicitly send to email if customer.io api key is set, since email notification cannot be set by
-      // configs through UI yet
-      jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, optionalLastJob.get(), attemptStats);
     }
     return new InternalOperationResult().succeeded(false);
   }
@@ -390,9 +382,6 @@ public class ConnectionsHandler {
       attemptStats.add(jobPersistence.getAttemptStats(lastJob.getId(), attempt.getAttemptNumber()));
     }
     jobNotifier.autoDisableConnection(lastJob, attemptStats);
-    // explicitly send to email if customer.io api key is set, since email notification cannot be set by
-    // configs through UI yet
-    jobNotifier.notifyJobByEmail(null, CONNECTION_DISABLED_NOTIFICATION, lastJob, attemptStats);
   }
 
   private int getDaysSinceTimestamp(final long currentTimestampInSeconds, final long timestampInSeconds) {
