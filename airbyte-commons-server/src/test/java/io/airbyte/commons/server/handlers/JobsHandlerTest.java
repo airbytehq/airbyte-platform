@@ -211,7 +211,6 @@ public class JobsHandlerTest {
     verify(jobPersistence).failAttempt(JOB_ID, ATTEMPT_NUMBER);
     verify(jobPersistence).writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, failureSummary);
     verify(jobPersistence).cancelJob(JOB_ID);
-    verify(jobNotifier).failJob(eq(mockJob), any());
     verify(helper).trackCompletion(any(), eq(JobStatus.FAILED));
   }
 
@@ -326,6 +325,31 @@ public class JobsHandlerTest {
     verify(jobPersistence).failJob(JOB_ID);
     verify(jobNotifier).failJob(Mockito.any(), any());
     verify(jobErrorReporter).reportSyncJobFailure(eq(CONNECTION_ID), eq(failureSummary), Mockito.any(), Mockito.any());
+  }
+
+  @Test
+  void testCancelledJobsDoNotNotify() throws IOException {
+
+    final AttemptFailureSummary failureSummary = new AttemptFailureSummary()
+        .withFailures(Collections.singletonList(
+            new FailureReason()
+                .withFailureOrigin(FailureOrigin.SOURCE)));
+
+    final Attempt mAttempt = Mockito.mock(Attempt.class);
+    Mockito.when(mAttempt.getFailureSummary()).thenReturn(Optional.of(failureSummary));
+
+    final JobConfig mJobConfig = Mockito.mock(JobConfig.class);
+    Mockito.when(mJobConfig.getSync()).thenReturn(null);
+
+    final Job mJob = Mockito.mock(Job.class);
+    Mockito.when(mJob.getScope()).thenReturn(CONNECTION_ID.toString());
+    Mockito.when(mJob.getConfig()).thenReturn(mJobConfig);
+    Mockito.when(mJob.getLastFailedAttempt()).thenReturn(Optional.of(mAttempt));
+    Mockito.when(mJob.getConfigType()).thenReturn(SYNC);
+    Mockito.when(jobPersistence.getJob(JOB_ID)).thenReturn(mJob);
+
+    jobsHandler.persistJobCancellation(CONNECTION_ID, JOB_ID, ATTEMPT_NUMBER, failureSummary);
+    verify(jobNotifier, never()).failJob(Mockito.any(), any());
   }
 
 }
