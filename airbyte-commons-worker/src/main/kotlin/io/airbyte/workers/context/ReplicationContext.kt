@@ -1,10 +1,6 @@
-/*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
- */
+package io.airbyte.workers.context
 
-package io.airbyte.workers.context;
-
-import java.util.UUID;
+import java.util.UUID
 
 /**
  * Context of a Replication.
@@ -21,12 +17,14 @@ import java.util.UUID;
  * @param sourceImage The name and version of the source image.
  * @param destinationImage The name and version of the destination image.
  */
-public record ReplicationContext(boolean isReset,
-                                 UUID connectionId,
-                                 UUID sourceId,
-                                 UUID destinationId,
-                                 Long jobId,
-                                 Integer attempt,
-                                 UUID workspaceId,
-                                 String sourceImage,
-                                 String destinationImage) {}
+data class ReplicationContext(
+  val isReset: Boolean,
+  val connectionId: UUID,
+  val sourceId: UUID,
+  val destinationId: UUID,
+  val jobId: Long,
+  val attempt: Int,
+  val workspaceId: UUID,
+  val sourceImage: String,
+  val destinationImage: String,
+)
