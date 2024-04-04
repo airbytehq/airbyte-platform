@@ -155,7 +155,7 @@ class ConnectorMessageProcessor(
               .withMessage(result.connectionStatus.message)
           jobOutput.checkConnection = output
         } else if (failureReason.isEmpty) {
-          throw WorkerException("Error checking connection status: no status nor failure reason were outputted")
+          throw WorkerException("Error checking connection status: no status nor failure reason provided")
         }
 
       OperationType.DISCOVER ->
@@ -165,7 +165,7 @@ class ConnectorMessageProcessor(
               .writeDiscoverCatalogResult(buildSourceDiscoverSchemaWriteRequestBody(input.discoveryInput, result.catalog))
           jobOutput.discoverCatalogId = apiResult.catalogId
         } else if (failureReason.isEmpty) {
-          throw WorkerException("Error checking connection status: no status nor failure reason were outputted")
+          throw WorkerException("Error discovering catalog: no failure reason provided")
         }
 
       OperationType.SPEC ->
