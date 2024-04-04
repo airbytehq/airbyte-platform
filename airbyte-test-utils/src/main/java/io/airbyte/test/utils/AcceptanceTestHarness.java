@@ -338,16 +338,18 @@ public class AcceptanceTestHarness {
 
       sourceDataSource = Databases.createDataSource(sourcePsql);
       destinationDataSource = Databases.createDataSource(destinationPsql);
-    }
 
-    // Pinning Postgres destination version
-    final DestinationDefinitionRead postgresDestDef = getPostgresDestinationDefinition();
-    if (!postgresDestDef.getDockerImageTag().equals(POSTGRES_DESTINATION_CONNECTOR_VERSION)) {
-      LOGGER.info("Setting postgres destination connector to version {}...", POSTGRES_DESTINATION_CONNECTOR_VERSION);
-      try {
-        updateDestinationDefinitionVersion(postgresDestDef.getDestinationDefinitionId(), POSTGRES_DESTINATION_CONNECTOR_VERSION);
-      } catch (final ApiException e) {
-        LOGGER.error("Error while updating destination definition version", e);
+      // Pinning Postgres destination version. This doesn't work on GKE since the
+      // airbyte-cron will revert this change. On GKE we are pinning the version by
+      // adding an entry to the scoped_configuration table.
+      final DestinationDefinitionRead postgresDestDef = getPostgresDestinationDefinition();
+      if (!postgresDestDef.getDockerImageTag().equals(POSTGRES_DESTINATION_CONNECTOR_VERSION)) {
+        LOGGER.info("Setting postgres destination connector to version {}...", POSTGRES_DESTINATION_CONNECTOR_VERSION);
+        try {
+          updateDestinationDefinitionVersion(postgresDestDef.getDestinationDefinitionId(), POSTGRES_DESTINATION_CONNECTOR_VERSION);
+        } catch (final ApiException e) {
+          LOGGER.error("Error while updating destination definition version", e);
+        }
       }
     }
   }
