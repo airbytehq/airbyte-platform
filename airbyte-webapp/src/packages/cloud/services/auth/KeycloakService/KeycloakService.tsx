@@ -55,6 +55,7 @@ interface KeycloakAuthState {
   error: Error | null;
   didInitialize: boolean;
   isAuthenticated: boolean;
+  isSso: boolean | null;
 }
 
 const keycloakAuthStateInitialState: KeycloakAuthState = {
@@ -63,6 +64,7 @@ const keycloakAuthStateInitialState: KeycloakAuthState = {
   error: null,
   didInitialize: false,
   isAuthenticated: false,
+  isSso: null,
 };
 
 type KeycloakAuthStateAction =
@@ -92,6 +94,8 @@ const keycloakAuthStateReducer = (state: KeycloakAuthState, action: KeycloakAuth
         airbyteUser: action.airbyteUser,
         isAuthenticated: true,
         didInitialize: true,
+        // We are using an SSO login if we're not in the AIRBYTE_CLOUD_REALM, which would be the end of the issuer
+        isSso: !action.keycloakUser.profile.iss.endsWith(AIRBYTE_CLOUD_REALM),
         error: null,
       };
     case "userUpdated":
@@ -106,6 +110,7 @@ const keycloakAuthStateReducer = (state: KeycloakAuthState, action: KeycloakAuth
         airbyteUser: null,
         isAuthenticated: false,
         didInitialize: true,
+        isSso: null,
         error: null,
       };
     case "error":

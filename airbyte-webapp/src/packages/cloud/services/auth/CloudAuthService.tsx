@@ -181,6 +181,7 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
         },
         hasPasswordLogin: () => !!firebaseUser.providerData.filter(({ providerId }) => providerId === "password"),
         providers: firebaseUser.providerData.map(({ providerId }) => providerId),
+        provider: null,
         sendEmailVerification: async () => {
           if (!firebaseUser) {
             console.error("sendEmailVerifiedLink should be used within auth flow");
@@ -217,6 +218,9 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
         logout,
         loggedOut: false,
         providers: null,
+        provider: keycloakAuth.isSso
+          ? "sso"
+          : (keycloakAuth.keycloakUser?.profile.identity_provider as string | undefined) ?? "none",
       };
     }
     // The context value for an unauthenticated user
@@ -228,6 +232,7 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
       emailVerified: false,
       loggedOut: true,
       providers: null,
+      provider: null,
       login: async ({ email, password }: { email: string; password: string }) => {
         await signInWithEmailAndPassword(firebaseAuth, email, password)
           .then(() => {

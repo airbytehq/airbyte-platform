@@ -172,7 +172,7 @@ const CloudWorkspaceDataPrefetcher: React.FC<PropsWithChildren<unknown>> = ({ ch
 };
 
 export const Routing: React.FC = () => {
-  const { user, inited, providers, loggedOut, requirePasswordReset } = useAuthService();
+  const { user, inited, providers, provider, loggedOut, requirePasswordReset } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
   const { pathname: originalPathname, search, hash } = useLocation();
 
@@ -203,9 +203,15 @@ export const Routing: React.FC = () => {
   const userTraits = useMemo(
     () =>
       user
-        ? { providers, email: user.email, isCorporate: isCorporateEmail(user.email), currentWorkspaceId: workspaceId }
+        ? {
+            providers,
+            provider,
+            email: user.email,
+            isCorporate: isCorporateEmail(user.email),
+            currentWorkspaceId: workspaceId,
+          }
         : {},
-    [providers, user, workspaceId]
+    [provider, providers, user, workspaceId]
   );
 
   useEffectOnce(() => {
