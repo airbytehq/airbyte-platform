@@ -4,7 +4,6 @@ import io.airbyte.api.model.generated.ConnectionStream
 import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.config.persistence.StreamRefreshesRepository
 import io.airbyte.config.persistence.domain.StreamRefresh
-import io.airbyte.config.persistence.domain.StreamRefreshPK
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.featureflag.ActivateRefreshes
@@ -25,7 +24,7 @@ class StreamRefreshesHandler(
   private val featureFlagClient: FeatureFlagClient,
 ) {
   fun deleteRefreshesForConnection(connectionId: UUID) {
-    streamRefreshesRepository.deleteByPkConnectionId(connectionId)
+    streamRefreshesRepository.deleteByConnectionId(connectionId)
   }
 
   open fun createRefreshesForConnection(
@@ -85,9 +84,7 @@ class StreamRefreshesHandler(
       streamDescriptors: List<StreamDescriptor>,
     ): List<StreamRefresh> {
       return streamDescriptors.map { streamDescriptor ->
-        StreamRefresh(
-          StreamRefreshPK(connectionId = connectionId, streamName = streamDescriptor.name, streamNamespace = streamDescriptor.namespace),
-        )
+        StreamRefresh(connectionId = connectionId, streamName = streamDescriptor.name, streamNamespace = streamDescriptor.namespace)
       }
     }
   }

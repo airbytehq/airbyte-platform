@@ -7,7 +7,6 @@ import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.StreamRefreshesRepository
 import io.airbyte.config.persistence.domain.StreamRefresh
-import io.airbyte.config.persistence.domain.StreamRefreshPK
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.featureflag.ActivateRefreshes
@@ -100,12 +99,7 @@ internal class StreamRefreshesHandlerTest {
     assertTrue(result)
 
     verifyOrder {
-      streamRefreshesRepository.saveAll(
-        streamDescriptorsToStreamRefreshes(
-          connectionId,
-          connectionStreamsToStreamDescriptors(connectionStream),
-        ),
-      )
+      streamRefreshesRepository.saveAll(any<List<StreamRefresh>>())
       eventRunner.startNewManualSync(connectionId)
     }
   }
@@ -122,12 +116,7 @@ internal class StreamRefreshesHandlerTest {
     assertTrue(result)
 
     verifyOrder {
-      streamRefreshesRepository.saveAll(
-        streamDescriptorsToStreamRefreshes(
-          connectionId,
-          streamDescriptors,
-        ),
-      )
+      streamRefreshesRepository.saveAll(any<List<StreamRefresh>>())
       eventRunner.startNewManualSync(connectionId)
     }
   }
@@ -143,24 +132,30 @@ internal class StreamRefreshesHandlerTest {
   fun `test the conversion from stream descriptors to stream refreshes`() {
     val expected =
       listOf(
-        StreamRefresh(
-          StreamRefreshPK(connectionId = connectionId, streamName = "name1", streamNamespace = "namespace1"),
-        ),
-        StreamRefresh(
-          StreamRefreshPK(connectionId = connectionId, streamName = "name2", streamNamespace = null),
-        ),
+        StreamRefresh(connectionId = connectionId, streamName = "name1", streamNamespace = "namespace1"),
+        StreamRefresh(connectionId = connectionId, streamName = "name2", streamNamespace = null),
       )
 
     val result = streamDescriptorsToStreamRefreshes(connectionId, streamDescriptors)
 
-    assertEquals(expected, result)
+    assertEquals(2, result.size)
+    result.stream().forEach({
+      assertEquals(connectionId, it.connectionId)
+      if (it.streamNamespace == null) {
+        assertEquals("name2", it.streamName)
+      } else if (it.streamNamespace == "namespace1") {
+        assertEquals("name1", it.streamName)
+      } else {
+        throw RuntimeException("Unexpected streamNamespace {${it.streamNamespace}}")
+      }
+    })
   }
 
   @Test
   fun `test delete`() {
     val connectionId: UUID = UUID.randomUUID()
-    every { streamRefreshesRepository.deleteByPkConnectionId(connectionId) }.returns(Unit)
+    every { streamRefreshesRepository.deleteByConnectionId(connectionId) }.returns(Unit)
     streamRefreshesHandler.deleteRefreshesForConnection(connectionId)
-    verify { streamRefreshesRepository.deleteByPkConnectionId(connectionId) }
+    verify { streamRefreshesRepository.deleteByConnectionId(connectionId) }
   }
 }

@@ -333,11 +333,12 @@ create table "public"."stream_generation" (
   constraint "stream_generation_pkey" primary key ("id")
 );
 create table "public"."stream_refreshes" (
+  "id" uuid not null,
   "connection_id" uuid not null,
   "stream_name" varchar(2147483647) not null,
-  "stream_namespace" varchar(2147483647) not null,
+  "stream_namespace" varchar(2147483647),
   "created_at" timestamp(6) with time zone not null default current_timestamp,
-  constraint "stream_refreshes_pkey" primary key ("connection_id", "stream_name", "stream_namespace")
+  constraint "stream_refreshes_pkey" primary key ("id")
 );
 create table "public"."stream_reset" (
   "id" uuid not null,
@@ -463,6 +464,8 @@ create index "sso_config_organization_id_idx" on "public"."sso_config"("organiza
 create index "stream_generation_connection_id_stream_name_generation_id_idx" on "public"."stream_generation"("connection_id" asc, "stream_name" asc, "generation_id" desc);
 create index "stream_generation_connection_id_stream_name_stream_namespac_idx" on "public"."stream_generation"("connection_id" asc, "stream_name" asc, "stream_namespace" asc, "generation_id" desc);
 create index "stream_refreshes_connection_id_idx" on "public"."stream_refreshes"("connection_id" asc);
+create index "stream_refreshes_connection_id_stream_name_idx" on "public"."stream_refreshes"("connection_id" asc, "stream_name" asc);
+create index "stream_refreshes_connection_id_stream_name_stream_namespace_idx" on "public"."stream_refreshes"("connection_id" asc, "stream_name" asc, "stream_namespace" asc);
 create index "connection_id_stream_name_namespace_idx" on "public"."stream_reset"("connection_id" asc, "stream_name" asc, "stream_namespace" asc);
 create index "user_auth_provider_auth_user_id_idx" on "public"."user"("auth_provider" asc, "auth_user_id" asc);
 create index "user_email_idx" on "public"."user"("email" asc);
