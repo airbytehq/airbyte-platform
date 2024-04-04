@@ -199,6 +199,18 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: KEYCLOAK_INTERNAL_HOST
+        {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+        - name: KEYCLOAK_ADMIN_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
+              key: KEYCLOAK_ADMIN_USER
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
+              key: KEYCLOAK_ADMIN_PASSWORD
+        {{- end }}
         - name: CONNECTOR_BUILDER_SERVER_API_HOST
           valueFrom:
             configMapKeyRef:
