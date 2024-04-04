@@ -142,6 +142,7 @@ public class BaseConfigDatabaseTest {
               state,
               stream_reset,
               stream_refreshes,
+              stream_generation,
               \"user\",
               user_invitation,
               sso_config,
