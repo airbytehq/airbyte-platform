@@ -1,7 +1,9 @@
 package io.airbyte.workers.payload
 
 import io.airbyte.commons.json.JsonSerde
+import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.storage.StorageClient
 
@@ -15,7 +17,7 @@ class ActivityPayloadStorageClient(
   private val metricClient: MetricClient,
 ) {
   /**
-   * It reads the object from a location determined by the given [uri] and unmarshals it from JSON.
+   * It reads the object from the location described by the given [uri] and unmarshals it from JSON.
    * Any Exceptions thrown by the raw object storage client or json deserializer will be forwarded to the caller.
    *
    * @return the unmarshalled object on a hit and null on a miss.
@@ -25,7 +27,7 @@ class ActivityPayloadStorageClient(
   }
 
   /**
-   * It reads the object from a location determined by the given [uri] and unmarshals it from JSON to [target] class.
+   * It reads the object from the location described by the given [uri] and unmarshals it from JSON to [target] class.
    * Any Exceptions thrown by the raw object storage client or json deserializer will be forwarded to the caller.
    *
    * @return the unmarshalled object on a hit and null on a miss.
@@ -53,5 +55,57 @@ class ActivityPayloadStorageClient(
     metricClient.count(OssMetricsRegistry.ACTIVITY_PAYLOAD_WRITTEN_TO_DOC_STORE, 1)
 
     return storageClientRaw.write(uri.id, jsonSerde.serialize(payload))
+  }
+
+  /**
+   * It reads the object from the location described by the given [uri] and unmarshals it from JSON to [target] class
+   * and compares it to the [expected] recording a metric based on the result.
+   *
+   * Any Exceptions thrown by the raw object storage client or json serializer will be forwarded to the caller.
+   *
+   * @return the object passed for comparison
+   */
+  fun <T : Any> validateOutput(
+    uri: ActivityPayloadURI?,
+    target: Class<T>,
+    expected: T,
+    attrs: List<MetricAttribute>,
+  ): T {
+    if (uri == null) {
+      val baseAttrs = attrs + MetricAttribute(MetricTags.URI_NULL, true.toString())
+      metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_READ, 1, *baseAttrs.toTypedArray())
+
+      return expected
+    }
+
+    val baseAttrs =
+      attrs +
+        listOf(
+          MetricAttribute(MetricTags.URI_NULL, false.toString()),
+          MetricAttribute(MetricTags.URI_ID, uri.id),
+          MetricAttribute(MetricTags.URI_VERSION, uri.version),
+          MetricAttribute(MetricTags.PAYLOAD_CLASS, target.name),
+        )
+
+    val remote: T?
+    try {
+      remote = readJSON(uri, target)
+    } catch (e: Exception) {
+      metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_READ, 1, *baseAttrs.toTypedArray())
+
+      return expected
+    }
+
+    val match = expected == remote
+    val miss = remote == null
+
+    val attrsWithMatch =
+      baseAttrs +
+        MetricAttribute(MetricTags.IS_MATCH, match.toString()) +
+        MetricAttribute(MetricTags.IS_MISS, miss.toString())
+
+    metricClient.count(OssMetricsRegistry.PAYLOAD_VALIDATION_RESULT, 1, *attrsWithMatch.toTypedArray())
+
+    return expected
   }
 }

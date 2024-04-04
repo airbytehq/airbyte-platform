@@ -438,7 +438,19 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   PAYLOAD_SIZE_EXCEEDED(MetricEmittingApps.WORKER,
       "payload_size_exceeded",
-      "Detected payload size was over 4mb Temporal limit");
+      "Detected payload size was over 4mb Temporal limit"),
+
+  PAYLOAD_FAILURE_WRITE(MetricEmittingApps.WORKER,
+      "payload_failure_write",
+      "Failure writing the activity payload to storage."),
+
+  PAYLOAD_FAILURE_READ(MetricEmittingApps.WORKER,
+      "payload_failure_read",
+      "Failure reading the activity payload from storage."),
+
+  PAYLOAD_VALIDATION_RESULT(MetricEmittingApps.WORKER,
+      "payload_validation_result",
+      "The result of the comparing the payload in object storage to the one passed from temporal.");
 
   private final MetricEmittingApp application;
   private final String metricName;

@@ -56,6 +56,14 @@ public class MetricTags {
   public static final String USER_TYPE = "user_type"; // real user, service account, data plane user, etc
   public static final String WILL_RETRY = "will_retry";
 
+  // payload metric tags
+  public static final String URI_NULL = "uri_null";
+  public static final String URI_ID = "uri_id";
+  public static final String URI_VERSION = "uri_version";
+  public static final String PAYLOAD_CLASS = "payload_class";
+  public static final String IS_MATCH = "is_match";
+  public static final String IS_MISS = "is_miss";
+
   public static String getReleaseStage(final ReleaseStage stage) {
     return stage != null ? stage.value() : UNKNOWN;
   }

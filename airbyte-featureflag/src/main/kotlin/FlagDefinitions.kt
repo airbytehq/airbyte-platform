@@ -197,3 +197,5 @@ object UseWorkloadApiForSpec : Temporary<Boolean>(key = "platform.use-workload-a
 object EnforceMutexKeyOnCreate : Temporary<Boolean>(key = "platform.enforce-mutex-key-on-create", default = false)
 
 object ActivateRefreshes : Temporary<Boolean>(key = "platform.activate-refreshes", default = false)
+
+object WriteReplicationOutputToObjectStorage : Temporary<Boolean>(key = "platform.write-replication-output-to-object-storage", default = false)

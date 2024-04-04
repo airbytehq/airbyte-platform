@@ -4,6 +4,9 @@
 
 package io.airbyte.workers.config;
 
+import io.airbyte.commons.json.JsonSerde;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.workers.payload.ActivityPayloadStorageClient;
 import io.airbyte.workers.storage.DocumentType;
 import io.airbyte.workers.storage.StorageClient;
 import io.airbyte.workers.storage.StorageClientFactory;
@@ -42,6 +45,28 @@ public class CloudStorageBeanFactory {
   @Named("outputDocumentStore")
   public StorageClient workloadStorageClient(final StorageClientFactory factory) {
     return factory.get(DocumentType.WORKLOAD_OUTPUT);
+  }
+
+  @Singleton
+  @Named("payloadDocumentStore")
+  public StorageClient payloadStorageClient(final StorageClientFactory factory) {
+    return factory.get(DocumentType.ACTIVITY_PAYLOADS);
+  }
+
+  @Singleton
+  public JsonSerde jsonSerde() {
+    return new JsonSerde();
+  }
+
+  @Singleton
+  public ActivityPayloadStorageClient activityPayloadStorageClient(
+                                                                   @Named("payloadDocumentStore") final StorageClient storageClientRaw,
+                                                                   final JsonSerde jsonSerde,
+                                                                   final MetricClient metricClient) {
+    return new ActivityPayloadStorageClient(
+        storageClientRaw,
+        jsonSerde,
+        metricClient);
   }
 
 }
