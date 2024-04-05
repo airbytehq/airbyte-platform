@@ -61,6 +61,10 @@ class StreamRefreshesHandler(
     return true
   }
 
+  open fun getRefreshesForConnection(connectionId: UUID): List<StreamRefresh> {
+    return streamRefreshesRepository.findByConnectionId(connectionId)
+  }
+
   private fun createRefreshesForStreams(
     connectionId: UUID,
     streams: List<StreamDescriptor>,
