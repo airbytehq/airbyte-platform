@@ -36,7 +36,7 @@ export const CreateConnectionFormControls: React.FC = () => {
   });
 
   return (
-    <Box mt="md">
+    <Box mt={isSimplifiedCreation ? undefined : "md"}>
       <FlexContainer justifyContent="space-between" alignItems="flex-start" gap="xl">
         <Text color="red" size="lg">
           {errorMessage}
