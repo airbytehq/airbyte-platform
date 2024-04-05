@@ -1101,10 +1101,11 @@ function builderPaginationStrategyToManifest(
   if (strategy.type === "OffsetIncrement" || strategy.type === "PageIncrement") {
     return strategy;
   }
-  const { cursor, ...rest } = strategy;
+  const { cursor, page_size, ...rest } = strategy;
 
   return {
     ...rest,
+    page_size: Number(page_size),
     cursor_value:
       cursor.type === "custom" ? cursor.cursor_value : `{{ ${cursor.type}${pathToSafeJinjaAccess(cursor.path)} }}`,
     stop_condition:
