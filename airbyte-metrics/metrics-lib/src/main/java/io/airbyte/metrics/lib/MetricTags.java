@@ -46,7 +46,7 @@ public class MetricTags {
   public static final String NOTIFICATION_CLIENT = "notification_client";
   public static final String RECORD_COUNT_TYPE = "record_count_type";
   public static final String RELEASE_STAGE = "release_stage";
-  public static final String RESET_WORKFLOW_FAILURE_CAUSE = "failure_cause";
+  public static final String FAILURE_CAUSE = "failure_cause";
   public static final String SOURCE_ID = "source_id";
   public static final String SOURCE_IMAGE = "source_image";
   public static final String STATUS = "status";

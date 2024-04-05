@@ -217,7 +217,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           LOGGER.info("sync summary after backfill: {}", standardSyncOutput);
 
           final StandardSyncOutput output = payloadChecker.validatePayloadSize(standardSyncOutput, metricAttributes);
-          final ActivityPayloadURI uri = ActivityPayloadURI.v1(connectionId, jobId, attemptNumber, StandardSyncOutput.class.getName());
+          final ActivityPayloadURI uri = ActivityPayloadURI.v1(connectionId, jobId, attemptNumber, "replication-output");
 
           if (featureFlagClient.boolVariation(WriteReplicationOutputToObjectStorage.INSTANCE, new Connection(connectionId))) {
             output.setUri(uri.toOpenApi());
@@ -228,6 +228,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
               final List<MetricAttribute> attrs = new ArrayList<>(Arrays.asList(metricAttributes));
               attrs.add(new MetricAttribute(MetricTags.URI_ID, uri.getId()));
               attrs.add(new MetricAttribute(MetricTags.URI_VERSION, uri.getVersion()));
+              attrs.add(new MetricAttribute(MetricTags.FAILURE_CAUSE, e.getClass().getSimpleName()));
 
               metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_WRITE, 1, attrs.toArray(new MetricAttribute[] {}));
             }

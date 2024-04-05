@@ -1,11 +1,15 @@
 package io.airbyte.workers.payload
 
 import io.airbyte.commons.json.JsonSerde
+import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.storage.StorageClient
+import io.github.oshai.kotlinlogging.KotlinLogging
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Writes and reads activity payloads to and from the configured object store.
@@ -78,6 +82,8 @@ class ActivityPayloadStorageClient(
       return expected
     }
 
+    ApmTraceUtils.addTagsToTrace(mapOf(Pair(MetricTags.URI_ID, uri.id), Pair(MetricTags.URI_VERSION, uri.version)))
+
     val baseAttrs =
       attrs +
         listOf(
@@ -91,7 +97,13 @@ class ActivityPayloadStorageClient(
     try {
       remote = readJSON(uri, target)
     } catch (e: Exception) {
-      metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_READ, 1, *baseAttrs.toTypedArray())
+      logger.error { e }
+
+      ApmTraceUtils.addExceptionToTrace(e)
+      val attrsWithException =
+        baseAttrs + MetricAttribute(MetricTags.FAILURE_CAUSE, e.javaClass.simpleName)
+
+      metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_READ, 1, *attrsWithException.toTypedArray())
 
       return expected
     }
