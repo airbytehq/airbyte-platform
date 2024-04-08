@@ -528,6 +528,13 @@ spec:
               name: {{ .Release.Name }}-airbyte-env
               key: AWS_DEFAULT_REGION
         {{- end }}
+        {{- if ((((.Values.global).storage).s3).endpoint) }}
+        - name: AWS_ENDPOINT # todo: change to S3_ENDPOINT, changes need to be pushed to the applications.yaml files
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: AWS_ENDPOINT
+        {{- end }}
         - name: S3_PATH_STYLE_ACCESS
           valueFrom:
             configMapKeyRef:

@@ -31,6 +31,9 @@ public class DefaultS3ClientFactory implements Supplier<S3Client> {
       builder.credentialsProvider(() -> AwsBasicCredentials.create(config.getAccessKey(), config.getSecretAccessKey()));
     }
     builder.region(Region.of(config.getRegion()));
+    if (config.getEndpoint() != null) {
+      builder.endpointOverride(URI(config.getEndpoint()));
+    }
     return builder.build();
   }
 

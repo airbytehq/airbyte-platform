@@ -322,6 +322,10 @@ internal fun S3StorageConfig.s3Client(): S3Client {
     }
   }
 
+  if (this@s3Client.endpoint != null) {
+    builder.endpointOverride(URI(this@s3Client.endpoint))
+  }
+
   return builder.build()
 }
 

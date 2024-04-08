@@ -12,6 +12,7 @@
 
         <!-- Note that logging to S3 will leverage the DefaultAWSCredentialsProviderChain for auth. -->
         <Property name="s3-bucket">${sys:STORAGE_BUCKET_LOG:-${env:STORAGE_BUCKET_LOG:-}}</Property>
+        <Property name="s3-endpoint">${sys:AWS_ENDPOINT:-${env:AWS_ENDPOINT}}</Property>
         <Property name="s3-region">${sys:AWS_DEFAULT_REGION:-${env:AWS_DEFAULT_REGION:-}}</Property>
     </Properties>
 
@@ -115,7 +116,8 @@
                     <Log4j2Appender name="${ctx:cloud_job_log_path}"
                       verbose="false"
                       stagingBufferAge="1"
-                      s3Bucket="${s3-bucket}" s3Path="job-logging${ctx:cloud_job_log_path}" s3Region="${s3-region}">
+                      s3Bucket="${s3-bucket}" s3Path="job-logging${ctx:cloud_job_log_path}" s3Region="${s3-region}"
+                      s3ServiceEndpoint="${s3-endpoint}">
                         <PatternLayout pattern="${default-pattern}"/>
                     </Log4j2Appender>
                 </Route>
@@ -136,7 +138,8 @@
                     <Log4j2Appender name="${ctx:cloud_job_log_path}"
                                     verbose="false"
                                     stagingBufferAge="1"
-                                    s3Bucket="${s3-bucket}" s3Path="job-logging${ctx:cloud_job_log_path}" s3Region="${s3-region}">
+                                    s3Bucket="${s3-bucket}" s3Path="job-logging${ctx:cloud_job_log_path}" s3Region="${s3-region}"
+                                    s3ServiceEndpoint="${s3-endpoint}">
                         <PatternLayout pattern="${simple-pattern}"/>
                     </Log4j2Appender>
                 </Route>
@@ -175,7 +178,8 @@
                 <Route>
                     <Log4j2Appender name="app-logging/${ctx:cloud_workspace_app_root}/"
                       stagingBufferAge="1"
-                      s3Bucket="${s3-bucket}" s3Path="app-logging${ctx:cloud_workspace_app_root}" s3Region="${s3-region}">
+                      s3Bucket="${s3-bucket}" s3Path="app-logging${ctx:cloud_workspace_app_root}" s3Region="${s3-region}"
+                      s3ServiceEndpoint="${s3-endpoint}">
                         <PatternLayout pattern="${default-pattern}"/>
                     </Log4j2Appender>
                 </Route>

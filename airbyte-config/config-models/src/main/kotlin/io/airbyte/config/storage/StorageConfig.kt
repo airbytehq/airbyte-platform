@@ -86,6 +86,7 @@ data class S3StorageConfig(
   @Value("\${$STORAGE_S3.access-key}") val accessKey: String?,
   @Value("\${$STORAGE_S3.secret-access-key}") val secretAccessKey: String?,
   @Value("\${$STORAGE_S3.region}") val region: String,
+  @Value("\${$STORAGE_S3.endpoint}") val endpoint: String?,
 ) : StorageConfig {
   override fun toEnvVarMap(): Map<String, String> =
     buildMap {
@@ -101,9 +102,12 @@ data class S3StorageConfig(
         put(EnvVar.AWS_SECRET_ACCESS_KEY, secretAccessKey)
       }
       put(EnvVar.AWS_DEFAULT_REGION, region)
+      endpoint?.let {
+        put(EnvVar.AWS_ENDPOINT, endpoint)
+      }
     }.mapKeys { it.key.name }
 
-  override fun toString(): String = "S3StorageConfig(accessKey=${accessKey.mask()}, secretAccessKey=${secretAccessKey.mask()}, region=$region)"
+  override fun toString(): String = "S3StorageConfig(accessKey=${accessKey.mask()}, secretAccessKey=${secretAccessKey.mask()}, region=$region, endpoint=$endpoint)"
 }
 
 /**

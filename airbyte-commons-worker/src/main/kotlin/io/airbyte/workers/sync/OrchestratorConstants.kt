@@ -81,6 +81,7 @@ object OrchestratorConstants {
           EnvVar.AWS_ASSUME_ROLE_SECRET_ACCESS_KEY,
           EnvVar.AWS_DEFAULT_REGION,
           EnvVar.AWS_SECRET_ACCESS_KEY,
+          EnvVar.AWS_ENDPOINT,
           EnvVar.DD_AGENT_HOST,
           EnvVar.DD_DOGSTATSD_PORT,
           EnvVar.DOCKER_HOST,

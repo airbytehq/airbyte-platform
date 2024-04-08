@@ -95,7 +95,7 @@ class CloudStorageBeanFactory {
   fun s3StateStorageConfiguration(storageConfig: StorageConfig): CloudStorageConfigs {
     if (storageConfig is S3StorageConfig) {
       return CloudStorageConfigs.s3(
-        S3Config(storageConfig.buckets.state, storageConfig.accessKey, storageConfig.secretAccessKey, storageConfig.region),
+        S3Config(storageConfig.buckets.state, storageConfig.accessKey, storageConfig.secretAccessKey, storageConfig.region, storageConfig.endpoint),
       )
     }
 
