@@ -128,6 +128,7 @@ const AuthServiceProvider: React.FC<PropsWithChildren<unknown>> = ({ children })
       inited,
       emailVerified: false,
       providers: [],
+      provider: null,
       loggedOut: false,
       logout: keycloakAuth.signoutRedirect,
       getAccessToken,

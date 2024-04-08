@@ -14,6 +14,7 @@ import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
+import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ResourceRequirementsType;
@@ -26,7 +27,9 @@ import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.SyncResourceRequirementsKey;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
+import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
+import io.airbyte.featureflag.ActivateRefreshes;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.DestResourceOverrides;
@@ -112,6 +115,64 @@ public class DefaultJobCreator implements JobCreator {
     final JobConfig jobConfig = new JobConfig()
         .withConfigType(ConfigType.SYNC)
         .withSync(jobSyncConfig);
+    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
+  }
+
+  @Override
+  public Optional<Long> createRefreshConnection(final StandardSync standardSync,
+                                                final String sourceDockerImageName,
+                                                final Version sourceProtocolVersion,
+                                                final String destinationDockerImageName,
+                                                final Version destinationProtocolVersion,
+                                                final List<StandardSyncOperation> standardSyncOperations,
+                                                @Nullable final JsonNode webhookOperationConfigs,
+                                                final StandardSourceDefinition sourceDefinition,
+                                                final StandardDestinationDefinition destinationDefinition,
+                                                final ActorDefinitionVersion sourceDefinitionVersion,
+                                                final ActorDefinitionVersion destinationDefinitionVersion,
+                                                final UUID workspaceId,
+                                                final List<StreamRefresh> streamsToRefresh)
+      throws IOException {
+    final boolean canRunRefreshes = featureFlagClient.boolVariation(ActivateRefreshes.INSTANCE, new Multi(
+        List.of(
+            new Workspace(workspaceId),
+            new Connection(standardSync.getConnectionId()),
+            new SourceDefinition(sourceDefinition.getSourceDefinitionId()),
+            new DestinationDefinition(destinationDefinition.getDestinationDefinitionId()))));
+
+    if (!canRunRefreshes) {
+      throw new IllegalStateException("Trying to create a refresh job for a destination which doesn't support refreshes");
+    }
+
+    final SyncResourceRequirements syncResourceRequirements =
+        getSyncResourceRequirements(workspaceId, standardSync, sourceDefinition, destinationDefinition, false);
+
+    final RefreshConfig refreshConfig = new RefreshConfig()
+        .withNamespaceDefinition(standardSync.getNamespaceDefinition())
+        .withNamespaceFormat(standardSync.getNamespaceFormat())
+        .withPrefix(standardSync.getPrefix())
+        .withSourceDockerImage(sourceDockerImageName)
+        .withSourceProtocolVersion(sourceProtocolVersion)
+        .withDestinationDockerImage(destinationDockerImageName)
+        .withDestinationProtocolVersion(destinationProtocolVersion)
+        .withOperationSequence(standardSyncOperations)
+        .withWebhookOperationConfigs(webhookOperationConfigs)
+        .withConfiguredAirbyteCatalog(standardSync.getCatalog())
+        .withSyncResourceRequirements(syncResourceRequirements)
+        .withIsSourceCustomConnector(sourceDefinition.getCustom())
+        .withIsDestinationCustomConnector(destinationDefinition.getCustom())
+        .withWorkspaceId(workspaceId)
+        .withSourceDefinitionVersionId(sourceDefinitionVersion.getVersionId())
+        .withDestinationDefinitionVersionId(destinationDefinitionVersion.getVersionId())
+        .withStreamsToRefresh(
+            streamsToRefresh.stream().map(streamRefresh -> new StreamDescriptor()
+                .withName(streamRefresh.getStreamName())
+                .withNamespace(streamRefresh.getStreamNamespace())).toList());
+
+    final JobConfig jobConfig = new JobConfig()
+        .withConfigType(ConfigType.REFRESH)
+        .withRefresh(refreshConfig);
+
     return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
   }
 

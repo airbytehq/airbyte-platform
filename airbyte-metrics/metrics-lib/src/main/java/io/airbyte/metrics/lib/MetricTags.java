@@ -46,7 +46,7 @@ public class MetricTags {
   public static final String NOTIFICATION_CLIENT = "notification_client";
   public static final String RECORD_COUNT_TYPE = "record_count_type";
   public static final String RELEASE_STAGE = "release_stage";
-  public static final String RESET_WORKFLOW_FAILURE_CAUSE = "failure_cause";
+  public static final String FAILURE_CAUSE = "failure_cause";
   public static final String SOURCE_ID = "source_id";
   public static final String SOURCE_IMAGE = "source_image";
   public static final String STATUS = "status";
@@ -55,6 +55,14 @@ public class MetricTags {
   public static final String UNKNOWN = "unknown";
   public static final String USER_TYPE = "user_type"; // real user, service account, data plane user, etc
   public static final String WILL_RETRY = "will_retry";
+
+  // payload metric tags
+  public static final String URI_NULL = "uri_null";
+  public static final String URI_ID = "uri_id";
+  public static final String URI_VERSION = "uri_version";
+  public static final String PAYLOAD_CLASS = "payload_class";
+  public static final String IS_MATCH = "is_match";
+  public static final String IS_MISS = "is_miss";
 
   public static String getReleaseStage(final ReleaseStage stage) {
     return stage != null ? stage.value() : UNKNOWN;

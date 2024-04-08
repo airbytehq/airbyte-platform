@@ -11,4 +11,12 @@ import java.util.UUID
  * NOTE: eventually this will fully replace the PermissionPersistence class.
  */
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
-interface PermissionRepository : PageableRepository<Permission, UUID>
+interface PermissionRepository : PageableRepository<Permission, UUID> {
+  fun findByIdIn(permissionIds: List<UUID>): List<Permission>
+
+  fun findByUserId(userId: UUID): List<Permission>
+
+  fun findByOrganizationId(organizationId: UUID): List<Permission>
+
+  fun deleteByIdIn(permissionIds: List<UUID>)
+}

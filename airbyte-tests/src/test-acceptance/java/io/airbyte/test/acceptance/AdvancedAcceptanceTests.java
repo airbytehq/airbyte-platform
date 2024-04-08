@@ -18,7 +18,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.invoker.generated.ApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.AirbyteStream;
 import io.airbyte.api.client.model.generated.AttemptInfoRead;
@@ -42,9 +41,7 @@ import io.airbyte.commons.lang.MoreBooleans;
 import io.airbyte.test.utils.AcceptanceTestHarness;
 import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.TestConnectionCreate;
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -90,7 +87,7 @@ class AdvancedAcceptanceTests {
   private static final String AIRBYTE_SERVER_HOST = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001");
 
   @BeforeAll
-  static void init() throws URISyntaxException, IOException, InterruptedException, ApiException {
+  static void init() throws Exception {
     final URI url = new URI(AIRBYTE_SERVER_HOST);
     final var apiClient = new AirbyteApiClient(
         new ApiClient().setScheme(url.getScheme())

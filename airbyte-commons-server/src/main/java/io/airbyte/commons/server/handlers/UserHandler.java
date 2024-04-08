@@ -35,6 +35,7 @@ import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.config.InitialUserConfiguration;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.errors.ConflictException;
 import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.commons.server.support.UserAuthenticationResolver;
 import io.airbyte.config.ConfigSchema;
@@ -49,6 +50,8 @@ import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.SQLOperationNotAllowedException;
 import io.airbyte.config.persistence.UserPersistence;
+import io.airbyte.data.services.PermissionRedundantException;
+import io.airbyte.data.services.PermissionService;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -74,6 +77,7 @@ public class UserHandler {
   private final Supplier<UUID> uuidGenerator;
   private final UserPersistence userPersistence;
   private final PermissionPersistence permissionPersistence;
+  private final PermissionService permissionService;
   private final PermissionHandler permissionHandler;
   private final WorkspacesHandler workspacesHandler;
   private final OrganizationPersistence organizationPersistence;
@@ -85,6 +89,7 @@ public class UserHandler {
   public UserHandler(
                      final UserPersistence userPersistence,
                      final PermissionPersistence permissionPersistence,
+                     final PermissionService permissionService,
                      final OrganizationPersistence organizationPersistence,
                      final PermissionHandler permissionHandler,
                      final WorkspacesHandler workspacesHandler,
@@ -95,6 +100,7 @@ public class UserHandler {
     this.userPersistence = userPersistence;
     this.organizationPersistence = organizationPersistence;
     this.permissionPersistence = permissionPersistence;
+    this.permissionService = permissionService;
     this.workspacesHandler = workspacesHandler;
     this.permissionHandler = permissionHandler;
     this.userAuthenticationResolver = userAuthenticationResolver;
@@ -381,7 +387,8 @@ public class UserHandler {
     return createUser(userCreate);
   }
 
-  private void handleUserPermissionsAndWorkspace(final UserRead createdUser) throws IOException, JsonValidationException, ConfigNotFoundException {
+  private void handleUserPermissionsAndWorkspace(final UserRead createdUser)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     createInstanceAdminPermissionIfInitialUser(createdUser);
     final Optional<Organization> ssoOrg = getSsoOrganizationIfExists();
     if (ssoOrg.isPresent()) {
@@ -460,7 +467,7 @@ public class UserHandler {
         .permissionType(permissionType));
   }
 
-  private void createInstanceAdminPermissionIfInitialUser(final UserRead createdUser) throws IOException, JsonValidationException {
+  private void createInstanceAdminPermissionIfInitialUser(final UserRead createdUser) {
     if (initialUserConfiguration.isEmpty()) {
       // do nothing if initial_user bean is not present.
       return;
@@ -482,12 +489,16 @@ public class UserHandler {
     LOGGER.info("creating instance_admin permission for user ID {} because their email matches this instance's configured initial_user",
         createdUser.getUserId());
 
-    permissionPersistence.writePermission(new Permission()
-        .withPermissionId(uuidGenerator.get())
-        .withUserId(createdUser.getUserId())
-        .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN)
-        .withOrganizationId(null)
-        .withWorkspaceId(null));
+    try {
+      permissionService.createPermission(new Permission()
+          .withPermissionId(uuidGenerator.get())
+          .withUserId(createdUser.getUserId())
+          .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN)
+          .withOrganizationId(null)
+          .withWorkspaceId(null));
+    } catch (final PermissionRedundantException e) {
+      throw new ConflictException(e.getMessage(), e);
+    }
   }
 
   private WorkspaceUserReadList buildWorkspaceUserReadList(final List<UserPermission> userPermissions, final UUID workspaceId) {

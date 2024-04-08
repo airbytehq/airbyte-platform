@@ -37,9 +37,6 @@ import io.airbyte.db.jdbc.JdbcUtils;
 import io.airbyte.test.utils.AcceptanceTestHarness;
 import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.TestConnectionCreate;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -81,7 +78,7 @@ class ApiAcceptanceTests {
   private UUID workspaceId;
 
   @BeforeEach
-  void setup() throws SQLException, URISyntaxException, IOException, ApiException, InterruptedException {
+  void setup() throws Exception {
     testResources = new AcceptanceTestsResources();
     testResources.init();
     testHarness = testResources.getTestHarness();

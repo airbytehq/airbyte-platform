@@ -53,7 +53,7 @@ class AirbyteControlMessageEventListenerTest {
     when(airbyteControlMessage.getType()).thenReturn(AirbyteControlMessage.Type.CONNECTOR_CONFIG);
     when(airbyteMessage.getType()).thenReturn(Type.CONTROL);
     when(airbyteMessage.getControl()).thenReturn(airbyteControlMessage);
-    when(ReplicationContext.destinationId()).thenReturn(destinationId);
+    when(ReplicationContext.getDestinationId()).thenReturn(destinationId);
 
     final ReplicationAirbyteMessageEvent replicationAirbyteMessageEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, ReplicationContext);
@@ -77,7 +77,7 @@ class AirbyteControlMessageEventListenerTest {
     when(airbyteControlMessage.getType()).thenReturn(AirbyteControlMessage.Type.CONNECTOR_CONFIG);
     when(airbyteMessage.getType()).thenReturn(Type.CONTROL);
     when(airbyteMessage.getControl()).thenReturn(airbyteControlMessage);
-    when(ReplicationContext.sourceId()).thenReturn(sourceId);
+    when(ReplicationContext.getSourceId()).thenReturn(sourceId);
 
     final ReplicationAirbyteMessageEvent replicationAirbyteMessageEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, ReplicationContext);

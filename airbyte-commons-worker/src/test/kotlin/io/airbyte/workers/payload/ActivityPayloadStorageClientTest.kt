@@ -3,6 +3,7 @@ package io.airbyte.workers.payload
 import io.airbyte.commons.json.JsonSerde
 import io.airbyte.config.StandardSyncOutput
 import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.models.RefreshSchemaActivityOutput
 import io.airbyte.workers.storage.StorageClient
 import io.mockk.every
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import java.lang.RuntimeException
 
 @ExtendWith(MockKExtension::class)
 class ActivityPayloadStorageClientTest {
@@ -31,7 +33,7 @@ class ActivityPayloadStorageClientTest {
   fun setup() {
     client = ActivityPayloadStorageClient(storageClientRaw, serde, metricClient)
 
-    every { metricClient.count(any(), any()) } returns Unit
+    every { metricClient.count(any(), any(), *anyVararg()) } returns Unit
 
     every { storageClientRaw.write(any(), any()) } returns Unit
 
@@ -90,5 +92,74 @@ class ActivityPayloadStorageClientTest {
     client.writeJSON(ActivityPayloadURI("sync-output"), syncOutput)
 
     verify { storageClientRaw.write("sync-output", "serialized-sync-output") }
+  }
+
+  @Test
+  fun `validateOutput records a result for a match`() {
+    val uri = ActivityPayloadURI("id", "version")
+    val syncOutput = StandardSyncOutput().withAdditionalProperty("some", "unique-value-1")
+
+    every { serde.deserialize(any(), StandardSyncOutput::class.java) } returns syncOutput
+
+    client.validateOutput(uri, StandardSyncOutput::class.java, syncOutput, listOf())
+
+    verify {
+      metricClient.count(OssMetricsRegistry.PAYLOAD_VALIDATION_RESULT, 1, *anyVararg())
+    }
+  }
+
+  @Test
+  fun `validateOutput records a result for a mismatch`() {
+    val uri = ActivityPayloadURI("id", "version")
+    val syncOutput1 = StandardSyncOutput().withAdditionalProperty("some", "unique-value-1")
+    val syncOutput2 = StandardSyncOutput().withAdditionalProperty("some", "unique-value-2")
+
+    every { serde.deserialize(any(), StandardSyncOutput::class.java) } returns syncOutput2
+
+    client.validateOutput(uri, StandardSyncOutput::class.java, syncOutput1, listOf())
+
+    verify {
+      metricClient.count(OssMetricsRegistry.PAYLOAD_VALIDATION_RESULT, 1, *anyVararg())
+    }
+  }
+
+  @Test
+  fun `validateOutput records a result for a read miss`() {
+    val uri = ActivityPayloadURI("id", "version")
+    val syncOutput = StandardSyncOutput().withAdditionalProperty("some", "unique-value-1")
+
+    every { storageClientRaw.read(uri.id) } returns null
+
+    client.validateOutput(uri, StandardSyncOutput::class.java, syncOutput, listOf())
+
+    verify {
+      metricClient.count(OssMetricsRegistry.PAYLOAD_VALIDATION_RESULT, 1, *anyVararg())
+    }
+  }
+
+  @Test
+  fun `validateOutput records read failure for null uri`() {
+    val uri = null
+    val syncOutput = StandardSyncOutput().withAdditionalProperty("some", "unique-value-1")
+
+    client.validateOutput(uri, StandardSyncOutput::class.java, syncOutput, listOf())
+
+    verify {
+      metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_READ, 1, *anyVararg())
+    }
+  }
+
+  @Test
+  fun `validateOutput records read failure on client read exception`() {
+    val uri = ActivityPayloadURI("id", "version")
+    val syncOutput = StandardSyncOutput().withAdditionalProperty("some", "unique-value-1")
+
+    every { storageClientRaw.read(uri.id) } throws RuntimeException("yikes")
+
+    client.validateOutput(uri, StandardSyncOutput::class.java, syncOutput, listOf())
+
+    verify {
+      metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_READ, 1, *anyVararg())
+    }
   }
 }

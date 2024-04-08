@@ -10,13 +10,9 @@ import static io.airbyte.test.acceptance.AcceptanceTestsResources.KUBE;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.TRUE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
 import io.airbyte.api.client.model.generated.CheckConnectionRead.StatusEnum;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.sql.SQLException;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -39,7 +35,7 @@ public class WorkloadBasicAcceptanceTests {
   static final UUID RUN_DISCOVER_WITH_WORKLOAD_WORKSPACE_ID = UUID.fromString("3851861d-ac0b-440c-bd60-408cf9e7fc0e");
 
   @BeforeEach
-  void setup() throws SQLException, URISyntaxException, IOException, ApiException, InterruptedException {
+  void setup() throws Exception {
     testResources.init();
     testResources.setup();
   }

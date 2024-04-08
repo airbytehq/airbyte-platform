@@ -146,8 +146,6 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
 
 object RunSocatInConnectorContainer : Temporary<Boolean>(key = "platform.run-socat-in-connector-container", default = false)
 
-object FailSyncIfTooBig : Temporary<Boolean>(key = "platform.fail-sync-if-too-big", default = false)
-
 object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-default-org-for-new-workspace", default = false)
 
 object WorkloadHeartbeatRate : Permanent<Int>(key = "workload.heartbeat.rate", default = 5)
@@ -171,6 +169,8 @@ object UseRuntimeSecretPersistence : Temporary<Boolean>(key = "platform.use-runt
 object UseWorkloadApi : Temporary<Boolean>(key = "platform.use-workload-api", default = false)
 
 object EmitStateStatsToSegment : Temporary<Boolean>(key = "platform.emit-state-stats-segment", default = true)
+
+object LogsForStripeChecksumDebugging : Temporary<Boolean>(key = "platform.logs-for-stripe-checksum-debug", default = false)
 
 object AddInitialCreditsForWorkspace : Temporary<Int>(key = "add-credits-at-workspace-creation-for-org", default = 0)
 
@@ -197,3 +197,5 @@ object UseWorkloadApiForSpec : Temporary<Boolean>(key = "platform.use-workload-a
 object EnforceMutexKeyOnCreate : Temporary<Boolean>(key = "platform.enforce-mutex-key-on-create", default = false)
 
 object ActivateRefreshes : Temporary<Boolean>(key = "platform.activate-refreshes", default = false)
+
+object WriteReplicationOutputToObjectStorage : Temporary<Boolean>(key = "platform.write-replication-output-to-object-storage", default = false)

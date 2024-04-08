@@ -238,7 +238,6 @@ public class JobsHandler {
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
       }
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CANCELLED_BY_RELEASE_STAGE, job);
-      jobNotifier.failJob(job, attemptStats);
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.FAILED);
     } catch (final IOException e) {
       jobCreationAndStatusUpdateHelper.trackCompletionForInternalFailure(jobId, connectionId, attemptNumber,

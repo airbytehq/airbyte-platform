@@ -4,6 +4,10 @@
 
 package io.airbyte.test.utils;
 
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.PERMISSION;
+
+import io.airbyte.config.Permission;
+import io.airbyte.config.persistence.PermissionPersistenceHelper;
 import io.airbyte.db.Database;
 import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.factory.DataSourceFactory;
@@ -11,9 +15,11 @@ import io.airbyte.db.factory.FlywayFactory;
 import io.airbyte.db.init.DatabaseInitializationException;
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator;
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider;
+import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.test.TestDatabaseProviders;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.time.OffsetDateTime;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.jooq.DSLContext;
@@ -136,6 +142,7 @@ public class BaseConfigDatabaseTest {
               state,
               stream_reset,
               stream_refreshes,
+              stream_generation,
               \"user\",
               user_invitation,
               sso_config,
@@ -143,6 +150,30 @@ public class BaseConfigDatabaseTest {
               workspace,
               workspace_service_account
             """));
+  }
+
+  /**
+   * This method used to live on PermissionPersistence, but it was deprecated in favor of the new
+   * PermissionService backed by a Micronaut Data repository. Many tests depended on this method, so
+   * rather than keep it in the deprecated PermissionPersistence, a simplified version is implemented
+   * here for tests only.
+   */
+  protected static void writePermission(final Permission permission) throws SQLException {
+    final io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType permissionType =
+        PermissionPersistenceHelper.convertConfigPermissionTypeToJooqPermissionType(permission.getPermissionType());
+
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+
+    database.query(ctx -> ctx
+        .insertInto(Tables.PERMISSION)
+        .set(PERMISSION.ID, permission.getPermissionId())
+        .set(PERMISSION.PERMISSION_TYPE, permissionType)
+        .set(PERMISSION.USER_ID, permission.getUserId())
+        .set(PERMISSION.WORKSPACE_ID, permission.getWorkspaceId())
+        .set(PERMISSION.ORGANIZATION_ID, permission.getOrganizationId())
+        .set(PERMISSION.CREATED_AT, timestamp)
+        .set(PERMISSION.UPDATED_AT, timestamp)
+        .execute());
   }
 
   private static void createDbContainer() {

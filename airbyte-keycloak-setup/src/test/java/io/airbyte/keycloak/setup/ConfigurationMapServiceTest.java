@@ -14,6 +14,8 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.keycloak.admin.client.resource.IdentityProvidersResource;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.mockito.InjectMocks;
@@ -40,9 +42,17 @@ class ConfigurationMapServiceTest {
     configurationMapService = new ConfigurationMapService(WEBAPP_URL, keycloakConfiguration);
   }
 
-  @Test
-  void testImportProviderFrom() {
-    when(identityProviderConfiguration.getDomain()).thenReturn("trial-577.okta.com");
+  @ParameterizedTest
+  @ValueSource(strings = {
+    "trial-577.okta.com",
+    "https://trial-577.okta.com",
+    "trial-577.okta.com/.well-known/openid-configuration",
+    "https://trial-577.okta.com/.well-known/openid-configuration",
+    "trial-577.okta.com/",
+    "https://trial-577.okta.com/",
+  })
+  void testImportProviderFrom(String url) {
+    when(identityProviderConfiguration.getDomain()).thenReturn(url);
     when(realmResource.identityProviders()).thenReturn(identityProvidersResource);
 
     Map<String, Object> importFromMap = new HashMap<>();

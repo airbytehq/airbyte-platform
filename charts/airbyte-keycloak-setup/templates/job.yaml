@@ -52,7 +52,6 @@ spec:
         {{- if .Values.extraInitContainers }}
         {{- toYaml .Values.extraInitContainers | nindent 8 }}
         {{- end }}
-      restartPolicy: Never
       containers:
         - name: airbyte-keycloak-setup-container
           image: {{ printf "%s:%s" .Values.image.repository (include "keycloak-setup.imageTag" .) }}

@@ -22,10 +22,17 @@ import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody;
 import io.airbyte.api.client.model.generated.ReportJobStartRequest;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
+import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.workers.context.AttemptContext;
+import io.airbyte.workers.payload.ActivityPayloadStorageClient;
+import io.airbyte.workers.payload.ActivityPayloadURI;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -38,11 +45,14 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
 
   private final JobsApi jobsApi;
   private final AttemptApi attemptApi;
+  private final ActivityPayloadStorageClient storageClient;
 
   public JobCreationAndStatusUpdateActivityImpl(final JobsApi jobsApi,
-                                                final AttemptApi attemptApi) {
+                                                final AttemptApi attemptApi,
+                                                final ActivityPayloadStorageClient storageClient) {
     this.jobsApi = jobsApi;
     this.attemptApi = attemptApi;
+    this.storageClient = storageClient;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -80,12 +90,23 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   public void jobSuccessWithAttemptNumber(final JobSuccessInputWithAttemptNumber input) {
     new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
+    final var directOutput = input.getStandardSyncOutput();
+    if (directOutput != null) {
+      final var uri = ActivityPayloadURI.fromOpenApi(directOutput.getUri());
+      final List<MetricAttribute> attrs = new ArrayList<>();
+      attrs.add(new MetricAttribute(MetricTags.CONNECTION_ID, input.getConnectionId().toString()));
+      attrs.add(new MetricAttribute(MetricTags.ATTEMPT_NUMBER, input.getAttemptNumber().toString()));
+      attrs.add(new MetricAttribute(MetricTags.JOB_ID, input.getJobId().toString()));
+
+      storageClient.validateOutput(uri, StandardSyncOutput.class, directOutput, attrs);
+    }
+
     try {
       final var request = new JobSuccessWithAttemptNumberRequest()
           .jobId(input.getJobId())
           .attemptNumber(input.getAttemptNumber())
           .connectionId(input.getConnectionId())
-          .standardSyncOutput(input.getStandardSyncOutput());
+          .standardSyncOutput(directOutput);
       jobsApi.jobSuccessWithAttemptNumber(request);
     } catch (final ApiException e) {
       ApmTraceUtils.addExceptionToTrace(e);
@@ -117,12 +138,23 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   public void attemptFailureWithAttemptNumber(final AttemptNumberFailureInput input) {
     new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
+    final var directOutput = input.getStandardSyncOutput();
+    if (directOutput != null) {
+      final var uri = ActivityPayloadURI.fromOpenApi(directOutput.getUri());
+      final List<MetricAttribute> attrs = new ArrayList<>();
+      attrs.add(new MetricAttribute(MetricTags.CONNECTION_ID, input.getConnectionId().toString()));
+      attrs.add(new MetricAttribute(MetricTags.ATTEMPT_NUMBER, input.getAttemptNumber().toString()));
+      attrs.add(new MetricAttribute(MetricTags.JOB_ID, input.getJobId().toString()));
+
+      storageClient.validateOutput(uri, StandardSyncOutput.class, directOutput, attrs);
+    }
+
     try {
       final var req = new FailAttemptRequest()
           .attemptNumber(input.getAttemptNumber())
           .jobId(input.getJobId())
           .failureSummary(input.getAttemptFailureSummary())
-          .standardSyncOutput(input.getStandardSyncOutput());
+          .standardSyncOutput(directOutput);
 
       attemptApi.failAttempt(req);
     } catch (final ApiException e) {

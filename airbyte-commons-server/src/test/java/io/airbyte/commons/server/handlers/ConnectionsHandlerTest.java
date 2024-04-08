@@ -232,6 +232,7 @@ class ConnectionsHandlerTest {
 
   private DestinationHandler destinationHandler;
   private SourceHandler sourceHandler;
+  private StreamRefreshesHandler streamRefreshesHandler;
   private JobNotifier jobNotifier;
   private Job job;
 
@@ -319,6 +320,7 @@ class ConnectionsHandlerTest {
         .withGeography(Geography.US);
 
     jobPersistence = mock(JobPersistence.class);
+    streamRefreshesHandler = mock(StreamRefreshesHandler.class);
     configRepository = mock(ConfigRepository.class);
     uuidGenerator = mock(Supplier.class);
     workspaceHelper = mock(WorkspaceHelper.class);
@@ -383,6 +385,7 @@ class ConnectionsHandlerTest {
     @BeforeEach
     void setUp() throws JsonValidationException, ConfigNotFoundException, IOException {
       connectionsHandler = new ConnectionsHandler(
+          streamRefreshesHandler,
           jobPersistence,
           configRepository,
           uuidGenerator,
@@ -641,6 +644,7 @@ class ConnectionsHandlerTest {
       connectionsHandler.deleteConnection(connectionId);
 
       verify(connectionHelper).deleteConnection(connectionId);
+      verify(streamRefreshesHandler).deleteRefreshesForConnection(connectionId);
     }
 
     @Test
@@ -718,7 +722,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, times(1)).autoDisableConnectionWarning(any(), any());
       }
 
@@ -738,7 +741,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, times(1)).autoDisableConnectionWarning(any(), any());
       }
 
@@ -760,7 +762,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
@@ -782,7 +783,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
@@ -801,7 +801,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
@@ -841,7 +840,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
 
       }
@@ -857,7 +855,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
@@ -890,7 +887,6 @@ class ConnectionsHandlerTest {
         assertFalse(internalOperationResult.getSucceeded());
         verify(configRepository, Mockito.never()).writeStandardSync(any());
         verify(jobNotifier, Mockito.never()).autoDisableConnection(any(), any());
-        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any(), any());
       }
 
       private void verifyDisabled() throws IOException {
@@ -898,7 +894,6 @@ class ConnectionsHandlerTest {
             argThat(standardSync -> (standardSync.getStatus().equals(Status.INACTIVE) && standardSync.getConnectionId().equals(connectionId))));
         verify(configRepository, times(1)).writeStandardSync(standardSync);
         verify(jobNotifier, times(1)).autoDisableConnection(eq(job), any());
-        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), eq(job), any());
         verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any(), any());
       }
 
@@ -1502,6 +1497,7 @@ class ConnectionsHandlerTest {
     @BeforeEach
     void setUp() {
       connectionsHandler = new ConnectionsHandler(
+          streamRefreshesHandler,
           jobPersistence,
           configRepository,
           uuidGenerator,
@@ -1752,6 +1748,7 @@ class ConnectionsHandlerTest {
     @BeforeEach
     void setUp() {
       connectionsHandler = new ConnectionsHandler(
+          streamRefreshesHandler,
           jobPersistence,
           configRepository,
           uuidGenerator,
@@ -2235,6 +2232,7 @@ class ConnectionsHandlerTest {
       when(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(SOURCE_ID)).thenReturn(WORKSPACE_ID);
       when(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(DESTINATION_ID)).thenReturn(WORKSPACE_ID);
       connectionsHandler = new ConnectionsHandler(
+          streamRefreshesHandler,
           jobPersistence,
           configRepository,
           uuidGenerator,
