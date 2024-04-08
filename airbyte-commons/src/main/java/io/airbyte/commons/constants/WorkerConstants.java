@@ -32,7 +32,13 @@ public class WorkerConstants {
       String value = System.getenv(envVarName);
       if (value != null) {
         try {
-          return Long.parseLong(value);
+          long parsedValue = Long.parseLong(value);
+          // Validate that the value is a positive integer greater than 0
+          if (parsedValue > 0) {
+            return parsedValue;
+          } else {
+            System.err.println("Environment variable " + envVarName + " must be a positive integer greater than 0, using default value: " + defaultValue);
+          }
         } catch (NumberFormatException e) {
           // If parsing fails, return the default value
           System.err.println("Invalid format for environment variable " + envVarName + ", using default value: " + defaultValue);
