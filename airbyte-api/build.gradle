@@ -470,7 +470,12 @@ private def updateApiClientWithFailsafe(def clientPath) {
             'val response = client.newCall(request).execute()',
             '''val call = client.newCall(request)
         val failsafeCall = FailsafeCall.with(policy).compose(call)
-        val response: Response = failsafeCall.execute()''')
+        val response: Response = failsafeCall.execute()
+
+        return response.use { processResponse(response) }
+        }
+
+        protected inline fun <reified T: Any?> processResponse(response: Response): ApiResponse<T?> {''')
 
     // add imports if not exist
     if (!apiClientFileText.contains("import dev.failsafe.RetryPolicy")) {

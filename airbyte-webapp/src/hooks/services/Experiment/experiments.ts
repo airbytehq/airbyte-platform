@@ -7,6 +7,7 @@
  */
 
 export interface Experiments {
+  "authPage.keycloak": boolean;
   "authPage.rightSideUrl": string | undefined;
   "authPage.signup.hideCompanyName": boolean;
   "authPage.signup.hideName": boolean;
