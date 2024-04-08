@@ -38,7 +38,6 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
 
   private OrganizationPersistence organizationPersistence;
   private UserPersistence userPersistence;
-  private PermissionPersistence permissionPersistence;
   private WorkspaceService workspaceService;
   private TestClient featureFlagClient;
   private SecretsRepositoryReader secretsRepositoryReader;
@@ -47,7 +46,6 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
 
   @BeforeEach
   void beforeEach() throws Exception {
-    permissionPersistence = new PermissionPersistence(database);
     userPersistence = new UserPersistence(database);
     organizationPersistence = new OrganizationPersistence(database);
     featureFlagClient = new TestClient();
@@ -206,7 +204,7 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
         .withPba(false)
         .withOrgLevelBilling(false));
     // grant user an admin access to org 1
-    permissionPersistence.writePermission(new Permission()
+    BaseConfigDatabaseTest.writePermission(new Permission()
         .withPermissionId(UUID.randomUUID())
         .withOrganizationId(orgId1)
         .withUserId(userId)
@@ -221,7 +219,7 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
         .withPba(false)
         .withOrgLevelBilling(false));
     // grant user an editor access to org 2
-    permissionPersistence.writePermission(new Permission()
+    BaseConfigDatabaseTest.writePermission(new Permission()
         .withPermissionId(UUID.randomUUID())
         .withOrganizationId(orgId2)
         .withUserId(userId)
@@ -236,7 +234,7 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
         .withPba(false)
         .withOrgLevelBilling(false));
     // grant user a read access to org 3
-    permissionPersistence.writePermission(new Permission()
+    BaseConfigDatabaseTest.writePermission(new Permission()
         .withPermissionId(UUID.randomUUID())
         .withOrganizationId(orgId3)
         .withUserId(userId)

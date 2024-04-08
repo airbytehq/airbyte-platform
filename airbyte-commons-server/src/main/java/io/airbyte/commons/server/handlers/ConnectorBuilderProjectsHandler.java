@@ -392,7 +392,6 @@ public class ConnectorBuilderProjectsHandler {
         ? new ConnectorBuilderHttpRequest()
             .url(request.getUrl())
             .httpMethod(ConnectorBuilderHttpRequest.HttpMethodEnum.fromString(request.getHttpMethod().getValue()))
-            .parameters(request.getParameters())
             .body(request.getBody())
             .headers(request.getHeaders())
         : null;

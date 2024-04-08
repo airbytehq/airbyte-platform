@@ -32,6 +32,7 @@ import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
+import io.airbyte.workers.payload.ActivityPayloadStorageClient;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.EnsureCleanJobStateInput;
@@ -66,6 +67,9 @@ class JobCreationAndStatusUpdateActivityTest {
   @Mock
   private AttemptApi attemptApi;
 
+  @Mock
+  private ActivityPayloadStorageClient storageClient;
+
   private JobCreationAndStatusUpdateActivityImpl jobCreationAndStatusUpdateActivity;
 
   private static final UUID CONNECTION_ID = UUID.randomUUID();
@@ -89,7 +93,7 @@ class JobCreationAndStatusUpdateActivityTest {
 
   @BeforeEach
   void beforeEach() {
-    jobCreationAndStatusUpdateActivity = new JobCreationAndStatusUpdateActivityImpl(jobsApi, attemptApi);
+    jobCreationAndStatusUpdateActivity = new JobCreationAndStatusUpdateActivityImpl(jobsApi, attemptApi, storageClient);
   }
 
   @Nested
@@ -199,7 +203,7 @@ class JobCreationAndStatusUpdateActivityTest {
 
       Assertions
           .assertThatThrownBy(() -> jobCreationAndStatusUpdateActivity.jobSuccessWithAttemptNumber(
-              new JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, null)))
+              new JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, standardSyncOutput)))
           .isInstanceOf(RetryableException.class)
           .hasCauseInstanceOf(ApiException.class);
     }

@@ -411,7 +411,7 @@ describe("Connection Configuration", () => {
         connection = connectionResponse;
         visit(connection);
         connectionSettings.goToSettingsPage();
-        deleteEntity(connection.name);
+        deleteEntity();
       });
     });
   });
@@ -534,15 +534,6 @@ describe("Connection Configuration", () => {
               notifySchemaChanges: connection.notifySchemaChanges,
             });
           });
-        });
-      });
-    });
-    describe("Transformations tab", () => {
-      it("cannot edit Custom transformations form settings", () => {
-        cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
-          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Transformation}`);
-
-          cy.get('form[data-testid="custom-transformation-form"]').children("fieldset").should("be.disabled");
         });
       });
     });

@@ -25,7 +25,7 @@ airbyte:
         log: ${STORAGE_BUCKET_LOG}
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
-        activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD:todo-remove-after-added-to-charts}
+        activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       local:
@@ -49,6 +49,8 @@ airbyte:
     credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
     email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
   sidecar:
+    # Can we bump this value? Does it need to be configured per operation?
+    # Should we pass it in from the launcher?
     file-timeout-minutes: ${SIDECAR_FILE_TIMEOUT_MINUTES:9}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}

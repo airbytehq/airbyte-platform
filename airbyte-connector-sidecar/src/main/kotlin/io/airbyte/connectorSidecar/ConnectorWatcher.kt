@@ -61,7 +61,13 @@ class ConnectorWatcher(
       while (!areNeededFilesPresent()) {
         Thread.sleep(100)
         if (fileTimeoutReach(stopwatch)) {
-          failWorkload(workloadId, null)
+          logger.warn { "Failed to find output files from connector within timeout $fileTimeoutMinutes. Is the connector still running?" }
+          val failureReason =
+            FailureReason()
+              .withFailureOrigin(FailureReason.FailureOrigin.UNKNOWN)
+              .withExternalMessage("Failed to find output files from connector within timeout $fileTimeoutMinutes.")
+
+          failWorkload(workloadId, failureReason)
           exitFileNotFound()
           // The return is needed for the test
           return
@@ -153,24 +159,26 @@ class ConnectorWatcher(
       },
       Optional.empty<UUID>(),
       Optional.empty<ConfiguredAirbyteCatalog>(),
-      Optional.empty<Class<out RuntimeException?>>(),
-      InvalidLineFailureConfiguration(false, false),
+      InvalidLineFailureConfiguration(false),
       gsonPksExtractor,
     )
   }
 
   @VisibleForTesting
   fun exitProperly() {
+    logger.info { "Deliberately exiting process with code 0." }
     exitProcess(0)
   }
 
   @VisibleForTesting
   fun exitInternalError() {
+    logger.info { "Deliberately exiting process with code 1." }
     exitProcess(1)
   }
 
   @VisibleForTesting
   fun exitFileNotFound() {
+    logger.info { "Deliberately exiting process with code 2." }
     exitProcess(2)
   }
 
@@ -239,6 +247,7 @@ class ConnectorWatcher(
     workloadId: String,
     failureReason: FailureReason?,
   ) {
+    logger.info { "Failing workload $workloadId." }
     if (failureReason != null) {
       workloadApi.workloadFailure(
         WorkloadFailureRequest(

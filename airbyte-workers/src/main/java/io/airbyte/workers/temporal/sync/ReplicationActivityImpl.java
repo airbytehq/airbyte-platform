@@ -27,10 +27,13 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.WriteReplicationOutputToObjectStorage;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.ReplicationInputHydrator;
@@ -38,6 +41,8 @@ import io.airbyte.workers.Worker;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
+import io.airbyte.workers.payload.ActivityPayloadStorageClient;
+import io.airbyte.workers.payload.ActivityPayloadURI;
 import io.airbyte.workers.sync.WorkloadApiWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.airbyte.workers.workload.JobOutputDocStore;
@@ -49,6 +54,8 @@ import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -80,6 +87,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final MetricClient metricClient;
   private final FeatureFlagClient featureFlagClient;
   private final PayloadChecker payloadChecker;
+  private final ActivityPayloadStorageClient storageClient;
 
   public ReplicationActivityImpl(final SecretsRepositoryReader secretsRepositoryReader,
                                  @Named("workspaceRoot") final Path workspaceRoot,
@@ -93,7 +101,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final OrchestratorHandleFactory orchestratorHandleFactory,
                                  final MetricClient metricClient,
                                  final FeatureFlagClient featureFlagClient,
-                                 final PayloadChecker payloadChecker) {
+                                 final PayloadChecker payloadChecker,
+                                 final ActivityPayloadStorageClient storageClient) {
     this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient.getConnectionApi(),
         airbyteApiClient.getJobsApi(),
         airbyteApiClient.getStateApi(),
@@ -111,6 +120,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.metricClient = metricClient;
     this.featureFlagClient = featureFlagClient;
     this.payloadChecker = payloadChecker;
+    this.storageClient = storageClient;
   }
 
   /**
@@ -128,11 +138,16 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   @Override
   public StandardSyncOutput replicateV2(final ReplicationActivityInput replicationActivityInput) {
     metricClient.count(OssMetricsRegistry.ACTIVITY_REPLICATION, 1);
+
+    final var connectionId = replicationActivityInput.getConnectionId();
+    final var jobId = replicationActivityInput.getJobRunConfig().getJobId();
+    final var attemptNumber = replicationActivityInput.getJobRunConfig().getAttemptId();
+
     final Map<String, Object> traceAttributes =
         Map.of(
-            ATTEMPT_NUMBER_KEY, replicationActivityInput.getJobRunConfig().getAttemptId(),
-            CONNECTION_ID_KEY, replicationActivityInput.getConnectionId(),
-            JOB_ID_KEY, replicationActivityInput.getJobRunConfig().getJobId(),
+            CONNECTION_ID_KEY, connectionId,
+            JOB_ID_KEY, jobId,
+            ATTEMPT_NUMBER_KEY, attemptNumber,
             DESTINATION_DOCKER_IMAGE_KEY, replicationActivityInput.getDestinationLauncherConfig().getDockerImage(),
             SOURCE_DOCKER_IMAGE_KEY, replicationActivityInput.getSourceLauncherConfig().getDockerImage());
     ApmTraceUtils
@@ -200,7 +215,26 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           }
           BackfillHelper.markBackfilledStreams(streamsToBackfill, standardSyncOutput);
           LOGGER.info("sync summary after backfill: {}", standardSyncOutput);
-          return payloadChecker.validatePayloadSize(standardSyncOutput, metricAttributes);
+
+          final StandardSyncOutput output = payloadChecker.validatePayloadSize(standardSyncOutput, metricAttributes);
+          final ActivityPayloadURI uri = ActivityPayloadURI.v1(connectionId, jobId, attemptNumber, "replication-output");
+
+          if (featureFlagClient.boolVariation(WriteReplicationOutputToObjectStorage.INSTANCE, new Connection(connectionId))) {
+            output.setUri(uri.toOpenApi());
+
+            try {
+              storageClient.writeJSON(uri, output);
+            } catch (final Exception e) {
+              final List<MetricAttribute> attrs = new ArrayList<>(Arrays.asList(metricAttributes));
+              attrs.add(new MetricAttribute(MetricTags.URI_ID, uri.getId()));
+              attrs.add(new MetricAttribute(MetricTags.URI_VERSION, uri.getVersion()));
+              attrs.add(new MetricAttribute(MetricTags.FAILURE_CAUSE, e.getClass().getSimpleName()));
+
+              metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_WRITE, 1, attrs.toArray(new MetricAttribute[] {}));
+            }
+          }
+
+          return output;
         },
         context);
   }

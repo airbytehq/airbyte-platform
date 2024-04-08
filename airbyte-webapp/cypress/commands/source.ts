@@ -64,9 +64,10 @@ export const updateSource = (name: string, field: string, value: string, isDropd
 };
 
 export const deleteSource = (name: string) => {
+  cy.log(`Deleting source ${name}`);
   cy.intercept("/api/v1/sources/delete").as("deleteSource");
   goToSourcePage();
   openConnectorPage(name);
-  deleteEntity("Test source cypress");
+  deleteEntity();
   cy.wait("@deleteSource");
 };

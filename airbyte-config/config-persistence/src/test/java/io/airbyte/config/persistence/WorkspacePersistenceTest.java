@@ -36,7 +36,6 @@ import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
-import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
@@ -73,9 +72,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
   private ConfigRepository configRepository;
   private WorkspacePersistence workspacePersistence;
-  private PermissionPersistence permissionPersistence;
   private UserPersistence userPersistence;
-  private WorkspaceService workspaceService;
   private FeatureFlagClient featureFlagClient;
   private SecretsRepositoryReader secretsRepositoryReader;
   private SecretsRepositoryWriter secretsRepositoryWriter;
@@ -87,8 +84,6 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-    workspaceService = spy(new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
-        secretPersistenceConfigService));
 
     final ConnectionService connectionService = mock(ConnectionService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
@@ -126,7 +121,6 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
                 secretsRepositoryWriter,
                 secretPersistenceConfigService)));
     workspacePersistence = new WorkspacePersistence(database);
-    permissionPersistence = new PermissionPersistence(database);
     userPersistence = new UserPersistence(database);
     final OrganizationPersistence organizationPersistence = new OrganizationPersistence(database);
 
@@ -447,14 +441,14 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     configRepository.writeStandardWorkspaceNoSecrets(workspace2);
 
     // create a workspace permission for workspace 1
-    permissionPersistence.writePermission(new Permission()
+    BaseConfigDatabaseTest.writePermission(new Permission()
         .withPermissionId(UUID.randomUUID())
         .withWorkspaceId(workspaceId1)
         .withUserId(userId)
         .withPermissionType(PermissionType.WORKSPACE_OWNER));
 
     // create an org permission that should grant access to workspace 2 and 3
-    permissionPersistence.writePermission(new Permission()
+    BaseConfigDatabaseTest.writePermission(new Permission()
         .withPermissionId(UUID.randomUUID())
         .withOrganizationId(MockData.ORGANIZATION_ID_2)
         .withUserId(userId)
@@ -510,14 +504,14 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     configRepository.writeStandardWorkspaceNoSecrets(workspace3);
 
     // create a workspace-level permission for workspace 1
-    permissionPersistence.writePermission(new Permission()
+    BaseConfigDatabaseTest.writePermission(new Permission()
         .withPermissionId(UUID.randomUUID())
         .withWorkspaceId(workspace1Id)
         .withUserId(userId)
         .withPermissionType(PermissionType.WORKSPACE_READER));
 
     // create an org-level permission that should grant access to workspace 2
-    permissionPersistence.writePermission(new Permission()
+    BaseConfigDatabaseTest.writePermission(new Permission()
         .withPermissionId(UUID.randomUUID())
         .withOrganizationId(MockData.ORGANIZATION_ID_2)
         .withUserId(userId)
@@ -525,7 +519,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
     // create an org-member permission that should NOT grant access to workspace 3, because
     // org-member is too low of a permission to grant read-access to workspaces in the org.
-    permissionPersistence.writePermission(new Permission()
+    BaseConfigDatabaseTest.writePermission(new Permission()
         .withPermissionId(UUID.randomUUID())
         .withOrganizationId(MockData.ORGANIZATION_ID_3)
         .withUserId(userId)

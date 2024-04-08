@@ -13,7 +13,7 @@ micronaut:
   env:
     cloud-deduction: true
   server:
-    port: 9000
+    port: 9000 # If this value is modified, update the SERVER_PORT constant in OrchestratorConstants.kt
   executors:
     control-message:
       type: fixed
@@ -48,7 +48,7 @@ airbyte:
         log: ${STORAGE_BUCKET_LOG}
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
-        activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD:todo-remove-after-added-to-charts}
+        activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       local:

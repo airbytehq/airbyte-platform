@@ -48,7 +48,7 @@ public class ApplicationBeanFactory {
     return new SynchronousPythonCdkCommandRunner(
         new AirbyteFileWriterImpl(),
         // This should eventually be constructed via DI.
-        VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(true),
+        VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(),
         this.getPython(),
         this.getCdkEntrypoint(),
         this.getPythonPath());

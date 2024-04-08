@@ -32,10 +32,7 @@ import io.airbyte.db.Database;
 import io.airbyte.test.utils.AcceptanceTestHarness;
 import io.airbyte.test.utils.Databases;
 import io.airbyte.test.utils.SchemaTableNamePair;
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.sql.SQLException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -166,7 +163,7 @@ public class ConnectorBuilderTests {
   }
 
   @BeforeAll
-  static void init() throws URISyntaxException, IOException, InterruptedException, ApiException, SQLException {
+  static void init() throws Exception {
     final URI url = new URI(AIRBYTE_SERVER_HOST);
     final var underlyingApiClient = new ApiClient().setScheme(url.getScheme())
         .setHost(url.getHost())

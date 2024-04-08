@@ -154,7 +154,7 @@ public class JobCreationAndStatusUpdateHelper {
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
       }
       final Job failedJob = jobPersistence.getJob(jobId);
-      jobNotifier.failJob("Failing job in order to start from clean job state for new temporal workflow run.", failedJob, attemptStats);
+      jobNotifier.failJob(failedJob, attemptStats);
       trackCompletion(failedJob, JobStatus.FAILED);
     }
   }

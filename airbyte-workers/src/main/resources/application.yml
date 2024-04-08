@@ -39,7 +39,7 @@ airbyte:
     max-attempts: ${ACTIVITY_MAX_ATTEMPT:5}
     max-delay: ${ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS:600}
     max-timeout: ${ACTIVITY_MAX_TIMEOUT_SECOND:120}
-    check-timeout: ${ACTIVITY_CHECK_TIMEOUT:5}
+    check-timeout: ${ACTIVITY_CHECK_TIMEOUT:10}
     discovery-timeout: ${ACTIVITY_DISCOVERY_TIMEOUT:30}
   acceptance:
     test:
@@ -51,7 +51,7 @@ airbyte:
         log: ${STORAGE_BUCKET_LOG}
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
-        activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD:todo-remove-after-added-to-charts}
+        activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       local:

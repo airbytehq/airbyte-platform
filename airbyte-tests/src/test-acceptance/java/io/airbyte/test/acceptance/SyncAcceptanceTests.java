@@ -72,9 +72,6 @@ import io.airbyte.test.utils.Databases;
 import io.airbyte.test.utils.SchemaTableNamePair;
 import io.airbyte.test.utils.TestConnectionCreate;
 import io.temporal.client.WorkflowQueryException;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -139,7 +136,7 @@ class SyncAcceptanceTests {
   UUID workspaceId;
 
   @BeforeEach
-  void setup() throws SQLException, URISyntaxException, IOException, ApiException, InterruptedException {
+  void setup() throws Exception {
     testResources = new AcceptanceTestsResources();
     testResources.init();
     testHarness = testResources.getTestHarness();

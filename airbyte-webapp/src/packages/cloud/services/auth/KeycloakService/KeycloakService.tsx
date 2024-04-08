@@ -30,6 +30,7 @@ export type KeycloakServiceContext = {
   changeRealmAndRedirectToSignin: (realm: string) => Promise<void>;
   // The access token is stored in a ref so we don't cause a re-render each time it changes. Instead, we can use the current ref value when we call the API.
   accessTokenRef: MutableRefObject<string | null>;
+  updateAirbyteUser: (airbyteUser: UserRead) => void;
   redirectToSignInWithGoogle: () => Promise<void>;
   redirectToSignInWithGithub: () => Promise<void>;
   redirectToSignInWithPassword: () => Promise<void>;
@@ -54,6 +55,7 @@ interface KeycloakAuthState {
   error: Error | null;
   didInitialize: boolean;
   isAuthenticated: boolean;
+  isSso: boolean | null;
 }
 
 const keycloakAuthStateInitialState: KeycloakAuthState = {
@@ -62,6 +64,7 @@ const keycloakAuthStateInitialState: KeycloakAuthState = {
   error: null,
   didInitialize: false,
   isAuthenticated: false,
+  isSso: null,
 };
 
 type KeycloakAuthStateAction =
@@ -76,6 +79,10 @@ type KeycloakAuthStateAction =
   | {
       type: "error";
       error: Error;
+    }
+  | {
+      type: "userUpdated";
+      airbyteUser: UserRead;
     };
 
 const keycloakAuthStateReducer = (state: KeycloakAuthState, action: KeycloakAuthStateAction): KeycloakAuthState => {
@@ -87,7 +94,14 @@ const keycloakAuthStateReducer = (state: KeycloakAuthState, action: KeycloakAuth
         airbyteUser: action.airbyteUser,
         isAuthenticated: true,
         didInitialize: true,
+        // We are using an SSO login if we're not in the AIRBYTE_CLOUD_REALM, which would be the end of the issuer
+        isSso: !action.keycloakUser.profile.iss.endsWith(AIRBYTE_CLOUD_REALM),
         error: null,
+      };
+    case "userUpdated":
+      return {
+        ...state,
+        airbyteUser: action.airbyteUser,
       };
     case "userUnloaded":
       return {
@@ -96,6 +110,7 @@ const keycloakAuthStateReducer = (state: KeycloakAuthState, action: KeycloakAuth
         airbyteUser: null,
         isAuthenticated: false,
         didInitialize: true,
+        isSso: null,
         error: null,
       };
     case "error":
@@ -237,12 +252,17 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
     keycloak.register({ redirectUri: createRedirectUri(AIRBYTE_CLOUD_REALM) });
   }, []);
 
+  const updateAirbyteUser = useCallback((airbyteUser: UserRead) => {
+    dispatch({ type: "userUpdated", airbyteUser });
+  }, []);
+
   const contextValue = useMemo(() => {
     const value = {
       ...authState,
       userManager,
       signin: () => userManager.signinRedirect(),
       signout: () => userManager.signoutRedirect({ post_logout_redirect_uri: window.location.origin }),
+      updateAirbyteUser,
       isAuthenticated: authState.isAuthenticated,
       changeRealmAndRedirectToSignin,
       accessTokenRef: keycloakAccessTokenRef,
@@ -255,6 +275,7 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
   }, [
     authState,
     userManager,
+    updateAirbyteUser,
     changeRealmAndRedirectToSignin,
     redirectToSignInWithGoogle,
     redirectToSignInWithGithub,

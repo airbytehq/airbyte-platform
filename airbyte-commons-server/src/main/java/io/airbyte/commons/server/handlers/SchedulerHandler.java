@@ -82,6 +82,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
+import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -161,6 +162,7 @@ public class SchedulerHandler {
   private final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
   private final WorkspaceService workspaceService;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
+  private final StreamRefreshesHandler streamRefreshesHandler;
 
   @VisibleForTesting
   public SchedulerHandler(final ConfigRepository configRepository,
@@ -184,7 +186,8 @@ public class SchedulerHandler {
                           final JobTracker jobTracker,
                           final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler,
                           final WorkspaceService workspaceService,
-                          final SecretPersistenceConfigService secretPersistenceConfigService) {
+                          final SecretPersistenceConfigService secretPersistenceConfigService,
+                          final StreamRefreshesHandler streamRefreshesHandler) {
     this.configRepository = configRepository;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.synchronousSchedulerClient = synchronousSchedulerClient;
@@ -210,6 +213,7 @@ public class SchedulerHandler {
         configRepository,
         jobNotifier,
         jobTracker);
+    this.streamRefreshesHandler = streamRefreshesHandler;
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceId(final SourceIdRequestBody sourceIdRequestBody)
@@ -585,6 +589,7 @@ public class SchedulerHandler {
     final StandardSync standardSync = configRepository.getStandardSync(jobCreate.getConnectionId());
     final List<StreamDescriptor> streamsToReset = streamResetPersistence.getStreamResets(jobCreate.getConnectionId());
     log.info("Found the following streams to reset for connection {}: {}", jobCreate.getConnectionId(), streamsToReset);
+    final List<StreamRefresh> streamsToRefresh = streamRefreshesHandler.getRefreshesForConnection(jobCreate.getConnectionId());
 
     if (!streamsToReset.isEmpty()) {
       final DestinationConnection destination = configRepository.getDestinationConnection(standardSync.getDestinationId());
@@ -632,8 +637,16 @@ public class SchedulerHandler {
           : jobIdOptional.get();
 
       return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId));
+    } else if (!streamsToRefresh.isEmpty()) {
+      final long jobId = jobFactory.createRefresh(jobCreate.getConnectionId(), streamsToRefresh);
+
+      log.info("New refresh job created, with id: " + jobId);
+      final Job job = jobPersistence.getJob(jobId);
+      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CREATED_BY_RELEASE_STAGE, job);
+
+      return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId));
     } else {
-      final long jobId = jobFactory.create(jobCreate.getConnectionId());
+      final long jobId = jobFactory.createSync(jobCreate.getConnectionId());
 
       log.info("New job created, with id: " + jobId);
       final Job job = jobPersistence.getJob(jobId);
