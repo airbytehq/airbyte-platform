@@ -1,7 +1,3 @@
-/*
- * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
- */
-
 package io.airbyte.commons.constants;
 
 import java.time.Duration;
@@ -32,9 +28,26 @@ public class WorkerConstants {
 
   public static class KubeConstants {
 
-    public static final Duration INIT_CONTAINER_STARTUP_TIMEOUT = Duration.ofMinutes(15);
-    public static final Duration INIT_CONTAINER_TERMINATION_TIMEOUT = Duration.ofMinutes(2);
-    public static final Duration POD_READY_TIMEOUT = Duration.ofMinutes(2);
+    private static long parseEnvVar(String envVarName, long defaultValue) {
+      String value = System.getenv(envVarName);
+      if (value != null) {
+        try {
+          return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+          // If parsing fails, return the default value
+          System.err.println("Invalid format for environment variable " + envVarName + ", using default value: " + defaultValue);
+        }
+      }
+      return defaultValue;
+    }
+
+    public static final Duration INIT_CONTAINER_STARTUP_TIMEOUT = Duration.ofMinutes(
+        parseEnvVar("INIT_CONTAINER_STARTUP_TIMEOUT", 15));
+    public static final Duration INIT_CONTAINER_TERMINATION_TIMEOUT = Duration.ofMinutes(
+        parseEnvVar("INIT_CONTAINER_TERMINATION_TIMEOUT", 2));
+    public static final Duration POD_READY_TIMEOUT = Duration.ofMinutes(
+        parseEnvVar("POD_READY_TIMEOUT", 2));
+
     /**
      * If changing the value for this, make sure to update the deadline values in
      * {@link io.airbyte.workload.handler.WorkloadHandlerImpl} as well.
