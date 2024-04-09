@@ -1773,6 +1773,7 @@ keycloak:
     runAsUser: 1000
     # gid=1000(airbyte)
     runAsGroup: 1000
+    fsGroup: 1000
     readOnlyRootFilesystem: false
     capabilities:
       drop: ["ALL"]
