@@ -87,6 +87,17 @@ spec:
         {{- if .Values.extraInitContainers }}
         {{- toYaml .Values.extraInitContainers | nindent 8 }}
         {{- end }}
+        {{- if and .Values.containerSecurityContext.runAsUser .Values.containerSecurityContext.runAsGroup }}
+        - name: fix-volume-permissions
+          image: busybox
+          command: ["sh", "-c", "chown -R {{ .Values.containerSecurityContext.runAsUser }}:{{ .Values.containerSecurityContext.runAsGroup }} /opt/keycloak/data/infinispan"]
+          securityContext:
+            runAsUser: 0
+            privileged: true
+          volumeMounts:
+            - name: keycloak-storage
+              mountPath: /opt/keycloak/data/infinispan
+        {{- end }}
       containers:
         - name: airbyte-keycloak
           image: {{ printf "%s:%s" .Values.image.repository (include "keycloak.imageTag" .) }}
