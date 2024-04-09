@@ -27,13 +27,10 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.WriteReplicationOutputToObjectStorage;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.ReplicationInputHydrator;
@@ -41,8 +38,7 @@ import io.airbyte.workers.Worker;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
-import io.airbyte.workers.payload.ActivityPayloadStorageClient;
-import io.airbyte.workers.payload.ActivityPayloadURI;
+import io.airbyte.workers.storage.activities.payloads.StandardSyncOutputClient;
 import io.airbyte.workers.sync.WorkloadApiWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.airbyte.workers.workload.JobOutputDocStore;
@@ -54,8 +50,6 @@ import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,7 +81,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final MetricClient metricClient;
   private final FeatureFlagClient featureFlagClient;
   private final PayloadChecker payloadChecker;
-  private final ActivityPayloadStorageClient storageClient;
+  private final StandardSyncOutputClient storageClient;
 
   public ReplicationActivityImpl(final SecretsRepositoryReader secretsRepositoryReader,
                                  @Named("workspaceRoot") final Path workspaceRoot,
@@ -102,7 +96,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final MetricClient metricClient,
                                  final FeatureFlagClient featureFlagClient,
                                  final PayloadChecker payloadChecker,
-                                 final ActivityPayloadStorageClient storageClient) {
+                                 final StandardSyncOutputClient storageClient) {
     this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient.getConnectionApi(),
         airbyteApiClient.getJobsApi(),
         airbyteApiClient.getStateApi(),
@@ -217,24 +211,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           LOGGER.info("sync summary after backfill: {}", standardSyncOutput);
 
           final StandardSyncOutput output = payloadChecker.validatePayloadSize(standardSyncOutput, metricAttributes);
-          final ActivityPayloadURI uri = ActivityPayloadURI.v1(connectionId, jobId, attemptNumber, "replication-output");
 
-          if (featureFlagClient.boolVariation(WriteReplicationOutputToObjectStorage.INSTANCE, new Connection(connectionId))) {
-            output.setUri(uri.toOpenApi());
-
-            try {
-              storageClient.writeJSON(uri, output);
-            } catch (final Exception e) {
-              final List<MetricAttribute> attrs = new ArrayList<>(Arrays.asList(metricAttributes));
-              attrs.add(new MetricAttribute(MetricTags.URI_ID, uri.getId()));
-              attrs.add(new MetricAttribute(MetricTags.URI_VERSION, uri.getVersion()));
-              attrs.add(new MetricAttribute(MetricTags.FAILURE_CAUSE, e.getClass().getSimpleName()));
-
-              metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_WRITE, 1, attrs.toArray(new MetricAttribute[] {}));
-            }
-          }
-
-          return output;
+          return storageClient.persistAndTrim(output, connectionId, Long.parseLong(jobId), attemptNumber.intValue(), metricAttributes);
         },
         context);
   }

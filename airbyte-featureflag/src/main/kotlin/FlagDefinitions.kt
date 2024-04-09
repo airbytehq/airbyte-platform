@@ -199,3 +199,5 @@ object EnforceMutexKeyOnCreate : Temporary<Boolean>(key = "platform.enforce-mute
 object ActivateRefreshes : Temporary<Boolean>(key = "platform.activate-refreshes", default = false)
 
 object WriteReplicationOutputToObjectStorage : Temporary<Boolean>(key = "platform.write-replication-output-to-object-storage", default = false)
+
+object ReadReplicationOutputFromObjectStorage : Temporary<Boolean>(key = "platform.read-replication-output-from-object-storage", default = false)

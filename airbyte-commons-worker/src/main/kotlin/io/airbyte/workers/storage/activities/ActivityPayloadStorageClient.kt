@@ -1,4 +1,4 @@
-package io.airbyte.workers.payload
+package io.airbyte.workers.storage.activities
 
 import io.airbyte.commons.json.JsonSerde
 import io.airbyte.metrics.lib.ApmTraceUtils
