@@ -1,7 +1,7 @@
-# if Cloud or Pro/Enterprise, render the keycloak deployment template.
+# if Cloud or Pro/Enterprise, render the keycloak StatefulSet template.
 {{- if or (eq .Values.global.deploymentMode "cloud") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "common.names.fullname" . }}
   labels:
@@ -11,13 +11,10 @@ metadata:
       {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
-  strategy:
+  serviceName: {{.Release.Name }}-airbyte-keycloak-headless-svc
+  podManagementPolicy: OrderedReady # embedded infinispan does not handle parallel joins well, src https://github.com/keycloak/keycloak/issues/21108#issuecomment-1599010602
+  updateStrategy:
     type: RollingUpdate
-    {{- if gt (int .Values.replicaCount) 1 }}
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
-    {{- end }}
   selector:
     matchLabels:
       {{- include "airbyte.selectorLabels" . | nindent 6 }}
@@ -87,7 +84,6 @@ spec:
           securityContext: 
             {{- toYaml .Values.initContainerSecurityContext | nindent 14 }}
         {{- end }}
-
         {{- if .Values.extraInitContainers }}
         {{- toYaml .Values.extraInitContainers | nindent 8 }}
         {{- end }}
@@ -169,6 +165,8 @@ spec:
           securityContext: {{- toYaml .Values.containerSecurityContext | nindent 12 }}
           {{- end }}
           volumeMounts:
+            - name: keycloak-storage
+              mountPath: /opt/keycloak/data/infinispan
           {{- if .Values.extraVolumeMounts }}
           {{ toYaml .Values.extraVolumeMounts | nindent 10 }}
           {{- end }}
@@ -197,6 +195,17 @@ spec:
             successThreshold: {{ .Values.readinessProbe.successThreshold }}
             failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
           {{- end }}
+          {{- if .Values.startupProbe.enabled }}
+          startupProbe:
+            httpGet:
+              path: /auth/health/started
+              port: {{ .Values.service.port }}
+            initialDelaySeconds: {{ .Values.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.startupProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.startupProbe.successThreshold }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
+          {{- end }}
       {{- if .Values.extraContainers }}
       {{ toYaml .Values.extraContainers | nindent 8 }}
       {{- end }}
@@ -208,4 +217,12 @@ spec:
       {{- if .Values.extraVolumes }}
       {{ toYaml .Values.extraVolumes | nindent 8 }}
       {{- end }}
-  {{- end }}
+  volumeClaimTemplates:
+  - metadata:
+      name: keycloak-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+{{- end }}
