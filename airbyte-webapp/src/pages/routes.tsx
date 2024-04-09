@@ -7,7 +7,7 @@ import {
   useInvalidateAllWorkspaceScopeOnChange,
   useListWorkspacesInfinite,
 } from "core/api";
-import { ApiErrorBoundary } from "core/errors";
+import { DefaultErrorBoundary } from "core/errors";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -71,7 +71,7 @@ const MainViewRoutes: React.FC = () => {
 
   return (
     <MainView>
-      <ApiErrorBoundary>
+      <DefaultErrorBoundary>
         <Routes>
           <Route path={RoutePaths.Destination}>
             <Route index element={<AllDestinationsPage />} />
@@ -118,7 +118,7 @@ const MainViewRoutes: React.FC = () => {
 
           <Route path="*" element={<Navigate to={RoutePaths.Connections} />} />
         </Routes>
-      </ApiErrorBoundary>
+      </DefaultErrorBoundary>
     </MainView>
   );
 };

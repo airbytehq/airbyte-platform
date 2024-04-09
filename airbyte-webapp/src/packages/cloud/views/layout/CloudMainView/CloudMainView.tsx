@@ -7,7 +7,7 @@ import { FlexContainer } from "components/ui/Flex";
 
 import { useCurrentWorkspace } from "core/api";
 import { useGetCloudWorkspaceAsync, useListCloudWorkspacesInfinite } from "core/api/cloud";
-import { ApiErrorBoundary } from "core/errors";
+import { DefaultErrorBoundary } from "core/errors";
 import { SideBar } from "views/layout/SideBar/SideBar";
 
 import { CloudHelpDropdown } from "./CloudHelpDropdown";
@@ -24,9 +24,9 @@ const CloudMainView: React.FC<React.PropsWithChildren> = (props) => {
       <FlexContainer className={styles.mainViewContainer} gap="none">
         <SideBar workspaceFetcher={useListCloudWorkspacesInfinite} bottomSlot={<CloudHelpDropdown />} />
         <div className={styles.content}>
-          <ApiErrorBoundary>
+          <DefaultErrorBoundary>
             <React.Suspense fallback={<LoadingPage />}>{props.children ?? <Outlet />}</React.Suspense>
-          </ApiErrorBoundary>
+          </DefaultErrorBoundary>
         </div>
       </FlexContainer>
     </FlexContainer>

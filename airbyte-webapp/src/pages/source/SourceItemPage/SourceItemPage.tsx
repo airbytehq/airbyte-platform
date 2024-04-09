@@ -11,7 +11,7 @@ import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { useGetSourceFromParams } from "area/connector/utils";
 import { useSourceDefinitionVersion, useSourceDefinition } from "core/api";
-import { ApiErrorBoundary } from "core/errors";
+import { DefaultErrorBoundary } from "core/errors";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { RoutePaths } from "pages/routePaths";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
@@ -35,7 +35,7 @@ export const SourceItemPage: React.FC = () => {
   ];
 
   return (
-    <ApiErrorBoundary>
+    <DefaultErrorBoundary>
       <ConnectorDocumentationWrapper>
         <HeadTitle titles={[{ id: "admin.sources" }, { title: source.name }]} />
         <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
@@ -47,11 +47,11 @@ export const SourceItemPage: React.FC = () => {
           <ConnectorNavigationTabs connectorType="source" connector={source} id={source.sourceId} />
         </PageHeaderWithNavigation>
         <Suspense fallback={<LoadingPage />}>
-          <ApiErrorBoundary>
+          <DefaultErrorBoundary>
             <Outlet />
-          </ApiErrorBoundary>
+          </DefaultErrorBoundary>
         </Suspense>
       </ConnectorDocumentationWrapper>
-    </ApiErrorBoundary>
+    </DefaultErrorBoundary>
   );
 };

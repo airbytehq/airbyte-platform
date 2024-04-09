@@ -1,1 +1,1 @@
-export { ApiErrorBoundary } from "./ApiErrorBoundary";
+export { DefaultErrorBoundary } from "./DefaultErrorBoundary";

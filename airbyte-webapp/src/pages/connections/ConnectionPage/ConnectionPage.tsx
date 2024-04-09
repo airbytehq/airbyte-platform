@@ -4,7 +4,7 @@ import { Outlet, useLocation, useParams } from "react-router-dom";
 import { LoadingPage, MainPageWithScroll } from "components";
 import { HeadTitle } from "components/common/HeadTitle";
 
-import { ApiErrorBoundary } from "core/errors";
+import { DefaultErrorBoundary } from "core/errors";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import {
   ConnectionEditServiceProvider,
@@ -50,7 +50,7 @@ export const ConnectionPage: React.FC = () => {
 
   return (
     <ConnectionEditServiceProvider connectionId={connectionId}>
-      <ApiErrorBoundary>
+      <DefaultErrorBoundary>
         <MainPageWithScroll
           headTitle={<ConnectionHeadTitle />}
           pageTitle={<ConnectionPageHeader />}
@@ -60,7 +60,7 @@ export const ConnectionPage: React.FC = () => {
             <Outlet />
           </Suspense>
         </MainPageWithScroll>
-      </ApiErrorBoundary>
+      </DefaultErrorBoundary>
     </ConnectionEditServiceProvider>
   );
 };

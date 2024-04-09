@@ -9,12 +9,12 @@ import { TrackErrorFn } from "hooks/services/AppMonitoringService";
 
 import { ErrorDetails } from "./ErrorDetails";
 
-interface ApiErrorBoundaryState {
+interface ErrorBoundaryState {
   error?: Error;
   message?: string;
 }
 
-interface ApiErrorBoundaryHookProps {
+interface ErrorBoundaryHookProps {
   location: LocationSensorState;
   navigate: NavigateFunction;
   trackError: TrackErrorFn;
@@ -27,17 +27,17 @@ class WrappedError extends Error {
   }
 }
 
-class ApiErrorBoundaryComponent extends React.Component<
-  React.PropsWithChildren<ApiErrorBoundaryHookProps>,
-  ApiErrorBoundaryState
+class ErrorBoundaryComponent extends React.Component<
+  React.PropsWithChildren<ErrorBoundaryHookProps>,
+  ErrorBoundaryState
 > {
-  state: ApiErrorBoundaryState = {};
+  state: ErrorBoundaryState = {};
 
-  static getDerivedStateFromError(error: unknown): ApiErrorBoundaryState {
+  static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
     return { error: error instanceof Error ? error : new WrappedError(error) };
   }
 
-  override componentDidUpdate(prevProps: ApiErrorBoundaryHookProps) {
+  override componentDidUpdate(prevProps: ErrorBoundaryHookProps) {
     // Clear out the error in case the user navigates to another part of the app
     if (this.props.location !== prevProps.location) {
       this.setState({ error: undefined });
@@ -59,13 +59,13 @@ class ApiErrorBoundaryComponent extends React.Component<
   }
 }
 
-export const ApiErrorBoundary: React.FC<React.PropsWithChildren> = ({ children }) => {
+export const DefaultErrorBoundary: React.FC<React.PropsWithChildren> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
   return (
-    <ApiErrorBoundaryComponent location={location} navigate={navigate} trackError={trackError}>
+    <ErrorBoundaryComponent location={location} navigate={navigate} trackError={trackError}>
       {children}
-    </ApiErrorBoundaryComponent>
+    </ErrorBoundaryComponent>
   );
 };

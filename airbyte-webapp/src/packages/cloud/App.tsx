@@ -7,7 +7,7 @@ import { DevToolsToggle } from "components/DevToolsToggle";
 import LoadingPage from "components/LoadingPage";
 
 import { QueryProvider } from "core/api";
-import { ApiErrorBoundary } from "core/errors";
+import { DefaultErrorBoundary } from "core/errors";
 import { AnalyticsProvider } from "core/services/analytics";
 import { defaultCloudFeatures, FeatureService } from "core/services/features";
 import { I18nProvider } from "core/services/i18n";
@@ -51,7 +51,7 @@ const App: React.FC = () => {
           <QueryProvider>
             <BlockerService>
               <Suspense fallback={<LoadingPage />}>
-                <ApiErrorBoundary>
+                <DefaultErrorBoundary>
                   <AnalyticsProvider>
                     <AppMonitoringServiceProvider>
                       <Services>
@@ -60,7 +60,7 @@ const App: React.FC = () => {
                       </Services>
                     </AppMonitoringServiceProvider>
                   </AnalyticsProvider>
-                </ApiErrorBoundary>
+                </DefaultErrorBoundary>
               </Suspense>
             </BlockerService>
           </QueryProvider>

@@ -5,7 +5,7 @@ import { mocked, render } from "test-utils";
 import { trackError } from "core/utils/datadog";
 import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
 
-import { ApiErrorBoundary } from "./ApiErrorBoundary";
+import { DefaultErrorBoundary } from "./DefaultErrorBoundary";
 
 const mockError = new Error("oh no!");
 
@@ -17,7 +17,7 @@ const ChildThatThrowsError = () => {
   throw mockError;
 };
 
-describe(`${ApiErrorBoundary.name}`, () => {
+describe(`${DefaultErrorBoundary.name}`, () => {
   let originalConsoleDebug: typeof console.debug;
   let originalConsoleError: typeof console.error;
 
@@ -36,9 +36,9 @@ describe(`${ApiErrorBoundary.name}`, () => {
   it("should render children when no error is thrown", async () => {
     await render(
       <AppMonitoringServiceProvider>
-        <ApiErrorBoundary>
+        <DefaultErrorBoundary>
           <p>test</p>
-        </ApiErrorBoundary>
+        </DefaultErrorBoundary>
       </AppMonitoringServiceProvider>
     );
 
@@ -48,9 +48,9 @@ describe(`${ApiErrorBoundary.name}`, () => {
   it("should render error view when an error is thrown", async () => {
     await render(
       <AppMonitoringServiceProvider>
-        <ApiErrorBoundary>
+        <DefaultErrorBoundary>
           <ChildThatThrowsError />
-        </ApiErrorBoundary>
+        </DefaultErrorBoundary>
       </AppMonitoringServiceProvider>
     );
 
@@ -62,9 +62,9 @@ describe(`${ApiErrorBoundary.name}`, () => {
     mockTrackError.mockClear();
 
     await render(
-      <ApiErrorBoundary>
+      <DefaultErrorBoundary>
         <ChildThatThrowsError />
-      </ApiErrorBoundary>
+      </DefaultErrorBoundary>
     );
 
     expect(mockTrackError).toHaveBeenCalledTimes(1);

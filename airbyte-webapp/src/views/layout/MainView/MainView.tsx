@@ -5,7 +5,7 @@ import { LoadingPage } from "components";
 import { FlexContainer } from "components/ui/Flex";
 
 import { useListWorkspacesInfinite } from "core/api";
-import { ApiErrorBoundary } from "core/errors";
+import { DefaultErrorBoundary } from "core/errors";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 
 import styles from "./MainView.module.scss";
@@ -23,9 +23,9 @@ const MainView: React.FC<React.PropsWithChildren> = (props) => {
         settingHighlight={hasNewVersions}
       />
       <div className={styles.content}>
-        <ApiErrorBoundary>
+        <DefaultErrorBoundary>
           <React.Suspense fallback={<LoadingPage />}>{props.children}</React.Suspense>
-        </ApiErrorBoundary>
+        </DefaultErrorBoundary>
       </div>
     </FlexContainer>
   );
