@@ -227,15 +227,10 @@ public class UserHandler {
 
     final User user = buildUser(userRead);
 
-    // We do not allow update on these fields: userId, authUserId, authProvider.
+    // We do not allow update on these fields: userId, authUserId, authProvider, and email
     boolean hasUpdate = false;
     if (userUpdate.getName() != null) {
       user.setName(userUpdate.getName());
-      hasUpdate = true;
-    }
-
-    if (userUpdate.getEmail() != null) {
-      user.setEmail(userUpdate.getEmail());
       hasUpdate = true;
     }
 
@@ -305,7 +300,6 @@ public class UserHandler {
         .authProvider(userRead.getAuthProvider())
         .status(UserStatus.DISABLED)
         .companyName(userRead.getCompanyName())
-        .email(userRead.getEmail())
         .news(userRead.getNews());
     updateUser(userUpdate);
   }

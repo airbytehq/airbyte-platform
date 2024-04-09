@@ -8950,9 +8950,6 @@ components:
           $ref: "#/components/schemas/UserStatus"
         companyName:
           type: string
-        email:
-          type: string
-          format: email
         news:
           type: boolean
         metadata:
