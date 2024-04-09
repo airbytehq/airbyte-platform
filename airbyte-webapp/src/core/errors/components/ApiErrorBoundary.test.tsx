@@ -54,7 +54,7 @@ describe(`${ApiErrorBoundary.name}`, () => {
       </AppMonitoringServiceProvider>
     );
 
-    expect(screen.getByTestId("errorView")).toBeInTheDocument();
+    expect(screen.getByTestId("errorDetails")).toBeInTheDocument();
   });
 
   it("should log the error when it throws", async () => {
@@ -68,6 +68,6 @@ describe(`${ApiErrorBoundary.name}`, () => {
     );
 
     expect(mockTrackError).toHaveBeenCalledTimes(1);
-    expect(mockTrackError).toHaveBeenCalledWith(mockError, expect.anything());
+    expect(mockTrackError).toHaveBeenCalledWith(mockError);
   });
 });

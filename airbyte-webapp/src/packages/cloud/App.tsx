@@ -2,12 +2,12 @@ import React, { Suspense } from "react";
 import { HelmetProvider } from "react-helmet-async";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
-import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import { DeployPreviewMessage } from "components/DeployPreviewMessage";
 import { DevToolsToggle } from "components/DevToolsToggle";
 import LoadingPage from "components/LoadingPage";
 
 import { QueryProvider } from "core/api";
+import { ApiErrorBoundary } from "core/errors";
 import { AnalyticsProvider } from "core/services/analytics";
 import { defaultCloudFeatures, FeatureService } from "core/services/features";
 import { I18nProvider } from "core/services/i18n";

@@ -3,18 +3,15 @@
 
 .button {
   padding: variables.$spacing-lg;
-}
-
-.iconContainer {
-  position: absolute;
+  position: relative;
 }
 
 .success {
   position: absolute;
   width: 13px;
   height: 13px;
-  top: -20px;
-  right: -15px;
+  top: -6px;
+  right: -6px;
   background-color: colors.$foreground;
   border-radius: 50%;
 }

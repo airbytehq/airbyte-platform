@@ -8,7 +8,7 @@ import { Icon } from "../Icon";
 
 interface CopyButtonProps {
   className?: string;
-  content: string;
+  content: string | (() => string);
   title?: string;
 }
 
@@ -28,7 +28,9 @@ export const CopyButton: React.FC<React.PropsWithChildren<CopyButtonProps>> = ({
       clearTimeout(timeoutRef.current);
     }
 
-    navigator.clipboard.writeText(content).then(() => {
+    const text = typeof content === "string" ? content : content();
+
+    navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       timeoutRef.current = setTimeout(() => setCopied(false), 2500);
     });
@@ -43,11 +45,7 @@ export const CopyButton: React.FC<React.PropsWithChildren<CopyButtonProps>> = ({
       icon="copy"
       onClick={handleClick}
     >
-      {copied && (
-        <div className={styles.iconContainer}>
-          <Icon className={styles.success} type="successFilled" color="success" />
-        </div>
-      )}
+      {copied && <Icon className={styles.success} type="successFilled" color="success" />}
       {children}
     </Button>
   );

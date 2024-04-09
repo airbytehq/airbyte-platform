@@ -4,16 +4,14 @@ import { Outlet, useLocation, useParams } from "react-router-dom";
 import { LoadingPage, MainPageWithScroll } from "components";
 import { HeadTitle } from "components/common/HeadTitle";
 
+import { ApiErrorBoundary } from "core/errors";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import {
   ConnectionEditServiceProvider,
   useConnectionEditService,
 } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperimentContext } from "hooks/services/Experiment";
 import { ConnectionRoutePaths } from "pages/routePaths";
-import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
-import { StartOverErrorView } from "views/common/StartOverErrorView";
 
 import { ConnectionPageHeader } from "./ConnectionPageHeader";
 
@@ -47,13 +45,12 @@ export const ConnectionPage: React.FC = () => {
     () => location.pathname.includes(`/${ConnectionRoutePaths.Replication}`),
     [location.pathname]
   );
-  const { trackError } = useAppMonitoringService();
 
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM);
 
   return (
     <ConnectionEditServiceProvider connectionId={connectionId}>
-      <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
+      <ApiErrorBoundary>
         <MainPageWithScroll
           headTitle={<ConnectionHeadTitle />}
           pageTitle={<ConnectionPageHeader />}
@@ -63,7 +60,7 @@ export const ConnectionPage: React.FC = () => {
             <Outlet />
           </Suspense>
         </MainPageWithScroll>
-      </ResourceNotFoundErrorBoundary>
+      </ApiErrorBoundary>
     </ConnectionEditServiceProvider>
   );
 };

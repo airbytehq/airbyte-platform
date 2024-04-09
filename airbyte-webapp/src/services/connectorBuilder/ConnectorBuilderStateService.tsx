@@ -26,7 +26,7 @@ import {
   BuilderProject,
   BuilderProjectPublishBody,
   BuilderProjectWithManifest,
-  CommonRequestError,
+  HttpError,
   NewVersionBody,
   useBuilderProject,
   useBuilderProjectReadStream,
@@ -82,7 +82,7 @@ interface FormStateContext {
   formValuesValid: boolean;
   resolvedManifest: ConnectorManifest;
   resolveErrorMessage: string | undefined;
-  resolveError: CommonRequestError<KnownExceptionInfo> | null;
+  resolveError: HttpError<KnownExceptionInfo> | null;
   isResolving: boolean;
   streamNames: string[];
   setDisplayedVersion: (value: number | undefined, manifest: DeclarativeComponentSchema) => void;
@@ -258,8 +258,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   );
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const resolveErrorMessage = isResolveError
-    ? resolveError instanceof Error
-      ? resolveError.message || unknownErrorMessage
+    ? resolveError instanceof HttpError
+      ? resolveError.response?.message || unknownErrorMessage
       : unknownErrorMessage
     : undefined;
 

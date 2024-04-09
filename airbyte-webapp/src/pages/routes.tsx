@@ -2,13 +2,12 @@ import React, { useMemo } from "react";
 import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
-import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
-
 import {
   useGetInstanceConfiguration,
   useInvalidateAllWorkspaceScopeOnChange,
   useListWorkspacesInfinite,
 } from "core/api";
+import { ApiErrorBoundary } from "core/errors";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
