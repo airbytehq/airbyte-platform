@@ -42,10 +42,11 @@ export const CopyButton: React.FC<React.PropsWithChildren<CopyButtonProps>> = ({
       className={classNames(className, styles.button)}
       variant="secondary"
       title={title || formatMessage({ id: "copyButton.title" })}
-      icon="copy"
       onClick={handleClick}
+      icon={children ? "copy" : undefined}
     >
       {copied && <Icon className={styles.success} type="successFilled" color="success" />}
+      {children ? undefined : <Icon type="copy" />}
       {children}
     </Button>
   );

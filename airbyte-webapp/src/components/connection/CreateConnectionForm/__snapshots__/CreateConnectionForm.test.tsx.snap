@@ -1291,18 +1291,22 @@ exports[`CreateConnectionForm should render with an error 1`] = `
             >
               <div
                 class="<removed-for-snapshot-test>"
-                data-icon="status-error"
-                data-testid="mocksvg"
-              />
-            </div>
-            <div
-              class="<removed-for-snapshot-test>"
-            >
-              <span
+              >
+                <div
+                  class="<removed-for-snapshot-test>"
+                  data-icon="status-error"
+                  data-testid="mocksvg"
+                />
+              </div>
+              <div
                 class="<removed-for-snapshot-test>"
               >
-                Test Error
-              </span>
+                <span
+                  class="<removed-for-snapshot-test>"
+                >
+                  Test Error
+                </span>
+              </div>
             </div>
           </div>
         </div>

@@ -469,6 +469,7 @@
   "jobs.failure.originLabel": "Failure origin:",
   "jobs.failure.typeLabel": "Failure type:",
   "jobs.failure.seeMore": "See more",
+  "jobs.failure.seeLess": "See less",
   "jobs.failure.copyText": "Copy text",
   "jobs.failure.copyText.success": "Text copied to clipboard",
   "jobs.noMetadataAvailable": "No job metadata available",
@@ -668,7 +669,8 @@
   "connection.stream.status.pending": "Pending",
   "connection.stream.status.title": "Enabled streams",
   "connection.stream.status.seeLogs": "See logs",
-  "connection.stream.status.gotoSettings": "Go to settings",
+  "connection.stream.status.checkSourceSettings": "Check source",
+  "connection.stream.status.checkDestinationSettings": "Check destination",
   "connection.stream.status.genericError": "There was an error with your {syncType}. See logs for details.",
   "connection.stream.status.table.status": "Status",
   "connection.stream.status.table.streamName": "Stream name",
@@ -1492,7 +1494,6 @@
   "jobHistory.logs.logDownloadPending": "Downloading logs for job {jobId}…",
   "jobHistory.logs.logDownloadFailed": "Failed to download logs for job {jobId}.",
   "jobHistory.logs.searchPlaceholder": "Search logs",
-  "jobHistory.logs.failureReason": "Failure reason: {reason}",
   "jobHistory.logs.logOrigin.all": "All logs",
   "jobHistory.logs.logOrigin.source": "source",
   "jobHistory.logs.logOrigin.destination": "destination",
@@ -1746,5 +1747,9 @@
   "userInvitations.cancel.success": "User invitation successfully cancelled",
   "userInvitations.cancel.error": "There was an error cancelling this invitation. Please try again.",
   "userInvitations.cancel.confirm.text": "Are you sure you want to cancel this invitation for {user} to {resource}?",
-  "userInvitations.cancel.confirm.title": "Cancel invitation"
+  "userInvitations.cancel.confirm.title": "Cancel invitation",
+
+  "failureMessage.type.error": "Failure in {origin}",
+  "failureMessage.type.warning": "Warning from {origin}",
+  "failureMessage.label": "{type} {message}"
 }

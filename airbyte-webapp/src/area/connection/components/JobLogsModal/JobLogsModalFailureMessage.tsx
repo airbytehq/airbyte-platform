@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
@@ -8,6 +7,7 @@ import { Message } from "components/ui/Message";
 
 import { AttemptFailureSummary, FailureType } from "core/api/types/AirbyteClient";
 import { copyToClipboard } from "core/utils/clipboard";
+import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
 import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./JobLogsModalFailureMessage.module.scss";
@@ -19,33 +19,22 @@ interface JobLogsModalFailureMessageProps {
 export const JobLogsModalFailureMessage: React.FC<JobLogsModalFailureMessageProps> = ({ failureSummary }) => {
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
+  const failureUiDetails = failureUiDetailsFromReason(failureSummary?.failures[0], formatMessage);
 
-  const internalFailureReason = useMemo(() => failureSummary?.failures[0]?.internalMessage, [failureSummary]);
-
-  const externalFailureReason = useMemo(() => failureSummary?.failures[0]?.externalMessage, [failureSummary]);
-
-  const failureToShow = useMemo(
-    () =>
-      !failureSummary ||
-      failureSummary?.failures.some(({ failureType }) => failureType === FailureType.manual_cancellation)
-        ? "none"
-        : failureSummary?.failures[0]?.internalMessage
-        ? "internal"
-        : failureSummary?.failures[0]?.externalMessage
-        ? "external"
-        : "unknown",
-    [failureSummary]
+  const isFailureCancellation = failureSummary?.failures.some(
+    ({ failureType }) => failureType === FailureType.manual_cancellation
   );
+  const showFailureMessage = !isFailureCancellation && failureUiDetails;
 
-  if (failureToShow === "none") {
+  if (!showFailureMessage) {
     return null;
   }
 
   const onCopyTextBtnClick = async () => {
-    if (!internalFailureReason) {
+    if (!failureUiDetails.secondaryMessage) {
       return;
     }
-    await copyToClipboard(internalFailureReason);
+    await copyToClipboard(failureUiDetails.secondaryMessage);
 
     registerNotification({
       type: "success",
@@ -56,35 +45,27 @@ export const JobLogsModalFailureMessage: React.FC<JobLogsModalFailureMessageProp
 
   return (
     <Box px="md">
-      {failureToShow === "internal" && (
-        <div className={styles.internalFailureContainer}>
-          <Message
-            type="error"
-            text={
-              <FlexContainer justifyContent="space-between" alignItems="center">
-                <FormattedMessage id="jobHistory.logs.failureReason" values={{ reason: externalFailureReason }} />
+      <div className={styles.internalFailureContainer}>
+        <Message
+          type={failureUiDetails.type}
+          text={
+            <FlexContainer justifyContent="space-between" alignItems="center">
+              <FormattedMessage
+                id="failureMessage.label"
+                values={{ type: `${failureUiDetails.typeLabel}:`, message: failureUiDetails.message }}
+              />
 
+              {failureUiDetails.secondaryMessage && (
                 <Button onClick={onCopyTextBtnClick}>
                   <FormattedMessage id="jobs.failure.copyText" />
                 </Button>
-              </FlexContainer>
-            }
-          />
-
-          <Box px="md">
-            <div className={styles.internalFailureReason}>{internalFailureReason}</div>
-          </Box>
-        </div>
-      )}
-
-      {failureToShow === "external" && (
-        <Message
-          type="error"
-          text={<FormattedMessage id="jobHistory.logs.failureReason" values={{ reason: externalFailureReason }} />}
-        />
-      )}
-
-      {failureToShow === "unknown" && <Message type="error" text={<FormattedMessage id="errorView.unknown" />} />}
+              )}
+            </FlexContainer>
+          }
+        >
+          {failureUiDetails.secondaryMessage}
+        </Message>
+      </div>
     </Box>
   );
 };
