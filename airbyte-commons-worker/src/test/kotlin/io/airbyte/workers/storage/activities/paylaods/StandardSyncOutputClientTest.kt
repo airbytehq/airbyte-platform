@@ -69,13 +69,13 @@ class StandardSyncOutputClientTest {
 
     every { featureFlagClient.boolVariation(ReadReplicationOutputFromObjectStorage, any()) } returns false
 
-    every { storageClient.validateOutput<StandardSyncOutput>(any(), any(), any(), any()) } returns input
+    every { storageClient.validateOutput<StandardSyncOutput>(any(), any(), any(), any(), any()) } returns input
 
     val result = client.hydrate(input, CONNECTION_ID, JOB_ID, ATTEMPT_NUMBER)
 
     assertEquals(input, result)
 
-    verify(exactly = 1) { storageClient.validateOutput<StandardSyncOutput>(any(), any(), any(), any()) }
+    verify(exactly = 1) { storageClient.validateOutput<StandardSyncOutput>(any(), any(), any(), any(), any()) }
     verify(exactly = 0) { storageClient.readJSON<StandardSyncOutput>(any(), any()) }
   }
 

@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import java.lang.RuntimeException
 
 @ExtendWith(MockKExtension::class)
 class ActivityPayloadStorageClientTest {
@@ -29,9 +28,12 @@ class ActivityPayloadStorageClientTest {
 
   private lateinit var client: ActivityPayloadStorageClient
 
+  private lateinit var comparator: StandardSyncOutputComparator
+
   @BeforeEach
   fun setup() {
     client = ActivityPayloadStorageClient(storageClientRaw, serde, metricClient)
+    comparator = StandardSyncOutputComparator()
 
     every { metricClient.count(any(), any(), *anyVararg()) } returns Unit
 
@@ -101,7 +103,7 @@ class ActivityPayloadStorageClientTest {
 
     every { serde.deserialize(any(), StandardSyncOutput::class.java) } returns syncOutput
 
-    client.validateOutput(uri, StandardSyncOutput::class.java, syncOutput, listOf())
+    client.validateOutput(uri, StandardSyncOutput::class.java, syncOutput, comparator, listOf())
 
     verify {
       metricClient.count(OssMetricsRegistry.PAYLOAD_VALIDATION_RESULT, 1, *anyVararg())
@@ -116,7 +118,7 @@ class ActivityPayloadStorageClientTest {
 
     every { serde.deserialize(any(), StandardSyncOutput::class.java) } returns syncOutput2
 
-    client.validateOutput(uri, StandardSyncOutput::class.java, syncOutput1, listOf())
+    client.validateOutput(uri, StandardSyncOutput::class.java, syncOutput1, comparator, listOf())
 
     verify {
       metricClient.count(OssMetricsRegistry.PAYLOAD_VALIDATION_RESULT, 1, *anyVararg())
@@ -130,7 +132,7 @@ class ActivityPayloadStorageClientTest {
 
     every { storageClientRaw.read(uri.id) } returns null
 
-    client.validateOutput(uri, StandardSyncOutput::class.java, syncOutput, listOf())
+    client.validateOutput(uri, StandardSyncOutput::class.java, syncOutput, comparator, listOf())
 
     verify {
       metricClient.count(OssMetricsRegistry.PAYLOAD_VALIDATION_RESULT, 1, *anyVararg())
@@ -142,7 +144,7 @@ class ActivityPayloadStorageClientTest {
     val uri = null
     val syncOutput = StandardSyncOutput().withAdditionalProperty("some", "unique-value-1")
 
-    client.validateOutput(uri, StandardSyncOutput::class.java, syncOutput, listOf())
+    client.validateOutput(uri, StandardSyncOutput::class.java, syncOutput, comparator, listOf())
 
     verify {
       metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_READ, 1, *anyVararg())
@@ -156,7 +158,7 @@ class ActivityPayloadStorageClientTest {
 
     every { storageClientRaw.read(uri.id) } throws RuntimeException("yikes")
 
-    client.validateOutput(uri, StandardSyncOutput::class.java, syncOutput, listOf())
+    client.validateOutput(uri, StandardSyncOutput::class.java, syncOutput, comparator, listOf())
 
     verify {
       metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_READ, 1, *anyVararg())

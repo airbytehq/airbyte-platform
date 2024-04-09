@@ -11,6 +11,7 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.storage.activities.ActivityPayloadStorageClient
 import io.airbyte.workers.storage.activities.ActivityPayloadURI
+import io.airbyte.workers.storage.activities.StandardSyncOutputComparator
 import java.util.UUID
 
 class StandardSyncOutputClient(
@@ -18,6 +19,8 @@ class StandardSyncOutputClient(
   private val metricClient: MetricClient,
   private val featureFlagClient: FeatureFlagClient,
 ) {
+  private val comparator = StandardSyncOutputComparator()
+
   fun persistAndTrim(
     output: StandardSyncOutput?,
     connectionId: UUID,
@@ -73,10 +76,7 @@ class StandardSyncOutputClient(
     }
 
     // if URI isn't set we can't hydrate
-    val uri = ActivityPayloadURI.fromOpenApi(output.uri)
-    if (uri == null) {
-      return output
-    }
+    val uri = ActivityPayloadURI.fromOpenApi(output.uri) ?: return output
 
     // if we aren't cut-over to reads, just validate the output
     if (!featureFlagClient.boolVariation(ReadReplicationOutputFromObjectStorage, Connection(connectionId))) {
@@ -87,7 +87,7 @@ class StandardSyncOutputClient(
           MetricAttribute(MetricTags.ATTEMPT_NUMBER, attemptNumber.toString()),
         )
 
-      storageClient.validateOutput(uri, StandardSyncOutput::class.java, output, attrs)
+      storageClient.validateOutput(uri, StandardSyncOutput::class.java, output, comparator, attrs)
 
       return output
     }

@@ -73,6 +73,7 @@ class ActivityPayloadStorageClient(
     uri: ActivityPayloadURI?,
     target: Class<T>,
     expected: T,
+    comparator: Comparator<T>,
     attrs: List<MetricAttribute>,
   ): T {
     if (uri == null) {
@@ -108,7 +109,7 @@ class ActivityPayloadStorageClient(
       return expected
     }
 
-    val match = expected == remote
+    val match = comparator.compare(expected, remote) == 0
     val miss = remote == null
 
     val attrsWithMatch =
