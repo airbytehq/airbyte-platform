@@ -12,7 +12,10 @@ import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.storage.activities.ActivityPayloadStorageClient
 import io.airbyte.workers.storage.activities.ActivityPayloadURI
 import io.airbyte.workers.storage.activities.StandardSyncOutputComparator
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.UUID
+
+private val logger = KotlinLogging.logger {}
 
 class StandardSyncOutputClient(
   private val storageClient: ActivityPayloadStorageClient,
@@ -51,6 +54,9 @@ class StandardSyncOutputClient(
             MetricAttribute(MetricTags.URI_VERSION, uri.version),
             MetricAttribute(MetricTags.FAILURE_CAUSE, e.javaClass.simpleName),
           )
+
+      logger.error { "Failure writing StandardSyncOutput. Message: ${e.message}" }
+      logger.error { "Stack Trace: ${e.stackTrace}" }
 
       metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_WRITE, 1, *attrs.toTypedArray())
     }
