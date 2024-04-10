@@ -29,7 +29,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     final var fieldSelector = new FieldSelector(recordSchemaValidator, workerMetricReporter, fieldSelectionEnabled, false);
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
         replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApi, false, analyticsMessageTracker,
-        Optional.empty(), sourceApi, destinationApi, streamStatusCompletionTracker));
+        Optional.empty()));
     return new BufferedReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,
@@ -42,8 +42,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
         replicationWorkerHelper,
         destinationTimeoutMonitor,
         getQueueType(),
-        OptionalInt.of(1),
-        streamStatusCompletionTracker);
+        OptionalInt.of(1));
   }
 
   public BufferedReplicationWorkerType getQueueType() {

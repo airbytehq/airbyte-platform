@@ -23,12 +23,10 @@ import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
-import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
 import io.airbyte.workers.exception.WorkerException;
-import io.airbyte.workers.helper.StreamStatusCompletionTracker;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.DestinationTimeoutMonitor;
@@ -37,11 +35,9 @@ import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -84,7 +80,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
   private final Stopwatch writeToDestStopwatch;
   private final Stopwatch readFromDestStopwatch;
   private final Stopwatch processFromDestStopwatch;
-  private final StreamStatusCompletionTracker streamStatusCompletionTracker;
 
   private static final int sourceMaxBufferSize = 1000;
   private static final int destinationMaxBufferSize = 1000;
@@ -101,10 +96,9 @@ public class BufferedReplicationWorker implements ReplicationWorker {
                                    final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                    final ReplicationWorkerHelper replicationWorkerHelper,
                                    final DestinationTimeoutMonitor destinationTimeoutMonitor,
-                                   final BufferedReplicationWorkerType bufferedReplicationWorkerType,
-                                   final StreamStatusCompletionTracker streamStatusCompletionTracker) {
+                                   final BufferedReplicationWorkerType bufferedReplicationWorkerType) {
     this(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader,
-        replicationWorkerHelper, destinationTimeoutMonitor, bufferedReplicationWorkerType, OptionalInt.empty(), streamStatusCompletionTracker);
+        replicationWorkerHelper, destinationTimeoutMonitor, bufferedReplicationWorkerType, OptionalInt.empty());
   }
 
   public BufferedReplicationWorker(final String jobId,
@@ -118,8 +112,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
                                    final ReplicationWorkerHelper replicationWorkerHelper,
                                    final DestinationTimeoutMonitor destinationTimeoutMonitor,
                                    final BufferedReplicationWorkerType bufferedReplicationWorkerType,
-                                   final OptionalInt pollTimeOutDurationForQueue,
-                                   final StreamStatusCompletionTracker streamStatusCompletionTracker) {
+                                   final OptionalInt pollTimeOutDurationForQueue) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.source = source;
@@ -147,7 +140,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     this.writeToDestStopwatch = new Stopwatch();
     this.readFromDestStopwatch = new Stopwatch();
     this.processFromDestStopwatch = new Stopwatch();
-    this.streamStatusCompletionTracker = streamStatusCompletionTracker;
   }
 
   @Trace(operationName = WORKER_OPERATION_NAME)
@@ -161,7 +153,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
       final ReplicationContext replicationContext = getReplicationContext(replicationInput);
       final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags();
       replicationWorkerHelper.initialize(replicationContext, flags, jobRoot);
-      streamStatusCompletionTracker.startTracking(replicationInput.getCatalog(), replicationContext);
 
       final CloseableWithTimeout destinationWithCloseTimeout = new CloseableWithTimeout(destination, mdc, flags);
       // note: resources are closed in the opposite order in which they are declared. thus source will be
@@ -287,13 +278,10 @@ public class BufferedReplicationWorker implements ReplicationWorker {
   }
 
   private ReplicationContext getReplicationContext(final ReplicationInput replicationInput) {
-
-    final UUID sourceDefinitionId = replicationWorkerHelper.getSourceDefinitionIdForSourceId(replicationInput.getSourceId());
-    final UUID destinationDefinitionId = replicationWorkerHelper.getDestinationDefinitionIdForDestinationId(replicationInput.getDestinationId());
     return new ReplicationContext(replicationInput.getIsReset(), replicationInput.getConnectionId(), replicationInput.getSourceId(),
         replicationInput.getDestinationId(), Long.parseLong(jobId),
         attempt, replicationInput.getWorkspaceId(), replicationInput.getSourceLauncherConfig().getDockerImage(),
-        replicationInput.getDestinationLauncherConfig().getDockerImage(), sourceDefinitionId, destinationDefinitionId);
+        replicationInput.getDestinationLauncherConfig().getDockerImage());
   }
 
   @Override
@@ -357,12 +345,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
       while (!replicationWorkerHelper.getShouldAbort() && !(sourceIsFinished = sourceIsFinished()) && !messagesFromSourceQueue.isClosed()) {
         final Optional<AirbyteMessage> messageOptional = source.attemptRead();
         if (messageOptional.isPresent()) {
-          final AirbyteMessage message = messageOptional.get();
-          if (message.getType() == Type.TRACE && message.getTrace().getType() == AirbyteTraceMessage.Type.STREAM_STATUS) {
-            streamStatusCompletionTracker.track(message.getTrace().getStreamStatus());
-          }
-
-          while (!replicationWorkerHelper.getShouldAbort() && !messagesFromSourceQueue.add(message)
+          while (!replicationWorkerHelper.getShouldAbort() && !messagesFromSourceQueue.add(messageOptional.get())
               && !messagesFromSourceQueue.isClosed()) {
             Thread.sleep(100);
           }
@@ -450,11 +433,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
           try (final var t = writeToDestStopwatch.start()) {
             destination.accept(message);
           }
-        }
-
-        final List<AirbyteMessage> statusMessageToSend = replicationWorkerHelper.getStreamStatusToSend(source.getExitValue());
-        for (AirbyteMessage airbyteMessage : statusMessageToSend) {
-          destination.accept(airbyteMessage);
         }
       } finally {
         destination.notifyEndOfInput();

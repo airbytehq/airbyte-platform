@@ -10,7 +10,6 @@ import io.airbyte.workers.general.ReplicationFeatureFlagReader;
 import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.general.ReplicationWorkerHelper;
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
-import io.airbyte.workers.helper.StreamStatusCompletionTracker;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
@@ -42,11 +41,9 @@ class DefaultReplicationWorkerPerformanceTest extends ReplicationWorkerPerforman
                                                 final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                                 final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
                                                 final ReplicationWorkerHelper replicationWorkerHelper,
-                                                final DestinationTimeoutMonitor destinationTimeoutMonitor,
-                                                final StreamStatusCompletionTracker streamStatusCompletionTracker) {
+                                                final DestinationTimeoutMonitor destinationTimeoutMonitor) {
     return new DefaultReplicationWorker(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator,
-        srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, replicationWorkerHelper, destinationTimeoutMonitor,
-        streamStatusCompletionTracker);
+        srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, replicationWorkerHelper, destinationTimeoutMonitor);
   }
 
   public static void main(final String[] args) throws IOException, InterruptedException {

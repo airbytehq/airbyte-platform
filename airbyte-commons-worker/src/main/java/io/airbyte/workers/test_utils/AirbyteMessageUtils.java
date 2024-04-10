@@ -244,22 +244,6 @@ public class AirbyteMessageUtils {
         .withTrace(airbyteTraceMessage);
   }
 
-  public static AirbyteMessage createStreamStatusTraceMessageWithType(final StreamDescriptor stream,
-                                                                      final AirbyteStreamStatusTraceMessage.AirbyteStreamStatus status) {
-    final AirbyteStreamStatusTraceMessage airbyteStreamStatusTraceMessage = new AirbyteStreamStatusTraceMessage()
-        .withStatus(status)
-        .withStreamDescriptor(stream);
-
-    final AirbyteTraceMessage airbyteTraceMessage = new AirbyteTraceMessage()
-        .withEmittedAt(null)
-        .withType(AirbyteTraceMessage.Type.STREAM_STATUS)
-        .withStreamStatus(airbyteStreamStatusTraceMessage);
-
-    return new AirbyteMessage()
-        .withType(Type.TRACE)
-        .withTrace(airbyteTraceMessage);
-  }
-
   public static AirbyteMessage createAnalyticsTraceMessage(final String type, final String value) {
     final AirbyteAnalyticsTraceMessage airbyteAnalyticsTraceMessage = new AirbyteAnalyticsTraceMessage()
         .withType(type)

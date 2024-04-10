@@ -26,8 +26,6 @@ class AnalyticsMessageTrackerTest {
   private lateinit var trackingClient: TrackingClient
   private lateinit var analyticsMessageTracker: AnalyticsMessageTracker
   private lateinit var ctx: ReplicationContext
-  private val sourceDefinitionId = UUID.randomUUID()
-  private val destinationDefinitionId = UUID.randomUUID()
 
   @BeforeEach
   fun setUp() {
@@ -37,7 +35,7 @@ class AnalyticsMessageTrackerTest {
     ctx =
       ReplicationContext(
         false, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-        1, 1, UUID.randomUUID(), SOURCE_IMAGE, DESTINATION_IMAGE, sourceDefinitionId, destinationDefinitionId,
+        1, 1, UUID.randomUUID(), SOURCE_IMAGE, DESTINATION_IMAGE,
       )
     analyticsMessageTracker.ctx = ctx
   }
