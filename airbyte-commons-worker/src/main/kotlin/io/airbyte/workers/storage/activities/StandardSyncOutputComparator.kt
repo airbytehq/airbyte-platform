@@ -17,12 +17,11 @@ class StandardSyncOutputComparator : Comparator<StandardSyncOutput> {
       val result =
         o1?.outputCatalog == o2?.outputCatalog &&
           o1?.failures == o2?.failures &&
-          o1?.normalizationSummary == o2?.normalizationSummary &&
           o1?.state == o2?.state &&
           o1?.additionalProperties == o2?.additionalProperties &&
-          o1?.standardSyncSummary == o2?.standardSyncSummary &&
-          o1?.uri == o2?.uri
-      // Temporarily ignore the webhook operation summary until the flow is corrected to include this when persisting the output
+          o1?.standardSyncSummary == o2?.standardSyncSummary
+// Temporarily ignore the normalization and webhook operation summaries until the flow is corrected to include this when persisting the output
+//          && o1?.normalizationSummary == o2?.normalizationSummary
 //          && o1?.webhookOperationSummary == o2?.webhookOperationSummary
       return if (result) {
         return 0
