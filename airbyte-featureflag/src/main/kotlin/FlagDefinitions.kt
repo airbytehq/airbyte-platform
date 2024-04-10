@@ -201,3 +201,5 @@ object ActivateRefreshes : Temporary<Boolean>(key = "platform.activate-refreshes
 object WriteReplicationOutputToObjectStorage : Temporary<Boolean>(key = "platform.write-replication-output-to-object-storage", default = false)
 
 object ReadReplicationOutputFromObjectStorage : Temporary<Boolean>(key = "platform.read-replication-output-from-object-storage", default = false)
+
+object UseCustomK8sInitCheck : Temporary<Boolean>(key = "platform.use-custom-k8s-init-check", default = true)
