@@ -5,7 +5,9 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_ADMIN;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_ADMIN;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.UserInvitationApi;
 import io.airbyte.api.model.generated.InviteCodeRequestBody;
@@ -63,7 +65,7 @@ public class UserInvitationApiController implements UserInvitationApi {
   @Post
   @Path("/list_pending")
   @Override
-  @Secured({WORKSPACE_ADMIN, ORGANIZATION_ADMIN})
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   public List<UserInvitationRead> listPendingInvitations(@Body final UserInvitationListRequestBody invitationListRequestBody) {
     return userInvitationHandler.getPendingInvitations(invitationListRequestBody);
   }
