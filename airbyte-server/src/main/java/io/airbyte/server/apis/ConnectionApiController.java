@@ -249,6 +249,22 @@ public class ConnectionApiController implements ConnectionApi {
   }
 
   @Override
+  @Post(uri = "/clear")
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  public JobInfoRead clearConnection(ConnectionIdRequestBody connectionIdRequestBody) {
+    return ApiHelper.execute(() -> schedulerHandler.resetConnection(connectionIdRequestBody));
+  }
+
+  @Override
+  @Post(uri = "/clear/stream")
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  public JobInfoRead clearConnectionStream(ConnectionStreamRequestBody connectionStreamRequestBody) {
+    return ApiHelper.execute(() -> schedulerHandler.resetConnectionStream(connectionStreamRequestBody));
+  }
+
+  @Override
   @Post(uri = "/apply_schema_change")
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.IO)
