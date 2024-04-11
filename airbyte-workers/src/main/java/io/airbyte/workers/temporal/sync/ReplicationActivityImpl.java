@@ -267,6 +267,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     syncSummary.setTotalStats(replicationSummary.getTotalStats());
     syncSummary.setStreamStats(replicationSummary.getStreamStats());
     syncSummary.setPerformanceMetrics(output.getReplicationAttemptSummary().getPerformanceMetrics());
+    syncSummary.setStreamCount((long) output.getOutputCatalog().getStreams().size());
 
     if (!featureFlagClient.boolVariation(NullOutputStateOnSyncOutput.INSTANCE, new Connection(connectionId))) {
       standardSyncOutput.setState(standardSyncOutput.getState());
