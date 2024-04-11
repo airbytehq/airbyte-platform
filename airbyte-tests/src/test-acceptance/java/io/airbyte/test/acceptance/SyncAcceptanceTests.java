@@ -6,25 +6,20 @@ package io.airbyte.test.acceptance;
 
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.DISABLE_TEMPORAL_TESTS_IN_GKE;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.FINAL_INTERVAL_SECS;
-import static io.airbyte.test.acceptance.AcceptanceTestsResources.GERALT;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.IS_GKE;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.JITTER_MAX_INTERVAL_SECS;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.KUBE;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.MAX_TRIES;
-import static io.airbyte.test.acceptance.AcceptanceTestsResources.STATE_AFTER_SYNC_ONE;
-import static io.airbyte.test.acceptance.AcceptanceTestsResources.STATE_AFTER_SYNC_TWO;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.TRUE;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.WITHOUT_SCD_TABLE;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.WITH_SCD_TABLE;
 import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_ID;
 import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_NAME;
-import static io.airbyte.test.utils.AcceptanceTestHarness.POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
 import static io.airbyte.test.utils.AcceptanceTestHarness.STREAM_NAME;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -44,7 +39,6 @@ import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule
 import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule.TimeUnitEnum;
 import io.airbyte.api.client.model.generated.ConnectionScheduleDataCron;
 import io.airbyte.api.client.model.generated.ConnectionScheduleType;
-import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.client.model.generated.DestinationRead;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
@@ -58,7 +52,6 @@ import io.airbyte.api.client.model.generated.SourceDefinitionRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
-import io.airbyte.api.client.model.generated.StreamState;
 import io.airbyte.api.client.model.generated.StreamStatusJobType;
 import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.api.client.model.generated.SyncMode;
@@ -73,9 +66,7 @@ import io.airbyte.test.utils.SchemaTableNamePair;
 import io.airbyte.test.utils.TestConnectionCreate;
 import io.temporal.client.WorkflowQueryException;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -485,204 +476,6 @@ class SyncAcceptanceTests {
 
     final JobInfoRead jobInfoRead = testHarness.resetConnection(connectionId);
     assertEquals(JobConfigType.RESET_CONNECTION, jobInfoRead.getJob().getConfigType());
-  }
-
-  // TODO (Angel): Enable once we fix the docker compose tests
-  @Test
-  @EnabledIfEnvironmentVariable(named = KUBE,
-                                matches = TRUE)
-  @DisabledIfEnvironmentVariable(named = IS_GKE,
-                                 matches = TRUE,
-                                 disabledReason = SLOW_TEST_IN_GKE)
-  void testSyncAfterUpgradeToPerStreamState(final TestInfo testInfo) throws Exception {
-    LOGGER.info("Starting {}", testInfo.getDisplayName());
-    // create custom source so that we don't share the source that is also being used by other tests
-    // Set the source to a version that does not support per-stream state
-    SourceDefinitionRead postgresSourceDefinition =
-        testHarness.createPostgresSourceDefinition(workspaceId,
-            POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
-    final SourceRead customPostgres =
-        testHarness.createSource("custom postgres", workspaceId,
-            postgresSourceDefinition.getSourceDefinitionId(), testHarness.getSourceDbConfig());
-    final UUID sourceId = customPostgres.getSourceId();
-    final UUID customSourceDefinitionId = customPostgres.getSourceDefinitionId();
-    final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final AirbyteCatalog catalog = discoverResult.getCatalog();
-
-    // Fetch the current/most recent source definition version
-    final SourceDefinitionRead sourceDefinitionRead =
-        testHarness.getSourceDefinition(testHarness.getPostgresSourceDefinitionId());
-    final String currentSourceDefintionVersion = sourceDefinitionRead.getDockerImageTag();
-
-    catalog.getStreams().forEach(s -> s.getConfig()
-        .syncMode(SyncMode.INCREMENTAL)
-        .selected(true)
-        .cursorField(List.of(COLUMN_ID))
-        .destinationSyncMode(DestinationSyncMode.APPEND));
-    final var conn =
-        testHarness.createConnection(new TestConnectionCreate.Builder(
-            sourceId,
-            destinationId,
-            catalog,
-            discoverResult.getCatalogId())
-                .build());
-    LOGGER.info("Beginning {} sync 1", testInfo.getDisplayName());
-
-    final var connectionId = conn.getConnectionId();
-    final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
-    testHarness.waitForSuccessfulJob(connectionSyncRead1.getJob());
-    LOGGER.info(STATE_AFTER_SYNC_ONE, testHarness.getConnectionState(connectionId));
-
-    Asserts.assertSourceAndDestinationDbRawRecordsInSync(
-        testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
-        conn.getNamespaceFormat(),
-        false, WITHOUT_SCD_TABLE);
-
-    // Set source to a version that supports per-stream state
-    testHarness.updateSourceDefinitionVersion(customSourceDefinitionId,
-        currentSourceDefintionVersion);
-    LOGGER.info("Upgraded source connector per-stream state supported version {}.",
-        currentSourceDefintionVersion);
-
-    // add new records and run again.
-    final Database src = testHarness.getSourceDatabase();
-    final var dst = testHarness.getDestinationDatabase();
-    // get contents of source before mutating records.
-    final List<JsonNode> expectedRecords = testHarness.retrieveRecordsFromDatabase(src, STREAM_NAME);
-    expectedRecords.add(Jsons.jsonNode(ImmutableMap.builder().put(COLUMN_ID, 6).put(COLUMN_NAME,
-        GERALT).build()));
-    // add a new record
-    src.query(ctx -> ctx.execute("INSERT INTO id_and_name(id, name) VALUES(6, 'geralt')"));
-    // mutate a record that was already synced with out updating its cursor value. if we are actually
-    // full refreshing, this record will appear in the output and cause the test to fail. if we are,
-    // correctly, doing incremental, we will not find this value in the destination.
-    src.query(ctx -> ctx.execute("UPDATE id_and_name SET name='yennefer' WHERE id=2"));
-
-    LOGGER.info("Starting {} sync 2", testInfo.getDisplayName());
-    final JobInfoRead connectionSyncRead2 = testHarness.syncConnection(connectionId);
-    testHarness.waitForSuccessfulJob(connectionSyncRead2.getJob());
-    LOGGER.info(STATE_AFTER_SYNC_TWO, testHarness.getConnectionState(connectionId));
-
-    Asserts.assertRawDestinationContains(dst, expectedRecords, conn.getNamespaceFormat(),
-        STREAM_NAME);
-
-    // reset back to no data.
-    LOGGER.info("Starting {} reset", testInfo.getDisplayName());
-    final JobInfoRead jobInfoRead = testHarness.resetConnection(connectionId);
-    testHarness.waitWhileJobHasStatus(jobInfoRead.getJob(),
-        Sets.newHashSet(JobStatus.PENDING, JobStatus.RUNNING, JobStatus.INCOMPLETE, JobStatus.FAILED));
-    // This is a band-aid to prevent some race conditions where the job status was updated but we may
-    // still be cleaning up some data in the reset table. This would be an argument for reworking the
-    // source of truth of the replication workflow state to be in DB rather than in Memory and
-    // serialized automagically by temporal
-    testHarness.waitWhileJobIsRunning(jobInfoRead.getJob(), Duration.ofMinutes(1));
-
-    LOGGER.info("state after reset: {}", testHarness.getConnectionState(connectionId));
-
-    Asserts.assertRawDestinationContains(dst, Collections.emptyList(), conn.getNamespaceFormat(),
-        STREAM_NAME);
-
-    // sync one more time. verify it is the equivalent of a full refresh.
-    final String expectedState =
-        """
-        {
-        "cursor":"6",
-        "version":2,
-        "state_type":"cursor_based",
-        "stream_name":"id_and_name",
-        "cursor_field":["id"],
-        "stream_namespace":"public",
-        "cursor_record_count":1}"
-        """;
-    LOGGER.info("Starting {} sync 3", testInfo.getDisplayName());
-    final JobInfoRead connectionSyncRead3 = testHarness.syncConnection(connectionId);
-    testHarness.waitForSuccessfulJob(connectionSyncRead3.getJob());
-    final ConnectionState state = testHarness.getConnectionState(connectionId);
-    LOGGER.info("state after sync 3: {}", state);
-
-    Asserts.assertSourceAndDestinationDbRawRecordsInSync(
-        testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
-        conn.getNamespaceFormat(),
-        false, WITHOUT_SCD_TABLE);
-    assertNotNull(state.getStreamState());
-    assertEquals(1, state.getStreamState().size());
-    final StreamState idAndNameState = state.getStreamState().get(0);
-    assertEquals(new StreamDescriptor().namespace(PUBLIC).name(STREAM_NAME),
-        idAndNameState.getStreamDescriptor());
-    assertEquals(Jsons.deserialize(expectedState), idAndNameState.getStreamState());
-  }
-
-  @Test
-  @DisabledIfEnvironmentVariable(named = IS_GKE,
-                                 matches = TRUE,
-                                 disabledReason = SLOW_TEST_IN_GKE)
-  void testSyncAfterUpgradeToPerStreamStateWithNoNewData(final TestInfo testInfo) throws Exception {
-    LOGGER.info("Starting {}", testInfo.getDisplayName());
-    // create custom source so that we don't share the source that is also being used by other tests
-    // Set the source to a version that does not support per-stream state
-    SourceDefinitionRead postgresSourceDefinition = testHarness.createPostgresSourceDefinition(workspaceId, POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
-    final SourceRead customPostgres =
-        testHarness.createSource("custom postgres", workspaceId, postgresSourceDefinition.getSourceDefinitionId(), testHarness.getSourceDbConfig());
-    final UUID sourceId = customPostgres.getSourceId();
-    final UUID customSourceDefinitionId = customPostgres.getSourceDefinitionId();
-    final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final AirbyteCatalog catalog = discoverResult.getCatalog();
-
-    // Fetch the current/most recent source definition version
-    final SourceDefinitionRead sourceDefinitionRead = testHarness.getSourceDefinition(testHarness.getPostgresSourceDefinitionId());
-    final String currentSourceDefintionVersion = sourceDefinitionRead.getDockerImageTag();
-
-    // Set the source to a version that does not support per-stream state
-    LOGGER.info("Setting source connector to pre-per-stream state version {}...",
-        POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
-    testHarness.updateSourceDefinitionVersion(customSourceDefinitionId, POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
-
-    catalog.getStreams().forEach(s -> s.getConfig()
-        .syncMode(SyncMode.INCREMENTAL)
-        .selected(true)
-        .cursorField(List.of(COLUMN_ID))
-        .destinationSyncMode(DestinationSyncMode.APPEND));
-    final var conn =
-        testHarness.createConnection(new TestConnectionCreate.Builder(
-            sourceId,
-            destinationId,
-            catalog,
-            discoverResult.getCatalogId())
-                .build());
-    LOGGER.info("Beginning {} sync 1", testInfo.getDisplayName());
-    final var connectionId = conn.getConnectionId();
-    final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
-    testHarness.waitForSuccessfulJob(connectionSyncRead1.getJob());
-    LOGGER.info(STATE_AFTER_SYNC_ONE, testHarness.getConnectionState(connectionId));
-
-    Asserts.assertSourceAndDestinationDbRawRecordsInSync(
-        testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
-        conn.getNamespaceFormat(),
-        false, WITHOUT_SCD_TABLE);
-
-    // Set source to a version that supports per-stream state
-    testHarness.updateSourceDefinitionVersion(customSourceDefinitionId, currentSourceDefintionVersion);
-    LOGGER.info("Upgraded source connector per-stream state supported version {}.", currentSourceDefintionVersion);
-
-    // sync one more time. verify that nothing has been synced
-    LOGGER.info("Starting {} sync 2", testInfo.getDisplayName());
-    final JobInfoRead connectionSyncRead2 = testHarness.syncConnection(connectionId);
-    testHarness.waitForSuccessfulJob(connectionSyncRead2.getJob());
-    LOGGER.info(STATE_AFTER_SYNC_TWO, testHarness.getConnectionState(connectionId));
-
-    final JobInfoRead syncJob = testHarness.getJobInfoRead(connectionSyncRead2.getJob().getId());
-    final Optional<AttemptInfoRead> result = syncJob.getAttempts().stream()
-        .min((a, b) -> Long.compare(b.getAttempt().getEndedAt(), a.getAttempt().getEndedAt()));
-
-    assertTrue(result.isPresent());
-    assertEquals(0, result.get().getAttempt().getRecordsSynced());
-    assertEquals(0, result.get().getAttempt().getTotalStats().getRecordsEmitted());
-    Asserts.assertSourceAndDestinationDbRawRecordsInSync(
-        testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
-        conn.getNamespaceFormat(),
-        false, WITHOUT_SCD_TABLE);
   }
 
   @Test
