@@ -131,8 +131,11 @@ public class ConnectionApiController implements ConnectionApi {
     return ApiHelper.execute(() -> connectionsHandler.listConnectionsForWorkspaces(listConnectionsForWorkspacesRequestBody));
   }
 
+  @Post(uri = "/refresh")
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
-  public BooleanRead refreshConnectionStream(ConnectionStreamRefreshRequestBody connectionStreamRefreshRequestBody) {
+  public BooleanRead refreshConnectionStream(@Body final ConnectionStreamRefreshRequestBody connectionStreamRefreshRequestBody) {
     return ApiHelper.execute(() -> new BooleanRead().value(streamRefreshesHandler.createRefreshesForConnection(
         connectionStreamRefreshRequestBody.getConnectionId(),
         connectionStreamRefreshRequestBody.getStreams() != null ? connectionStreamRefreshRequestBody.getStreams() : new ArrayList<>())));
@@ -252,7 +255,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/clear")
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
-  public JobInfoRead clearConnection(ConnectionIdRequestBody connectionIdRequestBody) {
+  public JobInfoRead clearConnection(@Body ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.resetConnection(connectionIdRequestBody));
   }
 
@@ -260,7 +263,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/clear/stream")
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
-  public JobInfoRead clearConnectionStream(ConnectionStreamRequestBody connectionStreamRequestBody) {
+  public JobInfoRead clearConnectionStream(@Body ConnectionStreamRequestBody connectionStreamRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.resetConnectionStream(connectionStreamRequestBody));
   }
 
