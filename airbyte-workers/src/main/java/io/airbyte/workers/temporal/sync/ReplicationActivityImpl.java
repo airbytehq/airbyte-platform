@@ -270,11 +270,11 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     syncSummary.setStreamCount((long) output.getOutputCatalog().getStreams().size());
 
     if (!featureFlagClient.boolVariation(NullOutputStateOnSyncOutput.INSTANCE, new Connection(connectionId))) {
-      standardSyncOutput.setState(standardSyncOutput.getState());
+      standardSyncOutput.setState(output.getState());
     }
 
     if (!featureFlagClient.boolVariation(NullOutputCatalogOnSyncOutput.INSTANCE, new Connection(connectionId))) {
-      standardSyncOutput.setOutputCatalog(standardSyncOutput.getOutputCatalog());
+      standardSyncOutput.setOutputCatalog(output.getOutputCatalog());
     }
 
     standardSyncOutput.setStandardSyncSummary(syncSummary);

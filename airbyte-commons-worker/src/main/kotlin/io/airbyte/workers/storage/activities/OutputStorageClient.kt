@@ -61,12 +61,14 @@ class OutputStorageClient<T : Any>
      * the expected. Emits a metric whether it's a match.
      */
     fun validate(
-      expected: T,
+      expected: T?,
       connectionId: UUID,
       jobId: Long,
       attemptNumber: Int,
       attrs: List<MetricAttribute>,
     ) {
+      if (expected == null) return
+
       val uri = ActivityPayloadURI.v1(connectionId, jobId, attemptNumber, payloadName)
 
       storageClient.validateOutput(
