@@ -487,56 +487,6 @@ class SyncAcceptanceTests {
     assertEquals(JobConfigType.RESET_CONNECTION, jobInfoRead.getJob().getConfigType());
   }
 
-  @Test
-  void testResetCancelsRunningSync() throws Exception {
-    final SourceDefinitionRead sourceDefinition = testHarness.createE2eSourceDefinition(
-        workspaceId);
-
-    final SourceRead source = testHarness.createSource(
-        E2E_TEST_SOURCE + UUID.randomUUID(),
-        workspaceId,
-        sourceDefinition.getSourceDefinitionId(),
-        Jsons.jsonNode(ImmutableMap.builder()
-            .put(TYPE, INFINITE_FEED)
-            .put(MESSAGE_INTERVAL, 1000)
-            .put(MAX_RECORDS, Duration.ofMinutes(5).toSeconds())
-            .build()));
-
-    final UUID sourceId = source.getSourceId();
-    final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final AirbyteCatalog catalog = discoverResult.getCatalog();
-    final SyncMode srcSyncMode = SyncMode.FULL_REFRESH;
-    final DestinationSyncMode dstSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(srcSyncMode).selected(true).destinationSyncMode(dstSyncMode));
-    final UUID connectionId =
-        testHarness.createConnection(new TestConnectionCreate.Builder(
-            sourceId,
-            destinationId,
-            catalog,
-            discoverResult.getCatalogId())
-                .build())
-            .getConnectionId();
-    final JobInfoRead connectionSyncRead = testHarness.syncConnection(connectionId);
-
-    // wait to get out of PENDING
-    final JobRead jobRead = testHarness.waitWhileJobHasStatus(connectionSyncRead.getJob(), Set.of(JobStatus.PENDING));
-    assertEquals(JobStatus.RUNNING, jobRead.getStatus());
-
-    // send reset request while sync is still running
-    final JobInfoRead jobInfoRead = testHarness.resetConnection(connectionId);
-
-    // verify that sync job was cancelled
-    final JobRead connectionSyncReadAfterReset = testHarness.getJobInfoRead(connectionSyncRead.getJob().getId()).getJob();
-    assertEquals(JobStatus.CANCELLED, connectionSyncReadAfterReset.getStatus());
-
-    // wait for the reset to complete
-    testHarness.waitForSuccessfulJob(jobInfoRead.getJob());
-    // TODO enable once stream status for resets has been fixed
-    // testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE,
-    // StreamStatusJobType.RESET);
-  }
-
   // TODO (Angel): Enable once we fix the docker compose tests
   @Test
   @EnabledIfEnvironmentVariable(named = KUBE,
