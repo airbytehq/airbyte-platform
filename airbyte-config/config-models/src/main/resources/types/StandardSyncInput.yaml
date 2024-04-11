@@ -10,7 +10,6 @@ required:
   - sourceConfiguration
   - destinationId
   - destinationConfiguration
-  - catalog
 properties:
   namespaceDefinition:
     "$ref": NamespaceDefinitionType.yaml
@@ -47,13 +46,15 @@ properties:
     type: object
     existingJavaType: com.fasterxml.jackson.databind.JsonNode
   catalog:
-    description: the configured airbyte catalog
+    description: DEPRECATED - this is now retrieved separately via API. The configured airbyte catalog.
     type: object
     # necessary because the configuration declaration is in a separate package.
     existingJavaType: io.airbyte.protocol.models.ConfiguredAirbyteCatalog
+    deprecated: true
   state:
-    description: optional state of the previous run. this object is defined per integration.
+    description: DEPRECATED - this is now retrieved separately via API. Optional state of the previous run. this object is defined per integration.
     "$ref": State.yaml
+    deprecated: true
   syncResourceRequirements:
     description: Resource requirements to use for the sync
     $ref: SyncResourceRequirements.yaml
