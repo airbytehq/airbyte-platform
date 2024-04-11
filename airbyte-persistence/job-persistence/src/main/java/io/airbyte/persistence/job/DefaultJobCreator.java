@@ -30,6 +30,7 @@ import io.airbyte.config.SyncResourceRequirementsKey;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.persistence.RefreshJobStateUpdater;
 import io.airbyte.config.persistence.StatePersistence;
+import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
 import io.airbyte.featureflag.ActivateRefreshes;
@@ -71,17 +72,20 @@ public class DefaultJobCreator implements JobCreator {
   private final FeatureFlagClient featureFlagClient;
   private final StatePersistence statePersistence;
   private final RefreshJobStateUpdater refreshJobStateUpdater;
+  private final StreamRefreshesRepository streamRefreshesRepository;
 
   public DefaultJobCreator(final JobPersistence jobPersistence,
                            final ResourceRequirementsProvider resourceRequirementsProvider,
                            final FeatureFlagClient featureFlagClient,
                            final StatePersistence statePersistence,
-                           final RefreshJobStateUpdater refreshJobStateUpdater) {
+                           final RefreshJobStateUpdater refreshJobStateUpdater,
+                           final StreamRefreshesRepository streamRefreshesRepository) {
     this.jobPersistence = jobPersistence;
     this.resourceRequirementsProvider = resourceRequirementsProvider;
     this.featureFlagClient = featureFlagClient;
     this.statePersistence = statePersistence;
     this.refreshJobStateUpdater = refreshJobStateUpdater;
+    this.streamRefreshesRepository = streamRefreshesRepository;
   }
 
   @Override
@@ -186,12 +190,22 @@ public class DefaultJobCreator implements JobCreator {
 
     if (job.isPresent()) {
       final Optional<StateWrapper> currentState = statePersistence.getCurrentState(standardSync.getConnectionId());
-      if (currentState.isPresent()) {
-        refreshJobStateUpdater.updateStateWrapperForRefresh(standardSync.getConnectionId(), currentState.get(), streamsToRefresh);
-      }
+      updateStateAndDeleteRefreshes(standardSync.getConnectionId(), streamsToRefresh, currentState);
     }
 
     return job;
+  }
+
+  // TODO: Add Transactional annotation
+  private void updateStateAndDeleteRefreshes(final UUID connectionId,
+                                             final List<StreamRefresh> streamsToRefresh,
+                                             final Optional<StateWrapper> currentState)
+      throws IOException {
+    if (currentState.isPresent()) {
+      refreshJobStateUpdater.updateStateWrapperForRefresh(connectionId, currentState.get(), streamsToRefresh);
+    }
+    streamsToRefresh.forEach(
+        s -> streamRefreshesRepository.deleteByConnectionIdAndStreamNameAndStreamNamespace(connectionId, s.getStreamName(), s.getStreamNamespace()));
   }
 
   @Override

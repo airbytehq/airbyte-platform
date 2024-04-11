@@ -47,6 +47,7 @@ import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.SyncResourceRequirementsKey;
 import io.airbyte.config.persistence.RefreshJobStateUpdater;
 import io.airbyte.config.persistence.StatePersistence;
+import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
 import io.airbyte.featureflag.ActivateRefreshes;
@@ -117,6 +118,7 @@ class DefaultJobCreatorTest {
   private JobPersistence jobPersistence;
   private StatePersistence statePersistence;
   private RefreshJobStateUpdater refreshJobStateUpdater;
+  private StreamRefreshesRepository streamRefreshesRepository;
   private JobCreator jobCreator;
   private ResourceRequirementsProvider resourceRequirementsProvider;
   private ResourceRequirements workerResourceRequirements;
@@ -211,6 +213,7 @@ class DefaultJobCreatorTest {
     jobPersistence = mock(JobPersistence.class);
     statePersistence = mock(StatePersistence.class);
     refreshJobStateUpdater = new RefreshJobStateUpdater(statePersistence);
+    streamRefreshesRepository = mock(StreamRefreshesRepository.class);
     workerResourceRequirements = new ResourceRequirements()
         .withCpuLimit("0.2")
         .withCpuRequest("0.2")
@@ -230,7 +233,8 @@ class DefaultJobCreatorTest {
     when(resourceRequirementsProvider.getResourceRequirements(any(), any(), any()))
         .thenReturn(workerResourceRequirements);
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, new TestClient(), statePersistence, refreshJobStateUpdater);
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, new TestClient(), statePersistence, refreshJobStateUpdater,
+            streamRefreshesRepository);
   }
 
   @Test
@@ -262,7 +266,8 @@ class DefaultJobCreatorTest {
     when(statePersistence.getCurrentState(STANDARD_SYNC.getConnectionId())).thenReturn(Optional.of(stateWrapper));
 
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, statePersistence, refreshJobStateUpdater);
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, statePersistence, refreshJobStateUpdater,
+            streamRefreshesRepository);
 
     final Optional<String> expectedSourceType = Optional.of("database");
     final ResourceRequirements destStderrResourceRequirements = new ResourceRequirements().withCpuLimit("10");
@@ -315,6 +320,8 @@ class DefaultJobCreatorTest {
     final StateWrapper expected =
         new StateWrapper().withStateType(StateType.STREAM).withStateMessages(Collections.singletonList(stateMessageFromNonRefreshStream));
     verify(statePersistence).updateOrCreateState(STANDARD_SYNC.getConnectionId(), expected);
+    verify(streamRefreshesRepository).deleteByConnectionIdAndStreamNameAndStreamNamespace(STANDARD_SYNC.getConnectionId(), streamToRefresh,
+        streamNamespace);
   }
 
   @Test
@@ -348,7 +355,8 @@ class DefaultJobCreatorTest {
     when(statePersistence.getCurrentState(STANDARD_SYNC.getConnectionId())).thenReturn(Optional.of(stateWrapper));
 
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, statePersistence, refreshJobStateUpdater);
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, statePersistence, refreshJobStateUpdater,
+            streamRefreshesRepository);
 
     final Optional<String> expectedSourceType = Optional.of("database");
     final ResourceRequirements destStderrResourceRequirements = new ResourceRequirements().withCpuLimit("10");
@@ -405,6 +413,8 @@ class DefaultJobCreatorTest {
 
     final StateWrapper expected = new StateWrapper().withStateType(StateType.GLOBAL).withGlobal(expectedStateMessage);
     verify(statePersistence).updateOrCreateState(STANDARD_SYNC.getConnectionId(), expected);
+    verify(streamRefreshesRepository).deleteByConnectionIdAndStreamNameAndStreamNamespace(STANDARD_SYNC.getConnectionId(), streamToRefresh,
+        streamNamespace);
   }
 
   private static RefreshConfig getRefreshConfig(final SyncResourceRequirements expectedSyncResourceRequirements,
@@ -460,7 +470,8 @@ class DefaultJobCreatorTest {
     when(statePersistence.getCurrentState(STANDARD_SYNC.getConnectionId())).thenReturn(Optional.of(stateWrapper));
 
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, statePersistence, refreshJobStateUpdater);
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, statePersistence, refreshJobStateUpdater,
+            streamRefreshesRepository);
 
     final Optional<String> expectedSourceType = Optional.of("database");
     final ResourceRequirements destStderrResourceRequirements = new ResourceRequirements().withCpuLimit("10");
@@ -518,6 +529,10 @@ class DefaultJobCreatorTest {
 
     final StateWrapper expected = new StateWrapper().withStateType(StateType.GLOBAL).withGlobal(expectedStateMessage);
     verify(statePersistence).updateOrCreateState(STANDARD_SYNC.getConnectionId(), expected);
+    verify(streamRefreshesRepository).deleteByConnectionIdAndStreamNameAndStreamNamespace(STANDARD_SYNC.getConnectionId(), streamToRefresh,
+        streamNamespace);
+    verify(streamRefreshesRepository).deleteByConnectionIdAndStreamNameAndStreamNamespace(STANDARD_SYNC.getConnectionId(), streamToRefresh2,
+        streamNamespace);
   }
 
   @Test
@@ -525,7 +540,8 @@ class DefaultJobCreatorTest {
     final FeatureFlagClient mFeatureFlagClient = mock(TestClient.class);
     when(mFeatureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(false);
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, statePersistence, refreshJobStateUpdater);
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, statePersistence, refreshJobStateUpdater,
+            streamRefreshesRepository);
 
     assertThrows(IllegalStateException.class, () -> jobCreator.createRefreshConnection(
         STANDARD_SYNC,
@@ -911,7 +927,8 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), statePersistence, refreshJobStateUpdater);
+        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), statePersistence, refreshJobStateUpdater,
+        streamRefreshesRepository);
 
     jobCreator.createSyncJob(
         SOURCE_CONNECTION,
@@ -976,7 +993,7 @@ class DefaultJobCreatorTest {
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
         new TestClient(Map.of(OrchestratorResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), statePersistence,
-        refreshJobStateUpdater);
+        refreshJobStateUpdater, streamRefreshesRepository);
 
     final var standardSync = new StandardSync()
         .withConnectionId(UUID.randomUUID())
@@ -1053,7 +1070,7 @@ class DefaultJobCreatorTest {
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
         new TestClient(Map.of(SourceResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), statePersistence,
-        refreshJobStateUpdater);
+        refreshJobStateUpdater, streamRefreshesRepository);
 
     jobCreator.createSyncJob(
         SOURCE_CONNECTION,
@@ -1109,7 +1126,8 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(weirdness))), statePersistence, refreshJobStateUpdater);
+        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(weirdness))), statePersistence, refreshJobStateUpdater,
+        streamRefreshesRepository);
 
     jobCreator.createSyncJob(
         SOURCE_CONNECTION,
