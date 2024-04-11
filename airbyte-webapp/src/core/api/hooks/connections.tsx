@@ -377,7 +377,9 @@ export const useRemoveConnectionsFromList = (): ((connectionIds: string[]) => vo
 };
 
 export const getConnectionListQueryKey = (connectorIds?: string[]) => {
-  return connectionsKeys.lists(connectorIds);
+  return !connectorIds?.length
+    ? [...connectionsKeys.lists(connectorIds), "empty"]
+    : connectionsKeys.lists(connectorIds);
 };
 
 export const useConnectionListQuery = (
