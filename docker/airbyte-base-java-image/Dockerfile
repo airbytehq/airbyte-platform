@@ -17,9 +17,9 @@ chown -R airbyte:airbyte /app
 EOF
 
 # Add the Datadog Java APM agent
-ADD https://dtdg.co/latest-java-tracer dd-java-agent.jar
+ADD --chown=airbyte:airbyte https://dtdg.co/latest-java-tracer dd-java-agent.jar
 
 # Add the OpenTelemetry Java APM agent
-ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar opentelemetry-javaagent.jar
+ADD --chown=airbyte:airbyte https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar opentelemetry-javaagent.jar
 
 USER airbyte:airbyte
