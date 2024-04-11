@@ -45,7 +45,6 @@ class LaunchPipeline(
     val startTime = TimeSource.Monotonic.markNow()
     metricPublisher.count(
       WorkloadLauncherMetricMetadata.WORKLOAD_RECEIVED,
-      MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId),
       MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, msg.workloadType.toString()),
     )
     val disposable =
@@ -55,7 +54,6 @@ class LaunchPipeline(
     metricPublisher.timer(
       WorkloadLauncherMetricMetadata.WORKLOAD_LAUNCH_DURATION,
       startTime.elapsedNow().toJavaDuration(),
-      MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, msg.workloadType.toString()),
     )
     disposable.dispose()
   }
