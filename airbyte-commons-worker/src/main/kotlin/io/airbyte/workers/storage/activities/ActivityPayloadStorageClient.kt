@@ -91,7 +91,7 @@ class ActivityPayloadStorageClient(
           MetricAttribute(MetricTags.URI_NULL, false.toString()),
           MetricAttribute(MetricTags.URI_ID, uri.id),
           MetricAttribute(MetricTags.URI_VERSION, uri.version),
-          MetricAttribute(MetricTags.PAYLOAD_CLASS, target.name),
+          MetricAttribute(MetricTags.PAYLOAD_NAME, target.name),
         )
 
     val remote: T?

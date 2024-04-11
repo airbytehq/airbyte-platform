@@ -14,6 +14,7 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
+import jakarta.annotation.Nullable;
 import java.util.UUID;
 
 /**
@@ -38,7 +39,7 @@ public interface NormalizationActivity {
 
   @ActivityMethod
   NormalizationInput generateNormalizationInputWithMinimumPayloadWithConnectionId(final JsonNode destinationConfiguration,
-                                                                                  final ConfiguredAirbyteCatalog airbyteCatalog,
+                                                                                  @Nullable final ConfiguredAirbyteCatalog airbyteCatalog,
                                                                                   final UUID workspaceId,
                                                                                   final UUID connectionId,
                                                                                   final UUID organizationId);

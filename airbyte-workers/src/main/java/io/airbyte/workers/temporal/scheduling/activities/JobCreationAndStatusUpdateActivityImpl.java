@@ -22,11 +22,22 @@ import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody;
 import io.airbyte.api.client.model.generated.ReportJobStartRequest;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
+import io.airbyte.config.State;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.NullOutputCatalogOnSyncOutput;
+import io.airbyte.featureflag.NullOutputStateOnSyncOutput;
+import io.airbyte.featureflag.WriteOutputCatalogToObjectStorage;
+import io.airbyte.featureflag.WriteOutputStateToObjectStorage;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.context.AttemptContext;
+import io.airbyte.workers.storage.activities.OutputStorageClient;
 import io.airbyte.workers.storage.activities.payloads.StandardSyncOutputClient;
 import io.micronaut.context.annotation.Requires;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.util.ArrayList;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -40,13 +51,22 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   private final JobsApi jobsApi;
   private final AttemptApi attemptApi;
   private final StandardSyncOutputClient storageClient;
+  private final FeatureFlagClient featureFlagClient;
+  private final OutputStorageClient<State> stateClient;
+  private final OutputStorageClient<ConfiguredAirbyteCatalog> catalogClient;
 
   public JobCreationAndStatusUpdateActivityImpl(final JobsApi jobsApi,
                                                 final AttemptApi attemptApi,
-                                                final StandardSyncOutputClient storageClient) {
+                                                final StandardSyncOutputClient storageClient,
+                                                final FeatureFlagClient featureFlagClient,
+                                                @Named("outputStateClient") final OutputStorageClient<State> stateClient,
+                                                @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogClient) {
     this.jobsApi = jobsApi;
     this.attemptApi = attemptApi;
     this.storageClient = storageClient;
+    this.featureFlagClient = featureFlagClient;
+    this.stateClient = stateClient;
+    this.catalogClient = catalogClient;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -89,6 +109,28 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
         input.getConnectionId(),
         input.getJobId(),
         input.getAttemptNumber());
+
+    if (output != null) {
+      if (featureFlagClient.boolVariation(WriteOutputStateToObjectStorage.INSTANCE, new Connection(input.getConnectionId()))
+          && !featureFlagClient.boolVariation(NullOutputStateOnSyncOutput.INSTANCE, new Connection(input.getConnectionId()))) {
+        stateClient.validate(
+            output.getState(),
+            input.getConnectionId(),
+            input.getJobId(),
+            input.getAttemptNumber(),
+            new ArrayList<>());
+      }
+
+      if (featureFlagClient.boolVariation(WriteOutputCatalogToObjectStorage.INSTANCE, new Connection(input.getConnectionId()))
+          && !featureFlagClient.boolVariation(NullOutputCatalogOnSyncOutput.INSTANCE, new Connection(input.getConnectionId()))) {
+        catalogClient.validate(
+            output.getOutputCatalog(),
+            input.getConnectionId(),
+            input.getJobId(),
+            input.getAttemptNumber(),
+            new ArrayList<>());
+      }
+    }
 
     try {
       final var request = new JobSuccessWithAttemptNumberRequest()

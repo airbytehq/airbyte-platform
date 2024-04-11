@@ -25,19 +25,27 @@ import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
+import io.airbyte.config.State;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.NullOutputCatalogOnSyncOutput;
+import io.airbyte.featureflag.NullOutputStateOnSyncOutput;
+import io.airbyte.featureflag.WriteOutputCatalogToObjectStorage;
+import io.airbyte.featureflag.WriteOutputStateToObjectStorage;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.ReplicationInputHydrator;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
+import io.airbyte.workers.storage.activities.OutputStorageClient;
 import io.airbyte.workers.storage.activities.payloads.StandardSyncOutputClient;
 import io.airbyte.workers.sync.WorkloadApiWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
@@ -54,6 +62,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -82,6 +91,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final FeatureFlagClient featureFlagClient;
   private final PayloadChecker payloadChecker;
   private final StandardSyncOutputClient storageClient;
+  private final OutputStorageClient<State> stateStorageClient;
+  private final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient;
 
   public ReplicationActivityImpl(final SecretsRepositoryReader secretsRepositoryReader,
                                  @Named("workspaceRoot") final Path workspaceRoot,
@@ -96,7 +107,9 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final MetricClient metricClient,
                                  final FeatureFlagClient featureFlagClient,
                                  final PayloadChecker payloadChecker,
-                                 final StandardSyncOutputClient storageClient) {
+                                 final StandardSyncOutputClient storageClient,
+                                 @Named("outputStateClient") final OutputStorageClient<State> stateStorageClient,
+                                 @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient) {
     this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient.getConnectionApi(),
         airbyteApiClient.getJobsApi(),
         airbyteApiClient.getStateApi(),
@@ -115,6 +128,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.featureFlagClient = featureFlagClient;
     this.payloadChecker = payloadChecker;
     this.storageClient = storageClient;
+    this.stateStorageClient = stateStorageClient;
+    this.catalogStorageClient = catalogStorageClient;
   }
 
   /**
@@ -192,7 +207,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                   Optional.ofNullable(replicationActivityInput.getTaskQueue()));
 
           final ReplicationOutput attemptOutput = temporalAttempt.get();
-          final StandardSyncOutput standardSyncOutput = reduceReplicationOutput(attemptOutput, metricAttributes);
+          final StandardSyncOutput standardSyncOutput = reduceReplicationOutput(attemptOutput, connectionId, metricAttributes);
 
           final String standardSyncOutputString = standardSyncOutput.toString();
           LOGGER.info("sync summary: {}", standardSyncOutputString);
@@ -210,6 +225,24 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           BackfillHelper.markBackfilledStreams(streamsToBackfill, standardSyncOutput);
           LOGGER.info("sync summary after backfill: {}", standardSyncOutput);
 
+          if (featureFlagClient.boolVariation(WriteOutputStateToObjectStorage.INSTANCE, new Connection(connectionId))) {
+            stateStorageClient.persist(
+                standardSyncOutput.getState(),
+                connectionId,
+                Long.parseLong(jobId),
+                attemptNumber.intValue(),
+                metricAttributes);
+          }
+
+          if (featureFlagClient.boolVariation(WriteOutputCatalogToObjectStorage.INSTANCE, new Connection(connectionId))) {
+            catalogStorageClient.persist(
+                standardSyncOutput.getOutputCatalog(),
+                connectionId,
+                Long.parseLong(jobId),
+                attemptNumber.intValue(),
+                metricAttributes);
+          }
+
           final StandardSyncOutput output = payloadChecker.validatePayloadSize(standardSyncOutput, metricAttributes);
 
           return storageClient.persistAndTrim(output, connectionId, Long.parseLong(jobId), attemptNumber.intValue(), metricAttributes);
@@ -217,7 +250,9 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         context);
   }
 
-  private StandardSyncOutput reduceReplicationOutput(final ReplicationOutput output, final MetricAttribute[] metricAttributes) {
+  private StandardSyncOutput reduceReplicationOutput(final ReplicationOutput output,
+                                                     final UUID connectionId,
+                                                     final MetricAttribute[] metricAttributes) {
     final StandardSyncOutput standardSyncOutput = new StandardSyncOutput();
     final StandardSyncSummary syncSummary = new StandardSyncSummary();
     final ReplicationAttemptSummary replicationSummary = output.getReplicationAttemptSummary();
@@ -233,8 +268,14 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     syncSummary.setStreamStats(replicationSummary.getStreamStats());
     syncSummary.setPerformanceMetrics(output.getReplicationAttemptSummary().getPerformanceMetrics());
 
-    standardSyncOutput.setState(output.getState());
-    standardSyncOutput.setOutputCatalog(output.getOutputCatalog());
+    if (!featureFlagClient.boolVariation(NullOutputStateOnSyncOutput.INSTANCE, new Connection(connectionId))) {
+      standardSyncOutput.setState(standardSyncOutput.getState());
+    }
+
+    if (!featureFlagClient.boolVariation(NullOutputCatalogOnSyncOutput.INSTANCE, new Connection(connectionId))) {
+      standardSyncOutput.setOutputCatalog(standardSyncOutput.getOutputCatalog());
+    }
+
     standardSyncOutput.setStandardSyncSummary(syncSummary);
     standardSyncOutput.setFailures(output.getFailures());
 

@@ -32,6 +32,10 @@ import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
+import io.airbyte.config.State;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.workers.storage.activities.OutputStorageClient;
 import io.airbyte.workers.storage.activities.payloads.StandardSyncOutputClient;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput;
@@ -70,6 +74,15 @@ class JobCreationAndStatusUpdateActivityTest {
   @Mock
   private StandardSyncOutputClient storageClient;
 
+  @Mock
+  private TestClient featureFlagClient;
+
+  @Mock
+  private OutputStorageClient<State> outputStateStorageClient;
+
+  @Mock
+  private OutputStorageClient<ConfiguredAirbyteCatalog> outputCatalogStorageClient;
+
   private JobCreationAndStatusUpdateActivityImpl jobCreationAndStatusUpdateActivity;
 
   private static final UUID CONNECTION_ID = UUID.randomUUID();
@@ -93,7 +106,13 @@ class JobCreationAndStatusUpdateActivityTest {
 
   @BeforeEach
   void beforeEach() {
-    jobCreationAndStatusUpdateActivity = new JobCreationAndStatusUpdateActivityImpl(jobsApi, attemptApi, storageClient);
+    jobCreationAndStatusUpdateActivity = new JobCreationAndStatusUpdateActivityImpl(
+        jobsApi,
+        attemptApi,
+        storageClient,
+        featureFlagClient,
+        outputStateStorageClient,
+        outputCatalogStorageClient);
   }
 
   @Nested
