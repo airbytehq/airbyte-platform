@@ -26,5 +26,3 @@ properties:
     "$ref": ActivityPayloadURI.yaml
   catalogUri:
     "$ref": ActivityPayloadURI.yaml
-  stateUri:
-    "$ref": ActivityPayloadURI.yaml

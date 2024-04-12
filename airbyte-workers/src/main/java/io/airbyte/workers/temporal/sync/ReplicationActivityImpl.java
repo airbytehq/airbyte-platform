@@ -31,9 +31,7 @@ import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.NullOutputCatalogOnSyncOutput;
-import io.airbyte.featureflag.NullOutputStateOnSyncOutput;
 import io.airbyte.featureflag.WriteOutputCatalogToObjectStorage;
-import io.airbyte.featureflag.WriteOutputStateToObjectStorage;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
@@ -225,17 +223,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           BackfillHelper.markBackfilledStreams(streamsToBackfill, standardSyncOutput);
           LOGGER.info("sync summary after backfill: {}", standardSyncOutput);
 
-          if (featureFlagClient.boolVariation(WriteOutputStateToObjectStorage.INSTANCE, new Connection(connectionId))) {
-            final var uri = stateStorageClient.persist(
-                attemptOutput.getState(),
-                connectionId,
-                Long.parseLong(jobId),
-                attemptNumber.intValue(),
-                metricAttributes);
-
-            standardSyncOutput.setStateUri(uri);
-          }
-
           if (featureFlagClient.boolVariation(WriteOutputCatalogToObjectStorage.INSTANCE, new Connection(connectionId))) {
             final var uri = catalogStorageClient.persist(
                 attemptOutput.getOutputCatalog(),
@@ -272,10 +259,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     syncSummary.setStreamStats(replicationSummary.getStreamStats());
     syncSummary.setPerformanceMetrics(output.getReplicationAttemptSummary().getPerformanceMetrics());
     syncSummary.setStreamCount((long) output.getOutputCatalog().getStreams().size());
-
-    if (!featureFlagClient.boolVariation(NullOutputStateOnSyncOutput.INSTANCE, new Connection(connectionId))) {
-      standardSyncOutput.setState(output.getState());
-    }
 
     if (!featureFlagClient.boolVariation(NullOutputCatalogOnSyncOutput.INSTANCE, new Connection(connectionId))) {
       standardSyncOutput.setOutputCatalog(output.getOutputCatalog());

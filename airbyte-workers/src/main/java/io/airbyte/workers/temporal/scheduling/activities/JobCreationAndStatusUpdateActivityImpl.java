@@ -105,20 +105,11 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
         input.getJobId(),
         input.getAttemptNumber());
 
-    if (output != null) {
-      if (output.getState() != null && output.getStateUri() != null) {
-        stateClient.validate(
-            output.getState(),
-            output.getStateUri(),
-            new ArrayList<>());
-      }
-
-      if (output.getOutputCatalog() != null && output.getCatalogUri() != null) {
-        catalogClient.validate(
-            output.getOutputCatalog(),
-            output.getCatalogUri(),
-            new ArrayList<>());
-      }
+    if (output != null && output.getOutputCatalog() != null && output.getCatalogUri() != null) {
+      catalogClient.validate(
+          output.getOutputCatalog(),
+          output.getCatalogUri(),
+          new ArrayList<>());
     }
 
     try {
@@ -163,6 +154,13 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
         input.getConnectionId(),
         input.getJobId(),
         input.getAttemptNumber());
+
+    if (output != null && output.getOutputCatalog() != null && output.getCatalogUri() != null) {
+      catalogClient.validate(
+          output.getOutputCatalog(),
+          output.getCatalogUri(),
+          new ArrayList<>());
+    }
 
     try {
       final var req = new FailAttemptRequest()
