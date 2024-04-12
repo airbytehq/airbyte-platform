@@ -42,6 +42,7 @@ import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus;
 import io.airbyte.workload.api.client.model.generated.WorkloadType;
+import io.temporal.activity.ActivityOptions;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Optional;
@@ -105,7 +106,8 @@ public class CheckConnectionActivityTest {
         workloadIdGenerator,
         jobOutputDocStore,
         mock(CheckConnectionInputHydrator.class),
-        mock(MetricClient.class)));
+        mock(MetricClient.class),
+        mock(ActivityOptions.class)));
 
     when(workloadIdGenerator.generateCheckWorkloadId(ACTOR_DEFINITION_ID, JOB_ID, ATTEMPT_NUMBER_AS_INT))
         .thenReturn(WORKLOAD_ID);
