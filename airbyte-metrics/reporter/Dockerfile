@@ -1,11 +1,12 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.2.0
-FROM ${JDK_IMAGE}
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.2.1
 
+FROM scratch as builder
 WORKDIR /app
-
-USER root
 ADD airbyte-app.tar /app
-RUN chown -R airbyte:airbyte /app
+
+FROM ${JDK_IMAGE}
+WORKDIR /app
+COPY --chown=airbyte:airbyte --from=builder /app /app
 USER airbyte:airbyte
 
 ENTRYPOINT ["/bin/bash", "-c", "airbyte-app/bin/airbyte-metrics-reporter"]
