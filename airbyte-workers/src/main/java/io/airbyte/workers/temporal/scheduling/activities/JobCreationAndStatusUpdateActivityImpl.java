@@ -28,7 +28,6 @@ import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.context.AttemptContext;
 import io.airbyte.workers.storage.activities.OutputStorageClient;
-import io.airbyte.workers.storage.activities.payloads.StandardSyncOutputClient;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -45,20 +44,17 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
 
   private final JobsApi jobsApi;
   private final AttemptApi attemptApi;
-  private final StandardSyncOutputClient storageClient;
   private final FeatureFlagClient featureFlagClient;
   private final OutputStorageClient<State> stateClient;
   private final OutputStorageClient<ConfiguredAirbyteCatalog> catalogClient;
 
   public JobCreationAndStatusUpdateActivityImpl(final JobsApi jobsApi,
                                                 final AttemptApi attemptApi,
-                                                final StandardSyncOutputClient storageClient,
                                                 final FeatureFlagClient featureFlagClient,
                                                 @Named("outputStateClient") final OutputStorageClient<State> stateClient,
                                                 @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogClient) {
     this.jobsApi = jobsApi;
     this.attemptApi = attemptApi;
-    this.storageClient = storageClient;
     this.featureFlagClient = featureFlagClient;
     this.stateClient = stateClient;
     this.catalogClient = catalogClient;
@@ -99,11 +95,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   public void jobSuccessWithAttemptNumber(final JobSuccessInputWithAttemptNumber input) {
     new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
-    final var output = storageClient.hydrate(
-        input.getStandardSyncOutput(),
-        input.getConnectionId(),
-        input.getJobId(),
-        input.getAttemptNumber());
+    final var output = input.getStandardSyncOutput();
 
     if (output != null && output.getOutputCatalog() != null && output.getCatalogUri() != null) {
       catalogClient.validate(
@@ -149,11 +141,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   public void attemptFailureWithAttemptNumber(final AttemptNumberFailureInput input) {
     new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
-    final var output = storageClient.hydrate(
-        input.getStandardSyncOutput(),
-        input.getConnectionId(),
-        input.getJobId(),
-        input.getAttemptNumber());
+    final var output = input.getStandardSyncOutput();
 
     if (output != null && output.getOutputCatalog() != null && output.getCatalogUri() != null) {
       catalogClient.validate(

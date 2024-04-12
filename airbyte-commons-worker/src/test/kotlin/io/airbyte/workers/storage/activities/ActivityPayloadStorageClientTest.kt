@@ -28,12 +28,11 @@ class ActivityPayloadStorageClientTest {
 
   private lateinit var client: ActivityPayloadStorageClient
 
-  private lateinit var comparator: StandardSyncOutputComparator
+  private var comparator = NaiveEqualityComparator<StandardSyncOutput>()
 
   @BeforeEach
   fun setup() {
     client = ActivityPayloadStorageClient(storageClientRaw, serde, metricClient)
-    comparator = StandardSyncOutputComparator()
 
     every { metricClient.count(any(), any(), *anyVararg()) } returns Unit
 

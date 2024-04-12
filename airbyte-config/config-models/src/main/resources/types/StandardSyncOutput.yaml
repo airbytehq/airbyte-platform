@@ -22,7 +22,5 @@ properties:
     type: array
     items:
       "$ref": FailureReason.yaml
-  uri:
-    "$ref": ActivityPayloadURI.yaml
   catalogUri:
     "$ref": ActivityPayloadURI.yaml

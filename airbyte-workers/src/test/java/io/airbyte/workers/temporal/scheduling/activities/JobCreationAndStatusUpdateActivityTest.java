@@ -36,7 +36,6 @@ import io.airbyte.config.State;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.storage.activities.OutputStorageClient;
-import io.airbyte.workers.storage.activities.payloads.StandardSyncOutputClient;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.EnsureCleanJobStateInput;
@@ -70,9 +69,6 @@ class JobCreationAndStatusUpdateActivityTest {
 
   @Mock
   private AttemptApi attemptApi;
-
-  @Mock
-  private StandardSyncOutputClient storageClient;
 
   @Mock
   private TestClient featureFlagClient;
@@ -109,7 +105,6 @@ class JobCreationAndStatusUpdateActivityTest {
     jobCreationAndStatusUpdateActivity = new JobCreationAndStatusUpdateActivityImpl(
         jobsApi,
         attemptApi,
-        storageClient,
         featureFlagClient,
         outputStateStorageClient,
         outputCatalogStorageClient);
@@ -206,15 +201,12 @@ class JobCreationAndStatusUpdateActivityTest {
     void setJobSuccess() throws ApiException {
       final var request =
           new JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, standardSyncOutput);
-      final var hydrated = new StandardSyncOutput().withAdditionalProperty("unique", "value1").withAdditionalProperty("unique", "value2");
-      when(storageClient.hydrate(request.getStandardSyncOutput(), CONNECTION_ID, JOB_ID, ATTEMPT_NUMBER)).thenReturn(hydrated);
-
       jobCreationAndStatusUpdateActivity.jobSuccessWithAttemptNumber(request);
       verify(jobsApi).jobSuccessWithAttemptNumber(new JobSuccessWithAttemptNumberRequest()
           .attemptNumber(request.getAttemptNumber())
           .jobId(request.getJobId())
           .connectionId(request.getConnectionId())
-          .standardSyncOutput(hydrated));
+          .standardSyncOutput(request.getStandardSyncOutput()));
     }
 
     @Test

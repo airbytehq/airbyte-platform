@@ -6,7 +6,6 @@ package io.airbyte.workers.config;
 
 import io.airbyte.commons.json.JsonSerde;
 import io.airbyte.config.State;
-import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.storage.DocumentType;
@@ -14,7 +13,6 @@ import io.airbyte.workers.storage.StorageClient;
 import io.airbyte.workers.storage.StorageClientFactory;
 import io.airbyte.workers.storage.activities.ActivityPayloadStorageClient;
 import io.airbyte.workers.storage.activities.OutputStorageClient;
-import io.airbyte.workers.storage.activities.payloads.StandardSyncOutputClient;
 import io.micronaut.context.annotation.Factory;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -72,17 +70,6 @@ public class CloudStorageBeanFactory {
         storageClientRaw,
         jsonSerde,
         metricClient);
-  }
-
-  @Singleton
-  public StandardSyncOutputClient standardSyncOutputClient(
-                                                           final ActivityPayloadStorageClient payloadStorageClient,
-                                                           final FeatureFlagClient featureFlagClient,
-                                                           final MetricClient metricClient) {
-    return new StandardSyncOutputClient(
-        payloadStorageClient,
-        metricClient,
-        featureFlagClient);
   }
 
   @Singleton

@@ -44,7 +44,6 @@ import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
 import io.airbyte.workers.storage.activities.OutputStorageClient;
-import io.airbyte.workers.storage.activities.payloads.StandardSyncOutputClient;
 import io.airbyte.workers.sync.WorkloadApiWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.airbyte.workers.workload.JobOutputDocStore;
@@ -88,7 +87,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final MetricClient metricClient;
   private final FeatureFlagClient featureFlagClient;
   private final PayloadChecker payloadChecker;
-  private final StandardSyncOutputClient storageClient;
   private final OutputStorageClient<State> stateStorageClient;
   private final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient;
 
@@ -105,7 +103,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final MetricClient metricClient,
                                  final FeatureFlagClient featureFlagClient,
                                  final PayloadChecker payloadChecker,
-                                 final StandardSyncOutputClient storageClient,
                                  @Named("outputStateClient") final OutputStorageClient<State> stateStorageClient,
                                  @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogStorageClient) {
     this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient.getConnectionApi(),
@@ -125,7 +122,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.metricClient = metricClient;
     this.featureFlagClient = featureFlagClient;
     this.payloadChecker = payloadChecker;
-    this.storageClient = storageClient;
     this.stateStorageClient = stateStorageClient;
     this.catalogStorageClient = catalogStorageClient;
   }
@@ -234,9 +230,9 @@ public class ReplicationActivityImpl implements ReplicationActivity {
             standardSyncOutput.setCatalogUri(uri);
           }
 
-          final StandardSyncOutput output = payloadChecker.validatePayloadSize(standardSyncOutput, metricAttributes);
+          payloadChecker.validatePayloadSize(standardSyncOutput, metricAttributes);
 
-          return storageClient.persistAndTrim(output, connectionId, Long.parseLong(jobId), attemptNumber.intValue(), metricAttributes);
+          return standardSyncOutput;
         },
         context);
   }
