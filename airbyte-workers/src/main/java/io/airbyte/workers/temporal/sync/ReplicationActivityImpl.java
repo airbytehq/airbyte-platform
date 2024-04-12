@@ -227,7 +227,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
           if (featureFlagClient.boolVariation(WriteOutputStateToObjectStorage.INSTANCE, new Connection(connectionId))) {
             final var uri = stateStorageClient.persist(
-                standardSyncOutput.getState(),
+                attemptOutput.getState(),
                 connectionId,
                 Long.parseLong(jobId),
                 attemptNumber.intValue(),
@@ -238,7 +238,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
           if (featureFlagClient.boolVariation(WriteOutputCatalogToObjectStorage.INSTANCE, new Connection(connectionId))) {
             final var uri = catalogStorageClient.persist(
-                standardSyncOutput.getOutputCatalog(),
+                attemptOutput.getOutputCatalog(),
                 connectionId,
                 Long.parseLong(jobId),
                 attemptNumber.intValue(),
