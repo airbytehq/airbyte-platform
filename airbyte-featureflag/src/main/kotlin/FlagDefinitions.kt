@@ -211,3 +211,5 @@ object NullOutputStateOnSyncOutput : Temporary<Boolean>(key = "platform.null-out
 object NullOutputCatalogOnSyncOutput : Temporary<Boolean>(key = "platform.null-output-catalog-on-sync-output", default = false)
 
 object UseCustomK8sInitCheck : Temporary<Boolean>(key = "platform.use-custom-k8s-init-check", default = true)
+
+object UseClear : Temporary<Boolean>(key = "connection.clearNotReset", default = false)
