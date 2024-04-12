@@ -226,21 +226,25 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           LOGGER.info("sync summary after backfill: {}", standardSyncOutput);
 
           if (featureFlagClient.boolVariation(WriteOutputStateToObjectStorage.INSTANCE, new Connection(connectionId))) {
-            stateStorageClient.persist(
+            final var uri = stateStorageClient.persist(
                 standardSyncOutput.getState(),
                 connectionId,
                 Long.parseLong(jobId),
                 attemptNumber.intValue(),
                 metricAttributes);
+
+            standardSyncOutput.setStateUri(uri);
           }
 
           if (featureFlagClient.boolVariation(WriteOutputCatalogToObjectStorage.INSTANCE, new Connection(connectionId))) {
-            catalogStorageClient.persist(
+            final var uri = catalogStorageClient.persist(
                 standardSyncOutput.getOutputCatalog(),
                 connectionId,
                 Long.parseLong(jobId),
                 attemptNumber.intValue(),
                 metricAttributes);
+
+            standardSyncOutput.setCatalogUri(uri);
           }
 
           final StandardSyncOutput output = payloadChecker.validatePayloadSize(standardSyncOutput, metricAttributes);

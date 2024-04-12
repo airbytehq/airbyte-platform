@@ -23,12 +23,7 @@ import io.airbyte.api.client.model.generated.ReportJobStartRequest;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.State;
-import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.NullOutputCatalogOnSyncOutput;
-import io.airbyte.featureflag.NullOutputStateOnSyncOutput;
-import io.airbyte.featureflag.WriteOutputCatalogToObjectStorage;
-import io.airbyte.featureflag.WriteOutputStateToObjectStorage;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.context.AttemptContext;
@@ -111,23 +106,17 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
         input.getAttemptNumber());
 
     if (output != null) {
-      if (featureFlagClient.boolVariation(WriteOutputStateToObjectStorage.INSTANCE, new Connection(input.getConnectionId()))
-          && !featureFlagClient.boolVariation(NullOutputStateOnSyncOutput.INSTANCE, new Connection(input.getConnectionId()))) {
+      if (output.getState() != null && output.getStateUri() != null) {
         stateClient.validate(
             output.getState(),
-            input.getConnectionId(),
-            input.getJobId(),
-            input.getAttemptNumber(),
+            output.getStateUri(),
             new ArrayList<>());
       }
 
-      if (featureFlagClient.boolVariation(WriteOutputCatalogToObjectStorage.INSTANCE, new Connection(input.getConnectionId()))
-          && !featureFlagClient.boolVariation(NullOutputCatalogOnSyncOutput.INSTANCE, new Connection(input.getConnectionId()))) {
+      if (output.getOutputCatalog() != null && output.getCatalogUri() != null) {
         catalogClient.validate(
             output.getOutputCatalog(),
-            input.getConnectionId(),
-            input.getJobId(),
-            input.getAttemptNumber(),
+            output.getCatalogUri(),
             new ArrayList<>());
       }
     }

@@ -6,6 +6,7 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.UUID
+import io.airbyte.config.ActivityPayloadURI as OpenApiURI
 
 private val logger = KotlinLogging.logger {}
 
@@ -31,8 +32,8 @@ class OutputStorageClient<T : Any>
       jobId: Long,
       attemptNumber: Int,
       metricAttributes: Array<MetricAttribute>,
-    ) {
-      if (obj == null) return
+    ): OpenApiURI? {
+      if (obj == null) return null
 
       val uri = ActivityPayloadURI.v1(connectionId, jobId, attemptNumber, payloadName)
 
@@ -54,25 +55,24 @@ class OutputStorageClient<T : Any>
 
         metricClient.count(OssMetricsRegistry.PAYLOAD_FAILURE_WRITE, 1, *attrs.toTypedArray())
       }
+
+      return uri.toOpenApi()
     }
 
     /**
-     * Queries object storage based on the provided connection, job and attempt ids and compares to
-     * the expected. Emits a metric whether it's a match.
+     * Queries object storage based on the provided uri. Emits a metric whether it's a match.
      */
     fun validate(
       expected: T?,
-      connectionId: UUID,
-      jobId: Long,
-      attemptNumber: Int,
+      uri: OpenApiURI,
       attrs: List<MetricAttribute>,
     ) {
       if (expected == null) return
 
-      val uri = ActivityPayloadURI.v1(connectionId, jobId, attemptNumber, payloadName)
+      val domainUri = ActivityPayloadURI.fromOpenApi(uri) ?: return
 
       storageClient.validateOutput(
-        uri,
+        domainUri,
         target,
         expected,
         comparator,
