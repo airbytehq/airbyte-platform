@@ -10,6 +10,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.generated.DestinationApi;
+import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
@@ -39,6 +41,7 @@ import io.airbyte.workers.general.ReplicationFeatureFlagReader;
 import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.general.ReplicationWorkerHelper;
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
+import io.airbyte.workers.helper.StreamStatusCompletionTracker;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
@@ -90,7 +93,8 @@ public abstract class ReplicationWorkerPerformanceTest {
                                                          final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                                          final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
                                                          final ReplicationWorkerHelper replicationWorkerHelper,
-                                                         final DestinationTimeoutMonitor destinationTimeoutMonitor);
+                                                         final DestinationTimeoutMonitor destinationTimeoutMonitor,
+                                                         final StreamStatusCompletionTracker streamStatusCompletionTracker);
 
   /**
    * Hook up the DefaultReplicationWorker to a test harness with an insanely quick Source
@@ -182,7 +186,8 @@ public abstract class ReplicationWorkerPerformanceTest {
         new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, dstNamespaceMapper, messageTracker, syncPersistence,
             replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), () -> {}, mock(WorkloadApi.class), false,
             analyticsMessageTracker,
-            Optional.empty());
+            Optional.empty(), mock(SourceApi.class), mock(DestinationApi.class), mock(StreamStatusCompletionTracker.class));
+    final StreamStatusCompletionTracker streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
 
     final var worker = getReplicationWorker("1", 0,
         versionedAbSource,
@@ -197,7 +202,8 @@ public abstract class ReplicationWorkerPerformanceTest {
         airbyteMessageDataExtractor,
         replicationAirbyteMessageEventPublishingHelper,
         replicationWorkerHelper,
-        destinationTimeoutMonitor);
+        destinationTimeoutMonitor,
+        streamStatusCompletionTracker);
     final AtomicReference<ReplicationOutput> output = new AtomicReference<>();
     final Thread workerThread = new Thread(() -> {
       try {
