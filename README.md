@@ -44,24 +44,34 @@ Explore our [demo app](https://demo.airbyte.io/).
 
 ### Run Airbyte locally
 
-You can run Airbyte locally with Docker.
+You can run Airbyte locally with `abctl`.
+
+## Setup & launch Airbyte
+
+- Install `Docker Desktop`  \(see [instructions](https://docs.docker.com/desktop/install/mac-install/)\).
+- After `Docker Desktop` is installed, you must enable `Kubernetes` \(see [instructions](https://docs.docker.com/desktop/kubernetes/)\).
+- Download the latest version of `abctl` from the [releases page](https://github.com/airbytehq/abctl/releases) and run the following command:
 
 ```bash
-git clone --depth 1 https://github.com/airbytehq/airbyte.git
-cd airbyte
-./run-ab-platform.sh 
+abctl local install
 ```
 
-Login to the web app at [http://localhost:8000](http://localhost:8000) by entering the default credentials found in your .env file.
+- Your browser should open to the Airbyte Application, if it does not visit [http://localhost](http://localhost)
+- You will be asked for a username and password. By default, that's username `airbyte` and password `password`. You can set these values through command line flags or environment variables. For example, to set the username and password to `foo` and `bar` respectively, you can run the following command:
 
-```
-BASIC_AUTH_USERNAME=airbyte
-BASIC_AUTH_PASSWORD=password
+```bash
+abctl local install --username foo --password bar
+
+# Or as Environment Variables
+ABCTL_LOCAL_INSTALL_PASSWORD=foo
+ABCTL_LOCAL_INSTALL_USERNAME=bar
 ```
 
 Follow web app UI instructions to set up a source, destination and connection to replicate data. Connections support the most popular sync modes: full refresh, incremental and change data capture for databases.
 
 Read the [Airbyte docs](https://docs.airbyte.com).
+
+The previous Docker Compose instructions are [here](https://docs.airbyte.com/deploying-airbyte/docker-compose).
 
 ### Manage Airbyte configurations with code
 
