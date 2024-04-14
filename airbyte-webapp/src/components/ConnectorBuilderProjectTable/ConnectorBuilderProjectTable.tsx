@@ -38,10 +38,10 @@ const DELETE_PROJECT_ERROR_ID = "connectorBuilder.deleteProject.error";
 const CHANGED_VERSION_SUCCESS_ID = "connectorBuilder.changeVersion.success";
 const CHANGED_VERSION_ERROR_ID = "connectorBuilder.changeVersion.error";
 
-const VersionChangeModalContent: React.FC<{
+const VersionChangeModal: React.FC<{
   project: BuilderProject;
-  onClose: () => void;
-}> = ({ onClose, project }) => {
+  onComplete: () => void;
+}> = ({ onComplete, project }) => {
   const { data: versions, isLoading: isLoadingVersionList } = useListBuilderProjectVersions(project);
   const [selectedVersion, setSelectedVersion] = useState<number | undefined>(undefined);
   const { mutateAsync: changeVersion, isLoading } = useChangeBuilderProjectVersion();
@@ -75,7 +75,7 @@ const VersionChangeModalContent: React.FC<{
         ),
         type: "success",
       });
-      onClose();
+      onComplete();
     } catch (e) {
       registerNotification({
         id: NOTIFICATION_ID,
@@ -151,13 +151,11 @@ const VersionChanger = ({ project, canUpdateConnector }: { project: BuilderProje
     );
   }
 
-  const openVersionChangeModal = async () =>
-    await openModal<"versionIsChanged">({
+  const openVersionChangeModal = () =>
+    openModal<void>({
       title: formatMessage({ id: "connectorBuilder.changeVersionModal.title" }, { name: project.name }),
       size: "sm",
-      content: ({ onClose }) => (
-        <VersionChangeModalContent project={project} onClose={() => onClose("versionIsChanged")} />
-      ),
+      content: ({ onComplete }) => <VersionChangeModal project={project} onComplete={onComplete} />,
     });
 
   return (
@@ -304,6 +302,7 @@ export const ConnectorBuilderProjectTable = ({
       data={projects}
       className={styles.table}
       sorting={false}
+      stickyHeaders={false}
       initialSortBy={[{ id: "name", desc: false }]}
     />
   );

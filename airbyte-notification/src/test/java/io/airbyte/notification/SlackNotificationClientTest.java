@@ -79,15 +79,6 @@ class SlackNotificationClientTest {
   }
 
   @Test
-  void testBadResponseWrongNotificationMessage() throws IOException, InterruptedException {
-    final String message = UUID.randomUUID().toString();
-    server.createContext(TEST_PATH, new ServerHandler("Message mismatched"));
-    final SlackNotificationClient client =
-        new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
-    assertThrows(IOException.class, () -> client.notifyFailure(message));
-  }
-
-  @Test
   void testBadWebhookUrl() {
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + "/bad"));
@@ -123,16 +114,6 @@ class SlackNotificationClientTest {
         .jobId(JOB_ID)
         .build();
     assertFalse(client.notifyJobFailure(summary, null));
-  }
-
-  @Test
-  void testNotify() throws IOException, InterruptedException {
-    final String message = UUID.randomUUID().toString();
-    server.createContext(TEST_PATH, new ServerHandler(message));
-    final SlackNotificationClient client =
-        new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
-    assertTrue(client.notifyFailure(message));
-    assertTrue(client.notifySuccess(message));
   }
 
   @Test

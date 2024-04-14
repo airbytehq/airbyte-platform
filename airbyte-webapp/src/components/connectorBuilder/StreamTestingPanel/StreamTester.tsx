@@ -12,6 +12,7 @@ import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
+import { HttpError } from "core/api";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
@@ -35,7 +36,7 @@ export const StreamTester: React.FC<{
   setTestingValuesInputOpen: (open: boolean) => void;
 }> = ({ hasTestingValuesErrors, setTestingValuesInputOpen }) => {
   const { formatMessage } = useIntl();
-  const { resolvedManifest, isResolving, resolveErrorMessage, resolveError } = useConnectorBuilderFormState();
+  const { streamNames, isResolving, resolveErrorMessage, resolveError } = useConnectorBuilderFormState();
   const {
     streamRead: {
       data: streamReadData,
@@ -56,8 +57,7 @@ export const StreamTester: React.FC<{
   const auxiliaryRequests = streamReadData?.auxiliary_requests;
   const autoImportSchema = useAutoImportSchema(testStreamIndex);
 
-  const resolvedStreams = resolvedManifest.streams;
-  const streamName = resolvedStreams[testStreamIndex]?.name;
+  const streamName = streamNames[testStreamIndex];
 
   const analyticsService = useAnalyticsService();
 
@@ -65,12 +65,12 @@ export const StreamTester: React.FC<{
 
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const errorMessage = isError
-    ? error instanceof Error
-      ? error.message || unknownErrorMessage
+    ? error instanceof HttpError
+      ? error.response?.message || unknownErrorMessage
       : unknownErrorMessage
     : undefined;
 
-  const errorExceptionStack = resolveError?.payload?.exceptionStack;
+  const errorExceptionStack = resolveError?.response?.exceptionStack;
 
   const [errorLogs, nonErrorLogs] = useMemo(
     () =>
@@ -119,10 +119,9 @@ export const StreamTester: React.FC<{
 
   const testDataWarnings = useTestWarnings();
 
-  const currentStream = resolvedStreams[testStreamIndex];
   return (
     <div className={styles.container}>
-      {!currentStream && isResolving && (
+      {streamName === undefined && isResolving && (
         <Text size="lg" align="center">
           <FormattedMessage id="connectorBuilder.loadingStreamList" />
         </Text>

@@ -1,4 +1,4 @@
-import React, { ReactNode, useMemo } from "react";
+import React, { ReactNode } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
@@ -13,11 +13,11 @@ import styles from "./StreamPanelHeader.module.scss";
 import { SyncModeSelect, SyncModeValue } from "../SyncModeSelect";
 
 interface StreamPanelHeaderProps {
-  config?: AirbyteStreamConfiguration;
+  stream: AirbyteStream;
+  config: AirbyteStreamConfiguration;
   disabled?: boolean;
   onClose: () => void;
   onSelectedChange: () => void;
-  stream?: AirbyteStream;
   onSelectSyncMode: (option: SyncModeValue) => void;
   availableSyncModes: SyncModeValue[];
 }
@@ -54,27 +54,19 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
   availableSyncModes,
   onSelectSyncMode,
 }) => {
-  const syncSchema: SyncModeValue | undefined = useMemo(() => {
-    if (!config) {
-      return undefined;
-    }
-    const { syncMode, destinationSyncMode } = config;
-    return { syncMode, destinationSyncMode };
-  }, [config]);
+  const { syncMode, destinationSyncMode, selected: isStreamSelectedForSync } = config ?? {};
 
   return (
     <Box pt="lg" pb="md" pr="sm" pl="md" className={styles.container}>
       <FlexContainer justifyContent="space-between" alignItems="center" data-testid="stream-details-header">
         <FlexContainer gap="md" alignItems="center" className={styles.leftActions}>
-          <div>
-            <Switch
-              size="sm"
-              checked={config?.selected}
-              onChange={onSelectedChange}
-              disabled={disabled}
-              data-testid="stream-details-sync-stream-switch"
-            />
-          </div>
+          <Switch
+            size="sm"
+            checked={isStreamSelectedForSync}
+            onChange={onSelectedChange}
+            disabled={disabled}
+            data-testid="stream-details-sync-stream-switch"
+          />
           <Text color="grey300" size="xs">
             <FormattedMessage id="form.stream.sync" />
           </Text>
@@ -82,15 +74,17 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
         <FlexContainer className={styles.properties} alignItems="center" justifyContent="center" gap="xl">
           <NamespaceProperty namespace={stream?.namespace} />
           <StreamProperty messageId="form.streamName" value={stream?.name} data-testid="stream-details-stream-name" />
-          <FlexItem className={styles.syncModeProperty} alignSelf="center">
-            <SyncModeSelect
-              options={availableSyncModes}
-              onChange={onSelectSyncMode}
-              value={syncSchema}
-              variant="grey"
-              disabled={disabled}
-            />
-          </FlexItem>
+          {isStreamSelectedForSync && (
+            <FlexItem className={styles.syncModeProperty} alignSelf="center">
+              <SyncModeSelect
+                options={availableSyncModes}
+                onChange={onSelectSyncMode}
+                value={{ syncMode, destinationSyncMode }}
+                variant="grey"
+                disabled={disabled}
+              />
+            </FlexItem>
+          )}
         </FlexContainer>
         <FlexContainer className={styles.rightActions} justifyContent="flex-end">
           <Button

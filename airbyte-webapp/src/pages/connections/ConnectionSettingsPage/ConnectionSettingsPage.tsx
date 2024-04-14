@@ -5,7 +5,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
 
 import { ConnectionDangerBlock } from "components/common/ConnectionDangerBlock";
-import { DeleteBlock } from "components/common/DeleteBlock";
+import { ConnectionDeleteBlock } from "components/common/ConnectionDeleteBlock";
 import {
   FormConnectionFormValues,
   useConnectionValidationSchema,
@@ -73,14 +73,12 @@ const dataResidencyDropdownDescription = (
 export const ConnectionSettingsPage: React.FC = () => {
   const { connection, updateConnection } = useConnectionEditService();
   const { mode } = useConnectionFormService();
-  const { mutateAsync: deleteConnection } = useDeleteConnection();
   const canUpdateDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
   const canSendSchemaUpdateNotifications = useFeature(FeatureItem.AllowAutoDetectSchema);
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
   const { trackError } = useAppMonitoringService();
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_SETTINGS);
-  const onDelete = () => deleteConnection(connection);
 
   const { workspaceId } = useCurrentWorkspace();
   const canEditConnection = useIntent("EditConnection", { workspaceId });
@@ -165,7 +163,7 @@ export const ConnectionSettingsPage: React.FC = () => {
             <FormSubmissionButtons submitKey="form.saveChanges" />
           </Form>
         </Card>
-        {connection.status !== "deprecated" && <DeleteBlock type="connection" onDelete={onDelete} />}
+        {connection.status !== "deprecated" && <ConnectionDeleteBlock />}
       </FlexContainer>
       <Disclosure>
         {({ open }) => (
@@ -257,7 +255,8 @@ const SimplifiedConnectionSettingsPage = () => {
       >
         <SimplifiedConnectionsSettingsCard
           title={formatMessage({ id: "sources.settings" })}
-          sourceName={connection.source.name}
+          source={connection.source}
+          destination={connection.destination}
           isCreating={false}
           isDeprecated={isDeprecated}
         />

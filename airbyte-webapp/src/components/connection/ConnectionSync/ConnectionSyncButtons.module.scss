@@ -1,8 +1,9 @@
+@use "scss/colors";
+
 :export {
   syncIconHeight: 15px;
 }
 
-.buttons {
-  display: flex;
-  gap: 5px;
+.clearDataLabel > p {
+  color: colors.$red;
 }

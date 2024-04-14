@@ -127,12 +127,22 @@ webapp:
   podLabels: {}
 
   # -- Security context for the container
-  ## Examples:
-  ## containerSecurityContext:
-  ##    runAsNonRoot: true
-  ##    runAsUser: 1000
-  ##    readOnlyRootFilesystem: true
-  containerSecurityContext: {}
+  podSecurityContext:
+    # gid=101(nginx)
+    fsGroup: 101
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    # uid=101(nginx)
+    runAsUser: 101
+    # gid=101(nginx)
+    runAsGroup: 101
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
 
   ## Configure extra options for the webapp containers' liveness and readiness probes,
   ## see https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
@@ -342,13 +352,23 @@ pod-sweeper:
   # -- Add extra labels to the podSweeper pod
   podLabels: {}
 
-  ## Examples:
-  ## containerSecurityContext:
-  ##    runAsNonRoot: true
-  ##    runAsUser: 1000
-  ##    readOnlyRootFilesystem: true
   # -- Security context for the container
-  containerSecurityContext: {}
+  podSecurityContext:
+    # gid=1001(anon)
+    fsGroup: 1001
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    # uid=1001(anon)
+    runAsUser: 1001
+    # gid=1001(anon)
+    runAsGroup: 1001
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
 
   livenessProbe:
     # -- Enable livenessProbe on the podSweeper
@@ -440,13 +460,23 @@ server:
   # -- Add extra labels to the server pods
   podLabels: {}
 
-  ## Examples:
-  ## containerSecurityContext:
-  ##    runAsNonRoot: true
-  ##    runAsUser: 1000
-  ##    readOnlyRootFilesystem: true
   # -- Security context for the container
-  containerSecurityContext: {}
+  podSecurityContext:
+    # gid=1000(airbyte)
+    fsGroup: 1000
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    # uid=1000(airbyte)
+    runAsUser: 1000
+    # gid=1000(airbyte)
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
 
   ## Configure extra options for the server containers' liveness and readiness probes
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
@@ -612,13 +642,23 @@ worker:
   # -- Add extra labels to the worker pods
   podLabels: {}
 
-  ## Examples:
-  ## containerSecurityContext:
-  ##    runAsNonRoot: true
-  ##    runAsUser: 1000
-  ##    readOnlyRootFilesystem: true
   # -- Security context for the container
-  containerSecurityContext: {}
+  podSecurityContext:
+    # gid=1000(airbyte)
+    fsGroup: 1000
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    # uid=1000(airbyte)
+    runAsUser: 1000
+    # gid=1000(airbyte)
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
 
   livenessProbe:
     # -- Enable livenessProbe on the worker
@@ -741,13 +781,23 @@ workload-launcher:
   # -- Add extra labels to the workload launcher pods
   podLabels: {}
 
-  ## Examples:
-  ## containerSecurityContext:
-  ##    runAsNonRoot: true
-  ##    runAsUser: 1000
-  ##    readOnlyRootFilesystem: true
   # -- Security context for the container
-  containerSecurityContext: {}
+  podSecurityContext:
+    # gid=1000(airbyte)
+    fsGroup: 1000
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    # uid=1000(airbyte)
+    runAsUser: 1000
+    # gid=1000(airbyte)
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
 
   livenessProbe:
     # -- Enable livenessProbe on the workload launcher
@@ -873,13 +923,23 @@ metrics:
   # -- Add extra labels to the metrics-reporter pod
   podLabels: {}
 
-  ## Examples:
-  ## containerSecurityContext:
-  ##    runAsNonRoot: true
-  ##    runAsUser: 1000
-  ##    readOnlyRootFilesystem: true
   # -- Security context for the container
-  containerSecurityContext: {}
+  podSecurityContext:
+    # gid=1000(airbyte)
+    fsGroup: 1000
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    # uid=1000(airbyte)
+    runAsUser: 1000
+    # gid=1000(airbyte)
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
 
   ## metrics-reporter app resource requests and limits
   ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
@@ -984,6 +1044,24 @@ airbyte-bootloader:
   # -- Affinity and anti-affinity for bootloader pod assignment, see
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+
+  # -- Security context for the container
+  podSecurityContext:
+    # gid=1000(airbyte)
+    fsGroup: 1000
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    # uid=1000(airbyte)
+    runAsUser: 1000
+    # gid=1000(airbyte)
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
 
   ## Example: (With default env vars and values taken from generated config map)
   ## extraEnv:
@@ -1098,13 +1176,23 @@ temporal:
   # -- Add extra labels to the temporal pod
   podLabels: {}
 
-  ## Examples:
-  ## containerSecurityContext:
-  ##    runAsNonRoot: true
-  ##    runAsUser: 1000
-  ##    readOnlyRootFilesystem: true
   # -- Security context for the container
-  containerSecurityContext: {}
+  podSecurityContext:
+    # gid=1000(temporal)
+    fsGroup: 1000
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    # uid=1000(temporal)
+    runAsUser: 1000
+    # gid=1000(temporal)
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
 
   ## Examples (when using `temporal.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraInitContainers:
@@ -1207,9 +1295,23 @@ postgresql:
   ## This secret is used in case of postgresql.enabled=true and we would like to specify password for newly created postgresql instance
   # -- Name of an existing secret containing the PostgreSQL password ('postgresql-password' key)
   existingSecret: ""
+  podSecurityContext:
+    # gid=70(postgres)
+    fsGroup: 70
   containerSecurityContext:
     # -- Ensures the container will run with a non-root user
+    allowPrivilegeEscalation: false 
     runAsNonRoot: true
+    # uid=70(postgres)
+    runAsUser: 70
+    # gid=70(postgres)
+    runAsGroup: 70
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+
   commonAnnotations:
     # -- It will determine when the hook should be rendered
     helm.sh/hook: pre-install
@@ -1286,13 +1388,23 @@ cron:
   # -- Add extra labels to the cron pods
   podLabels: {}
 
-  ## Examples:
-  ## containerSecurityContext:
-  ##    runAsNonRoot: true
-  ##    runAsUser: 1000
-  ##    readOnlyRootFilesystem: true
   # -- Security context for the container
-  containerSecurityContext: {}
+  podSecurityContext:
+    # uid=1000(airbyte)
+    fsGroup: 1000
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    # uid=1000(airbyte)
+    runAsUser: 1000
+    # gid=1000(airbyte)
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
 
   livenessProbe:
     # -- Enable livenessProbe on the cron
@@ -1447,6 +1559,24 @@ connector-builder-server:
     # -- The pull policy to use for the airbyte connector-builder-server image
     pullPolicy: IfNotPresent
 
+  # -- Security context for the container
+  podSecurityContext:
+    # gid=1000(airbyte)
+    fsGroup: 1000
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    # uid=1000(airbyte)
+    runAsUser: 1000
+    # gid=1000(airbyte)
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+
   livenessProbe:
     # -- Enable livenessProbe on the server
     enabled: true
@@ -1513,6 +1643,24 @@ airbyte-api-server:
     repository: airbyte/airbyte-api-server
     # -- The pull policy to use for the airbyte airbyte-api-server image
     pullPolicy: IfNotPresent
+
+  # -- Security context for the container
+  podSecurityContext:
+    # gid=1000(airbyte)
+    fsGroup: 1000
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    # uid=1000(airbyte)
+    runAsUser: 1000
+    # gid=1000(airbyte)
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
 
   livenessProbe:
     # -- Enable livenessProbe on the server
@@ -1600,9 +1748,71 @@ keycloak:
     adminUsername: airbyteAdmin
     adminPassword: keycloak123
 
+  # -- Security context for the container
+  podSecurityContext:
+    # gid=1000(airbyte)
+    fsGroup: 1000
+
+  initContainerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    # uid=70(postgres)
+    runAsUser: 70
+    # gid=70(postgres)
+    runAsGroup: 70
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+    
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    # uid=1000(airbyte)
+    runAsUser: 1000
+    # gid=1000(airbyte)
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+
 keycloak-setup:
   enabled: true
   env_vars: {}
+
+  # -- Security context for the container
+  podSecurityContext:
+    # gid=1000(airbyte)
+    fsGroup: 1000
+
+  initContainerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    # gid=100(curl_user)
+    runAsUser: 100
+    # gid=101(curl_group)
+    runAsGroup: 101
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    # uid=1000(airbyte)
+    runAsUser: 1000
+    # gid=1000(airbyte)
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
 
 workload-api-server:
   enabled: false
@@ -1617,6 +1827,24 @@ workload-api-server:
     repository: airbyte/workload-api-server
     # -- The pull policy to use for the airbyte-workload-api-server image
     pullPolicy: IfNotPresent
+
+  # -- Security context for the container
+  podSecurityContext:
+    # gid=1000(airbyte)
+    fsGroup: 1000
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false 
+    runAsNonRoot: true
+    # uid=1000(airbyte)
+    runAsUser: 1000
+    # gid=1000(airbyte)
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
 
   livenessProbe:
     # -- Enable livenessProbe on the server

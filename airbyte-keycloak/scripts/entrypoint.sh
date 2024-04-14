@@ -10,7 +10,8 @@ export KC_HOSTNAME_URL=$KEYCLOAK_HOSTNAME_URL
 export KC_HTTP_PORT=$KEYCLOAK_PORT
 export KC_HOSTNAME_ADMIN_URL=$KEYCLOAK_HOSTNAME_ADMIN_URL
 
-bin/kc.sh build --cache=ispn --cache-stack=kubernetes --health-enabled=true --http-relative-path /auth
+# cache-config is relative to conf directory
+bin/kc.sh build --cache=ispn --cache-stack=kubernetes --health-enabled=true --http-relative-path /auth --cache-config-file=cache-ispn-override.xml
 
 bin/kc.sh start --optimized --proxy edge --hostname-strict false
 

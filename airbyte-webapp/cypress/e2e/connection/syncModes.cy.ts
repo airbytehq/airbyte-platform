@@ -442,8 +442,10 @@ describe("Connection - sync modes", () => {
       connectionPage.visit(connection, "transformation", { interceptGetHandler: modifyAccountsTableInterceptHandler });
       connectionPage.visit(connection, "replication", { interceptGetHandler: modifyAccountsTableInterceptHandler });
 
-      // change sync mode in disabled stream and save
+      // enable stream, change sync mode, then disable stream and save
+      accountsStreamRow.toggleStreamSync();
       accountsStreamRow.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);
+      accountsStreamRow.toggleStreamSync();
       saveConnectionAndAssertStreams(
         {
           namespace: "public",

@@ -133,15 +133,38 @@ class WorkloadHandlerImplTest {
 
   @Test
   fun `test create workload mutex conflict`() {
+    val workloadIdWithSuccessfulFail = "workload-id-with-successful-fail"
+    val workloadIdWithFailedFail = "workload-id-with-failed-fail"
+    val duplWorkloads =
+      listOf(
+        Fixtures.workload(workloadIdWithSuccessfulFail, createdAt = OffsetDateTime.now().minusSeconds(5)),
+        Fixtures.workload(workloadIdWithFailedFail, createdAt = OffsetDateTime.now().minusSeconds(10)),
+      )
+    val newWorkload = Fixtures.workload(WORKLOAD_ID)
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(false)
+    every {
+      workloadHandler.failWorkload(workloadIdWithSuccessfulFail, any(), any())
+    }.answers {}
+    every {
+      workloadHandler.failWorkload(workloadIdWithFailedFail, any(), any())
+    }.throws(InvalidStatusTransitionException("$workloadIdWithFailedFail"))
+    every { workloadRepository.save(any()) }.returns(newWorkload)
     every {
       workloadRepository.searchByMutexKeyAndStatusInList(
         "mutex-this",
         WorkloadHandlerImpl.ACTIVE_STATUSES,
       )
-    }.returns(listOf(Fixtures.workload()))
-    assertThrows<ConflictException> {
-      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now)
+    }.returns(duplWorkloads + listOf(newWorkload))
+
+    workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "US", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now)
+    verify {
+      workloadHandler.failWorkload(workloadIdWithFailedFail, any(), any())
+      workloadHandler.failWorkload(workloadIdWithSuccessfulFail, any(), any())
+      workloadRepository.save(
+        match {
+          it.id == WORKLOAD_ID && it.mutexKey == "mutex-this"
+        },
+      )
     }
   }
 
@@ -642,6 +665,7 @@ class WorkloadHandlerImplTest {
       geography: String = "US",
       mutexKey: String = "",
       type: WorkloadType = WorkloadType.SYNC,
+      createdAt: OffsetDateTime = OffsetDateTime.now(),
     ): Workload =
       Workload(
         id = id,
@@ -653,6 +677,7 @@ class WorkloadHandlerImplTest {
         geography = geography,
         mutexKey = mutexKey,
         type = type,
+        createdAt = createdAt,
       )
   }
 }

@@ -8,6 +8,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
+import { DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useExperiment } from "hooks/services/Experiment";
 
@@ -24,14 +25,16 @@ import { SimplifiedSchemaChangeNotificationFormField } from "./SimplifiedSchemaC
 interface SimplifiedConnectionsSettingsCardProps {
   title: string;
   isCreating: boolean;
-  sourceName: string;
+  source: SourceRead;
+  destination: DestinationRead;
   isDeprecated?: boolean;
 }
 
 export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSettingsCardProps> = ({
   title,
   isCreating,
-  sourceName,
+  source,
+  destination,
   isDeprecated = false,
 }) => {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
@@ -43,7 +46,9 @@ export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSe
       <FlexContainer direction="column" gap="xl">
         <SimplifiedConnectionNameFormField />
         <SimplifiedConnectionScheduleFormField disabled={isDeprecated} />
-        {isCreating && <SimplifiedDestinationNamespaceFormField isCreating={isCreating} sourceName={sourceName} />}
+        {isCreating && (
+          <SimplifiedDestinationNamespaceFormField isCreating={isCreating} source={source} destination={destination} />
+        )}
         {isCreating && <SimplifiedDestinationStreamPrefixNameFormField />}
       </FlexContainer>
 
@@ -79,7 +84,8 @@ export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSe
           {!isCreating && (
             <SimplifiedDestinationNamespaceFormField
               isCreating={isCreating}
-              sourceName={sourceName}
+              source={source}
+              destination={destination}
               disabled={isDeprecated}
             />
           )}

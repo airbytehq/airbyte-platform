@@ -32,11 +32,11 @@ import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
+import io.airbyte.commons.server.errors.problems.ForbiddenProblem;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.commons.server.handlers.WorkspacesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.commons.server.support.CurrentUserService;
-import io.airbyte.server.apis.publicapi.problems.ForbiddenProblem;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
@@ -208,8 +208,11 @@ public class WorkspaceApiController implements WorkspaceApi {
     return ApiHelper.execute(() -> workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody, false));
   }
 
+  @Post("/get_by_connection_id_with_tombstone")
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public WorkspaceRead getWorkspaceByConnectionIdWithTombstone(ConnectionIdRequestBody connectionIdRequestBody) {
+  public WorkspaceRead getWorkspaceByConnectionIdWithTombstone(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody, true));
   }
 

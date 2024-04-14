@@ -177,6 +177,6 @@ tasks.named("buildDockerImage") {
 }
 
 // Include some cloud-specific tasks only in the airbyte-platform-internal environment
-if (file("${project.projectDir}/../../cloud-webapp/cloud-tasks.gradle").exists()) {
-    apply from: "${project.projectDir}/../../cloud-webapp/cloud-tasks.gradle"
+if (file("${project.projectDir}/../../cloud/cloud-webapp/cloud-tasks.gradle").exists()) {
+    apply from: "${project.projectDir}/../../cloud/cloud-webapp/cloud-tasks.gradle"
 }

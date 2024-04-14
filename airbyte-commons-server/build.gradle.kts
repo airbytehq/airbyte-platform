@@ -1,8 +1,8 @@
 plugins {
     id("io.airbyte.gradle.jvm.lib")
     id("io.airbyte.gradle.publish")
-    id("org.jetbrains.kotlin.jvm")
-    id("org.jetbrains.kotlin.kapt")
+    kotlin("jvm")
+    kotlin("kapt")
 }
 
 configurations.all {
@@ -33,6 +33,8 @@ dependencies {
     implementation(libs.micronaut.inject)
     implementation(libs.micronaut.jaxrs.server)
     implementation(libs.micronaut.security)
+    implementation(libs.bundles.micronaut.data.jdbc)
+    implementation(libs.bundles.micronaut.kotlin)
     implementation(libs.bundles.flyway)
     implementation(libs.s3)
     implementation(libs.aws.java.sdk.s3)

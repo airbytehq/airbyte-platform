@@ -8,13 +8,10 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
-private const val TYPE = "$STORAGE_ROOT.type"
-private const val PROP_BUCKET_LOG = "$STORAGE_BUCKET.log"
-private const val PROP_BUCKET_STATE = "$STORAGE_BUCKET.state"
-private const val PROP_BUCKET_WORKLOAD = "$STORAGE_BUCKET.workload-output"
 private const val VAL_BUCKET_LOG = "log"
 private const val VAL_BUCKET_STATE = "state"
 private const val VAL_BUCKET_WORKLOAD = "workload"
+private const val VAL_BUCKET_ACTIVITY_PAYLOAD = "payload"
 
 @MicronautTest(environments = ["storage-local"])
 class LocalStorageConfigTest {
@@ -28,6 +25,7 @@ class LocalStorageConfigTest {
       assertEquals(VAL_BUCKET_LOG, buckets.log)
       assertEquals(VAL_BUCKET_STATE, buckets.state)
       assertEquals(VAL_BUCKET_WORKLOAD, buckets.workloadOutput)
+      assertEquals(VAL_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
       assertEquals("/tmp", root)
     }
   }
@@ -41,6 +39,7 @@ class LocalStorageConfigTest {
           EnvVar.STORAGE_BUCKET_LOG to VAL_BUCKET_LOG,
           EnvVar.STORAGE_BUCKET_STATE to VAL_BUCKET_STATE,
           EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT to VAL_BUCKET_WORKLOAD,
+          EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD to VAL_BUCKET_ACTIVITY_PAYLOAD,
           EnvVar.LOCAL_ROOT to "/tmp",
         ).mapKeys { it.key.name }
 
@@ -61,6 +60,7 @@ class GcsStorageConfigTest {
       assertEquals(VAL_BUCKET_LOG, buckets.log)
       assertEquals(VAL_BUCKET_STATE, buckets.state)
       assertEquals(VAL_BUCKET_WORKLOAD, buckets.workloadOutput)
+      assertEquals(VAL_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
       assertEquals("credz", applicationCredentials)
     }
   }
@@ -74,6 +74,7 @@ class GcsStorageConfigTest {
           EnvVar.STORAGE_BUCKET_LOG to VAL_BUCKET_LOG,
           EnvVar.STORAGE_BUCKET_STATE to VAL_BUCKET_STATE,
           EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT to VAL_BUCKET_WORKLOAD,
+          EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD to VAL_BUCKET_ACTIVITY_PAYLOAD,
           EnvVar.GOOGLE_APPLICATION_CREDENTIALS to "credz",
         ).mapKeys { it.key.name }
 
@@ -94,6 +95,7 @@ class MinioStorageConfigTest {
       assertEquals(VAL_BUCKET_LOG, buckets.log)
       assertEquals(VAL_BUCKET_STATE, buckets.state)
       assertEquals(VAL_BUCKET_WORKLOAD, buckets.workloadOutput)
+      assertEquals(VAL_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
       assertEquals("access", this.accessKey)
       assertEquals("secret-access", secretAccessKey)
       assertEquals("endpoint", endpoint)
@@ -109,6 +111,7 @@ class MinioStorageConfigTest {
           EnvVar.STORAGE_BUCKET_LOG to VAL_BUCKET_LOG,
           EnvVar.STORAGE_BUCKET_STATE to VAL_BUCKET_STATE,
           EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT to VAL_BUCKET_WORKLOAD,
+          EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD to VAL_BUCKET_ACTIVITY_PAYLOAD,
           EnvVar.AWS_ACCESS_KEY_ID to "access",
           EnvVar.AWS_SECRET_ACCESS_KEY to "secret-access",
           EnvVar.MINIO_ENDPOINT to "endpoint",
@@ -131,6 +134,7 @@ class S3StorageConfigTest {
       assertEquals(VAL_BUCKET_LOG, buckets.log)
       assertEquals(VAL_BUCKET_STATE, buckets.state)
       assertEquals(VAL_BUCKET_WORKLOAD, buckets.workloadOutput)
+      assertEquals(VAL_BUCKET_ACTIVITY_PAYLOAD, buckets.activityPayload)
       assertEquals("access", this.accessKey)
       assertEquals("secret-access", secretAccessKey)
       assertEquals("us-moon-1", region)
@@ -146,6 +150,7 @@ class S3StorageConfigTest {
           EnvVar.STORAGE_BUCKET_LOG to VAL_BUCKET_LOG,
           EnvVar.STORAGE_BUCKET_STATE to VAL_BUCKET_STATE,
           EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT to VAL_BUCKET_WORKLOAD,
+          EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD to VAL_BUCKET_ACTIVITY_PAYLOAD,
           EnvVar.AWS_ACCESS_KEY_ID to "access",
           EnvVar.AWS_SECRET_ACCESS_KEY to "secret-access",
           EnvVar.AWS_DEFAULT_REGION to "us-moon-1",
@@ -162,7 +167,7 @@ class StorageConfigTest {
     val private = "nobody"
     val public = "everybody"
     val masked = "*******"
-    val buckets = StorageBucketConfig(log = "log", state = "state", workloadOutput = "workload")
+    val buckets = StorageBucketConfig(log = "log", state = "state", workloadOutput = "workload", activityPayload = "payload")
 
     val gcs = GcsStorageConfig(buckets = buckets, applicationCredentials = private)
     val minio =

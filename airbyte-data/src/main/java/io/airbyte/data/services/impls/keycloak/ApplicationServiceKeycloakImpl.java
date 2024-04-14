@@ -112,22 +112,22 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
   /**
    * List all Applications for a user.
    *
-   * @param userId The user to list Applications for.
+   * @param user The user to list Applications for.
    * @return The list of Applications for the user.
    */
   @Override
-  public List<Application> listApplicationsByUser(final User userId) {
-    final var users = keycloakAdminClient
+  public List<Application> listApplicationsByUser(final User user) {
+    final var clientUsers = keycloakAdminClient
         .realm(keycloakConfiguration.getClientRealm())
         .users()
-        .searchByAttributes(USER_ID + ":" + userId.getAuthUserId());
+        .searchByAttributes(USER_ID + ":" + user.getAuthUserId());
 
     final var existingClient = new ArrayList<ClientRepresentation>();
-    for (final var user : users) {
+    for (final var clientUser : clientUsers) {
       final var client = keycloakAdminClient
           .realm(keycloakConfiguration.getClientRealm())
           .clients()
-          .findByClientId(user.getAttributes().get(CLIENT_ID).getFirst())
+          .findByClientId(clientUser.getAttributes().get(CLIENT_ID).getFirst())
           .stream()
           .findFirst();
 
@@ -159,13 +159,10 @@ public class ApplicationServiceKeycloakImpl implements ApplicationService {
       return Optional.empty();
     }
 
-    // Get the user_id attribute from the client
-    final var userId = client.get().getAttributes().getOrDefault(USER_ID, null);
-    if (userId == null) {
-      throw new BadRequestException("Client does not have a user_id attribute");
-    }
+    final var userApplications = listApplicationsByUser(user);
 
-    if (!userId.equals(String.valueOf(user.getAuthUserId()))) {
+    // Only allow the user to delete their own Applications.
+    if (userApplications.stream().noneMatch(application -> application.getClientId().equals(applicationId))) {
       throw new BadRequestException("You do not have permission to delete this Application");
     }
 

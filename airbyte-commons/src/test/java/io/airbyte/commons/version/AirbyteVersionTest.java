@@ -106,12 +106,6 @@ class AirbyteVersionTest {
   }
 
   @Test
-  void testCheckVersion() {
-    AirbyteVersion.assertIsCompatible(new AirbyteVersion("3.2.1"), new AirbyteVersion("3.2.1"));
-    assertThrows(IllegalStateException.class, () -> AirbyteVersion.assertIsCompatible(new AirbyteVersion("1.2.3"), new AirbyteVersion("3.2.1")));
-  }
-
-  @Test
   void testCheckOnlyPatchVersion() {
     assertFalse(new AirbyteVersion(VERSION_678).checkOnlyPatchVersionIsUpdatedComparedTo(new AirbyteVersion(VERSION_678)));
     assertFalse(new AirbyteVersion("6.9.8").checkOnlyPatchVersionIsUpdatedComparedTo(new AirbyteVersion("6.8.9")));

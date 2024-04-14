@@ -76,10 +76,12 @@ import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpStatus;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
+import io.temporal.activity.ActivityOptions;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -114,6 +116,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
   private final JobOutputDocStore jobOutputDocStore;
   private final FeatureFlagClient featureFlagClient;
   private final MetricClient metricClient;
+  private final ActivityOptions activityOptions;
 
   public CheckConnectionActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                                      final ProcessFactory processFactory,
@@ -131,7 +134,8 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                                      final WorkloadApi workloadApi,
                                      final WorkloadIdGenerator workloadIdGenerator,
                                      final JobOutputDocStore jobOutputDocStore,
-                                     final MetricClient metricClient) {
+                                     final MetricClient metricClient,
+                                     @Named("checkActivityOptions") final ActivityOptions activityOptions) {
     this(workerConfigsProvider,
         processFactory,
         secretsRepositoryReader,
@@ -153,18 +157,19 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                 secretsRepositoryReader,
                 airbyteApiClient.getSecretPersistenceConfigApi(),
                 featureFlagClient)),
-        metricClient);
+        metricClient,
+        activityOptions);
   }
 
   @VisibleForTesting
   CheckConnectionActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                               final ProcessFactory processFactory,
                               final SecretsRepositoryReader secretsRepositoryReader,
-                              @Named("workspaceRoot") final Path workspaceRoot,
+                              final Path workspaceRoot,
                               final WorkerEnvironment workerEnvironment,
                               final LogConfigs logConfigs,
                               final AirbyteApiClient airbyteApiClient,
-                              @Value("${airbyte.version}") final String airbyteVersion,
+                              final String airbyteVersion,
                               final AirbyteMessageSerDeProvider serDeProvider,
                               final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                               final FeatureFlags featureFlags,
@@ -174,7 +179,8 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                               final WorkloadIdGenerator workloadIdGenerator,
                               final JobOutputDocStore jobOutputDocStore,
                               final CheckConnectionInputHydrator checkConnectionInputHydrator,
-                              final MetricClient metricClient) {
+                              final MetricClient metricClient,
+                              final ActivityOptions activityOptions) {
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.workspaceRoot = workspaceRoot;
@@ -192,6 +198,12 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
     this.featureFlagClient = featureFlagClient;
     this.inputHydrator = checkConnectionInputHydrator;
     this.metricClient = metricClient;
+    this.activityOptions = activityOptions;
+  }
+
+  @Override
+  public Duration getCheckConnectionTimeout() {
+    return activityOptions.getStartToCloseTimeout();
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -389,8 +401,8 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
       final var protocolVersion =
           launcherConfig.getProtocolVersion() != null ? launcherConfig.getProtocolVersion() : AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION;
       final AirbyteStreamFactory streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(), Optional.empty(), Optional.empty(),
-              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false),
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(), Optional.empty(),
+              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false),
               gsonPksExtractor);
 
       return new DefaultCheckConnectionWorker(integrationLauncher, connectorConfigUpdater, streamFactory);

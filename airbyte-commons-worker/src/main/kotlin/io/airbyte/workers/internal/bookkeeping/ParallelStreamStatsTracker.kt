@@ -7,6 +7,7 @@ import io.airbyte.config.SyncStats
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EmitStateStatsToSegment
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.LogsForStripeChecksumDebugging
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.MetricAttribute
@@ -55,6 +56,11 @@ class ParallelStreamStatsTracker(
   private val emitStatsCounterFlag: Boolean by lazy {
     val connectionContext = Multi(listOf(Connection(connectionId), Workspace(workspaceId)))
     featureFlagClient.boolVariation(EmitStateStatsToSegment, connectionContext)
+  }
+
+  private val logsForStripeChecksumDebugging: Boolean by lazy {
+    val connectionContext = Multi(listOf(Connection(connectionId), Workspace(workspaceId)))
+    featureFlagClient.boolVariation(LogsForStripeChecksumDebugging, connectionContext)
   }
 
   @Volatile
@@ -232,6 +238,7 @@ class ParallelStreamStatsTracker(
               val errorMessage =
                 "${origin.name.lowercase().replaceFirstChar { it.uppercase() }} state message checksum is invalid: " +
                   "state source record count $sourceRecordCount does not equal state destination record count $destinationRecordCount" +
+                  ". Please note that the destination count matches the platform count" +
                   if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
               logger.error { errorMessage }
               emitChecksumMetrics(CHECKSUM_PLATFORM_DESTINATION_MISMATCH)
@@ -245,6 +252,11 @@ class ParallelStreamStatsTracker(
                 } state message checksum is valid" +
                   if (includeStreamInLogs) " for stream ${getNameNamespacePair(stateMessage)}." else "."
               }
+            }
+          } else {
+            logger.info {
+              "Source state count is not available for comparison with destination count, " +
+                "but destination count matches the platform count."
             }
           }
         } else {
@@ -321,6 +333,7 @@ class ParallelStreamStatsTracker(
           "valid_data" to checksumValidationEnabled.toString(),
           "state_type" to stateMessage.type.toString(),
           "state_hash" to stateMessage.getStateHashCode(Hashing.murmur3_32_fixed()).toString(),
+          "state_id" to stateMessage.getStateIdForStatsTracking().toString(),
         )
 
       if (stateMessage.type == AirbyteStateMessage.AirbyteStateType.STREAM) {
@@ -545,6 +558,7 @@ class ParallelStreamStatsTracker(
       return StreamStatsTracker(
         nameNamespacePair = pair,
         metricClient = metricClient,
+        logsForStripeChecksumDebugging = logsForStripeChecksumDebugging,
       ).also { streamTrackers[pair] = it }
     }
   }

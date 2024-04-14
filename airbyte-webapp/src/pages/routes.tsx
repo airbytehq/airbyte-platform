@@ -2,13 +2,12 @@ import React, { useMemo } from "react";
 import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
-import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
-
 import {
   useGetInstanceConfiguration,
   useInvalidateAllWorkspaceScopeOnChange,
   useListWorkspacesInfinite,
 } from "core/api";
+import { DefaultErrorBoundary } from "core/errors";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -49,7 +48,7 @@ const SourceSettingsPage = React.lazy(() => import("./source/SourceSettingsPage"
 const SourceConnectionsPage = React.lazy(() => import("./source/SourceConnectionsPage"));
 const AdvancedSettingsPage = React.lazy(() => import("./SettingsPage/pages/AdvancedSettingsPage"));
 
-const WorkspacesPage = React.lazy(() => import("./workspaces/WorkspacesPage"));
+const WorkspacesPage = React.lazy(() => import("./workspaces"));
 
 const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
   const analyticsContext = useMemo(
@@ -72,7 +71,7 @@ const MainViewRoutes: React.FC = () => {
 
   return (
     <MainView>
-      <ApiErrorBoundary>
+      <DefaultErrorBoundary>
         <Routes>
           <Route path={RoutePaths.Destination}>
             <Route index element={<AllDestinationsPage />} />
@@ -119,7 +118,7 @@ const MainViewRoutes: React.FC = () => {
 
           <Route path="*" element={<Navigate to={RoutePaths.Connections} />} />
         </Routes>
-      </ApiErrorBoundary>
+      </DefaultErrorBoundary>
     </MainView>
   );
 };

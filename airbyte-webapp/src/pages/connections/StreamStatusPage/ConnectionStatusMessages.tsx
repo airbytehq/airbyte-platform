@@ -4,14 +4,19 @@ import { useNavigate } from "react-router-dom";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
 import { Box } from "components/ui/Box";
-import { FlexContainer } from "components/ui/Flex";
+import { CopyButton } from "components/ui/CopyButton";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
+import { Link } from "components/ui/Link";
 import { Message, MessageProps, MessageType, isHigherSeverity, MESSAGE_SEVERITY_LEVELS } from "components/ui/Message";
+import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
-import { ActorDefinitionVersionRead, FailureOrigin, FailureType } from "core/api/types/AirbyteClient";
+import { ActorDefinitionVersionRead, FailureOrigin } from "core/api/types/AirbyteClient";
 import { shouldDisplayBreakingChangeBanner, getHumanReadableUpgradeDeadline } from "core/domain/connector";
 import { FeatureItem, useFeature } from "core/services/features";
+import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
@@ -74,27 +79,70 @@ export const ConnectionStatusMessages: React.FC = () => {
 
     // If we have an error message and no breaking schema changes, show the error message
     if (failureReason && !hasBreakingSchemaChange) {
-      const isConfigError = failureReason.failureType === FailureType.config_error;
-      const isSourceError = failureReason.failureOrigin === FailureOrigin.source;
-      const isDestinationError = failureReason.failureOrigin === FailureOrigin.destination;
+      const failureUiDetails = failureUiDetailsFromReason(failureReason, formatMessage);
 
-      if (isConfigError && (isSourceError || isDestinationError)) {
+      const isError = failureUiDetails.type === "error";
+      if (isError) {
+        const isSourceError = failureUiDetails.origin === FailureOrigin.source;
+
         const targetRoute = isSourceError ? RoutePaths.Source : RoutePaths.Destination;
         const targetRouteId = isSourceError ? connection.sourceId : connection.destinationId;
         const configError = {
-          text: failureReason.externalMessage,
+          text: formatMessage(
+            { id: "failureMessage.label" },
+            {
+              type: (
+                <Text size="lg" bold as="span">
+                  {failureUiDetails.typeLabel}:
+                </Text>
+              ),
+              message: failureUiDetails.message,
+            }
+          ),
           onAction: () => navigate(`/${RoutePaths.Workspaces}/${workspaceId}/${targetRoute}/${targetRouteId}`),
-          actionBtnText: formatMessage({ id: "connection.stream.status.gotoSettings" }),
-          type: "warning",
+          actionBtnText: formatMessage({
+            id: isSourceError
+              ? "connection.stream.status.checkSourceSettings"
+              : "connection.stream.status.checkDestinationSettings",
+          }),
+          type: "error",
         } as const;
 
         errorMessages.push(configError);
       } else {
+        const hasInternalErrorMessage = !!failureUiDetails.secondaryMessage;
         const goToLogError = {
-          text: failureReason.externalMessage,
-          onAction: () => navigate(`../${ConnectionRoutePaths.JobHistory}#${lastSyncJobId}::${lastSyncAttemptNumber}`),
-          actionBtnText: formatMessage({ id: "connection.stream.status.seeLogs" }),
+          text: formatMessage(
+            { id: "failureMessage.label" },
+            {
+              type: (
+                <Text size="lg" bold as="span">
+                  {failureUiDetails.typeLabel}:
+                </Text>
+              ),
+              message: failureUiDetails.message,
+            }
+          ),
           type: "warning",
+          children: hasInternalErrorMessage && (
+            <FlexContainer>
+              <FlexItem grow alignSelf="center">
+                <Text>{failureUiDetails.secondaryMessage}</Text>
+              </FlexItem>
+              <FlexContainer direction="row" gap="sm">
+                <CopyButton content={failureUiDetails.secondaryMessage!} />
+                <Link
+                  to={`../${ConnectionRoutePaths.JobHistory}#${lastSyncJobId}::${lastSyncAttemptNumber}`}
+                  title={formatMessage({ id: "connection.stream.status.seeLogs" })}
+                  className={styles.buttonLikeLink}
+                >
+                  <Icon type="share" />
+                </Link>
+              </FlexContainer>
+            </FlexContainer>
+          ),
+          childrenClassName: styles.internalErrorMessage,
+          isExpandable: hasInternalErrorMessage,
         } as const;
         errorMessages.push(goToLogError);
       }

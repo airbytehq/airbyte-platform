@@ -27,6 +27,9 @@ object OrchestratorConstants {
   const val SIDECAR_INPUT = "sidecarInput.json"
   const val WORKLOAD_ID_FILE = "workload.txt"
 
+  // See the application.yml of the container-orchestrator for value
+  const val SERVER_PORT = 9000
+
   // define two ports for stdout/stderr usage on the container orchestrator pod
   const val PORT1 = 9877
   const val PORT2 = 9878
@@ -80,6 +83,7 @@ object OrchestratorConstants {
           EnvVar.AWS_SECRET_ACCESS_KEY,
           EnvVar.DD_AGENT_HOST,
           EnvVar.DD_DOGSTATSD_PORT,
+          EnvVar.DOCKER_HOST,
           EnvVar.GOOGLE_APPLICATION_CREDENTIALS,
           EnvVar.JOB_DEFAULT_ENV_MAP,
           EnvVar.JOB_ISOLATED_KUBE_NODE_SELECTORS,
@@ -107,8 +111,10 @@ object OrchestratorConstants {
           EnvVar.MINIO_ENDPOINT,
           EnvVar.OTEL_COLLECTOR_ENDPOINT,
           EnvVar.PUBLISH_METRICS,
+          EnvVar.ROOTLESS_WORKLOAD,
           EnvVar.SOCAT_KUBE_CPU_LIMIT,
           EnvVar.SOCAT_KUBE_CPU_REQUEST,
+          EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD,
           EnvVar.STORAGE_BUCKET_LOG,
           EnvVar.STORAGE_BUCKET_STATE,
           EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT,

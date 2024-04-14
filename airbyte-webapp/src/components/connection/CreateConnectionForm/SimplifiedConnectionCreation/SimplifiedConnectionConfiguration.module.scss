@@ -1,24 +1,25 @@
 @use "scss/colors";
 @use "scss/variables";
+@use "scss/mixins";
 
 .linkText {
-  // base "button"
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  border-radius: variables.$border-radius-sm;
-  font-weight: 600;
-  cursor: pointer;
-  background-color: colors.$white;
+  @include mixins.link-text;
+}
 
-  // secondary
-  color: colors.$grey-400;
-  border: 1px solid colors.$grey-300;
+.nextLink {
+  @include mixins.base-button;
 
-  // sizeXS
-  height: variables.$button-height-xs;
-  font-size: variables.$font-size-sm;
-  line-height: 15px;
-  padding: 10px;
+  // primary
+  color: colors.$white;
+  background-color: colors.$blue-400;
+  border: 0;
+
+  &:hover {
+    background-color: colors.$blue-500;
+    color: colors.$white;
+  }
+
+  &:active {
+    background-color: colors.$blue-600;
+  }
 }

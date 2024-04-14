@@ -7,10 +7,9 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { ConnectionConfiguration } from "area/connector/types";
-import { useGetSourceDefinitionSpecificationAsync, LogsRequestError } from "core/api";
+import { useGetSourceDefinitionSpecificationAsync } from "core/api";
 import { SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector } from "core/domain/connector";
-import { FormError } from "core/utils/errorStatusMessage";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
 
@@ -24,7 +23,6 @@ export interface SourceFormValues {
 interface SourceFormProps {
   onSubmit: (values: SourceFormValues) => Promise<void>;
   sourceDefinitions: SourceDefinitionRead[];
-  error?: FormError | null;
   selectedSourceDefinitionId?: string;
 }
 
@@ -36,12 +34,7 @@ const hasSourceDefinitionId = (state: unknown): state is { sourceDefinitionId: s
   );
 };
 
-export const SourceForm: React.FC<SourceFormProps> = ({
-  onSubmit,
-  sourceDefinitions,
-  error,
-  selectedSourceDefinitionId,
-}) => {
+export const SourceForm: React.FC<SourceFormProps> = ({ onSubmit, sourceDefinitions, selectedSourceDefinitionId }) => {
   const location = useLocation();
 
   const [sourceDefinitionId, setSourceDefinitionId] = useState<string | null>(
@@ -92,7 +85,6 @@ export const SourceForm: React.FC<SourceFormProps> = ({
       selectedConnectorDefinitionSpecification={sourceDefinitionSpecification}
       selectedConnectorDefinitionId={sourceDefinitionId}
       onSubmit={onSubmitForm}
-      jobInfo={LogsRequestError.extractJobInfo(error)}
       supportLevel={selectedSourceDefinition?.supportLevel}
     />
   );

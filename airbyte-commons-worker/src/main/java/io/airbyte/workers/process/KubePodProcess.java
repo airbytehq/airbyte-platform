@@ -21,6 +21,7 @@ import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.workers.helper.ConnectorApmSupportHelper;
 import io.airbyte.workers.models.SecretMetadata;
+import io.fabric8.kubernetes.api.model.CapabilitiesBuilder;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPort;
@@ -32,9 +33,14 @@ import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodFluent;
+import io.fabric8.kubernetes.api.model.PodSecurityContext;
+import io.fabric8.kubernetes.api.model.PodSecurityContextBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
+import io.fabric8.kubernetes.api.model.SeccompProfileBuilder;
 import io.fabric8.kubernetes.api.model.SecretKeySelector;
+import io.fabric8.kubernetes.api.model.SecurityContext;
+import io.fabric8.kubernetes.api.model.SecurityContextBuilder;
 import io.fabric8.kubernetes.api.model.Toleration;
 import io.fabric8.kubernetes.api.model.TolerationBuilder;
 import io.fabric8.kubernetes.api.model.Volume;
@@ -213,6 +219,7 @@ public class KubePodProcess implements KubePod {
         .withCommand("sh", "-c", initCommand)
         .withResources(getResourceRequirementsBuilder(resourceRequirements).build())
         .withVolumeMounts(mainVolumeMounts)
+        .withSecurityContext(containerSecurityContext())
         .build();
   }
 
@@ -286,7 +293,8 @@ public class KubePodProcess implements KubePod {
         .withCommand("sh", "-c", mainCommand)
         .withEnv(allEnvVars)
         .withWorkingDir(CONFIG_DIR)
-        .withVolumeMounts(mainVolumeMounts);
+        .withVolumeMounts(mainVolumeMounts)
+        .withSecurityContext(containerSecurityContext());
 
     final ResourceRequirementsBuilder resourceRequirementsBuilder = getResourceRequirementsBuilder(resourceRequirements);
     if (resourceRequirementsBuilder != null) {
@@ -521,6 +529,7 @@ public class KubePodProcess implements KubePod {
           .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
           .withResources(getResourceRequirementsBuilder(podResourceRequirements.stdIn()).build())
           .withImagePullPolicy(sidecarImagePullPolicy)
+          .withSecurityContext(containerSecurityContext())
           .build();
 
       final Container relayStdout = new ContainerBuilder()
@@ -530,6 +539,7 @@ public class KubePodProcess implements KubePod {
           .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
           .withResources(getResourceRequirementsBuilder(podResourceRequirements.stdOut()).build())
           .withImagePullPolicy(sidecarImagePullPolicy)
+          .withSecurityContext(containerSecurityContext())
           .build();
 
       final Container relayStderr = new ContainerBuilder()
@@ -539,6 +549,7 @@ public class KubePodProcess implements KubePod {
           .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
           .withResources(getResourceRequirementsBuilder(podResourceRequirements.stdErr()).build())
           .withImagePullPolicy(sidecarImagePullPolicy)
+          .withSecurityContext(containerSecurityContext())
           .build();
 
       final List<Container> socatContainers;
@@ -594,6 +605,7 @@ public class KubePodProcess implements KubePod {
           .withVolumeMounts(terminationVolumeMount)
           .withResources(getResourceRequirementsBuilder(podResourceRequirements.heartbeat()).build())
           .withImagePullPolicy(sidecarImagePullPolicy)
+          .withSecurityContext(containerSecurityContext(100, 101)) // uid=100(curl_user) gid=101(curl_group)
           .build();
 
       final List<Container> containers = Lists.concat(List.of(main, callHeartbeatServer), socatContainers);
@@ -622,6 +634,7 @@ public class KubePodProcess implements KubePod {
           .withInitContainers(init)
           .withContainers(containers)
           .withVolumes(pipeVolume, configVolume, terminationVolume, tmpVolume)
+          .withSecurityContext(podSecurityContext())
           .endSpec()
           .build();
 
@@ -975,6 +988,52 @@ public class KubePodProcess implements KubePod {
 
   private static String prependPodInfo(final String message, final String podNamespace, final String podName) {
     return String.format("(pod: %s / %s) - %s", podNamespace, podName, message);
+  }
+
+  /**
+   * Returns a PodSecurityContext specific to containers.
+   *
+   * @return PodSecurityContext if ROOTLESS_WORKLOAD is enabled, null otherwise.
+   */
+  private static PodSecurityContext podSecurityContext(final long user, final long group) {
+    if (Boolean.parseBoolean(io.airbyte.commons.envvar.EnvVar.ROOTLESS_WORKLOAD.fetch("false"))) {
+      return new PodSecurityContextBuilder()
+          .withRunAsUser(user)
+          .withRunAsGroup(group)
+          .withFsGroup(group)
+          .withRunAsNonRoot(true)
+          .withSeccompProfile(new SeccompProfileBuilder().withType("RuntimeDefault").build())
+          .build();
+    }
+
+    return null;
+  }
+
+  private static PodSecurityContext podSecurityContext() {
+    return podSecurityContext(1000, 1000);
+  }
+
+  /**
+   * Returns a SecurityContext specific to containers.
+   *
+   * @return SecurityContext if ROOTLESS_WORKLOAD is enabled, null otherwise.
+   */
+  private static SecurityContext containerSecurityContext(final long user, final long group) {
+    if (Boolean.parseBoolean(io.airbyte.commons.envvar.EnvVar.ROOTLESS_WORKLOAD.fetch("false"))) {
+      return new SecurityContextBuilder()
+          .withRunAsUser(user)
+          .withRunAsGroup(group)
+          .withAllowPrivilegeEscalation(false)
+          .withReadOnlyRootFilesystem(false)
+          .withCapabilities(new CapabilitiesBuilder().addAllToDrop(List.of("ALL")).build())
+          .build();
+    }
+
+    return null;
+  }
+
+  private static SecurityContext containerSecurityContext() {
+    return containerSecurityContext(1000, 1000);
   }
 
 }

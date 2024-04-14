@@ -6,16 +6,14 @@ import { Link } from "components/ui/Link";
 import { Table } from "components/ui/Table";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { ConnectionScheduleType, SchemaChange } from "core/api/types/AirbyteClient";
-import { FeatureItem, useFeature } from "core/services/features";
 import { RoutePaths } from "pages/routePaths";
 
-import ConnectionSettingsCell from "./components/ConnectionSettingsCell";
 import { ConnectionStatusCell } from "./components/ConnectionStatusCell";
 import { ConnectorNameCell } from "./components/ConnectorNameCell";
 import { FrequencyCell } from "./components/FrequencyCell";
 import { LastSyncCell } from "./components/LastSyncCell";
-import { StatusCell } from "./components/StatusCell";
+import { SchemaChangeCell } from "./components/SchemaChangeCell";
+import { StateSwitchCell } from "./components/StateSwitchCell";
 import { StreamsStatusCell } from "./components/StreamStatusCell";
 import styles from "./ConnectionTable.module.scss";
 import { ConnectionTableDataItem } from "./types";
@@ -28,7 +26,6 @@ interface ConnectionTableProps {
 
 const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant }) => {
   const createLink = useCurrentWorkspaceLink();
-  const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
   const streamCentricUIEnabled = false;
 
   const columnHelper = createColumnHelper<ConnectionTableDataItem>();
@@ -158,28 +155,29 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
           thClassName: styles.thEnabled,
         },
         cell: (props) => (
-          <StatusCell
-            schemaChange={props.row.original.schemaChange}
-            connection={props.row.original.connection}
+          <StateSwitchCell
+            connectionId={props.row.original.connectionId}
             enabled={props.cell.getValue()}
-            id={props.row.original.connectionId}
-            isSyncing={props.row.original.isSyncing}
-            isManual={props.row.original.scheduleType === ConnectionScheduleType.manual}
-            hasBreakingChange={allowAutoDetectSchema && props.row.original.schemaChange === SchemaChange.breaking}
+            schemaChange={props.row.original.schemaChange}
           />
         ),
         enableSorting: false,
       }),
-      columnHelper.accessor("connectionId", {
+      columnHelper.accessor("schemaChange", {
         header: "",
         meta: {
           thClassName: styles.thConnectionSettings,
         },
-        cell: (props) => <ConnectionSettingsCell id={props.cell.getValue()} />,
+        cell: (props) => (
+          <SchemaChangeCell
+            connectionId={props.row.original.connectionId}
+            schemaChange={props.row.original.schemaChange}
+          />
+        ),
         enableSorting: false,
       }),
     ],
-    [columnHelper, createLink, entity, allowAutoDetectSchema]
+    [columnHelper, createLink, entity]
   );
 
   return (

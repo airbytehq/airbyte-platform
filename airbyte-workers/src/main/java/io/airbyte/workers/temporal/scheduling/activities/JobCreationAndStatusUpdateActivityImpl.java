@@ -22,10 +22,16 @@ import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody;
 import io.airbyte.api.client.model.generated.ReportJobStartRequest;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
+import io.airbyte.config.State;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.context.AttemptContext;
+import io.airbyte.workers.storage.activities.OutputStorageClient;
 import io.micronaut.context.annotation.Requires;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.util.ArrayList;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -38,11 +44,20 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
 
   private final JobsApi jobsApi;
   private final AttemptApi attemptApi;
+  private final FeatureFlagClient featureFlagClient;
+  private final OutputStorageClient<State> stateClient;
+  private final OutputStorageClient<ConfiguredAirbyteCatalog> catalogClient;
 
   public JobCreationAndStatusUpdateActivityImpl(final JobsApi jobsApi,
-                                                final AttemptApi attemptApi) {
+                                                final AttemptApi attemptApi,
+                                                final FeatureFlagClient featureFlagClient,
+                                                @Named("outputStateClient") final OutputStorageClient<State> stateClient,
+                                                @Named("outputCatalogClient") final OutputStorageClient<ConfiguredAirbyteCatalog> catalogClient) {
     this.jobsApi = jobsApi;
     this.attemptApi = attemptApi;
+    this.featureFlagClient = featureFlagClient;
+    this.stateClient = stateClient;
+    this.catalogClient = catalogClient;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -80,12 +95,21 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   public void jobSuccessWithAttemptNumber(final JobSuccessInputWithAttemptNumber input) {
     new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
+    final var output = input.getStandardSyncOutput();
+
+    if (output != null && output.getOutputCatalog() != null && output.getCatalogUri() != null) {
+      catalogClient.validate(
+          output.getOutputCatalog(),
+          output.getCatalogUri(),
+          new ArrayList<>());
+    }
+
     try {
       final var request = new JobSuccessWithAttemptNumberRequest()
           .jobId(input.getJobId())
           .attemptNumber(input.getAttemptNumber())
           .connectionId(input.getConnectionId())
-          .standardSyncOutput(input.getStandardSyncOutput());
+          .standardSyncOutput(output);
       jobsApi.jobSuccessWithAttemptNumber(request);
     } catch (final ApiException e) {
       ApmTraceUtils.addExceptionToTrace(e);
@@ -117,12 +141,21 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   public void attemptFailureWithAttemptNumber(final AttemptNumberFailureInput input) {
     new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
+    final var output = input.getStandardSyncOutput();
+
+    if (output != null && output.getOutputCatalog() != null && output.getCatalogUri() != null) {
+      catalogClient.validate(
+          output.getOutputCatalog(),
+          output.getCatalogUri(),
+          new ArrayList<>());
+    }
+
     try {
       final var req = new FailAttemptRequest()
           .attemptNumber(input.getAttemptNumber())
           .jobId(input.getJobId())
           .failureSummary(input.getAttemptFailureSummary())
-          .standardSyncOutput(input.getStandardSyncOutput());
+          .standardSyncOutput(output);
 
       attemptApi.failAttempt(req);
     } catch (final ApiException e) {

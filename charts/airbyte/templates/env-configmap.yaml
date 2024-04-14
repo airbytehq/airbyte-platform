@@ -88,6 +88,7 @@ data:
   SEGMENT_WRITE_KEY: 7UDdp5K55CyiGgsauOr2pNNujGvmhaeu
   # Storage start
   STORAGE_TYPE: {{ (((.Values.global).storage).type) | default "minio" | quote }}
+  STORAGE_BUCKET_ACTIVITY_PAYLOAD: {{ ((((.Values.global).storage).bucket).activityPayload) | default "airbyte-storage" | quote }}
   STORAGE_BUCKET_LOG: {{ ((((.Values.global).storage).bucket).log) | default "airbyte-storage" | quote }}
   STORAGE_BUCKET_STATE: {{ ((((.Values.global).storage).bucket).state) | default "airbyte-storage" | quote }}
   STORAGE_BUCKET_WORKLOAD_OUTPUT: {{ ((((.Values.global).storage).bucket).workloadOutput) | default "airbyte-storage" | quote }}

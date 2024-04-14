@@ -40,7 +40,9 @@ export interface AuthContextApi {
   inited: boolean;
   emailVerified: boolean;
   loggedOut: boolean;
+  /** @deprecated use `provider` instead */
   providers: string[] | null;
+  provider: string | null;
   getAccessToken?: () => Promise<string | null>;
   hasPasswordLogin?: () => boolean;
   login?: AuthLogin;

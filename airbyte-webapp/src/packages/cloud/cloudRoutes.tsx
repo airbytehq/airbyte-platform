@@ -2,12 +2,12 @@ import React, { PropsWithChildren, Suspense, useMemo } from "react";
 import { createSearchParams, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
-import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentOrganizationInfo, useCurrentWorkspace, useInvalidateAllWorkspaceScopeOnChange } from "core/api";
 import { usePrefetchCloudWorkspaceData } from "core/api/cloud";
+import { DefaultErrorBoundary } from "core/errors";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -87,7 +87,7 @@ const MainRoutes: React.FC = () => {
   const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
 
   return (
-    <ApiErrorBoundary>
+    <DefaultErrorBoundary>
       <Routes>
         <Route path={RoutePaths.Destination}>
           <Route index element={<AllDestinationsPage />} />
@@ -134,7 +134,7 @@ const MainRoutes: React.FC = () => {
         <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
         <Route path="*" element={<Navigate to={RoutePaths.Connections} replace />} />
       </Routes>
-    </ApiErrorBoundary>
+    </DefaultErrorBoundary>
   );
 };
 
@@ -172,7 +172,7 @@ const CloudWorkspaceDataPrefetcher: React.FC<PropsWithChildren<unknown>> = ({ ch
 };
 
 export const Routing: React.FC = () => {
-  const { user, inited, providers, loggedOut, requirePasswordReset } = useAuthService();
+  const { user, inited, providers, provider, loggedOut, requirePasswordReset } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
   const { pathname: originalPathname, search, hash } = useLocation();
 
@@ -203,9 +203,15 @@ export const Routing: React.FC = () => {
   const userTraits = useMemo(
     () =>
       user
-        ? { providers, email: user.email, isCorporate: isCorporateEmail(user.email), currentWorkspaceId: workspaceId }
+        ? {
+            providers,
+            provider,
+            email: user.email,
+            isCorporate: isCorporateEmail(user.email),
+            currentWorkspaceId: workspaceId,
+          }
         : {},
-    [providers, user, workspaceId]
+    [provider, providers, user, workspaceId]
   );
 
   useEffectOnce(() => {

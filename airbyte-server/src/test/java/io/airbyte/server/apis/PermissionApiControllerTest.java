@@ -46,11 +46,9 @@ class PermissionApiControllerTest extends BaseControllerTest {
   }
 
   @Test
-  void testUpdatePermission() throws ConfigNotFoundException, IOException, JsonValidationException {
+  void testUpdatePermission() throws ConfigNotFoundException, IOException {
     final UUID userId = UUID.randomUUID();
     Mockito.when(permissionHandler.getPermission(Mockito.any()))
-        .thenReturn(new PermissionRead().userId(userId));
-    Mockito.when(permissionHandler.updatePermission(Mockito.any()))
         .thenReturn(new PermissionRead().userId(userId));
     final String path = "/api/v1/permissions/update";
     testEndpointStatus(
@@ -59,7 +57,7 @@ class PermissionApiControllerTest extends BaseControllerTest {
   }
 
   @Test
-  void testDeletePermission() throws IOException {
+  void testDeletePermission() {
     Mockito.doNothing().when(permissionHandler).deletePermission(Mockito.any());
     final String path = "/api/v1/permissions/delete";
     testEndpointStatus(

@@ -7,6 +7,10 @@ import { useIntent } from "core/utils/rbac";
 import { useModalService } from "hooks/services/Modal";
 import { InviteUsersModal } from "packages/cloud/views/users/InviteUsersModal";
 
+/**
+ *
+ * @deprecated This component is deprecated and should not be used in new code.  It is a part of our legacy invitation system.
+ */
 export const FirebaseInviteUserButton: React.FC = () => {
   const { openModal } = useModalService();
   const { formatMessage } = useIntl();
@@ -14,9 +18,11 @@ export const FirebaseInviteUserButton: React.FC = () => {
   const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId });
 
   const onOpenInviteUsersModal = () =>
-    openModal({
+    openModal<void>({
       title: formatMessage({ id: "modals.addUser.title" }),
-      content: () => <InviteUsersModal invitedFrom="user.settings" />,
+      content: ({ onComplete, onCancel }) => (
+        <InviteUsersModal invitedFrom="user.settings" onSubmit={onComplete} onCancel={onCancel} />
+      ),
       size: "md",
     });
 

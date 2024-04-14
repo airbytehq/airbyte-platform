@@ -91,39 +91,52 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
     val matchingStatus = InvitationStatus.pending
     val otherStatus = InvitationStatus.accepted
 
-    val matchingWorkspaceAndStatusInvitation =
+    // setup workspace invites
+
+    val matchingWorkspaceInvite =
       userInvitation.copy(
         id = UUID.randomUUID(),
         inviteCode = UUID.randomUUID().toString(),
         scopeId = workspaceId,
         status = matchingStatus,
       )
-    repository.save(matchingWorkspaceAndStatusInvitation)
+    repository.save(matchingWorkspaceInvite)
 
-    val anotherMatchingWorkspaceAndStatusInvitation =
-      matchingWorkspaceAndStatusInvitation.copy(
+    val anotherMatchingInvite =
+      matchingWorkspaceInvite.copy(
         id = UUID.randomUUID(),
         inviteCode = UUID.randomUUID().toString(),
       )
-    repository.save(anotherMatchingWorkspaceAndStatusInvitation)
+    repository.save(anotherMatchingInvite)
 
-    val matchingWorkspaceWrongStatusInvitation =
-      matchingWorkspaceAndStatusInvitation.copy(
+    val wrongStatusWorkspaceInvite =
+      matchingWorkspaceInvite.copy(
         id = UUID.randomUUID(),
         inviteCode = UUID.randomUUID().toString(),
         status = otherStatus,
       )
-    repository.save(matchingWorkspaceWrongStatusInvitation)
+    repository.save(wrongStatusWorkspaceInvite)
 
-    val wrongWorkspaceMatchingStatusInvitation =
-      matchingWorkspaceAndStatusInvitation.copy(
+    val wrongWorkspaceInvite =
+      matchingWorkspaceInvite.copy(
         id = UUID.randomUUID(),
         inviteCode = UUID.randomUUID().toString(),
         scopeId = otherWorkspaceId,
       )
-    repository.save(wrongWorkspaceMatchingStatusInvitation)
+    repository.save(wrongWorkspaceInvite)
 
-    val matchingOrganizationAndStatusInvitation =
+    val nothingMatchesWorkspaceInvite =
+      userInvitation.copy(
+        id = UUID.randomUUID(),
+        inviteCode = UUID.randomUUID().toString(),
+        scopeId = otherWorkspaceId,
+        status = otherStatus,
+      )
+    repository.save(nothingMatchesWorkspaceInvite)
+
+    // setup org invites
+
+    val matchingOrgInvite =
       userInvitation.copy(
         id = UUID.randomUUID(),
         inviteCode = UUID.randomUUID().toString(),
@@ -131,57 +144,135 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest<UserI
         scopeType = ScopeType.organization,
         status = matchingStatus,
       )
-    repository.save(matchingOrganizationAndStatusInvitation)
+    repository.save(matchingOrgInvite)
 
-    val anotherMatchingOrganizationAndStatusInvitation =
-      matchingOrganizationAndStatusInvitation.copy(
+    val anotherMatchingOrgInvite =
+      matchingOrgInvite.copy(
         id = UUID.randomUUID(),
         inviteCode = UUID.randomUUID().toString(),
       )
-    repository.save(anotherMatchingOrganizationAndStatusInvitation)
+    repository.save(anotherMatchingOrgInvite)
 
-    val matchingOrganizationWrongStatusInvitation =
-      matchingOrganizationAndStatusInvitation.copy(
+    val wrongStatusOrgInvite =
+      matchingOrgInvite.copy(
         id = UUID.randomUUID(),
         inviteCode = UUID.randomUUID().toString(),
         status = otherStatus,
       )
-    repository.save(matchingOrganizationWrongStatusInvitation)
+    repository.save(wrongStatusOrgInvite)
 
-    val wrongOrganizationMatchingStatusInvitation =
-      matchingOrganizationAndStatusInvitation.copy(
+    val wrongOrgInvite =
+      matchingOrgInvite.copy(
         id = UUID.randomUUID(),
         inviteCode = UUID.randomUUID().toString(),
         scopeId = otherOrganizationId,
         status = matchingStatus,
       )
-    repository.save(wrongOrganizationMatchingStatusInvitation)
+    repository.save(wrongOrgInvite)
 
-    val nothingMatchesInvitation =
+    val nothingMatchesOrgInvite =
       userInvitation.copy(
         id = UUID.randomUUID(),
         inviteCode = UUID.randomUUID().toString(),
-        scopeId = otherWorkspaceId,
+        scopeId = otherOrganizationId,
+        scopeType = ScopeType.organization,
         status = otherStatus,
       )
-    repository.save(nothingMatchesInvitation)
+    repository.save(nothingMatchesOrgInvite)
 
-    val expectedWorkspaceMatches = listOf(matchingWorkspaceAndStatusInvitation, anotherMatchingWorkspaceAndStatusInvitation)
-    val expectedOrganizationMatches = listOf(matchingOrganizationAndStatusInvitation, anotherMatchingOrganizationAndStatusInvitation)
+    val expectedWorkspaceMatches = listOf(matchingWorkspaceInvite, anotherMatchingInvite)
+    val expectedOrgMatches = listOf(matchingOrgInvite, anotherMatchingOrgInvite)
 
-    val actualWorkspaceInvitations = repository.findByStatusAndScopeTypeAndScopeId(matchingStatus, EntityScopeType.workspace, workspaceId)
-    val actualOrganizationInvitations = repository.findByStatusAndScopeTypeAndScopeId(matchingStatus, EntityScopeType.organization, organizationId)
+    val actualWorkspaceInvites = repository.findByStatusAndScopeTypeAndScopeId(matchingStatus, EntityScopeType.workspace, workspaceId)
+    val actualOrgInvites = repository.findByStatusAndScopeTypeAndScopeId(matchingStatus, EntityScopeType.organization, organizationId)
 
-    // for each worksapce invitation found, make sure that it has a match by calling assertInvitationEquals
+    // for each workspace invitation found, make sure that it has a match by calling assertInvitationEquals
     expectedWorkspaceMatches.forEach { expected ->
-      val actual = actualWorkspaceInvitations.find { it.id == expected.id }
+      val actual = actualWorkspaceInvites.find { it.id == expected.id }
       assert(actual != null)
       assertInvitationEquals(expected, actual!!)
     }
 
     // for each organization invitation found, make sure that it has a match by calling assertInvitationEquals
-    expectedOrganizationMatches.forEach { expected ->
-      val actual = actualOrganizationInvitations.find { it.id == expected.id }
+    expectedOrgMatches.forEach { expected ->
+      val actual = actualOrgInvites.find { it.id == expected.id }
+      assert(actual != null)
+      assertInvitationEquals(expected, actual!!)
+    }
+  }
+
+  @Test
+  fun `test find by status and scope type and scope id and invited email`() {
+    val workspaceId = UUID.randomUUID()
+    val otherWorkspaceId = UUID.randomUUID()
+    val matchingStatus = InvitationStatus.pending
+    val otherStatus = InvitationStatus.accepted
+    val matchingEmail = "matching@airbyte.io"
+    val otherEmail = "other@airbyte.io"
+
+    val matchingInvite =
+      userInvitation.copy(
+        id = UUID.randomUUID(),
+        inviteCode = UUID.randomUUID().toString(),
+        scopeId = workspaceId,
+        status = matchingStatus,
+        invitedEmail = matchingEmail,
+      )
+    repository.save(matchingInvite)
+
+    val anotherMatchingInvite =
+      matchingInvite.copy(
+        id = UUID.randomUUID(),
+        inviteCode = UUID.randomUUID().toString(),
+      )
+    repository.save(anotherMatchingInvite)
+
+    val wrongEmailInvite =
+      matchingInvite.copy(
+        id = UUID.randomUUID(),
+        inviteCode = UUID.randomUUID().toString(),
+        invitedEmail = otherEmail,
+      )
+    repository.save(wrongEmailInvite)
+
+    val wrongWorkspaceInvite =
+      matchingInvite.copy(
+        id = UUID.randomUUID(),
+        inviteCode = UUID.randomUUID().toString(),
+        scopeId = otherWorkspaceId,
+      )
+    repository.save(wrongWorkspaceInvite)
+
+    val wrongStatusInvite =
+      matchingInvite.copy(
+        id = UUID.randomUUID(),
+        inviteCode = UUID.randomUUID().toString(),
+        status = otherStatus,
+      )
+    repository.save(wrongStatusInvite)
+
+    val wrongEverythingInvite =
+      userInvitation.copy(
+        id = UUID.randomUUID(),
+        inviteCode = UUID.randomUUID().toString(),
+        invitedEmail = otherEmail,
+        scopeId = otherWorkspaceId,
+        status = otherStatus,
+      )
+    repository.save(wrongEverythingInvite)
+
+    val expectedMatches = listOf(matchingInvite, anotherMatchingInvite)
+    val actualMatches =
+      repository.findByStatusAndScopeTypeAndScopeIdAndInvitedEmail(
+        matchingStatus,
+        EntityScopeType.workspace,
+        workspaceId,
+        matchingEmail,
+      )
+
+    // for each invitation found, make sure that it has a match by calling assertInvitationEquals
+    expectedMatches.forEach { expected ->
+      val actual = actualMatches.find { it.id == expected.id }
       assert(actual != null)
       assertInvitationEquals(expected, actual!!)
     }

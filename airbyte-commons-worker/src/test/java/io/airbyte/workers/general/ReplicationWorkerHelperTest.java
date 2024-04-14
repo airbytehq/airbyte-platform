@@ -17,6 +17,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.airbyte.api.client.generated.DestinationApi;
+import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -29,6 +31,7 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
+import io.airbyte.workers.helper.StreamStatusCompletionTracker;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
@@ -54,6 +57,7 @@ class ReplicationWorkerHelperTest {
   private AirbyteMessageTracker messageTracker;
   private SyncPersistence syncPersistence;
   private AnalyticsMessageTracker analyticsMessageTracker;
+  private StreamStatusCompletionTracker streamStatusCompletionTracker;
 
   @BeforeEach
   void setUp() {
@@ -63,6 +67,7 @@ class ReplicationWorkerHelperTest {
     messageTracker = mock(AirbyteMessageTracker.class);
     analyticsMessageTracker = mock(AnalyticsMessageTracker.class);
     when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
+    streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(
         mock(AirbyteMessageDataExtractor.class),
         mock(FieldSelector.class),
@@ -75,17 +80,24 @@ class ReplicationWorkerHelperTest {
         mock(WorkloadApi.class),
         false,
         analyticsMessageTracker,
-        Optional.empty()));
+        Optional.empty(),
+        mock(SourceApi.class),
+        mock(DestinationApi.class),
+        streamStatusCompletionTracker));
   }
 
   @Test
   void testGetReplicationOutput() throws JsonProcessingException {
     // Need to pass in a replication context
+    final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog().withAdditionalProperty("test", "test");
+    final ReplicationContext replicationContext = new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L,
+        1, UUID.randomUUID(), SOURCE_IMAGE, DESTINATION_IMAGE, UUID.randomUUID(), UUID.randomUUID());
     replicationWorkerHelper.initialize(
-        new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L,
-            1, UUID.randomUUID(), SOURCE_IMAGE, DESTINATION_IMAGE),
+        replicationContext,
         mock(ReplicationFeatureFlags.class),
-        mock(Path.class));
+        mock(Path.class),
+        catalog);
+    verify(streamStatusCompletionTracker).startTracking(catalog, replicationContext);
     // Need to have a configured catalog for getReplicationOutput
     replicationWorkerHelper.startDestination(
         mock(AirbyteDestination.class),
@@ -106,12 +118,13 @@ class ReplicationWorkerHelperTest {
   void testAnalyticsMessageHandling() {
     final ReplicationContext context =
         new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L,
-            1, UUID.randomUUID(), SOURCE_IMAGE, DESTINATION_IMAGE);
+            1, UUID.randomUUID(), SOURCE_IMAGE, DESTINATION_IMAGE, UUID.randomUUID(), UUID.randomUUID());
     // Need to pass in a replication context
     replicationWorkerHelper.initialize(
         context,
         mock(ReplicationFeatureFlags.class),
-        mock(Path.class));
+        mock(Path.class),
+        mock(ConfiguredAirbyteCatalog.class));
     // Need to have a configured catalog for getReplicationOutput
     replicationWorkerHelper.startDestination(
         mock(AirbyteDestination.class),

@@ -1,7 +1,7 @@
 import classNames from "classnames";
 import { dump, load, YAMLException } from "js-yaml";
 import debounce from "lodash/debounce";
-import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FieldPath, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -16,7 +16,6 @@ import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
-import { SimpleRetrieverPaginator } from "core/api/types/ConnectorManifest";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import {
   useConnectorBuilderFormManagementState,
@@ -85,7 +84,7 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
                 <CardToggle path={inputsConfig.path} defaultValue={inputsConfig.defaultValue} />
               )}
               <ControlLabels
-                className={classNames({ [styles.toggleLabel]: inputsConfig?.toggleable })}
+                className={classNames(styles.label, { [styles.toggleLabel]: inputsConfig?.toggleable })}
                 label={label}
                 infoTooltipContent={tooltip}
                 htmlFor={inputsConfig ? String(inputsConfig.path) : undefined}
@@ -238,7 +237,7 @@ const YamlEditableComponent: React.FC<React.PropsWithChildren<YamlEditableCompon
 
             let builderFormValue;
             try {
-              const manifestValue = load(formValue) as SimpleRetrieverPaginator;
+              const manifestValue = load(formValue);
               builderFormValue = manifestToBuilder(manifestValue);
             } catch (e) {
               const isKnownError = e instanceof ManifestCompatibilityError || e instanceof YAMLException;
@@ -383,7 +382,7 @@ const CopyToModal: React.FC<{
   const streams = useBuilderWatch("formValues.streams");
   const [selectMap, setSelectMap] = useState<Record<string, boolean>>({});
   return (
-    <Modal size="sm" title={title} onClose={onCancel}>
+    <Modal size="sm" title={title} onCancel={onCancel}>
       <form
         onSubmit={() => {
           onApply(
@@ -430,7 +429,7 @@ const CopyFromModal: React.FC<{
 }> = ({ onCancel, onSelect, title, currentStreamIndex }) => {
   const streams = useBuilderWatch("formValues.streams");
   return (
-    <Modal size="sm" title={title} onClose={onCancel}>
+    <Modal size="sm" title={title} onCancel={onCancel}>
       <ModalBody className={styles.modalStreamListContainer}>
         {streams.map((stream, index) =>
           currentStreamIndex === index ? null : (

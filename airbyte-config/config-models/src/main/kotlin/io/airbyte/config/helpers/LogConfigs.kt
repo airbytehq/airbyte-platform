@@ -17,7 +17,7 @@ class LogConfigs(
     val EMPTY: LogConfigs =
       LogConfigs(
         LocalStorageConfig(
-          StorageBucketConfig("log", "state", "workload"),
+          StorageBucketConfig("log", "state", "workload", "payload"),
           "/tmp/local-storage",
         ),
       )

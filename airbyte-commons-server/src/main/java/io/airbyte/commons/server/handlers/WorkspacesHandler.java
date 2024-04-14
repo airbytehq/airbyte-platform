@@ -14,7 +14,6 @@ import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationRead;
-import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody;
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
@@ -38,6 +37,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
 import io.airbyte.commons.server.converters.NotificationSettingsConverter;
+import io.airbyte.commons.server.converters.WorkspaceConverter;
 import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
@@ -112,30 +112,6 @@ public class WorkspacesHandler {
     this.workspaceService = workspaceService;
     this.slugify = new Slugify();
     this.trackingClient = trackingClient;
-  }
-
-  private static WorkspaceRead buildWorkspaceRead(final StandardWorkspace workspace) {
-    final WorkspaceRead result = new WorkspaceRead()
-        .workspaceId(workspace.getWorkspaceId())
-        .customerId(workspace.getCustomerId())
-        .email(workspace.getEmail())
-        .name(workspace.getName())
-        .slug(workspace.getSlug())
-        .initialSetupComplete(workspace.getInitialSetupComplete())
-        .displaySetupWizard(workspace.getDisplaySetupWizard())
-        .anonymousDataCollection(workspace.getAnonymousDataCollection())
-        .news(workspace.getNews())
-        .securityUpdates(workspace.getSecurityUpdates())
-        .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
-        .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
-        .defaultGeography(Enums.convertTo(workspace.getDefaultGeography(), Geography.class))
-        .organizationId(workspace.getOrganizationId())
-        .tombstone(workspace.getTombstone());
-    // Add read-only webhook configs.
-    if (workspace.getWebhookOperationConfigs() != null) {
-      result.setWebhookConfigs(WorkspaceWebhookConfigsConverter.toApiReads(workspace.getWebhookOperationConfigs()));
-    }
-    return result;
   }
 
   public WorkspaceRead createWorkspace(final WorkspaceCreate workspaceCreate)
@@ -304,7 +280,7 @@ public class WorkspacesHandler {
 
   public WorkspaceReadList listWorkspaces() throws JsonValidationException, IOException {
     final List<WorkspaceRead> reads = configRepository.listStandardWorkspaces(false).stream()
-        .map(WorkspacesHandler::buildWorkspaceRead)
+        .map(WorkspaceConverter::domainToApiModel)
         .collect(Collectors.toList());
     return new WorkspaceReadList().workspaces(reads);
   }
@@ -319,7 +295,7 @@ public class WorkspacesHandler {
             listResourcesForWorkspacesRequestBody.getPagination().getRowOffset(),
             listResourcesForWorkspacesRequestBody.getNameContains()))
         .stream()
-        .map(WorkspacesHandler::buildWorkspaceRead)
+        .map(WorkspaceConverter::domainToApiModel)
         .collect(Collectors.toList());
     return new WorkspaceReadList().workspaces(reads);
   }
@@ -334,7 +310,7 @@ public class WorkspacesHandler {
 
     final List<WorkspaceRead> reads = standardWorkspaces
         .stream()
-        .map(WorkspacesHandler::buildWorkspaceRead)
+        .map(WorkspaceConverter::domainToApiModel)
         .collect(Collectors.toList());
     return new WorkspaceReadList().workspaces(reads);
   }
@@ -344,7 +320,7 @@ public class WorkspacesHandler {
     final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
     final boolean includeTombstone = workspaceIdRequestBody.getIncludeTombstone() != null ? workspaceIdRequestBody.getIncludeTombstone() : false;
     final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, includeTombstone);
-    return buildWorkspaceRead(workspace);
+    return WorkspaceConverter.domainToApiModel(workspace);
   }
 
   public WorkspaceOrganizationInfoRead getWorkspaceOrganizationInfo(final WorkspaceIdRequestBody workspaceIdRequestBody)
@@ -361,14 +337,14 @@ public class WorkspacesHandler {
   public WorkspaceRead getWorkspaceBySlug(final SlugRequestBody slugRequestBody) throws IOException, ConfigNotFoundException {
     // for now we assume there is one workspace and it has a default uuid.
     final StandardWorkspace workspace = configRepository.getWorkspaceBySlug(slugRequestBody.getSlug(), false);
-    return buildWorkspaceRead(workspace);
+    return WorkspaceConverter.domainToApiModel(workspace);
   }
 
   public WorkspaceRead getWorkspaceByConnectionId(final ConnectionIdRequestBody connectionIdRequestBody, boolean includeTombstone)
       throws ConfigNotFoundException {
     final StandardWorkspace workspace =
         configRepository.getStandardWorkspaceFromConnection(connectionIdRequestBody.getConnectionId(), includeTombstone);
-    return buildWorkspaceRead(workspace);
+    return WorkspaceConverter.domainToApiModel(workspace);
   }
 
   public WorkspaceReadList listWorkspacesInOrganization(final ListWorkspacesInOrganizationRequestBody request) throws IOException {
@@ -381,13 +357,13 @@ public class WorkspacesHandler {
                   false, request.getPagination().getPageSize(), request.getPagination().getRowOffset()),
               nameContains)
           .stream()
-          .map(WorkspacesHandler::buildWorkspaceRead)
+          .map(WorkspaceConverter::domainToApiModel)
           .collect(Collectors.toList());
     } else {
       standardWorkspaces = workspacePersistence
           .listWorkspacesByOrganizationId(request.getOrganizationId(), false, nameContains)
           .stream()
-          .map(WorkspacesHandler::buildWorkspaceRead)
+          .map(WorkspaceConverter::domainToApiModel)
           .collect(Collectors.toList());
     }
     return new WorkspaceReadList().workspaces(standardWorkspaces);
@@ -402,13 +378,13 @@ public class WorkspacesHandler {
               false, request.getPagination().getPageSize(), request.getPagination().getRowOffset(),
               nameContains)
           .stream()
-          .map(WorkspacesHandler::buildWorkspaceRead)
+          .map(WorkspaceConverter::domainToApiModel)
           .collect(Collectors.toList());
     } else {
       standardWorkspaces = workspacePersistence
           .listWorkspacesByInstanceAdminUser(false, nameContains)
           .stream()
-          .map(WorkspacesHandler::buildWorkspaceRead)
+          .map(WorkspaceConverter::domainToApiModel)
           .collect(Collectors.toList());
     }
     return new WorkspaceReadList().workspaces(standardWorkspaces);
@@ -430,13 +406,13 @@ public class WorkspacesHandler {
                   false, request.getPagination().getPageSize(), request.getPagination().getRowOffset()),
               nameContains)
           .stream()
-          .map(WorkspacesHandler::buildWorkspaceRead)
+          .map(WorkspaceConverter::domainToApiModel)
           .collect(Collectors.toList());
     } else {
       standardWorkspaces = workspacePersistence
           .listActiveWorkspacesByUserId(request.getUserId(), nameContains)
           .stream()
-          .map(WorkspacesHandler::buildWorkspaceRead)
+          .map(WorkspaceConverter::domainToApiModel)
           .collect(Collectors.toList());
     }
     return new WorkspaceReadList().workspaces(standardWorkspaces);
@@ -453,7 +429,7 @@ public class WorkspacesHandler {
 
     validateWorkspacePatch(workspace, workspacePatch);
 
-    LOGGER.debug("Initial WorkspaceRead: {}", buildWorkspaceRead(workspace));
+    LOGGER.debug("Initial WorkspaceRead: {}", WorkspaceConverter.domainToApiModel(workspace));
 
     applyPatchToStandardWorkspace(workspace, workspacePatch);
 
@@ -514,7 +490,7 @@ public class WorkspacesHandler {
 
   private WorkspaceRead buildWorkspaceReadFromId(final UUID workspaceId) throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, false);
-    return buildWorkspaceRead(workspace);
+    return WorkspaceConverter.domainToApiModel(workspace);
   }
 
   private WorkspaceOrganizationInfoRead buildWorkspaceOrganizationInfoRead(final Organization organization) {
@@ -593,7 +569,7 @@ public class WorkspacesHandler {
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
-    return buildWorkspaceRead(workspace);
+    return WorkspaceConverter.domainToApiModel(workspace);
   }
 
 }

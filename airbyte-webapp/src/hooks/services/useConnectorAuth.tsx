@@ -4,7 +4,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useAsyncFn, useEffectOnce, useEvent, useUnmount } from "react-use";
 import { v4 as uuid } from "uuid";
 
-import { useCompleteOAuth, useConsentUrls, isCommonRequestError } from "core/api";
+import { HttpError, useCompleteOAuth, useConsentUrls } from "core/api";
 import {
   CompleteOAuthResponse,
   CompleteOAuthResponseAuthPayload,
@@ -131,7 +131,7 @@ export function useConnectorAuth(): {
         return { consentUrl: response.consentUrl, payload };
       } catch (e) {
         // If this API returns a 404 the OAuth credentials have not been added to the database.
-        if (isCommonRequestError(e) && e.status === 404) {
+        if (e instanceof HttpError && e.status === 404) {
           if (process.env.NODE_ENV === "development") {
             notificationService.registerNotification({
               id: "oauthConnector.credentialsMissing",

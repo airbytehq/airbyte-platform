@@ -29,7 +29,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<React.PropsWithChildren<SidebarProps>> = ({ className, yamlSelected, children }) => {
   const analyticsService = useAnalyticsService();
-  const { toggleUI } = useConnectorBuilderFormState();
+  const { toggleUI, isResolving } = useConnectorBuilderFormState();
   const formValues = useBuilderWatch("formValues");
   const showSavingIndicator = yamlSelected || formValues.streams.length > 0;
   const OnUiToggleClick = () => {
@@ -43,7 +43,15 @@ export const Sidebar: React.FC<React.PropsWithChildren<SidebarProps>> = ({ class
 
   return (
     <FlexContainer direction="column" alignItems="stretch" gap="xl" className={classnames(className, styles.container)}>
-      <UiYamlToggleButton yamlSelected={yamlSelected} onClick={OnUiToggleClick} size="sm" />
+      <UiYamlToggleButton
+        yamlSelected={yamlSelected}
+        onClick={OnUiToggleClick}
+        size="sm"
+        disabled={yamlSelected && isResolving}
+        tooltip={
+          yamlSelected && isResolving ? <FormattedMessage id="connectorBuilder.resolvingStreamList" /> : undefined
+        }
+      />
 
       <FlexContainer direction="column" alignItems="center">
         <ConnectorImage />

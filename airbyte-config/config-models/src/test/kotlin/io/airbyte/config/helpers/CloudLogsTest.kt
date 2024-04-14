@@ -7,7 +7,7 @@ import io.airbyte.config.storage.StorageBucketConfig
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
-private val buckets = StorageBucketConfig(log = "log", state = "state", workloadOutput = "workload")
+private val buckets = StorageBucketConfig(log = "log", state = "state", workloadOutput = "workload", activityPayload = "payload")
 
 class CloudLogsTest {
   @Test

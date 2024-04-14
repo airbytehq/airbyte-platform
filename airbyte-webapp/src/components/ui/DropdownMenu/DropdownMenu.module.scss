@@ -6,7 +6,6 @@
   z-index: z-indices.$dropdownMenu;
   overflow: auto;
   max-height: 300px;
-  padding: variables.$spacing-sm;
   outline: none;
   border-radius: variables.$border-radius-md;
   background-color: colors.$foreground;
@@ -28,11 +27,10 @@
   align-items: center;
   height: 42px;
   width: 100%;
-  padding: 0 variables.$spacing-lg;
+  padding: 0 variables.$spacing-xl;
   border: 0;
   background-color: transparent;
   text-decoration: none;
-  border-radius: variables.$border-radius-md;
 
   .icon {
     display: flex;
@@ -52,7 +50,7 @@
   }
 
   &.active {
-    background-color: colors.$grey-100;
+    background-color: colors.$blue-50;
   }
 
   &.disabled {

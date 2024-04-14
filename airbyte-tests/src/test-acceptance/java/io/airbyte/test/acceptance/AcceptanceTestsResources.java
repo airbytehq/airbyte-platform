@@ -42,6 +42,7 @@ import io.airbyte.test.utils.TestConnectionCreate.Builder;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Collections;
@@ -276,7 +277,7 @@ public class AcceptanceTestsResources {
         StreamStatusJobType.SYNC);
   }
 
-  void init() throws URISyntaxException, IOException, InterruptedException, ApiException {
+  void init() throws URISyntaxException, IOException, InterruptedException, ApiException, GeneralSecurityException {
     // TODO(mfsiega-airbyte): clean up and centralize the way we do config.
     final boolean isGke = System.getenv().containsKey(IS_GKE);
     // Set up the API client.

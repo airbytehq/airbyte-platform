@@ -67,15 +67,15 @@ export const loadOsano = (): void => {
   );
   document.head.appendChild(style);
 
-  // Create and append the script tag to  load osano
+  // Create and append the script tag to load osano
   const script = document.createElement("script");
   script.src = `https://cmp.osano.com/${process.env.REACT_APP_OSANO}/osano.js`;
   script.addEventListener("load", () => {
     window.Osano?.cm.addEventListener("osano-cm-script-blocked", (item) => {
-      console.debug(`Script blocked by Osano: ${item}`);
+      console.debug(`🛡️ [Osano] Script blocked: ${item}`);
     });
     window.Osano?.cm.addEventListener("osano-cm-cookie-blocked", (item) => {
-      console.debug(`Cookie blocked by Osano: ${item}`);
+      console.debug(`️🛡️ [Osano] Cookie blocked: ${item}`);
     });
   });
   document.head.appendChild(script);

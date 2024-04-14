@@ -12,3 +12,4 @@ enum:
   - reset_connection
   - connection_updater
   - replicate
+  - refresh

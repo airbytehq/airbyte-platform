@@ -55,6 +55,7 @@ micronaut:
         max-content-length: 52428800 # 50MB
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+      max-header-size: ${NETTY_MAX_HEADER_SIZE:32768}
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
   http:
     client:
@@ -81,6 +82,7 @@ airbyte:
         log: ${STORAGE_BUCKET_LOG}
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
+        activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       local:

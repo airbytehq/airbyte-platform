@@ -30,6 +30,7 @@ describe("ExperimentService", () => {
             removeContext,
             getExperiment,
             getExperimentChanges$: () => EMPTY,
+            getAllExperiments: () => ({}),
           }}
         >
           {children}
@@ -48,6 +49,7 @@ describe("ExperimentService", () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             getExperiment: () => undefined as any,
             getExperimentChanges$: () => EMPTY,
+            getAllExperiments: () => ({}),
           }}
         >
           {children}
@@ -72,6 +74,7 @@ describe("ExperimentService", () => {
             getExperiment,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             getExperimentChanges$: () => subject.asObservable() as any,
+            getAllExperiments: () => ({}),
           }}
         >
           {children}

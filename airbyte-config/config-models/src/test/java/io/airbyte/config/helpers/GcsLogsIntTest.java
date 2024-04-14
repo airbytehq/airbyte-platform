@@ -27,10 +27,7 @@ class GcsLogsIntTest {
 
   private static Storage getClientFactory() {
     return new DefaultGcsClientFactory(new GcsStorageConfig(
-        new StorageBucketConfig(
-            System.getenv(EnvVar.STORAGE_BUCKET_LOG.name()),
-            "",
-            ""),
+        new StorageBucketConfig(System.getenv(EnvVar.STORAGE_BUCKET_LOG.name()), "", "", ""),
         System.getenv(EnvVar.GOOGLE_APPLICATION_CREDENTIALS.name()))).get();
   }
 

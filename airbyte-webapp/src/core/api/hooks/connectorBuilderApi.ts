@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_JSON_MANIFEST_VALUES, ManifestValuePerComponentPerStream } from "components/connectorBuilder/types";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { CommonRequestError } from "core/api/errors";
+import { HttpError } from "core/api";
 
 import { readStream, resolveManifest } from "../generated/ConnectorBuilderClient";
 import { KnownExceptionInfo } from "../generated/ConnectorBuilderClient.schemas";
@@ -49,14 +49,13 @@ export const useBuilderReadStream = (
 
 export const useBuilderResolvedManifest = (
   params: ResolveManifestRequestBody,
-  mode: "ui" | "yaml",
-  manifestValuePerComponentPerStream: ManifestValuePerComponentPerStream,
-  enabled = true
+  enabled = true,
+  manifestValuePerComponentPerStream?: ManifestValuePerComponentPerStream
 ) => {
   const requestOptions = useRequestOptions();
 
-  return useQuery<ResolveManifest, CommonRequestError<KnownExceptionInfo>>(
-    mode === "yaml"
+  return useQuery<ResolveManifest, HttpError<KnownExceptionInfo>>(
+    manifestValuePerComponentPerStream === undefined
       ? connectorBuilderKeys.resolveYaml(params.manifest)
       : connectorBuilderKeys.resolveUi(manifestValuePerComponentPerStream),
     () => resolveManifest(params, requestOptions),

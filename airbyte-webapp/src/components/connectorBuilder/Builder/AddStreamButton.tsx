@@ -124,7 +124,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
         <Modal
           size="sm"
           title={modalTitle ?? <FormattedMessage id="connectorBuilder.addStreamModal.title" />}
-          onClose={() => {
+          onCancel={() => {
             setIsOpen(false);
           }}
         >

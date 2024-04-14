@@ -1,6 +1,8 @@
 plugins {
     id("io.airbyte.gradle.jvm.lib")
     id("io.airbyte.gradle.publish")
+    kotlin("jvm")
+    kotlin("kapt")
 }
 
 configurations.all {
@@ -12,6 +14,10 @@ configurations.all {
 dependencies {
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)     // Lombok must be added BEFORE Micronaut
+    annotationProcessor(libs.bundles.micronaut.annotation.processor)
+
+    kapt(platform(libs.micronaut.platform))
+    kapt(libs.bundles.micronaut.annotation.processor)
 
     implementation(platform(libs.fasterxml))
     implementation(libs.bundles.jackson)
@@ -47,6 +53,8 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-exporter-otlp")
     implementation(libs.apache.commons.collections)
     implementation(libs.datadog.statsd.client)
+    implementation(libs.bundles.micronaut.data.jdbc)
+    implementation(libs.bundles.micronaut.kotlin)
 
     testImplementation(project(":airbyte-config:config-persistence"))
     testImplementation(project(":airbyte-test-utils"))

@@ -19,7 +19,8 @@ then
     TARGET_FILE="build/declarative_component_schema-${CDK_VERSION}.yaml"
     if [ ! -f "$TARGET_FILE" ]; then
         echo "Downloading CDK manifest schema $CDK_VERSION from pypi"
-        curl -L https://pypi.python.org/packages/source/a/airbyte-cdk/airbyte-cdk-${CDK_VERSION}.tar.gz | tar -xzO airbyte-cdk-${CDK_VERSION}/airbyte_cdk/sources/declarative/declarative_component_schema.yaml > ${TARGET_FILE}
+        pypi_url=$(curl -s https://pypi.org/pypi/airbyte-cdk/${CDK_VERSION}/json | jq -r '.urls[] | select(.packagetype == "sdist") | .url')
+        curl $pypi_url | tar -xzO airbyte_cdk-${CDK_VERSION}/airbyte_cdk/sources/declarative/declarative_component_schema.yaml > ${TARGET_FILE}
     else
         echo "Found cached CDK manifest schema $CDK_VERSION"
     fi

@@ -13,9 +13,9 @@ import io.airbyte.api.model.generated.WebBackendConnectionReadList;
 import io.airbyte.api.model.generated.WebBackendConnectionRequestBody;
 import io.airbyte.api.model.generated.WebBackendGeographiesListResult;
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult;
+import io.airbyte.commons.server.authorization.ApiAuthorizationHelper;
+import io.airbyte.commons.server.errors.problems.ForbiddenProblem;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.server.apis.publicapi.authorization.AirbyteApiAuthorizationHelper;
-import io.airbyte.server.apis.publicapi.problems.ForbiddenProblem;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Requires;
@@ -35,7 +35,7 @@ import org.mockito.Mockito;
 @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class WebBackendApiTest extends BaseControllerTest {
 
-  private AirbyteApiAuthorizationHelper airbyteApiAuthorizationHelper;
+  private ApiAuthorizationHelper apiAuthorizationHelper;
 
   // Due to some strange interaction between Micronaut 3, Java, and Kotlin, the only way to
   // mock this Kotlin dependency is to annotate it with @Bean instead of @MockBean, and to
@@ -43,13 +43,13 @@ class WebBackendApiTest extends BaseControllerTest {
   // back to BaseControllerTest and use @MockBean after we upgrade to Micronaut 4.
   @Singleton
   @Primary
-  AirbyteApiAuthorizationHelper mmAirbyteApiAuthorizationHelper() {
-    return airbyteApiAuthorizationHelper;
+  ApiAuthorizationHelper mmAirbyteApiAuthorizationHelper() {
+    return apiAuthorizationHelper;
   }
 
   @BeforeEach
   void setup() {
-    airbyteApiAuthorizationHelper = Mockito.mock(AirbyteApiAuthorizationHelper.class);
+    apiAuthorizationHelper = Mockito.mock(ApiAuthorizationHelper.class);
   }
 
   @Test
@@ -100,7 +100,7 @@ class WebBackendApiTest extends BaseControllerTest {
         .doNothing() // first call that makes it here passes auth check
         .doNothing() // second call that makes it here passes auth check but 404s
         .doThrow(new ForbiddenProblem("forbidden")) // third call fails auth check and 403s
-        .when(airbyteApiAuthorizationHelper).checkWorkspacePermissions(Mockito.anyString(), Mockito.any(), Mockito.any());
+        .when(apiAuthorizationHelper).checkWorkspacePermissions(Mockito.anyString(), Mockito.any(), Mockito.any());
 
     // first call doesn't activate checkWorkspacePermissions because withRefreshedCatalog is false
     testEndpointStatus(

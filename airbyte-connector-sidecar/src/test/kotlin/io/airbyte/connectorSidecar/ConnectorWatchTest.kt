@@ -192,12 +192,12 @@ class ConnectorWatchTest {
 
     every { connectorWatcher.exitFileNotFound() } returns Unit
 
-    every { workloadApi.workloadFailure(WorkloadFailureRequest(workloadId)) } returns Unit
+    every { workloadApi.workloadFailure(any()) } returns Unit
 
     connectorWatcher.run()
 
     verifyOrder {
-      workloadApi.workloadFailure(WorkloadFailureRequest(workloadId))
+      workloadApi.workloadFailure(any())
       connectorWatcher.exitFileNotFound()
     }
   }

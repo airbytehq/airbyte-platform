@@ -29,6 +29,8 @@ spec:
         {{ include "airbyte.minioSelectorLabels" . | nindent 8 }}
     spec:
       # Refer to the PVC created earlier
+      securityContext:
+        fsGroup: 1000
       containers:
         - name: airbyte-minio
           # Pulls the default Minio image from Docker Hub
@@ -51,6 +53,19 @@ spec:
           ports:
             - containerPort: 9000
           # Mount the volume into the pod
+          securityContext:
+            allowPrivilegeEscalation: false 
+            runAsNonRoot: true
+            # uid=1000(airbyte)
+            runAsUser: 1000
+            # gid=1000(airbyte)
+            runAsGroup: 1000
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+
           volumeMounts:
             - name: airbyte-minio-pv-claim # must match the volume name, above
               mountPath: "/storage"
@@ -96,15 +111,29 @@ metadata:
     "helm.sh/hook-delete-policy": hook-succeeded, before-hook-creation
 spec:
   restartPolicy: OnFailure
+  securityContext:
+    fsGroup: 1000
   containers:
     - name: minio-mc
-      image: minio/mc
+      image: airbyte/mc
       command: ["/bin/sh", "-c",
         "until (/usr/bin/mc config host add myminio $MINIO_ENDPOINT $MINIO_ACCESS_KEY $MINIO_SECRET_KEY) do echo '...waiting...' && sleep 1; done;
           /usr/bin/mc mb --ignore-existing myminio/state-storage;
           /usr/bin/mc policy set public myminio/state-storage;
           /usr/bin/mc mb --ignore-existing myminio/airbyte-dev-logs;
           /usr/bin/mc policy set public myminio/airbyte-dev-logs;"]
+      securityContext:
+        allowPrivilegeEscalation: false 
+        runAsNonRoot: true
+        # uid=1000(airbyte)
+        runAsUser: 1000
+        # gid=1000(airbyte)
+        runAsGroup: 1000
+        readOnlyRootFilesystem: false
+        capabilities:
+          drop: ["ALL"]
+        seccompProfile:
+          type: RuntimeDefault
       env:
         {{- if and (eq (lower (default "" .Values.global.storage.type)) "minio") (((.Values.global).storage).minio) }}
         - name: MINIO_ACCESS_KEY

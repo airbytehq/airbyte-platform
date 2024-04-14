@@ -189,7 +189,7 @@ const manifestStreamToBuilder = (
   return {
     ...DEFAULT_BUILDER_STREAM_VALUES,
     id: index.toString(),
-    name: stream.name ?? "",
+    name: stream.name ?? `stream_${index}`,
     urlPath: requester.path,
     httpMethod: requester.http_method === "POST" ? "POST" : "GET",
     fieldPointer: retriever.record_selector.extractor.field_path as string[],

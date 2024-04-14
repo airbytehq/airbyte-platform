@@ -434,7 +434,7 @@ public class DefaultJobPersistence implements JobPersistence {
       // TODO feature flag this for data types rollout
       // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(jobOutput.getDiscoverCatalog().getCatalog());
       CatalogMigrationV1Helper.downgradeSchemaIfNeeded(jobOutput.getDiscoverCatalog().getCatalog());
-    } else if (jobOutput.getOutputType() == OutputType.SYNC && jobOutput.getSync() != null) {
+    } else if (jobOutput.getOutputType() == OutputType.SYNC && jobOutput.getSync() != null && jobOutput.getSync().getOutputCatalog() != null) {
       // TODO feature flag this for data types rollout
       // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(jobOutput.getSync().getOutputCatalog());
       CatalogMigrationV1Helper.downgradeSchemaIfNeeded(jobOutput.getSync().getOutputCatalog());
@@ -935,12 +935,10 @@ public class DefaultJobPersistence implements JobPersistence {
           .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))
           .and(updatedAtEnd == null ? DSL.noCondition() : JOBS.UPDATED_AT.le(updatedAtEnd))
           .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
-          .limit(limit)
-          .offset(offset)
           .getSQL(ParamType.INLINED) + ") AS jobs";
 
       LOGGER.debug("jobs subquery: {}", jobsSubquery);
-      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + buildJobOrderByString(orderByField, orderByMethod)));
+      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + buildJobOrderByString(orderByField, orderByMethod, limit, offset)));
     });
   }
 
@@ -975,11 +973,9 @@ public class DefaultJobPersistence implements JobPersistence {
           .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))
           .and(updatedAtEnd == null ? DSL.noCondition() : JOBS.UPDATED_AT.le(updatedAtEnd))
           .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
-          .limit(limit)
-          .offset(offset)
           .getSQL(ParamType.INLINED) + ") AS jobs";
 
-      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + buildJobOrderByString(orderByField, orderByMethod)));
+      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + buildJobOrderByString(orderByField, orderByMethod, limit, offset)));
     });
   }
 
@@ -1437,7 +1433,7 @@ public class DefaultJobPersistence implements JobPersistence {
     return value != null ? value.replaceAll("\\u0000|\\\\u0000", "") : null;
   }
 
-  private String buildJobOrderByString(final String orderByField, final String orderByMethod) {
+  private String buildJobOrderByString(final String orderByField, final String orderByMethod, final int limit, final int offset) {
     // Set up maps and values
     final Map<OrderByField, String> fieldMap = Map.of(
         OrderByField.CREATED_AT, JOBS.CREATED_AT.getName(),
@@ -1457,7 +1453,7 @@ public class DefaultJobPersistence implements JobPersistence {
       sortMethod = orderByMethod.toUpperCase();
     }
 
-    return String.format("ORDER BY jobs.%s %s ", field, sortMethod);
+    return String.format("ORDER BY jobs.%s %s LIMIT %d OFFSET %d", field, sortMethod, limit, offset);
   }
 
   private enum OrderByField {

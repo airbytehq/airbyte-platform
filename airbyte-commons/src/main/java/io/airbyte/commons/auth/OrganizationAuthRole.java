@@ -16,7 +16,7 @@ import java.util.stream.Stream;
  * organization leveled auth role and workspace leveled auth roles. See AuthRole.java for more
  * information.
  */
-public enum OrganizationAuthRole {
+public enum OrganizationAuthRole implements AuthRoleInterface {
 
   ORGANIZATION_ADMIN(400, AuthRoleConstants.ORGANIZATION_ADMIN),
   ORGANIZATION_EDITOR(300, AuthRoleConstants.ORGANIZATION_EDITOR),

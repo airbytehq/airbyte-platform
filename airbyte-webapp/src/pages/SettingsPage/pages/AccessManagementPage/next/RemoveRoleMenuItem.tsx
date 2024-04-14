@@ -4,15 +4,14 @@ import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationInfo, useCurrentWorkspace, useDeletePermissions } from "core/api";
-import { WorkspaceUserAccessInfoRead } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
 import styles from "./RemoveRoleMenuItem.module.scss";
-import { ResourceType } from "../components/useGetAccessManagementData";
+import { ResourceType, UnifiedWorkspaceUserModel } from "../components/useGetAccessManagementData";
 
 interface RemoveRoleMenuItemProps {
-  user: WorkspaceUserAccessInfoRead;
+  user: UnifiedWorkspaceUserModel;
   resourceType: ResourceType;
 }
 
@@ -53,11 +52,11 @@ export const RemoveRoleMenuItem: React.FC<RemoveRoleMenuItemProps> = ({ user, re
   return (
     <button
       onClick={onClick}
-      disabled={currentUserId === user.userId || permissionToRemove.length === 0}
+      disabled={currentUserId === user.id || permissionToRemove.length === 0}
       className={styles.removeRoleMenuItem__button}
     >
       <Box py="lg" px="md">
-        <Text color={currentUserId === user.userId || permissionToRemove.length === 0 ? "red200" : "red"}>
+        <Text color={currentUserId === user.id || permissionToRemove.length === 0 ? "red200" : "red"}>
           <FormattedMessage id="settings.accessManagement.removeUser" />
         </Text>
       </Box>

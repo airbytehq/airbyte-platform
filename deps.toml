@@ -1,5 +1,5 @@
 [versions]
-airbyte-protocol = "0.5.1"
+airbyte-protocol = "0.9.0"
 bouncycastle = "1.70"
 commons_io = "2.7"
 connectors-testcontainers = "1.15.3"
@@ -20,16 +20,16 @@ kotlin-logging = "5.1.0"
 kubernetes-client = "6.5.1"
 log4j = "2.22.1"
 lombok = "1.18.30"
-micronaut = "4.3.6"
+micronaut = "4.3.8"
 micronaut-cache = "4.2.2"
 micronaut-data = "4.6.1"
 micronaut-email = "2.4.0"
 micronaut-jaxrs = "4.3.0"
-micronaut-jdbc = "5.5.1"
+micronaut-jdbc = "5.5.2"
 micronaut-kotlin = "4.2.0"
 micronaut-micrometer = "5.4.0"
-micronaut-openapi = "6.5.1"
-micronaut-security = "4.6.7"
+micronaut-openapi = "6.6.3"
+micronaut-security = "4.6.10"
 micronaut-test = "4.2.0"
 moshi = "1.15.0"
 mockito = "5.8.0"
@@ -55,7 +55,9 @@ apache-commons-collections = { module = "org.apache.commons:commons-collections4
 apache-commons-lang = { module = "org.apache.commons:commons-lang3", version = "3.11" }
 apache-commons-text = { module = "org.apache.commons:commons-text", version = "1.10.0" }
 apache-cxf-core = { module = "org.apache.cxf:cxf-core", version = "3.4.2" }
-appender-log4j2 = { module = "com.therealvan:appender-log4j2", version = "5.2.1" }
+# Following is a custom JAR that was uploaded in Airbyte's mycloud repo. Edit this once the PR https://github.com/bluedenim/log4j-s3-search/pull/149
+# is merged and released
+appender-log4j2 = { module = "com.therealvan:appender-log4j2", version = "5.2.2-SNAPSHOT" }
 assertj-core = { module = "org.assertj:assertj-core", version = "3.21.0" }
 aws-java-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version = "1.12.6" }
 aws-java-sdk-sts = {module = "com.amazonaws:aws-java-sdk-sts", version = "1.12.6"}
@@ -84,6 +86,8 @@ glassfish = { module = "org.glassfish.jersey:jackson-bom", version.ref = "glassf
 google-auth-library-oauth2-http = { module = "com.google.auth:google-auth-library-oauth2-http", version = "1.4.0" }
 google-cloud-storage = { module = "com.google.cloud:google-cloud-storage", version = "2.17.2" }
 google-cloud-storage-secretmanager = { module = "com.google.cloud:google-cloud-secretmanager", version = "2.0.5" }
+google-cloud-sqladmin = { module = "com.google.apis:google-api-services-sqladmin", version = "v1-rev20240317-2.0.0" }
+google-cloud-api-client = { module = "com.google.api-client:google-api-client", version = "2.4.0" }
 guava = { module = "com.google.guava:guava", version = "31.1-jre" }
 gson = { module = "com.google.code.gson:gson", version = "2.10.1" }
 hamcrest-all = { module = "org.hamcrest:hamcrest-all", version = "1.3" }
@@ -257,5 +261,5 @@ temporal-telemetry = ["temporal-opentracing"]
 [plugins]
 ksp = { id ="com.google.devtools.ksp", version = "1.9.22-1.0.17"}
 node-gradle = { id = "com.github.node-gradle.node", version = "3.4.0" }
-nu-studer-jooq = { id = "nu.studer.jooq", version = "8.2.1" }
+nu-studer-jooq = { id = "nu.studer.jooq", version = "9.0" }
 de-undercouch-download = { id = "de.undercouch.download", version = "5.5.0" }

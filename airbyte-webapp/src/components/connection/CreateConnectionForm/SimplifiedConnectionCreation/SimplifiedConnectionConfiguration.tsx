@@ -82,6 +82,7 @@ const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
   const { trackFormChange } = useFormChangeTrackerService();
 
   const source = useGetSourceFromSearchParams();
+  const destination = useGetDestinationFromSearchParams();
 
   // if the user is navigating from the first step the form may be dirty
   useMount(() => {
@@ -91,7 +92,8 @@ const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
   return (
     <SimplifiedConnectionsSettingsCard
       title={formatMessage({ id: "connectionForm.configureConnection" })}
-      sourceName={source.name}
+      source={source}
+      destination={destination}
       isCreating
     />
   );
@@ -99,8 +101,8 @@ const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
 
 const FirstNav: React.FC = () => {
   const createLink = useCurrentWorkspaceLink();
-  const source = useGetSourceFromSearchParams();
   const destination = useGetDestinationFromSearchParams();
+  const source = useGetSourceFromSearchParams();
 
   const { isValid, errors } = useFormState<FormConnectionFormValues>();
   const { trigger } = useFormContext<FormConnectionFormValues>();
@@ -147,7 +149,7 @@ const FirstNav: React.FC = () => {
               ),
               search: `?${SOURCE_ID_PARAM}=${source.sourceId}&${DESTINATION_ID_PARAM}=${destination.destinationId}`,
             }}
-            className={classNames(styles.linkText)}
+            className={classNames(styles.nextLink)}
             onClick={() => {
               // we're navigating to the next step which retains the creation form's state
               clearFormChange(CREATE_CONNECTION_FORM_ID);
@@ -156,7 +158,7 @@ const FirstNav: React.FC = () => {
             <FormattedMessage id="connectionForm.nextButton" />
           </Link>
         ) : (
-          <Button variant="secondary" disabled>
+          <Button disabled>
             <FormattedMessage id="connectionForm.nextButton" />
           </Button>
         )}

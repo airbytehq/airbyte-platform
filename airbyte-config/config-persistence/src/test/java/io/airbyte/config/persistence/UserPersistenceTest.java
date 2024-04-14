@@ -288,7 +288,6 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     void setup() throws IOException, JsonValidationException, SQLException {
       truncateAllTables();
 
-      final PermissionPersistence permissionPersistence = new PermissionPersistence(database);
       final OrganizationPersistence organizationPersistence = new OrganizationPersistence(database);
 
       organizationPersistence.createOrganization(ORG);
@@ -303,7 +302,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
 
       for (final Permission permission : List.of(ORG_MEMBER_USER_PERMISSION, ORG_READER_PERMISSION, WORKSPACE_2_READER_PERMISSION,
           WORKSPACE_3_READER_PERMISSION, BOTH_USER_WORKSPACE_PERMISSION, BOTH_USER_ORGANIZATION_PERMISSION)) {
-        permissionPersistence.writePermission(permission);
+        BaseConfigDatabaseTest.writePermission(permission);
       }
     }
 

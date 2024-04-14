@@ -32,7 +32,12 @@ export const openConnectorPage = (name: string) => {
 
 export const deleteEntity = () => {
   cy.get("button[data-id='open-delete-modal']").click();
-  cy.get("button[data-id='delete']").click();
+  cy.get("input[id='confirmation-text']")
+    .invoke("attr", "placeholder")
+    .then((placeholder) => {
+      cy.get("input[id='confirmation-text']").type(placeholder ?? "");
+      cy.get("button[data-id='delete']").click();
+    });
 };
 
 export const clearApp = () => {
