@@ -19,6 +19,7 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.RefreshJobStateUpdater;
 import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
+import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.config.persistence.helper.GenerationBumper;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -93,10 +94,12 @@ public class ApplicationBeanFactory {
                                              final WorkerConfigsProvider workerConfigsProvider,
                                              final FeatureFlagClient featureFlagClient,
                                              final GenerationBumper generationBumper,
+                                             final CatalogGenerationSetter catalogGenerationSetter,
                                              final StatePersistence statePersistence,
                                              final RefreshJobStateUpdater refreshJobStateUpdater,
                                              final StreamRefreshesRepository streamRefreshesRepository) {
-    return new DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient, generationBumper, statePersistence, refreshJobStateUpdater,
+    return new DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient, generationBumper, catalogGenerationSetter,
+        statePersistence, refreshJobStateUpdater,
         streamRefreshesRepository);
   }
 
