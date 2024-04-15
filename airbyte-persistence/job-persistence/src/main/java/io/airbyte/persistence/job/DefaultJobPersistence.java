@@ -1272,23 +1272,6 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
-  public void updateJobConfig(Long jobId, JobConfig config) throws IOException {
-    jobDatabase.query(ctx -> {
-      final Job job = getJob(ctx, jobId);
-      if (job.isJobInTerminalState()) {
-        // If the job is already terminal, no need to update the catalog
-        return null;
-      }
-
-      ctx.update(JOBS)
-          .set(JOBS.CONFIG, JSONB.valueOf(Jsons.serialize(config)))
-          .set(JOBS.UPDATED_AT, OffsetDateTime.now())
-          .execute();
-      return null;
-    });
-  }
-
-  @Override
   public Optional<String> getVersion() throws IOException {
     return getMetadata(AirbyteVersion.AIRBYTE_VERSION_KEY_NAME).findFirst();
   }

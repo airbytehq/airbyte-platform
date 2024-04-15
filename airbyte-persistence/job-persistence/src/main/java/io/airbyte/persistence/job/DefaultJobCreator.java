@@ -32,7 +32,6 @@ import io.airbyte.config.persistence.RefreshJobStateUpdater;
 import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.domain.StreamRefresh;
-import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
 import io.airbyte.config.persistence.helper.GenerationBumper;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
 import io.airbyte.featureflag.ActivateRefreshes;
@@ -73,7 +72,6 @@ public class DefaultJobCreator implements JobCreator {
   private final ResourceRequirementsProvider resourceRequirementsProvider;
   private final FeatureFlagClient featureFlagClient;
   private final GenerationBumper generationBumper;
-  private final CatalogGenerationSetter catalogGenerationSetter;
   private final StatePersistence statePersistence;
   private final RefreshJobStateUpdater refreshJobStateUpdater;
   private final StreamRefreshesRepository streamRefreshesRepository;
@@ -82,7 +80,6 @@ public class DefaultJobCreator implements JobCreator {
                            final ResourceRequirementsProvider resourceRequirementsProvider,
                            final FeatureFlagClient featureFlagClient,
                            final GenerationBumper generationBumper,
-                           final CatalogGenerationSetter catalogGenerationSetter,
                            final StatePersistence statePersistence,
                            final RefreshJobStateUpdater refreshJobStateUpdater,
                            final StreamRefreshesRepository streamRefreshesRepository) {
@@ -90,7 +87,6 @@ public class DefaultJobCreator implements JobCreator {
     this.resourceRequirementsProvider = resourceRequirementsProvider;
     this.featureFlagClient = featureFlagClient;
     this.generationBumper = generationBumper;
-    this.catalogGenerationSetter = catalogGenerationSetter;
     this.statePersistence = statePersistence;
     this.refreshJobStateUpdater = refreshJobStateUpdater;
     this.streamRefreshesRepository = streamRefreshesRepository;
@@ -136,33 +132,7 @@ public class DefaultJobCreator implements JobCreator {
     final JobConfig jobConfig = new JobConfig()
         .withConfigType(ConfigType.SYNC)
         .withSync(jobSyncConfig);
-    final Optional<Long> maybeJobId = jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
-
-    final boolean canRunRefreshes = featureFlagClient.boolVariation(ActivateRefreshes.INSTANCE, new Multi(
-        List.of(
-            new Workspace(workspaceId),
-            new Connection(standardSync.getConnectionId()),
-            new SourceDefinition(sourceDefinition.getSourceDefinitionId()),
-            new DestinationDefinition(destinationDefinition.getDestinationDefinitionId()))));
-
-    if (canRunRefreshes && maybeJobId.isPresent()) {
-      Long jobId = maybeJobId.get();
-
-      final ConfiguredAirbyteCatalog catalogWithGeneration = catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
-          standardSync.getCatalog(),
-          standardSync.getConnectionId(),
-          jobId,
-          List.of());
-
-      final JobSyncConfig syncConfigWithGeneration = jobSyncConfig.withConfiguredAirbyteCatalog(catalogWithGeneration);
-      final JobConfig jobConfigWithGeneration = new JobConfig()
-          .withConfigType(ConfigType.SYNC)
-          .withSync(syncConfigWithGeneration);
-
-      jobPersistence.updateJobConfig(jobId, jobConfigWithGeneration);
-    }
-
-    return maybeJobId;
+    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
   }
 
   @Override
@@ -225,18 +195,6 @@ public class DefaultJobCreator implements JobCreator {
     if (maybeJobId.isPresent()) {
       final long jobId = maybeJobId.get();
       generationBumper.updateGenerationForStreams(standardSync.getConnectionId(), jobId, streamsToRefresh);
-      final ConfiguredAirbyteCatalog catalogWithGeneration = catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
-          standardSync.getCatalog(),
-          standardSync.getConnectionId(),
-          jobId,
-          streamsToRefresh);
-
-      final RefreshConfig refreshConfigWithGeneration = refreshConfig.withConfiguredAirbyteCatalog(catalogWithGeneration);
-      final JobConfig jobConfigWithGeneration = new JobConfig()
-          .withConfigType(ConfigType.REFRESH)
-          .withRefresh(refreshConfigWithGeneration);
-
-      jobPersistence.updateJobConfig(jobId, jobConfigWithGeneration);
       final Optional<StateWrapper> currentState = statePersistence.getCurrentState(standardSync.getConnectionId());
       updateStateAndDeleteRefreshes(standardSync.getConnectionId(), streamsToRefresh, currentState);
     }

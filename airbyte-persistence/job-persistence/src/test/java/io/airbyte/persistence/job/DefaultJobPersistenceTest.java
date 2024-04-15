@@ -241,21 +241,6 @@ class DefaultJobPersistenceTest {
   }
 
   @Test
-  @DisplayName("Properly update a config")
-  void testUpdateConfig() throws IOException {
-    final long jobId = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG).orElseThrow();
-
-    final Job actual = jobPersistence.getJob(jobId);
-
-    assertEquals(SYNC_JOB_CONFIG, actual.getConfig());
-
-    jobPersistence.updateJobConfig(jobId, SPEC_JOB_CONFIG);
-    final Job actualAfterUpdate = jobPersistence.getJob(jobId);
-
-    assertEquals(SPEC_JOB_CONFIG, actualAfterUpdate.getConfig());
-  }
-
-  @Test
   @DisplayName("Should set a job to incomplete if an attempt fails")
   void testCompleteAttemptFailed() throws IOException {
     final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
