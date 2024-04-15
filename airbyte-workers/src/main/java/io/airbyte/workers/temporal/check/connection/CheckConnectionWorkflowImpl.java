@@ -103,7 +103,9 @@ public class CheckConnectionWorkflowImpl implements CheckConnectionWorkflow {
         failureReason
             .withExternalMessage("The check connection took too long.")
             .withInternalMessage(
-                String.format("Check connection exceeded the timeout of %s minutes", activity.getCheckConnectionTimeout().toMinutes()));
+                activity.getCheckConnectionTimeout() != null
+                    ? String.format("Check connection exceeded the timeout of %s minutes", activity.getCheckConnectionTimeout().toMinutes())
+                    : "The check connection took too long.");
         break;
       case UNKNOWN:
       case NOT_A_TIMEOUT:
