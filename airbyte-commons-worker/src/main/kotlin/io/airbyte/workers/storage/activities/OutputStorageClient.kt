@@ -1,5 +1,6 @@
 package io.airbyte.workers.storage.activities
 
+import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
@@ -48,6 +49,9 @@ class OutputStorageClient<T : Any>
               MetricAttribute(MetricTags.FAILURE_CAUSE, e.javaClass.simpleName),
               MetricAttribute(MetricTags.PAYLOAD_NAME, payloadName),
             )
+
+        ApmTraceUtils.addExceptionToTrace(e)
+        ApmTraceUtils.addTagsToTrace(attrs)
 
         logger.error { "Failure writing $payloadName to object storage." }
         logger.error { "Message: ${e.message}" }
