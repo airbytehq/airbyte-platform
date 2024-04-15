@@ -4,7 +4,6 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.test.acceptance.AcceptanceTestsResources.DISABLE_TEMPORAL_TESTS_IN_GKE;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.FINAL_INTERVAL_SECS;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.IS_GKE;
 import static io.airbyte.test.acceptance.AcceptanceTestsResources.JITTER_MAX_INTERVAL_SECS;
@@ -18,31 +17,20 @@ import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_NAME;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
 import static io.airbyte.test.utils.AcceptanceTestHarness.STREAM_NAME;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
-import io.airbyte.api.client.model.generated.AttemptInfoRead;
-import io.airbyte.api.client.model.generated.AttemptStatus;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionScheduleData;
-import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule;
-import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule.TimeUnitEnum;
 import io.airbyte.api.client.model.generated.ConnectionScheduleDataCron;
 import io.airbyte.api.client.model.generated.ConnectionScheduleType;
-import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
-import io.airbyte.api.client.model.generated.DestinationRead;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
-import io.airbyte.api.client.model.generated.JobConfigType;
 import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobStatus;
@@ -57,14 +45,12 @@ import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.api.client.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
 import io.airbyte.db.Database;
 import io.airbyte.test.utils.AcceptanceTestHarness;
 import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.Databases;
 import io.airbyte.test.utils.SchemaTableNamePair;
 import io.airbyte.test.utils.TestConnectionCreate;
-import io.temporal.client.WorkflowQueryException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
@@ -75,7 +61,6 @@ import org.jooq.impl.SQLDataType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
@@ -342,145 +327,6 @@ class SyncAcceptanceTests {
   @Test
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
-                                 disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
-  void testUpdateConnectionWhenWorkflowUnreachable() throws Exception {
-    // This test only covers the specific behavior of updating a connection that does not have an
-    // underlying temporal workflow.
-    // Also, this test doesn't verify correctness of the schedule update applied, as adding the ability
-    // to query a workflow for its current
-    // schedule is out of scope for the issue (https://github.com/airbytehq/airbyte/issues/11215). This
-    // test just ensures that the underlying workflow
-    // is running after the update method is called.
-    final UUID sourceId = testHarness.createPostgresSource().getSourceId();
-    final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final AirbyteCatalog catalog = discoverResult.getCatalog();
-    catalog.getStreams().forEach(s -> s.getConfig()
-        .syncMode(SyncMode.INCREMENTAL)
-        .selected(true)
-        .cursorField(List.of(COLUMN_ID))
-        .destinationSyncMode(DestinationSyncMode.APPEND_DEDUP)
-        .primaryKey(List.of(List.of(COLUMN_NAME))));
-
-    LOGGER.info("Testing connection update when temporal is in a terminal state");
-    final UUID connectionId =
-        testHarness.createConnection(new TestConnectionCreate.Builder(
-            sourceId,
-            destinationId,
-            catalog,
-            discoverResult.getCatalogId())
-                .build())
-            .getConnectionId();
-
-    testHarness.terminateTemporalWorkflow(connectionId);
-    // This should throw an exception since the workflow is terminated and does not exist.
-    assertThrows(WorkflowQueryException.class, () -> testHarness.getWorkflowState(connectionId));
-
-    // we should still be able to update the connection when the temporal workflow is in this state
-    testHarness.updateConnectionSchedule(
-        connectionId,
-        ConnectionScheduleType.BASIC,
-        new ConnectionScheduleData().basicSchedule(new ConnectionScheduleDataBasicSchedule().timeUnit(TimeUnitEnum.HOURS).units(1L)));
-    // updateConnection should recreate the workflow. Querying for it should not throw an exception.
-    assertDoesNotThrow(() -> testHarness.getWorkflowState(connectionId));
-  }
-
-  @Test
-  @DisabledIfEnvironmentVariable(named = IS_GKE,
-                                 matches = TRUE,
-                                 disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
-  void testManualSyncRepairsWorkflowWhenWorkflowUnreachable() throws Exception {
-    // This test only covers the specific behavior of updating a connection that does not have an
-    // underlying temporal workflow.
-    final SourceDefinitionRead sourceDefinition = testHarness.createE2eSourceDefinition(
-        workspaceId);
-    final SourceRead source = testHarness.createSource(
-        E2E_TEST_SOURCE + UUID.randomUUID(),
-        workspaceId,
-        sourceDefinition.getSourceDefinitionId(),
-        Jsons.jsonNode(ImmutableMap.builder()
-            .put(TYPE, INFINITE_FEED)
-            .put(MAX_RECORDS, 5000)
-            .put(MESSAGE_INTERVAL, 100)
-            .build()));
-    final UUID sourceId = source.getSourceId();
-    final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final AirbyteCatalog catalog = discoverResult.getCatalog();
-    catalog.getStreams().forEach(s -> s.getConfig()
-        .syncMode(SyncMode.INCREMENTAL)
-        .selected(true)
-        .cursorField(List.of(COLUMN_ID))
-        .destinationSyncMode(DestinationSyncMode.APPEND_DEDUP)
-        .primaryKey(List.of(List.of(COLUMN_NAME))));
-
-    LOGGER.info("Testing manual sync when temporal is in a terminal state");
-    final UUID connectionId =
-        testHarness.createConnection(new TestConnectionCreate.Builder(
-            sourceId,
-            destinationId,
-            catalog,
-            discoverResult.getCatalogId())
-                .build())
-            .getConnectionId();
-
-    LOGGER.info("Starting first manual sync");
-    final JobInfoRead firstJobInfo = testHarness.syncConnection(connectionId);
-    LOGGER.info("Terminating workflow during first sync");
-    testHarness.terminateTemporalWorkflow(connectionId);
-
-    LOGGER.info("Submitted another manual sync");
-    testHarness.syncConnection(connectionId);
-
-    LOGGER.info("Waiting for workflow to be recreated...");
-    Thread.sleep(500);
-
-    final WorkflowState workflowState = testHarness.getWorkflowState(connectionId);
-    assertTrue(workflowState.isRunning());
-    assertTrue(workflowState.isSkipScheduling());
-
-    // verify that the first manual sync was marked as failed
-    final JobInfoRead terminatedJobInfo = testHarness.getJobInfoRead(firstJobInfo.getJob().getId());
-    assertEquals(JobStatus.FAILED, terminatedJobInfo.getJob().getStatus());
-  }
-
-  @Test
-  @DisabledIfEnvironmentVariable(named = IS_GKE,
-                                 matches = TRUE,
-                                 disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
-  void testResetConnectionRepairsWorkflowWhenWorkflowUnreachable() throws Exception {
-    // This test only covers the specific behavior of updating a connection that does not have an
-    // underlying temporal workflow.
-    final UUID sourceId = testHarness.createPostgresSource().getSourceId();
-    final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final AirbyteCatalog catalog = discoverResult.getCatalog();
-    catalog.getStreams().forEach(s -> s.getConfig()
-        .selected(true)
-        .syncMode(SyncMode.INCREMENTAL)
-        .cursorField(List.of(COLUMN_ID))
-        .destinationSyncMode(DestinationSyncMode.APPEND_DEDUP)
-        .primaryKey(List.of(List.of(COLUMN_NAME))));
-
-    LOGGER.info("Testing reset connection when temporal is in a terminal state");
-    final UUID connectionId =
-        testHarness.createConnection(new TestConnectionCreate.Builder(
-            sourceId,
-            destinationId,
-            catalog,
-            discoverResult.getCatalogId())
-                .build())
-            .getConnectionId();
-
-    testHarness.terminateTemporalWorkflow(connectionId);
-
-    final JobInfoRead jobInfoRead = testHarness.resetConnection(connectionId);
-    assertEquals(JobConfigType.RESET_CONNECTION, jobInfoRead.getJob().getConfigType());
-  }
-
-  @Test
-  @DisabledIfEnvironmentVariable(named = IS_GKE,
-                                 matches = TRUE,
                                  disabledReason = "The different way of interacting with the source db causes errors")
   void testMultipleSchemasAndTablesSyncAndReset() throws Exception {
     // create tables in another schema
@@ -732,70 +578,6 @@ class SyncAcceptanceTests {
         .map((record) -> ((ObjectNode) record).retain(COLUMN_ID)).collect(Collectors.toList());
     Asserts.assertRawDestinationContains(dst, expectedRawRecords, conn.getNamespaceFormat(), STREAM_NAME);
     testHarness.assertNormalizedDestinationContainsIdColumn(conn.getNamespaceFormat(), expectedNormalizedRecords);
-  }
-
-  @Test
-  @Disabled
-  void testFailureTimeout() throws Exception {
-    final SourceDefinitionRead sourceDefinition = testHarness.createE2eSourceDefinition(
-        workspaceId);
-    final DestinationDefinitionRead destinationDefinition = testHarness.createE2eDestinationDefinition(
-        workspaceId);
-
-    final SourceRead source = testHarness.createSource(
-        E2E_TEST_SOURCE + UUID.randomUUID(),
-        workspaceId,
-        sourceDefinition.getSourceDefinitionId(),
-        Jsons.jsonNode(ImmutableMap.builder()
-            .put(TYPE, INFINITE_FEED)
-            .put(MAX_RECORDS, 1000)
-            .put(MESSAGE_INTERVAL, 100)
-            .build()));
-
-    // Destination fails after processing 5 messages, so the job should fail after the graceful close
-    // timeout of 1 minute
-    final DestinationRead destination = testHarness.createDestination(
-        "E2E Test Destination -" + UUID.randomUUID(),
-        workspaceId,
-        destinationDefinition.getDestinationDefinitionId(),
-        Jsons.jsonNode(ImmutableMap.builder()
-            .put(TYPE, "FAILING")
-            .put("num_messages", 5)
-            .build()));
-
-    final UUID sourceId = source.getSourceId();
-    final UUID destinationId = destination.getDestinationId();
-    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final AirbyteCatalog catalog = discoverResult.getCatalog();
-
-    final UUID connectionId =
-        testHarness.createConnection(new TestConnectionCreate.Builder(
-            sourceId,
-            destinationId,
-            catalog,
-            discoverResult.getCatalogId())
-                .build())
-            .getConnectionId();
-
-    final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
-
-    // wait to get out of pending.
-    final JobRead runningJob = testHarness.waitWhileJobHasStatus(connectionSyncRead1.getJob(), Sets.newHashSet(JobStatus.PENDING));
-
-    // wait for job for max of 3 minutes, by which time the job attempt should have failed
-    testHarness.waitWhileJobHasStatus(runningJob, Sets.newHashSet(JobStatus.RUNNING), Duration.ofMinutes(3));
-
-    final JobInfoRead jobInfo = testHarness.getJobInfoRead(runningJob.getId());
-    // Only look at the first attempt. It's possible that in the time between leaving RUNNING and
-    // retrieving the job info, we'll have started a new attempt.
-    final AttemptInfoRead attemptInfoRead = jobInfo.getAttempts().get(0);
-
-    // assert that the job attempt failed, and cancel the job regardless of status to prevent retries
-    try {
-      assertEquals(AttemptStatus.FAILED, attemptInfoRead.getAttempt().getStatus());
-    } finally {
-      testHarness.cancelSync(runningJob.getId());
-    }
   }
 
   static void assertDestinationDbEmpty(final Database dst) throws Exception {
