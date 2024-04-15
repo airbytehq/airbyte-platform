@@ -49,6 +49,7 @@ import io.airbyte.config.persistence.RefreshJobStateUpdater;
 import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.domain.StreamRefresh;
+import io.airbyte.config.persistence.helper.GenerationBumper;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
 import io.airbyte.featureflag.ActivateRefreshes;
 import io.airbyte.featureflag.DestResourceOverrides;
@@ -124,6 +125,7 @@ class DefaultJobCreatorTest {
   private ResourceRequirements workerResourceRequirements;
   private ResourceRequirements sourceResourceRequirements;
   private ResourceRequirements destResourceRequirements;
+  private GenerationBumper generationBumper;
 
   private static final JsonNode PERSISTED_WEBHOOK_CONFIGS;
 
@@ -232,8 +234,10 @@ class DefaultJobCreatorTest {
     resourceRequirementsProvider = mock(ResourceRequirementsProvider.class);
     when(resourceRequirementsProvider.getResourceRequirements(any(), any(), any()))
         .thenReturn(workerResourceRequirements);
+    generationBumper = mock(GenerationBumper.class);
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, new TestClient(), statePersistence, refreshJobStateUpdater,
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, new TestClient(), generationBumper, statePersistence,
+            refreshJobStateUpdater,
             streamRefreshesRepository);
   }
 
@@ -266,7 +270,8 @@ class DefaultJobCreatorTest {
     when(statePersistence.getCurrentState(STANDARD_SYNC.getConnectionId())).thenReturn(Optional.of(stateWrapper));
 
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, statePersistence, refreshJobStateUpdater,
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, generationBumper, statePersistence,
+            refreshJobStateUpdater,
             streamRefreshesRepository);
 
     final Optional<String> expectedSourceType = Optional.of("database");
@@ -299,6 +304,12 @@ class DefaultJobCreatorTest {
         .withConfigType(ConfigType.REFRESH)
         .withRefresh(refreshConfig);
 
+    final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
+    when(jobPersistence.enqueueJob(expectedScope, jobConfig)).thenReturn(Optional.of(JOB_ID));
+
+    List<StreamRefresh> refreshes =
+        List.of(new StreamRefresh(UUID.randomUUID(), STANDARD_SYNC.getConnectionId(), streamToRefresh, streamNamespace, null));
+
     jobCreator.createRefreshConnection(
         STANDARD_SYNC,
         SOURCE_IMAGE_NAME,
@@ -312,10 +323,10 @@ class DefaultJobCreatorTest {
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
         WORKSPACE_ID,
-        List.of(new StreamRefresh(UUID.randomUUID(), STANDARD_SYNC.getConnectionId(), streamToRefresh, streamNamespace, null)));
+        refreshes);
 
-    final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
     verify(jobPersistence).enqueueJob(expectedScope, jobConfig);
+    verify(generationBumper).updateGenerationForStreams(STANDARD_SYNC.getConnectionId(), JOB_ID, refreshes);
 
     final StateWrapper expected =
         new StateWrapper().withStateType(StateType.STREAM).withStateMessages(Collections.singletonList(stateMessageFromNonRefreshStream));
@@ -355,7 +366,8 @@ class DefaultJobCreatorTest {
     when(statePersistence.getCurrentState(STANDARD_SYNC.getConnectionId())).thenReturn(Optional.of(stateWrapper));
 
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, statePersistence, refreshJobStateUpdater,
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, generationBumper, statePersistence,
+            refreshJobStateUpdater,
             streamRefreshesRepository);
 
     final Optional<String> expectedSourceType = Optional.of("database");
@@ -470,7 +482,8 @@ class DefaultJobCreatorTest {
     when(statePersistence.getCurrentState(STANDARD_SYNC.getConnectionId())).thenReturn(Optional.of(stateWrapper));
 
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, statePersistence, refreshJobStateUpdater,
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, generationBumper, statePersistence,
+            refreshJobStateUpdater,
             streamRefreshesRepository);
 
     final Optional<String> expectedSourceType = Optional.of("database");
@@ -540,7 +553,8 @@ class DefaultJobCreatorTest {
     final FeatureFlagClient mFeatureFlagClient = mock(TestClient.class);
     when(mFeatureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(false);
     jobCreator =
-        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, statePersistence, refreshJobStateUpdater,
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, generationBumper, statePersistence,
+            refreshJobStateUpdater,
             streamRefreshesRepository);
 
     assertThrows(IllegalStateException.class, () -> jobCreator.createRefreshConnection(
@@ -927,7 +941,8 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), statePersistence, refreshJobStateUpdater,
+        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), generationBumper, statePersistence,
+        refreshJobStateUpdater,
         streamRefreshesRepository);
 
     jobCreator.createSyncJob(
@@ -992,7 +1007,7 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(OrchestratorResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), statePersistence,
+        new TestClient(Map.of(OrchestratorResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), generationBumper, statePersistence,
         refreshJobStateUpdater, streamRefreshesRepository);
 
     final var standardSync = new StandardSync()
@@ -1069,7 +1084,7 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(SourceResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), statePersistence,
+        new TestClient(Map.of(SourceResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), generationBumper, statePersistence,
         refreshJobStateUpdater, streamRefreshesRepository);
 
     jobCreator.createSyncJob(
@@ -1126,7 +1141,8 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(weirdness))), statePersistence, refreshJobStateUpdater,
+        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(weirdness))), generationBumper, statePersistence,
+        refreshJobStateUpdater,
         streamRefreshesRepository);
 
     jobCreator.createSyncJob(

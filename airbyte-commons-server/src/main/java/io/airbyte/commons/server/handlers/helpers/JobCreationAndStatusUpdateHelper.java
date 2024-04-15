@@ -253,6 +253,8 @@ public class JobCreationAndStatusUpdateHelper {
     final List<UUID> actorDefVersionIds = switch (job.getConfig().getConfigType()) {
       case SYNC -> List.of(job.getConfig().getSync().getDestinationDefinitionVersionId(), job.getConfig().getSync().getSourceDefinitionVersionId());
       case RESET_CONNECTION -> List.of(job.getConfig().getResetConnection().getDestinationDefinitionVersionId());
+      case REFRESH -> List.of(job.getConfig().getRefresh().getSourceDefinitionVersionId(),
+          job.getConfig().getRefresh().getDestinationDefinitionVersionId());
       default -> throw new IllegalArgumentException("Unexpected config type: " + job.getConfigType());
     };
 

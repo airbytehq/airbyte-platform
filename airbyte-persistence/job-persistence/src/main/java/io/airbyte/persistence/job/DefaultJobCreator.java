@@ -32,6 +32,7 @@ import io.airbyte.config.persistence.RefreshJobStateUpdater;
 import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.domain.StreamRefresh;
+import io.airbyte.config.persistence.helper.GenerationBumper;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
 import io.airbyte.featureflag.ActivateRefreshes;
 import io.airbyte.featureflag.Connection;
@@ -70,6 +71,7 @@ public class DefaultJobCreator implements JobCreator {
   private final JobPersistence jobPersistence;
   private final ResourceRequirementsProvider resourceRequirementsProvider;
   private final FeatureFlagClient featureFlagClient;
+  private final GenerationBumper generationBumper;
   private final StatePersistence statePersistence;
   private final RefreshJobStateUpdater refreshJobStateUpdater;
   private final StreamRefreshesRepository streamRefreshesRepository;
@@ -77,12 +79,14 @@ public class DefaultJobCreator implements JobCreator {
   public DefaultJobCreator(final JobPersistence jobPersistence,
                            final ResourceRequirementsProvider resourceRequirementsProvider,
                            final FeatureFlagClient featureFlagClient,
+                           final GenerationBumper generationBumper,
                            final StatePersistence statePersistence,
                            final RefreshJobStateUpdater refreshJobStateUpdater,
                            final StreamRefreshesRepository streamRefreshesRepository) {
     this.jobPersistence = jobPersistence;
     this.resourceRequirementsProvider = resourceRequirementsProvider;
     this.featureFlagClient = featureFlagClient;
+    this.generationBumper = generationBumper;
     this.statePersistence = statePersistence;
     this.refreshJobStateUpdater = refreshJobStateUpdater;
     this.streamRefreshesRepository = streamRefreshesRepository;
@@ -186,14 +190,16 @@ public class DefaultJobCreator implements JobCreator {
         .withConfigType(ConfigType.REFRESH)
         .withRefresh(refreshConfig);
 
-    final Optional<Long> job = jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
+    final Optional<Long> maybeJobId = jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
 
-    if (job.isPresent()) {
+    if (maybeJobId.isPresent()) {
+      final long jobId = maybeJobId.get();
+      generationBumper.updateGenerationForStreams(standardSync.getConnectionId(), jobId, streamsToRefresh);
       final Optional<StateWrapper> currentState = statePersistence.getCurrentState(standardSync.getConnectionId());
       updateStateAndDeleteRefreshes(standardSync.getConnectionId(), streamsToRefresh, currentState);
     }
 
-    return job;
+    return maybeJobId;
   }
 
   // TODO: Add Transactional annotation
