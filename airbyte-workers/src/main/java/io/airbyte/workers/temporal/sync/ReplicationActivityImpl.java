@@ -16,6 +16,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_
 
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.temporal.HeartbeatUtils;
@@ -48,7 +49,6 @@ import io.airbyte.workers.sync.WorkloadApiWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.micronaut.context.annotation.Value;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
@@ -80,8 +80,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final LogConfigs logConfigs;
   private final String airbyteVersion;
   private final AirbyteApiClient airbyteApiClient;
+  private final WorkloadApiClient workloadApiClient;
   private final JobOutputDocStore jobOutputDocStore;
-  private final WorkloadApi workloadApi;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final OrchestratorHandleFactory orchestratorHandleFactory;
   private final MetricClient metricClient;
@@ -97,7 +97,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  @Value("${airbyte.version}") final String airbyteVersion,
                                  final AirbyteApiClient airbyteApiClient,
                                  final JobOutputDocStore jobOutputDocStore,
-                                 final WorkloadApi workloadApi,
+                                 final WorkloadApiClient workloadApiClient,
                                  final WorkloadIdGenerator workloadIdGenerator,
                                  final OrchestratorHandleFactory orchestratorHandleFactory,
                                  final MetricClient metricClient,
@@ -116,7 +116,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.airbyteVersion = airbyteVersion;
     this.airbyteApiClient = airbyteApiClient;
     this.jobOutputDocStore = jobOutputDocStore;
-    this.workloadApi = workloadApi;
+    this.workloadApiClient = workloadApiClient;
     this.workloadIdGenerator = workloadIdGenerator;
     this.orchestratorHandleFactory = orchestratorHandleFactory;
     this.metricClient = metricClient;
@@ -177,7 +177,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           // TODO: remove this once migration to workloads complete
           if (useWorkloadApi(replicationActivityInput)) {
             worker = new WorkloadApiWorker(jobOutputDocStore, airbyteApiClient,
-                workloadApi, workloadIdGenerator, replicationActivityInput, featureFlagClient);
+                workloadApiClient, workloadIdGenerator, replicationActivityInput, featureFlagClient);
           } else {
             final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =
                 orchestratorHandleFactory.create(hydratedReplicationInput.getSourceLauncherConfig(),

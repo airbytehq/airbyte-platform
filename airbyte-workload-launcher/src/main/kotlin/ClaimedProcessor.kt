@@ -6,9 +6,9 @@ package io.airbyte.workload.launcher
 
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
+import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadListRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadListResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus
@@ -32,7 +32,7 @@ private val logger = KotlinLogging.logger {}
 
 @Singleton
 class ClaimedProcessor(
-  private val apiClient: WorkloadApi,
+  private val apiClient: WorkloadApiClient,
   private val pipe: LaunchPipeline,
   private val metricPublisher: CustomMetricPublisher,
   @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
@@ -50,7 +50,7 @@ class ClaimedProcessor(
       )
 
     val workloadList: WorkloadListResponse =
-      apiClient.workloadList(workloadListRequest)
+      apiClient.workloadApi.workloadList(workloadListRequest)
 
     logger.info { "Re-hydrating ${workloadList.workloads.size} workload claim(s)..." }
 

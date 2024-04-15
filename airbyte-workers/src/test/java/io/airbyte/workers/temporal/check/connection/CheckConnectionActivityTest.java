@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
@@ -69,6 +70,7 @@ public class CheckConnectionActivityTest {
   private final FeatureFlags featureFlags = mock(FeatureFlags.class);
   private final GsonPksExtractor gsonPksExtractor = mock(GsonPksExtractor.class);
   private final WorkloadApi workloadApi = mock(WorkloadApi.class);
+  private final WorkloadApiClient workloadApiClient = mock(WorkloadApiClient.class);
   private final WorkloadIdGenerator workloadIdGenerator = mock(WorkloadIdGenerator.class);
   private final JobOutputDocStore jobOutputDocStore = mock(JobOutputDocStore.class);
   private final FeatureFlagClient featureFlagClient = mock(ConfigFileClient.class);
@@ -102,7 +104,7 @@ public class CheckConnectionActivityTest {
         featureFlags,
         featureFlagClient,
         gsonPksExtractor,
-        workloadApi,
+        workloadApiClient,
         workloadIdGenerator,
         jobOutputDocStore,
         mock(CheckConnectionInputHydrator.class),
@@ -115,6 +117,7 @@ public class CheckConnectionActivityTest {
     when(workloadApi.workloadGet(WORKLOAD_ID))
         .thenReturn(getWorkloadWithStatus(WorkloadStatus.RUNNING))
         .thenReturn(getWorkloadWithStatus(WorkloadStatus.SUCCESS));
+    when(workloadApiClient.getWorkloadApi()).thenReturn(workloadApi);
   }
 
   @Test

@@ -17,6 +17,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.commons.concurrency.VoidCallable;
@@ -58,6 +59,7 @@ class ReplicationWorkerHelperTest {
   private SyncPersistence syncPersistence;
   private AnalyticsMessageTracker analyticsMessageTracker;
   private StreamStatusCompletionTracker streamStatusCompletionTracker;
+  private WorkloadApiClient workloadApiClient;
 
   @BeforeEach
   void setUp() {
@@ -66,8 +68,10 @@ class ReplicationWorkerHelperTest {
     syncPersistence = mock(SyncPersistence.class);
     messageTracker = mock(AirbyteMessageTracker.class);
     analyticsMessageTracker = mock(AnalyticsMessageTracker.class);
-    when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
     streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
+    workloadApiClient = mock(WorkloadApiClient.class);
+    when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
+    when(workloadApiClient.getWorkloadApi()).thenReturn(mock(WorkloadApi.class));
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(
         mock(AirbyteMessageDataExtractor.class),
         mock(FieldSelector.class),
@@ -77,7 +81,7 @@ class ReplicationWorkerHelperTest {
         mock(ReplicationAirbyteMessageEventPublishingHelper.class),
         mock(ThreadedTimeTracker.class),
         mock(VoidCallable.class),
-        mock(WorkloadApi.class),
+        workloadApiClient,
         false,
         analyticsMessageTracker,
         Optional.empty(),

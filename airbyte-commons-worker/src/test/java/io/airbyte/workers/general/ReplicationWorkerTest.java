@@ -31,6 +31,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.model.generated.DestinationRead;
@@ -184,6 +185,7 @@ abstract class ReplicationWorkerTest {
 
   protected ReplicationWorkerHelper replicationWorkerHelper;
   protected WorkloadApi workloadApi;
+  protected WorkloadApiClient workloadApiClient;
 
   protected AnalyticsMessageTracker analyticsMessageTracker;
   protected SourceApi sourceApi;
@@ -233,6 +235,8 @@ abstract class ReplicationWorkerTest {
     destinationTimeoutMonitor = mock(DestinationTimeoutMonitor.class);
     replicationAirbyteMessageEventPublishingHelper = mock(ReplicationAirbyteMessageEventPublishingHelper.class);
     workloadApi = mock(WorkloadApi.class);
+    workloadApiClient = mock(WorkloadApiClient.class);
+    when(workloadApiClient.getWorkloadApi()).thenReturn(workloadApi);
 
     analyticsMessageTracker = mock(AnalyticsMessageTracker.class);
 

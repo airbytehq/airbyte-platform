@@ -7,6 +7,7 @@ package io.airbyte.workers.general
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.annotations.VisibleForTesting
+import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.api.client.generated.DestinationApi
 import io.airbyte.api.client.generated.SourceApi
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody
@@ -60,7 +61,6 @@ import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
 import io.airbyte.workers.models.StateWithId.attachIdToStateMessageFromSource
-import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpStatus
@@ -86,7 +86,7 @@ class ReplicationWorkerHelper(
   private val replicationAirbyteMessageEventPublishingHelper: ReplicationAirbyteMessageEventPublishingHelper,
   private val timeTracker: ThreadedTimeTracker,
   private val onReplicationRunning: VoidCallable,
-  private val workloadApi: WorkloadApi,
+  private val workloadApiClient: WorkloadApiClient,
   private val workloadEnabled: Boolean,
   private val analyticsMessageTracker: AnalyticsMessageTracker,
   private val workloadId: Optional<String>,
@@ -146,7 +146,7 @@ class ReplicationWorkerHelper(
               throw RuntimeException("workloadId should always be present")
             }
             logger.info { "Sending workload heartbeat" }
-            workloadApi.workloadHeartbeat(
+            workloadApiClient.workloadApi.workloadHeartbeat(
               WorkloadHeartbeatRequest(workloadId.get()),
             )
             lastSuccessfulHeartbeat = Instant.now()

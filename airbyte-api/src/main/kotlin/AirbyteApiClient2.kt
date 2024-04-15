@@ -16,6 +16,7 @@ import io.airbyte.api.client2.generated.HealthApi
 import io.airbyte.api.client2.generated.JobRetryStatesApi
 import io.airbyte.api.client2.generated.JobsApi
 import io.airbyte.api.client2.generated.OperationApi
+import io.airbyte.api.client2.generated.OrganizationApi
 import io.airbyte.api.client2.generated.PermissionApi
 import io.airbyte.api.client2.generated.SecretsPersistenceConfigApi
 import io.airbyte.api.client2.generated.SourceApi
@@ -23,9 +24,15 @@ import io.airbyte.api.client2.generated.SourceDefinitionApi
 import io.airbyte.api.client2.generated.SourceDefinitionSpecificationApi
 import io.airbyte.api.client2.generated.StateApi
 import io.airbyte.api.client2.generated.StreamStatusesApi
+import io.airbyte.api.client2.generated.UserApi
+import io.airbyte.api.client2.generated.WebBackendApi
 import io.airbyte.api.client2.generated.WorkspaceApi
+import io.micronaut.context.annotation.Requires
+import io.micronaut.context.annotation.Value
+import jakarta.inject.Named
+import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
-import java.io.IOException
+import okhttp3.Response
 
 /**
  * This class wraps all the generated API clients and provides a single entry point. This class is meant
@@ -46,53 +53,39 @@ import java.io.IOException
  * <li>3. Integrate failsafe (https://failsafe.dev/) for circuit breaking / retry<li>
  * policies.
  * </ol>
- * <p>
- * todo (cgardens): The LogsApi is intentionally not included because in the java client we had to do some
- * work to set the correct headers in the generated code. At some point we will need to test that that
- * functionality works in the new client (and if necessary, patch it). Context: https://github.com/airbytehq/airbyte/pull/1799
  */
 @Suppress("MemberVisibilityCanBePrivate")
+@Singleton
+@Requires(property = "airbyte.internal-api.base-path")
 class AirbyteApiClient2
   @JvmOverloads
   constructor(
-    basePath: String,
-    policy: RetryPolicy<okhttp3.Response> = RetryPolicy.ofDefaults(),
-    var httpClient: OkHttpClient = OkHttpClient(),
-    throwOn5xx: Boolean = true,
+    @Value("\${airbyte.internal-api.base-path}") basePath: String,
+    @Named("airbyteApiClientRetryPolicy") policy: RetryPolicy<Response>,
+    @Named("airbyteApiOkHttpClient") httpClient: OkHttpClient,
   ) {
-    init {
-      if (throwOn5xx) {
-        httpClient = httpClient.newBuilder().addInterceptor(ThrowOn5xxInterceptor()).build()
-      }
-    }
-
+    val attemptApi = AttemptApi(basePath = basePath, client = httpClient, policy = policy)
     val connectionApi = ConnectionApi(basePath = basePath, client = httpClient, policy = policy)
     val connectorBuilderProjectApi = ConnectorBuilderProjectApi(basePath = basePath, client = httpClient, policy = policy)
     val deploymentMetadataApi = DeploymentMetadataApi(basePath = basePath, client = httpClient, policy = policy)
-    val destinationDefinitionApi = DestinationDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
     val destinationApi = DestinationApi(basePath = basePath, client = httpClient, policy = policy)
-    val destinationSpecificationApi = DestinationDefinitionSpecificationApi(basePath = basePath, client = httpClient, policy = policy)
+    val destinationDefinitionApi = DestinationDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
+    val destinationDefinitionSpecificationApi =
+      DestinationDefinitionSpecificationApi(basePath = basePath, client = httpClient, policy = policy)
+    val healthApi = HealthApi(basePath = basePath, client = httpClient, policy = policy)
     val jobsApi = JobsApi(basePath = basePath, client = httpClient, policy = policy)
     val jobRetryStatesApi = JobRetryStatesApi(basePath = basePath, client = httpClient, policy = policy)
     val operationApi = OperationApi(basePath = basePath, client = httpClient, policy = policy)
-    val sourceDefinitionApi = SourceDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
+    val organizationApi = OrganizationApi(basePath = basePath, client = httpClient, policy = policy)
+    val permissionApi = PermissionApi(basePath = basePath, client = httpClient, policy = policy)
+    val secretPersistenceConfigApi = SecretsPersistenceConfigApi(basePath = basePath, client = httpClient, policy = policy)
     val sourceApi = SourceApi(basePath = basePath, client = httpClient, policy = policy)
-    val sourceDefinitionSpecificationApi = SourceDefinitionSpecificationApi(basePath = basePath, client = httpClient, policy = policy)
-    val workspaceApi = WorkspaceApi(basePath = basePath, client = httpClient, policy = policy)
-    val healthApi = HealthApi(basePath = basePath, client = httpClient, policy = policy)
-    val attemptApi = AttemptApi(basePath = basePath, client = httpClient, policy = policy)
+    val sourceDefinitionApi = SourceDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
+    val sourceDefinitionSpecificationApi =
+      SourceDefinitionSpecificationApi(basePath = basePath, client = httpClient, policy = policy)
     val stateApi = StateApi(basePath = basePath, client = httpClient, policy = policy)
     val streamStatusesApi = StreamStatusesApi(basePath = basePath, client = httpClient, policy = policy)
-    val secretPersistenceConfigApi = SecretsPersistenceConfigApi(basePath = basePath, client = httpClient, policy = policy)
-    val permissonsApi = PermissionApi(basePath = basePath, client = httpClient, policy = policy)
+    val userApi = UserApi(basePath = basePath, client = httpClient, policy = policy)
+    val webBackendApi = WebBackendApi(basePath = basePath, client = httpClient, policy = policy)
+    val workspaceApi = WorkspaceApi(basePath = basePath, client = httpClient, policy = policy)
   }
-
-class ThrowOn5xxInterceptor : okhttp3.Interceptor {
-  override fun intercept(chain: okhttp3.Interceptor.Chain): okhttp3.Response {
-    val response = chain.proceed(chain.request())
-    if (response.code >= 500) {
-      throw IOException("HTTP error: ${response.code} ${response.message}")
-    }
-    return response
-  }
-}

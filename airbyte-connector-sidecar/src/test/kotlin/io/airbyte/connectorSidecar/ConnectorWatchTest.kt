@@ -1,5 +1,6 @@
 package io.airbyte.connectorSidecar
 
+import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
 import io.airbyte.config.ActorType
@@ -51,6 +52,9 @@ class ConnectorWatchTest {
   private lateinit var workloadApi: WorkloadApi
 
   @MockK
+  private lateinit var workloadApiClient: WorkloadApiClient
+
+  @MockK
   private lateinit var jobOutputDocStore: JobOutputDocStore
 
   @MockK
@@ -66,6 +70,8 @@ class ConnectorWatchTest {
 
   @BeforeEach
   fun init() {
+    every { workloadApiClient.workloadApi } returns workloadApi
+
     connectorWatcher =
       spyk(
         ConnectorWatcher(
@@ -76,7 +82,7 @@ class ConnectorWatchTest {
           serDeProvider,
           airbyteProtocolVersionedMigratorFactory,
           gsonPksExtractor,
-          workloadApi,
+          workloadApiClient,
           jobOutputDocStore,
         ),
       )

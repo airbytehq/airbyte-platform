@@ -13,6 +13,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.Geography;
@@ -65,7 +66,6 @@ import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workers.workload.exception.DocStoreAccessException;
-import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel;
@@ -111,7 +111,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
   private final FeatureFlags featureFlags;
   private final GsonPksExtractor gsonPksExtractor;
   private final CheckConnectionInputHydrator inputHydrator;
-  private final WorkloadApi workloadApi;
+  private final WorkloadApiClient workloadApiClient;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final JobOutputDocStore jobOutputDocStore;
   private final FeatureFlagClient featureFlagClient;
@@ -131,7 +131,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                                      final FeatureFlags featureFlags,
                                      final FeatureFlagClient featureFlagClient,
                                      final GsonPksExtractor gsonPksExtractor,
-                                     final WorkloadApi workloadApi,
+                                     final WorkloadApiClient workloadApiClient,
                                      final WorkloadIdGenerator workloadIdGenerator,
                                      final JobOutputDocStore jobOutputDocStore,
                                      final MetricClient metricClient,
@@ -149,7 +149,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         featureFlags,
         featureFlagClient,
         gsonPksExtractor,
-        workloadApi,
+        workloadApiClient,
         workloadIdGenerator,
         jobOutputDocStore,
         new CheckConnectionInputHydrator(
@@ -175,7 +175,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                               final FeatureFlags featureFlags,
                               final FeatureFlagClient featureFlagClient,
                               final GsonPksExtractor gsonPksExtractor,
-                              final WorkloadApi workloadApi,
+                              final WorkloadApiClient workloadApiClient,
                               final WorkloadIdGenerator workloadIdGenerator,
                               final JobOutputDocStore jobOutputDocStore,
                               final CheckConnectionInputHydrator checkConnectionInputHydrator,
@@ -192,7 +192,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
     this.migratorFactory = migratorFactory;
     this.featureFlags = featureFlags;
     this.gsonPksExtractor = gsonPksExtractor;
-    this.workloadApi = workloadApi;
+    this.workloadApiClient = workloadApiClient;
     this.workloadIdGenerator = workloadIdGenerator;
     this.jobOutputDocStore = jobOutputDocStore;
     this.featureFlagClient = featureFlagClient;
@@ -271,12 +271,12 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
     createWorkload(workloadCreateRequest);
 
     try {
-      Workload workload = workloadApi.workloadGet(workloadId);
+      Workload workload = workloadApiClient.getWorkloadApi().workloadGet(workloadId);
       final int checkFrequencyInSeconds = featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE,
           new Workspace(workspaceId));
       while (!isWorkloadTerminal(workload)) {
         Thread.sleep(1000 * checkFrequencyInSeconds);
-        workload = workloadApi.workloadGet(workloadId);
+        workload = workloadApiClient.getWorkloadApi().workloadGet(workloadId);
       }
     } catch (final IOException | InterruptedException e) {
       throw new RuntimeException(e);
@@ -353,7 +353,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
 
   private void createWorkload(final WorkloadCreateRequest workloadCreateRequest) {
     try {
-      workloadApi.workloadCreate(workloadCreateRequest);
+      workloadApiClient.getWorkloadApi().workloadCreate(workloadCreateRequest);
     } catch (final ClientException e) {
       /*
        * The Workload API returns a 409 response when the request to execute the workload has already been

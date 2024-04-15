@@ -1,4 +1,8 @@
-package io.airbyte.workers.config
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
+
+package io.airbyte.api.client.config
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.statsd.StatsdMeterRegistry
@@ -12,10 +16,6 @@ import jakarta.inject.Singleton
 
 private val logger = KotlinLogging.logger {}
 
-// TODO Temporarily copy this from the workload-launcher.  Ultimately, this will move to airbyte-metrics/metrics-lib
-//      and would provide a mechanism to override/add additional tags and/or define the tags that will be included
-//      in metrics
-
 /**
  * Custom Micronaut {@link MeterRegistryConfigurer} used to ensure that a common set of tags are
  * added to every Micrometer registry. Specifically, this class ensures that the tags for the
@@ -28,11 +28,11 @@ private val logger = KotlinLogging.logger {}
 @RequiresMetrics
 class StatsDRegistryConfigurer : MeterRegistryConfigurer<StatsdMeterRegistry>, Ordered {
   override fun configure(meterRegistry: StatsdMeterRegistry?) {
-        /*
-         * Use a LinkedHashSet to maintain order as items are added to the set. This ensures that the items
-         * are output as key1, value1, key2, value2, etc in order to maintain the relationship between key
-         * value pairs.
-         */
+    /*
+     * Use a LinkedHashSet to maintain order as items are added to the set. This ensures that the items
+     * are output as key1, value1, key2, value2, etc in order to maintain the relationship between key
+     * value pairs.
+     */
     val tags: MutableSet<String> = LinkedHashSet()
 
     possiblyAddTag(DATA_DOG_SERVICE_TAG, "service", tags)

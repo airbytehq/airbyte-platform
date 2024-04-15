@@ -11,6 +11,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_
 
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
+import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.Configs;
@@ -31,7 +32,6 @@ import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest;
@@ -55,7 +55,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   private final ReplicationWorkerFactory replicationWorkerFactory;
   // Used by the orchestrator to mark the job RUNNING once the relevant pods are spun up.
   private final AsyncStateManager asyncStateManager;
-  private final WorkloadApi workloadApi;
+  private final WorkloadApiClient workloadApiClient;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final boolean workloadEnabled;
   private final JobOutputDocStore jobOutputDocStore;
@@ -65,7 +65,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
                                     final JobRunConfig jobRunConfig,
                                     final ReplicationWorkerFactory replicationWorkerFactory,
                                     final AsyncStateManager asyncStateManager,
-                                    final WorkloadApi workloadApi,
+                                    final WorkloadApiClient workloadApiClient,
                                     final WorkloadIdGenerator workloadIdGenerator,
                                     final boolean workloadEnabled,
                                     final JobOutputDocStore jobOutputDocStore) {
@@ -74,7 +74,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
     this.jobRunConfig = jobRunConfig;
     this.replicationWorkerFactory = replicationWorkerFactory;
     this.asyncStateManager = asyncStateManager;
-    this.workloadApi = workloadApi;
+    this.workloadApiClient = workloadApiClient;
     this.workloadIdGenerator = workloadIdGenerator;
     this.workloadEnabled = workloadEnabled;
     this.jobOutputDocStore = jobOutputDocStore;
@@ -173,21 +173,21 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   }
 
   private void cancelWorkload(final String workloadId) throws IOException {
-    workloadApi.workloadCancel(new WorkloadCancelRequest(workloadId, "Replication job has been cancelled", "orchestrator"));
+    workloadApiClient.getWorkloadApi().workloadCancel(new WorkloadCancelRequest(workloadId, "Replication job has been cancelled", "orchestrator"));
   }
 
   private void failWorkload(final String workloadId, final Optional<FailureReason> failureReason) throws IOException {
     if (failureReason.isPresent()) {
-      workloadApi.workloadFailure(new WorkloadFailureRequest(workloadId,
+      workloadApiClient.getWorkloadApi().workloadFailure(new WorkloadFailureRequest(workloadId,
           failureReason.get().getFailureOrigin().value(),
           failureReason.get().getExternalMessage()));
     } else {
-      workloadApi.workloadFailure(new WorkloadFailureRequest(workloadId, null, null));
+      workloadApiClient.getWorkloadApi().workloadFailure(new WorkloadFailureRequest(workloadId, null, null));
     }
   }
 
   private void succeedWorkload(final String workloadId) throws IOException {
-    workloadApi.workloadSuccess(new WorkloadSuccessRequest(workloadId));
+    workloadApiClient.getWorkloadApi().workloadSuccess(new WorkloadSuccessRequest(workloadId));
   }
 
   private void markJobRunning() {
