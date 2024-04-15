@@ -52,7 +52,7 @@ export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSe
         {isCreating && <SimplifiedDestinationStreamPrefixNameFormField />}
       </FlexContainer>
 
-      <Box mt="md">
+      <Box mt="lg">
         {/* readonly mode disables all elements, including buttons, from the fieldset */}
         {/* to keep this toggle available, style and attribute a span like a button */}
         <span
@@ -65,7 +65,7 @@ export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSe
           }
         >
           <FormattedMessage id="connectionForm.advancedSettings" />
-          <Icon type={isAdvancedOpen ? "chevronDown" : "chevronRight"} size="lg" />
+          <Icon type={isAdvancedOpen ? "chevronDown" : "chevronRight"} size="md" />
         </span>
 
         {isCreating && (
@@ -74,26 +74,26 @@ export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSe
           </Text>
         )}
 
-        {isAdvancedOpen && <hr className={styles.hr} />}
-
         {/* using styles.hidden to show/hide as residency field makes an http request for geographies */}
         {/* which triggers a suspense boundary - none of the places for a suspense fallback are good UX  */}
         {/* so always render, making the geography request as part of the initial page load */}
-        <FlexContainer direction="column" gap="xl" className={isAdvancedOpen ? undefined : styles.hidden}>
-          {canEditDataGeographies && <SimplfiedConnectionDataResidencyFormField disabled={isDeprecated} />}
-          {!isCreating && (
-            <SimplifiedDestinationNamespaceFormField
-              isCreating={isCreating}
-              source={source}
-              destination={destination}
-              disabled={isDeprecated}
-            />
-          )}
-          {!isCreating && <SimplifiedDestinationStreamPrefixNameFormField disabled={isDeprecated} />}
-          <SimplfiedSchemaChangesFormField isCreating={isCreating} disabled={isDeprecated} />
-          <SimplifiedSchemaChangeNotificationFormField disabled={isDeprecated} />
-          {canBackfillNewColumns && <SimplifiedBackfillFormField disabled={isDeprecated} />}
-        </FlexContainer>
+        <Box mt="xl">
+          <FlexContainer direction="column" gap="xl" className={isAdvancedOpen ? undefined : styles.hidden}>
+            {canEditDataGeographies && <SimplfiedConnectionDataResidencyFormField disabled={isDeprecated} />}
+            {!isCreating && (
+              <SimplifiedDestinationNamespaceFormField
+                isCreating={isCreating}
+                source={source}
+                destination={destination}
+                disabled={isDeprecated}
+              />
+            )}
+            {!isCreating && <SimplifiedDestinationStreamPrefixNameFormField disabled={isDeprecated} />}
+            <SimplfiedSchemaChangesFormField isCreating={isCreating} disabled={isDeprecated} />
+            <SimplifiedSchemaChangeNotificationFormField disabled={isDeprecated} />
+            {canBackfillNewColumns && <SimplifiedBackfillFormField disabled={isDeprecated} />}
+          </FlexContainer>
+        </Box>
 
         {!isCreating && (
           <Box mt="xl">

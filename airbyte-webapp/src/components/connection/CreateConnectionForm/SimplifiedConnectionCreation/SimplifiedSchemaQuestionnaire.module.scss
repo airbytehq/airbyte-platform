@@ -8,10 +8,11 @@
 .collapsedQuestion {
   overflow: hidden;
   height: 0;
+  transition: height variables.$transition-out;
 }
 
 .expandedQuestion {
   overflow: hidden;
-  height: 171px;
+  height: 131px;
   transition: height variables.$transition-out;
 }
