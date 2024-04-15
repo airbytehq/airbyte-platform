@@ -79,16 +79,24 @@ export const useCreateUserInvitation = () => {
   return useMutation(async (invitationCreate: UserInvitationCreateRequestBody) =>
     createUserInvitation(invitationCreate, requestOptions)
       .then((response) => {
+        if (response.directlyAdded === true) {
+          registerNotification({
+            type: "success",
+            text: formatMessage({ id: "userInvitations.create.success.directlyAdded" }),
+            id: "userInvitations.create.success.directlyAdded",
+          });
+          queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
+
+          return response;
+        }
         registerNotification({
           type: "success",
           text: formatMessage({ id: "userInvitations.create.success" }),
           id: "userInvitations.create.success",
         });
         const keyScope = invitationCreate.scopeType === "workspace" ? SCOPE_WORKSPACE : SCOPE_ORGANIZATION;
-
-        // this endpoint will direct add users who are already within the org, so we want to invalidate both the invitations and the members lists
-        queryClient.invalidateQueries(workspaceKeys.allListAccessUsers);
         queryClient.invalidateQueries([keyScope, "userInvitations"]);
+
         return response;
       })
       .catch((err) => {
@@ -127,7 +135,7 @@ export const useCancelUserInvitation = () => {
 
   return useMutation(async (inviteCodeRequestBody: InviteCodeRequestBody) =>
     cancelUserInvitation(inviteCodeRequestBody, requestOptions)
-      .then((res) => {
+      .then((response) => {
         registerNotification({
           type: "success",
           text: formatMessage({ id: "userInvitations.cancel.success" }),
@@ -135,9 +143,10 @@ export const useCancelUserInvitation = () => {
         });
 
         queryClient.invalidateQueries([
-          res.scopeType === "organization" ? SCOPE_ORGANIZATION : SCOPE_WORKSPACE,
+          response.scopeType === "organization" ? SCOPE_ORGANIZATION : SCOPE_WORKSPACE,
           "userInvitations",
         ]);
+        return response;
       })
       .catch(() => {
         registerNotification({

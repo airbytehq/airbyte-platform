@@ -80,7 +80,7 @@ export const useCreatePermission = () => {
       onSuccess: (data: PermissionRead) => {
         registerNotification({
           id: "settings.accessManagement.permissionCreate.success",
-          text: formatMessage({ id: "settings.accessManagement.permissionCreate.success" }),
+          text: formatMessage({ id: "userInvitations.create.success.directlyAdded" }),
           type: "success",
         });
         if (data.organizationId) {
@@ -91,7 +91,7 @@ export const useCreatePermission = () => {
       onError: () => {
         registerNotification({
           id: "settings.accessManagement.permissionCreate.error",
-          text: formatMessage({ id: "settings.accessManagement.permissionCreate.error" }),
+          text: formatMessage({ id: "userInvitations.create.error" }),
           type: "error",
         });
       },
