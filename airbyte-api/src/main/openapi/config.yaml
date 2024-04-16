@@ -6164,6 +6164,7 @@ components:
       type: object
       required:
         - name
+        - organizationId
       properties:
         email:
           type: string
@@ -6197,6 +6198,7 @@ components:
       required:
         - id
         - name
+        - organizationId
       properties:
         id:
           type: string

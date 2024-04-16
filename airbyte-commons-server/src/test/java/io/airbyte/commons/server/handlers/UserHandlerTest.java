@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -100,6 +99,7 @@ class UserHandlerTest {
       .withAuthProvider(AuthProvider.GOOGLE_IDENTITY_PLATFORM)
       .withStatus(Status.INVITED)
       .withName(USER_NAME);
+  private ResourceBootstrapHandler resourceBootstrapHandler;
 
   @BeforeEach
   void setUp() {
@@ -113,10 +113,11 @@ class UserHandlerTest {
     uuidSupplier = mock(Supplier.class);
     jwtUserAuthenticationResolver = mock(JwtUserAuthenticationResolver.class);
     initialUserConfiguration = mock(InitialUserConfiguration.class);
+    resourceBootstrapHandler = mock(ResourceBootstrapHandler.class);
 
     userHandler =
         new UserHandler(userPersistence, permissionPersistence, permissionService, organizationPersistence, permissionHandler, workspacesHandler,
-            uuidSupplier, jwtUserAuthenticationResolver, Optional.of(initialUserConfiguration));
+            uuidSupplier, jwtUserAuthenticationResolver, Optional.of(initialUserConfiguration), resourceBootstrapHandler);
   }
 
   @Test
@@ -328,7 +329,7 @@ class UserHandlerTest {
         when(jwtUserAuthenticationResolver.resolveUser(NEW_AUTH_USER_ID)).thenReturn(newUser);
         when(uuidSupplier.get()).thenReturn(NEW_USER_ID);
         when(userPersistence.getUser(NEW_USER_ID)).thenReturn(Optional.of(newUser));
-        when(workspacesHandler.createDefaultWorkspaceForUser(any(), any())).thenReturn(defaultWorkspace);
+        when(resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(any())).thenReturn(defaultWorkspace);
       }
 
       @ParameterizedTest
@@ -357,7 +358,7 @@ class UserHandlerTest {
           // happens in Cloud)
           userHandler = new UserHandler(userPersistence, permissionPersistence, permissionService, organizationPersistence, permissionHandler,
               workspacesHandler,
-              uuidSupplier, jwtUserAuthenticationResolver, Optional.empty());
+              uuidSupplier, jwtUserAuthenticationResolver, Optional.empty(), resourceBootstrapHandler);
         }
 
         if (isFirstOrgUser) {
@@ -376,6 +377,9 @@ class UserHandlerTest {
           when(workspacesHandler.listWorkspacesInOrganization(
               new ListWorkspacesInOrganizationRequestBody().organizationId(ORGANIZATION.getOrganizationId()))).thenReturn(
                   new WorkspaceReadList().workspaces(List.of(defaultWorkspace)));
+          if (newUser.getDefaultWorkspaceId() == null) {
+            newUser.setDefaultWorkspaceId(defaultWorkspace.getWorkspaceId());
+          }
         } else {
           when(workspacesHandler.listWorkspacesInOrganization(any())).thenReturn(new WorkspaceReadList().workspaces(List.of()));
         }
@@ -395,7 +399,7 @@ class UserHandlerTest {
         verifyUserRead(userRead, apiAuthProvider);
         verifyInstanceAdminPermissionCreation(initialUserEmail, initialUserPresent);
         verifyOrganizationPermissionCreation(ssoRealm, isFirstOrgUser);
-        verifyDefaultWorkspaceCreation(ssoRealm, isDefaultWorkspaceForOrgPresent, userPersistenceInOrder);
+        verifyDefaultWorkspaceCreation(isDefaultWorkspaceForOrgPresent, userPersistenceInOrder);
       }
 
       private void verifyCreatedUser(final AuthProvider expectedAuthProvider, final InOrder inOrder) throws IOException {
@@ -405,38 +409,19 @@ class UserHandlerTest {
             && user.getAuthProvider().equals(expectedAuthProvider)));
       }
 
-      private void verifyDefaultWorkspaceCreation(final String ssoRealm, final Boolean isDefaultWorkspaceForOrgPresent, final InOrder inOrder)
-          throws IOException, JsonValidationException, ConfigNotFoundException {
-        boolean workspaceCreated = false;
-
-        if (ssoRealm == null) {
-          // always create a default workspace for non-SSO users
-          verify(workspacesHandler).createDefaultWorkspaceForUser(
-              argThat(user -> user.getUserId().equals(NEW_USER_ID)),
-              eq(Optional.empty()));
-          workspaceCreated = true;
-
-        } else {
-          if (!isDefaultWorkspaceForOrgPresent) {
-            // create a default workspace for the org if one doesn't yet exist
-            verify(workspacesHandler).createDefaultWorkspaceForUser(
-                argThat(user -> user.getUserId().equals(NEW_USER_ID)),
-                argThat(org -> org.orElseThrow().getOrganizationId().equals(ORGANIZATION.getOrganizationId())));
-            workspaceCreated = true;
-
-          } else {
-            // never create an additional workspace for the org if one already exists.
-            verify(workspacesHandler, never()).createDefaultWorkspaceForUser(any(), any());
-          }
-        }
-        if (workspaceCreated) {
+      private void verifyDefaultWorkspaceCreation(final Boolean isDefaultWorkspaceForOrgPresent, final InOrder inOrder)
+          throws IOException {
+        // No need to deal with other vars because SSO users and first org users etc. are all directed
+        // through the same codepath now.
+        if (!isDefaultWorkspaceForOrgPresent) {
+          // create a default workspace for the org if one doesn't yet exist
+          verify(resourceBootstrapHandler).bootStrapWorkspaceForCurrentUser(any());
           // if a workspace was created, verify that the user's defaultWorkspaceId was updated
           // and that a workspaceAdmin permission was created for them.
           inOrder.verify(userPersistence).writeUser(argThat(user -> user.getDefaultWorkspaceId().equals(WORKSPACE_ID)));
-          verify(permissionHandler).createPermission(new PermissionCreate()
-              .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_ADMIN)
-              .workspaceId(WORKSPACE_ID)
-              .userId(NEW_USER_ID));
+        } else {
+          // never create an additional workspace for the org if one already exists.
+          verify(resourceBootstrapHandler, never()).bootStrapWorkspaceForCurrentUser(any());
         }
       }
 

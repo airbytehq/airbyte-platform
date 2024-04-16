@@ -4,6 +4,8 @@
 
 package io.airbyte.server.pro;
 
+import static io.airbyte.config.persistence.UserPersistence.DEFAULT_USER_ID;
+
 import io.airbyte.commons.auth.AirbyteAuthConstants;
 import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
 import io.airbyte.commons.server.support.RbacRoleHelper;
@@ -31,7 +33,7 @@ public class AirbyteAuthInternalTokenValidator implements TokenValidator<HttpReq
   public Publisher<Authentication> validateToken(final String token, final HttpRequest<?> request) {
     if (validateAirbyteAuthInternalToken(token)) {
       return Flux.create(emitter -> {
-        emitter.next(getAuthentication(token));
+        emitter.next(getAuthentication());
         emitter.complete();
       });
     } else {
@@ -44,10 +46,10 @@ public class AirbyteAuthInternalTokenValidator implements TokenValidator<HttpReq
     return AirbyteAuthConstants.VALID_INTERNAL_SERVICE_NAMES.contains(token);
   }
 
-  private Authentication getAuthentication(final String token) {
+  private Authentication getAuthentication() {
     // set the Authentication username to the token value, which must be a valid internal service name.
     // for now, all internal services get instance admin roles.
-    return Authentication.build(token, RbacRoleHelper.getInstanceAdminRoles());
+    return Authentication.build(DEFAULT_USER_ID.toString(), RbacRoleHelper.getInstanceAdminRoles());
   }
 
 }

@@ -39,8 +39,10 @@ import io.airbyte.commons.server.converters.NotificationConverter;
 import io.airbyte.commons.server.converters.NotificationSettingsConverter;
 import io.airbyte.commons.server.converters.WorkspaceConverter;
 import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter;
+import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
+import io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt;
 import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -137,6 +139,13 @@ public class WorkspacesHandler {
   public WorkspaceRead createWorkspaceIfNotExist(final WorkspaceCreateWithId workspaceCreateWithId)
       throws JsonValidationException, IOException, ValueConflictKnownException, ConfigNotFoundException {
 
+    // We expect that the caller is specifying the workspace ID.
+    // Since this code is currently only called by OSS, it's enforced in the public API and the UI
+    // currently.
+    if (workspaceCreateWithId.getOrganizationId() == null) {
+      throw new BadObjectSchemaKnownException("Workspace missing org ID.");
+    }
+
     final String email = workspaceCreateWithId.getEmail();
     final Boolean anonymousDataCollection = workspaceCreateWithId.getAnonymousDataCollection();
     final Boolean news = workspaceCreateWithId.getNews();
@@ -187,7 +196,7 @@ public class WorkspacesHandler {
     final Boolean news = user.getNews();
     // otherwise, create a default workspace for this user
     final WorkspaceCreate workspaceCreate = new WorkspaceCreate()
-        .name(getDefaultWorkspaceName(organization, companyName, email))
+        .name(WorkspaceHelpersKt.getDefaultWorkspaceName(organization, companyName, email))
         .organizationId(organization.map(Organization::getOrganizationId).orElse(null))
         .email(email)
         .news(news)
@@ -195,24 +204,6 @@ public class WorkspacesHandler {
         .securityUpdates(false)
         .displaySetupWizard(true);
     return createWorkspace(workspaceCreate);
-  }
-
-  private String getDefaultWorkspaceName(final Optional<Organization> organization, final String companyName, final String email) {
-    String defaultWorkspaceName = "";
-    if (organization.isPresent()) {
-      // use organization name as default workspace name
-      defaultWorkspaceName = organization.get().getName().trim();
-    }
-    // if organization name is not available or empty, use user's company name (note: this is an
-    // optional field)
-    if (defaultWorkspaceName.isEmpty() && companyName != null) {
-      defaultWorkspaceName = companyName.trim();
-    }
-    // if company name is still empty, use user's email (note: this is a required field)
-    if (defaultWorkspaceName.isEmpty()) {
-      defaultWorkspaceName = email;
-    }
-    return defaultWorkspaceName;
   }
 
   public void deleteWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
