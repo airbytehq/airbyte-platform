@@ -1750,8 +1750,8 @@ keycloak:
 
   # -- Security context for the container
   podSecurityContext:
-    # gid=1000(airbyte)
-    fsGroup: 1000
+    # gid=0(root)
+    fsGroup: 0
 
   initContainerSecurityContext:
     allowPrivilegeEscalation: false 
@@ -1769,10 +1769,10 @@ keycloak:
   containerSecurityContext:
     allowPrivilegeEscalation: false 
     runAsNonRoot: true
-    # uid=1000(airbyte)
+    # uid=1000(keycloak)
     runAsUser: 1000
-    # gid=1000(airbyte)
-    runAsGroup: 1000
+    # gid=0(root)
+    runAsGroup: 0
     readOnlyRootFilesystem: false
     capabilities:
       drop: ["ALL"]
