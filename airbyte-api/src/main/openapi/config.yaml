@@ -9637,6 +9637,7 @@ components:
         - refresh_schema
         - heartbeat_timeout
         - destination_timeout
+        - transient_error
     AttemptStatus:
       type: string
       enum:
