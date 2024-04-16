@@ -13,7 +13,6 @@ import { ConnectorBuilderMainRHFContext } from "services/connectorBuilder/Connec
 import { BuilderField, BuilderFieldProps } from "./BuilderField";
 import styles from "./BuilderFieldWithInputs.module.scss";
 import { InputForm, newInputInEditing } from "./InputsForm";
-import { useInferredInputs } from "../useInferredInputs";
 
 export const BuilderFieldWithInputs: React.FC<BuilderFieldProps> = (props) => {
   return (
@@ -31,14 +30,13 @@ const UserInputHelper = (props: UserInputHelperProps) => {
     throw new Error("rhf context not available");
   }
   const inputs = watch("formValues.inputs");
-  const inferredInputs = useInferredInputs();
   const listOptions = useMemo(() => {
-    const options: Array<Option<string | undefined>> = [...inputs, ...inferredInputs].map((input) => ({
+    const options: Array<Option<string | undefined>> = inputs.map((input) => ({
       label: input.definition.title || input.key,
       value: input.key,
     }));
     return options;
-  }, [inputs, inferredInputs]);
+  }, [inputs]);
   return <InnerUserInputHelper {...props} listOptions={listOptions} />;
 };
 
@@ -57,7 +55,7 @@ const InnerUserInputHelper = React.memo(
           selectedValue={undefined}
           onSelect={(selectedValue) => {
             if (selectedValue) {
-              setValue(path, `${getValues(path) || ""}{{ config['${selectedValue}'] }}`, {
+              setValue(path, `${getValues(path) || ""}{{ config["${selectedValue}"] }}`, {
                 shouldDirty: true,
                 shouldTouch: true,
                 shouldValidate: true,

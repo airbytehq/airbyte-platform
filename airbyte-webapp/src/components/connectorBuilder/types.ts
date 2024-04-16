@@ -50,8 +50,8 @@ import {
   RequestOptionInjectInto,
   NoAuthType,
   HttpRequester,
+  OAuthAuthenticatorRefreshTokenUpdater,
 } from "core/api/types/ConnectorManifest";
-import { naturalComparator } from "core/utils/objects";
 
 import { CDK_VERSION } from "./cdk";
 import { formatJson } from "./utils";
@@ -72,7 +72,7 @@ export interface BuilderFormInput {
   key: string;
   required: boolean;
   definition: AirbyteJSONSchema;
-  as_config_path?: boolean;
+  isLocked?: boolean;
 }
 
 type BuilderHttpMethod = "GET" | "POST";
@@ -93,16 +93,27 @@ export type BuilderSessionTokenAuthenticator = Omit<SessionTokenAuthenticator, "
   };
 };
 
-export type BuilderFormAuthenticator = (
+export type BuilderFormAuthenticator =
   | NoAuth
-  | (Omit<OAuthAuthenticator, "refresh_request_body"> & {
-      refresh_request_body: Array<[string, string]>;
-    })
+  | BuilderFormOAuthAuthenticator
   | ApiKeyAuthenticator
   | BearerAuthenticator
   | BasicHttpAuthenticator
-  | BuilderSessionTokenAuthenticator
-) & { type: string };
+  | BuilderSessionTokenAuthenticator;
+
+export type BuilderFormOAuthAuthenticator = Omit<
+  OAuthAuthenticator,
+  "refresh_request_body" | "refresh_token_updater"
+> & {
+  refresh_request_body: Array<[string, string]>;
+  refresh_token_updater?: Omit<
+    OAuthAuthenticatorRefreshTokenUpdater,
+    "access_token_config_path" | "token_expiry_date_config_path" | "refresh_token_config_path"
+  > & {
+    access_token: string;
+    token_expiry_date: string;
+  };
+};
 
 export interface BuilderFormValues {
   global: {
@@ -110,8 +121,6 @@ export interface BuilderFormValues {
     authenticator: BuilderFormAuthenticator;
   };
   inputs: BuilderFormInput[];
-  inferredInputOverrides: Record<string, Partial<AirbyteJSONSchema>>;
-  inputOrder: string[];
   streams: BuilderStream[];
   checkStreams: string[];
   version: string;
@@ -173,12 +182,14 @@ export interface BuilderIncrementalSync
   end_datetime:
     | {
         type: "user_input";
+        value: string;
       }
     | { type: "now" }
     | { type: "custom"; value: string; format?: string };
   start_datetime:
     | {
         type: "user_input";
+        value: string;
       }
     | { type: "custom"; value: string; format?: string };
   slicer?: {
@@ -318,8 +329,6 @@ export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
     authenticator: { type: "NoAuth" },
   },
   inputs: [],
-  inferredInputOverrides: {},
-  inputOrder: [],
   streams: [],
   checkStreams: [],
   version: CDK_VERSION,
@@ -373,166 +382,8 @@ export const CURSOR_PAGINATION: CursorPaginationType = "CursorPagination";
 export const OFFSET_INCREMENT: OffsetIncrementType = "OffsetIncrement";
 export const PAGE_INCREMENT: PageIncrementType = "PageIncrement";
 
-export const incrementalSyncInferredInputs: Record<"start_date" | "end_date", BuilderFormInput> = {
-  start_date: {
-    key: "start_date",
-    required: true,
-    definition: {
-      type: "string",
-      title: "Start date",
-      format: "date-time",
-      pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
-    },
-  },
-  end_date: {
-    key: "end_date",
-    required: true,
-    definition: {
-      type: "string",
-      title: "End date",
-      format: "date-time",
-      pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
-    },
-  },
-};
-
-export const DEFAULT_INFERRED_INPUT_ORDER = [
-  "api_key",
-  "username",
-  "password",
-  "client_id",
-  "client_secret",
-  "client_refresh_token",
-];
-
-export const authTypeToKeyToInferredInput = (
-  authenticator: BuilderFormAuthenticator | { type: BuilderFormAuthenticator["type"] }
-): Record<string, BuilderFormInput> => {
-  switch (authenticator.type) {
-    case "NoAuth":
-      return {};
-    case API_KEY_AUTHENTICATOR:
-      return {
-        api_token: {
-          key: "api_key",
-          required: true,
-          definition: {
-            type: "string",
-            title: "API Key",
-            airbyte_secret: true,
-          },
-        },
-      };
-    case BEARER_AUTHENTICATOR:
-      return {
-        api_token: {
-          key: "api_key",
-          required: true,
-          definition: {
-            type: "string",
-            title: "API Key",
-            airbyte_secret: true,
-          },
-        },
-      };
-    case BASIC_AUTHENTICATOR:
-      return {
-        username: {
-          key: "username",
-          required: true,
-          definition: {
-            type: "string",
-            title: "Username",
-          },
-        },
-        password: {
-          key: "password",
-          required: false,
-          definition: {
-            type: "string",
-            title: "Password",
-            always_show: true,
-            airbyte_secret: true,
-          },
-        },
-      };
-    case OAUTH_AUTHENTICATOR:
-      const baseInputs: Record<string, BuilderFormInput> = {
-        client_id: {
-          key: "client_id",
-          required: true,
-          definition: {
-            type: "string",
-            title: "Client ID",
-            airbyte_secret: true,
-          },
-        },
-        client_secret: {
-          key: "client_secret",
-          required: true,
-          definition: {
-            type: "string",
-            title: "Client secret",
-            airbyte_secret: true,
-          },
-        },
-      };
-      if (!("grant_type" in authenticator) || authenticator.grant_type === "refresh_token") {
-        baseInputs.refresh_token = {
-          key: "client_refresh_token",
-          required: true,
-          definition: {
-            type: "string",
-            title: "Refresh token",
-            airbyte_secret: true,
-          },
-        };
-        if ("refresh_token_updater" in authenticator && authenticator.refresh_token_updater) {
-          baseInputs.oauth_access_token = {
-            key: "oauth_access_token",
-            required: false,
-            definition: {
-              type: "string",
-              title: "Access token",
-              airbyte_secret: true,
-              description:
-                "The current access token. This field might be overridden by the connector based on the token refresh endpoint response.",
-            },
-            as_config_path: true,
-          };
-          baseInputs.oauth_token_expiry_date = {
-            key: "oauth_token_expiry_date",
-            required: false,
-            definition: {
-              type: "string",
-              title: "Token expiry date",
-              format: "date-time",
-              description:
-                "The date the current access token expires in. This field might be overridden by the connector based on the token refresh endpoint response.",
-            },
-            as_config_path: true,
-          };
-        }
-      }
-      return baseInputs;
-    case SESSION_TOKEN_AUTHENTICATOR:
-      if ("login_requester" in authenticator && "type" in authenticator.login_requester.authenticator) {
-        return authTypeToKeyToInferredInput(authenticator.login_requester.authenticator);
-      }
-      return {};
-  }
-};
-
 export const OAUTH_ACCESS_TOKEN_INPUT = "oauth_access_token";
 export const OAUTH_TOKEN_EXPIRY_DATE_INPUT = "oauth_token_expiry_date";
-
-export const inferredAuthValues = (type: BuilderFormAuthenticator["type"]): Record<string, string> => {
-  return Object.fromEntries(
-    Object.entries(authTypeToKeyToInferredInput({ type })).map(([authKey, inferredInput]) => {
-      return [authKey, interpolateConfigKey(inferredInput.key)];
-    })
-  );
-};
 
 export function hasIncrementalSyncUserInput(
   streams: BuilderFormValues["streams"],
@@ -546,63 +397,24 @@ export function hasIncrementalSyncUserInput(
   );
 }
 
-export const getInferredAuthValue = (authenticator: BuilderFormAuthenticator, authKey: string) => {
-  if (authenticator.type === "SessionTokenAuthenticator") {
-    return Reflect.get(authenticator.login_requester.authenticator, authKey);
-  }
-  return Reflect.get(authenticator, authKey);
-};
-
-export function getInferredInputList(
-  authenticator: BuilderFormAuthenticator,
-  inferredInputOverrides: BuilderFormValues["inferredInputOverrides"],
-  startDateInput: boolean,
-  endDateInput: boolean
-): BuilderFormInput[] {
-  const authKeyToInferredInput = authTypeToKeyToInferredInput(authenticator);
-  const authKeys = Object.keys(authKeyToInferredInput);
-  const inputs = authKeys.flatMap((authKey) => {
-    if (
-      authKeyToInferredInput[authKey].as_config_path ||
-      extractInterpolatedConfigKey(getInferredAuthValue(authenticator, authKey)) === authKeyToInferredInput[authKey].key
-    ) {
-      return [authKeyToInferredInput[authKey]];
-    }
-    return [];
-  });
-
-  if (startDateInput) {
-    inputs.push(incrementalSyncInferredInputs.start_date);
-  }
-
-  if (endDateInput) {
-    inputs.push(incrementalSyncInferredInputs.end_date);
-  }
-
-  return inputs.map((input) =>
-    inferredInputOverrides[input.key]
-      ? {
-          ...input,
-          definition: { ...input.definition, ...inferredInputOverrides[input.key] },
-        }
-      : input
-  );
+export function interpolateConfigKey(key: string): string;
+export function interpolateConfigKey(key: string | undefined): string | undefined;
+export function interpolateConfigKey(key: string | undefined): string | undefined {
+  return key ? `{{ config["${key}"] }}` : undefined;
 }
 
-const interpolateConfigKey = (key: string): string => {
-  return `{{ config['${key}'] }}`;
-};
-
-const interpolatedConfigValueRegex = /^{{config(\.(.+)|\[('|"+)(.+)('|"+)\])}}$/;
+const interpolatedConfigValueRegexBracket = /^\s*{{\s*config\[('|")+(\S+)('|")+\]\s*}}\s*$/;
+const interpolatedConfigValueRegexDot = /^\s*{{\s*config\.(\S+)\s*}}\s*$/;
 
 export function isInterpolatedConfigKey(str: string | undefined): boolean {
   if (str === undefined) {
     return false;
   }
-  const noWhitespaceString = str.replace(/\s/g, "");
-  return interpolatedConfigValueRegex.test(noWhitespaceString);
+  return interpolatedConfigValueRegexBracket.test(str) || interpolatedConfigValueRegexDot.test(str);
 }
 
+export function extractInterpolatedConfigKey(str: string): string;
+export function extractInterpolatedConfigKey(str: string | undefined): string | undefined;
 export function extractInterpolatedConfigKey(str: string | undefined): string | undefined {
   /**
    * This methods does not work for nested configs like `config["credentials"]["client_secret"]` as the interpolated config key would be
@@ -611,14 +423,15 @@ export function extractInterpolatedConfigKey(str: string | undefined): string | 
   if (str === undefined) {
     return undefined;
   }
-  const noWhitespaceString = str.replace(/\s/g, "");
-  const regexResult = interpolatedConfigValueRegex.exec(noWhitespaceString);
-  if (regexResult === null) {
-    return undefined;
-  } else if (regexResult.length > 2) {
-    return regexResult[4];
+  const regexBracketResult = interpolatedConfigValueRegexBracket.exec(str);
+  if (regexBracketResult === null) {
+    const regexDotResult = interpolatedConfigValueRegexDot.exec(str);
+    if (regexDotResult === null) {
+      return undefined;
+    }
+    return regexDotResult[1];
   }
-  return regexResult[2];
+  return regexBracketResult[2];
 }
 
 const INTERPOLATION_PATTERN = /^\{\{.+\}\}$/;
@@ -962,7 +775,7 @@ export const streamSchema = yup.object().shape({
         ),
         start_datetime: yup.object().shape({
           value: yup.mixed().when("type", {
-            is: (val: string) => val === "custom",
+            is: (val: string) => val === "custom" || val === "user_input",
             then: yup.string().required(REQUIRED_ERROR),
             otherwise: strip,
           }),
@@ -970,7 +783,7 @@ export const streamSchema = yup.object().shape({
         end_datetime: schemaIfRangeFilter(
           yup.object().shape({
             value: yup.mixed().when("type", {
-              is: (val: string) => val === "custom",
+              is: (val: string) => val === "custom" || val === "user_input",
               then: yup.string().required(REQUIRED_ERROR),
               otherwise: strip,
             }),
@@ -1043,6 +856,8 @@ function builderAuthenticatorToManifest(
     return undefined;
   }
   if (globalSettings.authenticator.type === "OAuthAuthenticator") {
+    const { access_token, token_expiry_date, ...refresh_token_updater } =
+      globalSettings.authenticator.refresh_token_updater ?? {};
     return {
       ...globalSettings.authenticator,
       refresh_token:
@@ -1050,9 +865,19 @@ function builderAuthenticatorToManifest(
           ? undefined
           : globalSettings.authenticator.refresh_token,
       refresh_token_updater:
-        globalSettings.authenticator.grant_type === "client_credentials"
+        globalSettings.authenticator.grant_type === "client_credentials" ||
+        !globalSettings.authenticator.refresh_token_updater
           ? undefined
-          : globalSettings.authenticator.refresh_token_updater,
+          : {
+              ...refresh_token_updater,
+              access_token_config_path: [
+                extractInterpolatedConfigKey(globalSettings.authenticator.refresh_token_updater.access_token),
+              ],
+              token_expiry_date_config_path: [
+                extractInterpolatedConfigKey(globalSettings.authenticator.refresh_token_updater.token_expiry_date),
+              ],
+              refresh_token_config_path: [extractInterpolatedConfigKey(globalSettings.authenticator.refresh_token!)],
+            },
       refresh_request_body: Object.fromEntries(globalSettings.authenticator.refresh_request_body),
     };
   }
@@ -1060,6 +885,20 @@ function builderAuthenticatorToManifest(
     return {
       ...globalSettings.authenticator,
       header: undefined,
+      api_token: globalSettings.authenticator.api_token,
+    };
+  }
+  if (globalSettings.authenticator.type === "BearerAuthenticator") {
+    return {
+      ...globalSettings.authenticator,
+      api_token: globalSettings.authenticator.api_token,
+    };
+  }
+  if (globalSettings.authenticator.type === "BasicHttpAuthenticator") {
+    return {
+      ...globalSettings.authenticator,
+      username: globalSettings.authenticator.username,
+      password: globalSettings.authenticator.password,
     };
   }
   if (globalSettings.authenticator.type === "SessionTokenAuthenticator") {
@@ -1168,7 +1007,7 @@ export function builderIncrementalSyncToManifest(
   } = formValues;
   const startDatetime = {
     type: "MinMaxDatetime" as const,
-    datetime: start_datetime.type === "custom" ? start_datetime.value : `{{ config['start_date'] }}`,
+    datetime: start_datetime.value,
     datetime_format: start_datetime.type === "custom" ? start_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
   };
   const manifestIncrementalSync = {
@@ -1187,11 +1026,9 @@ export function builderIncrementalSyncToManifest(
       end_datetime: {
         type: "MinMaxDatetime",
         datetime:
-          end_datetime.type === "custom"
-            ? end_datetime.value
-            : end_datetime.type === "now"
+          end_datetime.type === "now"
             ? `{{ now_utc().strftime('${INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT}') }}`
-            : `{{ config['end_date'] }}`,
+            : end_datetime.value,
         datetime_format: end_datetime.type === "custom" ? end_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
       },
       step: slicer?.step,
@@ -1389,49 +1226,6 @@ function builderStreamToDeclarativeSteam(
   return merge({}, declarativeStream, stream.unsupportedFields);
 }
 
-export const orderInputs = (
-  inputs: BuilderFormInput[],
-  inferredInputs: BuilderFormInput[],
-  storedInputOrder: string[]
-) => {
-  const keyToStoredOrder = storedInputOrder.reduce((map, key, index) => map.set(key, index), new Map<string, number>());
-
-  return inferredInputs
-    .map((input) => {
-      return { input, isInferred: true, id: input.key };
-    })
-    .concat(
-      inputs.map((input) => {
-        return { input, isInferred: false, id: input.key };
-      })
-    )
-    .sort((inputA, inputB) => {
-      const storedIndexA = keyToStoredOrder.get(inputA.id);
-      const storedIndexB = keyToStoredOrder.get(inputB.id);
-
-      if (storedIndexA !== undefined && storedIndexB !== undefined) {
-        return storedIndexA - storedIndexB;
-      }
-      if (storedIndexA !== undefined && storedIndexB === undefined) {
-        return inputB.isInferred ? 1 : -1;
-      }
-      if (storedIndexA === undefined && storedIndexB !== undefined) {
-        return inputA.isInferred ? -1 : 1;
-      }
-      // both indexes are undefined
-      if (inputA.isInferred && inputB.isInferred) {
-        return DEFAULT_INFERRED_INPUT_ORDER.indexOf(inputA.id) - DEFAULT_INFERRED_INPUT_ORDER.indexOf(inputB.id);
-      }
-      if (inputA.isInferred && !inputB.isInferred) {
-        return -1;
-      }
-      if (!inputA.isInferred && inputB.isInferred) {
-        return 1;
-      }
-      return naturalComparator(inputA.id, inputB.id);
-    });
-};
-
 export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderMetadata => {
   const componentNameIfString = (componentName: YamlSupportedComponentName, value: unknown) =>
     isYamlString(value) ? [componentName] : [];
@@ -1461,35 +1255,25 @@ export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderM
   };
 };
 
+export const builderInputsToSpec = (inputs: BuilderFormInput[]): Spec => {
+  const specSchema: JSONSchema7 = {
+    $schema: "http://json-schema.org/draft-07/schema#",
+    type: "object",
+    required: inputs.filter((input) => input.required).map((input) => input.key),
+    properties: Object.fromEntries(inputs.map((input, index) => [input.key, { ...input.definition, order: index }])),
+    additionalProperties: true,
+  };
+
+  return {
+    connection_specification: specSchema,
+    type: "Spec",
+  };
+};
+
 export const convertToManifest = (values: BuilderFormValues): ConnectorManifest => {
   const manifestStreams: DeclarativeStream[] = values.streams.map((stream) =>
     builderStreamToDeclarativeSteam(values, stream, [])
   );
-
-  const orderedInputs = orderInputs(
-    values.inputs,
-    getInferredInputList(
-      values.global.authenticator,
-      values.inferredInputOverrides,
-      hasIncrementalSyncUserInput(values.streams, "start_datetime"),
-      hasIncrementalSyncUserInput(values.streams, "end_datetime")
-    ),
-    values.inputOrder
-  );
-  const allInputs = orderedInputs.map((orderedInput) => orderedInput.input);
-
-  const specSchema: JSONSchema7 = {
-    $schema: "http://json-schema.org/draft-07/schema#",
-    type: "object",
-    required: allInputs.filter((input) => input.required).map((input) => input.key),
-    properties: Object.fromEntries(allInputs.map((input, index) => [input.key, { ...input.definition, order: index }])),
-    additionalProperties: true,
-  };
-
-  const spec: Spec = {
-    connection_specification: specSchema,
-    type: "Spec",
-  };
 
   const streamNames = values.streams.map((s) => s.name);
   const validCheckStreamNames = (values.checkStreams ?? []).filter((checkStream) => streamNames.includes(checkStream));
@@ -1526,7 +1310,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     },
     streams: streamRefs,
     schemas: streamNameToSchema,
-    spec,
+    spec: builderInputsToSpec(values.inputs),
     metadata: builderFormValuesToMetadata(values),
   };
 };

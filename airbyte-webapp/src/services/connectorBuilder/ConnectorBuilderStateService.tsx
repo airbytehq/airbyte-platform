@@ -19,6 +19,7 @@ import {
   getManifestValuePerComponentPerStream,
   useBuilderWatch,
 } from "components/connectorBuilder/types";
+import { useUpdateLockedInputs } from "components/connectorBuilder/useLockedInputs";
 import { formatJson } from "components/connectorBuilder/utils";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
@@ -68,6 +69,13 @@ export type SavingState = "loading" | "invalid" | "saved" | "error" | "readonly"
 
 export type ConnectorBuilderPermission = "write" | "readOnly" | "adminReadOnly";
 
+export type TestingValuesUpdate = UseMutateAsyncFunction<
+  ConnectorBuilderProjectTestingValues,
+  Error,
+  Omit<ConnectorBuilderProjectTestingValuesUpdate, "builderProjectId" | "workspaceId">,
+  unknown
+>;
+
 interface FormStateContext {
   jsonManifest: DeclarativeComponentSchema;
   yamlEditorIsMounted: boolean;
@@ -94,12 +102,7 @@ interface FormStateContext {
   releaseNewVersion: (options: NewVersionBody) => Promise<void>;
   toggleUI: (newMode: BuilderState["mode"]) => Promise<void>;
   setFormValuesValid: (value: boolean) => void;
-  updateTestingValues: UseMutateAsyncFunction<
-    ConnectorBuilderProjectTestingValues,
-    Error,
-    Omit<ConnectorBuilderProjectTestingValuesUpdate, "builderProjectId" | "workspaceId">,
-    unknown
-  >;
+  updateTestingValues: TestingValuesUpdate;
 }
 
 interface TestReadLimits {
@@ -485,6 +488,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   );
 
   useUpdateTestingValuesOnSpecChange(jsonManifest.spec, updateTestingValues);
+
+  useUpdateLockedInputs();
 
   const ctx: FormStateContext = {
     jsonManifest,
