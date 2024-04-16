@@ -28,6 +28,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -66,7 +67,7 @@ public class SlackNotificationClient extends NotificationClient {
         summary.getErrorMessage(),
         summary.getConnection().getUrl(),
         String.valueOf(summary.getJobId()));
-    return notifyJson(buildJobCompletedNotification(summary, legacyMessage).toJsonNode());
+    return notifyJson(buildJobCompletedNotification(summary, "Sync failure occurred", legacyMessage, Optional.empty()).toJsonNode());
   }
 
   @Override
@@ -81,19 +82,26 @@ public class SlackNotificationClient extends NotificationClient {
         summary.getErrorMessage(),
         summary.getConnection().getUrl(),
         String.valueOf(summary.getJobId()));
-    return notifyJson(buildJobCompletedNotification(summary, legacyMessage).toJsonNode());
+    return notifyJson(buildJobCompletedNotification(summary, "Sync completed", legacyMessage, Optional.empty()).toJsonNode());
   }
 
   @NotNull
-  static Notification buildJobCompletedNotification(final SyncSummary summary, final String text) {
+  static Notification buildJobCompletedNotification(final SyncSummary summary,
+                                                    final String titleText,
+                                                    final String legacyText,
+                                                    final Optional<String> topContent) {
     Notification notification = new Notification();
-    notification.setText(text);
+    notification.setText(legacyText);
     Section title = notification.addSection();
     String connectionLink = Notification.createLink(summary.getConnection().getName(), summary.getConnection().getUrl());
-    String titleText = summary.isSuccess() ? "Sync completed" : "Sync failure occurred";
     title.setText(String.format("%s: %s", titleText, connectionLink));
-    Section description = notification.addSection();
 
+    if (topContent.isPresent()) {
+      final Section topSection = notification.addSection();
+      topSection.setText(topContent.get());
+    }
+
+    Section description = notification.addSection();
     final Field sourceLabel = description.addField();
     sourceLabel.setType("mrkdwn");
     sourceLabel.setText("*Source:*");
@@ -143,38 +151,35 @@ public class SlackNotificationClient extends NotificationClient {
   public boolean notifyConnectionDisabled(final SyncSummary summary,
                                           final String receiverEmail)
       throws IOException, InterruptedException {
-    final String message = renderTemplate(
+    String legacyMessage = renderTemplate(
         "slack/auto_disable_slack_notification_template.txt",
         summary.getSource().getName(),
         summary.getDestination().getName(),
         summary.getErrorMessage(),
         summary.getWorkspace().getId().toString(),
         summary.getConnection().getId().toString());
-
-    final String webhookUrl = config.getWebhook();
-    if (!Strings.isEmpty(webhookUrl)) {
-      return notify(message);
-    }
-    return false;
+    String message = """
+                     Your connection has been repeatedly failing and has been automatically disabled.
+                     """;
+    return notifyJson(buildJobCompletedNotification(summary, "Connection disabled", legacyMessage, Optional.of(message)).toJsonNode());
   }
 
   @Override
   public boolean notifyConnectionDisableWarning(final SyncSummary summary,
                                                 final String receiverEmail)
       throws IOException, InterruptedException {
-    final String message = renderTemplate(
+    String legacyMessage = renderTemplate(
         "slack/auto_disable_warning_slack_notification_template.txt",
         summary.getSource().getName(),
         summary.getDestination().getName(),
         summary.getErrorMessage(),
         summary.getWorkspace().getId().toString(),
         summary.getConnection().getId().toString());
-
-    final String webhookUrl = config.getWebhook();
-    if (!Strings.isEmpty(webhookUrl)) {
-      return notify(message);
-    }
-    return false;
+    String message = """
+                     Your connection has been repeatedly failing. Please address any issues to ensure your syncs continue to run.
+                     """;
+    return notifyJson(
+        buildJobCompletedNotification(summary, "Warning - repeated connection failures", legacyMessage, Optional.of(message)).toJsonNode());
   }
 
   @Override
