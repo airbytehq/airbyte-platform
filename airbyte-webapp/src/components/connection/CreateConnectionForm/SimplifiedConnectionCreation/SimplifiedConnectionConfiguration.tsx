@@ -67,7 +67,10 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
 
   return (
     <>
-      <Card title={formatMessage({ id: "connectionForm.selectSyncMode" })}>
+      <Card
+        title={formatMessage({ id: "connectionForm.selectSyncMode" })}
+        helpText={formatMessage({ id: "connectionForm.selectSyncModeDescription" })}
+      >
         <SimplifiedSchemaQuestionnaire />
       </Card>
       <SyncCatalogCard />

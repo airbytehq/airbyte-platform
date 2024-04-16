@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.Geography;
@@ -70,7 +71,6 @@ import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workers.workload.exception.DocStoreAccessException;
-import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel;
@@ -115,7 +115,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   private final MetricClient metricClient;
   private final FeatureFlagClient featureFlagClient;
   private final GsonPksExtractor gsonPksExtractor;
-  private final WorkloadApi workloadApi;
+  private final WorkloadApiClient workloadApiClient;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final JobOutputDocStore jobOutputDocStore;
 
@@ -133,7 +133,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
                                      final MetricClient metricClient,
                                      final FeatureFlagClient featureFlagClient,
                                      final GsonPksExtractor gsonPksExtractor,
-                                     final WorkloadApi workloadApi,
+                                     final WorkloadApiClient workloadApiClient,
                                      final WorkloadIdGenerator workloadIdGenerator,
                                      final JobOutputDocStore jobOutputDocStore) {
     this.workerConfigsProvider = workerConfigsProvider;
@@ -150,7 +150,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     this.metricClient = metricClient;
     this.featureFlagClient = featureFlagClient;
     this.gsonPksExtractor = gsonPksExtractor;
-    this.workloadApi = workloadApi;
+    this.workloadApiClient = workloadApiClient;
     this.workloadIdGenerator = workloadIdGenerator;
     this.jobOutputDocStore = jobOutputDocStore;
   }
@@ -240,12 +240,12 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     createWorkload(workloadCreateRequest);
 
     try {
-      Workload workload = workloadApi.workloadGet(workloadId);
+      Workload workload = workloadApiClient.getWorkloadApi().workloadGet(workloadId);
       final int checkFrequencyInSeconds = featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE,
           new Workspace(workspaceId));
       while (!isWorkloadTerminal(workload)) {
         Thread.sleep(1000 * checkFrequencyInSeconds);
-        workload = workloadApi.workloadGet(workloadId);
+        workload = workloadApiClient.getWorkloadApi().workloadGet(workloadId);
       }
     } catch (final IOException | InterruptedException e) {
       throw new RuntimeException(e);
@@ -322,7 +322,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
 
   private void createWorkload(final WorkloadCreateRequest workloadCreateRequest) {
     try {
-      workloadApi.workloadCreate(workloadCreateRequest);
+      workloadApiClient.getWorkloadApi().workloadCreate(workloadCreateRequest);
     } catch (final ClientException e) {
       /*
        * The Workload API returns a 409 response when the request to execute the workload has already been

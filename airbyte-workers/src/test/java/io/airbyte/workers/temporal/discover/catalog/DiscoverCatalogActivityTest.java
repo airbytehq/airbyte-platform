@@ -12,6 +12,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
@@ -60,12 +61,14 @@ public class DiscoverCatalogActivityTest {
   private final FeatureFlagClient featureFlagClient = mock(ConfigFileClient.class);
   private final GsonPksExtractor gsonPksExtractor = mock();
   private final WorkloadApi workloadApi = mock();
+  private final WorkloadApiClient workloadApiClient = mock();
   private final WorkloadIdGenerator workloadIdGenerator = mock();
   private final JobOutputDocStore jobOutputDocStore = mock();
   private DiscoverCatalogActivityImpl discoverCatalogActivity;
 
   @BeforeEach
   void init() {
+    when(workloadApiClient.getWorkloadApi()).thenReturn(workloadApi);
     discoverCatalogActivity = spy(new DiscoverCatalogActivityImpl(
         workerConfigsProvider,
         processFactory,
@@ -81,7 +84,7 @@ public class DiscoverCatalogActivityTest {
         metricClient,
         featureFlagClient,
         gsonPksExtractor,
-        workloadApi,
+        workloadApiClient,
         workloadIdGenerator,
         jobOutputDocStore));
   }

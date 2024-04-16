@@ -7,8 +7,6 @@ type: object
 additionalProperties: true
 required:
   - standardSyncSummary
-  - state
-  - output_catalog
 properties:
   standardSyncSummary:
     "$ref": StandardSyncSummary.yaml
@@ -24,5 +22,5 @@ properties:
     type: array
     items:
       "$ref": FailureReason.yaml
-  uri:
+  catalogUri:
     "$ref": ActivityPayloadURI.yaml

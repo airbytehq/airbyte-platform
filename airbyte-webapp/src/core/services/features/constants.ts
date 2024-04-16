@@ -13,7 +13,9 @@ export const defaultEnterpriseFeatures = [
   FeatureItem.AllowAllRBACRoles,
   FeatureItem.APITokenManagement,
   FeatureItem.ConnectionHistoryGraphs,
+  FeatureItem.DisplayOrganizationUsers,
   FeatureItem.EnterpriseBranding,
+  FeatureItem.IndicateGuestUsers,
   FeatureItem.MultiWorkspaceUI,
   FeatureItem.RBAC,
 ];

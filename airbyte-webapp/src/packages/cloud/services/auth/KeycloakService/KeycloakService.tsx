@@ -1,3 +1,5 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { BroadcastChannel } from "broadcast-channel";
 import Keycloak from "keycloak-js";
 import isEqual from "lodash/isEqual";
 import { User, WebStorageStateStore, UserManager } from "oidc-client-ts";
@@ -85,6 +87,8 @@ type KeycloakAuthStateAction =
       airbyteUser: UserRead;
     };
 
+type BroadcastEvent = Extract<KeycloakAuthStateAction, { type: "userLoaded" | "userUnloaded" }>;
+
 const keycloakAuthStateReducer = (state: KeycloakAuthState, action: KeycloakAuthStateAction): KeycloakAuthState => {
   switch (action.type) {
     case "userLoaded":
@@ -122,14 +126,34 @@ const keycloakAuthStateReducer = (state: KeycloakAuthState, action: KeycloakAuth
   }
 };
 
+const broadcastChannel = new BroadcastChannel<BroadcastEvent>("keycloak-state-sync");
+
 export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
   const userSigninInitialized = useRef(false);
+  const queryClient = useQueryClient();
   const [userManager] = useState<UserManager>(initializeUserManager);
   const [authState, dispatch] = useReducer(keycloakAuthStateReducer, keycloakAuthStateInitialState);
   const { mutateAsync: getAirbyteUser } = useGetOrCreateUser();
 
   // Allows us to get the access token as a callback, instead of re-rendering every time a new access token arrives
   const keycloakAccessTokenRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    broadcastChannel.onmessage = (event) => {
+      console.log("broadcastChannel.onmessage", event);
+      if (event.type === "userUnloaded") {
+        console.debug("🔑 Received userUnloaded event from other tab.");
+        dispatch({ type: "userUnloaded" });
+        // Need to clear all queries from cache. In the tab that triggered the logout this is
+        // handled inside CloudAuthService.logout
+        queryClient.removeQueries();
+      } else if (event.type === "userLoaded") {
+        console.debug("🔑 Received userLoaded event from other tab.");
+        keycloakAccessTokenRef.current = event.keycloakUser.access_token;
+        dispatch({ type: "userLoaded", keycloakUser: event.keycloakUser, airbyteUser: event.airbyteUser });
+      }
+    };
+  }, [queryClient]);
 
   // Initialization of the current user
   useEffect(() => {
@@ -183,12 +207,16 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
       // Only if actual user values (not just access_token) have changed, do we need to update the state and cause a re-render
       if (!usersAreSame({ keycloakUser, airbyteUser }, authState)) {
         dispatch({ type: "userLoaded", keycloakUser, airbyteUser });
+        // Notify other tabs that this tab got a new user loaded (usually meaning this tab signed in)
+        broadcastChannel.postMessage({ type: "userLoaded", keycloakUser, airbyteUser });
       }
     };
     userManager.events.addUserLoaded(handleUserLoaded);
 
     const handleUserUnloaded = () => {
       dispatch({ type: "userUnloaded" });
+      // Notify other open tabs that the user got unloaded (i.e. this tab signed out)
+      broadcastChannel.postMessage({ type: "userUnloaded" });
     };
     userManager.events.addUserUnloaded(handleUserUnloaded);
 

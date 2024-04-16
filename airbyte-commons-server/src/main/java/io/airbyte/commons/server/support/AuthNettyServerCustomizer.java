@@ -30,11 +30,20 @@ public class AuthNettyServerCustomizer implements BeanCreatedEventListener<Regis
   private final AuthorizationServerHandler authorizationServerHandler;
 
   private final Integer aggregatorMaxContentLength;
+  private final Integer maxInitialLineLength;
+  private final Integer maxHeaderSize;
+  private final Integer maxChunkSize;
 
   public AuthNettyServerCustomizer(final AuthorizationServerHandler authorizationServerHandler,
-                                   @Value("${micronaut.server.netty.aggregator.max-content-length}") final Integer aggregatorMaxContentLength) {
+                                   @Value("${micronaut.server.netty.aggregator.max-content-length}") final Integer aggregatorMaxContentLength,
+                                   @Value("${micronaut.server.netty.max-initial-line-length:4096}") final Integer maxInitialLineLength,
+                                   @Value("${micronaut.server.netty.max-header-size:8192}") final Integer maxHeaderSize,
+                                   @Value("${micronaut.server.netty.max-chunk-size:8192}") final Integer maxChunkSize) {
     this.authorizationServerHandler = authorizationServerHandler;
     this.aggregatorMaxContentLength = aggregatorMaxContentLength;
+    this.maxInitialLineLength = maxInitialLineLength;
+    this.maxHeaderSize = maxHeaderSize;
+    this.maxChunkSize = maxChunkSize;
   }
 
   @Override
@@ -73,7 +82,7 @@ public class AuthNettyServerCustomizer implements BeanCreatedEventListener<Regis
       channel.pipeline()
           .addFirst("authorizationServerHandler", authorizationServerHandler)
           .addFirst("aggregator", new HttpObjectAggregator(aggregatorMaxContentLength))
-          .addFirst("decoder", new HttpRequestDecoder());
+          .addFirst("decoder", new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize));
     }
 
   }

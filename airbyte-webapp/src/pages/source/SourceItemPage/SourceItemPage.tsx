@@ -2,7 +2,6 @@ import React, { Suspense } from "react";
 import { useIntl } from "react-intl";
 import { Outlet, useParams } from "react-router-dom";
 
-import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import { HeadTitle } from "components/common/HeadTitle";
 import { ConnectorNavigationTabs } from "components/connector/ConnectorNavigationTabs";
 import { ConnectorTitleBlock } from "components/connector/ConnectorTitleBlock";
@@ -12,11 +11,9 @@ import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { useGetSourceFromParams } from "area/connector/utils";
 import { useSourceDefinitionVersion, useSourceDefinition } from "core/api";
+import { DefaultErrorBoundary } from "core/errors";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { RoutePaths } from "pages/routePaths";
-import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
-import { StartOverErrorView } from "views/common/StartOverErrorView";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
 export const SourceItemPage: React.FC = () => {
@@ -37,10 +34,8 @@ export const SourceItemPage: React.FC = () => {
     { label: source.name },
   ];
 
-  const { trackError } = useAppMonitoringService();
-
   return (
-    <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
+    <DefaultErrorBoundary>
       <ConnectorDocumentationWrapper>
         <HeadTitle titles={[{ id: "admin.sources" }, { title: source.name }]} />
         <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
@@ -52,11 +47,11 @@ export const SourceItemPage: React.FC = () => {
           <ConnectorNavigationTabs connectorType="source" connector={source} id={source.sourceId} />
         </PageHeaderWithNavigation>
         <Suspense fallback={<LoadingPage />}>
-          <ApiErrorBoundary>
+          <DefaultErrorBoundary>
             <Outlet />
-          </ApiErrorBoundary>
+          </DefaultErrorBoundary>
         </Suspense>
       </ConnectorDocumentationWrapper>
-    </ResourceNotFoundErrorBoundary>
+    </DefaultErrorBoundary>
   );
 };

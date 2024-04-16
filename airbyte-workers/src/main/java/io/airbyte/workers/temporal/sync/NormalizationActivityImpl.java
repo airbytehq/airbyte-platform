@@ -65,6 +65,7 @@ import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.micronaut.context.annotation.Value;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
+import jakarta.annotation.Nullable;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
@@ -256,14 +257,14 @@ public class NormalizationActivityImpl implements NormalizationActivity {
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public NormalizationInput generateNormalizationInputWithMinimumPayloadWithConnectionId(final JsonNode destinationConfiguration,
-                                                                                         final ConfiguredAirbyteCatalog airbyteCatalog,
+                                                                                         @Nullable final ConfiguredAirbyteCatalog airbyteCatalog,
                                                                                          final UUID workspaceId,
                                                                                          final UUID connectionId,
                                                                                          final UUID organizationId) {
     return new NormalizationInput()
         .withConnectionId(connectionId)
         .withDestinationConfiguration(destinationConfiguration)
-        .withCatalog(airbyteCatalog)
+        .withCatalog(airbyteCatalog) // this may be null as we will hydrate downstream in the NormalizationActivity
         .withResourceRequirements(getNormalizationResourceRequirements())
         .withWorkspaceId(workspaceId)
         // As much info as we can give.

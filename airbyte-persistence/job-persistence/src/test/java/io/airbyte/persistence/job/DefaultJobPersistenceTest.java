@@ -2035,6 +2035,35 @@ class DefaultJobPersistenceTest {
     }
 
     @Test
+    @DisplayName("Should apply limits after ordering by the key provided by the caller")
+    void testListJobsOrderedByUpdatedAt() throws IOException {
+
+      final var jobId1 = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
+      final var job1Attempt1 = jobPersistence.createAttempt(jobId1, LOG_PATH);
+
+      final var laterTime = NOW.plusSeconds(1000);
+      when(timeSupplier.get()).thenReturn(laterTime);
+      final var jobId2 = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
+      final var job2Attempt1LogPath = LOG_PATH.resolve("3");
+      final var job2Attempt1 = jobPersistence.createAttempt(jobId2, job2Attempt1LogPath);
+      jobPersistence.succeedAttempt(jobId2, job2Attempt1);
+
+      final var evenLaterTime = NOW.plusSeconds(3000);
+      when(timeSupplier.get()).thenReturn(evenLaterTime);
+      jobPersistence.succeedAttempt(jobId1, job1Attempt1);
+
+      String configId = null;
+      final List<Job> updatedAtJobs =
+          jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType()), configId, 1, 0, null, null, null, null, null, "UPDATED_AT", "ASC");
+      assertEquals(1, updatedAtJobs.size());
+      assertEquals(jobId2, updatedAtJobs.get(0).getId());
+      final List<Job> createdAtJobs =
+          jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType()), configId, 1, 0, null, null, null, null, null, "CREATED_AT", "ASC");
+      assertEquals(1, createdAtJobs.size());
+      assertEquals(jobId1, createdAtJobs.get(0).getId());
+    }
+
+    @Test
     @DisplayName("Should list jobs across all connections in any status")
     void testListJobsWithNoFilters() throws IOException {
       final int numJobsToCreate = 10;

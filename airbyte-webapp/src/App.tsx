@@ -2,7 +2,6 @@ import React, { Suspense } from "react";
 import { HelmetProvider } from "react-helmet-async";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
-import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import { DevToolsToggle } from "components/DevToolsToggle";
 
 import { QueryProvider, useGetInstanceConfiguration } from "core/api";
@@ -10,6 +9,7 @@ import {
   InstanceConfigurationResponseEdition,
   InstanceConfigurationResponseTrackingStrategy,
 } from "core/api/types/AirbyteClient";
+import { DefaultErrorBoundary } from "core/errors";
 import { AnalyticsProvider } from "core/services/analytics";
 import { OSSAuthService } from "core/services/auth";
 import { defaultOssFeatures, defaultEnterpriseFeatures, FeatureService } from "core/services/features";
@@ -65,11 +65,11 @@ const App: React.FC = () => {
           <QueryProvider>
             <BlockerService>
               <Suspense fallback={<LoadingPage />}>
-                <ApiErrorBoundary>
+                <DefaultErrorBoundary>
                   <Services>
                     <Routing />
                   </Services>
-                </ApiErrorBoundary>
+                </DefaultErrorBoundary>
               </Suspense>
             </BlockerService>
           </QueryProvider>

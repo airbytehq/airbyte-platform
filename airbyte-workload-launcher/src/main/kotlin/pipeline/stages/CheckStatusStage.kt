@@ -6,7 +6,6 @@ import io.airbyte.metrics.annotations.Tag
 import io.airbyte.metrics.lib.MetricAttribute
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
-import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_ID_TAG
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
@@ -49,7 +48,6 @@ open class CheckStatusStage(
       }
       customMetricPublisher.count(
         WorkloadLauncherMetricMetadata.WORKLOAD_ALREADY_RUNNING,
-        MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId),
         MetricAttribute(MeterFilterFactory.WORKLOAD_TYPE_TAG, input.msg.workloadType.toString()),
       )
 

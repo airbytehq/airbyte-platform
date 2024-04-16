@@ -60,7 +60,7 @@ public class MetricTags {
   public static final String URI_NULL = "uri_null";
   public static final String URI_ID = "uri_id";
   public static final String URI_VERSION = "uri_version";
-  public static final String PAYLOAD_CLASS = "payload_class";
+  public static final String PAYLOAD_NAME = "payload_name";
   public static final String IS_MATCH = "is_match";
   public static final String IS_MISS = "is_miss";
 

@@ -13,6 +13,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.config.Configs;
 import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
@@ -43,6 +44,7 @@ class ReplicationJobOrchestratorTest {
 
   private ReplicationWorkerFactory replicationWorkerFactory;
   private WorkloadApi workloadApi;
+  private WorkloadApiClient workloadApiClient;
   private WorkloadIdGenerator workloadIdGenerator;
   private ReplicationWorker replicationWorker;
 
@@ -50,8 +52,11 @@ class ReplicationJobOrchestratorTest {
   void setUp() {
     replicationWorkerFactory = mock(ReplicationWorkerFactory.class);
     workloadApi = mock(WorkloadApi.class);
+    workloadApiClient = mock(WorkloadApiClient.class);
     workloadIdGenerator = mock(WorkloadIdGenerator.class);
     replicationWorker = mock(ReplicationWorker.class);
+
+    when(workloadApiClient.getWorkloadApi()).thenReturn(workloadApi);
   }
 
   @Test
@@ -69,7 +74,7 @@ class ReplicationJobOrchestratorTest {
         jobRunConfig,
         replicationWorkerFactory,
         mock(AsyncStateManager.class),
-        workloadApi,
+        workloadApiClient,
         workloadIdGenerator,
         true,
         mock(JobOutputDocStore.class));
@@ -99,7 +104,7 @@ class ReplicationJobOrchestratorTest {
         jobRunConfig,
         replicationWorkerFactory,
         mock(AsyncStateManager.class),
-        workloadApi,
+        workloadApiClient,
         workloadIdGenerator,
         true,
         mock(JobOutputDocStore.class));
@@ -128,7 +133,7 @@ class ReplicationJobOrchestratorTest {
         jobRunConfig,
         replicationWorkerFactory,
         mock(AsyncStateManager.class),
-        workloadApi,
+        workloadApiClient,
         workloadIdGenerator,
         true,
         mock(JobOutputDocStore.class));
@@ -157,7 +162,7 @@ class ReplicationJobOrchestratorTest {
         jobRunConfig,
         replicationWorkerFactory,
         mock(AsyncStateManager.class),
-        workloadApi,
+        workloadApiClient,
         workloadIdGenerator,
         true,
         mock(JobOutputDocStore.class));

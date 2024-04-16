@@ -23,7 +23,7 @@ class WorkloadApiTest {
     const val MESSAGE = "message"
     const val BODY = "body"
     const val STATUS_CODE = 400
-    const val BASE_PATH = "basepath"
+    const val BASE_PATH = "http://basepath"
   }
 
   @Test

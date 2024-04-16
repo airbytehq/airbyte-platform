@@ -33,8 +33,8 @@ const Detail: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
 };
 
 const SignupPage: React.FC<SignupPageProps> = () => {
-  const [keycloakAuthEnabledLocalStorage] = useLocalStorage("airbyte_keycloak-auth-ui", false);
-  const keycloakAuthEnabledExperiment = useExperiment("authPage.keycloak", false);
+  const [keycloakAuthEnabledLocalStorage] = useLocalStorage("airbyte_keycloak-auth-ui", true);
+  const keycloakAuthEnabledExperiment = useExperiment("authPage.keycloak", true);
   const keycloakAuthEnabled = keycloakAuthEnabledExperiment || keycloakAuthEnabledLocalStorage;
   const { loginWithOAuth, signUp } = useAuthService();
   useTrackPage(PageTrackingCodes.SIGNUP);
