@@ -194,8 +194,6 @@ object UseWorkloadApiForDiscover : Temporary<Boolean>(key = "platform.use-worklo
 
 object UseWorkloadApiForSpec : Temporary<Boolean>(key = "platform.use-workload-api-for-spec", default = false)
 
-object EnforceMutexKeyOnCreate : Temporary<Boolean>(key = "platform.enforce-mutex-key-on-create", default = false)
-
 object ActivateRefreshes : Temporary<Boolean>(key = "platform.activate-refreshes", default = false)
 
 object WriteOutputCatalogToObjectStorage : Temporary<Boolean>(key = "platform.write-output-catalog-to-object-storage", default = false)

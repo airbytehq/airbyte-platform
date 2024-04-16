@@ -1,8 +1,6 @@
 package io.airbyte.workload.handler
 
 import io.airbyte.config.WorkloadType
-import io.airbyte.featureflag.Connection
-import io.airbyte.featureflag.EnforceMutexKeyOnCreate
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
@@ -27,7 +25,6 @@ class WorkloadHandlerImpl(
   private val featureFlagClient: FeatureFlagClient,
 ) : WorkloadHandler {
   companion object {
-    val UUID_ZERO: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000")
     val ACTIVE_STATUSES: List<WorkloadStatus> =
       listOf(WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING)
   }
@@ -96,7 +93,7 @@ class WorkloadHandlerImpl(
 
     // Evaluating feature flag with UUID_ZERO because the client requires a context. This feature flag is intended to be used
     // as a global kill switch for validation.
-    if (mutexKey != null && featureFlagClient.boolVariation(EnforceMutexKeyOnCreate, Connection(UUID_ZERO))) {
+    if (mutexKey != null) {
       // Keep the most recent workload by creation date with mutexKey, fail the others.
       workloadRepository
         .searchByMutexKeyAndStatusInList(mutexKey, statuses = ACTIVE_STATUSES)
