@@ -1098,10 +1098,17 @@ function pathToSafeJinjaAccess(path: string[]): string {
 function builderPaginationStrategyToManifest(
   strategy: BuilderPaginator["strategy"]
 ): DefaultPaginator["pagination_strategy"] {
-  if (strategy.type === "OffsetIncrement" || strategy.type === "PageIncrement") {
-    return strategy;
+  const correctedStrategy = {
+    ...strategy,
+    // must manually convert page_size to a number if it exists, because RHF watch() treats all numeric values as strings
+    page_size: strategy.page_size ? Number(strategy.page_size) : undefined,
+  };
+
+  if (correctedStrategy.type === "OffsetIncrement" || correctedStrategy.type === "PageIncrement") {
+    return correctedStrategy;
   }
-  const { cursor, ...rest } = strategy;
+
+  const { cursor, ...rest } = correctedStrategy;
 
   return {
     ...rest,

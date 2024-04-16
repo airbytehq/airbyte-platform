@@ -113,16 +113,7 @@ InnerUserInputHelper.displayName = "InnerUserInputHelper";
 
 const UserInputHelperControlButton: React.FC<ListBoxControlButtonProps<string | undefined>> = () => {
   return (
-    <Tooltip
-      control={
-        <div className={styles.buttonContent}>
-          {"{{"}
-          <Icon type="user" />
-          {"}}"}
-        </div>
-      }
-      placement="top"
-    >
+    <Tooltip control={<Icon type="user" size="sm" className={styles.buttonContent} />} placement="top">
       <FormattedMessage id="connectorBuilder.interUserInputValue" />
     </Tooltip>
   );
