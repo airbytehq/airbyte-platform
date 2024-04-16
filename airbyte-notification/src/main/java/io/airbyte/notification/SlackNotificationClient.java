@@ -130,11 +130,11 @@ public class SlackNotificationClient extends NotificationClient {
     Section summarySection = notification.addSection();
     summarySection.setText(String.format("""
                                          *Sync Summary:*
-                                         %d record(s) loaded / %d record(s) extracted
-                                         %s loaded / %s extracted
+                                         %d record(s) extracted / %d record(s) loaded
+                                         %s extracted / %s loaded
                                          """,
-        summary.getRecordsCommitted(), summary.getRecordsEmitted(),
-        summary.getBytesCommittedFormatted(), summary.getBytesEmittedFormatted()));
+        summary.getRecordsEmitted(), summary.getRecordsCommitted(),
+        summary.getBytesEmittedFormatted(), summary.getBytesCommittedFormatted()));
 
     return notification;
   }
