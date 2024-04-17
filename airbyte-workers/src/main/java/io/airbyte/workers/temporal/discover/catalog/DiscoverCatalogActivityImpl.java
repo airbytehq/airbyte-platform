@@ -244,7 +244,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
       final int checkFrequencyInSeconds = featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE,
           new Workspace(workspaceId));
       while (!isWorkloadTerminal(workload)) {
-        Thread.sleep(1000 * checkFrequencyInSeconds);
+        Thread.sleep(1000L * checkFrequencyInSeconds);
         workload = workloadApiClient.getWorkloadApi().workloadGet(workloadId);
       }
     } catch (final IOException | InterruptedException e) {
@@ -254,7 +254,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     try {
       final Optional<ConnectorJobOutput> connectorJobOutput = jobOutputDocStore.read(workloadId);
 
-      log.error(String.valueOf(connectorJobOutput.get()));
+      connectorJobOutput.ifPresent(c -> log.error(String.valueOf(c)));
       return connectorJobOutput.orElse(new ConnectorJobOutput()
           .withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)
           .withDiscoverCatalogId(null)
