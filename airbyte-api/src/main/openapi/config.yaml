@@ -6598,6 +6598,8 @@ components:
           type: string
         draftManifest:
           $ref: "#/components/schemas/DeclarativeManifest"
+        yamlManifest:
+          type: string
     ConnectorBuilderProjectDetailsRead:
       type: object
       required:

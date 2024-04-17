@@ -460,7 +460,11 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     if (modeRef.current === "ui" && !formAndResolveValid) {
       return;
     }
-    const newProject: BuilderProjectWithManifest = { name, manifest: jsonManifest };
+    const newProject: BuilderProjectWithManifest = {
+      name,
+      manifest: jsonManifest,
+      yamlManifest: convertJsonToYaml(jsonManifest),
+    };
     await updateProject(newProject);
     setPersistedState(newProject);
   }, [permission, name, formAndResolveValid, jsonManifest, updateProject]);
