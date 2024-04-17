@@ -62,9 +62,7 @@ public class TestConfigHelpers {
         .withSourceId(replicationInput.getSourceId())
         .withDestinationId(replicationInput.getDestinationId())
         .withDestinationConfiguration(replicationInput.getDestinationConfiguration())
-        .withCatalog(replicationInput.getCatalog())
         .withSourceConfiguration(replicationInput.getSourceConfiguration())
-        .withState(replicationInput.getState())
         .withOperationSequence(replicationInput.getOperationSequence())
         .withWorkspaceId(replicationInput.getWorkspaceId())
         .withConnectionContext(new ConnectionContext().withOrganizationId(organizationId)));

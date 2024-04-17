@@ -188,19 +188,6 @@ public class Job {
   }
 
   /**
-   * Get the last attempt by created_at for the job that had an output.
-   *
-   * @return the last attempt. empty optional, if there have been no attempts with outputs.
-   */
-  public Optional<Attempt> getLastAttemptWithOutput() {
-    return getAttempts()
-        .stream()
-        .sorted(Comparator.comparing(Attempt::getCreatedAtInSecond).reversed())
-        .filter(a -> a.getOutput().isPresent() && a.getOutput().get().getSync() != null && a.getOutput().get().getSync().getState() != null)
-        .findFirst();
-  }
-
-  /**
    * Get the last attempt by created_at for the job.
    *
    * @return the last attempt. empty optional, if there have been no attempts.

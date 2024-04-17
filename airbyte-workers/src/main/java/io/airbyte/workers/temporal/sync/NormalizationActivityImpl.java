@@ -37,8 +37,6 @@ import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.ResourceRequirements;
-import io.airbyte.config.StandardSyncInput;
-import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
@@ -220,51 +218,17 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     return input.withDestinationConfiguration(fullDestinationConfig).withCatalog(catalog);
   }
 
-  /**
-   * This activity is deprecated. It is using a big payload which is not needed, it has been replace
-   * by generateNormalizationInputWithMinimumPayload
-   *
-   * @param syncInput sync input
-   * @param syncOutput sync output
-   * @return normalization output
-   */
-  @SuppressWarnings("InvalidJavadocPosition")
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  @Override
-  @Deprecated(forRemoval = true)
-  public NormalizationInput generateNormalizationInput(final StandardSyncInput syncInput, final StandardSyncOutput syncOutput) {
-    return new NormalizationInput()
-        .withConnectionId(syncInput.getConnectionId())
-        .withDestinationConfiguration(syncInput.getDestinationConfiguration())
-        .withCatalog(syncOutput.getOutputCatalog())
-        .withResourceRequirements(getNormalizationResourceRequirements())
-        .withWorkspaceId(syncInput.getWorkspaceId())
-        .withConnectionContext(syncInput.getConnectionContext());
-  }
-
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  @Override
-  public NormalizationInput generateNormalizationInputWithMinimumPayload(final JsonNode destinationConfiguration,
-                                                                         final ConfiguredAirbyteCatalog airbyteCatalog,
-                                                                         final UUID workspaceId) {
-    return new NormalizationInput()
-        .withDestinationConfiguration(destinationConfiguration)
-        .withCatalog(airbyteCatalog)
-        .withResourceRequirements(getNormalizationResourceRequirements())
-        .withWorkspaceId(workspaceId);
-  }
-
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public NormalizationInput generateNormalizationInputWithMinimumPayloadWithConnectionId(final JsonNode destinationConfiguration,
-                                                                                         @Nullable final ConfiguredAirbyteCatalog airbyteCatalog,
+                                                                                         @Deprecated @Nullable final ConfiguredAirbyteCatalog unused,
                                                                                          final UUID workspaceId,
                                                                                          final UUID connectionId,
                                                                                          final UUID organizationId) {
     return new NormalizationInput()
         .withConnectionId(connectionId)
         .withDestinationConfiguration(destinationConfiguration)
-        .withCatalog(airbyteCatalog) // this may be null as we will hydrate downstream in the NormalizationActivity
+        .withCatalog(null) // this is null as we will hydrate downstream in the NormalizationActivity
         .withResourceRequirements(getNormalizationResourceRequirements())
         .withWorkspaceId(workspaceId)
         // As much info as we can give.

@@ -31,7 +31,6 @@ import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.NullOutputCatalogOnSyncOutput;
 import io.airbyte.featureflag.WriteOutputCatalogToObjectStorage;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -255,10 +254,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     syncSummary.setStreamStats(replicationSummary.getStreamStats());
     syncSummary.setPerformanceMetrics(output.getReplicationAttemptSummary().getPerformanceMetrics());
     syncSummary.setStreamCount((long) output.getOutputCatalog().getStreams().size());
-
-    if (!featureFlagClient.boolVariation(NullOutputCatalogOnSyncOutput.INSTANCE, new Connection(connectionId))) {
-      standardSyncOutput.setOutputCatalog(output.getOutputCatalog());
-    }
 
     standardSyncOutput.setStandardSyncSummary(syncSummary);
     standardSyncOutput.setFailures(output.getFailures());

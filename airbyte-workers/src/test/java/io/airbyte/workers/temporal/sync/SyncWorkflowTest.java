@@ -142,14 +142,13 @@ class SyncWorkflowTest {
     syncStats = new SyncStats().withRecordsCommitted(10L);
     standardSyncSummary = new StandardSyncSummary().withTotalStats(syncStats);
     failedSyncSummary = new StandardSyncSummary().withStatus(ReplicationStatus.FAILED).withTotalStats(new SyncStats().withRecordsEmitted(0L));
-    replicationSuccessOutput = new StandardSyncOutput().withOutputCatalog(syncInput.getCatalog()).withStandardSyncSummary(standardSyncSummary);
-    replicationFailOutput = new StandardSyncOutput().withOutputCatalog(syncInput.getCatalog()).withStandardSyncSummary(failedSyncSummary);
+    replicationSuccessOutput = new StandardSyncOutput().withStandardSyncSummary(standardSyncSummary);
+    replicationFailOutput = new StandardSyncOutput().withStandardSyncSummary(failedSyncSummary);
 
     normalizationSummary = new NormalizationSummary();
 
     normalizationInput = new NormalizationInput()
         .withDestinationConfiguration(syncInput.getDestinationConfiguration())
-        .withCatalog(syncInput.getCatalog())
         .withResourceRequirements(new ResourceRequirements())
         .withConnectionId(syncInput.getConnectionId())
         .withWorkspaceId(syncInput.getWorkspaceId())

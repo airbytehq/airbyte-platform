@@ -434,10 +434,6 @@ public class DefaultJobPersistence implements JobPersistence {
       // TODO feature flag this for data types rollout
       // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(jobOutput.getDiscoverCatalog().getCatalog());
       CatalogMigrationV1Helper.downgradeSchemaIfNeeded(jobOutput.getDiscoverCatalog().getCatalog());
-    } else if (jobOutput.getOutputType() == OutputType.SYNC && jobOutput.getSync() != null && jobOutput.getSync().getOutputCatalog() != null) {
-      // TODO feature flag this for data types rollout
-      // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(jobOutput.getSync().getOutputCatalog());
-      CatalogMigrationV1Helper.downgradeSchemaIfNeeded(jobOutput.getSync().getOutputCatalog());
     }
     return jobOutput;
   }
