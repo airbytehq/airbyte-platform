@@ -48,7 +48,7 @@ v3-swagger = "2.2.19"
 
 [libraries]
 airbyte-protocol = { module = "io.airbyte.airbyte-protocol:protocol-models", version.ref = "airbyte-protocol" }
-apache-ant = { module = "org.apache.ant:ant", version = "1.10.10" }
+apache-ant = { module = "org.apache.ant:ant", version = "1.10.14" }
 apache-commons = { module = "org.apache.commons:commons-compress", version = "1.20" }
 apache-commons-cli = { module = "commons-cli:commons-cli", version = "1.4" }
 apache-commons-collections = { module = "org.apache.commons:commons-collections4", version = "4.4" }
