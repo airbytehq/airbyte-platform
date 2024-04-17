@@ -5,11 +5,14 @@
 package io.airbyte.workers.config;
 
 import io.airbyte.commons.json.JsonSerde;
+import io.airbyte.config.State;
 import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.workers.payload.ActivityPayloadStorageClient;
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.storage.DocumentType;
 import io.airbyte.workers.storage.StorageClient;
 import io.airbyte.workers.storage.StorageClientFactory;
+import io.airbyte.workers.storage.activities.ActivityPayloadStorageClient;
+import io.airbyte.workers.storage.activities.OutputStorageClient;
 import io.micronaut.context.annotation.Factory;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -67,6 +70,30 @@ public class CloudStorageBeanFactory {
         storageClientRaw,
         jsonSerde,
         metricClient);
+  }
+
+  @Singleton
+  @Named("outputStateClient")
+  public OutputStorageClient<State> outputStateClient(
+                                                      final ActivityPayloadStorageClient payloadStorageClient,
+                                                      final MetricClient metricClient) {
+    return new OutputStorageClient<>(
+        payloadStorageClient,
+        metricClient,
+        "output-state",
+        State.class);
+  }
+
+  @Singleton
+  @Named("outputCatalogClient")
+  public OutputStorageClient<ConfiguredAirbyteCatalog> outputCatalogClient(
+                                                                           final ActivityPayloadStorageClient payloadStorageClient,
+                                                                           final MetricClient metricClient) {
+    return new OutputStorageClient<>(
+        payloadStorageClient,
+        metricClient,
+        "output-catalog",
+        ConfiguredAirbyteCatalog.class);
   }
 
 }

@@ -10,6 +10,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.constants.AlwaysAllowedHosts;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -64,7 +67,7 @@ public class ConfigReplacer {
         }
 
         if (value != null) {
-          valuesMap.put(fullKey, value);
+          valuesMap.put(fullKey, sanitize(value));
         }
       } else if (type == JsonToken.START_OBJECT) {
         if (jsonParser.getCurrentName() != null) {
@@ -96,6 +99,32 @@ public class ConfigReplacer {
     final AllowedHosts resolvedAllowedHosts = new AllowedHosts();
     resolvedAllowedHosts.setHosts(resolvedHosts);
     return resolvedAllowedHosts;
+  }
+
+  public String sanitize(String s) {
+    try {
+      final String withProtocol = s.contains("://") ? s : "x://" + s;
+      final URI uri = new URI(withProtocol);
+      return uri.toURL().getHost();
+    } catch (MalformedURLException | URISyntaxException e) {
+      // some hosts will be provided from the connector config with a protocol, like ftp://site.com or
+      // mongodb+srv://cluster0.abcd1.mongodb.net
+      String[] parts = s.split("://");
+      s = parts.length > 1 ? parts[1] : parts[0];
+
+      // some hosts might have a trailing path. We only want the first chunk in all cases (e.g.
+      // http://site.com/path/foo/bar)
+      parts = s.split("/");
+      s = parts[0];
+
+      // some hosts will have a username or password, like https://user:passowrd@site.com
+      parts = s.split("@");
+      s = parts.length > 1 ? parts[1] : parts[0];
+
+      // remove slashes - we only want hostnames, not paths
+      s = s.replace("/", "");
+      return s;
+    }
   }
 
 }

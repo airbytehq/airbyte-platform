@@ -77,27 +77,6 @@ public class ConnectionManagerUtils {
     return signalWorkflowAndRepairIfNecessary(connectionId, signalMethod, Optional.empty());
   }
 
-  /**
-   * Attempts to send a signal to the existing ConnectionManagerWorkflow for the provided connection.
-   *
-   * If the workflow is unreachable, this will restart the workflow and send the signal in a single
-   * batched request. Batching is used to avoid race conditions between starting the workflow and
-   * executing the signal.
-   *
-   * @param connectionId the connection ID to execute this operation for
-   * @param signalMethod a function that takes in a connection manager workflow and executes a signal
-   *        method on it, with 1 argument
-   * @param signalArgument the single argument to be input to the signal
-   * @return the healthy connection manager workflow that was signaled
-   * @throws DeletedWorkflowException if the connection manager workflow was deleted
-   */
-  public <T> ConnectionManagerWorkflow signalWorkflowAndRepairIfNecessary(final UUID connectionId,
-                                                                          final Function<ConnectionManagerWorkflow, Proc1<T>> signalMethod,
-                                                                          final T signalArgument)
-      throws DeletedWorkflowException {
-    return signalWorkflowAndRepairIfNecessary(connectionId, signalMethod, Optional.of(signalArgument));
-  }
-
   // This method unifies the logic of the above two, by using the optional signalArgument parameter to
   // indicate if an argument is being provided to the signal or not.
   // Keeping this private and only exposing the above methods outside this class provides a strict

@@ -1,4 +1,5 @@
 @use "scss/colors";
+@use "scss/variables";
 
 .advancedSettings {
   cursor: pointer;
@@ -6,6 +7,7 @@
   border: none;
   text-decoration: underline;
   color: colors.$blue;
+  font-size: variables.$font-size-md;
   font-weight: 600;
   padding: 0;
   transition: color 0.2s ease-in;
@@ -19,12 +21,6 @@
 .hideOverflow {
   // keep the hr under advanced settings from overflowing
   overflow-x: hidden;
-}
-
-.hr {
-  border-width: 0;
-  border-top: 1px solid colors.$grey-100;
-  transform: scaleX(2); // expand out of its container to the card edge
 }
 
 .hidden {

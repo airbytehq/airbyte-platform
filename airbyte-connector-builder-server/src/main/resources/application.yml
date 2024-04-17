@@ -33,6 +33,7 @@ micronaut:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
       aggregator:
         max-content-length: 52428800 # 50MB
+      max-header-size: ${NETTY_MAX_HEADER_SIZE:32768}
   endpoints:
     v1/manifest_template:
       enable: true

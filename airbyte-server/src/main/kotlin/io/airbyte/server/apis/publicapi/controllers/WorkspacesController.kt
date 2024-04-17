@@ -5,10 +5,12 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.commons.auth.OrganizationAuthRole
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.authorization.Scope
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
 import io.airbyte.public_api.generated.PublicWorkspacesApi
 import io.airbyte.public_api.model.generated.WorkspaceCreateRequest
 import io.airbyte.public_api.model.generated.WorkspaceOAuthCredentialsRequest
@@ -30,7 +32,7 @@ val logger = KotlinLogging.logger {}
 @Controller(WORKSPACES_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class WorkspacesController(
-  private val workspaceService: WorkspaceService,
+  protected val workspaceService: WorkspaceService,
   private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val currentUserService: CurrentUserService,
 ) : PublicWorkspacesApi {
@@ -55,7 +57,12 @@ open class WorkspacesController(
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun publicCreateWorkspace(workspaceCreateRequest: WorkspaceCreateRequest?): Response {
-    // As long as user is authenticated, they can proceed.
+    // Now that we have orgs everywhere, ensure the user is at least an organization editor
+    apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
+      Scope.ORGANIZATION,
+      listOf(DEFAULT_ORGANIZATION_ID.toString()),
+      setOf(OrganizationAuthRole.ORGANIZATION_EDITOR),
+    )
     return workspaceService.controllerCreateWorkspace(workspaceCreateRequest!!)
   }
 

@@ -65,3 +65,17 @@ CollapsibleWithPreviewInfo.args = {
     </div>
   ),
 };
+
+export const CardWithHelpText = Template.bind({});
+CardWithHelpText.args = {
+  title: "Title",
+  children: "Card content here",
+  helpText: "This is helpful text",
+};
+
+export const CardWithHelpDescription = Template.bind({});
+CardWithHelpDescription.args = {
+  title: "Title",
+  children: "Card content here",
+  description: "This is descriptive text",
+};

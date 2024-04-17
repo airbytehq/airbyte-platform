@@ -14,6 +14,7 @@ import { Spinner } from "components/ui/Spinner";
 
 import { AuthOAuthLogin, OAuthProviders } from "core/services/auth";
 import { useLocalStorage } from "core/utils/useLocalStorage";
+import { useExperiment } from "hooks/services/Experiment";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { useKeycloakService } from "packages/cloud/services/auth/KeycloakService";
 
@@ -75,7 +76,9 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth, type }) 
   const [searchParams] = useSearchParams();
   const loginRedirect = searchParams.get("loginRedirect");
   const navigate = useNavigate();
-  const [keycloakAuthEnabled] = useLocalStorage("airbyte_keycloak-auth-ui", false);
+  const [keycloakAuthEnabledLocalStorage] = useLocalStorage("airbyte_keycloak-auth-ui", true);
+  const keycloakAuthEnabledExperiment = useExperiment("authPage.keycloak", true);
+  const keycloakAuthEnabled = keycloakAuthEnabledExperiment || keycloakAuthEnabledLocalStorage;
   const {
     redirectToSignInWithGithub,
     redirectToSignInWithGoogle,

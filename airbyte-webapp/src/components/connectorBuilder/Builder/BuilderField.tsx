@@ -59,6 +59,8 @@ export type BuilderFieldProps = BaseFieldProps &
         onChange?: (newValue: string) => void;
         onBlur?: (value: string) => void;
         disabled?: boolean;
+        step?: number;
+        min?: number;
       }
     | { type: "date" | "date-time"; onChange?: (newValue: string) => void }
     | { type: "boolean"; onChange?: (newValue: boolean) => void; disabled?: boolean; disabledTooltip?: string }
@@ -217,6 +219,8 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
           readOnly={readOnly}
           adornment={adornment}
           disabled={props.disabled}
+          step={props.step}
+          min={props.min}
           onBlur={(e) => {
             field.onBlur();
             props.onBlur?.(e.target.value);

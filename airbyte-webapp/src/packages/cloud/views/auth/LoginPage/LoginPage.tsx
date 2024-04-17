@@ -18,6 +18,7 @@ import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { LoginFormErrorCodes } from "packages/cloud/services/auth/types";
@@ -54,7 +55,9 @@ export const LoginPage: React.FC = () => {
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
   const [searchParams] = useSearchParams();
-  const [keycloakAuthEnabled] = useLocalStorage("airbyte_keycloak-auth-ui", false);
+  const [keycloakAuthEnabledLocalStorage] = useLocalStorage("airbyte_keycloak-auth-ui", true);
+  const keycloakAuthEnabledExperiment = useExperiment("authPage.keycloak", true);
+  const keycloakAuthEnabled = keycloakAuthEnabledExperiment || keycloakAuthEnabledLocalStorage;
   const loginRedirectString = searchParams.get("loginRedirect");
   const isAcceptingInvitation = loginRedirectString?.includes("accept-invite");
 

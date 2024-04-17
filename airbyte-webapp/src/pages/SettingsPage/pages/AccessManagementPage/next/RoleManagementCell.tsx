@@ -8,6 +8,7 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { useCurrentOrganizationInfo, useCurrentWorkspace } from "core/api";
 import { useCurrentUser } from "core/services/auth";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
 
 import { GuestBadge } from "./GuestBadge";
@@ -49,6 +50,7 @@ export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, re
   const canListOrganizationUsers = useIntent("ListOrganizationMembers", {
     organizationId: organizationInfo?.organizationId,
   });
+  const indicateGuestUsers = useFeature(FeatureItem.IndicateGuestUsers);
   const cannotDemoteUser = resourceType === "workspace" && orgPermissionType === "organization_admin";
   const shouldHidePopover = cannotDemoteUser || !canEditPermissions || user.id === currentUser.userId;
 
@@ -77,7 +79,7 @@ export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, re
           <FormattedMessage id="role.organizationAdmin" />
         </Badge>
       )}
-      {canListOrganizationUsers && organizationInfo?.organizationId && (
+      {canListOrganizationUsers && organizationInfo?.organizationId && indicateGuestUsers && (
         <GuestBadge userId={user.id} organizationId={organizationInfo.organizationId} />
       )}
       {user.invitationStatus === "pending" && (

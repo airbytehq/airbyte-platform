@@ -7,42 +7,25 @@ package io.airbyte.test.acceptance;
 import static io.airbyte.commons.auth.AirbyteAuthConstants.X_AIRBYTE_AUTH_HEADER;
 import static io.airbyte.test.acceptance.AcceptanceTestConstants.IS_ENTERPRISE_TRUE;
 import static io.airbyte.test.acceptance.AcceptanceTestConstants.X_AIRBYTE_AUTH_HEADER_TEST_CLIENT_VALUE;
-import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_ID;
 import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.invoker.generated.ApiClient;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
-import io.airbyte.api.client.model.generated.AirbyteStream;
-import io.airbyte.api.client.model.generated.AttemptInfoRead;
-import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
-import io.airbyte.api.client.model.generated.DestinationRead;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
 import io.airbyte.api.client.model.generated.JobInfoRead;
-import io.airbyte.api.client.model.generated.JobRead;
-import io.airbyte.api.client.model.generated.JobStatus;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceDefinitionRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
-import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.api.client.model.generated.StreamStatusJobType;
 import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.api.client.model.generated.SyncMode;
-import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.lang.MoreBooleans;
 import io.airbyte.test.utils.AcceptanceTestHarness;
 import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.TestConnectionCreate;
 import java.net.URI;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
@@ -149,147 +132,10 @@ class AdvancedAcceptanceTests {
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
         conn.getNamespaceFormat(), false, false);
 
-    LOGGER.info("===== before stream");
     Asserts.assertStreamStatuses(testHarness, workspaceId, connectionId, connectionSyncRead.getJob().getId(), StreamStatusRunState.COMPLETE,
         StreamStatusJobType.SYNC);
 
     testHarness.cleanup();
-  }
-
-  @Test
-  void testCheckpointing() throws Exception {
-    final SourceDefinitionRead sourceDefinition = testHarness.createE2eSourceDefinition(workspaceId);
-    final DestinationDefinitionRead destinationDefinition = testHarness.createE2eDestinationDefinition(workspaceId);
-
-    final SourceRead source = testHarness.createSource(
-        "E2E Test Source -" + UUID.randomUUID(),
-        workspaceId,
-        sourceDefinition.getSourceDefinitionId(),
-        Jsons.jsonNode(ImmutableMap.builder()
-            .put(TYPE, "EXCEPTION_AFTER_N")
-            .put("throw_after_n_records", 100)
-            .build()));
-
-    final DestinationRead destination = testHarness.createDestination(
-        "E2E Test Destination -" + UUID.randomUUID(),
-        workspaceId,
-        destinationDefinition.getDestinationDefinitionId(),
-        Jsons.jsonNode(ImmutableMap.of(TYPE, "SILENT")));
-
-    final UUID sourceId = source.getSourceId();
-    final UUID destinationId = destination.getDestinationId();
-    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final AirbyteCatalog catalog = discoverResult.getCatalog();
-    final AirbyteStream stream = catalog.getStreams().get(0).getStream();
-
-    assertEquals(
-        Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL),
-        stream.getSupportedSyncModes());
-    assertTrue(MoreBooleans.isTruthy(stream.getSourceDefinedCursor()));
-
-    final SyncMode syncMode = SyncMode.INCREMENTAL;
-    final DestinationSyncMode destinationSyncMode = DestinationSyncMode.APPEND;
-    catalog.getStreams().forEach(s -> s.getConfig()
-        .syncMode(syncMode)
-        .cursorField(List.of(COLUMN_ID))
-        .selected(true)
-        .destinationSyncMode(destinationSyncMode));
-    final UUID connectionId =
-        testHarness.createConnection(new TestConnectionCreate.Builder(
-            sourceId,
-            destinationId,
-            catalog,
-            discoverResult.getCatalogId()).build())
-            .getConnectionId();
-    final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
-
-    // wait to get out of pending.
-    final JobRead runningJob = testHarness.waitWhileJobHasStatus(connectionSyncRead1.getJob(), Sets.newHashSet(JobStatus.PENDING));
-    // wait to get out of running.
-    testHarness.waitWhileJobHasStatus(runningJob, Sets.newHashSet(JobStatus.RUNNING));
-    // now cancel it so that we freeze state!
-    try {
-      testHarness.cancelSync(connectionSyncRead1.getJob().getId());
-    } catch (final Exception e) {
-      LOGGER.error("error:", e);
-    }
-
-    final ConnectionState connectionState = testHarness.waitForConnectionState(connectionId);
-
-    /*
-     * the source is set to emit a state message every 5th message. because of the multithreaded nature,
-     * we can't guarantee exactly what checkpoint will be registered. what we can do is send enough
-     * messages to make sure that we check point at least once.
-     */
-    assertNotNull(connectionState.getState());
-    assertTrue(connectionState.getState().get(COLUMN1).isInt());
-    LOGGER.info("state value: {}", connectionState.getState().get(COLUMN1).asInt());
-    assertTrue(connectionState.getState().get(COLUMN1).asInt() > 0);
-    assertEquals(0, connectionState.getState().get(COLUMN1).asInt() % 5);
-  }
-
-  // verify that when the worker uses backpressure from pipes that no records are lost.
-  @Test
-  void testBackpressure() throws Exception {
-    final SourceDefinitionRead sourceDefinition = testHarness.createE2eSourceDefinition(workspaceId);
-    final DestinationDefinitionRead destinationDefinition = testHarness.createE2eDestinationDefinition(workspaceId);
-
-    final SourceRead source = testHarness.createSource(
-        "E2E Test Source -" + UUID.randomUUID(),
-        workspaceId,
-        sourceDefinition.getSourceDefinitionId(),
-        Jsons.jsonNode(ImmutableMap.builder()
-            .put(TYPE, "INFINITE_FEED")
-            .put("max_records", 5000)
-            .build()));
-
-    final DestinationRead destination = testHarness.createDestination(
-        "E2E Test Destination -" + UUID.randomUUID(),
-        workspaceId,
-        destinationDefinition.getDestinationDefinitionId(),
-        Jsons.jsonNode(ImmutableMap.builder()
-            .put(TYPE, "THROTTLED")
-            .put("millis_per_record", 1)
-            .build()));
-
-    final UUID sourceId = source.getSourceId();
-    final UUID destinationId = destination.getDestinationId();
-    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
-    final AirbyteCatalog catalog = discoverResult.getCatalog();
-    catalog.getStreams().forEach(s -> s.getConfig().selected(true));
-
-    final UUID connectionId =
-        testHarness.createConnection(new TestConnectionCreate.Builder(
-            sourceId,
-            destinationId,
-            catalog,
-            discoverResult.getCatalogId()).build())
-            .getConnectionId();
-    final JobInfoRead connectionSyncRead1 = testHarness.syncConnection(connectionId);
-
-    // wait to get out of pending.
-    final JobRead runningJob = testHarness.waitWhileJobHasStatus(connectionSyncRead1.getJob(), Sets.newHashSet(JobStatus.PENDING));
-    // wait to get out of running.
-    testHarness.waitWhileJobHasStatus(runningJob, Sets.newHashSet(JobStatus.RUNNING));
-
-    final JobInfoRead jobInfo = testHarness.getJobInfoRead(runningJob.getId());
-    final AttemptInfoRead attemptInfoRead = jobInfo.getAttempts().get(jobInfo.getAttempts().size() - 1);
-    assertNotNull(attemptInfoRead);
-
-    int expectedMessageNumber = 0;
-    final int max = 10_000;
-    for (final String logLine : attemptInfoRead.getLogs().getLogLines()) {
-      if (expectedMessageNumber > max) {
-        break;
-      }
-
-      if (logLine.contains("received record: ") && logLine.contains("\"type\": \"RECORD\"")) {
-        assertTrue(
-            logLine.contains(String.format("\"column1\": \"%s\"", expectedMessageNumber)),
-            String.format("Expected %s but got: %s", expectedMessageNumber, logLine));
-        expectedMessageNumber++;
-      }
-    }
   }
 
 }

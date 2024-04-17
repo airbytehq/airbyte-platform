@@ -4,7 +4,7 @@
 
 package io.airbyte.workload.launcher.client
 
-import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.ClaimResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadClaimRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
@@ -20,7 +20,7 @@ private val logger = KotlinLogging.logger {}
 
 @Singleton
 class WorkloadApiClient(
-  private val workloadApiRaw: WorkloadApi,
+  private val workloadApiClient: WorkloadApiClient,
   @Value("\${airbyte.data-plane-id}") private val dataplaneId: String,
 ) {
   fun reportFailure(failure: StageError) {
@@ -40,19 +40,19 @@ class WorkloadApiClient(
   fun updateStatusToRunning(workloadId: String) {
     val request = WorkloadRunningRequest(workloadId)
     logger.info { "Attempting to update workload: $workloadId to RUNNING." }
-    workloadApiRaw.workloadRunning(request)
+    workloadApiClient.workloadApi.workloadRunning(request)
   }
 
   fun updateStatusToFailed(workloadId: String) {
     val request = WorkloadFailureRequest(workloadId)
     logger.info { "Attempting to update workload: $workloadId to FAILED." }
-    workloadApiRaw.workloadFailure(request)
+    workloadApiClient.workloadApi.workloadFailure(request)
   }
 
   fun updateStatusToLaunched(workloadId: String) {
     val request = WorkloadLaunchedRequest(workloadId)
     logger.info { "Attempting to update workload: $workloadId to LAUNCHED." }
-    workloadApiRaw.workloadLaunched(request)
+    workloadApiClient.workloadApi.workloadLaunched(request)
   }
 
   fun claim(workloadId: String): Boolean {
@@ -60,7 +60,7 @@ class WorkloadApiClient(
 
     try {
       val resp: ClaimResponse =
-        workloadApiRaw.workloadClaim(
+        workloadApiClient.workloadApi.workloadClaim(
           WorkloadClaimRequest(
             workloadId,
             dataplaneId,

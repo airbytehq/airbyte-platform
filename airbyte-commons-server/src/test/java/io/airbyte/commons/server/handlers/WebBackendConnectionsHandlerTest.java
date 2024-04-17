@@ -11,9 +11,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -105,7 +107,9 @@ import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.UseClear;
 import io.airbyte.featureflag.UseIconUrlInApiResponse;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
@@ -130,6 +134,8 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 
@@ -155,6 +161,7 @@ class WebBackendConnectionsHandlerTest {
   private ConfigRepository configRepository;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
+  private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
 
   private static final String STREAM1 = "stream1";
   private static final String STREAM2 = "stream2";
@@ -189,7 +196,6 @@ class WebBackendConnectionsHandlerTest {
     final WorkspaceService workspaceService = mock(WorkspaceService.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
-    final TestClient featureFlagClient = mock(TestClient.class);
     final Supplier uuidGenerator = mock(Supplier.class);
     when(featureFlagClient.boolVariation(UseIconUrlInApiResponse.INSTANCE, new Workspace(ANONYMOUS)))
         .thenReturn(true);
@@ -219,7 +225,7 @@ class WebBackendConnectionsHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater);
 
-    wbHandler = new WebBackendConnectionsHandler(
+    wbHandler = spy(new WebBackendConnectionsHandler(
         connectionsHandler,
         stateHandler,
         sourceHandler,
@@ -229,7 +235,8 @@ class WebBackendConnectionsHandlerTest {
         operationsHandler,
         eventRunner,
         configRepository,
-        actorDefinitionVersionHelper);
+        actorDefinitionVersionHelper,
+        featureFlagClient));
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(UUID.randomUUID())
@@ -927,8 +934,11 @@ class WebBackendConnectionsHandlerTest {
     verify(operationsHandler, times(1)).updateOperation(operationUpdate);
   }
 
-  @Test
-  void testUpdateConnectionWithUpdatedSchemaLegacy() throws JsonValidationException, ConfigNotFoundException, IOException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testUpdateConnectionWithUpdatedSchemaLegacy(boolean isClear) throws JsonValidationException, ConfigNotFoundException, IOException {
+    when(featureFlagClient.boolVariation(eq(UseClear.INSTANCE), any())).thenReturn(isClear);
+
     final WebBackendConnectionUpdate updateBody = new WebBackendConnectionUpdate()
         .namespaceDefinition(expected.getNamespaceDefinition())
         .namespaceFormat(expected.getNamespaceFormat())
@@ -972,8 +982,10 @@ class WebBackendConnectionsHandlerTest {
     when(configRepository.getAllStreamsForConnection(expected.getConnectionId())).thenReturn(connectionStreams);
 
     final ManualOperationResult successfulResult = ManualOperationResult.builder().jobId(Optional.empty()).failingReason(Optional.empty()).build();
-    when(eventRunner.resetConnection(any(), any(), anyBoolean())).thenReturn(successfulResult);
+    when(eventRunner.resetConnection(any(), any(), eq(!isClear))).thenReturn(successfulResult);
     when(eventRunner.startNewManualSync(any())).thenReturn(successfulResult);
+
+    when(configRepository.getMostRecentActorCatalogForSource(any())).thenReturn(Optional.of(new ActorCatalog().withCatalog(Jsons.emptyObject())));
 
     final WebBackendConnectionRead result = wbHandler.webBackendUpdateConnection(updateBody);
 
@@ -984,11 +996,14 @@ class WebBackendConnectionsHandlerTest {
     verify(schedulerHandler, times(0)).syncConnection(connectionId);
     verify(connectionsHandler, times(1)).updateConnection(any());
     final InOrder orderVerifier = inOrder(eventRunner);
-    orderVerifier.verify(eventRunner, times(1)).resetConnection(connectionId.getConnectionId(), connectionStreams, true);
+    orderVerifier.verify(eventRunner, times(1)).resetConnection(connectionId.getConnectionId(), connectionStreams, !isClear);
   }
 
-  @Test
-  void testUpdateConnectionWithUpdatedSchemaPerStream() throws JsonValidationException, ConfigNotFoundException, IOException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testUpdateConnectionWithUpdatedSchemaPerStream(boolean isClear) throws JsonValidationException, ConfigNotFoundException, IOException {
+    when(featureFlagClient.boolVariation(eq(UseClear.INSTANCE), any())).thenReturn(isClear);
+
     final WebBackendConnectionUpdate updateBody = new WebBackendConnectionUpdate()
         .namespaceDefinition(expected.getNamespaceDefinition())
         .namespaceFormat(expected.getNamespaceFormat())
@@ -1038,8 +1053,11 @@ class WebBackendConnectionsHandlerTest {
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(connectionRead);
 
     final ManualOperationResult successfulResult = ManualOperationResult.builder().jobId(Optional.empty()).failingReason(Optional.empty()).build();
-    when(eventRunner.resetConnection(any(), any(), anyBoolean())).thenReturn(successfulResult);
+    when(eventRunner.resetConnection(any(), any(), eq(!isClear))).thenReturn(successfulResult);
     when(eventRunner.startNewManualSync(any())).thenReturn(successfulResult);
+
+    when(configRepository.getMostRecentActorCatalogForSource(any())).thenReturn(Optional.of(new ActorCatalog().withCatalog(Jsons.emptyObject())));
+    doReturn(false).when(wbHandler).containsBreakingChange(any());
 
     final WebBackendConnectionRead result = wbHandler.webBackendUpdateConnection(updateBody);
 
@@ -1055,7 +1073,7 @@ class WebBackendConnectionsHandlerTest {
             new io.airbyte.protocol.models.StreamDescriptor().withName("updateStream"),
             new io.airbyte.protocol.models.StreamDescriptor().withName("configUpdateStream"),
             new io.airbyte.protocol.models.StreamDescriptor().withName("removeStream")),
-        true);
+        !isClear);
   }
 
   @Test

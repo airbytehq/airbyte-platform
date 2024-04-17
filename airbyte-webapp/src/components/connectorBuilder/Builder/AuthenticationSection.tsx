@@ -1,12 +1,10 @@
+import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
 
-import {
-  OAuthAuthenticatorRefreshTokenUpdater,
-  SessionTokenAuthenticatorRequestAuthentication,
-} from "core/api/types/ConnectorManifest";
+import { SessionTokenAuthenticatorRequestAuthentication } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 
@@ -26,11 +24,7 @@ import {
   API_KEY_AUTHENTICATOR,
   BASIC_AUTHENTICATOR,
   BEARER_AUTHENTICATOR,
-  extractInterpolatedConfigKey,
-  inferredAuthValues,
-  OAUTH_ACCESS_TOKEN_INPUT,
   OAUTH_AUTHENTICATOR,
-  OAUTH_TOKEN_EXPIRY_DATE_INPUT,
   SESSION_TOKEN_AUTHENTICATOR,
   useBuilderWatch,
   BuilderErrorHandler,
@@ -39,7 +33,10 @@ import {
   SESSION_TOKEN_REQUEST_BEARER_AUTHENTICATOR,
   NO_AUTH,
   BuilderFormAuthenticator,
+  interpolateConfigKey,
+  BuilderFormOAuthAuthenticator,
 } from "../types";
+import { LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE, useGetUniqueKey } from "../useLockedInputs";
 
 const AUTH_PATH = "formValues.global.authenticator";
 const authPath = <T extends string>(path: T) => `${AUTH_PATH}.${path}` as const;
@@ -47,6 +44,7 @@ const authPath = <T extends string>(path: T) => `${AUTH_PATH}.${path}` as const;
 export const AuthenticationSection: React.FC = () => {
   const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
+  const getUniqueKey = useGetUniqueKey();
 
   return (
     <BuilderCard
@@ -63,24 +61,26 @@ export const AuthenticationSection: React.FC = () => {
           "BasicHttpAuthenticator",
           "OAuthAuthenticator",
         ]}
-        onSelect={(type) =>
+        onSelect={(newType) => {
           analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.AUTHENTICATION_METHOD_SELECT, {
             actionDescription: "Authentication method selected",
-            auth_type: type,
-          })
-        }
+            auth_type: newType,
+          });
+        }}
         options={[
           { label: formatMessage({ id: "connectorBuilder.authentication.method.noAuth" }), default: { type: NO_AUTH } },
           {
             label: formatMessage({ id: "connectorBuilder.authentication.method.apiKey" }),
             default: {
               type: API_KEY_AUTHENTICATOR,
-              ...inferredAuthValues("ApiKeyAuthenticator"),
               inject_into: {
                 type: "RequestOption",
                 inject_into: "header",
                 field_name: "",
               },
+              api_token: interpolateConfigKey(
+                getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[API_KEY_AUTHENTICATOR].api_token.key)
+              ),
             },
             children: (
               <>
@@ -97,7 +97,9 @@ export const AuthenticationSection: React.FC = () => {
             label: formatMessage({ id: "connectorBuilder.authentication.method.bearer" }),
             default: {
               type: BEARER_AUTHENTICATOR,
-              ...(inferredAuthValues("BearerAuthenticator") as Record<"api_token", string>),
+              api_token: interpolateConfigKey(
+                getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[BEARER_AUTHENTICATOR].api_token.key)
+              ),
             },
             children: <BuilderInputPlaceholder manifestPath="BearerAuthenticator.properties.api_token" />,
           },
@@ -105,7 +107,12 @@ export const AuthenticationSection: React.FC = () => {
             label: formatMessage({ id: "connectorBuilder.authentication.method.basicHttp" }),
             default: {
               type: BASIC_AUTHENTICATOR,
-              ...(inferredAuthValues("BasicHttpAuthenticator") as Record<"username" | "password", string>),
+              username: interpolateConfigKey(
+                getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[BASIC_AUTHENTICATOR].username.key)
+              ),
+              password: interpolateConfigKey(
+                getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[BASIC_AUTHENTICATOR].password.key)
+              ),
             },
             children: (
               <>
@@ -118,13 +125,18 @@ export const AuthenticationSection: React.FC = () => {
             label: formatMessage({ id: "connectorBuilder.authentication.method.oAuth" }),
             default: {
               type: OAUTH_AUTHENTICATOR,
-              ...(inferredAuthValues("OAuthAuthenticator") as Record<
-                "client_id" | "client_secret" | "refresh_token" | "oauth_access_token" | "oauth_token_expiry_date",
-                string
-              >),
               refresh_request_body: [],
               token_refresh_endpoint: "",
               grant_type: "refresh_token",
+              client_id: interpolateConfigKey(
+                getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].client_id.key)
+              ),
+              client_secret: interpolateConfigKey(
+                getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].client_secret.key)
+              ),
+              refresh_token: interpolateConfigKey(
+                getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].refresh_token.key)
+              ),
             },
             children: <OAuthForm />,
           },
@@ -168,8 +180,10 @@ export const AuthenticationSection: React.FC = () => {
 
 const OAuthForm = () => {
   const { formatMessage } = useIntl();
+  const { setValue } = useFormContext();
   const grantType = useBuilderWatch(authPath("grant_type"));
-  const refreshToken = useBuilderWatch(authPath("refresh_token"));
+  const getUniqueKey = useGetUniqueKey();
+
   return (
     <>
       <BuilderFieldWithInputs
@@ -182,21 +196,42 @@ const OAuthForm = () => {
         path={authPath("grant_type")}
         options={["refresh_token", "client_credentials"]}
         manifestPath="OAuthAuthenticator.properties.grant_type"
+        onChange={(newValue) => {
+          if (newValue === "client_credentials") {
+            setValue(authPath("refresh_token"), undefined);
+          } else if (newValue === "refresh_token") {
+            setValue(
+              authPath("refresh_token"),
+              interpolateConfigKey(
+                getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].refresh_token.key)
+              )
+            );
+          }
+        }}
       />
       <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.client_id" />
       <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.client_secret" />
       {grantType === "refresh_token" && (
         <>
           <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.refresh_token" />
-          <ToggleGroupField<OAuthAuthenticatorRefreshTokenUpdater>
+          <ToggleGroupField<BuilderFormOAuthAuthenticator["refresh_token_updater"]>
             label={formatMessage({ id: "connectorBuilder.authentication.refreshTokenUpdater.label" })}
             tooltip={formatMessage({ id: "connectorBuilder.authentication.refreshTokenUpdater.tooltip" })}
             fieldPath={authPath("refresh_token_updater")}
             initialValues={{
               refresh_token_name: "",
-              access_token_config_path: [OAUTH_ACCESS_TOKEN_INPUT],
-              refresh_token_config_path: [extractInterpolatedConfigKey(refreshToken) || ""],
-              token_expiry_date_config_path: [OAUTH_TOKEN_EXPIRY_DATE_INPUT],
+              access_token: interpolateConfigKey(
+                getUniqueKey(
+                  LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].refresh_token_updater
+                    .access_token_config_path.key
+                )
+              ),
+              token_expiry_date: interpolateConfigKey(
+                getUniqueKey(
+                  LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].refresh_token_updater
+                    .token_expiry_date_config_path.key
+                )
+              ),
             }}
           >
             <BuilderField
@@ -251,6 +286,8 @@ const SessionTokenForm = () => {
     authPath("login_requester"),
     true
   );
+  const getUniqueKey = useGetUniqueKey();
+
   return (
     <>
       <GroupControls label={<ControlLabels label={loginRequesterLabel} infoTooltipContent={loginRequesterTooltip} />}>
@@ -270,7 +307,7 @@ const SessionTokenForm = () => {
           path={authPath("login_requester.authenticator")}
           label={formatMessage({ id: "connectorBuilder.authentication.loginRequester.authenticator.label" })}
           manifestPath="HttpRequester.properties.authenticator"
-          manifestOptionPaths={["ApiKeyAuthenticator", "BearerAuthenticator", "BasicHttpAuthenticator"]}
+          manifestOptionPaths={[API_KEY_AUTHENTICATOR, BEARER_AUTHENTICATOR, BASIC_AUTHENTICATOR]}
           options={[
             {
               label: formatMessage({ id: "connectorBuilder.authentication.method.noAuth" }),
@@ -280,12 +317,14 @@ const SessionTokenForm = () => {
               label: formatMessage({ id: "connectorBuilder.authentication.method.apiKey" }),
               default: {
                 type: API_KEY_AUTHENTICATOR,
-                ...inferredAuthValues("ApiKeyAuthenticator"),
                 inject_into: {
                   type: "RequestOption",
                   inject_into: "header",
                   field_name: "",
                 },
+                api_token: interpolateConfigKey(
+                  getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[API_KEY_AUTHENTICATOR].api_token.key)
+                ),
               },
               children: (
                 <>
@@ -302,7 +341,9 @@ const SessionTokenForm = () => {
               label: formatMessage({ id: "connectorBuilder.authentication.method.bearer" }),
               default: {
                 type: BEARER_AUTHENTICATOR,
-                ...(inferredAuthValues(BEARER_AUTHENTICATOR) as Record<"api_token", string>),
+                api_token: interpolateConfigKey(
+                  getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[BEARER_AUTHENTICATOR].api_token.key)
+                ),
               },
               children: <BuilderInputPlaceholder manifestPath="BearerAuthenticator.properties.api_token" />,
             },
@@ -310,7 +351,12 @@ const SessionTokenForm = () => {
               label: formatMessage({ id: "connectorBuilder.authentication.method.basicHttp" }),
               default: {
                 type: BASIC_AUTHENTICATOR,
-                ...(inferredAuthValues(BASIC_AUTHENTICATOR) as Record<"username" | "password", string>),
+                username: interpolateConfigKey(
+                  getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[BASIC_AUTHENTICATOR].username.key)
+                ),
+                password: interpolateConfigKey(
+                  getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[BASIC_AUTHENTICATOR].password.key)
+                ),
               },
               children: (
                 <>

@@ -44,8 +44,8 @@ object PaginationMapper {
     limit: Int,
     offset: Int,
   ): Optional<Int> {
-    // If we have no more entries or we had no entries this page, just return empty - no next URL
-    return if (CollectionUtils.isEmpty(collection) || collection.size < limit) {
+    // If we have no more entries, or we had no entries this page, just return empty - no next URL
+    return if (CollectionUtils.isEmpty(collection)) {
       Optional.empty()
     } else {
       Optional.of(offset + limit)

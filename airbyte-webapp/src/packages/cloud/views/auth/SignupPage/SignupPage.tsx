@@ -11,6 +11,7 @@ import { Icon } from "components/ui/Icon";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { SignupForm } from "./components/SignupForm";
 import styles from "./SignupPage.module.scss";
@@ -32,7 +33,9 @@ const Detail: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
 };
 
 const SignupPage: React.FC<SignupPageProps> = () => {
-  const [keycloakAuthEnabled] = useLocalStorage("airbyte_keycloak-auth-ui", false);
+  const [keycloakAuthEnabledLocalStorage] = useLocalStorage("airbyte_keycloak-auth-ui", true);
+  const keycloakAuthEnabledExperiment = useExperiment("authPage.keycloak", true);
+  const keycloakAuthEnabled = keycloakAuthEnabledExperiment || keycloakAuthEnabledLocalStorage;
   const { loginWithOAuth, signUp } = useAuthService();
   useTrackPage(PageTrackingCodes.SIGNUP);
 

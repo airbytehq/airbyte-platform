@@ -12,16 +12,15 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_
 import datadog.trace.api.Trace;
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub;
 import io.airbyte.commons.temporal.scheduling.CheckConnectionWorkflow;
-import io.airbyte.config.ActorType;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.ConnectorJobOutput.OutputType;
-import io.airbyte.config.FailureReason;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.CheckConnectionInput;
+import io.airbyte.workers.temporal.FailureConverter;
 import io.temporal.workflow.Workflow;
 import java.util.Map;
 import java.util.UUID;
@@ -57,15 +56,16 @@ public class CheckConnectionWorkflowImpl implements CheckConnectionWorkflow {
       }
     } catch (final Exception e) {
       result = new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
-          .withCheckConnection(new StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.FAILED)
-              .withMessage("The check connection failed."))
-          .withFailureReason(new FailureReason()
-
-              .withFailureOrigin(connectionConfiguration.getActorType() == ActorType.SOURCE ? FailureReason.FailureOrigin.SOURCE
-                  : FailureReason.FailureOrigin.DESTINATION)
-              .withExternalMessage("The check connection failed because of an internal error")
-              .withInternalMessage("The check connection failed because of an internal error in the scheduler used by airbyte.")
-              .withStacktrace(e.toString()));
+          .withCheckConnection(
+              new StandardCheckConnectionOutput()
+                  .withStatus(StandardCheckConnectionOutput.Status.FAILED)
+                  .withMessage("The check connection failed."))
+          .withFailureReason(
+              new FailureConverter().getFailureReason(
+                  "Check",
+                  connectionConfiguration.getActorType(),
+                  e,
+                  activity.getCheckConnectionTimeout()));
     }
 
     return result;

@@ -21,7 +21,8 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalConstants;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
 import io.airbyte.config.ConnectionContext;
-import io.airbyte.config.FailureReason;
+import io.airbyte.config.FailureReason.FailureOrigin;
+import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.OperatorWebhook;
@@ -422,10 +423,10 @@ class SyncWorkflowTest {
     doThrow(new RuntimeException())
         .when(refreshSchemaActivity).refreshSchemaV2(any());
     final StandardSyncOutput output = execute();
-    assertEquals(output.getStandardSyncSummary().getStatus(), ReplicationStatus.FAILED);
-    assertEquals(output.getFailures().size(), 1);
-    assertEquals(output.getFailures().get(0).getFailureOrigin(), FailureReason.FailureOrigin.SOURCE);
-    assertEquals(output.getFailures().get(0).getFailureType(), FailureReason.FailureType.REFRESH_SCHEMA);
+    assertEquals(ReplicationStatus.FAILED, output.getStandardSyncSummary().getStatus());
+    assertEquals(1, output.getFailures().size());
+    assertEquals(FailureOrigin.AIRBYTE_PLATFORM, output.getFailures().get(0).getFailureOrigin());
+    assertEquals(FailureType.REFRESH_SCHEMA, output.getFailures().get(0).getFailureType());
   }
 
   @SuppressWarnings("ResultOfMethodCallIgnored")

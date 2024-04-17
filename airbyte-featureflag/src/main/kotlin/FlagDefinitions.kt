@@ -194,8 +194,12 @@ object UseWorkloadApiForDiscover : Temporary<Boolean>(key = "platform.use-worklo
 
 object UseWorkloadApiForSpec : Temporary<Boolean>(key = "platform.use-workload-api-for-spec", default = false)
 
-object EnforceMutexKeyOnCreate : Temporary<Boolean>(key = "platform.enforce-mutex-key-on-create", default = false)
-
 object ActivateRefreshes : Temporary<Boolean>(key = "platform.activate-refreshes", default = false)
 
-object WriteReplicationOutputToObjectStorage : Temporary<Boolean>(key = "platform.write-replication-output-to-object-storage", default = false)
+object WriteOutputCatalogToObjectStorage : Temporary<Boolean>(key = "platform.write-output-catalog-to-object-storage", default = false)
+
+object NullOutputCatalogOnSyncOutput : Temporary<Boolean>(key = "platform.null-output-catalog-on-sync-output", default = false)
+
+object UseCustomK8sInitCheck : Temporary<Boolean>(key = "platform.use-custom-k8s-init-check", default = true)
+
+object UseClear : Temporary<Boolean>(key = "connection.clearNotReset", default = false)

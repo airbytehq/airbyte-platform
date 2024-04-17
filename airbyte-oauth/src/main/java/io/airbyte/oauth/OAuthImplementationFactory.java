@@ -20,6 +20,7 @@ import io.airbyte.oauth.flows.IntercomOAuthFlow;
 import io.airbyte.oauth.flows.LeverOAuthFlow;
 import io.airbyte.oauth.flows.LinkedinAdsOAuthFlow;
 import io.airbyte.oauth.flows.MailchimpOAuthFlow;
+import io.airbyte.oauth.flows.MicrosoftAzureBlobStorageOAuthFlow;
 import io.airbyte.oauth.flows.MicrosoftBingAdsOAuthFlow;
 import io.airbyte.oauth.flows.MicrosoftOneDriveOAuthFlow;
 import io.airbyte.oauth.flows.MicrosoftSharepointOAuthFlow;
@@ -76,6 +77,7 @@ public class OAuthImplementationFactory {
     builder.put("airbyte/source-amazon-ads", new AmazonAdsOAuthFlow(httpClient));
     builder.put("airbyte/source-amazon-seller-partner", new AmazonSellerPartnerOAuthFlow(httpClient));
     builder.put("airbyte/source-asana", new AsanaOAuthFlow(httpClient));
+    builder.put("airbyte/source-azure-blob-storage", new MicrosoftAzureBlobStorageOAuthFlow(httpClient));
     builder.put("airbyte/source-bing-ads", new MicrosoftBingAdsOAuthFlow(httpClient));
     builder.put("airbyte/source-drift", new DriftOAuthFlow(httpClient));
     builder.put("airbyte/source-facebook-marketing", new FacebookMarketingOAuthFlow(httpClient));

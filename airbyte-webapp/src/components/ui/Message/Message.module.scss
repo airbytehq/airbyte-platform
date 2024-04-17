@@ -23,11 +23,6 @@ $message-icon-size: 22px;
 }
 
 .messageContainer {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: variables.$spacing-xs;
-  box-sizing: border-box;
   padding: variables.$spacing-sm;
   border-radius: variables.$border-radius-md;
 
@@ -37,21 +32,18 @@ $message-icon-size: 22px;
   @include type("error", colors.$red-300, colors.$red-50);
 }
 
-.messageContainerWithChildren {
-  border-radius: variables.$border-radius-md variables.$border-radius-md 0 0;
-}
-
 @mixin children-type($name, $color, $background) {
   @include type($name, $color, $background);
   &.#{$name} {
     color: colors.$dark-blue-900;
-    border: 1px solid $background;
+    border: variables.$spacing-sm solid $background;
+    padding: variables.$spacing-sm;
     background: colors.$foreground;
   }
 }
 
 .childrenContainer {
-  border-radius: 0 0 variables.$border-radius-md variables.$border-radius-md;
+  border-radius: variables.$border-radius-md;
   font-size: variables.$font-size-lg;
 
   @include children-type("info", colors.$blue-400, colors.$blue-50);
@@ -62,9 +54,6 @@ $message-icon-size: 22px;
 
 .iconContainer {
   padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .messageIcon {
@@ -94,8 +83,7 @@ $message-icon-size: 22px;
   text-align: left;
 }
 
-.closeButton {
-  svg {
-    color: colors.$dark-blue-900;
-  }
+.alignRightColumn {
+  align-self: stretch; // flex equivalent of `height: 100%`
+  max-height: calc(32px + 9px); // 32px for the button's height, allow up to 9px "padding" on the top
 }
