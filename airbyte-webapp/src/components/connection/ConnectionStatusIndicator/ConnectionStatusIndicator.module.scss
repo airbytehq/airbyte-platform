@@ -4,8 +4,10 @@
 
 .status {
   position: relative;
+  transform: scale(1.2);
 
   .icon {
+    transform: scale(1.1);
     width: 20px;
     height: 20px;
     display: flex;
@@ -33,10 +35,4 @@
       }
     }
   }
-}
-
-.spinner {
-  position: absolute;
-  top: -1px;
-  left: -1px;
 }

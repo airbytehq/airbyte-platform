@@ -618,6 +618,7 @@
   "connection.refreshSchema": "Refresh schema",
   "connection.replication": "Replication",
   "connection.schema": "Schema",
+  "connection.syncStatusCard.title": "Sync Status",
   "connection.streams": "Streams",
   "connection.transfer": "Transfer",
   "connection.linkCopied": "Link copied!",
@@ -672,7 +673,7 @@
   "connection.stream.status.error": "Error",
   "connection.stream.status.late": "Late",
   "connection.stream.status.pending": "Pending",
-  "connection.stream.status.title": "Enabled streams",
+  "connection.stream.status.title": "Active Streams",
   "connection.stream.status.seeLogs": "See logs",
   "connection.stream.status.checkSourceSettings": "Check source",
   "connection.stream.status.checkDestinationSettings": "Check destination",
@@ -1098,6 +1099,8 @@
   "ui.loading": "Loading …",
   "ui.markdown.copyCode": "Copy code",
   "ui.markdown.copied": "Copied",
+  "ui.switch.enabled": "Enabled",
+  "ui.switch.disabled": "Disabled",
 
   "airbyte.datatype.string": "String",
   "airbyte.datatype.binary_data": "Binary Data",
@@ -1607,6 +1610,7 @@
   "confirmResetPassword.link.invalid": "The password reset link is invalid. Please double check the reset email.",
   "confirmResetPassword.password.weak": "Your password does not meet the minimum length",
 
+  "connection.header.frequency.tooltip": "Click to edit in Settings",
   "connection.dbtCloudJobs.cardTitle": "Transformations",
   "connection.dbtCloudJobs.addJob": "Add transformation",
   "connection.dbtCloudJobs.dbtError": "There was an error communicating with dbt Cloud: {displayMessage}",
