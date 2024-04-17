@@ -260,6 +260,6 @@ temporal-telemetry = ["temporal-opentracing"]
 
 [plugins]
 ksp = { id ="com.google.devtools.ksp", version = "1.9.22-1.0.17"}
-node-gradle = { id = "com.github.node-gradle.node", version = "3.4.0" }
+node-gradle = { id = "com.github.node-gradle.node", version = "7.0.1" }
 nu-studer-jooq = { id = "nu.studer.jooq", version = "9.0" }
 de-undercouch-download = { id = "de.undercouch.download", version = "5.5.0" }
