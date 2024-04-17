@@ -21,13 +21,14 @@ export const InputContainer: React.FC<React.PropsWithChildren<{ highlightAfterRe
     let highlightTimeout: number;
 
     if (highlightAfterRedirect && locationState?.action === "scheduleType") {
+      // remove the redirection info from the location state
+      navigate(pathname, { replace: true });
+
       setHighlighted(true);
       highlightTimeout = window.setTimeout(() => {
         setHighlighted(false);
       }, 1500);
     }
-    // remove the redirection info from the location state
-    navigate(pathname, { replace: true });
 
     return () => {
       window.clearTimeout(highlightTimeout);
