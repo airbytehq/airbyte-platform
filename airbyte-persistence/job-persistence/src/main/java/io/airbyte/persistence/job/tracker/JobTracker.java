@@ -54,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -229,7 +230,12 @@ public class JobTracker {
       final ActorDefinitionVersion destinationVersion =
           actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, standardSync.getDestinationId());
 
-      final Map<String, Object> jobMetadata = generateJobMetadata(String.valueOf(jobId), configType, job.getAttemptsCount());
+      final List<Job> jobsHistory = jobPersistence.listJobsIncludingId(
+          Set.of(ConfigType.SYNC, ConfigType.RESET_CONNECTION, ConfigType.REFRESH), connectionId.toString(), jobId, 2);
+
+      final Optional<Job> previousJob = jobsHistory.stream().filter(jobHistory -> jobHistory.getId() != jobId).findFirst();
+
+      final Map<String, Object> jobMetadata = generateJobMetadata(String.valueOf(jobId), configType, job.getAttemptsCount(), previousJob);
       final Map<String, Object> jobAttemptMetadata = generateJobAttemptMetadata(jobId, jobState);
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
       final Map<String, Object> destinationDefMetadata = generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
@@ -278,7 +284,7 @@ public class JobTracker {
       final ActorDefinitionVersion destinationVersion =
           actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, standardSync.getDestinationId());
 
-      final Map<String, Object> jobMetadata = generateJobMetadata(String.valueOf(jobId), null, attempts);
+      final Map<String, Object> jobMetadata = generateJobMetadata(String.valueOf(jobId), null, attempts, Optional.empty());
       final Map<String, Object> jobAttemptMetadata = generateJobAttemptMetadata(jobId, jobState);
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
       final Map<String, Object> destinationDefMetadata = generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
@@ -508,17 +514,25 @@ public class JobTracker {
   }
 
   private Map<String, Object> generateJobMetadata(final String jobId, final ConfigType configType) {
-    return generateJobMetadata(jobId, configType, 0);
+    return generateJobMetadata(jobId, configType, 0, Optional.empty());
   }
 
-  private Map<String, Object> generateJobMetadata(final String jobId, final @Nullable ConfigType configType, final int attempt) {
+  @VisibleForTesting
+  Map<String, Object> generateJobMetadata(final String jobId,
+                                          final @Nullable ConfigType configType,
+                                          final int attempt,
+                                          final Optional<Job> previousJob) {
     final Map<String, Object> metadata = new HashMap<>();
     if (configType != null) {
       metadata.put("job_type", configType);
     }
     metadata.put("job_id", jobId);
     metadata.put("attempt_id", attempt);
-
+    previousJob.ifPresent(job -> {
+      if (job.getConfigType() != null) {
+        metadata.put("previous_job_type", job.getConfigType());
+      }
+    });
     return Collections.unmodifiableMap(metadata);
   }
 

@@ -32,6 +32,7 @@ import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.Metadata;
 import io.airbyte.config.NormalizationSummary;
+import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.Schedule.TimeUnit;
 import io.airbyte.config.StandardCheckConnectionOutput;
@@ -330,6 +331,11 @@ class JobTrackerTest {
   }
 
   @Test
+  void testTrackRefresh() throws ConfigNotFoundException, IOException, JsonValidationException {
+    testAsynchronous(ConfigType.REFRESH, SYNC_CONFIG_METADATA);
+  }
+
+  @Test
   void testTrackSyncForInternalFailure() throws JsonValidationException, ConfigNotFoundException, IOException {
     final Long jobId = 12345L;
     final Integer attemptNumber = 2;
@@ -500,6 +506,20 @@ class JobTrackerTest {
     assertEquals(expected, actual);
   }
 
+  @Test
+  void testGenerateMetadata() {
+    final String jobId = "shouldBeLong";
+    final int attemptId = 2;
+    final ConfigType configType = ConfigType.REFRESH;
+    final Job previousJob = new Job(0, ConfigType.RESET_CONNECTION, null, null, null, null, null, 0L, 0L);
+
+    final Map<String, Object> metadata = jobTracker.generateJobMetadata(jobId, configType, attemptId, Optional.of(previousJob));
+    assertEquals(jobId, metadata.get("job_id"));
+    assertEquals(attemptId, metadata.get("attempt_id"));
+    assertEquals(configType, metadata.get("job_type"));
+    assertEquals(ConfigType.RESET_CONNECTION, metadata.get("previous_job_type"));
+  }
+
   void testAsynchronousAttempt(final ConfigType configType) throws ConfigNotFoundException, IOException, JsonValidationException {
     testAsynchronousAttempt(configType, getJobWithAttemptsMock(configType, LONG_JOB_ID), Collections.emptyMap());
   }
@@ -617,9 +637,6 @@ class JobTrackerTest {
             .withSyncMode(SyncMode.FULL_REFRESH)
             .withDestinationSyncMode(DestinationSyncMode.APPEND)));
 
-    final JobSyncConfig jobSyncConfig = new JobSyncConfig()
-        .withConfiguredAirbyteCatalog(catalog);
-
     final AttemptSyncConfig attemptSyncConfig = new AttemptSyncConfig()
         .withSourceConfiguration(Jsons.jsonNode(ImmutableMap.of("key", "some_value")))
         .withDestinationConfiguration(Jsons.jsonNode(ImmutableMap.of("key", false)));
@@ -628,7 +645,14 @@ class JobTrackerTest {
     when(jobConfig.getConfigType()).thenReturn(configType);
 
     if (configType == ConfigType.SYNC) {
+      final JobSyncConfig jobSyncConfig = new JobSyncConfig()
+          .withConfiguredAirbyteCatalog(catalog);
       when(jobConfig.getSync()).thenReturn(jobSyncConfig);
+    }
+    if (configType == ConfigType.REFRESH) {
+      final RefreshConfig refreshConfig = new RefreshConfig()
+          .withConfiguredAirbyteCatalog(catalog);
+      when(jobConfig.getRefresh()).thenReturn(refreshConfig);
     }
 
     final Attempt attempt = mock(Attempt.class);
