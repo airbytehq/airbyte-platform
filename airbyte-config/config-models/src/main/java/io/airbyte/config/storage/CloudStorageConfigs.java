@@ -152,14 +152,20 @@ public class CloudStorageConfigs {
   public static class S3Config extends S3ApiWorkerStorageConfig {
 
     private final String region;
+    private final String endpoint;
 
-    public S3Config(final String bucketName, final String awsAccessKey, final String awsSecretAccessKey, final String region) {
+    public S3Config(final String bucketName, final String awsAccessKey, final String awsSecretAccessKey, final String region, final String endpoint) {
       super(bucketName, awsAccessKey, awsSecretAccessKey);
       this.region = region;
+      this.endpoint = endpoint;
     }
 
     public String getRegion() {
       return region;
+    }
+
+    public String getEndpoint() {
+      return endpoint;
     }
 
   }

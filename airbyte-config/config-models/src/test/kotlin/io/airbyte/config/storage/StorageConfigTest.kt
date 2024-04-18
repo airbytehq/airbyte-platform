@@ -138,6 +138,7 @@ class S3StorageConfigTest {
       assertEquals("access", this.accessKey)
       assertEquals("secret-access", secretAccessKey)
       assertEquals("us-moon-1", region)
+      assertEquals("endpoint", endpoint)
     }
   }
 
@@ -154,6 +155,7 @@ class S3StorageConfigTest {
           EnvVar.AWS_ACCESS_KEY_ID to "access",
           EnvVar.AWS_SECRET_ACCESS_KEY to "secret-access",
           EnvVar.AWS_DEFAULT_REGION to "us-moon-1",
+          EnvVar.AWS_ENDPOINT to "endpoint",
         ).mapKeys { it.key.name }
 
       assertEquals(expected, toEnvVarMap())

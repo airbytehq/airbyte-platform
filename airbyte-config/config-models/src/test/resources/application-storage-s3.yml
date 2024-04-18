@@ -11,3 +11,4 @@ airbyte:
         access-key: access
         secret-access-key: secret-access
         region: us-moon-1
+        endpoint: endpoint
