@@ -193,6 +193,7 @@ const SimplifiedConnectionSettingsPage = () => {
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
+  const sayClearInsteadOfReset = useExperiment("connection.clearNotReset", false);
 
   const { mode } = useConnectionFormService();
   const destDefinitionVersion = useDestinationDefinitionVersion(connection.destinationId);
@@ -210,11 +211,13 @@ const SimplifiedConnectionSettingsPage = () => {
   const onReset = useCallback(async () => {
     await doResetConnection(connection.connectionId);
     registerNotification({
-      id: "connection_reset_start_success",
-      text: formatMessage({ id: "form.resetData.successfulStart" }),
+      id: sayClearInsteadOfReset ? "clearData.successfulStart" : "connection_reset_start_success",
+      text: formatMessage({
+        id: sayClearInsteadOfReset ? "form.clearData.successfulStart" : "form.resetData.successfulStart",
+      }),
       type: "success",
     });
-  }, [doResetConnection, connection.connectionId, formatMessage, registerNotification]);
+  }, [doResetConnection, connection.connectionId, registerNotification, sayClearInsteadOfReset, formatMessage]);
 
   const onSuccess = () => {
     registerNotification({
