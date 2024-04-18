@@ -24,6 +24,13 @@
     &--disabled {
       cursor: not-allowed;
     }
+
+    &--light.radioButtonTiles__toggle--light {
+      border: none;
+      outline: none;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
   }
 
   &__dot {
