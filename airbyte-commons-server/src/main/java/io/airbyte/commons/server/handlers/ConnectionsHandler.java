@@ -1115,8 +1115,11 @@ public class ConnectionsHandler {
         payload.put("connection_id", connectionId);
         payload.put("schema_change_event_date", changeEventTimeline);
         payload.put("stream_change_type", streamTransform.getTransformType().toString());
-        payload.put("stream_namespace", streamTransform.getStreamDescriptor().getNamespace());
-        payload.put("stream_name", streamTransform.getStreamDescriptor().getName());
+        StreamDescriptor streamDescriptor = streamTransform.getStreamDescriptor();
+        if (streamDescriptor.getNamespace() != null) {
+          payload.put("stream_namespace", streamDescriptor.getNamespace());
+        }
+        payload.put("stream_name", streamDescriptor.getName());
         if (streamTransform.getTransformType() == TransformTypeEnum.UPDATE_STREAM) {
           payload.put("stream_field_changes", Jsons.serialize(streamTransform.getUpdateStream()));
         }
