@@ -2218,6 +2218,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/getForJob:
+    post:
+      tags:
+        - connection
+      summary: Get a connection for a given jobId
+      operationId: getConnectionForJob
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionAndJobIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connections/list_by_actor_definition:
     post:
       tags:
@@ -7842,6 +7865,16 @@ components:
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
+    ConnectionAndJobIdRequestBody:
+      type: object
+      required:
+        - connectionId
+        - jobId
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
     ConnectionUptimeHistoryRequestBody:
       type: object
       required:
@@ -9189,6 +9222,18 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SelectedFieldInfo"
+        minimumGenerationId:
+          type: integer
+          format: int64
+          description: The minimum generation Id of the stream
+        generationId:
+          type: integer
+          format: int64
+          description: Generation Id of the stream
+        syncId:
+          type: integer
+          format: int64
+          description: Sync id of the stream.
     SelectedFieldInfo:
       type: object
       # TODO(mfsiega-airbyte): point to thorough documentation on nested fields and paths.

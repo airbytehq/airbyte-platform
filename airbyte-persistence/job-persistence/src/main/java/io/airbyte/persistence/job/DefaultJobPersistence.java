@@ -9,6 +9,7 @@ import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.NORMALIZATION_SUMMARIES;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
+import static io.airbyte.persistence.job.models.JobStatus.TERMINAL_STATUSES;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -403,6 +404,10 @@ public class DefaultJobPersistence implements JobPersistence {
       // TODO feature flag this for data types rollout
       // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(jobConfig.getResetConnection().getConfiguredAirbyteCatalog());
       CatalogMigrationV1Helper.downgradeSchemaIfNeeded(jobConfig.getResetConnection().getConfiguredAirbyteCatalog());
+    } else if (jobConfig.getConfigType() == ConfigType.REFRESH && jobConfig.getRefresh() != null) {
+      // TODO feature flag this for data types rollout
+      // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(jobConfig.getRefresh().getConfiguredAirbyteCatalog());
+      CatalogMigrationV1Helper.downgradeSchemaIfNeeded(jobConfig.getRefresh().getConfiguredAirbyteCatalog());
     }
     return jobConfig;
   }
@@ -516,7 +521,7 @@ public class DefaultJobPersistence implements JobPersistence {
         ? String.format("WHERE NOT EXISTS (SELECT 1 FROM jobs WHERE config_type IN (%s) AND scope = '%s' AND status NOT IN (%s)) ",
             Job.REPLICATION_TYPES.stream().map(DefaultJobPersistence::toSqlName).map(Names::singleQuote).collect(Collectors.joining(",")),
             scope,
-            JobStatus.TERMINAL_STATUSES.stream().map(DefaultJobPersistence::toSqlName).map(Names::singleQuote).collect(Collectors.joining(",")))
+            TERMINAL_STATUSES.stream().map(DefaultJobPersistence::toSqlName).map(Names::singleQuote).collect(Collectors.joining(",")))
         : "";
 
     return jobDatabase.query(
@@ -1083,12 +1088,11 @@ public class DefaultJobPersistence implements JobPersistence {
             + "FROM jobs "
             + "JOIN attempts ON jobs.id = attempts.job_id "
             + WHERE
-            + "CAST(config_type AS VARCHAR) = ? AND "
+            + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES) + AND
             + SCOPE_CLAUSE
             + "CAST(jobs.status AS VARCHAR) = ? AND "
             + "attempts.ended_at > ? "
             + "ORDER BY attempts.ended_at ASC",
-        toSqlName(ConfigType.SYNC),
         connectionId.toString(),
         toSqlName(JobStatus.SUCCEEDED),
         timeConvertedIntoLocalDateTime))
@@ -1148,10 +1152,9 @@ public class DefaultJobPersistence implements JobPersistence {
   public Optional<Job> getLastSyncJob(final UUID connectionId) throws IOException {
     return jobDatabase.query(ctx -> ctx
         .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
-            + "CAST(jobs.config_type AS VARCHAR) = ? " + AND
+            + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES) + AND
             + "scope = ? "
             + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1,
-            toSqlName(ConfigType.SYNC),
             connectionId.toString())
         .stream()
         .findFirst()
@@ -1171,10 +1174,9 @@ public class DefaultJobPersistence implements JobPersistence {
     return jobDatabase.query(ctx -> ctx
         .fetch("SELECT DISTINCT ON (scope) jobs.scope, jobs.created_at, jobs.status "
             + " FROM jobs "
-            + WHERE + "CAST(jobs.config_type AS VARCHAR) = ? "
+            + WHERE + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES)
             + AND + scopeInList(connectionIds)
-            + "ORDER BY scope, created_at DESC",
-            toSqlName(ConfigType.SYNC))
+            + "ORDER BY scope, created_at DESC")
         .stream()
         .map(r -> new JobStatusSummary(UUID.fromString(r.get("scope", String.class)), getEpoch(r, "created_at"),
             JobStatus.valueOf(r.get("status", String.class).toUpperCase())))
@@ -1193,11 +1195,10 @@ public class DefaultJobPersistence implements JobPersistence {
 
     return jobDatabase.query(ctx -> ctx
         .fetch("SELECT DISTINCT ON (scope) * FROM jobs "
-            + WHERE + "CAST(jobs.config_type AS VARCHAR) = ? "
+            + WHERE + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES)
             + AND + scopeInList(connectionIds)
             + AND + JOB_STATUS_IS_NON_TERMINAL
-            + "ORDER BY scope, created_at DESC",
-            toSqlName(ConfigType.SYNC))
+            + "ORDER BY scope, created_at DESC")
         .stream()
         .flatMap(r -> getJobOptional(ctx, r.get("id", Long.class)).stream())
         .collect(Collectors.toList()));
@@ -1265,6 +1266,19 @@ public class DefaultJobPersistence implements JobPersistence {
             .where(ATTEMPTS.JOB_ID.eq(jobId))
             .fetch(record -> new AttemptNormalizationStatus(record.get(ATTEMPTS.ATTEMPT_NUMBER),
                 Optional.ofNullable(record.get(SYNC_STATS.RECORDS_COMMITTED)), record.get(NORMALIZATION_SUMMARIES.FAILURES) != null)));
+  }
+
+  @Override
+  public void updateJobConfig(Long jobId, JobConfig config) throws IOException {
+    jobDatabase.query(ctx -> {
+
+      ctx.update(JOBS)
+          .set(JOBS.CONFIG, JSONB.valueOf(Jsons.serialize(config)))
+          .set(JOBS.UPDATED_AT, OffsetDateTime.now())
+          .where(JOBS.ID.eq(jobId))
+          .execute();
+      return null;
+    });
   }
 
   @Override

@@ -102,6 +102,9 @@ const streamConfigSchema: SchemaOf<AirbyteStreamConfiguration> = yup.object({
     .optional(),
   aliasName: yup.string().optional(),
   primaryKey: yup.array().of(yup.array().of(yup.string())).optional(),
+  minimumGenerationId: yup.number().optional(),
+  generationId: yup.number().optional(),
+  syncId: yup.number().optional(),
 });
 
 export const streamAndConfigurationSchema: SchemaOf<AirbyteStreamAndConfiguration> = yup.object({

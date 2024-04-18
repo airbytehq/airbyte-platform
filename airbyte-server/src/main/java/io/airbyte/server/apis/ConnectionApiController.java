@@ -13,6 +13,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 import io.airbyte.api.generated.ConnectionApi;
 import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
 import io.airbyte.api.model.generated.BooleanRead;
+import io.airbyte.api.model.generated.ConnectionAndJobIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
@@ -59,10 +60,12 @@ import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
 @Controller("/api/v1/connections")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
+@Slf4j
 public class ConnectionApiController implements ConnectionApi {
 
   private final ConnectionsHandler connectionsHandler;
@@ -177,6 +180,15 @@ public class ConnectionApiController implements ConnectionApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public List<ConnectionDataHistoryReadItem> getConnectionDataHistory(@Body final ConnectionDataHistoryRequestBody connectionDataHistoryRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.getConnectionDataHistory(connectionDataHistoryRequestBody));
+  }
+
+  @Override
+  @Post(uri = "/getForJob")
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public ConnectionRead getConnectionForJob(@Body final ConnectionAndJobIdRequestBody connectionAndJobIdRequestBody) {
+    return ApiHelper.execute(
+        () -> connectionsHandler.getConnectionForJob(connectionAndJobIdRequestBody.getConnectionId(), connectionAndJobIdRequestBody.getJobId()));
   }
 
   @Override

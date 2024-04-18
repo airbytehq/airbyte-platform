@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers.helpers;
 
+import static io.airbyte.config.JobConfig.ConfigType.REFRESH;
 import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.FAILURE_ORIGINS_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.FAILURE_TYPES_KEY;
@@ -67,7 +68,7 @@ public class JobCreationAndStatusUpdateHelper {
       ReleaseStage.BETA, 3,
       ReleaseStage.GENERALLY_AVAILABLE, 4);
   private static final Comparator<ReleaseStage> RELEASE_STAGE_COMPARATOR = Comparator.comparingInt(RELEASE_STAGE_ORDER::get);
-  public static final Set<ConfigType> SYNC_CONFIG_SET = Set.of(SYNC);
+  public static final Set<ConfigType> SYNC_CONFIG_SET = Set.of(SYNC, REFRESH);
 
   private final JobPersistence jobPersistence;
   private final ConfigRepository configRepository;
@@ -274,6 +275,13 @@ public class JobCreationAndStatusUpdateHelper {
       additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, sync.getSourceDockerImage()));
       additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, sync.getDestinationDockerImage()));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, sync.getWorkspaceId().toString()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, input.getConnectionId().toString()));
+    } else if (job.getConfigType() == REFRESH) {
+      final var refresh = job.getConfig().getRefresh();
+      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_ID, refresh.getSourceDefinitionVersionId().toString()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, refresh.getSourceDockerImage()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, refresh.getDestinationDockerImage()));
+      additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, refresh.getWorkspaceId().toString()));
       additionalAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, input.getConnectionId().toString()));
     }
     emitToReleaseStagesMetricHelper(metric, job, additionalAttributes);

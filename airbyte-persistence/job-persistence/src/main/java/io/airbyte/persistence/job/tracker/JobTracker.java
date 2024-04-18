@@ -4,6 +4,8 @@
 
 package io.airbyte.persistence.job.tracker;
 
+import static io.airbyte.persistence.job.models.Job.REPLICATION_TYPES;
+import static io.airbyte.persistence.job.models.Job.SYNC_REPLICATION_TYPES;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
 
@@ -211,7 +213,7 @@ public class JobTracker {
   public void trackSync(final Job job, final JobState jobState) {
     Exceptions.swallow(() -> {
       final ConfigType configType = job.getConfigType();
-      final boolean allowedJob = configType == ConfigType.SYNC || configType == ConfigType.RESET_CONNECTION;
+      final boolean allowedJob = REPLICATION_TYPES.contains(configType);
       Preconditions.checkArgument(allowedJob, "Job type " + configType + " is not allowed!");
       final long jobId = job.getId();
       final Optional<Attempt> lastAttempt = job.getLastAttempt();
@@ -303,7 +305,7 @@ public class JobTracker {
                                                          @Nullable final AttemptSyncConfig attemptSyncConfig,
                                                          final JsonNode sourceConfigSchema,
                                                          final JsonNode destinationConfigSchema) {
-    if (config.getConfigType() == ConfigType.SYNC) {
+    if (SYNC_REPLICATION_TYPES.contains(config.getConfigType())) {
       final Map<String, Object> actorConfigMetadata = new HashMap<>();
 
       if (attemptSyncConfig != null) {
@@ -317,7 +319,15 @@ public class JobTracker {
             mapToJsonString(configToMetadata(destinationConfiguration, destinationConfigSchema)));
       }
 
-      final Map<String, Object> catalogMetadata = getCatalogMetadata(config.getSync().getConfiguredAirbyteCatalog());
+      final Map<String, Object> catalogMetadata;
+      if (config.getConfigType() == ConfigType.SYNC) {
+        catalogMetadata = getCatalogMetadata(config.getSync().getConfiguredAirbyteCatalog());
+      } else if (config.getConfigType() == ConfigType.REFRESH) {
+        catalogMetadata = getCatalogMetadata(config.getRefresh().getConfiguredAirbyteCatalog());
+      } else {
+        // This is not possible
+        throw new IllegalStateException("This should not be reacheable");
+      }
       return MoreMaps.merge(actorConfigMetadata, catalogMetadata);
     } else {
       return emptyMap();

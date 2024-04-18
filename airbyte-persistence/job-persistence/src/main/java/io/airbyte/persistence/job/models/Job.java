@@ -22,7 +22,8 @@ import java.util.stream.Collectors;
  */
 public class Job {
 
-  public static final Set<ConfigType> REPLICATION_TYPES = EnumSet.of(ConfigType.SYNC, ConfigType.RESET_CONNECTION);
+  public static final Set<ConfigType> REPLICATION_TYPES = EnumSet.of(ConfigType.SYNC, ConfigType.RESET_CONNECTION, ConfigType.REFRESH);
+  public static final Set<ConfigType> SYNC_REPLICATION_TYPES = EnumSet.of(ConfigType.SYNC, ConfigType.REFRESH);
 
   private final long id;
   private final ConfigType configType;
