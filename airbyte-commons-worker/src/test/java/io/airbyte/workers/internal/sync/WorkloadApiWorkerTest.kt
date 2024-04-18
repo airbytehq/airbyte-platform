@@ -18,6 +18,7 @@ import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.storage.StorageClient
 import io.airbyte.workers.sync.WorkloadApiWorker
+import io.airbyte.workers.sync.WorkloadClient
 import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workers.workload.WorkloadIdGenerator
 import io.airbyte.workload.api.client.generated.WorkloadApi
@@ -62,6 +63,7 @@ internal class WorkloadApiWorkerTest {
         jobOutputDocStore,
         apiClient,
         workloadApiClient,
+        WorkloadClient(workloadApiClient),
         workloadIdGenerator,
         replicationActivityInput,
         featureFlagClient,

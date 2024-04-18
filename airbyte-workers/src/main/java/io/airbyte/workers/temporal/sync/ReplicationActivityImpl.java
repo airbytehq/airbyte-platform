@@ -45,6 +45,7 @@ import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
 import io.airbyte.workers.storage.activities.OutputStorageClient;
 import io.airbyte.workers.sync.WorkloadApiWorker;
+import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
@@ -80,6 +81,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final String airbyteVersion;
   private final AirbyteApiClient airbyteApiClient;
   private final WorkloadApiClient workloadApiClient;
+  private final WorkloadClient workloadClient;
   private final JobOutputDocStore jobOutputDocStore;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final OrchestratorHandleFactory orchestratorHandleFactory;
@@ -97,6 +99,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final AirbyteApiClient airbyteApiClient,
                                  final JobOutputDocStore jobOutputDocStore,
                                  final WorkloadApiClient workloadApiClient,
+                                 final WorkloadClient workloadClient,
                                  final WorkloadIdGenerator workloadIdGenerator,
                                  final OrchestratorHandleFactory orchestratorHandleFactory,
                                  final MetricClient metricClient,
@@ -116,6 +119,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.airbyteApiClient = airbyteApiClient;
     this.jobOutputDocStore = jobOutputDocStore;
     this.workloadApiClient = workloadApiClient;
+    this.workloadClient = workloadClient;
     this.workloadIdGenerator = workloadIdGenerator;
     this.orchestratorHandleFactory = orchestratorHandleFactory;
     this.metricClient = metricClient;
@@ -176,7 +180,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           // TODO: remove this once migration to workloads complete
           if (useWorkloadApi(replicationActivityInput)) {
             worker = new WorkloadApiWorker(jobOutputDocStore, airbyteApiClient,
-                workloadApiClient, workloadIdGenerator, replicationActivityInput, featureFlagClient);
+                workloadApiClient, workloadClient, workloadIdGenerator, replicationActivityInput, featureFlagClient);
           } else {
             final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =
                 orchestratorHandleFactory.create(hydratedReplicationInput.getSourceLauncherConfig(),

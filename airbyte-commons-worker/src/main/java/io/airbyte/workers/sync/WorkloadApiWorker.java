@@ -48,7 +48,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.function.Function;
-import org.openapitools.client.infrastructure.ClientException;
 import org.openapitools.client.infrastructure.ServerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,6 +66,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   private final JobOutputDocStore jobOutputDocStore;
   private final AirbyteApiClient apiClient;
   private final WorkloadApiClient workloadApiClient;
+  private final WorkloadClient workloadClient;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final ReplicationActivityInput input;
   private final FeatureFlagClient featureFlagClient;
@@ -76,12 +76,14 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   public WorkloadApiWorker(final JobOutputDocStore jobOutputDocStore,
                            final AirbyteApiClient apiClient,
                            final WorkloadApiClient workloadApiClient,
+                           final WorkloadClient workloadClient,
                            final WorkloadIdGenerator workloadIdGenerator,
                            final ReplicationActivityInput input,
                            final FeatureFlagClient featureFlagClient) {
     this.jobOutputDocStore = jobOutputDocStore;
     this.apiClient = apiClient;
     this.workloadApiClient = workloadApiClient;
+    this.workloadClient = workloadClient;
     this.workloadIdGenerator = workloadIdGenerator;
     this.input = input;
     this.featureFlagClient = featureFlagClient;
@@ -100,25 +102,27 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     // Ideally, this should be passed down to avoid the extra API call.
     final Geography geo = getGeography(replicationInput.getConnectionId());
 
+    final WorkloadCreateRequest workloadCreateRequest = new WorkloadCreateRequest(
+        workloadId,
+        List.of(
+            // This list copied from KubeProcess#getLabels() without docker image labels which we populate from
+            // the launcher
+            new WorkloadLabel(Metadata.CONNECTION_ID_LABEL_KEY, replicationInput.getConnectionId().toString()),
+            new WorkloadLabel(Metadata.JOB_LABEL_KEY, replicationInput.getJobRunConfig().getJobId()),
+            new WorkloadLabel(Metadata.ATTEMPT_LABEL_KEY, replicationInput.getJobRunConfig().getAttemptId().toString()),
+            new WorkloadLabel(Metadata.WORKSPACE_LABEL_KEY, replicationInput.getWorkspaceId().toString()),
+            new WorkloadLabel(Metadata.WORKER_POD_LABEL_KEY, Metadata.WORKER_POD_LABEL_VALUE)),
+        serializedInput,
+        fullLogPath(jobRoot),
+        geo.getValue(),
+        WorkloadType.SYNC,
+        WorkloadPriority.DEFAULT,
+        replicationInput.getConnectionId().toString(),
+        null);
+
     // Create the workload
     try {
-      createWorkload(new WorkloadCreateRequest(
-          workloadId,
-          List.of(
-              // This list copied from KubeProcess#getLabels() without docker image labels which we populate from
-              // the launcher
-              new WorkloadLabel(Metadata.CONNECTION_ID_LABEL_KEY, replicationInput.getConnectionId().toString()),
-              new WorkloadLabel(Metadata.JOB_LABEL_KEY, replicationInput.getJobRunConfig().getJobId()),
-              new WorkloadLabel(Metadata.ATTEMPT_LABEL_KEY, replicationInput.getJobRunConfig().getAttemptId().toString()),
-              new WorkloadLabel(Metadata.WORKSPACE_LABEL_KEY, replicationInput.getWorkspaceId().toString()),
-              new WorkloadLabel(Metadata.WORKER_POD_LABEL_KEY, Metadata.WORKER_POD_LABEL_VALUE)),
-          serializedInput,
-          fullLogPath(jobRoot),
-          geo.getValue(),
-          WorkloadType.SYNC,
-          WorkloadPriority.DEFAULT,
-          replicationInput.getConnectionId().toString(),
-          null));
+      workloadClient.createWorkload(workloadCreateRequest);
     } catch (final ServerException e) {
       if (e.getStatusCode() != HTTP_CONFLICT_CODE) {
         throw e;
@@ -128,6 +132,8 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     }
 
     // Wait until workload reaches a terminal status
+    // TODO merge this with WorkloadApiHelper.waitForWorkload. The only difference currently is the
+    // progress log.
     int i = 0;
     final Duration sleepInterval = Duration.ofSeconds(featureFlagClient.intVariation(WorkloadPollingInterval.INSTANCE, getFeatureFlagContext()));
     Workload workload;
@@ -226,26 +232,6 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
         new Connection(input.getConnectionId()),
         new Source(input.getSourceId()),
         new Destination(input.getDestinationId())));
-  }
-
-  private void createWorkload(final WorkloadCreateRequest workloadCreateRequest) {
-    try {
-      workloadApiClient.getWorkloadApi().workloadCreate(workloadCreateRequest);
-    } catch (final ClientException e) {
-      /*
-       * The Workload API returns a 304 response when the request to execute the workload has already been
-       * created. That response is handled in the form of a ClientException by the generated OpenAPI
-       * client. We do not want to cause the Temporal workflow to retry, so catch it and log the
-       * information so that the workflow will continue.
-       */
-      if (e.getStatusCode() == HttpStatus.CONFLICT.getCode()) {
-        log.warn("Workload {} already created and in progress.  Continuing...", workloadCreateRequest.getWorkloadId());
-      } else {
-        throw new RuntimeException(e);
-      }
-    } catch (final IOException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   private Workload getWorkload(final String workloadId) {

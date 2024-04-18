@@ -36,6 +36,7 @@ import io.airbyte.workers.CheckConnectionInputHydrator;
 import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.models.CheckConnectionInput;
 import io.airbyte.workers.process.ProcessFactory;
+import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
@@ -104,7 +105,7 @@ public class CheckConnectionActivityTest {
         featureFlags,
         featureFlagClient,
         gsonPksExtractor,
-        workloadApiClient,
+        new WorkloadClient(workloadApiClient),
         workloadIdGenerator,
         jobOutputDocStore,
         mock(CheckConnectionInputHydrator.class),

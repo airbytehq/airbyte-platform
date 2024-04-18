@@ -11,14 +11,9 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.DOCKER_IMAGE_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 
-import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.WorkloadApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.Geography;
-import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
@@ -58,24 +53,21 @@ import io.airbyte.workers.process.AirbyteIntegrationLauncher;
 import io.airbyte.workers.process.IntegrationLauncher;
 import io.airbyte.workers.process.Metadata;
 import io.airbyte.workers.process.ProcessFactory;
+import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workers.workload.exception.DocStoreAccessException;
-import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel;
 import io.airbyte.workload.api.client.model.generated.WorkloadPriority;
-import io.airbyte.workload.api.client.model.generated.WorkloadStatus;
 import io.airbyte.workload.api.client.model.generated.WorkloadType;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
-import io.micronaut.http.HttpStatus;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
@@ -85,7 +77,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
-import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * SpecActivityImpl.
@@ -107,7 +98,7 @@ public class SpecActivityImpl implements SpecActivity {
   private final FeatureFlags featureFlags;
   private final GsonPksExtractor gsonPksExtractor;
   private final FeatureFlagClient featureFlagClient;
-  private final WorkloadApiClient workloadApiClient;
+  private final WorkloadClient workloadClient;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final JobOutputDocStore jobOutputDocStore;
   private final MetricClient metricClient;
@@ -124,7 +115,7 @@ public class SpecActivityImpl implements SpecActivity {
                           final FeatureFlags featureFlags,
                           final GsonPksExtractor gsonPksExtractor,
                           final FeatureFlagClient featureFlagClient,
-                          final WorkloadApiClient workloadApiClient,
+                          final WorkloadClient workloadClient,
                           final WorkloadIdGenerator workloadIdGenerator,
                           final JobOutputDocStore jobOutputDocStore,
                           final MetricClient metricClient) {
@@ -140,7 +131,7 @@ public class SpecActivityImpl implements SpecActivity {
     this.featureFlags = featureFlags;
     this.gsonPksExtractor = gsonPksExtractor;
     this.featureFlagClient = featureFlagClient;
-    this.workloadApiClient = workloadApiClient;
+    this.workloadClient = workloadClient;
     this.workloadIdGenerator = workloadIdGenerator;
     this.jobOutputDocStore = jobOutputDocStore;
     this.metricClient = metricClient;
@@ -200,19 +191,11 @@ public class SpecActivityImpl implements SpecActivity {
         null,
         null);
 
-    createWorkload(workloadCreateRequest);
+    workloadClient.createWorkload(workloadCreateRequest);
 
-    try {
-      Workload workload = workloadApiClient.getWorkloadApi().workloadGet(workloadId);
-      final int checkFrequencyInSeconds = featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE,
-          new Workspace(ANONYMOUS));
-      while (!isWorkloadTerminal(workload)) {
-        Thread.sleep(1000 * checkFrequencyInSeconds);
-        workload = workloadApiClient.getWorkloadApi().workloadGet(workloadId);
-      }
-    } catch (final IOException | InterruptedException e) {
-      throw new RuntimeException(e);
-    }
+    final int checkFrequencyInSeconds =
+        featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE, new Workspace(ANONYMOUS));
+    workloadClient.waitForWorkload(workloadId, checkFrequencyInSeconds);
 
     try {
       final Optional<ConnectorJobOutput> connectorJobOutput = jobOutputDocStore.read(workloadId);
@@ -276,58 +259,6 @@ public class SpecActivityImpl implements SpecActivity {
     return new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(),
         Optional.empty(), new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false), gsonPksExtractor)
             .withDetectVersion(true);
-  }
-
-  @VisibleForTesting
-  boolean isWorkloadTerminal(final Workload workload) {
-    final var status = workload.getStatus();
-    return status == WorkloadStatus.SUCCESS || status == WorkloadStatus.FAILURE || status == WorkloadStatus.CANCELLED;
-  }
-
-  @VisibleForTesting
-  Geography getGeography(final Optional<UUID> maybeConnectionId, final Optional<UUID> maybeWorkspaceId) throws WorkerException {
-    try {
-      return maybeConnectionId
-          .map(connectionId -> {
-            try {
-              return airbyteApiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody().connectionId(connectionId)).getGeography();
-            } catch (final ApiException e) {
-              throw new RuntimeException(e);
-            }
-          }).orElse(
-              maybeWorkspaceId.map(
-                  workspaceId -> {
-                    try {
-                      return airbyteApiClient.getWorkspaceApi().getWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId))
-                          .getDefaultGeography();
-                    } catch (final ApiException e) {
-                      throw new RuntimeException(e);
-                    }
-                  })
-                  .orElse(Geography.AUTO));
-    } catch (final Exception e) {
-      throw new WorkerException("Unable to find geography of connection " + maybeConnectionId, e);
-    }
-  }
-
-  private void createWorkload(final WorkloadCreateRequest workloadCreateRequest) {
-    try {
-      workloadApiClient.getWorkloadApi().workloadCreate(workloadCreateRequest);
-    } catch (final ClientException e) {
-      /*
-       * The Workload API returns a 409 response when the request to execute the workload has already been
-       * created. That response is handled in the form of a ClientException by the generated OpenAPI
-       * client. We do not want to cause the Temporal workflow to retry, so catch it and log the
-       * information so that the workflow will continue.
-       */
-      if (e.getStatusCode() == HttpStatus.CONFLICT.getCode()) {
-        log.warn("Workload {} already created and in progress.  Continuing...", workloadCreateRequest.getWorkloadId());
-      } else {
-        throw new RuntimeException(e);
-      }
-    } catch (final IOException e) {
-      throw new RuntimeException(e);
-    }
   }
 
 }

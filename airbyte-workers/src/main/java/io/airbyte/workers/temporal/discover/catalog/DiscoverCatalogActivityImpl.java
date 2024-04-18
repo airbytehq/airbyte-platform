@@ -14,7 +14,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.Geography;
@@ -67,23 +66,20 @@ import io.airbyte.workers.process.AirbyteIntegrationLauncher;
 import io.airbyte.workers.process.IntegrationLauncher;
 import io.airbyte.workers.process.Metadata;
 import io.airbyte.workers.process.ProcessFactory;
+import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workers.workload.exception.DocStoreAccessException;
-import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel;
 import io.airbyte.workload.api.client.model.generated.WorkloadPriority;
-import io.airbyte.workload.api.client.model.generated.WorkloadStatus;
 import io.airbyte.workload.api.client.model.generated.WorkloadType;
 import io.micronaut.context.annotation.Value;
-import io.micronaut.http.HttpStatus;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
@@ -92,7 +88,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
-import org.openapitools.client.infrastructure.ClientException;
 
 /**
  * DiscoverCatalogActivityImpl.
@@ -115,7 +110,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   private final MetricClient metricClient;
   private final FeatureFlagClient featureFlagClient;
   private final GsonPksExtractor gsonPksExtractor;
-  private final WorkloadApiClient workloadApiClient;
+  private final WorkloadClient workloadClient;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final JobOutputDocStore jobOutputDocStore;
 
@@ -133,7 +128,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
                                      final MetricClient metricClient,
                                      final FeatureFlagClient featureFlagClient,
                                      final GsonPksExtractor gsonPksExtractor,
-                                     final WorkloadApiClient workloadApiClient,
+                                     final WorkloadClient workloadClient,
                                      final WorkloadIdGenerator workloadIdGenerator,
                                      final JobOutputDocStore jobOutputDocStore) {
     this.workerConfigsProvider = workerConfigsProvider;
@@ -150,7 +145,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     this.metricClient = metricClient;
     this.featureFlagClient = featureFlagClient;
     this.gsonPksExtractor = gsonPksExtractor;
-    this.workloadApiClient = workloadApiClient;
+    this.workloadClient = workloadClient;
     this.workloadIdGenerator = workloadIdGenerator;
     this.jobOutputDocStore = jobOutputDocStore;
   }
@@ -237,19 +232,11 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
         null,
         null);
 
-    createWorkload(workloadCreateRequest);
+    workloadClient.createWorkload(workloadCreateRequest);
 
-    try {
-      Workload workload = workloadApiClient.getWorkloadApi().workloadGet(workloadId);
-      final int checkFrequencyInSeconds = featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE,
-          new Workspace(workspaceId));
-      while (!isWorkloadTerminal(workload)) {
-        Thread.sleep(1000L * checkFrequencyInSeconds);
-        workload = workloadApiClient.getWorkloadApi().workloadGet(workloadId);
-      }
-    } catch (final IOException | InterruptedException e) {
-      throw new RuntimeException(e);
-    }
+    final int checkFrequencyInSeconds =
+        featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE, new Workspace(workspaceId));
+    workloadClient.waitForWorkload(workloadId, checkFrequencyInSeconds);
 
     try {
       final Optional<ConnectorJobOutput> connectorJobOutput = jobOutputDocStore.read(workloadId);
@@ -289,12 +276,6 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   }
 
   @VisibleForTesting
-  boolean isWorkloadTerminal(final Workload workload) {
-    final var status = workload.getStatus();
-    return status == WorkloadStatus.SUCCESS || status == WorkloadStatus.FAILURE || status == WorkloadStatus.CANCELLED;
-  }
-
-  @VisibleForTesting
   Geography getGeography(final Optional<UUID> maybeConnectionId, final Optional<UUID> maybeWorkspaceId) throws WorkerException {
     try {
       return maybeConnectionId
@@ -317,26 +298,6 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
                   .orElse(Geography.AUTO));
     } catch (final Exception e) {
       throw new WorkerException("Unable to find geography of connection " + maybeConnectionId, e);
-    }
-  }
-
-  private void createWorkload(final WorkloadCreateRequest workloadCreateRequest) {
-    try {
-      workloadApiClient.getWorkloadApi().workloadCreate(workloadCreateRequest);
-    } catch (final ClientException e) {
-      /*
-       * The Workload API returns a 409 response when the request to execute the workload has already been
-       * created. That response is handled in the form of a ClientException by the generated OpenAPI
-       * client. We do not want to cause the Temporal workflow to retry, so catch it and log the
-       * information so that the workflow will continue.
-       */
-      if (e.getStatusCode() == HttpStatus.CONFLICT.getCode()) {
-        log.warn("Workload {} already created and in progress.  Continuing...", workloadCreateRequest.getWorkloadId());
-      } else {
-        throw new RuntimeException(e);
-      }
-    } catch (final IOException e) {
-      throw new RuntimeException(e);
     }
   }
 
