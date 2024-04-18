@@ -1285,7 +1285,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
 
   const streamNameToSchema = Object.fromEntries(
     values.streams.map((stream) => {
-      const schema = stream.schema ? JSON.parse(stream.schema) : DEFAULT_SCHEMA;
+      const schema = stream.schema ? JSON.parse(stream.schema) : JSON.parse(DEFAULT_SCHEMA);
       schema.additionalProperties = true;
       return [stream.name, schema];
     })
