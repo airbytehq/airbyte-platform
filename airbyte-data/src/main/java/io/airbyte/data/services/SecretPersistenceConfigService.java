@@ -17,8 +17,6 @@ public interface SecretPersistenceConfigService {
 
   SecretPersistenceConfig getSecretPersistenceConfig(ScopeType scope, UUID scopeId) throws IOException, ConfigNotFoundException;
 
-  Optional<SecretPersistenceCoordinate> getSecretPersistenceCoordinate(UUID workspaceId, UUID organizationId) throws IOException;
-
   Optional<SecretPersistenceCoordinate> createOrUpdateSecretPersistenceConfig(ScopeType scope,
                                                                               UUID scopeId,
                                                                               SecretPersistenceType secretPersistenceType,
