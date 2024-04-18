@@ -29,6 +29,8 @@ spec:
         {{ include "airbyte.minioSelectorLabels" . | nindent 8 }}
     spec:
       # Refer to the PVC created earlier
+      securityContext:
+        fsGroup: 1000
       containers:
         - name: airbyte-minio
           # Pulls the default Minio image from Docker Hub
@@ -54,10 +56,10 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false 
             runAsNonRoot: true
-            # uid=101(nginx)
-            runAsUser: 101
-            # gid=101(nginx)
-            runAsGroup: 101
+            # uid=1000(airbyte)
+            runAsUser: 1000
+            # gid=1000(airbyte)
+            runAsGroup: 1000
             readOnlyRootFilesystem: false
             capabilities:
               drop: ["ALL"]

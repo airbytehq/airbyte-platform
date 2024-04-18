@@ -1,15 +1,15 @@
 plugins {
-    id("groovy-gradle-plugin")
+  id("groovy-gradle-plugin")
 }
 
 repositories {
-    mavenCentral()
+  mavenCentral()
 }
 
 dependencies {
-    implementation("ru.vyarus:gradle-use-python-plugin:2.3.0")
+  implementation("ru.vyarus:gradle-use-python-plugin:2.3.0")
 }
 
 tasks.withType<Jar>().configureEach {
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+  duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }

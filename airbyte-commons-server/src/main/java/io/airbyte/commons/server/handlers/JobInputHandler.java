@@ -226,8 +226,6 @@ public class JobInputHandler {
           .withDestinationConfiguration(attemptSyncConfig.getDestinationConfiguration())
           .withOperationSequence(config.getOperationSequence())
           .withWebhookOperationConfigs(config.getWebhookOperationConfigs())
-          .withCatalog(config.getConfiguredAirbyteCatalog())
-          .withState(attemptSyncConfig.getState())
           .withSyncResourceRequirements(config.getSyncResourceRequirements())
           .withConnectionId(connectionId)
           .withWorkspaceId(config.getWorkspaceId())

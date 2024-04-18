@@ -7,6 +7,10 @@ package io.airbyte.server.config;
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
+import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater;
+import io.airbyte.commons.server.handlers.helpers.CompositeBuilderProjectUpdater;
+import io.airbyte.commons.server.handlers.helpers.ConfigRepositoryBuilderProjectUpdater;
+import io.airbyte.commons.server.handlers.helpers.LocalFileSystemBuilderProjectUpdater;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.TemporalEventRunner;
 import io.airbyte.commons.temporal.TemporalClient;
@@ -16,6 +20,10 @@ import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.RefreshJobStateUpdater;
+import io.airbyte.config.persistence.StatePersistence;
+import io.airbyte.config.persistence.StreamRefreshesRepository;
+import io.airbyte.config.persistence.helper.GenerationBumper;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
@@ -38,6 +46,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.net.http.HttpClient;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -87,8 +96,13 @@ public class ApplicationBeanFactory {
   @Singleton
   public DefaultJobCreator defaultJobCreator(final JobPersistence jobPersistence,
                                              final WorkerConfigsProvider workerConfigsProvider,
-                                             final FeatureFlagClient featureFlagClient) {
-    return new DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient);
+                                             final FeatureFlagClient featureFlagClient,
+                                             final GenerationBumper generationBumper,
+                                             final StatePersistence statePersistence,
+                                             final RefreshJobStateUpdater refreshJobStateUpdater,
+                                             final StreamRefreshesRepository streamRefreshesRepository) {
+    return new DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient, generationBumper, statePersistence, refreshJobStateUpdater,
+        streamRefreshesRepository);
   }
 
   @SuppressWarnings("ParameterName")
@@ -161,6 +175,17 @@ public class ApplicationBeanFactory {
   @Named("oauthHttpClient")
   public HttpClient httpClient() {
     return HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
+  }
+
+  @Singleton
+  public BuilderProjectUpdater builderProjectUpdater(ConfigRepository configRepository) {
+    final var pathToConnectors = io.airbyte.commons.envvar.EnvVar.PATH_TO_CONNECTORS.fetch();
+    ConfigRepositoryBuilderProjectUpdater configRepositoryProjectUpdater = new ConfigRepositoryBuilderProjectUpdater(configRepository);
+    if (pathToConnectors == null || pathToConnectors.isEmpty()) {
+      return configRepositoryProjectUpdater;
+    } else {
+      return new CompositeBuilderProjectUpdater(List.of(configRepositoryProjectUpdater, new LocalFileSystemBuilderProjectUpdater()));
+    }
   }
 
 }

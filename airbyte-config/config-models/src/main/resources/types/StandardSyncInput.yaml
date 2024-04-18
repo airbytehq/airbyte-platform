@@ -10,7 +10,6 @@ required:
   - sourceConfiguration
   - destinationId
   - destinationConfiguration
-  - catalog
 properties:
   namespaceDefinition:
     "$ref": NamespaceDefinitionType.yaml
@@ -46,14 +45,6 @@ properties:
     description: The webhook operation configs belonging to this workspace. See webhookOperationConfigs in StandardWorkspace.yaml.
     type: object
     existingJavaType: com.fasterxml.jackson.databind.JsonNode
-  catalog:
-    description: the configured airbyte catalog
-    type: object
-    # necessary because the configuration declaration is in a separate package.
-    existingJavaType: io.airbyte.protocol.models.ConfiguredAirbyteCatalog
-  state:
-    description: optional state of the previous run. this object is defined per integration.
-    "$ref": State.yaml
   syncResourceRequirements:
     description: Resource requirements to use for the sync
     $ref: SyncResourceRequirements.yaml

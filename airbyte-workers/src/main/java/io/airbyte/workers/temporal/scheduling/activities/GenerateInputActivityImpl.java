@@ -54,7 +54,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public JobInput getSyncWorkflowInput(final SyncInput input) {
-    final var resp = Jsons.convertValue(AirbyteApiClient.retryWithJitter(
+    final var jobInput = Jsons.convertValue(AirbyteApiClient.retryWithJitter(
         () -> jobsApi.getJobInput(new io.airbyte.api.client.model.generated.SyncInput().jobId(input.getJobId())
             .attemptNumber(input.getAttemptId())),
         "Create job input."), JobInput.class);
@@ -62,18 +62,18 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
     MetricAttribute[] attrs = new MetricAttribute[0];
     try {
       attrs = new MetricAttribute[] {
-        new MetricAttribute(ApmTraceUtils.formatTag(CONNECTION_ID), resp.getDestinationLauncherConfig().getConnectionId().toString()),
-        new MetricAttribute(ApmTraceUtils.formatTag(JOB_ID), resp.getJobRunConfig().getJobId()),
-        new MetricAttribute(ApmTraceUtils.formatTag(ATTEMPT_NUMBER), resp.getJobRunConfig().getAttemptId().toString()),
-        new MetricAttribute(ApmTraceUtils.formatTag(DESTINATION_DOCKER_IMAGE_KEY), resp.getDestinationLauncherConfig().getDockerImage()),
-        new MetricAttribute(ApmTraceUtils.formatTag(SOURCE_DOCKER_IMAGE_KEY), resp.getSourceLauncherConfig().getDockerImage()),
+        new MetricAttribute(ApmTraceUtils.formatTag(CONNECTION_ID), jobInput.getDestinationLauncherConfig().getConnectionId().toString()),
+        new MetricAttribute(ApmTraceUtils.formatTag(JOB_ID), jobInput.getJobRunConfig().getJobId()),
+        new MetricAttribute(ApmTraceUtils.formatTag(ATTEMPT_NUMBER), jobInput.getJobRunConfig().getAttemptId().toString()),
+        new MetricAttribute(ApmTraceUtils.formatTag(DESTINATION_DOCKER_IMAGE_KEY), jobInput.getDestinationLauncherConfig().getDockerImage()),
+        new MetricAttribute(ApmTraceUtils.formatTag(SOURCE_DOCKER_IMAGE_KEY), jobInput.getSourceLauncherConfig().getDockerImage()),
       };
     } catch (final NullPointerException e) {
       // This shouldn't happen, but for good measure we're catching, because I don't want to introduce an
       // NPE in the critical path.
     }
 
-    return payloadChecker.validatePayloadSize(resp, attrs);
+    return payloadChecker.validatePayloadSize(jobInput, attrs);
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)

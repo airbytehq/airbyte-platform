@@ -196,31 +196,6 @@ public class JobNotifier {
         metricTriggerAttribute);
   }
 
-  /**
-   * This method allows for the alert to be sent without the customerio configuration set in the
-   * database.
-   * <p>
-   * This is only needed because there is no UI element to allow for users to create that
-   * configuration.
-   * <p>
-   * Once that exists, this can be removed and we should be using `notifyJobByEmail`. The alert is
-   * sent to the email associated with the workspace.
-   *
-   * @param reason for notification
-   * @param action tracking action for telemetry
-   * @param job job notification is for
-   * @param attemptStats sync stats for each attempts
-   */
-  public void notifyJobByEmail(final String reason, final String action, final Job job, List<JobPersistence.AttemptStats> attemptStats) {
-    try {
-      final UUID workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.getId());
-      final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);
-      notifyJob(action, job, attemptStats, workspace);
-    } catch (final Exception e) {
-      LOGGER.error("Unable to read configuration:", e);
-    }
-  }
-
   private String getJobDescription(final Job job, final String reason) {
     final Instant jobStartedDate = Instant.ofEpochSecond(job.getStartedAtInSecond().orElse(job.getCreatedAtInSecond()));
     final DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL)

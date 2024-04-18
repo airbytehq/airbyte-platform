@@ -12,6 +12,7 @@ import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
+import { HttpError } from "core/api";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
@@ -64,12 +65,12 @@ export const StreamTester: React.FC<{
 
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const errorMessage = isError
-    ? error instanceof Error
-      ? error.message || unknownErrorMessage
+    ? error instanceof HttpError
+      ? error.response?.message || unknownErrorMessage
       : unknownErrorMessage
     : undefined;
 
-  const errorExceptionStack = resolveError?.payload?.exceptionStack;
+  const errorExceptionStack = resolveError?.response?.exceptionStack;
 
   const [errorLogs, nonErrorLogs] = useMemo(
     () =>
@@ -185,7 +186,7 @@ export const StreamTester: React.FC<{
       )}
       {!isFetching && streamReadData && streamReadData.test_read_limit_reached && showLimitWarning && (
         <Message
-          type="warning"
+          type="info"
           text={
             <FormattedMessage
               id="connectorBuilder.streamTestLimitReached"

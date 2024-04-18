@@ -215,6 +215,10 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
           })
         );
       },
+      getAllExperiments(): Partial<Experiments> {
+        // Return all feature flags from the LD client
+        return ldClient.current?.allFlags() ?? {};
+      },
     }),
     [addContext, removeContext]
   );

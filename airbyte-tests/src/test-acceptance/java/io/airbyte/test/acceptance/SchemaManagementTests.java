@@ -4,6 +4,7 @@
 
 package io.airbyte.test.acceptance;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -38,6 +39,7 @@ import io.airbyte.test.utils.TestConnectionCreate;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -114,7 +116,7 @@ class SchemaManagementTests {
             .build());
   }
 
-  void init() throws ApiException, URISyntaxException, IOException, InterruptedException {
+  void init() throws ApiException, URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
     // TODO(mfsiega-airbyte): clean up and centralize the way we do config.
     final boolean isGke = System.getenv().containsKey(IS_GKE);
     // Set up the API client.
@@ -139,7 +141,8 @@ class SchemaManagementTests {
     final var webBackendApi = new WebBackendApi(underlyingWebBackendApiClient);
 
     final UUID workspaceId = System.getenv().get(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID) == null ? apiClient.getWorkspaceApi()
-        .createWorkspace(new WorkspaceCreate().email("acceptance-tests@airbyte.io").name("Airbyte Acceptance Tests" + UUID.randomUUID()))
+        .createWorkspace(new WorkspaceCreate().email("acceptance-tests@airbyte.io").name("Airbyte Acceptance Tests" + UUID.randomUUID())
+            .organizationId(DEFAULT_ORGANIZATION_ID))
         .getWorkspaceId()
         : UUID.fromString(System.getenv().get(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID));
 

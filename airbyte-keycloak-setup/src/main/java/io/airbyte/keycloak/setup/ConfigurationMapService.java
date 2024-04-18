@@ -19,6 +19,8 @@ import org.keycloak.admin.client.resource.RealmResource;
 @Singleton
 public class ConfigurationMapService {
 
+  public static final String HTTPS_PREFIX = "https://";
+  public static final String WELL_KNOWN_OPENID_CONFIGURATION_SUFFIX = ".well-known/openid-configuration";
   private final String webappUrl;
   private final AirbyteKeycloakConfiguration keycloakConfiguration;
 
@@ -59,8 +61,15 @@ public class ConfigurationMapService {
   }
 
   private String getProviderDiscoveryUrl(final IdentityProviderConfiguration provider) {
-    final String domainWithTrailingSlash = provider.getDomain().endsWith("/") ? provider.getDomain() : provider.getDomain() + "/";
-    return "https://" + domainWithTrailingSlash + ".well-known/openid-configuration";
+    String domain = provider.getDomain();
+    if (!domain.startsWith(HTTPS_PREFIX)) {
+      domain = HTTPS_PREFIX + domain;
+    }
+    if (!domain.endsWith(WELL_KNOWN_OPENID_CONFIGURATION_SUFFIX)) {
+      domain = domain.endsWith("/") ? domain : domain + "/";
+      domain = domain + WELL_KNOWN_OPENID_CONFIGURATION_SUFFIX;
+    }
+    return domain;
   }
 
 }

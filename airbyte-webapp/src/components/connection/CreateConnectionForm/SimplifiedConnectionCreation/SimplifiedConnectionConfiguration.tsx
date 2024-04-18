@@ -67,7 +67,10 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
 
   return (
     <>
-      <Card title={formatMessage({ id: "connectionForm.selectSyncMode" })}>
+      <Card
+        title={formatMessage({ id: "connectionForm.selectSyncMode" })}
+        helpText={formatMessage({ id: "connectionForm.selectSyncModeDescription" })}
+      >
         <SimplifiedSchemaQuestionnaire />
       </Card>
       <SyncCatalogCard />
@@ -149,7 +152,7 @@ const FirstNav: React.FC = () => {
               ),
               search: `?${SOURCE_ID_PARAM}=${source.sourceId}&${DESTINATION_ID_PARAM}=${destination.destinationId}`,
             }}
-            className={classNames(styles.linkText)}
+            className={classNames(styles.nextLink)}
             onClick={() => {
               // we're navigating to the next step which retains the creation form's state
               clearFormChange(CREATE_CONNECTION_FORM_ID);
@@ -158,7 +161,7 @@ const FirstNav: React.FC = () => {
             <FormattedMessage id="connectionForm.nextButton" />
           </Link>
         ) : (
-          <Button variant="secondary" disabled>
+          <Button disabled>
             <FormattedMessage id="connectionForm.nextButton" />
           </Button>
         )}

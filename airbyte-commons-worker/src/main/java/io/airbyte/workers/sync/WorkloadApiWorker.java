@@ -7,6 +7,7 @@ package io.airbyte.workers.sync;
 import static io.airbyte.config.helpers.LogClientSingleton.fullLogPath;
 
 import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.Geography;
@@ -30,7 +31,6 @@ import io.airbyte.workers.process.Metadata;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workers.workload.exception.DocStoreAccessException;
-import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
@@ -58,7 +58,7 @@ import org.slf4j.LoggerFactory;
  */
 public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOutput> {
 
-  private static final int HTTP_CONFLICT_CODE = 409;
+  private static final int HTTP_CONFLICT_CODE = HttpStatus.CONFLICT.getCode();
   private static final String DESTINATION = "destination";
   private static final String SOURCE = "source";
 
@@ -66,7 +66,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   private static final Set<WorkloadStatus> TERMINAL_STATUSES = Set.of(WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS);
   private final JobOutputDocStore jobOutputDocStore;
   private final AirbyteApiClient apiClient;
-  private final WorkloadApi workloadApi;
+  private final WorkloadApiClient workloadApiClient;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final ReplicationActivityInput input;
   private final FeatureFlagClient featureFlagClient;
@@ -75,13 +75,13 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
 
   public WorkloadApiWorker(final JobOutputDocStore jobOutputDocStore,
                            final AirbyteApiClient apiClient,
-                           final WorkloadApi workloadApi,
+                           final WorkloadApiClient workloadApiClient,
                            final WorkloadIdGenerator workloadIdGenerator,
                            final ReplicationActivityInput input,
                            final FeatureFlagClient featureFlagClient) {
     this.jobOutputDocStore = jobOutputDocStore;
     this.apiClient = apiClient;
-    this.workloadApi = workloadApi;
+    this.workloadApiClient = workloadApiClient;
     this.workloadIdGenerator = workloadIdGenerator;
     this.input = input;
     this.featureFlagClient = featureFlagClient;
@@ -185,7 +185,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   public void cancel() {
     try {
       if (workloadId != null) {
-        workloadApi.workloadCancel(new WorkloadCancelRequest(workloadId, "user requested", "WorkloadApiWorker"));
+        workloadApiClient.getWorkloadApi().workloadCancel(new WorkloadCancelRequest(workloadId, "user requested", "WorkloadApiWorker"));
       }
     } catch (final IOException e) {
       throw new RuntimeException(e);
@@ -200,7 +200,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     }
   }
 
-  private ReplicationOutput getReplicationOutput(final String workloadId) throws DocStoreAccessException {
+  private ReplicationOutput getReplicationOutput(final String workloadId) {
     final Optional<ReplicationOutput> output;
 
     output = fetchReplicationOutput(workloadId, (location) -> {
@@ -230,7 +230,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
 
   private void createWorkload(final WorkloadCreateRequest workloadCreateRequest) {
     try {
-      workloadApi.workloadCreate(workloadCreateRequest);
+      workloadApiClient.getWorkloadApi().workloadCreate(workloadCreateRequest);
     } catch (final ClientException e) {
       /*
        * The Workload API returns a 304 response when the request to execute the workload has already been
@@ -250,7 +250,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
 
   private Workload getWorkload(final String workloadId) {
     try {
-      return workloadApi.workloadGet(workloadId);
+      return workloadApiClient.getWorkloadApi().workloadGet(workloadId);
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }

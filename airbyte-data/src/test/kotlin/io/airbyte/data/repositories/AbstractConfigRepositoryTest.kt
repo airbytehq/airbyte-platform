@@ -39,6 +39,10 @@ abstract class AbstractConfigRepositoryTest<T : CrudRepository<*, *>>(
     fun setupBase() {
       container.start()
 
+      // occasionally, the container is not yet accepting connections even though start() has returned.
+      // this createConnection() call will block until the container is ready to accept connections.
+      container.createConnection("").use { }
+
       // set the micronaut datasource properties to match our container we started up
       context =
         ApplicationContext.run(

@@ -1,4 +1,9 @@
-ARG JAVA_WORKER_BASE_IMAGE_VERSION=2.1.0
+ARG JAVA_WORKER_BASE_IMAGE_VERSION=2.2.0
+
+FROM scratch as builder
+WORKDIR /app
+ADD airbyte-app.tar /app
+
 FROM airbyte/airbyte-base-java-worker-image:${JAVA_WORKER_BASE_IMAGE_VERSION}
 
 ARG DOCKER_BUILD_ARCH=amd64
@@ -9,12 +14,8 @@ ARG VERSION=dev
 ENV APPLICATION airbyte-connector-sidecar
 ENV VERSION=${VERSION}
 
-USER root
-COPY WellKnownTypes.json /app
-
-# Move connector-sidecar app
-ADD airbyte-app.tar /app
-RUN chown -R airbyte:airbyte /app
+COPY --chown=airbyte:airbyte WellKnownTypes.json /app
+COPY --chown=airbyte:airbyte --from=builder /app /app
 USER airbyte:airbyte
 
 # wait for upstream dependencies to become available before starting server

@@ -136,7 +136,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
             LOGGER.info("Not Running Normalization Container for connection {}, attempt id {}, because it ran in destination",
                 connectionId, jobRunConfig.getAttemptId());
           } else {
-            final NormalizationInput normalizationInput = generateNormalizationInput(syncInput, syncOutput);
+            final NormalizationInput normalizationInput = generateNormalizationInput(syncInput);
             final NormalizationSummary normalizationSummary =
                 normalizationActivity.normalize(jobRunConfig, destinationLauncherConfig, normalizationInput);
             syncOutput = syncOutput.withNormalizationSummary(normalizationSummary);
@@ -177,10 +177,9 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     return syncOutput;
   }
 
-  private NormalizationInput generateNormalizationInput(final StandardSyncInput syncInput,
-                                                        final StandardSyncOutput syncOutput) {
+  private NormalizationInput generateNormalizationInput(final StandardSyncInput syncInput) {
     return normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(syncInput.getDestinationConfiguration(),
-        syncOutput.getOutputCatalog(),
+        null,
         syncInput.getWorkspaceId(),
         syncInput.getConnectionId(),
         syncInput.getConnectionContext().getOrganizationId());

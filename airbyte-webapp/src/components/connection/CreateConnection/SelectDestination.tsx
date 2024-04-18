@@ -124,7 +124,7 @@ export const SelectDestination: React.FC = () => {
             <FlexContainer>
               <Link
                 to={createLink(`/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`)}
-                className={classNames(styles.button, styles.typeSecondary, styles.sizeXS, styles.linkText)}
+                className={classNames(styles.linkText)}
               >
                 <FormattedMessage id="connectionForm.backToDefineSource" />
               </Link>

@@ -1,6 +1,6 @@
 import type { Experiments } from "./experiments";
 
-import { createContext, useContext, useEffect, useMemo } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
 import { useObservable } from "react-use";
 import { EMPTY, Observable } from "rxjs";
 
@@ -31,6 +31,7 @@ export interface ExperimentService {
   removeContext: (kind: Exclude<ContextKind, "user">) => void;
   getExperiment<K extends keyof Experiments>(key: K, defaultValue: Experiments[K]): Experiments[K];
   getExperimentChanges$<K extends keyof Experiments>(key: K): Observable<Experiments[K]>;
+  getAllExperiments(): Partial<Experiments>;
 }
 
 const debugContext = isDevelopment() ? (msg: string) => console.debug(`%c${msg}`, "color: SlateBlue") : () => undefined;
@@ -87,5 +88,10 @@ function useExperimentWithOverwrites<K extends keyof Experiments>(
 const isCypress = window.hasOwnProperty("Cypress");
 export const useExperiment =
   !isCypress && process.env.NODE_ENV === "development" ? useExperimentWithOverwrites : useExperimentHook;
+
+export const useGetAllExperiments = () => {
+  const experimentService = useContext(experimentContext);
+  return useCallback(() => experimentService?.getAllExperiments() ?? {}, [experimentService]);
+};
 
 export const ExperimentProvider = experimentContext.Provider;

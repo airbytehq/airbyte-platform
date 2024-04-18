@@ -19,20 +19,18 @@ const clearBreakingFieldChanges = (
   }
 
   const { primaryKey, cursorField } = nodeStream.config;
+  const stream = nodeStream.stream;
 
   let clearPrimaryKey = false;
   let clearCursorField = false;
-
   for (const streamTransformation of breakingChangesByStream) {
     if (!streamTransformation.updateStream || !streamTransformation.updateStream?.length) {
       continue;
     }
-
     // get all of the removed field paths for this transformation
     const breakingFieldPaths = streamTransformation.updateStream
       .filter(({ breaking }) => breaking)
       .map((update) => update.fieldName);
-
     // if there is a primary key in the config, and any of its field paths were removed, we'll be clearing it
     if (
       !!primaryKey?.length &&
@@ -40,20 +38,26 @@ const clearBreakingFieldChanges = (
     ) {
       clearPrimaryKey = true;
     }
-
     // if there is a cursor field, and any of its field path was removed, we'll be clearing it
     if (!!cursorField?.length && breakingFieldPaths.some((path) => isEqual(path, cursorField))) {
       clearCursorField = true;
     }
   }
-
   if (clearPrimaryKey || clearCursorField) {
     return {
       ...nodeStream,
       config: {
         ...nodeStream.config,
-        primaryKey: clearPrimaryKey ? [] : nodeStream.config.primaryKey,
-        cursorField: clearCursorField ? [] : nodeStream.config.cursorField,
+        primaryKey: stream?.sourceDefinedPrimaryKey // it's possible there's a new source-defined primary key, in which case that should take precedence
+          ? stream?.sourceDefinedPrimaryKey
+          : clearPrimaryKey
+          ? []
+          : nodeStream.config.primaryKey,
+        cursorField: nodeStream.stream?.defaultCursorField
+          ? nodeStream.stream?.defaultCursorField // likewise, a source-defined cursor should never be cleared
+          : clearCursorField
+          ? []
+          : nodeStream.config.cursorField,
       },
     };
   }

@@ -8,12 +8,10 @@ import { Text } from "components/ui/Text";
 import { useCurrentWorkspace } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./InviteUsersHint.module.scss";
 import { AddUserModal } from "../../workspaces/WorkspaceSettingsView/components/AddUserModal";
-import { InviteUsersModal } from "../InviteUsersModal";
 
 export interface InviteUsersHintProps {
   connectorType: "source" | "destination";
@@ -26,7 +24,6 @@ export const InviteUsersHint: React.FC<InviteUsersHintProps> = ({ connectorType 
   const { workspaceId } = useCurrentWorkspace();
   const canInviteUsers = useIntent("UpdateWorkspacePermissions", { workspaceId });
   const { openModal } = useModalService();
-  const inviteSystemv2 = useExperiment("settings.invitationSystemv2", false);
 
   if (!inviteUsersHintVisible || !canInviteUsers) {
     return null;
@@ -35,12 +32,7 @@ export const InviteUsersHint: React.FC<InviteUsersHintProps> = ({ connectorType 
   const onOpenInviteUsersModal = () =>
     openModal<void>({
       title: formatMessage({ id: "userInvitations.create.modal.title" }, { workspace: workspace.name }),
-      content: ({ onComplete, onCancel }) =>
-        inviteSystemv2 ? (
-          <AddUserModal onSubmit={onComplete} />
-        ) : (
-          <InviteUsersModal invitedFrom={connectorType} onSubmit={onComplete} onCancel={onCancel} />
-        ),
+      content: ({ onComplete }) => <AddUserModal onSubmit={onComplete} />,
       size: "md",
     });
 

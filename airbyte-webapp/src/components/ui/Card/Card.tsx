@@ -16,6 +16,7 @@ interface CardProps {
    * The title of the card
    */
   title?: string;
+  helpText?: string;
   description?: React.ReactNode;
   /**
    * override card container styles
@@ -46,6 +47,7 @@ interface CardProps {
 export const Card: React.FC<React.PropsWithChildren<CardProps>> = ({
   children,
   title,
+  helpText,
   description,
   className,
   bodyClassName,
@@ -61,7 +63,9 @@ export const Card: React.FC<React.PropsWithChildren<CardProps>> = ({
   const [isCollapsed, toggleIsCollapsed] = useToggle(defaultCollapsedState);
 
   const headerTitle = (
-    <div
+    <FlexContainer
+      direction="column"
+      alignItems="flex-start"
       className={classNames(styles.cardHeader, {
         [styles.withBorderBottom]: titleWithBottomBorder,
         [styles.withPaddingBottom]: (isCollapsed && collapsible && !collapsedPreviewInfo) || !children,
@@ -91,7 +95,12 @@ export const Card: React.FC<React.PropsWithChildren<CardProps>> = ({
           )}
         </>
       )}
-    </div>
+      {helpText && (
+        <Text className={styles.helpText} size="sm">
+          {helpText}
+        </Text>
+      )}
+    </FlexContainer>
   );
 
   return (

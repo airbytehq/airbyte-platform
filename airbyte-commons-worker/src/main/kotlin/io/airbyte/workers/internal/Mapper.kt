@@ -6,6 +6,7 @@ import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteMessage.Type
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType
+import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.github.oshai.kotlinlogging.KotlinLogging
 
@@ -88,6 +89,15 @@ class NamespacingMapper
 
             streamDescriptor.namespace = destinationNamespace
             streamDescriptor.name = destinationStreamName
+          }
+        Type.TRACE ->
+          with(message.trace) {
+            if (this.type != AirbyteTraceMessage.Type.STREAM_STATUS) {
+              return@with
+            }
+            val streamDescriptor = this.streamStatus.streamDescriptor
+            streamDescriptor.name = transformStreamName(streamDescriptor.name, streamPrefix)
+            streamDescriptor.namespace = transformNamespace(streamDescriptor.namespace)
           }
         else -> Unit
       }

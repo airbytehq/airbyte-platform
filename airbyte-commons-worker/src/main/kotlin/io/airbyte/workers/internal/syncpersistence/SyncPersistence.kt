@@ -4,17 +4,12 @@ import datadog.trace.api.Trace
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.AttemptApi
 import io.airbyte.api.client.generated.StateApi
-import io.airbyte.api.client.invoker.generated.ApiException
 import io.airbyte.api.client.model.generated.AttemptStats
 import io.airbyte.api.client.model.generated.AttemptStreamStats
-import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.ConnectionState
 import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate
-import io.airbyte.api.client.model.generated.ConnectionStateType
 import io.airbyte.api.client.model.generated.SaveStatsRequestBody
 import io.airbyte.commons.converters.StateConverter
-import io.airbyte.config.StateType
-import io.airbyte.config.StateWrapper
 import io.airbyte.config.SyncStats
 import io.airbyte.config.helpers.StateMessageHelper
 import io.airbyte.metrics.lib.MetricAttribute
@@ -25,7 +20,6 @@ import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
-import io.airbyte.protocol.models.CatalogHelpers
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker
 import io.airbyte.workers.internal.bookkeeping.getPerStreamStats
@@ -83,7 +77,6 @@ class SyncPersistenceImpl
   ) : SyncPersistence, SyncStatsTracker by syncStatsTracker {
     private var stateBuffer = stateAggregatorFactory.create()
     private var stateFlushFuture: ScheduledFuture<*>? = null
-    private var onlyFlushAtTheEnd = false
     private var isReceivingStats = false
     private var stateToFlush: StateAggregator? = null
     private var statsToPersist: SaveStatsRequestBody? = null
@@ -130,30 +123,11 @@ class SyncPersistenceImpl
 
       metricClient.count(OssMetricsRegistry.STATE_BUFFERING, 1)
       stateBuffer.ingest(stateMessage)
-      startBackgroundFlushStateTask(connectionId, stateMessage)
+      startBackgroundFlushStateTask(connectionId)
     }
 
-    private fun startBackgroundFlushStateTask(
-      connectionId: UUID,
-      stateMessage: AirbyteStateMessage,
-    ) {
-      if (stateFlushFuture != null || onlyFlushAtTheEnd) {
-        return
-      }
-
-      // Fetch the current persisted state to see if it is a state migration.
-      // In case of a state migration, we only flush at the end of the sync to avoid dropping states in
-      // case of a sync failure
-      val currentPersistedState: ConnectionState? =
-        try {
-          stateApi.getState(ConnectionIdRequestBody().connectionId(connectionId))
-        } catch (e: ApiException) {
-          logger.warn(e) { "Failed to check current state for connectionId $connectionId, it will be retried next time we see a state" }
-          return
-        }
-      if (isMigration(currentPersistedState, stateMessage) && stateMessage.type == AirbyteStateMessage.AirbyteStateType.STREAM) {
-        logger.info { "State type migration from LEGACY to STREAM detected, all states will be persisted at the end of the sync" }
-        onlyFlushAtTheEnd = true
+    private fun startBackgroundFlushStateTask(connectionId: UUID) {
+      if (stateFlushFuture != null) {
         return
       }
 
@@ -220,9 +194,6 @@ class SyncPersistenceImpl
       if (hasStatesToFlush()) {
         // we still have data to flush
         prepareDataForFlush()
-        if (onlyFlushAtTheEnd) {
-          validateStreamMigration()
-        }
         try {
           retryWithJitterThrows("Flush States from SyncPersistenceImpl") {
             doFlushState()
@@ -333,16 +304,6 @@ class SyncPersistenceImpl
       metricClient.count(OssMetricsRegistry.STATE_COMMIT_ATTEMPT_SUCCESSFUL, 1)
     }
 
-    private fun isMigration(
-      currentPersistedState: ConnectionState?,
-      stateMessage: AirbyteStateMessage,
-    ): Boolean {
-      return (
-        !isStateEmpty(currentPersistedState) && currentPersistedState?.stateType == ConnectionStateType.LEGACY &&
-          stateMessage.type != AirbyteStateMessage.AirbyteStateType.LEGACY
-      )
-    }
-
     private fun doFlushStats() {
       if (!hasStatsToFlush()) {
         return
@@ -363,17 +324,6 @@ class SyncPersistenceImpl
     private fun hasStatesToFlush(): Boolean = !stateBuffer.isEmpty() || stateToFlush != null
 
     private fun hasStatsToFlush(): Boolean = isReceivingStats && statsToPersist != null
-
-    private fun validateStreamMigration() {
-      val state = stateToFlush?.getAggregated() ?: return
-
-      StateMessageHelper.getTypedState(state.state)
-        .getOrNull()
-        ?.takeIf { it.stateType == StateType.STREAM }
-        ?.let {
-          validateStreamStates(it, catalog)
-        }
-    }
 
     /**
      * Wraps RetryWithJitterThrows for testing.
@@ -453,30 +403,4 @@ private fun MetricClient.emitFailedStateCloseMetrics(connectionId: UUID?) {
 private fun MetricClient.emitFailedStatsCloseMetrics(connectionId: UUID?) {
   val attribute: MetricAttribute? = connectionId?.let { MetricAttribute(MetricTags.CONNECTION_ID, it.toString()) }
   count(OssMetricsRegistry.STATS_COMMIT_NOT_ATTEMPTED, 1, attribute)
-}
-
-/**
- * Validate that the LEGACY -> STREAM migration is correct
- *
- * During the migration, we will lose any previous stream state that isn't in the new state. To
- * avoid a potential loss of state, we ensure that all the incremental streams are present in the
- * new state.
- *
- * @param state the new state we want to persist
- * @param configuredCatalog the configured catalog of the connection of state
- */
-fun validateStreamStates(
-  state: StateWrapper,
-  configuredCatalog: ConfiguredAirbyteCatalog,
-) {
-  val stateStreamDescriptors = state.stateMessages.map { it.stream.streamDescriptor }.toList()
-
-  CatalogHelpers.extractIncrementalStreamDescriptors(configuredCatalog)
-    .find { !stateStreamDescriptors.contains(it) }
-    ?.let {
-      throw IllegalStateException(
-        "Job ran during migration from Legacy State to Per Stream State. One of the streams that did not have state is: " +
-          "(namespace: ${it.namespace}, name: ${it.name}). Job must be retried in order to properly store state.",
-      )
-    }
 }

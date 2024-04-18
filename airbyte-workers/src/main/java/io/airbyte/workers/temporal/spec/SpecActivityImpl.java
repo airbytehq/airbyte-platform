@@ -14,6 +14,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.Geography;
@@ -61,7 +62,6 @@ import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workers.workload.exception.DocStoreAccessException;
-import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel;
@@ -107,7 +107,7 @@ public class SpecActivityImpl implements SpecActivity {
   private final FeatureFlags featureFlags;
   private final GsonPksExtractor gsonPksExtractor;
   private final FeatureFlagClient featureFlagClient;
-  private final WorkloadApi workloadApi;
+  private final WorkloadApiClient workloadApiClient;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final JobOutputDocStore jobOutputDocStore;
   private final MetricClient metricClient;
@@ -124,7 +124,7 @@ public class SpecActivityImpl implements SpecActivity {
                           final FeatureFlags featureFlags,
                           final GsonPksExtractor gsonPksExtractor,
                           final FeatureFlagClient featureFlagClient,
-                          final WorkloadApi workloadApi,
+                          final WorkloadApiClient workloadApiClient,
                           final WorkloadIdGenerator workloadIdGenerator,
                           final JobOutputDocStore jobOutputDocStore,
                           final MetricClient metricClient) {
@@ -140,7 +140,7 @@ public class SpecActivityImpl implements SpecActivity {
     this.featureFlags = featureFlags;
     this.gsonPksExtractor = gsonPksExtractor;
     this.featureFlagClient = featureFlagClient;
-    this.workloadApi = workloadApi;
+    this.workloadApiClient = workloadApiClient;
     this.workloadIdGenerator = workloadIdGenerator;
     this.jobOutputDocStore = jobOutputDocStore;
     this.metricClient = metricClient;
@@ -203,12 +203,12 @@ public class SpecActivityImpl implements SpecActivity {
     createWorkload(workloadCreateRequest);
 
     try {
-      Workload workload = workloadApi.workloadGet(workloadId);
+      Workload workload = workloadApiClient.getWorkloadApi().workloadGet(workloadId);
       final int checkFrequencyInSeconds = featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE,
           new Workspace(ANONYMOUS));
       while (!isWorkloadTerminal(workload)) {
         Thread.sleep(1000 * checkFrequencyInSeconds);
-        workload = workloadApi.workloadGet(workloadId);
+        workload = workloadApiClient.getWorkloadApi().workloadGet(workloadId);
       }
     } catch (final IOException | InterruptedException e) {
       throw new RuntimeException(e);
@@ -273,8 +273,8 @@ public class SpecActivityImpl implements SpecActivity {
     final Version protocolVersion =
         launcherConfig.getProtocolVersion() != null ? launcherConfig.getProtocolVersion() : migratorFactory.getMostRecentVersion();
     // Try to detect version from the stream
-    return new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(), Optional.empty(),
-        Optional.empty(), new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false), gsonPksExtractor)
+    return new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(),
+        Optional.empty(), new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false), gsonPksExtractor)
             .withDetectVersion(true);
   }
 
@@ -312,7 +312,7 @@ public class SpecActivityImpl implements SpecActivity {
 
   private void createWorkload(final WorkloadCreateRequest workloadCreateRequest) {
     try {
-      workloadApi.workloadCreate(workloadCreateRequest);
+      workloadApiClient.getWorkloadApi().workloadCreate(workloadCreateRequest);
     } catch (final ClientException e) {
       /*
        * The Workload API returns a 409 response when the request to execute the workload has already been

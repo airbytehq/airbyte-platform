@@ -54,6 +54,6 @@ export const deleteDestination = (name: string) => {
   cy.intercept("/api/v1/destinations/delete").as("deleteDestination");
   goToDestinationPage();
   openConnectorPage(name);
-  deleteEntity(name);
+  deleteEntity();
   cy.wait("@deleteDestination");
 };

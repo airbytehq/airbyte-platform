@@ -4,6 +4,7 @@
 
 package io.airbyte.container_orchestrator.config;
 
+import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.commons.envvar.EnvVar;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
@@ -36,7 +37,6 @@ import io.airbyte.workers.sync.OrchestratorConstants;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Prototype;
@@ -120,13 +120,13 @@ class ContainerOrchestratorFactory {
                                      final JobRunConfig jobRunConfig,
                                      final ReplicationWorkerFactory replicationWorkerFactory,
                                      final AsyncStateManager asyncStateManager,
-                                     final WorkloadApi workloadApi,
+                                     final WorkloadApiClient workloadApiClient,
                                      final WorkloadIdGenerator workloadIdGenerator,
                                      @Value("${airbyte.workload.enabled}") final boolean workloadEnabled,
                                      final JobOutputDocStore jobOutputDocStore) {
     return switch (application) {
       case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(configDir, envConfigs, jobRunConfig,
-          replicationWorkerFactory, asyncStateManager, workloadApi, workloadIdGenerator, workloadEnabled, jobOutputDocStore);
+          replicationWorkerFactory, asyncStateManager, workloadApiClient, workloadIdGenerator, workloadEnabled, jobOutputDocStore);
       case NormalizationLauncherWorker.NORMALIZATION -> new NormalizationJobOrchestrator(envConfigs, processFactory, jobRunConfig, asyncStateManager);
       case DbtLauncherWorker.DBT -> new DbtJobOrchestrator(envConfigs, workerConfigsProvider, processFactory, jobRunConfig, asyncStateManager);
       case AsyncOrchestratorPodProcess.NO_OP -> new NoOpOrchestrator();

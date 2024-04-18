@@ -173,7 +173,7 @@ class SlackNotificationClientTest {
         .workspace(WorkspaceInfo.builder().id(WORKSPACE_ID).build())
         .destination(DestinationInfo.builder().name(DESTINATION_TEST).build())
         .source(SourceInfo.builder().name(SOURCE_TEST).build())
-        .connection(ConnectionInfo.builder().id(CONNECTION_ID).build())
+        .connection(ConnectionInfo.builder().id(CONNECTION_ID).name(CONNECTION_NAME).url("http://connection").build())
         .errorMessage("job description.")
         .build();
     assertTrue(client.notifyConnectionDisabled(summary, ""));
@@ -200,7 +200,7 @@ class SlackNotificationClientTest {
         .workspace(WorkspaceInfo.builder().id(WORKSPACE_ID).build())
         .destination(DestinationInfo.builder().name(DESTINATION_TEST).build())
         .source(SourceInfo.builder().name(SOURCE_TEST).build())
-        .connection(ConnectionInfo.builder().id(CONNECTION_ID).build())
+        .connection(ConnectionInfo.builder().id(CONNECTION_ID).name(CONNECTION_NAME).url("http://connection").build())
         .errorMessage("job description.")
         .build();
     assertTrue(client.notifyConnectionDisableWarning(summary, ""));
@@ -359,7 +359,7 @@ class SlackNotificationClientTest {
         response = "No notification message or message missing `text` node";
         t.sendResponseHeaders(500, response.length());
       } else {
-        response = String.format("Wrong notification messge: %s", message.get("text").asText());
+        response = String.format("Wrong notification message: %s", message.get("text").asText());
         t.sendResponseHeaders(500, response.length());
       }
       final OutputStream os = t.getResponseBody();

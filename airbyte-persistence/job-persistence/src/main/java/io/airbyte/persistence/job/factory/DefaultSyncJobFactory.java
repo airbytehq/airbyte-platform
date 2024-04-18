@@ -19,8 +19,10 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.persistence.job.DefaultJobCreator;
 import io.airbyte.persistence.job.WorkspaceHelper;
+import io.airbyte.persistence.job.helper.model.JobCreatorInput;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
@@ -56,71 +58,117 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
   }
 
   @Override
-  public Long create(final UUID connectionId) {
+  public Long createSync(final UUID connectionId) {
     try {
-      final StandardSync standardSync = configRepository.getStandardSync(connectionId);
-      final UUID workspaceId = workspaceHelper.getWorkspaceForSourceId(standardSync.getSourceId());
-      final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);
-      final SourceConnection sourceConnection = configRepository.getSourceConnection(standardSync.getSourceId());
-      final DestinationConnection destinationConnection = configRepository.getDestinationConnection(standardSync.getDestinationId());
-      final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
-          sourceConnection.getSourceDefinitionId(),
-          sourceConnection.getSourceId(),
-          sourceConnection.getWorkspaceId(),
-          sourceConnection.getConfiguration());
-      sourceConnection.withConfiguration(configInjector.injectConfig(sourceConfiguration, sourceConnection.getSourceDefinitionId()));
-      final JsonNode destinationConfiguration = oAuthConfigSupplier.injectDestinationOAuthParameters(
-          destinationConnection.getDestinationDefinitionId(),
-          destinationConnection.getDestinationId(),
-          destinationConnection.getWorkspaceId(),
-          destinationConnection.getConfiguration());
-      destinationConnection
-          .withConfiguration(configInjector.injectConfig(destinationConfiguration, destinationConnection.getDestinationDefinitionId()));
-      final StandardSourceDefinition sourceDefinition = configRepository
-          .getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
-      final StandardDestinationDefinition destinationDefinition = configRepository
-          .getStandardDestinationDefinition(destinationConnection.getDestinationDefinitionId());
-
-      final ActorDefinitionVersion sourceVersion =
-          actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, standardSync.getSourceId());
-      final ActorDefinitionVersion destinationVersion =
-          actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, standardSync.getDestinationId());
-
-      final String sourceImageName = sourceVersion.getDockerRepository() + ":" + sourceVersion.getDockerImageTag();
-      final String destinationImageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
-
-      final List<StandardSyncOperation> standardSyncOperations = Lists.newArrayList();
-      for (final var operationId : standardSync.getOperationIds()) {
-        final StandardSyncOperation standardSyncOperation = configRepository.getStandardSyncOperation(operationId);
-        standardSyncOperations.add(standardSyncOperation);
-      }
-
-      // for OSS users, make it possible to ignore default actor-level resource requirements
-      if (!connectorSpecificResourceDefaultsEnabled) {
-        sourceDefinition.setResourceRequirements(null);
-        destinationDefinition.setResourceRequirements(null);
-      }
+      final JobCreatorInput jobCreatorInput = getJobCreatorInput(connectionId);
 
       return jobCreator.createSyncJob(
-          sourceConnection,
-          destinationConnection,
-          standardSync,
-          sourceImageName,
-          new Version(sourceVersion.getProtocolVersion()),
-          destinationImageName,
-          new Version(destinationVersion.getProtocolVersion()),
-          standardSyncOperations,
-          workspace.getWebhookOperationConfigs(),
-          sourceDefinition,
-          destinationDefinition,
-          sourceVersion,
-          destinationVersion,
-          workspace.getWorkspaceId())
+          jobCreatorInput.getSource(),
+          jobCreatorInput.getDestination(),
+          jobCreatorInput.getStandardSync(),
+          jobCreatorInput.getSourceDockerImageName(),
+          jobCreatorInput.getSourceProtocolVersion(),
+          jobCreatorInput.getDestinationDockerImageName(),
+          jobCreatorInput.getDestinationProtocolVersion(),
+          jobCreatorInput.getStandardSyncOperations(),
+          jobCreatorInput.getWebhookOperationConfigs(),
+          jobCreatorInput.getSourceDefinition(),
+          jobCreatorInput.getDestinationDefinition(),
+          jobCreatorInput.getSourceDefinitionVersion(),
+          jobCreatorInput.getDestinationDefinitionVersion(),
+          jobCreatorInput.getWorkspaceId())
           .orElseThrow(() -> new IllegalStateException("We shouldn't be trying to create a new sync job if there is one running already."));
 
     } catch (final IOException | JsonValidationException | ConfigNotFoundException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  public Long createRefresh(UUID connectionId, List<StreamRefresh> streamsToRefresh) {
+    try {
+      final JobCreatorInput jobCreatorInput = getJobCreatorInput(connectionId);
+
+      return jobCreator.createRefreshConnection(
+          jobCreatorInput.getStandardSync(),
+          jobCreatorInput.getSourceDockerImageName(),
+          jobCreatorInput.getSourceProtocolVersion(),
+          jobCreatorInput.getDestinationDockerImageName(),
+          jobCreatorInput.getDestinationProtocolVersion(),
+          jobCreatorInput.getStandardSyncOperations(),
+          jobCreatorInput.getWebhookOperationConfigs(),
+          jobCreatorInput.getSourceDefinition(),
+          jobCreatorInput.getDestinationDefinition(),
+          jobCreatorInput.getSourceDefinitionVersion(),
+          jobCreatorInput.getDestinationDefinitionVersion(),
+          jobCreatorInput.getWorkspaceId(),
+          streamsToRefresh)
+          .orElseThrow(() -> new IllegalStateException("We shouldn't be trying to create a new sync job if there is one running already."));
+
+    } catch (final IOException | JsonValidationException | ConfigNotFoundException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private JobCreatorInput getJobCreatorInput(UUID connectionId) throws JsonValidationException, ConfigNotFoundException, IOException {
+    final StandardSync standardSync = configRepository.getStandardSync(connectionId);
+    final UUID workspaceId = workspaceHelper.getWorkspaceForSourceId(standardSync.getSourceId());
+    final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);
+    final SourceConnection sourceConnection = configRepository.getSourceConnection(standardSync.getSourceId());
+    final DestinationConnection destinationConnection = configRepository.getDestinationConnection(standardSync.getDestinationId());
+    final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
+        sourceConnection.getSourceDefinitionId(),
+        sourceConnection.getSourceId(),
+        sourceConnection.getWorkspaceId(),
+        sourceConnection.getConfiguration());
+    sourceConnection.withConfiguration(configInjector.injectConfig(sourceConfiguration, sourceConnection.getSourceDefinitionId()));
+    final JsonNode destinationConfiguration = oAuthConfigSupplier.injectDestinationOAuthParameters(
+        destinationConnection.getDestinationDefinitionId(),
+        destinationConnection.getDestinationId(),
+        destinationConnection.getWorkspaceId(),
+        destinationConnection.getConfiguration());
+    destinationConnection
+        .withConfiguration(configInjector.injectConfig(destinationConfiguration, destinationConnection.getDestinationDefinitionId()));
+    final StandardSourceDefinition sourceDefinition = configRepository
+        .getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
+    final StandardDestinationDefinition destinationDefinition = configRepository
+        .getStandardDestinationDefinition(destinationConnection.getDestinationDefinitionId());
+
+    final ActorDefinitionVersion sourceVersion =
+        actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, standardSync.getSourceId());
+    final ActorDefinitionVersion destinationVersion =
+        actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, standardSync.getDestinationId());
+
+    final String sourceImageName = sourceVersion.getDockerRepository() + ":" + sourceVersion.getDockerImageTag();
+    final String destinationImageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
+
+    final List<StandardSyncOperation> standardSyncOperations = Lists.newArrayList();
+    for (final var operationId : standardSync.getOperationIds()) {
+      final StandardSyncOperation standardSyncOperation = configRepository.getStandardSyncOperation(operationId);
+      standardSyncOperations.add(standardSyncOperation);
+    }
+
+    // for OSS users, make it possible to ignore default actor-level resource requirements
+    if (!connectorSpecificResourceDefaultsEnabled) {
+      sourceDefinition.setResourceRequirements(null);
+      destinationDefinition.setResourceRequirements(null);
+    }
+
+    return new JobCreatorInput(
+        sourceConnection,
+        destinationConnection,
+        standardSync,
+        sourceImageName,
+        new Version(sourceVersion.getProtocolVersion()),
+        destinationImageName,
+        new Version(destinationVersion.getProtocolVersion()),
+        standardSyncOperations,
+        workspace.getWebhookOperationConfigs(),
+        sourceDefinition,
+        destinationDefinition,
+        sourceVersion,
+        destinationVersion,
+        workspaceId);
   }
 
 }

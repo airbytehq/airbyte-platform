@@ -21,6 +21,7 @@ import {
   getConnectionUptimeHistory,
   getState,
   getStateType,
+  refreshConnectionStream,
   resetConnection,
   resetConnectionStream,
   syncConnection,
@@ -195,6 +196,20 @@ export const useResetConnectionStream = (connectionId: string) => {
   });
 };
 
+export const useRefreshConnectionStreams = (connectionId: string) => {
+  const queryClient = useQueryClient();
+  const requestOptions = useRequestOptions();
+  const setConnectionRunState = useSetConnectionRunState();
+
+  return useMutation(async (streams?: ConnectionStream[]) => {
+    await refreshConnectionStream({ connectionId, streams }, requestOptions);
+    setConnectionRunState(connectionId, true);
+    queryClient.setQueriesData<JobReadList>(jobsKeys.useListJobsForConnectionStatus(connectionId), (prevJobList) =>
+      prependArtificialJobToStatus({ status: JobStatus.running, configType: "refresh" }, prevJobList)
+    );
+  });
+};
+
 export const useGetConnectionQuery = () => {
   const requestOptions = useRequestOptions();
   return useMutation((request: WebBackendConnectionRequestBody) => webBackendGetConnection(request, requestOptions))
@@ -362,7 +377,9 @@ export const useRemoveConnectionsFromList = (): ((connectionIds: string[]) => vo
 };
 
 export const getConnectionListQueryKey = (connectorIds?: string[]) => {
-  return connectionsKeys.lists(connectorIds);
+  return !connectorIds?.length
+    ? [...connectionsKeys.lists(connectorIds), "empty"]
+    : connectionsKeys.lists(connectorIds);
 };
 
 export const useConnectionListQuery = (

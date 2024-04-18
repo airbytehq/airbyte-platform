@@ -146,8 +146,6 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
 
 object RunSocatInConnectorContainer : Temporary<Boolean>(key = "platform.run-socat-in-connector-container", default = false)
 
-object FailSyncIfTooBig : Temporary<Boolean>(key = "platform.fail-sync-if-too-big", default = false)
-
 object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-default-org-for-new-workspace", default = false)
 
 object WorkloadHeartbeatRate : Permanent<Int>(key = "workload.heartbeat.rate", default = 5)
@@ -172,6 +170,8 @@ object UseWorkloadApi : Temporary<Boolean>(key = "platform.use-workload-api", de
 
 object EmitStateStatsToSegment : Temporary<Boolean>(key = "platform.emit-state-stats-segment", default = true)
 
+object LogsForStripeChecksumDebugging : Temporary<Boolean>(key = "platform.logs-for-stripe-checksum-debug", default = false)
+
 object AddInitialCreditsForWorkspace : Temporary<Int>(key = "add-credits-at-workspace-creation-for-org", default = 0)
 
 object WorkloadApiRouting : Permanent<String>(key = "workload-api-routing", default = "workload_default")
@@ -194,6 +194,12 @@ object UseWorkloadApiForDiscover : Temporary<Boolean>(key = "platform.use-worklo
 
 object UseWorkloadApiForSpec : Temporary<Boolean>(key = "platform.use-workload-api-for-spec", default = false)
 
-object EnforceMutexKeyOnCreate : Temporary<Boolean>(key = "platform.enforce-mutex-key-on-create", default = false)
-
 object ActivateRefreshes : Temporary<Boolean>(key = "platform.activate-refreshes", default = false)
+
+object WriteOutputCatalogToObjectStorage : Temporary<Boolean>(key = "platform.write-output-catalog-to-object-storage", default = false)
+
+object NullOutputCatalogOnSyncOutput : Temporary<Boolean>(key = "platform.null-output-catalog-on-sync-output", default = false)
+
+object UseCustomK8sInitCheck : Temporary<Boolean>(key = "platform.use-custom-k8s-init-check", default = true)
+
+object UseClear : Temporary<Boolean>(key = "connection.clearNotReset", default = false)

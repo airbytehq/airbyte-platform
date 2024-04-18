@@ -36,3 +36,5 @@ properties:
       "$ref": StreamSyncStats.yaml
   performanceMetrics:
     "$ref": PerformanceMetrics.yaml
+  streamCount:
+    type: integer

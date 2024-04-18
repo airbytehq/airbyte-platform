@@ -7,6 +7,7 @@
  */
 
 export interface Experiments {
+  "authPage.keycloak": boolean;
   "authPage.rightSideUrl": string | undefined;
   "authPage.signup.hideCompanyName": boolean;
   "authPage.signup.hideName": boolean;
@@ -26,7 +27,6 @@ export interface Experiments {
   "connector.suggestedDestinationConnectors": string;
   "platform.auto-backfill-on-new-columns": boolean;
   "settings.breakingChangeNotifications": boolean;
-  "settings.invitationSystemv2": boolean;
   "settings.token-management-ui": boolean;
   "settings.showAdvancedSettings": boolean;
   "upcomingFeaturesPage.url": string;

@@ -80,7 +80,7 @@ public class JobsHandler {
       if (!job.getConfigType().equals(JobConfig.ConfigType.RESET_CONNECTION)) {
         jobNotifier.failJob(job, attemptStats);
       }
-      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_FAILED_BY_RELEASE_STAGE, job);
+      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_FAILED_BY_RELEASE_STAGE, job, input);
 
       final UUID connectionId = UUID.fromString(job.getScope());
       if (!connectionId.equals(input.getConnectionId())) {
@@ -160,7 +160,7 @@ public class JobsHandler {
       if (!job.getConfigType().equals(JobConfig.ConfigType.RESET_CONNECTION)) {
         jobNotifier.successJob(job, attemptStats);
       }
-      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_SUCCEEDED_BY_RELEASE_STAGE, job);
+      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_SUCCEEDED_BY_RELEASE_STAGE, job, input);
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.SUCCEEDED);
 
       return new InternalOperationResult().succeeded(true);
@@ -238,7 +238,6 @@ public class JobsHandler {
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
       }
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CANCELLED_BY_RELEASE_STAGE, job);
-      jobNotifier.failJob(job, attemptStats);
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.FAILED);
     } catch (final IOException e) {
       jobCreationAndStatusUpdateHelper.trackCompletionForInternalFailure(jobId, connectionId, attemptNumber,

@@ -108,6 +108,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
+import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
@@ -265,6 +266,7 @@ class SchedulerHandlerTest {
   private ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
   private WorkspaceService workspaceService;
   private SecretPersistenceConfigService secretPersistenceConfigService;
+  private StreamRefreshesHandler streamRefreshesHandler;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
@@ -313,6 +315,9 @@ class SchedulerHandlerTest {
         .supportedDestinationSyncModes(
             List.of(io.airbyte.api.model.generated.DestinationSyncMode.OVERWRITE, io.airbyte.api.model.generated.DestinationSyncMode.APPEND)));
 
+    streamRefreshesHandler = mock(StreamRefreshesHandler.class);
+    when(streamRefreshesHandler.getRefreshesForConnection(any())).thenReturn(new ArrayList<>());
+
     schedulerHandler = new SchedulerHandler(
         configRepository,
         secretsRepositoryWriter,
@@ -335,13 +340,14 @@ class SchedulerHandlerTest {
         jobTracker,
         connectorDefinitionSpecificationHandler,
         workspaceService,
-        secretPersistenceConfigService);
+        secretPersistenceConfigService,
+        streamRefreshesHandler);
   }
 
   @Test
   @DisplayName("Test job creation")
   void createJob() throws JsonValidationException, ConfigNotFoundException, IOException {
-    Mockito.when(jobFactory.create(CONNECTION_ID))
+    Mockito.when(jobFactory.createSync(CONNECTION_ID))
         .thenReturn(JOB_ID);
     Mockito.when(configRepository.getStandardSync(CONNECTION_ID))
         .thenReturn(Mockito.mock(StandardSync.class));
@@ -352,6 +358,27 @@ class SchedulerHandlerTest {
 
     final JobInfoRead output = schedulerHandler.createJob(new JobCreate().connectionId(CONNECTION_ID));
 
+    Assertions.assertThat(output.getJob().getId()).isEqualTo(JOB_ID);
+  }
+
+  @Test
+  @DisplayName("Test refresh job creation")
+  void createRefreshJob() throws JsonValidationException, ConfigNotFoundException, IOException {
+    when(jobFactory.createRefresh(eq(CONNECTION_ID), any()))
+        .thenReturn(JOB_ID);
+    when(configRepository.getStandardSync(CONNECTION_ID))
+        .thenReturn(mock(StandardSync.class));
+    when(jobPersistence.getJob(JOB_ID))
+        .thenReturn(job);
+    when(jobConverter.getJobInfoRead(job))
+        .thenReturn(new JobInfoRead().job(new JobRead().id(JOB_ID)));
+    when(streamRefreshesHandler.getRefreshesForConnection(CONNECTION_ID))
+        .thenReturn(List.of(
+            new StreamRefresh(UUID.randomUUID(), CONNECTION_ID, "name", "namespace", null)));
+
+    final JobInfoRead output = schedulerHandler.createJob(new JobCreate().connectionId(CONNECTION_ID));
+
+    verify(jobFactory).createRefresh(eq(CONNECTION_ID), any());
     Assertions.assertThat(output.getJob().getId()).isEqualTo(JOB_ID);
   }
 

@@ -4,10 +4,12 @@
 
 package io.airbyte.workers.temporal.sync;
 
-import io.airbyte.config.FailureReason;
+import io.airbyte.config.ActorType;
+import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.SyncStats;
+import io.airbyte.workers.temporal.FailureConverter;
 import java.util.List;
 
 /**
@@ -35,13 +37,12 @@ public class SyncOutputProvider {
    * @return sync output
    */
   public static StandardSyncOutput getRefreshSchemaFailure(final Exception e) {
+    final var failure = new FailureConverter().getFailureReason("Refresh Schema", ActorType.SOURCE, e);
+    if (failure.getFailureType() == null) {
+      failure.setFailureType(FailureType.REFRESH_SCHEMA);
+    }
     return new StandardSyncOutput()
-        .withFailures(List.of(new FailureReason()
-            .withFailureType(FailureReason.FailureType.REFRESH_SCHEMA)
-            .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
-            .withExternalMessage("Failed to detect if there is a schema change. If the error persist please contact the support team.")
-            .withInternalMessage("Failed to launch the refresh schema activity because of: " + e.getMessage())
-            .withStacktrace(e.toString())))
+        .withFailures(List.of(failure))
         .withStandardSyncSummary(EMPTY_FAILED_SYNC);
   }
 

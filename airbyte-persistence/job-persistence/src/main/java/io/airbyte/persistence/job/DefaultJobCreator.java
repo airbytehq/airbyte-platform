@@ -14,6 +14,7 @@ import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
+import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ResourceRequirementsType;
@@ -23,10 +24,17 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
+import io.airbyte.config.StateWrapper;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.SyncResourceRequirementsKey;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
+import io.airbyte.config.persistence.RefreshJobStateUpdater;
+import io.airbyte.config.persistence.StatePersistence;
+import io.airbyte.config.persistence.StreamRefreshesRepository;
+import io.airbyte.config.persistence.domain.StreamRefresh;
+import io.airbyte.config.persistence.helper.GenerationBumper;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
+import io.airbyte.featureflag.ActivateRefreshes;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.DestResourceOverrides;
@@ -63,13 +71,25 @@ public class DefaultJobCreator implements JobCreator {
   private final JobPersistence jobPersistence;
   private final ResourceRequirementsProvider resourceRequirementsProvider;
   private final FeatureFlagClient featureFlagClient;
+  private final GenerationBumper generationBumper;
+  private final StatePersistence statePersistence;
+  private final RefreshJobStateUpdater refreshJobStateUpdater;
+  private final StreamRefreshesRepository streamRefreshesRepository;
 
   public DefaultJobCreator(final JobPersistence jobPersistence,
                            final ResourceRequirementsProvider resourceRequirementsProvider,
-                           final FeatureFlagClient featureFlagClient) {
+                           final FeatureFlagClient featureFlagClient,
+                           final GenerationBumper generationBumper,
+                           final StatePersistence statePersistence,
+                           final RefreshJobStateUpdater refreshJobStateUpdater,
+                           final StreamRefreshesRepository streamRefreshesRepository) {
     this.jobPersistence = jobPersistence;
     this.resourceRequirementsProvider = resourceRequirementsProvider;
     this.featureFlagClient = featureFlagClient;
+    this.generationBumper = generationBumper;
+    this.statePersistence = statePersistence;
+    this.refreshJobStateUpdater = refreshJobStateUpdater;
+    this.streamRefreshesRepository = streamRefreshesRepository;
   }
 
   @Override
@@ -113,6 +133,85 @@ public class DefaultJobCreator implements JobCreator {
         .withConfigType(ConfigType.SYNC)
         .withSync(jobSyncConfig);
     return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
+  }
+
+  @Override
+  public Optional<Long> createRefreshConnection(final StandardSync standardSync,
+                                                final String sourceDockerImageName,
+                                                final Version sourceProtocolVersion,
+                                                final String destinationDockerImageName,
+                                                final Version destinationProtocolVersion,
+                                                final List<StandardSyncOperation> standardSyncOperations,
+                                                @Nullable final JsonNode webhookOperationConfigs,
+                                                final StandardSourceDefinition sourceDefinition,
+                                                final StandardDestinationDefinition destinationDefinition,
+                                                final ActorDefinitionVersion sourceDefinitionVersion,
+                                                final ActorDefinitionVersion destinationDefinitionVersion,
+                                                final UUID workspaceId,
+                                                final List<StreamRefresh> streamsToRefresh)
+      throws IOException {
+    final boolean canRunRefreshes = featureFlagClient.boolVariation(ActivateRefreshes.INSTANCE, new Multi(
+        List.of(
+            new Workspace(workspaceId),
+            new Connection(standardSync.getConnectionId()),
+            new SourceDefinition(sourceDefinition.getSourceDefinitionId()),
+            new DestinationDefinition(destinationDefinition.getDestinationDefinitionId()))));
+
+    if (!canRunRefreshes) {
+      throw new IllegalStateException("Trying to create a refresh job for a destination which doesn't support refreshes");
+    }
+
+    final SyncResourceRequirements syncResourceRequirements =
+        getSyncResourceRequirements(workspaceId, standardSync, sourceDefinition, destinationDefinition, false);
+
+    final RefreshConfig refreshConfig = new RefreshConfig()
+        .withNamespaceDefinition(standardSync.getNamespaceDefinition())
+        .withNamespaceFormat(standardSync.getNamespaceFormat())
+        .withPrefix(standardSync.getPrefix())
+        .withSourceDockerImage(sourceDockerImageName)
+        .withSourceProtocolVersion(sourceProtocolVersion)
+        .withDestinationDockerImage(destinationDockerImageName)
+        .withDestinationProtocolVersion(destinationProtocolVersion)
+        .withOperationSequence(standardSyncOperations)
+        .withWebhookOperationConfigs(webhookOperationConfigs)
+        .withConfiguredAirbyteCatalog(standardSync.getCatalog())
+        .withSyncResourceRequirements(syncResourceRequirements)
+        .withIsSourceCustomConnector(sourceDefinition.getCustom())
+        .withIsDestinationCustomConnector(destinationDefinition.getCustom())
+        .withWorkspaceId(workspaceId)
+        .withSourceDefinitionVersionId(sourceDefinitionVersion.getVersionId())
+        .withDestinationDefinitionVersionId(destinationDefinitionVersion.getVersionId())
+        .withStreamsToRefresh(
+            streamsToRefresh.stream().map(streamRefresh -> new StreamDescriptor()
+                .withName(streamRefresh.getStreamName())
+                .withNamespace(streamRefresh.getStreamNamespace())).toList());
+
+    final JobConfig jobConfig = new JobConfig()
+        .withConfigType(ConfigType.REFRESH)
+        .withRefresh(refreshConfig);
+
+    final Optional<Long> maybeJobId = jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
+
+    if (maybeJobId.isPresent()) {
+      final long jobId = maybeJobId.get();
+      generationBumper.updateGenerationForStreams(standardSync.getConnectionId(), jobId, streamsToRefresh);
+      final Optional<StateWrapper> currentState = statePersistence.getCurrentState(standardSync.getConnectionId());
+      updateStateAndDeleteRefreshes(standardSync.getConnectionId(), streamsToRefresh, currentState);
+    }
+
+    return maybeJobId;
+  }
+
+  // TODO: Add Transactional annotation
+  private void updateStateAndDeleteRefreshes(final UUID connectionId,
+                                             final List<StreamRefresh> streamsToRefresh,
+                                             final Optional<StateWrapper> currentState)
+      throws IOException {
+    if (currentState.isPresent()) {
+      refreshJobStateUpdater.updateStateWrapperForRefresh(connectionId, currentState.get(), streamsToRefresh);
+    }
+    streamsToRefresh.forEach(
+        s -> streamRefreshesRepository.deleteByConnectionIdAndStreamNameAndStreamNamespace(connectionId, s.getStreamName(), s.getStreamNamespace()));
   }
 
   @Override

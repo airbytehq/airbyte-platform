@@ -19,6 +19,7 @@ import {
   getManifestValuePerComponentPerStream,
   useBuilderWatch,
 } from "components/connectorBuilder/types";
+import { useUpdateLockedInputs } from "components/connectorBuilder/useLockedInputs";
 import { formatJson } from "components/connectorBuilder/utils";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
@@ -26,7 +27,7 @@ import {
   BuilderProject,
   BuilderProjectPublishBody,
   BuilderProjectWithManifest,
-  CommonRequestError,
+  HttpError,
   NewVersionBody,
   useBuilderProject,
   useBuilderProjectReadStream,
@@ -68,6 +69,13 @@ export type SavingState = "loading" | "invalid" | "saved" | "error" | "readonly"
 
 export type ConnectorBuilderPermission = "write" | "readOnly" | "adminReadOnly";
 
+export type TestingValuesUpdate = UseMutateAsyncFunction<
+  ConnectorBuilderProjectTestingValues,
+  Error,
+  Omit<ConnectorBuilderProjectTestingValuesUpdate, "builderProjectId" | "workspaceId">,
+  unknown
+>;
+
 interface FormStateContext {
   jsonManifest: DeclarativeComponentSchema;
   yamlEditorIsMounted: boolean;
@@ -82,7 +90,7 @@ interface FormStateContext {
   formValuesValid: boolean;
   resolvedManifest: ConnectorManifest;
   resolveErrorMessage: string | undefined;
-  resolveError: CommonRequestError<KnownExceptionInfo> | null;
+  resolveError: HttpError<KnownExceptionInfo> | null;
   isResolving: boolean;
   streamNames: string[];
   setDisplayedVersion: (value: number | undefined, manifest: DeclarativeComponentSchema) => void;
@@ -94,12 +102,7 @@ interface FormStateContext {
   releaseNewVersion: (options: NewVersionBody) => Promise<void>;
   toggleUI: (newMode: BuilderState["mode"]) => Promise<void>;
   setFormValuesValid: (value: boolean) => void;
-  updateTestingValues: UseMutateAsyncFunction<
-    ConnectorBuilderProjectTestingValues,
-    Error,
-    Omit<ConnectorBuilderProjectTestingValuesUpdate, "builderProjectId" | "workspaceId">,
-    unknown
-  >;
+  updateTestingValues: TestingValuesUpdate;
 }
 
 interface TestReadLimits {
@@ -258,8 +261,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   );
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const resolveErrorMessage = isResolveError
-    ? resolveError instanceof Error
-      ? resolveError.message || unknownErrorMessage
+    ? resolveError instanceof HttpError
+      ? resolveError.response?.message || unknownErrorMessage
       : unknownErrorMessage
     : undefined;
 
@@ -457,7 +460,11 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     if (modeRef.current === "ui" && !formAndResolveValid) {
       return;
     }
-    const newProject: BuilderProjectWithManifest = { name, manifest: jsonManifest };
+    const newProject: BuilderProjectWithManifest = {
+      name,
+      manifest: jsonManifest,
+      yamlManifest: convertJsonToYaml(jsonManifest),
+    };
     await updateProject(newProject);
     setPersistedState(newProject);
   }, [permission, name, formAndResolveValid, jsonManifest, updateProject]);
@@ -485,6 +492,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   );
 
   useUpdateTestingValuesOnSpecChange(jsonManifest.spec, updateTestingValues);
+
+  useUpdateLockedInputs();
 
   const ctx: FormStateContext = {
     jsonManifest,

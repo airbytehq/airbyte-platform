@@ -28,8 +28,10 @@ import {
   SMALL_DURATION_OPTIONS,
   StreamPathFn,
   builderIncrementalSyncToManifest,
+  interpolateConfigKey,
   useBuilderWatch,
 } from "../types";
+import { LOCKED_INPUT_BY_INCREMENTAL_FIELD_NAME, useGetUniqueKey } from "../useLockedInputs";
 
 interface IncrementalSectionProps {
   streamFieldPath: StreamPathFn;
@@ -39,6 +41,7 @@ interface IncrementalSectionProps {
 export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
   const filterMode = useBuilderWatch(streamFieldPath("incrementalSync.filter_mode"));
+  const getExistingOrUniqueKey = useGetUniqueKey();
   return (
     <BuilderCard
       docLink={links.connectorBuilderIncrementalSync}
@@ -50,7 +53,12 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         defaultValue: {
           datetime_format: "",
           cursor_datetime_formats: [],
-          start_datetime: { type: "user_input" },
+          start_datetime: {
+            type: "user_input",
+            value: interpolateConfigKey(
+              getExistingOrUniqueKey(LOCKED_INPUT_BY_INCREMENTAL_FIELD_NAME.start_datetime.key, "start_datetime")
+            ),
+          },
           end_datetime: { type: "now" },
           step: "",
           cursor_field: "",
@@ -131,7 +139,12 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         options={[
           {
             label: formatMessage({ id: "connectorBuilder.incremental.userInput" }),
-            default: { type: "user_input" },
+            default: {
+              type: "user_input",
+              value: interpolateConfigKey(
+                getExistingOrUniqueKey(LOCKED_INPUT_BY_INCREMENTAL_FIELD_NAME.start_datetime.key, "start_datetime")
+              ),
+            },
             children: (
               <BuilderInputPlaceholder
                 label={formatMessage({
@@ -194,7 +207,12 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
           options={[
             {
               label: formatMessage({ id: "connectorBuilder.incremental.userInput" }),
-              default: { type: "user_input" },
+              default: {
+                type: "user_input",
+                value: interpolateConfigKey(
+                  getExistingOrUniqueKey(LOCKED_INPUT_BY_INCREMENTAL_FIELD_NAME.end_datetime.key, "end_datetime")
+                ),
+              },
               children: (
                 <BuilderInputPlaceholder
                   label={formatMessage({ id: "connectorBuilder.incremental.userInput.endDatetime.label" })}

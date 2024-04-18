@@ -9,6 +9,6 @@ describe("Error handling view", () => {
 
     cy.visit("/");
 
-    cy.get("div").contains("Cannot reach server. The server may still be starting up.").should("exist");
+    cy.get("p").contains("Airbyte is temporarily unavailable.").should("exist");
   });
 });

@@ -58,7 +58,7 @@ class DefaultGetSpecWorkerTest {
     final IntegrationLauncher integrationLauncher = mock(IntegrationLauncher.class, RETURNS_DEEP_STUBS);
     when(integrationLauncher.spec(jobRoot)).thenReturn(process);
 
-    worker = new DefaultGetSpecWorker(integrationLauncher, VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(false));
+    worker = new DefaultGetSpecWorker(integrationLauncher, VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory());
   }
 
   @Test

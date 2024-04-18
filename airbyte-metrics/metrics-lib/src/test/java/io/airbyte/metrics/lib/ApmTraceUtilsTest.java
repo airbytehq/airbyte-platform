@@ -29,6 +29,7 @@ import io.opentracing.util.GlobalTracerTestUtil;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.After;
@@ -61,6 +62,21 @@ class ApmTraceUtilsTest {
     when(tracer.activeSpan()).thenReturn(span);
     GlobalTracerTestUtil.setGlobalTracerUnconditionally(tracer);
     ApmTraceUtils.addTagsToTrace(TAGS);
+    verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, TAG_1), VALUE_1);
+    verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, TAG_2), VALUE_2);
+  }
+
+  @Test
+  void convertsAndAddsAttributes() {
+    final Span span = mock(Span.class);
+    final Tracer tracer = mock(Tracer.class);
+    when(tracer.activeSpan()).thenReturn(span);
+
+    GlobalTracerTestUtil.setGlobalTracerUnconditionally(tracer);
+
+    final var attrs = List.of(new MetricAttribute(TAG_1, VALUE_1), new MetricAttribute(TAG_2, VALUE_2));
+    ApmTraceUtils.addTagsToTrace(attrs);
+
     verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, TAG_1), VALUE_1);
     verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, TAG_2), VALUE_2);
   }

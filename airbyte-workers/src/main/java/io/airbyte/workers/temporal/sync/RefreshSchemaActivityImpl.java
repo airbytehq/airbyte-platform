@@ -22,6 +22,7 @@ import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkloadPriority;
 import io.airbyte.commons.features.FeatureFlags;
+import io.airbyte.commons.temporal.utils.PayloadChecker;
 import io.airbyte.featureflag.AutoBackfillOnNewColumns;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
@@ -32,7 +33,9 @@ import io.airbyte.featureflag.ShouldRunRefreshSchema;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
@@ -55,17 +58,20 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
   private final ConnectionApi connectionApi;
   private final FeatureFlags envVariableFeatureFlags;
   private final FeatureFlagClient featureFlagClient;
+  private final PayloadChecker payloadChecker;
 
   public RefreshSchemaActivityImpl(final SourceApi sourceApi,
                                    final ConnectionApi connectionApi,
                                    final WorkspaceApi workspaceApi,
                                    final FeatureFlags envVariableFeatureFlags,
-                                   final FeatureFlagClient featureFlagClient) {
+                                   final FeatureFlagClient featureFlagClient,
+                                   final PayloadChecker payloadChecker) {
     this.sourceApi = sourceApi;
     this.connectionApi = connectionApi;
     this.workspaceApi = workspaceApi;
     this.envVariableFeatureFlags = envVariableFeatureFlags;
     this.featureFlagClient = featureFlagClient;
+    this.payloadChecker = payloadChecker;
   }
 
   @Override
@@ -160,9 +166,17 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
         .connectionId(connectionId)
         .catalogId(sourceDiscoverSchemaRead.getCatalogId());
 
-    return new RefreshSchemaActivityOutput(AirbyteApiClient.retryWithJitterThrows(
+    final var output = new RefreshSchemaActivityOutput(AirbyteApiClient.retryWithJitterThrows(
         () -> connectionApi.applySchemaChangeForConnection(request),
         "Auto propagate the schema change").getPropagatedDiff());
+
+    final var attrs = new MetricAttribute[] {
+      new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(connectionId))
+    };
+
+    payloadChecker.validatePayloadSize(output, attrs);
+
+    return output;
   }
 
   private boolean schemaRefreshRanRecently(final UUID sourceCatalogId) {

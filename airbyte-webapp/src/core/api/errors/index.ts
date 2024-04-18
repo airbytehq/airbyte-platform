@@ -1,2 +1,2 @@
-export * from "./CommonRequestError";
 export * from "./ErrorWithJobInfo";
+export * from "./HttpError";
