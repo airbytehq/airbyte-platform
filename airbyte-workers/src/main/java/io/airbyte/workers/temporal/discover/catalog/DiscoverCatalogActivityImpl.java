@@ -34,7 +34,7 @@ import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ConnectorJobOutput;
-import io.airbyte.config.FailureReason;
+import io.airbyte.config.ConnectorJobOutput.OutputType;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.helpers.LogConfigs;
@@ -68,9 +68,7 @@ import io.airbyte.workers.process.Metadata;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
-import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workers.workload.exception.DocStoreAccessException;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel;
 import io.airbyte.workload.api.client.model.generated.WorkloadPriority;
@@ -112,7 +110,6 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   private final GsonPksExtractor gsonPksExtractor;
   private final WorkloadClient workloadClient;
   private final WorkloadIdGenerator workloadIdGenerator;
-  private final JobOutputDocStore jobOutputDocStore;
 
   public DiscoverCatalogActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                                      final ProcessFactory processFactory,
@@ -129,8 +126,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
                                      final FeatureFlagClient featureFlagClient,
                                      final GsonPksExtractor gsonPksExtractor,
                                      final WorkloadClient workloadClient,
-                                     final WorkloadIdGenerator workloadIdGenerator,
-                                     final JobOutputDocStore jobOutputDocStore) {
+                                     final WorkloadIdGenerator workloadIdGenerator) {
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.secretsRepositoryReader = secretsRepositoryReader;
@@ -147,7 +143,6 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     this.gsonPksExtractor = gsonPksExtractor;
     this.workloadClient = workloadClient;
     this.workloadIdGenerator = workloadIdGenerator;
-    this.jobOutputDocStore = jobOutputDocStore;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -238,20 +233,12 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
         featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE, new Workspace(workspaceId));
     workloadClient.waitForWorkload(workloadId, checkFrequencyInSeconds);
 
-    try {
-      final Optional<ConnectorJobOutput> connectorJobOutput = jobOutputDocStore.read(workloadId);
-
-      connectorJobOutput.ifPresent(c -> log.error(String.valueOf(c)));
-      return connectorJobOutput.orElse(new ConnectorJobOutput()
-          .withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)
-          .withDiscoverCatalogId(null)
-          .withFailureReason(new FailureReason()
-              .withFailureType(FailureReason.FailureType.CONFIG_ERROR)
-              .withInternalMessage("Unable to read output for workload: " + workloadId)
-              .withExternalMessage("Unable to read output")));
-    } catch (final DocStoreAccessException e) {
-      throw new WorkerException("Unable to read output", e);
-    }
+    return workloadClient.getConnectorJobOutput(
+        workloadId,
+        failureReason -> new ConnectorJobOutput()
+            .withOutputType(OutputType.DISCOVER_CATALOG_ID)
+            .withDiscoverCatalogId(null)
+            .withFailureReason(failureReason));
   }
 
   @Override

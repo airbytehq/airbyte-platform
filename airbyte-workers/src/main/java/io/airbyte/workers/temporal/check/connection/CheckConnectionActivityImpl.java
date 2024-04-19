@@ -30,10 +30,11 @@ import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ConnectorJobOutput;
-import io.airbyte.config.FailureReason;
+import io.airbyte.config.ConnectorJobOutput.OutputType;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardCheckConnectionOutput;
+import io.airbyte.config.StandardCheckConnectionOutput.Status;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
@@ -63,9 +64,7 @@ import io.airbyte.workers.process.Metadata;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
-import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workers.workload.exception.DocStoreAccessException;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel;
 import io.airbyte.workload.api.client.model.generated.WorkloadPriority;
@@ -85,7 +84,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 
 /**
  * Check connection activity temporal implementation for the control plane.
@@ -108,7 +106,6 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
   private final CheckConnectionInputHydrator inputHydrator;
   private final WorkloadClient workloadClient;
   private final WorkloadIdGenerator workloadIdGenerator;
-  private final JobOutputDocStore jobOutputDocStore;
   private final FeatureFlagClient featureFlagClient;
   private final MetricClient metricClient;
   private final ActivityOptions activityOptions;
@@ -128,7 +125,6 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                                      final GsonPksExtractor gsonPksExtractor,
                                      final WorkloadClient workloadClient,
                                      final WorkloadIdGenerator workloadIdGenerator,
-                                     final JobOutputDocStore jobOutputDocStore,
                                      final MetricClient metricClient,
                                      @Named("checkActivityOptions") final ActivityOptions activityOptions) {
     this(workerConfigsProvider,
@@ -146,7 +142,6 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         gsonPksExtractor,
         workloadClient,
         workloadIdGenerator,
-        jobOutputDocStore,
         new CheckConnectionInputHydrator(
             new ConnectorSecretsHydrator(
                 secretsRepositoryReader,
@@ -172,7 +167,6 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                               final GsonPksExtractor gsonPksExtractor,
                               final WorkloadClient workloadClient,
                               final WorkloadIdGenerator workloadIdGenerator,
-                              final JobOutputDocStore jobOutputDocStore,
                               final CheckConnectionInputHydrator checkConnectionInputHydrator,
                               final MetricClient metricClient,
                               final ActivityOptions activityOptions) {
@@ -189,7 +183,6 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
     this.gsonPksExtractor = gsonPksExtractor;
     this.workloadClient = workloadClient;
     this.workloadIdGenerator = workloadIdGenerator;
-    this.jobOutputDocStore = jobOutputDocStore;
     this.featureFlagClient = featureFlagClient;
     this.inputHydrator = checkConnectionInputHydrator;
     this.metricClient = metricClient;
@@ -269,37 +262,21 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE, new Workspace(workspaceId));
     workloadClient.waitForWorkload(workloadId, checkFrequencyInSeconds);
 
-    try {
-      final Optional<ConnectorJobOutput> connectorJobOutput = jobOutputDocStore.read(workloadId);
+    final var output = workloadClient.getConnectorJobOutput(
+        workloadId,
+        failureReason -> new ConnectorJobOutput()
+            .withOutputType(OutputType.CHECK_CONNECTION)
+            .withCheckConnection(
+                new StandardCheckConnectionOutput()
+                    .withStatus(Status.FAILED)
+                    .withMessage(failureReason.getExternalMessage()))
+            .withFailureReason(failureReason));
 
-      if (connectorJobOutput.isEmpty() || connectorJobOutput.get().getCheckConnection() == null
-          || connectorJobOutput.get().getCheckConnection().getStatus() == StandardCheckConnectionOutput.Status.FAILED) {
-        metricClient.count(OssMetricsRegistry.SIDECAR_CHECK, 1, new MetricAttribute(MetricTags.STATUS, "failed"));
-      } else {
-        metricClient.count(OssMetricsRegistry.SIDECAR_CHECK, 1, new MetricAttribute(MetricTags.STATUS, "success"));
-      }
-
-      return connectorJobOutput.orElse(getErrorOutput(workloadId, Optional.empty()));
-    } catch (final DocStoreAccessException e) {
-      return getErrorOutput(workloadId, Optional.of(e));
-    }
-  }
-
-  private ConnectorJobOutput getErrorOutput(String workloadId, Optional<Exception> e) {
-    FailureReason failureReason = new FailureReason()
-        .withFailureType(FailureReason.FailureType.CONFIG_ERROR)
-        .withInternalMessage("Unable to read output for workload: " + workloadId)
-        .withExternalMessage("Unable to read output");
-
-    e.ifPresent(exception -> failureReason.setStacktrace(ExceptionUtils.getStackTrace(exception)));
-
-    return new ConnectorJobOutput()
-        .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
-        .withCheckConnection(
-            new StandardCheckConnectionOutput()
-                .withStatus(StandardCheckConnectionOutput.Status.FAILED)
-                .withMessage("Unable to read output"))
-        .withFailureReason(failureReason);
+    metricClient.count(
+        OssMetricsRegistry.SIDECAR_CHECK,
+        1,
+        new MetricAttribute(MetricTags.STATUS, output.getCheckConnection().getStatus() == Status.FAILED ? "failed" : "success"));
+    return output;
   }
 
   @Override

@@ -1,6 +1,9 @@
 package io.airbyte.workers.sync
 
 import io.airbyte.api.client.WorkloadApiClient
+import io.airbyte.config.ConnectorJobOutput
+import io.airbyte.config.FailureReason
+import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus
@@ -9,6 +12,7 @@ import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ClientException
 import java.io.IOException
+import kotlin.jvm.optionals.getOrElse
 import kotlin.time.Duration.Companion.seconds
 
 private val logger = KotlinLogging.logger { }
@@ -18,7 +22,7 @@ private val logger = KotlinLogging.logger { }
  * This client should be preferred over direct usage of the WorkloadApiClient.
  */
 @Singleton
-class WorkloadClient(private val workloadApiClient: WorkloadApiClient) {
+class WorkloadClient(private val workloadApiClient: WorkloadApiClient, private val jobOutputDocStore: JobOutputDocStore) {
   companion object {
     val TERMINAL_STATUSES = setOf(WorkloadStatus.SUCCESS, WorkloadStatus.FAILURE, WorkloadStatus.CANCELLED)
   }
@@ -57,6 +61,67 @@ class WorkloadClient(private val workloadApiClient: WorkloadApiClient) {
       throw RuntimeException(e)
     } catch (e: InterruptedException) {
       throw RuntimeException(e)
+    }
+  }
+
+  fun getConnectorJobOutput(
+    workloadId: String,
+    onFailure: (FailureReason) -> ConnectorJobOutput,
+  ): ConnectorJobOutput {
+    return Result.runCatching {
+      jobOutputDocStore.read(workloadId).orElseThrow()
+    }.fold(
+      onFailure = { t -> onFailure(handleMissingConnectorJobOutput(workloadId, t)) },
+      onSuccess = { x -> x },
+    )
+  }
+
+  private fun handleMissingConnectorJobOutput(
+    workloadId: String,
+    t: Throwable?,
+  ): FailureReason {
+    return Result.runCatching {
+      val workload = workloadApiClient.workloadApi.workloadGet(workloadId)
+
+      return when (workload.status) {
+        // This is pretty bad, the workload succeeded, but we failed to read the output
+        WorkloadStatus.SUCCESS ->
+          FailureReason()
+            .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
+            .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
+            .withExternalMessage("Failed to read the output")
+            .withInternalMessage("Failed to read the output of a successful workload $workloadId")
+            .withStacktrace(t?.stackTraceToString())
+
+        // do some classification from workload.terminationSource
+        WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE ->
+          FailureReason()
+            .withFailureOrigin(
+              when (workload.terminationSource) {
+                "source" -> FailureReason.FailureOrigin.SOURCE
+                "destination" -> FailureReason.FailureOrigin.DESTINATION
+                else -> FailureReason.FailureOrigin.AIRBYTE_PLATFORM
+              },
+            )
+            .withExternalMessage("Workload terminated by ${workload.terminationSource}")
+            .withInternalMessage(workload.terminationReason)
+
+        // We should never be in this situation, workload is still running not having an output is expected,
+        // we should not be trying to read the output of a non-terminal workload.
+        else ->
+          FailureReason()
+            .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
+            .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
+            .withExternalMessage("Expected error in the platform")
+            .withInternalMessage("$workloadId isn't in a terminal state, no output available")
+      }
+    }.getOrElse {
+      FailureReason()
+        .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
+        .withFailureType(FailureReason.FailureType.TRANSIENT_ERROR)
+        .withExternalMessage("Platform failure")
+        .withInternalMessage("Unable to reach the workload-api")
+        .withStacktrace(it.stackTraceToString())
     }
   }
 

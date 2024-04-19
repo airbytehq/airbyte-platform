@@ -105,9 +105,8 @@ public class CheckConnectionActivityTest {
         featureFlags,
         featureFlagClient,
         gsonPksExtractor,
-        new WorkloadClient(workloadApiClient),
+        new WorkloadClient(workloadApiClient, jobOutputDocStore),
         workloadIdGenerator,
-        jobOutputDocStore,
         mock(CheckConnectionInputHydrator.class),
         mock(MetricClient.class),
         mock(ActivityOptions.class)));

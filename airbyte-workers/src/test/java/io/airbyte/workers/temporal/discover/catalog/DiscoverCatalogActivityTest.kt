@@ -83,9 +83,8 @@ class DiscoverCatalogActivityTest {
           metricClient,
           featureFlagClient,
           gsonPksExtractor,
-          WorkloadClient(workloadApiClient),
+          WorkloadClient(workloadApiClient, jobOutputDocStore),
           workloadIdGenerator,
-          jobOutputDocStore,
         ),
       )
   }

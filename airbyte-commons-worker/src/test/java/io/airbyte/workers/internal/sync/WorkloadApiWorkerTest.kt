@@ -63,7 +63,7 @@ internal class WorkloadApiWorkerTest {
         jobOutputDocStore,
         apiClient,
         workloadApiClient,
-        WorkloadClient(workloadApiClient),
+        WorkloadClient(workloadApiClient, jobOutputDocStore),
         workloadIdGenerator,
         replicationActivityInput,
         featureFlagClient,

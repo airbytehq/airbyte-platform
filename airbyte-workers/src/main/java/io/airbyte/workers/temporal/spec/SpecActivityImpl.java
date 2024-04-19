@@ -27,7 +27,7 @@ import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ConnectorJobOutput;
-import io.airbyte.config.FailureReason;
+import io.airbyte.config.ConnectorJobOutput.OutputType;
 import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -55,9 +55,7 @@ import io.airbyte.workers.process.Metadata;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
-import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workers.workload.exception.DocStoreAccessException;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel;
 import io.airbyte.workload.api.client.model.generated.WorkloadPriority;
@@ -100,7 +98,6 @@ public class SpecActivityImpl implements SpecActivity {
   private final FeatureFlagClient featureFlagClient;
   private final WorkloadClient workloadClient;
   private final WorkloadIdGenerator workloadIdGenerator;
-  private final JobOutputDocStore jobOutputDocStore;
   private final MetricClient metricClient;
 
   public SpecActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
@@ -117,7 +114,6 @@ public class SpecActivityImpl implements SpecActivity {
                           final FeatureFlagClient featureFlagClient,
                           final WorkloadClient workloadClient,
                           final WorkloadIdGenerator workloadIdGenerator,
-                          final JobOutputDocStore jobOutputDocStore,
                           final MetricClient metricClient) {
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
@@ -133,7 +129,6 @@ public class SpecActivityImpl implements SpecActivity {
     this.featureFlagClient = featureFlagClient;
     this.workloadClient = workloadClient;
     this.workloadIdGenerator = workloadIdGenerator;
-    this.jobOutputDocStore = jobOutputDocStore;
     this.metricClient = metricClient;
   }
 
@@ -197,20 +192,12 @@ public class SpecActivityImpl implements SpecActivity {
         featureFlagClient.intVariation(WorkloadCheckFrequencyInSeconds.INSTANCE, new Workspace(ANONYMOUS));
     workloadClient.waitForWorkload(workloadId, checkFrequencyInSeconds);
 
-    try {
-      final Optional<ConnectorJobOutput> connectorJobOutput = jobOutputDocStore.read(workloadId);
-
-      log.error(String.valueOf(connectorJobOutput.get()));
-      return connectorJobOutput.orElse(new ConnectorJobOutput()
-          .withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)
-          .withDiscoverCatalogId(null)
-          .withFailureReason(new FailureReason()
-              .withFailureType(FailureReason.FailureType.CONFIG_ERROR)
-              .withInternalMessage("Unable to read output for workload: " + workloadId)
-              .withExternalMessage("Unable to read output")));
-    } catch (final DocStoreAccessException e) {
-      throw new WorkerException("Unable to read output", e);
-    }
+    return workloadClient.getConnectorJobOutput(
+        workloadId,
+        failureReason -> new ConnectorJobOutput()
+            .withOutputType(OutputType.SPEC)
+            .withSpec(null)
+            .withFailureReason(failureReason));
   }
 
   @Override
