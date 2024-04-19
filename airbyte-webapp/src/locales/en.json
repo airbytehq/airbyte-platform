@@ -1066,6 +1066,7 @@
   "credits.maxCreditsError": "The maximum credit purchase is {maximum} credits.",
   "credits.checkoutModalTitle": "Select credit quantity",
   "credits.checkout": "Checkout",
+  "credits.checkout.creditExpiration": "Credits are valid for 12 months.  Visit our <lnk>pricing page</lnk> to learn more.",
   "credits.aboveMaxCredits": "To buy large quantities of credits, talk to our <lnk>Sales team</lnk>.",
   "credits.numberOfCredits": "Number of credits",
   "credits.pricePerCredit": "Price per credit",
