@@ -47,7 +47,7 @@ class StreamsController(
     private val log: org.slf4j.Logger? = LoggerFactory.getLogger(StreamsController::class.java)
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun getStreamProperties(
     sourceId: UUID,
     destinationId: UUID?,

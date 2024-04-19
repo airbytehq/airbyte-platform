@@ -48,7 +48,7 @@ open class JobsController(
 ) : PublicJobsApi {
   @DELETE
   @Path("/{jobId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCancelJob(
     @PathParam("jobId") jobId: Long,
   ): Response {
@@ -83,7 +83,7 @@ open class JobsController(
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateJob(jobCreateRequest: JobCreateRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
@@ -160,7 +160,7 @@ open class JobsController(
 
   @GET
   @Path("/{jobId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun getJob(
     @PathParam("jobId") jobId: Long,
   ): Response {
@@ -195,7 +195,7 @@ open class JobsController(
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun listJobs(
     connectionId: UUID?,
     limit: Int?,
