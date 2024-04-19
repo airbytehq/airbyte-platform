@@ -42,8 +42,10 @@ Explore our [demo app](https://demo.airbyte.io/).
 
 ## Quick start
 
-⚠️ This Quickstart method is still under active development. If you would like to use the previous Docker Compose method, please refer to the [Docker Compose](https://docs.airbyte.com/deploying-airbyte/docker-compose) documentation.
-Additionally the `abctl` installation method currently does not support .env file configurations. ⚠️
+⚠️ This Quickstart method is still under active development. This tool is intended to get Airbyte running as quickly as possible with no additional configuration necessary.
+Additional configuration options may be added in the future, however, if you need additional configuration options now, use the
+docker compose solution by following the instructions for the `run_ab_platform.sh` script [here](/deploying-airbyte/docker-compose).
+⚠️
 
 ### Run Airbyte locally
 
