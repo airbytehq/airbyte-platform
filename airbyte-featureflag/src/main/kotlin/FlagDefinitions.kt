@@ -188,8 +188,6 @@ object FailSyncOnInvalidChecksum : Temporary<Boolean>(key = "platform.fail-sync-
 
 object HydrateAggregatedStats : Temporary<Boolean>(key = "platform.hydrate-aggregated-stats", default = true)
 
-object BillingCronScopeChangeTimestamp : Permanent<String>(key = "platform.billing-cron-scope-change-timestamp", default = "1735711200")
-
 object UseWorkloadApiForDiscover : Temporary<Boolean>(key = "platform.use-workload-api-for-discover", default = false)
 
 object UseWorkloadApiForSpec : Temporary<Boolean>(key = "platform.use-workload-api-for-spec", default = false)
@@ -201,5 +199,7 @@ object WriteOutputCatalogToObjectStorage : Temporary<Boolean>(key = "platform.wr
 object NullOutputCatalogOnSyncOutput : Temporary<Boolean>(key = "platform.null-output-catalog-on-sync-output", default = false)
 
 object UseCustomK8sInitCheck : Temporary<Boolean>(key = "platform.use-custom-k8s-init-check", default = true)
+
+object DeleteFullRefreshState : Temporary<Boolean>(key = "platform.delete-full-refresh-state", default = false)
 
 object UseClear : Temporary<Boolean>(key = "connection.clearNotReset", default = false)
