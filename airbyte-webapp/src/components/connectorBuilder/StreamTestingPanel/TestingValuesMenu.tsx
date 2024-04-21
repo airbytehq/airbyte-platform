@@ -101,12 +101,11 @@ export const TestingValuesMenu: React.FC<TestingValuesMenuProps> = ({ testingVal
               <FlexContainer direction="column">
                 {showInputsWarning && (
                   <Message
-                    className={styles.warningBox}
-                    type="warning"
+                    type="info"
                     onClose={() => {
                       setShowInputsWarning(false);
                     }}
-                    text={<FormattedMessage id="connectorBuilder.inputsFormWarning" />}
+                    text={<FormattedMessage id="connectorBuilder.inputsFormMessage" />}
                   />
                 )}
                 {permission === "adminReadOnly" && (

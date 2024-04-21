@@ -186,7 +186,7 @@ export const StreamTester: React.FC<{
       )}
       {!isFetching && streamReadData && streamReadData.test_read_limit_reached && showLimitWarning && (
         <Message
-          type="warning"
+          type="info"
           text={
             <FormattedMessage
               id="connectorBuilder.streamTestLimitReached"

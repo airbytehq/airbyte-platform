@@ -240,13 +240,8 @@ object AirbyteCatalogHelper {
     airbyteStream: AirbyteStream,
     streamConfiguration: StreamConfiguration,
   ): List<List<String>>? {
-    // if no source defined primary key
-    return if (airbyteStream.sourceDefinedPrimaryKey == null || airbyteStream.sourceDefinedPrimaryKey!!.isEmpty()) {
+    return (airbyteStream.sourceDefinedPrimaryKey ?: emptyList()).ifEmpty {
       streamConfiguration.primaryKey
-    } else if (streamConfiguration.primaryKey == null || streamConfiguration.primaryKey.isEmpty()) {
-      airbyteStream.sourceDefinedPrimaryKey
-    } else {
-      listOf()
     }
   }
 
@@ -325,26 +320,33 @@ object AirbyteCatalogHelper {
     primaryKey: List<List<String>>?,
     airbyteStream: AirbyteStream,
   ) {
-    // if no source defined primary key
-    if (airbyteStream.sourceDefinedPrimaryKey == null || airbyteStream.sourceDefinedPrimaryKey!!.isEmpty()) {
-      if (!primaryKey.isNullOrEmpty()) {
-        // validate primary key
+    // Validate that if a source defined primary key exists, that's the one we use.
+    // Currently, UI only supports this and there's likely assumptions baked into the platform that mean this needs to be true.
+    val sourceDefinedPrimaryKeyExists = !airbyteStream.sourceDefinedPrimaryKey.isNullOrEmpty()
+    val configuredPrimaryKeyExists = !primaryKey.isNullOrEmpty()
 
-        val validPrimaryKey: List<List<String>> = getStreamFields(airbyteStream.jsonSchema!!)
-
-        // todo maybe check that they don't provide the same primary key twice?
-        for (singlePrimaryKey in primaryKey) {
-          if (!validPrimaryKey.contains(singlePrimaryKey)) { // todo double check if the .contains() for list of strings works as intended
-            throw ConnectionConfigurationProblem.invalidPrimaryKey(airbyteStream.name, validPrimaryKey)
-          }
-        }
-      } else {
-        throw ConnectionConfigurationProblem.missingPrimaryKey(airbyteStream.name)
+    if (sourceDefinedPrimaryKeyExists && configuredPrimaryKeyExists) {
+      if (airbyteStream.sourceDefinedPrimaryKey != primaryKey) {
+        throw ConnectionConfigurationProblem.primaryKeyAlreadyDefined(airbyteStream.name, airbyteStream.sourceDefinedPrimaryKey)
       }
-    } else {
-      // source defined primary key exists
-      if (!primaryKey.isNullOrEmpty()) {
-        throw ConnectionConfigurationProblem.primaryKeyAlreadyDefined(airbyteStream.name)
+    }
+
+    // Ensure that we've passed at least some kind of primary key
+    val noPrimaryKey = !configuredPrimaryKeyExists && !sourceDefinedPrimaryKeyExists
+    if (noPrimaryKey) {
+      throw ConnectionConfigurationProblem.missingPrimaryKey(airbyteStream.name)
+    }
+
+    // Validate the actual key passed in
+    val validPrimaryKey: List<List<String>> = getStreamFields(airbyteStream.jsonSchema!!)
+
+    for (singlePrimaryKey in primaryKey!!) {
+      if (!validPrimaryKey.contains(singlePrimaryKey)) { // todo double check if the .contains() for list of strings works as intended
+        throw ConnectionConfigurationProblem.invalidPrimaryKey(airbyteStream.name, validPrimaryKey)
+      }
+
+      if (singlePrimaryKey.distinct() != singlePrimaryKey) {
+        throw ConnectionConfigurationProblem.duplicatePrimaryKey(airbyteStream.name, primaryKey)
       }
     }
   }

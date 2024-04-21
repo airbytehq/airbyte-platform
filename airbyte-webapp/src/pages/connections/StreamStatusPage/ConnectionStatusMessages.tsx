@@ -3,7 +3,6 @@ import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { Box } from "components/ui/Box";
 import { CopyButton } from "components/ui/CopyButton";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -270,18 +269,16 @@ export const ConnectionStatusMessages: React.FC = () => {
 
   if (errorMessagesToDisplay.length > 0) {
     return (
-      <Box p="lg">
-        <FlexContainer
-          direction="column"
-          data-error-count={typeCount.error}
-          data-warning-count={typeCount.warning}
-          data-notification-count={typeCount.info}
-        >
-          {errorMessagesToDisplay.map((message, index) => (
-            <Message key={index} className={styles.error} {...message} />
-          ))}
-        </FlexContainer>
-      </Box>
+      <FlexContainer
+        direction="column"
+        data-error-count={typeCount.error}
+        data-warning-count={typeCount.warning}
+        data-notification-count={typeCount.info}
+      >
+        {errorMessagesToDisplay.map((message, index) => (
+          <Message key={index} className={styles.error} {...message} />
+        ))}
+      </FlexContainer>
     );
   }
 

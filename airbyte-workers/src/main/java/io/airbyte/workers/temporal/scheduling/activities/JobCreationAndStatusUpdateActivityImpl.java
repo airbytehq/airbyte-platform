@@ -31,7 +31,6 @@ import io.airbyte.workers.storage.activities.OutputStorageClient;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.util.ArrayList;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -97,13 +96,6 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
 
     final var output = input.getStandardSyncOutput();
 
-    if (output != null && output.getOutputCatalog() != null && output.getCatalogUri() != null) {
-      catalogClient.validate(
-          output.getOutputCatalog(),
-          output.getCatalogUri(),
-          new ArrayList<>());
-    }
-
     try {
       final var request = new JobSuccessWithAttemptNumberRequest()
           .jobId(input.getJobId())
@@ -142,13 +134,6 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
     final var output = input.getStandardSyncOutput();
-
-    if (output != null && output.getOutputCatalog() != null && output.getCatalogUri() != null) {
-      catalogClient.validate(
-          output.getOutputCatalog(),
-          output.getCatalogUri(),
-          new ArrayList<>());
-    }
 
     try {
       final var req = new FailAttemptRequest()

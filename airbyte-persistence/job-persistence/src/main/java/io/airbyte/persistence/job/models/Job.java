@@ -22,7 +22,8 @@ import java.util.stream.Collectors;
  */
 public class Job {
 
-  public static final Set<ConfigType> REPLICATION_TYPES = EnumSet.of(ConfigType.SYNC, ConfigType.RESET_CONNECTION);
+  public static final Set<ConfigType> REPLICATION_TYPES = EnumSet.of(ConfigType.SYNC, ConfigType.RESET_CONNECTION, ConfigType.REFRESH);
+  public static final Set<ConfigType> SYNC_REPLICATION_TYPES = EnumSet.of(ConfigType.SYNC, ConfigType.REFRESH);
 
   private final long id;
   private final ConfigType configType;
@@ -184,19 +185,6 @@ public class Job {
         .stream()
         .sorted(Comparator.comparing(Attempt::getCreatedAtInSecond).reversed())
         .filter(a -> a.getStatus() == AttemptStatus.FAILED)
-        .findFirst();
-  }
-
-  /**
-   * Get the last attempt by created_at for the job that had an output.
-   *
-   * @return the last attempt. empty optional, if there have been no attempts with outputs.
-   */
-  public Optional<Attempt> getLastAttemptWithOutput() {
-    return getAttempts()
-        .stream()
-        .sorted(Comparator.comparing(Attempt::getCreatedAtInSecond).reversed())
-        .filter(a -> a.getOutput().isPresent() && a.getOutput().get().getSync() != null && a.getOutput().get().getSync().getState() != null)
         .findFirst();
   }
 

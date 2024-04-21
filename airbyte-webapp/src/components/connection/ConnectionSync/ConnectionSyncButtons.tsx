@@ -115,7 +115,13 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
           className={buttonClassName}
         >
           <FormattedMessage
-            id={resetStarting || jobResetRunning ? "connection.cancelReset" : "connection.cancelSync"}
+            id={
+              resetStarting || jobResetRunning
+                ? sayClearInsteadOfReset
+                  ? "connection.cancelDataClear"
+                  : "connection.cancelReset"
+                : "connection.cancelSync"
+            }
           />
         </Button>
       )}

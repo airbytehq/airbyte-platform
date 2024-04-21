@@ -22,6 +22,7 @@ interface RadioButtonTilesProps<T> {
   onSelectRadioButton: (value: T) => void;
   name: string;
   direction?: ComponentProps<typeof FlexContainer>["direction"];
+  light?: boolean;
 }
 
 export const RadioButtonTiles = <T extends string>({
@@ -30,6 +31,7 @@ export const RadioButtonTiles = <T extends string>({
   selectedValue,
   name,
   direction,
+  light,
 }: RadioButtonTilesProps<T>) => (
   <FlexContainer direction={direction}>
     {options.map(({ value, label, description, extra, disabled }) => (
@@ -47,6 +49,7 @@ export const RadioButtonTiles = <T extends string>({
         />
         <label
           className={classNames(styles.radioButtonTiles__toggle, {
+            [styles["radioButtonTiles__toggle--light"]]: light,
             [styles["radioButtonTiles__toggle--disabled"]]: disabled,
           })}
           htmlFor={`${name}-${value}`}

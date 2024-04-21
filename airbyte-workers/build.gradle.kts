@@ -109,6 +109,7 @@ dependencies {
   testImplementation(libs.temporal.testing)
   testImplementation(libs.json.path)
   testImplementation(libs.mockito.inline)
+  testImplementation(libs.mockk)
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers)
   testImplementation(libs.platform.testcontainers.postgresql)

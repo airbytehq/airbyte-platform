@@ -105,6 +105,13 @@ class GoogleSecretManagerPersistence(
       client.addSecretVersion(name, secretPayload)
     }
   }
+
+  override fun delete(coordinate: SecretCoordinate) {
+    googleSecretManagerServiceClient.createClient().use { client ->
+      val secretName = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
+      client.deleteSecret(secretName)
+    }
+  }
 }
 
 @Singleton

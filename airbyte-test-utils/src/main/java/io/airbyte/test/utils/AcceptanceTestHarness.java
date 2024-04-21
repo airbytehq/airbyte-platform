@@ -155,6 +155,7 @@ public class AcceptanceTestHarness {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AcceptanceTestHarness.class);
 
+  private static final UUID DEFAULT_ORGANIZATION_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
   private static final String DOCKER_COMPOSE_FILE_NAME = "docker-compose.yaml";
   // assume env file is one directory level up from airbyte-tests.
   private static final File ENV_FILE = Path.of(System.getProperty("user.dir")).getParent().resolve(".env").toFile();
@@ -1245,7 +1246,7 @@ public class AcceptanceTestHarness {
         .createWorkspaceIfNotExist(new WorkspaceCreateWithId()
             .id(workspaceId)
             .email("acceptance-tests@airbyte.io")
-            .name("Airbyte Acceptance Tests" + UUID.randomUUID())),
+            .name("Airbyte Acceptance Tests" + UUID.randomUUID()).organizationId(DEFAULT_ORGANIZATION_ID)),
         "create workspace", 10, FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 

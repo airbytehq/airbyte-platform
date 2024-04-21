@@ -49,6 +49,7 @@ export const links = {
   interpolationVariableDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
   interpolationMacroDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference#macros`,
   creditDescription: "https://airbyte.com/pricing#what-is-a-credit",
+  pricingPage: "https://airbyte.com/pricing",
   usingCustomConnectors: `${BASE_DOCS_LINK}/operator-guides/using-custom-connectors/`,
   gettingSupport: `${BASE_DOCS_LINK}/community/getting-support`,
   autoRechargeEnrollment: `${BASE_DOCS_LINK}/cloud/managing-airbyte-cloud/manage-credits#automatic-reload-of-credits-beta`,

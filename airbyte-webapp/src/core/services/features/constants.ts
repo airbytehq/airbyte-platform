@@ -22,6 +22,7 @@ export const defaultEnterpriseFeatures = [
 
 export const defaultCloudFeatures = [
   FeatureItem.AllowAutoDetectSchema,
+  FeatureItem.AllowInAppSupportChat,
   FeatureItem.AllowOAuthConnector,
   FeatureItem.AllowChangeDataGeographies,
   FeatureItem.AllowDBTCloudIntegration,

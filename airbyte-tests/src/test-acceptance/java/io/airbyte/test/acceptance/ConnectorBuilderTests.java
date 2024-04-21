@@ -4,6 +4,7 @@
 
 package io.airbyte.test.acceptance;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -171,7 +172,8 @@ public class ConnectorBuilderTests {
         .setBasePath("/api");
     apiClient = new AirbyteApiClient(underlyingApiClient);
     workspaceId = apiClient.getWorkspaceApi()
-        .createWorkspace(new WorkspaceCreate().email("acceptance-tests@airbyte.io").name("Airbyte Acceptance Tests" + UUID.randomUUID().toString()))
+        .createWorkspace(new WorkspaceCreate().email("acceptance-tests@airbyte.io").name("Airbyte Acceptance Tests" + UUID.randomUUID().toString())
+            .organizationId(DEFAULT_ORGANIZATION_ID))
         .getWorkspaceId();
     testHarness = new AcceptanceTestHarness(apiClient, null, workspaceId);
     testHarness.setup();

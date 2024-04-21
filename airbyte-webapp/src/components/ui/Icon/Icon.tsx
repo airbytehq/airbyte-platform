@@ -46,6 +46,7 @@ import EqualIcon from "./icons/equalIcon.svg?react";
 import ErrorFilledIcon from "./icons/errorFilledIcon.svg?react";
 import ErrorOutlineIcon from "./icons/errorOutlineIcon.svg?react";
 import ExpandIcon from "./icons/expandIcon.svg?react";
+import ExportIcon from "./icons/exportIcon.svg?react";
 import EyeIcon from "./icons/eyeIcon.svg?react";
 import EyeSlashIcon from "./icons/eyeSlashIcon.svg?react";
 import FileIcon from "./icons/fileIcon.svg?react";
@@ -193,6 +194,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   errorFilled: ErrorFilledIcon,
   errorOutline: ErrorOutlineIcon,
   expand: ExpandIcon,
+  export: ExportIcon,
   eye: EyeIcon,
   eyeSlash: EyeSlashIcon,
   file: FileIcon,

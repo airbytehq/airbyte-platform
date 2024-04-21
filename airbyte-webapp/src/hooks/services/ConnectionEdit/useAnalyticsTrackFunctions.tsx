@@ -1,11 +1,11 @@
+// eslint-disable-next-line check-file/filename-blocklist
 import { ConnectionStatus, WebBackendConnectionRead } from "core/api/types/AirbyteClient";
 import { Action, getFrequencyFromScheduleData, Namespace, useAnalyticsService } from "core/services/analytics";
 
-// TODO: reuse the same function from PR-11981
 export const useAnalyticsTrackFunctions = () => {
   const analyticsService = useAnalyticsService();
 
-  const trackConnectionUpdate = (updatedConnection: WebBackendConnectionRead) => {
+  const trackConnectionStatusUpdate = (updatedConnection: WebBackendConnectionRead) => {
     const trackableAction = updatedConnection.status === ConnectionStatus.active ? Action.REENABLE : Action.DISABLE;
 
     analyticsService.track(Namespace.CONNECTION, trackableAction, {
@@ -18,5 +18,5 @@ export const useAnalyticsTrackFunctions = () => {
     });
   };
 
-  return { trackConnectionUpdate };
+  return { trackConnectionStatusUpdate };
 };

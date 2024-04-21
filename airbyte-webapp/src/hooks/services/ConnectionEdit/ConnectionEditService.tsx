@@ -13,6 +13,7 @@ import {
 } from "core/api/types/AirbyteClient";
 import { useIntent } from "core/utils/rbac";
 
+import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 import { ConnectionFormServiceProvider } from "../ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "../Notification";
 
@@ -33,6 +34,7 @@ interface ConnectionEditHook {
   schemaRefreshing: boolean;
   schemaHasBeenRefreshed: boolean;
   updateConnection: (connectionUpdates: WebBackendConnectionUpdate) => Promise<void>;
+  updateConnectionStatus: (status: ConnectionStatus) => Promise<void>;
   refreshSchema: () => Promise<void>;
   discardRefreshedSchema: () => void;
 }
@@ -41,6 +43,7 @@ const getConnectionCatalog = (connection: WebBackendConnectionRead): ConnectionC
   pick(connection, ["syncCatalog", "catalogId"]);
 
 const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEditHook => {
+  const { trackConnectionStatusUpdate } = useAnalyticsTrackFunctions();
   const { formatMessage } = useIntl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const getConnectionQuery = useGetConnectionQuery();
@@ -58,6 +61,18 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
   }, [catalog]);
 
   const { mutateAsync: updateConnectionAction, isLoading: connectionUpdating } = useUpdateConnection();
+
+  const updateConnectionStatus = useCallback(
+    async (status: ConnectionStatus) => {
+      const updatedConnection = await updateConnectionAction({
+        connectionId,
+        status,
+      });
+      setConnection(updatedConnection);
+      trackConnectionStatusUpdate(updatedConnection);
+    },
+    [connectionId, updateConnectionAction, trackConnectionStatusUpdate]
+  );
 
   const updateConnection = useCallback(
     async (connectionUpdates: WebBackendConnectionUpdate) => {
@@ -146,6 +161,7 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
     schemaRefreshing,
     schemaHasBeenRefreshed,
     updateConnection,
+    updateConnectionStatus,
     refreshSchema,
     discardRefreshedSchema,
   };

@@ -200,14 +200,33 @@ export const useRefreshConnectionStreams = (connectionId: string) => {
   const queryClient = useQueryClient();
   const requestOptions = useRequestOptions();
   const setConnectionRunState = useSetConnectionRunState();
+  const platformSupportsRefresh = useExperiment("platform.activate-refreshes", false);
+  const { registerNotification } = useNotificationService();
+  const { formatMessage } = useIntl();
 
-  return useMutation(async (streams?: ConnectionStream[]) => {
-    await refreshConnectionStream({ connectionId, streams }, requestOptions);
-    setConnectionRunState(connectionId, true);
-    queryClient.setQueriesData<JobReadList>(jobsKeys.useListJobsForConnectionStatus(connectionId), (prevJobList) =>
-      prependArtificialJobToStatus({ status: JobStatus.running, configType: "refresh" }, prevJobList)
-    );
-  });
+  return useMutation(
+    async (streams?: ConnectionStream[]) => {
+      if (!platformSupportsRefresh) {
+        return;
+      }
+
+      await refreshConnectionStream({ connectionId, streams }, requestOptions);
+    },
+    {
+      onSuccess: () => {
+        setConnectionRunState(connectionId, true);
+        queryClient.setQueriesData<JobReadList>(jobsKeys.useListJobsForConnectionStatus(connectionId), (prevJobList) =>
+          prependArtificialJobToStatus({ status: JobStatus.running, configType: "refresh" }, prevJobList)
+        );
+      },
+      onError: () => {
+        registerNotification({
+          id: "connection.actions.error",
+          text: formatMessage({ id: "connection.actions.error" }),
+        });
+      },
+    }
+  );
 };
 
 export const useGetConnectionQuery = () => {

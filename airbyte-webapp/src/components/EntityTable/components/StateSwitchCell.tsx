@@ -6,8 +6,7 @@ import { Switch } from "components/ui/Switch";
 import { useCurrentWorkspace, useUpdateConnection } from "core/api";
 import { ConnectionId, ConnectionStatus, SchemaChange } from "core/api/types/AirbyteClient";
 import { useIntent } from "core/utils/rbac";
-
-import { useAnalyticsTrackFunctions } from "../useAnalyticTrackFunction";
+import { useAnalyticsTrackFunctions } from "hooks/services/ConnectionEdit/useAnalyticsTrackFunctions";
 
 interface StateSwitchCellProps {
   connectionId: ConnectionId;
@@ -16,7 +15,7 @@ interface StateSwitchCellProps {
 }
 
 export const StateSwitchCell: React.FC<StateSwitchCellProps> = ({ connectionId, enabled, schemaChange }) => {
-  const { trackConnectionUpdate } = useAnalyticsTrackFunctions();
+  const { trackConnectionStatusUpdate } = useAnalyticsTrackFunctions();
   const { workspaceId } = useCurrentWorkspace();
   const canEditConnection = useIntent("EditConnection", { workspaceId });
   const { mutateAsync: updateConnection, isLoading } = useUpdateConnection();
@@ -26,7 +25,7 @@ export const StateSwitchCell: React.FC<StateSwitchCellProps> = ({ connectionId, 
       connectionId,
       status: checked ? ConnectionStatus.active : ConnectionStatus.inactive,
     });
-    trackConnectionUpdate(updatedConnection);
+    trackConnectionStatusUpdate(updatedConnection);
   };
 
   const isDisabled = schemaChange === SchemaChange.breaking || !canEditConnection || isLoading;

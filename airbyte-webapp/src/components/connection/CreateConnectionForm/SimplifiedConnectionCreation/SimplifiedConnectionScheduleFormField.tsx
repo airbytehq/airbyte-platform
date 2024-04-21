@@ -126,7 +126,7 @@ const SimplifiedScheduleTypeFormControl: React.FC<{ disabled: boolean }> = ({ di
               </FlexContainer>
             }
           />
-          <InputContainer>
+          <InputContainer highlightAfterRedirect>
             <ListBox<ConnectionScheduleType>
               isDisabled={disabled}
               id={controlId}

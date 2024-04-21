@@ -19,4 +19,8 @@ class NoOpSecretPersistence : SecretPersistence {
   ) {
     return
   }
+
+  override fun delete(coordinate: SecretCoordinate) {
+    return
+  }
 }

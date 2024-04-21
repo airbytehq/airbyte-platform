@@ -52,7 +52,7 @@ open class ConnectionsController(
   private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val currentUserService: CurrentUserService,
 ) : PublicConnectionsApi {
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateConnection(connectionCreateRequest: ConnectionCreateRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
@@ -177,7 +177,7 @@ open class ConnectionsController(
   }
 
   @Path("/{connectionId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteConnection(connectionId: UUID): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
@@ -210,7 +210,7 @@ open class ConnectionsController(
   }
 
   @Path("/{connectionId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetConnection(connectionId: UUID): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermissions(
@@ -237,7 +237,7 @@ open class ConnectionsController(
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun listConnections(
     workspaceIds: List<UUID>?,
     includeDeleted: Boolean?,
@@ -275,7 +275,7 @@ open class ConnectionsController(
 
   @Patch
   @Path("/{connectionId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun patchConnection(
     @PathParam(value = "connectionId") connectionId: UUID,
     @Valid @Body @NotNull connectionPatchRequest:

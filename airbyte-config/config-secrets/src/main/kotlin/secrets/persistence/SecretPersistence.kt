@@ -46,4 +46,6 @@ interface SecretPersistence : ReadOnlySecretPersistence {
     // Default implementation does not support expiry.
     write(coordinate, payload)
   }
+
+  fun delete(coordinate: SecretCoordinate)
 }

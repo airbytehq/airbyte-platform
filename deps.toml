@@ -37,7 +37,7 @@ mockito-kotlin = "5.2.1"
 netty-tcnative = "2.0.62.Final"
 okhttp3 = "4.12.0"
 platform-testcontainers = "1.19.4"
-postgresql = "42.5.4"
+postgresql = "42.7.3"
 reactor = "3.6.1"
 segment = "2.1.1"
 sentry = "6.14.0"
@@ -48,8 +48,8 @@ v3-swagger = "2.2.19"
 
 [libraries]
 airbyte-protocol = { module = "io.airbyte.airbyte-protocol:protocol-models", version.ref = "airbyte-protocol" }
-apache-ant = { module = "org.apache.ant:ant", version = "1.10.10" }
-apache-commons = { module = "org.apache.commons:commons-compress", version = "1.20" }
+apache-ant = { module = "org.apache.ant:ant", version = "1.10.14" }
+apache-commons = { module = "org.apache.commons:commons-compress", version = "1.26.1" }
 apache-commons-cli = { module = "commons-cli:commons-cli", version = "1.4" }
 apache-commons-collections = { module = "org.apache.commons:commons-collections4", version = "4.4" }
 apache-commons-lang = { module = "org.apache.commons:commons-lang3", version = "3.11" }
@@ -57,10 +57,10 @@ apache-commons-text = { module = "org.apache.commons:commons-text", version = "1
 apache-cxf-core = { module = "org.apache.cxf:cxf-core", version = "3.4.2" }
 # Following is a custom JAR that was uploaded in Airbyte's mycloud repo. Edit this once the PR https://github.com/bluedenim/log4j-s3-search/pull/149
 # is merged and released
-appender-log4j2 = { module = "com.therealvan:appender-log4j2", version = "5.2.2-SNAPSHOT" }
+appender-log4j2 = { module = "com.therealvan:appender-log4j2", version = "5.2.3-SNAPSHOT" }
 assertj-core = { module = "org.assertj:assertj-core", version = "3.21.0" }
-aws-java-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version = "1.12.6" }
-aws-java-sdk-sts = {module = "com.amazonaws:aws-java-sdk-sts", version = "1.12.6"}
+aws-java-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version = "1.12.701" }
+aws-java-sdk-sts = {module = "com.amazonaws:aws-java-sdk-sts", version = "1.12.701"}
 aws-secretsmanager-caching-java = { module = "com.amazonaws.secretsmanager:aws-secretsmanager-caching-java", version = "1.0.2" }
 bouncycastle-bcprov = { module = "org.bouncycastle:bcprov-jdk15on", version.ref = "bouncycastle" }
 bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk15on", version.ref = "bouncycastle" }
@@ -115,7 +115,7 @@ jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
 jooq = { module = "org.jooq:jooq", version.ref = "jooq" }
 jooq-codegen = { module = "org.jooq:jooq-codegen", version.ref = "jooq" }
 jooq-meta = { module = "org.jooq:jooq-meta", version.ref = "jooq" }
-json-path = { module = "com.jayway.jsonpath:json-path", version = "2.7.0" }
+json-path = { module = "com.jayway.jsonpath:json-path", version = "2.9.0" }
 json-assert = { module = "org.skyscreamer:jsonassert", version = "1.5.1" }
 jsoup = { module = "org.jsoup:jsoup", version = "1.17.2" }
 jul-to-slf4j = { module = "org.slf4j:jul-to-slf4j", version.ref = "slf4j" }
@@ -260,6 +260,6 @@ temporal-telemetry = ["temporal-opentracing"]
 
 [plugins]
 ksp = { id ="com.google.devtools.ksp", version = "1.9.22-1.0.17"}
-node-gradle = { id = "com.github.node-gradle.node", version = "3.4.0" }
+node-gradle = { id = "com.github.node-gradle.node", version = "7.0.1" }
 nu-studer-jooq = { id = "nu.studer.jooq", version = "9.0" }
 de-undercouch-download = { id = "de.undercouch.download", version = "5.5.0" }

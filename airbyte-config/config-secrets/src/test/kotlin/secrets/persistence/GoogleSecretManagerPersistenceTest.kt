@@ -18,7 +18,9 @@ import com.google.protobuf.ByteString
 import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.persistence.GoogleSecretManagerPersistence.Companion.replicationPolicy
 import io.grpc.Status
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions
@@ -163,5 +165,27 @@ class GoogleSecretManagerPersistenceTest {
     persistence.write(coordinate, secret)
 
     verify { mockGoogleClient.addSecretVersion(any<SecretName>(), any<SecretPayload>()) }
+  }
+
+  @Test
+  fun `test deleting a secret via the client deletes the secret`() {
+    val secret = "secret value"
+    val projectId = "test"
+    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val mockClient: GoogleSecretManagerServiceClient = mockk()
+    val mockGoogleClient: SecretManagerServiceClient = mockk()
+    val mockResponse: AccessSecretVersionResponse = mockk()
+    val mockPayload: SecretPayload = mockk()
+    val persistence = GoogleSecretManagerPersistence(projectId, mockClient)
+
+    every { mockPayload.data } returns ByteString.copyFromUtf8(secret)
+    every { mockResponse.payload } returns mockPayload
+    every { mockClient.createClient() } returns mockGoogleClient
+    every { mockGoogleClient.deleteSecret(ofType(SecretName::class)) } just Runs
+    every { mockGoogleClient.close() } returns Unit
+
+    persistence.delete(coordinate)
+
+    verify { mockGoogleClient.deleteSecret(any<SecretName>()) }
   }
 }

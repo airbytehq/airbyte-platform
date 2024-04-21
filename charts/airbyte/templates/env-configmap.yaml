@@ -92,7 +92,9 @@ data:
   STORAGE_BUCKET_LOG: {{ ((((.Values.global).storage).bucket).log) | default "airbyte-storage" | quote }}
   STORAGE_BUCKET_STATE: {{ ((((.Values.global).storage).bucket).state) | default "airbyte-storage" | quote }}
   STORAGE_BUCKET_WORKLOAD_OUTPUT: {{ ((((.Values.global).storage).bucket).workloadOutput) | default "airbyte-storage" | quote }}
-  AWS_DEFAULT_REGION: {{ ((((.Values.global).storage).s3).region) | default ""  | quote }}
+  {{- with .Values.global.storage.s3 }}
+  AWS_DEFAULT_REGION: {{ .region | default ""  | quote }}
+  {{- end}}
   MINIO_ENDPOINT: {{ include "airbyte.storage.minio.endpoint" . | quote }}
   S3_PATH_STYLE_ACCESS: {{ include "airbyte.s3PathStyleAccess" . | quote }}
   # Storage end
