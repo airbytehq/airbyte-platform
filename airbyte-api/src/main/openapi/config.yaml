@@ -10810,6 +10810,7 @@ components:
       type: object
       required:
         - edition
+        - version
         - webappUrl
         - initialSetupComplete
         - defaultUserId
@@ -10822,6 +10823,9 @@ components:
           enum:
             - community
             - pro
+        version:
+          description: release version for the corresponding edition
+          type: string
         licenseType:
           type: string
           enum:
