@@ -23,7 +23,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class WebClientCreatorTest {
+class WebClientConfiguratorTest {
 
   private static final String WEBAPP_URL = "http://localhost:8000";
   private static final String WEB_CLIENT_ID = "airbyte-okta";
@@ -36,12 +36,12 @@ class WebClientCreatorTest {
   @Mock
   private Response response;
   @InjectMocks
-  private WebClientCreator webClientCreator;
+  private WebClientConfigurator webClientConfigurator;
 
   @BeforeEach
   void setUp() {
     when(keycloakConfiguration.getWebClientId()).thenReturn(WEB_CLIENT_ID);
-    webClientCreator = new WebClientCreator(WEBAPP_URL, keycloakConfiguration);
+    webClientConfigurator = new WebClientConfigurator(WEBAPP_URL, keycloakConfiguration);
   }
 
   @Test
@@ -50,7 +50,7 @@ class WebClientCreatorTest {
     when(clientsResource.create(any(ClientRepresentation.class))).thenReturn(response);
     when(response.getStatus()).thenReturn(201);
 
-    webClientCreator.createWebClient(realmResource);
+    webClientConfigurator.configureWebClient(realmResource);
 
     verify(clientsResource).create(any(ClientRepresentation.class));
   }
@@ -59,12 +59,11 @@ class WebClientCreatorTest {
   void testCreateClientRepresentation() {
     when(keycloakConfiguration.getWebClientId()).thenReturn(WEB_CLIENT_ID);
 
-    final ClientRepresentation clientRepresentation = webClientCreator.createClientRepresentation();
+    final ClientRepresentation clientRepresentation = webClientConfigurator.getClientRepresentationFromConfig();
 
     assertEquals(WEB_CLIENT_ID, clientRepresentation.getClientId());
     assertTrue(clientRepresentation.isPublicClient());
     assertTrue(clientRepresentation.isDirectAccessGrantsEnabled());
-    assertEquals(WEBAPP_URL, clientRepresentation.getBaseUrl());
     assertEquals("180", clientRepresentation.getAttributes().get("access.token.lifespan"));
   }
 

@@ -56,7 +56,7 @@ class KeycloakSetupTest {
 
     verify(httpClient).toBlocking();
     verify(blockingHttpClient).exchange(any(HttpRequest.class), eq(String.class));
-    verify(keycloakServer).createAirbyteRealm();
+    verify(keycloakServer).setupAirbyteRealm();
     verify(keycloakServer).closeKeycloakAdminClient();
     verify(configDbResetHelper, never()).deleteConfigDbUsers();
   }
@@ -70,7 +70,7 @@ class KeycloakSetupTest {
 
     verify(keycloakServer).getKeycloakServerUrl();
     verify(httpClient.toBlocking()).exchange(any(HttpRequest.class), eq(String.class));
-    verify(keycloakServer, never()).createAirbyteRealm(); // Should not be called if exception is thrown
+    verify(keycloakServer, never()).setupAirbyteRealm(); // Should not be called if exception is thrown
     verify(keycloakServer).closeKeycloakAdminClient();
   }
 
@@ -80,8 +80,8 @@ class KeycloakSetupTest {
 
     keycloakSetup.run();
 
-    verify(keycloakServer, times(0)).createAirbyteRealm();
-    verify(keycloakServer, times(1)).recreateAirbyteRealm();
+    verify(keycloakServer, times(0)).setupAirbyteRealm();
+    verify(keycloakServer, times(1)).destroyAndRecreateAirbyteRealm();
     verify(configDbResetHelper, times(1)).deleteConfigDbUsers();
   }
 

@@ -11,6 +11,7 @@ import jakarta.ws.rs.core.Response;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.ClientRepresentation;
@@ -21,7 +22,7 @@ import org.keycloak.representations.idm.ClientRepresentation;
  */
 @Singleton
 @Slf4j
-public class WebClientCreator {
+public class WebClientConfigurator {
 
   public static final int HTTP_STATUS_CREATED = 201;
   private static final String LOCAL_OSS_DEV_URI = "https://localhost:3000/*";
@@ -30,42 +31,57 @@ public class WebClientCreator {
   private final AirbyteKeycloakConfiguration keycloakConfiguration;
   private final String webappUrl;
 
-  public WebClientCreator(@Value("${airbyte.webapp-url}") final String webappUrl,
-                          final AirbyteKeycloakConfiguration keycloakConfiguration) {
+  public WebClientConfigurator(@Value("${airbyte.webapp-url}") final String webappUrl,
+                               final AirbyteKeycloakConfiguration keycloakConfiguration) {
     this.webappUrl = webappUrl;
     this.keycloakConfiguration = keycloakConfiguration;
   }
 
-  public void createWebClient(final RealmResource keycloakRealm) {
-    final ClientRepresentation client = createClientRepresentation();
-    final Response clientResponse = keycloakRealm.clients().create(client);
-    handleClientCreationResponse(clientResponse, client.getClientId());
+  public void configureWebClient(final RealmResource keycloakRealm) {
+    final ClientRepresentation clientConfig = getClientRepresentationFromConfig();
+
+    final Optional<ClientRepresentation> existingClient = keycloakRealm.clients().findByClientId(clientConfig.getClientId())
+        .stream()
+        .findFirst();
+
+    if (existingClient.isPresent()) {
+      keycloakRealm.clients().get(existingClient.get().getId()).update(applyConfigToExistingClientRepresentation(existingClient.get()));
+      log.info(clientConfig.getClientId() + " client updated successfully.");
+    } else {
+      try (final Response response = keycloakRealm.clients().create(clientConfig)) {
+        if (response.getStatus() == HTTP_STATUS_CREATED) {
+          log.info(clientConfig.getClientId() + " client created successfully. Status: " + response.getStatusInfo());
+        } else {
+          final String errorMessage = String.format("Failed to create %s client.\nReason: %s\nResponse: %s", clientConfig.getClientId(),
+              response.getStatusInfo().getReasonPhrase(), response.readEntity(String.class));
+          log.error(errorMessage);
+          throw new RuntimeException(errorMessage);
+        }
+      }
+    }
   }
 
-  ClientRepresentation createClientRepresentation() {
+  ClientRepresentation getClientRepresentationFromConfig() {
     final ClientRepresentation client = new ClientRepresentation();
     client.setClientId(keycloakConfiguration.getWebClientId());
     client.setPublicClient(true); // Client authentication disabled
     client.setDirectAccessGrantsEnabled(true); // Standard flow authentication
     client.setRedirectUris(getWebClientRedirectUris(webappUrl));
-    client.setBaseUrl(webappUrl);
     client.setAttributes(getClientAttributes());
 
     return client;
+  }
+
+  private ClientRepresentation applyConfigToExistingClientRepresentation(final ClientRepresentation clientRepresentation) {
+    // only change the attributes that come from external configuration
+    clientRepresentation.setRedirectUris(getWebClientRedirectUris(webappUrl));
+    return clientRepresentation;
   }
 
   private Map<String, String> getClientAttributes() {
     final Map<String, String> attributeMap = new HashMap<>();
     attributeMap.put("access.token.lifespan", "180");
     return attributeMap;
-  }
-
-  private void handleClientCreationResponse(final Response clientResponse, final String webClientId) {
-    if (clientResponse.getStatus() == HTTP_STATUS_CREATED) {
-      log.info(webClientId + " client created successfully. Status: " + clientResponse.getStatusInfo());
-    } else {
-      log.info("Failed to create " + webClientId + " client. Status: " + clientResponse.getStatusInfo().getReasonPhrase());
-    }
   }
 
   private List<String> getWebClientRedirectUris(final String webappUrl) {
