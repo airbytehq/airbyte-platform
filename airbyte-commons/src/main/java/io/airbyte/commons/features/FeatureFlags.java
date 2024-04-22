@@ -16,8 +16,6 @@ public interface FeatureFlags {
 
   boolean logConnectorMessages();
 
-  boolean needStateValidation();
-
   /**
    * Return true if field selection should be applied. See also fieldSelectionWorkspaces.
    *

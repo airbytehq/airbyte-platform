@@ -17,8 +17,6 @@ object LogConnectorMessages : EnvVar(envVar = "LOG_CONNECTOR_MESSAGES")
 
 object AutoDetectSchema : EnvVar(envVar = "AUTO_DETECT_SCHEMA")
 
-object NeedStateValidation : EnvVar(envVar = "NEED_STATE_VALIDATION")
-
 object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValidationLimit", default = false)
 
 object NormalizationInDestination : Temporary<String>(key = "connectors.normalizationInDestination", default = "")
@@ -76,8 +74,6 @@ object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.
 object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-worker-impl", default = "buffered")
 
 object UseResourceRequirementsVariant : Permanent<String>(key = "platform.resource-requirements-variant", default = "default")
-
-object UseParallelStreamStatsTracker : Temporary<Boolean>(key = "platform.use-parallel-stream-stats-tracker", default = false)
 
 object SuccessiveCompleteFailureLimit : Temporary<Int>(key = "complete-failures.max-successive", default = -1)
 
