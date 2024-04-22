@@ -344,7 +344,7 @@ pod-sweeper:
     # -- The pull policy for the pod sweeper image
     pullPolicy: IfNotPresent
     # -- The pod sweeper image tag to use
-    tag: 1.28.4
+    tag: 1.28.9
 
   # -- Add extra annotations to the podSweeper pod
   podAnnotations: {}
