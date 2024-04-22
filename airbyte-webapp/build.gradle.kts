@@ -10,6 +10,21 @@ plugins {
     alias(libs.plugins.node.gradle)
 }
 
+/**
+ * Utility function to parse a .gitignore file into a list of ignore pattern entries
+ */
+fun parseIgnoreFile(f: File): List<String> {
+    val ignores = mutableListOf<String>()
+    f.forEachLine { line ->
+        //ignore comments and empty lines
+        if (!line.startsWith('#') && line.isNotEmpty()) {
+            ignores.add(line)
+        }
+    }
+    return ignores
+}
+
+
 // Use the node version that's defined in the .nvmrc file
 val nodeVersion = file("${projectDir}/.nvmrc").readText().trim()
 
@@ -18,17 +33,15 @@ val parsedJson = JsonSlurper().parse(FileReader("${projectDir}/package.json")) a
 val engines = parsedJson["engines"] as? Map<*, *>  // Safely cast to Map if 'engines' exists
 val pnpmVer = engines?.get("pnpm")?.toString()?.trim()  // Extract 'pnpm' as String and trim
 
-/*
-This array should contain a path to all configs that are common to most build tasks and
-might affect them (i.e. if any of those files change we want to rerun most tasks)
-*/
-val commonConfigs = listOf(
-    ".env",
-    ".env.production",
-    "package.json",
-    "pnpm-lock.yaml",
-    "tsconfig.json",
-    ".prettierrc.js"
+/**
+ * A list of all files outside the webapp folder, that the webapp build depends on, i.e.
+ * if those change we can't reuse a cached build.
+ */
+val outsideWebappDependencies = listOf(
+    "../airbyte-api/src/main/openapi/config.yaml",
+    "../airbyte-api/src/main/openapi/cloud-config.yaml",
+    "../airbyte-connector-builder-server/src/main/openapi/openapi.yaml",
+    "../airbyte-connector-builder-resources/CDK_VERSION",
 )
 
 configure<NodeExtension> {
@@ -51,45 +64,35 @@ val nodeModules = fileTree("node_modules") {
     exclude(".cache")
 }
 
-/*
-fileTree to watch the public dir but exclude the auto generated buildInfo.json. It's content is anyway a
-content hash, depending on the other files.
-*/
-val publicDir = fileTree("public") {
-    exclude("buildInfo.json")
+/**
+ * All files inside the webapp folder that aren't gitignored
+ */
+val allFiles = fileTree(".") {
+    exclude(parseIgnoreFile(file("../.gitignore")))
+    exclude(parseIgnoreFile(file(".gitignore")))
+    exclude(parseIgnoreFile(file("./src/core/api/generated/.gitignore")))
+    exclude(parseIgnoreFile(file("./src/core/api/types/.gitignore")))
 }
 
 tasks.register<PnpmTask>("pnpmBuild") {
     dependsOn(tasks.named("pnpmInstall"))
 
-
     environment.put("VERSION", rootProject.ext.get("version") as String)
 
     args = listOf("build")
 
+    // The WEBAPP_BUILD_CLOUD_ENV environment variable is an input for this task, since it changes for which env we're building the webapp
     inputs.property("cloudEnv", System.getenv("WEBAPP_BUILD_CLOUD_ENV") ?: "")
-    inputs.files(commonConfigs)
-    inputs.files(nodeModules)
-    inputs.files(publicDir)
-    inputs.file(".eslintrc.js")
-    inputs.file(".stylelintrc")
-    inputs.file("orval.config.ts")
-    inputs.file("vite.config.mts")
-    inputs.file("index.html")
-    inputs.dir("scripts")
-    inputs.dir("src")
+    inputs.files(allFiles, outsideWebappDependencies)
 
     outputs.dir("build/app")
 }
 
 tasks.register<PnpmTask>("test") {
-    dependsOn(tasks.named("assemble"))
-
+    dependsOn(tasks.named("pnpmInstall"))
+    
     args = listOf("run", "test:ci")
-    inputs.files(commonConfigs)
-    inputs.file("jest.config.ts")
-    inputs.file("babel.config.js")
-    inputs.dir("src")
+    inputs.files(allFiles, outsideWebappDependencies)
 
     /*
     The test has no outputs, thus we always treat the outputs up to date
@@ -151,17 +154,12 @@ tasks.register<PnpmTask>("cloudE2eTest") {
 //    }
 //}
 
-
 tasks.register<PnpmTask>("buildStorybook") {
     dependsOn(tasks.named("pnpmInstall"))
 
     args = listOf("run", "build:storybook")
 
-    inputs.files(commonConfigs)
-    inputs.files(nodeModules)
-    inputs.files(publicDir)
-    inputs.dir(".storybook")
-    inputs.dir("src")
+    inputs.files(allFiles, outsideWebappDependencies)
 
     outputs.dir("build/storybook")
 
