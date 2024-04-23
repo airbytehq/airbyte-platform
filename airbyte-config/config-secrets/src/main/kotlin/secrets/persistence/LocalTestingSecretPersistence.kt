@@ -60,4 +60,8 @@ open class LocalTestingSecretPersistence(
       coordinate.fullCoordinate,
     ).execute()
   }
+
+  override fun delete(coordinate: SecretCoordinate) {
+    return
+  }
 }

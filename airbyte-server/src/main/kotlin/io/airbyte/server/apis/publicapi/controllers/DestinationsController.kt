@@ -6,6 +6,9 @@ package io.airbyte.server.apis.publicapi.controllers
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
+import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.server.errors.problems.UnprocessableEntityProblem
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.public_api.generated.PublicDestinationsApi
@@ -13,8 +16,6 @@ import io.airbyte.public_api.model.generated.DestinationCreateRequest
 import io.airbyte.public_api.model.generated.DestinationPatchRequest
 import io.airbyte.public_api.model.generated.DestinationPutRequest
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
-import io.airbyte.server.apis.publicapi.authorization.AirbyteApiAuthorizationHelper
-import io.airbyte.server.apis.publicapi.authorization.Scope
 import io.airbyte.server.apis.publicapi.constants.DELETE
 import io.airbyte.server.apis.publicapi.constants.DESTINATIONS_PATH
 import io.airbyte.server.apis.publicapi.constants.DESTINATIONS_WITH_ID_PATH
@@ -26,7 +27,7 @@ import io.airbyte.server.apis.publicapi.constants.PUT
 import io.airbyte.server.apis.publicapi.helpers.getActorDefinitionIdFromActorName
 import io.airbyte.server.apis.publicapi.helpers.removeDestinationType
 import io.airbyte.server.apis.publicapi.mappers.DESTINATION_NAME_TO_DEFINITION_ID
-import io.airbyte.server.apis.publicapi.problems.UnprocessableEntityProblem
+import io.airbyte.server.apis.publicapi.services.DestinationService
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Patch
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -34,7 +35,6 @@ import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.core.Response
-import services.DestinationService
 import java.util.UUID
 
 @Controller(DESTINATIONS_PATH)
@@ -42,13 +42,13 @@ import java.util.UUID
 open class DestinationsController(
   private val destinationService: DestinationService,
   private val trackingHelper: TrackingHelper,
-  private val airbyteApiAuthorizationHelper: AirbyteApiAuthorizationHelper,
+  private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val currentUserService: CurrentUserService,
 ) : PublicDestinationsApi {
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateDestination(destinationCreateRequest: DestinationCreateRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(destinationCreateRequest.workspaceId.toString()),
       Scope.WORKSPACE,
       userId,
@@ -99,10 +99,10 @@ open class DestinationsController(
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteDestination(destinationId: UUID): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(destinationId.toString()),
       Scope.DESTINATION,
       userId,
@@ -131,10 +131,10 @@ open class DestinationsController(
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetDestination(destinationId: UUID): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(destinationId.toString()),
       Scope.DESTINATION,
       userId,
@@ -163,7 +163,7 @@ open class DestinationsController(
       .build()
   }
 
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun listDestinations(
     workspaceIds: MutableList<UUID>?,
     includeDeleted: Boolean?,
@@ -171,7 +171,7 @@ open class DestinationsController(
     offset: Int?,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       workspaceIds?.map { it.toString() } ?: emptyList(),
       Scope.WORKSPACES,
       userId,
@@ -201,13 +201,13 @@ open class DestinationsController(
 
   @Path("/{destinationId}")
   @Patch
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun patchDestination(
     destinationId: UUID,
     destinationPatchRequest: DestinationPatchRequest,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(destinationId.toString()),
       Scope.DESTINATION,
       userId,
@@ -241,13 +241,13 @@ open class DestinationsController(
   }
 
   @Path("/{destinationId}")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun putDestination(
     destinationId: UUID,
     destinationPutRequest: DestinationPutRequest,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+    apiAuthorizationHelper.checkWorkspacePermissions(
       listOf(destinationId.toString()),
       Scope.DESTINATION,
       userId,

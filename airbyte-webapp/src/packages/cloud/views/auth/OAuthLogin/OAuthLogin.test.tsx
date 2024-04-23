@@ -8,8 +8,14 @@ import { OAuthLogin } from "./OAuthLogin";
 
 const mockLoginWithOAuth = jest.fn();
 
+const mockRedirectToSignInWithGithub = jest.fn().mockReturnValue(Promise.resolve());
+const mockRedirectToSignInWithGoogle = jest.fn().mockReturnValue(Promise.resolve());
+
 jest.mock("packages/cloud/services/auth/KeycloakService", () => ({
-  useKeycloakService: () => ({ redirectToSignInWithGithub: jest.fn(), redirectToSignInWithGoogle: jest.fn() }),
+  useKeycloakService: () => ({
+    redirectToSignInWithGithub: mockRedirectToSignInWithGithub,
+    redirectToSignInWithGoogle: mockRedirectToSignInWithGoogle,
+  }),
 }));
 
 describe("OAuthLogin", () => {
@@ -18,14 +24,18 @@ describe("OAuthLogin", () => {
   });
 
   it("should call auth service for Google", async () => {
-    const { getByTestId } = render(<OAuthLogin loginWithOAuth={mockLoginWithOAuth} />, { wrapper: TestWrapper });
+    const { getByTestId } = render(<OAuthLogin loginWithOAuth={mockLoginWithOAuth} type="login" />, {
+      wrapper: TestWrapper,
+    });
     await userEvents.click(getByTestId("googleOauthLogin"));
-    expect(mockLoginWithOAuth).toHaveBeenCalledWith("google");
+    expect(mockRedirectToSignInWithGoogle).toHaveBeenCalled();
   });
 
   it("should call auth service for GitHub", async () => {
-    const { getByTestId } = render(<OAuthLogin loginWithOAuth={mockLoginWithOAuth} />, { wrapper: TestWrapper });
+    const { getByTestId } = render(<OAuthLogin loginWithOAuth={mockLoginWithOAuth} type="login" />, {
+      wrapper: TestWrapper,
+    });
     await userEvents.click(getByTestId("githubOauthLogin"));
-    expect(mockLoginWithOAuth).toHaveBeenCalledWith("github");
+    expect(mockRedirectToSignInWithGithub).toHaveBeenCalled();
   });
 });

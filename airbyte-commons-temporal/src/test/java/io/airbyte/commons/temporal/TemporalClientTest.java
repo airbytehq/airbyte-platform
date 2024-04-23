@@ -426,8 +426,9 @@ public class TemporalClientTest {
     @DisplayName("Test startNewManualSync repairs the workflow if it is in a bad state")
     void testStartNewManualSyncRepairsBadWorkflowState() {
       final ConnectionManagerWorkflow mTerminatedConnectionManagerWorkflow = mock(ConnectionManagerWorkflow.class);
-      when(mTerminatedConnectionManagerWorkflow.getState())
-          .thenThrow(new IllegalStateException(EXCEPTION_MESSAGE));
+
+      // This simulates a workflow that is in a bad state.
+      when(mTerminatedConnectionManagerWorkflow.getState()).thenThrow(new IllegalStateException(EXCEPTION_MESSAGE));
       when(mTerminatedConnectionManagerWorkflow.getJobInformation()).thenReturn(new JobInformation(JOB_ID, ATTEMPT_ID));
 
       final ConnectionManagerWorkflow mNewConnectionManagerWorkflow = mock(ConnectionManagerWorkflow.class);
@@ -631,8 +632,9 @@ public class TemporalClientTest {
     @DisplayName("Test resetConnection repairs the workflow if it is in a bad state")
     void testResetConnectionRepairsBadWorkflowState() throws IOException {
       final ConnectionManagerWorkflow mTerminatedConnectionManagerWorkflow = mock(ConnectionManagerWorkflow.class);
-      when(mTerminatedConnectionManagerWorkflow.getState())
-          .thenThrow(new IllegalStateException(EXCEPTION_MESSAGE));
+
+      // This simulates a workflow that is in a bad state.
+      when(mTerminatedConnectionManagerWorkflow.getState()).thenThrow(new IllegalStateException(EXCEPTION_MESSAGE));
       when(mTerminatedConnectionManagerWorkflow.getJobInformation()).thenReturn(new JobInformation(JOB_ID, ATTEMPT_ID));
 
       final ConnectionManagerWorkflow mNewConnectionManagerWorkflow = mock(ConnectionManagerWorkflow.class);

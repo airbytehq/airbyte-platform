@@ -122,6 +122,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.CRON, // Actually `cron` or `bootloader` based on which metric client calls the code
       "connector_registry_definition_processed",
       "increments when a connector registry definition is processed by the ApplyDefinitionsHelper"),
+  CONNECTOR_BREAKING_CHANGE_PIN_SERVED(
+      MetricEmittingApps.SERVER,
+      "connector_breaking_change_pin_served",
+      "increments when a breaking change pin is served"),
   EST_NUM_METRICS_EMITTED_BY_REPORTER(
       MetricEmittingApps.METRICS_REPORTER,
       "est_num_metrics_emitted_by_reporter",
@@ -146,10 +150,6 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.WORKER,
       "json_string_length",
       "string length of a raw json string"),
-  RECORD_SIZE_ERROR(
-      MetricEmittingApps.WORKER,
-      "record_size_error",
-      "length of a raw record json string exceeding the limit"),
   KUBE_POD_PROCESS_CREATE_TIME_MILLISECS(
       MetricEmittingApps.WORKER,
       "kube_pod_process_create_time_millisecs",
@@ -408,17 +408,49 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "destination_deserialization_error",
       "When a sync failed with a deserialization error from the destination"),
 
+  HEARTBEAT_TERMINAL_SHUTDOWN(MetricEmittingApps.ORCHESTRATOR,
+      "heartbeat_terminal_shutdown",
+      "When the heartbeat receives a terminal response from the server, and we shut down the orchestrator"),
+
+  HEARTBEAT_CONNECTIVITY_FAILURE_SHUTDOWN(MetricEmittingApps.ORCHESTRATOR,
+      "heartbeat_connectivity_failure_shutdown",
+      "When the heartbeat cannot communicate with the server, and we shut down the orchestrator"),
+
   SIDECAR_CHECK(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
       "sidecar_check",
-      "Exit of the connetor sidecar"),
+      "Exit of the connector sidecar"),
 
   CATALOG_DISCOVERY(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
       "catalog_discover",
-      "Exit of the connetor sidecar"),
+      "Exit of the connector sidecar"),
 
   SPEC(MetricEmittingApps.SIDECAR_ORCHESTRATOR,
       "spec",
-      "Result of the spec operation");
+      "Result of the spec operation"),
+
+  ACTIVITY_PAYLOAD_READ_FROM_DOC_STORE(MetricEmittingApps.WORKER,
+      "activity_payload_read_from_doc_store",
+      "An activity payload was read from the doc store."),
+
+  ACTIVITY_PAYLOAD_WRITTEN_TO_DOC_STORE(MetricEmittingApps.WORKER,
+      "activity_payload_written_to_doc_store",
+      "An activity payload was written to the doc store."),
+
+  PAYLOAD_SIZE_EXCEEDED(MetricEmittingApps.WORKER,
+      "payload_size_exceeded",
+      "Detected payload size was over 4mb Temporal limit"),
+
+  PAYLOAD_FAILURE_WRITE(MetricEmittingApps.WORKER,
+      "payload_failure_write",
+      "Failure writing the activity payload to storage."),
+
+  PAYLOAD_FAILURE_READ(MetricEmittingApps.WORKER,
+      "payload_failure_read",
+      "Failure reading the activity payload from storage."),
+
+  PAYLOAD_VALIDATION_RESULT(MetricEmittingApps.WORKER,
+      "payload_validation_result",
+      "The result of the comparing the payload in object storage to the one passed from temporal.");
 
   private final MetricEmittingApp application;
   private final String metricName;

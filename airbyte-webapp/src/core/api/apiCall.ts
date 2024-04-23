@@ -1,8 +1,6 @@
 import { trackError } from "core/utils/datadog";
-import { shortUuid } from "core/utils/uuid";
 
-import { CommonRequestError } from "./errors/CommonRequestError";
-import { VersionError } from "./errors/VersionError";
+import { HttpError } from "./errors/HttpError";
 
 export interface ApiCallOptions {
   getAccessToken: () => Promise<string | null>;
@@ -16,7 +14,6 @@ export interface RequestOptions<DataType = unknown> {
   data?: DataType;
   headers?: HeadersInit;
   responseType?: "blob";
-  signal?: AbortSignal;
 }
 
 function getRequestBody<U>(data: U) {
@@ -31,10 +28,11 @@ function getRequestBody<U>(data: U) {
 }
 
 export const fetchApiCall = async <T, U = unknown>(
-  { url, method, params, data, headers, responseType, signal }: RequestOptions<U>,
+  request: RequestOptions<U>,
   options: ApiCallOptions,
   apiUrl: string
 ): Promise<typeof responseType extends "blob" ? Blob : T> => {
+  const { url, method, params, data, headers, responseType } = request;
   // Remove the `v1/` in the end of the apiUrl for now, during the transition period
   // to get rid of it from all environment variables.
   const requestUrl = `${apiUrl.replace(/\/v1\/?$/, "")}${url.startsWith("/") ? "" : "/"}${url}`;
@@ -57,14 +55,19 @@ export const fetchApiCall = async <T, U = unknown>(
     method,
     ...(data ? { body: getRequestBody(data) } : {}),
     headers: requestHeaders,
-    signal: signal ?? options.signal,
+    signal: options.signal,
   });
 
-  return parseResponse(response, requestUrl, responseType);
+  return parseResponse(response, request, requestUrl, responseType);
 };
 
 /** Parses response from server */
-async function parseResponse<T>(response: Response, requestUrl: string, responseType?: "blob"): Promise<T> {
+async function parseResponse<T>(
+  response: Response,
+  request: RequestOptions,
+  requestUrl: string,
+  responseType?: "blob"
+): Promise<T> {
   if (response.status === 204) {
     return {} as T;
   }
@@ -81,40 +84,18 @@ async function parseResponse<T>(response: Response, requestUrl: string, response
       : response.json();
   }
 
-  if (response.headers.get("content-type") === "application/json") {
-    const jsonError = await response.json();
-
-    if (jsonError?.error?.startsWith("Version mismatch between")) {
-      throw new VersionError(jsonError.error);
-    }
-
-    throw new CommonRequestError(response, jsonError);
-  }
-
-  let responseText: string | undefined;
-
-  // Try to load the response body as text, since it wasn't JSON
+  let responsePayload: unknown;
   try {
-    responseText = await response.text();
+    responsePayload =
+      response.headers.get("content-type") === "application/json" ? await response.json() : await response.text();
   } catch (e) {
-    responseText = "<cannot load response body>";
+    responsePayload = "<cannot load response body>";
   }
 
-  const requestId = shortUuid();
-
-  const error = new CommonRequestError(response, {
-    message: `${
-      response.status === 502 || response.status === 503 ? "Server temporarily unavailable" : "Unknown error"
-    } (http.${response.status}.${requestId})`,
-  });
-
-  trackError(error, {
-    httpStatus: response.status,
-    httpUrl: requestUrl,
-    httpBody: responseText,
-    requestId,
-  });
-  console.error(`${requestUrl}: ${responseText} (http.${response.status}.${requestId})`);
-
+  // Create a HttpError for the request/response. Replace the request url with the full url we called.
+  const error = new HttpError({ ...request, url: requestUrl }, response.status, responsePayload);
+  // Track HttpErrors here (instead of the error boundary), so we report all of them,
+  // even the ones that will handled by our application via e.g. toast notification.
+  trackError(error, { ...error });
   throw error;
 }

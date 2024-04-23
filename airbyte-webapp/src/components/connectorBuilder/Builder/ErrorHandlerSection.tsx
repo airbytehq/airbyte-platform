@@ -1,5 +1,6 @@
 import { FormattedMessage, useIntl } from "react-intl";
 
+import GroupControls from "components/GroupControls";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 
@@ -12,6 +13,8 @@ import { BuilderList } from "./BuilderList";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { getDescriptionByManifest, getOptionsByManifest } from "./manifestHelpers";
 import { ToggleGroupField } from "./ToggleGroupField";
+import { manifestErrorHandlerToBuilder } from "../convertManifestToBuilderForm";
+import { builderErrorHandlersToManifest } from "../types";
 
 type ErrorHandlerSectionProps =
   | {
@@ -41,6 +44,8 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
           type="number"
           path={buildPath("backoff_strategy.backoff_time_in_seconds")}
           manifestPath="ConstantBackoffStrategy.properties.backoff_time_in_seconds"
+          step={1}
+          min={0}
         />
       ),
     },
@@ -127,74 +132,76 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
         addButtonLabel={formatMessage({ id: "connectorBuilder.errorHandler.addButton" })}
       >
         {({ buildPath }) => (
-          <FlexContainer direction="column">
-            <ToggleGroupField<DefaultErrorHandlerBackoffStrategiesItem>
-              label={formatMessage({ id: "connectorBuilder.errorHandler.backoffStrategy.label" })}
-              tooltip={formatMessage({ id: "connectorBuilder.errorHandler.backoffStrategy.tooltip" })}
-              fieldPath={buildPath("backoff_strategy")}
-              initialValues={{
-                type: "ConstantBackoffStrategy",
-                backoff_time_in_seconds: 5,
-              }}
-            >
-              <BuilderOneOf<DefaultErrorHandlerBackoffStrategiesItem>
-                path={buildPath("backoff_strategy")}
-                label={formatMessage({ id: "connectorBuilder.errorHandler.backoffStrategy.strategy.label" })}
-                tooltip={formatMessage({ id: "connectorBuilder.errorHandler.backoffStrategy.strategy.tooltip" })}
-                manifestOptionPaths={[
-                  "ConstantBackoffStrategy",
-                  "ExponentialBackoffStrategy",
-                  "WaitTimeFromHeader",
-                  "WaitUntilTimeFromHeader",
-                ]}
-                options={getBackoffOptions(buildPath)}
-              />
-            </ToggleGroupField>
-            <ToggleGroupField<HttpResponseFilter>
-              label={formatMessage({ id: "connectorBuilder.errorHandler.responseFilter.label" })}
-              tooltip={formatMessage({ id: "connectorBuilder.errorHandler.responseFilter.tooltip" })}
-              fieldPath={buildPath("response_filter")}
-              initialValues={{
-                type: "HttpResponseFilter",
-                action: "IGNORE",
-              }}
-            >
-              <>
-                <BuilderField
-                  type="string"
-                  path={buildPath("response_filter.error_message_contains")}
-                  optional
-                  manifestPath="HttpResponseFilter.properties.error_message_contains"
+          <GroupControls>
+            <FlexContainer direction="column">
+              <ToggleGroupField<DefaultErrorHandlerBackoffStrategiesItem>
+                label={formatMessage({ id: "connectorBuilder.errorHandler.backoffStrategy.label" })}
+                tooltip={formatMessage({ id: "connectorBuilder.errorHandler.backoffStrategy.tooltip" })}
+                fieldPath={buildPath("backoff_strategy")}
+                initialValues={{
+                  type: "ConstantBackoffStrategy",
+                  backoff_time_in_seconds: 5,
+                }}
+              >
+                <BuilderOneOf<DefaultErrorHandlerBackoffStrategiesItem>
+                  path={buildPath("backoff_strategy")}
+                  label={formatMessage({ id: "connectorBuilder.errorHandler.backoffStrategy.strategy.label" })}
+                  tooltip={formatMessage({ id: "connectorBuilder.errorHandler.backoffStrategy.strategy.tooltip" })}
+                  manifestOptionPaths={[
+                    "ConstantBackoffStrategy",
+                    "ExponentialBackoffStrategy",
+                    "WaitTimeFromHeader",
+                    "WaitUntilTimeFromHeader",
+                  ]}
+                  options={getBackoffOptions(buildPath)}
                 />
-                <BuilderField
-                  type="string"
-                  path={buildPath("response_filter.predicate")}
-                  optional
-                  pattern={formatMessage({ id: "connectorBuilder.errorHandler.responseFilter.predicate.pattern" })}
-                  manifestPath="HttpResponseFilter.properties.predicate"
-                />
-                <BuilderField
-                  type="array"
-                  path={buildPath("response_filter.http_codes")}
-                  itemType="integer"
-                  optional
-                  manifestPath="HttpResponseFilter.properties.http_codes"
-                />
-                <BuilderField
-                  type="enum"
-                  path={buildPath("response_filter.action")}
-                  options={getOptionsByManifest("HttpResponseFilter.properties.action")}
-                  manifestPath="HttpResponseFilter.properties.action"
-                />
-                <BuilderField
-                  type="string"
-                  path={buildPath("response_filter.error_message")}
-                  optional
-                  manifestPath="HttpResponseFilter.properties.error_message"
-                />
-              </>
-            </ToggleGroupField>
-          </FlexContainer>
+              </ToggleGroupField>
+              <ToggleGroupField<HttpResponseFilter>
+                label={formatMessage({ id: "connectorBuilder.errorHandler.responseFilter.label" })}
+                tooltip={formatMessage({ id: "connectorBuilder.errorHandler.responseFilter.tooltip" })}
+                fieldPath={buildPath("response_filter")}
+                initialValues={{
+                  type: "HttpResponseFilter",
+                  action: "IGNORE",
+                }}
+              >
+                <>
+                  <BuilderField
+                    type="string"
+                    path={buildPath("response_filter.error_message_contains")}
+                    optional
+                    manifestPath="HttpResponseFilter.properties.error_message_contains"
+                  />
+                  <BuilderField
+                    type="string"
+                    path={buildPath("response_filter.predicate")}
+                    optional
+                    pattern={formatMessage({ id: "connectorBuilder.errorHandler.responseFilter.predicate.pattern" })}
+                    manifestPath="HttpResponseFilter.properties.predicate"
+                  />
+                  <BuilderField
+                    type="array"
+                    path={buildPath("response_filter.http_codes")}
+                    itemType="integer"
+                    optional
+                    manifestPath="HttpResponseFilter.properties.http_codes"
+                  />
+                  <BuilderField
+                    type="enum"
+                    path={buildPath("response_filter.action")}
+                    options={getOptionsByManifest("HttpResponseFilter.properties.action")}
+                    manifestPath="HttpResponseFilter.properties.action"
+                  />
+                  <BuilderField
+                    type="string"
+                    path={buildPath("response_filter.error_message")}
+                    optional
+                    manifestPath="HttpResponseFilter.properties.error_message"
+                  />
+                </>
+              </ToggleGroupField>
+            </FlexContainer>
+          </GroupControls>
         )}
       </BuilderList>
     </>
@@ -209,13 +216,18 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
       docLink={links.connectorBuilderErrorHandler}
       label={formatMessage({ id: "connectorBuilder.errorHandler.label" })}
       tooltip={getDescriptionByManifest("DefaultErrorHandler")}
-      toggleConfig={{
+      inputsConfig={{
+        toggleable: true,
         path: props.basePath,
         defaultValue: [
           {
             type: "DefaultErrorHandler",
           },
         ],
+        yamlConfig: {
+          builderToManifest: builderErrorHandlersToManifest,
+          manifestToBuilder: manifestErrorHandlerToBuilder,
+        },
       }}
       copyConfig={{
         path: "errorHandler",

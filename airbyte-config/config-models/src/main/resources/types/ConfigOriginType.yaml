@@ -6,3 +6,4 @@ description: ScopedConfiguration origin types
 type: string
 enum:
   - user
+  - breaking_change

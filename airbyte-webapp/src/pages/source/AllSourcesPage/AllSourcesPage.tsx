@@ -1,4 +1,4 @@
-import React, { useDeferredValue, useMemo, useState } from "react";
+import React, { useDeferredValue, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { Navigate, useNavigate } from "react-router-dom";
 
@@ -10,31 +10,30 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { Heading } from "components/ui/Heading";
-import { Icon } from "components/ui/Icon";
 import { PageHeader } from "components/ui/PageHeader";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import { useConnectionList, useCurrentWorkspace, useSourceList } from "core/api";
-import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useConnectionList, useCurrentWorkspace, useFilters, useSourceList } from "core/api";
+import { SourceRead } from "core/api/types/AirbyteClient";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useIntent } from "core/utils/rbac";
 
 import styles from "./AllSourcesPage.module.scss";
 import { SourcePaths } from "../../routePaths";
 
-const AllSourcesPage: React.FC = () => {
+const AllSourcesPageInner: React.FC<{ sources: SourceRead[] }> = ({ sources }) => {
   const navigate = useNavigate();
   useTrackPage(PageTrackingCodes.SOURCE_LIST);
   const onCreateSource = () => navigate(`${SourcePaths.SelectSourceNew}`);
   const { workspaceId } = useCurrentWorkspace();
   const canCreateSource = useIntent("CreateSource", { workspaceId });
-  const { sources } = useSourceList();
   const connectionList = useConnectionList({ sourceId: sources.map(({ sourceId }) => sourceId) });
   const connections = connectionList?.connections ?? [];
   const data = getEntityTableData(sources, connections, "source");
 
-  const [searchFilter, setSearchFilter] = useState<string>("");
-  const debouncedSearchFilter = useDeferredValue(searchFilter);
+  const [{ search }, setFilterValue] = useFilters<{ search: string }>({ search: "" });
+  const debouncedSearchFilter = useDeferredValue(search);
 
   const filteredSources = useMemo(
     () => filterBySearchEntityTableData(debouncedSearchFilter, data),
@@ -53,13 +52,7 @@ const AllSourcesPage: React.FC = () => {
             </Heading>
           }
           endComponent={
-            <Button
-              disabled={!canCreateSource}
-              icon={<Icon type="plus" />}
-              onClick={onCreateSource}
-              size="sm"
-              data-id="new-source"
-            >
+            <Button disabled={!canCreateSource} icon="plus" onClick={onCreateSource} size="sm" data-id="new-source">
               <FormattedMessage id="sources.newSource" />
             </Button>
           }
@@ -68,7 +61,7 @@ const AllSourcesPage: React.FC = () => {
     >
       <Card noPadding className={styles.card}>
         <Box p="lg">
-          <SearchInput value={searchFilter} onChange={({ target: { value } }) => setSearchFilter(value)} />
+          <SearchInput value={search} onChange={({ target: { value } }) => setFilterValue("search", value)} />
         </Box>
         <ImplementationTable data={debouncedSearchFilter ? filteredSources : data} entity="source" />
         {filteredSources.length === 0 && (
@@ -83,6 +76,11 @@ const AllSourcesPage: React.FC = () => {
   ) : (
     <Navigate to={SourcePaths.SelectSourceNew} />
   );
+};
+
+const AllSourcesPage: React.FC = () => {
+  const { sources } = useSourceList();
+  return sources.length ? <AllSourcesPageInner sources={sources} /> : <Navigate to={SourcePaths.SelectSourceNew} />;
 };
 
 export default AllSourcesPage;

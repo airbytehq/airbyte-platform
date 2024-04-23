@@ -218,9 +218,6 @@ components:
         url:
           type: string
           description: URL that the request was sent to
-        parameters:
-          type: object
-          description: The request parameters that were set on the HTTP request, if any
         body:
           type: string
           description: The body of the HTTP request, if present

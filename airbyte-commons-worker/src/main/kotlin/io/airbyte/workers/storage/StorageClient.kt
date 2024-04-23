@@ -67,6 +67,7 @@ enum class DocumentType(val prefix: Path) {
   LOGS(prefix = Path.of("/job-logging")),
   STATE(prefix = Path.of("/state")),
   WORKLOAD_OUTPUT(prefix = Path.of("/workload/output")),
+  ACTIVITY_PAYLOADS(prefix = Path.of("/activity-payloads")),
 }
 
 /**
@@ -299,6 +300,7 @@ internal fun GcsStorageConfig.gcsClient(): Storage {
  */
 internal fun MinioStorageConfig.s3Client(): S3Client =
   S3Client.builder()
+    .serviceConfiguration { it.pathStyleAccessEnabled(true) }
     .credentialsProvider { AwsBasicCredentials.create(this@s3Client.accessKey, this@s3Client.secretAccessKey) }
     .endpointOverride(URI(this@s3Client.endpoint))
     // The region isn't actually used but is required. Set to us-east-1 based on https://github.com/minio/minio/discussions/15063.
@@ -331,4 +333,5 @@ fun StorageConfig.bucketName(type: DocumentType): String =
     DocumentType.STATE -> this.buckets.state
     DocumentType.WORKLOAD_OUTPUT -> this.buckets.workloadOutput
     DocumentType.LOGS -> this.buckets.log
+    DocumentType.ACTIVITY_PAYLOADS -> this.buckets.activityPayload
   }

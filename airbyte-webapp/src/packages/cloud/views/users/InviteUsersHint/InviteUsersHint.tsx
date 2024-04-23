@@ -11,13 +11,14 @@ import { useIntent } from "core/utils/rbac";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./InviteUsersHint.module.scss";
-import { InviteUsersModal } from "../InviteUsersModal";
+import { AddUserModal } from "../../workspaces/WorkspaceSettingsView/components/AddUserModal";
 
 export interface InviteUsersHintProps {
   connectorType: "source" | "destination";
 }
 
 export const InviteUsersHint: React.FC<InviteUsersHintProps> = ({ connectorType }) => {
+  const workspace = useCurrentWorkspace();
   const { formatMessage } = useIntl();
   const inviteUsersHintVisible = useFeature(FeatureItem.ShowInviteUsersHint);
   const { workspaceId } = useCurrentWorkspace();
@@ -29,9 +30,9 @@ export const InviteUsersHint: React.FC<InviteUsersHintProps> = ({ connectorType 
   }
 
   const onOpenInviteUsersModal = () =>
-    openModal({
-      title: formatMessage({ id: "modals.addUser.title" }),
-      content: () => <InviteUsersModal invitedFrom={connectorType} />,
+    openModal<void>({
+      title: formatMessage({ id: "userInvitations.create.modal.title" }, { workspace: workspace.name }),
+      content: ({ onComplete }) => <AddUserModal onSubmit={onComplete} />,
       size: "md",
     });
 

@@ -1,14 +1,15 @@
-import { dump } from "js-yaml";
 import snakeCase from "lodash/snakeCase";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
-import { Icon } from "components/ui/Icon";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { FILE_TYPE_DOWNLOAD, downloadFile } from "core/utils/file";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { downloadFile, FILE_TYPE_DOWNLOAD } from "core/utils/file";
+import {
+  convertJsonToYaml,
+  useConnectorBuilderFormState,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./DownloadYamlButton.module.scss";
 import { useBuilderWatch } from "./types";
@@ -27,12 +28,7 @@ export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ classNam
   const mode = useBuilderWatch("mode");
 
   const downloadYaml = () => {
-    const yamlToDownload =
-      mode === "ui"
-        ? dump(jsonManifest, {
-            noRefs: true,
-          })
-        : yaml;
+    const yamlToDownload = mode === "ui" ? convertJsonToYaml(jsonManifest) : yaml;
     const file = new Blob([yamlToDownload], { type: FILE_TYPE_DOWNLOAD });
     downloadFile(file, connectorNameField ? `${snakeCase(connectorNameField)}.yaml` : "connector_builder.yaml");
     analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DOWNLOAD_YAML, {
@@ -71,7 +67,7 @@ export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ classNam
       variant="secondary"
       onClick={handleClick}
       disabled={buttonDisabled}
-      icon={showWarningIcon ? <Icon type="warningOutline" /> : undefined}
+      {...(showWarningIcon && { icon: "warningOutline" })}
       data-testid="download-yaml-button"
       type="button"
     >

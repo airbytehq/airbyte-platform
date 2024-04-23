@@ -79,7 +79,7 @@ manifest should match snapshot:
     data:
       fileContents: |2-
         path
-    kind: ConfigMap
+    kind: secret 
     metadata:
       annotations:
         helm.sh/hook: pre-install,pre-upgrade
@@ -122,7 +122,6 @@ manifest should match snapshot:
       JOB_MAIN_CONTAINER_MEMORY_LIMIT: ""
       JOB_MAIN_CONTAINER_MEMORY_REQUEST: ""
       JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: 0.29.15.001
-      KEYCLOAK_HOSTNAME_URL: '%!s(<nil>)/auth'
       KEYCLOAK_INTERNAL_HOST: RELEASE-NAME-airbyte-keycloak-svc:9000
       KEYCLOAK_PORT: "9000"
       LOCAL_ROOT: /tmp/airbyte_local
@@ -137,6 +136,7 @@ manifest should match snapshot:
       TRACKING_STRATEGY: segment
       WEBAPP_URL: http://RELEASE-NAME-airbyte-webapp-svc:80
       WORKER_ENVIRONMENT: kubernetes
+      STORAGE_BUCKET_ACTIVITY_PAYLOAD: airbyte-state-storage
       STORAGE_BUCKET_LOG: airbyte-dev-logs
       STORAGE_BUCKET_STATE: airbyte-state-storage
       STORAGE_BUCKET_WORKLOAD_OUTPUT: airbyte-state-storage

@@ -14,7 +14,7 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { StreamReadInferredSchema } from "core/api/types/ConnectorBuilderClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./SchemaDiffView.module.scss";
 import { SchemaConflictMessage } from "../SchemaConflictMessage";
@@ -63,9 +63,7 @@ function getDiff(existingSchema: string | undefined, detectedSchema: object): Di
 
 export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, incompatibleErrors }) => {
   const analyticsService = useAnalyticsService();
-  const {
-    resolvedManifest: { streams },
-  } = useConnectorBuilderTestRead();
+  const { streamNames } = useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
   const testStreamIndex = useBuilderWatch("testStreamIndex");
   const { setValue } = useFormContext();
@@ -104,7 +102,7 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
                       setValue(path, formattedSchema);
                       analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.OVERWRITE_SCHEMA, {
                         actionDescription: "Declared schema overwritten by detected schema",
-                        stream_name: streams[testStreamIndex]?.name,
+                        stream_name: streamNames[testStreamIndex],
                       });
                     }}
                   >
@@ -129,7 +127,7 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
                             setValue(path, schemaDiff.mergedSchema);
                             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.MERGE_SCHEMA, {
                               actionDescription: "Detected and Declared schemas merged to update declared schema",
-                              stream_name: streams[testStreamIndex]?.name,
+                              stream_name: streamNames[testStreamIndex],
                             });
                           }}
                         >
@@ -155,7 +153,7 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
             setValue(path, formattedSchema);
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.OVERWRITE_SCHEMA, {
               actionDescription: "Declared schema overwritten by detected schema",
-              stream_name: streams[testStreamIndex]?.name,
+              stream_name: streamNames[testStreamIndex],
             });
           }}
           data-testid="accept-schema"

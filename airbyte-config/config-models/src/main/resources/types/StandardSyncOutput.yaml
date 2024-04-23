@@ -7,8 +7,6 @@ type: object
 additionalProperties: true
 required:
   - standardSyncSummary
-  - state
-  - output_catalog
 properties:
   standardSyncSummary:
     "$ref": StandardSyncSummary.yaml
@@ -16,11 +14,9 @@ properties:
     "$ref": NormalizationSummary.yaml
   webhookOperationSummary:
     "$ref": WebhookOperationSummary.yaml
-  state:
-    "$ref": State.yaml
-  output_catalog:
-    existingJavaType: io.airbyte.protocol.models.ConfiguredAirbyteCatalog
   failures:
     type: array
     items:
       "$ref": FailureReason.yaml
+  catalogUri:
+    "$ref": ActivityPayloadURI.yaml

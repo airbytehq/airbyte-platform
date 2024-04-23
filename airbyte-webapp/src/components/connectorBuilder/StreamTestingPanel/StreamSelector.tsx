@@ -9,7 +9,7 @@ import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./StreamSelector.module.scss";
 import { useBuilderWatch } from "../types";
@@ -38,11 +38,9 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
   const view = useBuilderWatch("view");
   const testStreamIndex = useBuilderWatch("testStreamIndex");
 
-  const {
-    resolvedManifest: { streams },
-  } = useConnectorBuilderTestRead();
+  const { streamNames } = useConnectorBuilderFormState();
 
-  if (streams.length === 0) {
+  if (streamNames.length === 0) {
     return (
       <Box py="md">
         <Heading className={styles.label} as="h1" size="sm">
@@ -52,14 +50,14 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
     );
   }
 
-  const options = streams.map((stream) => {
+  const options = streamNames.map((streamName) => {
     const label =
-      stream.name && stream.name.trim() ? capitalize(stream.name) : formatMessage({ id: "connectorBuilder.emptyName" });
-    return { label, value: stream.name ?? "" };
+      streamName && streamName.trim() ? capitalize(streamName) : formatMessage({ id: "connectorBuilder.emptyName" });
+    return { label, value: streamName ?? "" };
   });
 
   const handleStreamSelect = (selectedStreamName: string) => {
-    const selectedStreamIndex = streams.findIndex((stream) => selectedStreamName === stream.name);
+    const selectedStreamIndex = streamNames.findIndex((streamName) => selectedStreamName === streamName);
     if (selectedStreamIndex >= 0) {
       setValue("testStreamIndex", selectedStreamIndex);
 
@@ -77,7 +75,7 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
     <ListBox
       className={classNames(className, styles.container)}
       options={options}
-      selectedValue={streams[testStreamIndex]?.name ?? formatMessage({ id: "connectorBuilder.noStreamSelected" })}
+      selectedValue={streamNames[testStreamIndex] ?? formatMessage({ id: "connectorBuilder.noStreamSelected" })}
       onSelect={handleStreamSelect}
       buttonClassName={styles.button}
       controlButton={ControlButton}

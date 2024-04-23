@@ -1,6 +1,7 @@
 package io.airbyte.workload.handler
 
 import io.airbyte.config.WorkloadType
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.errors.ConflictException
@@ -21,7 +22,13 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class WorkloadHandlerImpl(
   private val workloadRepository: WorkloadRepository,
+  private val featureFlagClient: FeatureFlagClient,
 ) : WorkloadHandler {
+  companion object {
+    val ACTIVE_STATUSES: List<WorkloadStatus> =
+      listOf(WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING)
+  }
+
   override fun getWorkload(workloadId: String): ApiWorkload {
     return getDomainWorkload(workloadId).toApi()
   }
@@ -65,6 +72,9 @@ class WorkloadHandlerImpl(
     if (workloadAlreadyExists) {
       throw ConflictException("Workload with id: $workloadId already exists")
     }
+
+    // Create the workload and then check for mutexKey uniqueness.
+    // This will lead to a more deterministic concurrency resolution in the event of concurrent create calls.
     val domainWorkload =
       DomainWorkload(
         id = workloadId,
@@ -79,8 +89,27 @@ class WorkloadHandlerImpl(
         autoId = autoId,
         deadline = deadline,
       )
-
     workloadRepository.save(domainWorkload).toApi()
+
+    // Evaluating feature flag with UUID_ZERO because the client requires a context. This feature flag is intended to be used
+    // as a global kill switch for validation.
+    if (mutexKey != null) {
+      // Keep the most recent workload by creation date with mutexKey, fail the others.
+      workloadRepository
+        .searchByMutexKeyAndStatusInList(mutexKey, statuses = ACTIVE_STATUSES)
+        .sortedByDescending { it.createdAt }
+        .drop(1)
+        .forEach {
+          try {
+            logger.info { "${it.id} violates the $mutexKey uniqueness constraint, failing in favor of $workloadId before continuing." }
+            failWorkload(it.id, source = "workload-api", reason = "Superseded by $workloadId")
+          } catch (_: InvalidStatusTransitionException) {
+            // This edge case happens if the workload reached a terminal state through another path.
+            // This would be unusual but not actionable so we're logging a message rather than failing the call.
+            logger.info { "${it.id} was completed before being superseded by $workloadId" }
+          }
+        }
+    }
   }
 
   override fun claimWorkload(
@@ -214,7 +243,7 @@ class WorkloadHandlerImpl(
         )
       }
       WorkloadStatus.LAUNCHED -> logger.info { "Workload $workloadId is already marked as launched. Skipping..." }
-      WorkloadStatus.RUNNING -> throw InvalidStatusTransitionException("Workload $workloadId is already marked as running. Skipping...")
+      WorkloadStatus.RUNNING -> logger.info { "Workload $workloadId is already marked as running. Skipping..." }
       WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
         "Heartbeat a workload in a terminal state",
       )

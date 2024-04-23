@@ -26,7 +26,7 @@ describe("#useInitialFormValues", () => {
   it("should generate initial values w/ 'not create' mode: true", () => {
     const { result } = renderHook(() => useInitialFormValues(mockConnection, mockDestinationDefinitionVersion, true));
     expect(result.current).toMatchSnapshot();
-    expect(result.current.name).toBeUndefined();
+    expect(result.current.name).toBeDefined();
   });
 
   // This is a low-priority test

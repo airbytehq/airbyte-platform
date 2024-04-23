@@ -2,6 +2,7 @@ package io.airbyte.connectorSidecar
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.base.Stopwatch
+import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
@@ -21,7 +22,6 @@ import io.airbyte.workers.internal.VersionedAirbyteStreamFactory.InvalidLineFail
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.workload.JobOutputDocStore
-import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -47,7 +47,7 @@ class ConnectorWatcher(
   val serDeProvider: AirbyteMessageSerDeProvider,
   val airbyteProtocolVersionedMigratorFactory: AirbyteProtocolVersionedMigratorFactory,
   val gsonPksExtractor: GsonPksExtractor,
-  val workloadApi: WorkloadApi,
+  val workloadApiClient: WorkloadApiClient,
   val jobOutputDocStore: JobOutputDocStore,
 ) {
   fun run() {
@@ -61,7 +61,13 @@ class ConnectorWatcher(
       while (!areNeededFilesPresent()) {
         Thread.sleep(100)
         if (fileTimeoutReach(stopwatch)) {
-          failWorkload(workloadId, null)
+          logger.warn { "Failed to find output files from connector within timeout $fileTimeoutMinutes. Is the connector still running?" }
+          val failureReason =
+            FailureReason()
+              .withFailureOrigin(FailureReason.FailureOrigin.UNKNOWN)
+              .withExternalMessage("Failed to find output files from connector within timeout $fileTimeoutMinutes.")
+
+          failWorkload(workloadId, failureReason)
           exitFileNotFound()
           // The return is needed for the test
           return
@@ -112,7 +118,7 @@ class ConnectorWatcher(
           }
         }
       jobOutputDocStore.write(workloadId, connectorOutput)
-      workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
+      workloadApiClient.workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
     } catch (e: Exception) {
       logger.error(e) { "Error performing operation: ${e.javaClass.name}" }
 
@@ -153,24 +159,26 @@ class ConnectorWatcher(
       },
       Optional.empty<UUID>(),
       Optional.empty<ConfiguredAirbyteCatalog>(),
-      Optional.empty<Class<out RuntimeException?>>(),
-      InvalidLineFailureConfiguration(false, false),
+      InvalidLineFailureConfiguration(false),
       gsonPksExtractor,
     )
   }
 
   @VisibleForTesting
   fun exitProperly() {
+    logger.info { "Deliberately exiting process with code 0." }
     exitProcess(0)
   }
 
   @VisibleForTesting
   fun exitInternalError() {
+    logger.info { "Deliberately exiting process with code 1." }
     exitProcess(1)
   }
 
   @VisibleForTesting
   fun exitFileNotFound() {
+    logger.info { "Deliberately exiting process with code 2." }
     exitProcess(2)
   }
 
@@ -239,8 +247,9 @@ class ConnectorWatcher(
     workloadId: String,
     failureReason: FailureReason?,
   ) {
+    logger.info { "Failing workload $workloadId." }
     if (failureReason != null) {
-      workloadApi.workloadFailure(
+      workloadApiClient.workloadApi.workloadFailure(
         WorkloadFailureRequest(
           workloadId,
           failureReason.failureOrigin.value(),
@@ -248,7 +257,7 @@ class ConnectorWatcher(
         ),
       )
     } else {
-      workloadApi.workloadFailure(WorkloadFailureRequest(workloadId))
+      workloadApiClient.workloadApi.workloadFailure(WorkloadFailureRequest(workloadId))
     }
   }
 }

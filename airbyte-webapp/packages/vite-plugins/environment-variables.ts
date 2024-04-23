@@ -21,7 +21,7 @@ export function environmentVariables(): Plugin {
       const cloudEnv = process.env.WEBAPP_BUILD_CLOUD_ENV;
       if (cloudEnv) {
         console.log(`☁️ Getting env file for cloud environment ${chalk.green(cloudEnv)}\n`);
-        const envDirPath = path.join(ROOT_PATH, `../../cloud-webapp/envs/`, cloudEnv);
+        const envDirPath = path.join(ROOT_PATH, `../../cloud/cloud-webapp/envs/`, cloudEnv);
 
         // loadEnv will not throw if you give it a non-existent path, so we explicitly check here
         if (!fs.existsSync(path.join(envDirPath, `.env`))) {

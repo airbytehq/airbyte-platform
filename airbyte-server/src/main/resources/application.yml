@@ -1,15 +1,28 @@
 micronaut:
   application:
     name: airbyte-server
+  caches:
+    # used by the analytics tracking client to cache calls to resolve the deployment and identity (workspace) for
+    # track events
+    analytics-tracking-deployments:
+      charset: "UTF-8"
+      expire-after-access: 10m
+    analytics-tracking-identity:
+      charset: "UTF-8"
+      expire-after-access: 10m
   env:
     cloud-deduction: true
   executors:
+    # We set our max pool size for the config DB to 20 in 10-values.yml files at the time of writing this.
     health:
       type: fixed
-      n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
+      n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:3}
     io:
       type: fixed
-      n-threads: ${IO_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
+      n-threads: ${IO_TASK_EXECUTOR_THREADS:10}
+    public-api:
+      type: fixed
+      n-threads: ${PUBLIC_API_EXECUTOR_THREADS:5}
     scheduler:
       type: fixed
       n-threads: ${SCHEDULER_TASK_EXECUTOR_THREADS:25}
@@ -46,6 +59,7 @@ micronaut:
         max-content-length: 52428800 # 50MB
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+      max-header-size: ${NETTY_MAX_HEADER_SIZE:32768}
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
   http:
     client:
@@ -72,6 +86,7 @@ airbyte:
         log: ${STORAGE_BUCKET_LOG}
         state: ${STORAGE_BUCKET_STATE}
         workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
+        activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       local:
@@ -108,9 +123,9 @@ airbyte:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:
       aws:
-        access-key: ${AWS_ACCESS_KEY:}
-        secret-key: ${AWS_SECRET_ACCESS_KEY:}
-        region: ${AWS_REGION:}
+        access-key: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID:}
+        secret-key: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY:}
+        region: ${AWS_SECRET_MANAGER_REGION:}
         kmsKeyArn: ${AWS_KMS_KEY_ARN:}
         tags: ${AWS_SECRET_MANAGER_SECRET_TAGS:}
       gcp:
@@ -342,6 +357,9 @@ datasources:
 
 endpoints:
   beans:
+    enabled: true
+    sensitive: false
+  caches:
     enabled: true
     sensitive: false
   env:

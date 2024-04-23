@@ -1,3 +1,4 @@
+@use "./colors";
 @use "./variables";
 
 @mixin overflow-ellipsis {
@@ -66,4 +67,45 @@ $stripes-width: 83px;
   position: absolute;
   white-space: nowrap;
   width: 1px;
+}
+
+// need something to look like a button but don't want to @forward the button module, this is it!
+@mixin base-button {
+  // base "button"
+  transition: 0.2s ease-in;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  border-radius: variables.$border-radius-sm;
+  font-weight: 600;
+  cursor: pointer;
+
+  // sizeXS
+  height: variables.$button-height-xs;
+  font-size: variables.$font-size-sm;
+  line-height: 15px;
+  padding: 10px;
+}
+
+// looks like a buttonp[variant=link], like if you need a <Link /> to look like a button
+@mixin link-text {
+  @include base-button;
+
+  // secondary
+  color: colors.$grey-400;
+  border: 1px solid colors.$grey-300;
+
+  &:hover {
+    border-color: colors.$grey-400;
+    color: colors.$grey-500;
+  }
+
+  &:active {
+    border-color: colors.$grey-500;
+    color: colors.$grey-500;
+  }
+
+  // custom background (secondary button has no background)
+  background-color: colors.$foreground;
 }

@@ -14,6 +14,8 @@ import com.segment.analytics.messages.TrackMessage
 import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.cache.annotation.CacheConfig
+import io.micronaut.cache.annotation.Cacheable
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
 import io.micronaut.http.context.ServerRequestContext
@@ -22,7 +24,6 @@ import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.lang.Thread.sleep
 import java.time.Instant
-import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
@@ -68,7 +69,7 @@ interface TrackingClient {
   fun track(
     workspaceId: UUID,
     action: String?,
-    metadata: Map<String?, Any?>?,
+    metadata: Map<String?, Any?>,
   )
 }
 
@@ -104,26 +105,23 @@ class SegmentTrackingClient(
   override fun identify(workspaceId: UUID) {
     val deployment: Deployment = deploymentFetcher.get()
     val trackingIdentity: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId)
-    val identityMetadata: MutableMap<String, Any?> = HashMap()
+    val identityMetadata: Map<String, Any?> =
+      buildMap {
+        // deployment
+        put(AIRBYTE_VERSION_KEY, deployment.getDeploymentVersion())
+        put("deployment_mode", deployment.getDeploymentMode())
+        put("deployment_env", deployment.getDeploymentEnvironment())
+        put("deployment_id", deployment.getDeploymentId().toString())
 
-    // deployment
-    identityMetadata[AIRBYTE_VERSION_KEY] = deployment.getDeploymentVersion()
-    identityMetadata["deployment_mode"] = deployment.getDeploymentMode()
-    identityMetadata["deployment_env"] = deployment.getDeploymentEnvironment()
-    identityMetadata["deployment_id"] = deployment.getDeploymentId().toString()
+        // workspace (includes info that in the future we would store in an organization)
+        put("anonymized", trackingIdentity.isAnonymousDataCollection())
+        put("subscribed_newsletter", trackingIdentity.isNews())
+        put("subscribed_security", trackingIdentity.isSecurityUpdates())
+        trackingIdentity.email?.let { put("email", it) }
 
-    // workspace (includes info that in the future we would store in an organization)
-    identityMetadata["anonymized"] = trackingIdentity.isAnonymousDataCollection()
-    identityMetadata["subscribed_newsletter"] = trackingIdentity.isNews()
-    identityMetadata["subscribed_security"] = trackingIdentity.isSecurityUpdates()
-    if (trackingIdentity.email != null) {
-      identityMetadata["email"] = trackingIdentity.email
-    }
-
-    // other
-    if (airbyteRole.isNotBlank()) {
-      identityMetadata[AIRBYTE_ROLE] = airbyteRole
-    }
+        // other
+        airbyteRole.takeIf { it.isNotBlank() }?.let { put(AIRBYTE_ROLE, it) }
+      }
 
     val joinKey: String = trackingIdentity.customerId.toString()
     segmentAnalyticsClient.analyticsClient.enqueue(
@@ -145,32 +143,34 @@ class SegmentTrackingClient(
     workspaceId: UUID,
     action: String?,
   ) {
-    track(workspaceId, action, emptyMap<String?, Any>())
+    track(workspaceId, action, emptyMap())
   }
 
   override fun track(
     workspaceId: UUID,
     action: String?,
-    metadata: Map<String?, Any?>?,
+    metadata: Map<String?, Any?>,
   ) {
-    val mapCopy: MutableMap<String, Any?> = java.util.HashMap(metadata)
     val deployment: Deployment = deploymentFetcher.get()
     val trackingIdentity: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId)
 
-    val airbyteSource: Optional<String> = getAirbyteSource()
-    mapCopy[AIRBYTE_SOURCE] = airbyteSource.orElse(UNKNOWN)
+    val mapCopy: Map<String?, Any?> =
+      buildMap {
+        putAll(metadata)
+        put(AIRBYTE_SOURCE, getAirbyteSource() ?: UNKNOWN)
 
-    // Always add these traits.
-    mapCopy[AIRBYTE_VERSION_KEY] = deployment.getDeploymentVersion()
-    mapCopy[CUSTOMER_ID_KEY] = trackingIdentity.customerId
-    mapCopy[AIRBYTE_DEPLOYMENT_ID] = deployment.getDeploymentId().toString()
-    mapCopy[AIRBYTE_DEPLOYMENT_MODE] = deployment.getDeploymentMode()
-    mapCopy[AIRBYTE_TRACKED_AT] = Instant.now().toString()
-    if (metadata!!.isNotEmpty()) {
-      if (trackingIdentity.email != null) {
-        mapCopy["email"] = trackingIdentity.email
+        // Always add these traits.
+        put(AIRBYTE_VERSION_KEY, deployment.getDeploymentVersion())
+        put(CUSTOMER_ID_KEY, trackingIdentity.customerId)
+        put(AIRBYTE_DEPLOYMENT_ID, deployment.getDeploymentId().toString())
+        put(AIRBYTE_DEPLOYMENT_MODE, deployment.getDeploymentMode())
+        put(AIRBYTE_TRACKED_AT, Instant.now().toString())
+        if (metadata.isNotEmpty()) {
+          if (trackingIdentity.email != null) {
+            put("email", trackingIdentity.email)
+          }
+        }
       }
-    }
 
     val joinKey: String = trackingIdentity.customerId.toString()
     segmentAnalyticsClient.analyticsClient.enqueue(
@@ -180,12 +180,12 @@ class SegmentTrackingClient(
     )
   }
 
-  private fun getAirbyteSource(): Optional<String> {
+  private fun getAirbyteSource(): String? {
     val currentRequest = ServerRequestContext.currentRequest<Any>()
     return if (currentRequest.isPresent) {
-      Optional.ofNullable<String>(currentRequest.get().headers[AIRBYTE_ANALYTIC_SOURCE_HEADER])
+      currentRequest.get().headers[AIRBYTE_ANALYTIC_SOURCE_HEADER]
     } else {
-      Optional.empty<String>()
+      null
     }
   }
 
@@ -326,7 +326,7 @@ class LoggingTrackingClient(
   override fun track(
     workspaceId: UUID,
     action: String?,
-    metadata: Map<String?, Any?>?,
+    metadata: Map<String?, Any?>,
   ) {
     val deployment: Deployment = deploymentFetcher.get()
     val trackingIdentity: TrackingIdentity = trackingIdentityFetcher.apply(workspaceId)
@@ -337,9 +337,11 @@ class LoggingTrackingClient(
 }
 
 @Singleton
-class DeploymentFetcher(
+@CacheConfig("analytics-tracking-deployments")
+open class DeploymentFetcher(
   @Named("deploymentSupplier") val deploymentFetcher: Supplier<DeploymentMetadataRead>,
 ) : Supplier<Deployment> {
+  @Cacheable
   override fun get(): Deployment {
     val deploymentMetadata = deploymentFetcher.get()
     return Deployment(deploymentMetadata)
@@ -347,9 +349,11 @@ class DeploymentFetcher(
 }
 
 @Singleton
-class TrackingIdentityFetcher(
+@CacheConfig("analytics-tracking-identity")
+open class TrackingIdentityFetcher(
   @Named("workspaceFetcher") val workspaceFetcher: Function<UUID, WorkspaceRead>,
 ) : Function<UUID, TrackingIdentity> {
+  @Cacheable
   override fun apply(workspaceId: UUID): TrackingIdentity {
     val workspaceRead = workspaceFetcher.apply(workspaceId)
     val email: String? =

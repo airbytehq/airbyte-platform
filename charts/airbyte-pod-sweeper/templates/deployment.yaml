@@ -92,6 +92,7 @@ spec:
           successThreshold: {{ .Values.readinessProbe.successThreshold }}
           failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
         {{- end }}
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
       volumes:
       - name: kube-config
         emptyDir: {}

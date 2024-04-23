@@ -71,7 +71,7 @@ export const MetricsForm: React.FC = () => {
         description={formatMessage({ id: "preferences.collectData" })}
       />
 
-      <FormSubmissionButtons submitKey="form.saveChanges" />
+      <FormSubmissionButtons noCancel justify="flex-start" submitKey="form.saveChanges" />
     </Form>
   );
 };

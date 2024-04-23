@@ -1,0 +1,9 @@
+micronaut:
+  caches:
+    # used by the analytics tracking client to cache calls to resolve the deployment and identity (workspace) for
+    # track events
+    # We overwrite the expiry in orchestrator to avoid making the workspace API call again and again for state stats metrics
+    analytics-tracking-deployments:
+      expire-after-access: 24h
+    analytics-tracking-identity:
+      expire-after-access: 24h

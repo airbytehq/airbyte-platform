@@ -7,6 +7,11 @@ package io.airbyte.workers.general
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.annotations.VisibleForTesting
+import io.airbyte.api.client.WorkloadApiClient
+import io.airbyte.api.client.generated.DestinationApi
+import io.airbyte.api.client.generated.SourceApi
+import io.airbyte.api.client.model.generated.DestinationIdRequestBody
+import io.airbyte.api.client.model.generated.SourceIdRequestBody
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause
 import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.commons.converters.ThreadedTimeTracker
@@ -30,6 +35,7 @@ import io.airbyte.protocol.models.AirbyteMessage.Type
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStateStats
 import io.airbyte.protocol.models.AirbyteTraceMessage
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.context.ReplicationContext
@@ -37,6 +43,7 @@ import io.airbyte.workers.context.ReplicationFeatureFlags
 import io.airbyte.workers.exception.WorkloadHeartbeatException
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor
 import io.airbyte.workers.helper.FailureHelper
+import io.airbyte.workers.helper.StreamStatusCompletionTracker
 import io.airbyte.workers.internal.AirbyteDestination
 import io.airbyte.workers.internal.AirbyteMapper
 import io.airbyte.workers.internal.AirbyteSource
@@ -53,19 +60,20 @@ import io.airbyte.workers.internal.bookkeeping.getTotalStats
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
-import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.workers.models.StateWithId.attachIdToStateMessageFromSource
 import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpStatus
 import org.apache.commons.io.FileUtils
-import org.openapitools.client.infrastructure.ClientException
 import org.slf4j.MDC
 import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.util.Collections
 import java.util.Optional
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
+import io.airbyte.workload.api.client.generated.infrastructure.ClientException as GeneratedClientException
 
 private val logger = KotlinLogging.logger { }
 
@@ -78,10 +86,13 @@ class ReplicationWorkerHelper(
   private val replicationAirbyteMessageEventPublishingHelper: ReplicationAirbyteMessageEventPublishingHelper,
   private val timeTracker: ThreadedTimeTracker,
   private val onReplicationRunning: VoidCallable,
-  private val workloadApi: WorkloadApi,
+  private val workloadApiClient: WorkloadApiClient,
   private val workloadEnabled: Boolean,
   private val analyticsMessageTracker: AnalyticsMessageTracker,
   private val workloadId: Optional<String>,
+  private val sourceApi: SourceApi,
+  private val destinationApi: DestinationApi,
+  private val streamStatusCompletionTracker: StreamStatusCompletionTracker,
 ) {
   private val metricClient = MetricClientFactory.getMetricClient()
   private val metricAttrs: MutableList<MetricAttribute> = mutableListOf()
@@ -135,7 +146,7 @@ class ReplicationWorkerHelper(
               throw RuntimeException("workloadId should always be present")
             }
             logger.info { "Sending workload heartbeat" }
-            workloadApi.workloadHeartbeat(
+            workloadApiClient.workloadApi.workloadHeartbeat(
               WorkloadHeartbeatRequest(workloadId.get()),
             )
             lastSuccessfulHeartbeat = Instant.now()
@@ -145,13 +156,15 @@ class ReplicationWorkerHelper(
              * Workload should stop because it is no longer expected to be running.
              * See [io.airbyte.workload.api.WorkloadApi.workloadHeartbeat]
              */
-            if (e is ClientException && e.statusCode == HttpStatus.GONE.code) {
-              logger.warn(e) { "Received kill response from API, shutting down heartbeat" }
+            if (e is GeneratedClientException && e.statusCode == HttpStatus.GONE.code) {
+              metricClient.count(OssMetricsRegistry.HEARTBEAT_TERMINAL_SHUTDOWN, 1, *metricAttrs.toTypedArray())
               markCancelled()
               return@Runnable
             } else if (Duration.between(lastSuccessfulHeartbeat, Instant.now()) > heartbeatTimeoutDuration) {
               logger.warn(e) { "Have not been able to update heartbeat for more than the timeout duration, shutting down heartbeat" }
+              metricClient.count(OssMetricsRegistry.HEARTBEAT_CONNECTIVITY_FAILURE_SHUTDOWN, 1, *metricAttrs.toTypedArray())
               markFailed()
+              abort()
               trackFailure(WorkloadHeartbeatException("Workload Heartbeat Error", e))
               return@Runnable
             }
@@ -166,6 +179,7 @@ class ReplicationWorkerHelper(
     ctx: ReplicationContext,
     replicationFeatureFlags: ReplicationFeatureFlags,
     jobRoot: Path,
+    configuredAirbyteCatalog: ConfiguredAirbyteCatalog,
   ) {
     timeTracker.trackReplicationStartTime()
 
@@ -180,6 +194,7 @@ class ReplicationWorkerHelper(
     }
 
     ApmTraceUtils.addTagsToTrace(ctx.connectionId, ctx.attempt.toLong(), ctx.jobId.toString(), jobRoot)
+    streamStatusCompletionTracker.startTracking(configuredAirbyteCatalog, ctx)
   }
 
   fun startDestination(
@@ -283,6 +298,10 @@ class ReplicationWorkerHelper(
   fun processMessageFromDestination(destinationRawMessage: AirbyteMessage) {
     val message = mapper.revertMap(destinationRawMessage)
     internalProcessMessageFromDestination(message)
+  }
+
+  fun getStreamStatusToSend(exitValue: Int): List<AirbyteMessage> {
+    return streamStatusCompletionTracker.finalize(exitValue, mapper)
   }
 
   @JvmOverloads
@@ -417,13 +436,22 @@ class ReplicationWorkerHelper(
     // internally we always want to deal with the state message we got from the
     // source, so we only modify the state message after processing it, right before we send it to the
     // destination
-    return internalProcessMessageFromSource(sourceRawMessage)
+    return attachIdToStateMessageFromSource(sourceRawMessage)
+      .let { internalProcessMessageFromSource(it) }
       .let { mapper.mapMessage(it) }
-      .let { Optional.of(it) }
+      .let { Optional.ofNullable(it) }
   }
 
   fun isWorkerV2TestEnabled(): Boolean {
     return workloadEnabled
+  }
+
+  fun getSourceDefinitionIdForSourceId(sourceId: UUID): UUID {
+    return sourceApi.getSource(SourceIdRequestBody().sourceId(sourceId)).sourceDefinitionId
+  }
+
+  fun getDestinationDefinitionIdForDestinationId(destinationId: UUID): UUID {
+    return destinationApi.getDestination(DestinationIdRequestBody().destinationId(destinationId)).destinationDefinitionId
   }
 
   private fun getTotalStats(
@@ -448,8 +476,7 @@ class ReplicationWorkerHelper(
 
     val failures = mutableListOf<FailureReason>()
     // only .setFailures() if a failure occurred or if there is an AirbyteErrorTraceMessage
-    messageTracker.errorTraceMessageFailure(context.jobId, context.attempt)
-      ?.let { failures.add(it) }
+    failures.addAll(messageTracker.errorTraceMessageFailure(context.jobId, context.attempt))
 
     failures.addAll(replicationFailures)
 
@@ -479,7 +506,14 @@ class ReplicationWorkerHelper(
             ex.humanReadableThreshold,
             ex.humanReadableTimeSinceLastRec,
           )
-        is DestinationTimeoutMonitor.TimeoutException -> FailureHelper.destinationTimeoutFailure(ex, jobId, attempt)
+        is DestinationTimeoutMonitor.TimeoutException ->
+          FailureHelper.destinationTimeoutFailure(
+            ex,
+            jobId,
+            attempt,
+            ex.humanReadableThreshold,
+            ex.humanReadableTimeSinceLastAction,
+          )
         is WorkloadHeartbeatException -> FailureHelper.platformFailure(ex, jobId, attempt, ex.message)
         else -> FailureHelper.replicationFailure(ex, jobId, attempt)
       }

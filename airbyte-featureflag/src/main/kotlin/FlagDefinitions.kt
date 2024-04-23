@@ -17,8 +17,6 @@ object LogConnectorMessages : EnvVar(envVar = "LOG_CONNECTOR_MESSAGES")
 
 object AutoDetectSchema : EnvVar(envVar = "AUTO_DETECT_SCHEMA")
 
-object NeedStateValidation : EnvVar(envVar = "NEED_STATE_VALIDATION")
-
 object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValidationLimit", default = false)
 
 object NormalizationInDestination : Temporary<String>(key = "connectors.normalizationInDestination", default = "")
@@ -77,8 +75,6 @@ object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-wor
 
 object UseResourceRequirementsVariant : Permanent<String>(key = "platform.resource-requirements-variant", default = "default")
 
-object UseParallelStreamStatsTracker : Temporary<Boolean>(key = "platform.use-parallel-stream-stats-tracker", default = false)
-
 object SuccessiveCompleteFailureLimit : Temporary<Int>(key = "complete-failures.max-successive", default = -1)
 
 object TotalCompleteFailureLimit : Temporary<Int>(key = "complete-failures.max-total", default = -1)
@@ -110,6 +106,8 @@ object SourceResourceOverrides : Temporary<String>(key = "source-resource-overri
 object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", default = false)
 
 object AutoRechargeEnabled : Permanent<Boolean>(key = "billing.autoRecharge", default = false)
+
+object UseBreakingChangeScopedConfigs : Temporary<Boolean>(key = "connectors.useBreakingChangeScopedConfigs", default = false)
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
@@ -144,8 +142,6 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
 
 object RunSocatInConnectorContainer : Temporary<Boolean>(key = "platform.run-socat-in-connector-container", default = false)
 
-object FailSyncIfTooBig : Temporary<Boolean>(key = "platform.fail-sync-if-too-big", default = false)
-
 object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-default-org-for-new-workspace", default = false)
 
 object WorkloadHeartbeatRate : Permanent<Int>(key = "workload.heartbeat.rate", default = 5)
@@ -170,6 +166,8 @@ object UseWorkloadApi : Temporary<Boolean>(key = "platform.use-workload-api", de
 
 object EmitStateStatsToSegment : Temporary<Boolean>(key = "platform.emit-state-stats-segment", default = true)
 
+object LogsForStripeChecksumDebugging : Temporary<Boolean>(key = "platform.logs-for-stripe-checksum-debug", default = false)
+
 object AddInitialCreditsForWorkspace : Temporary<Int>(key = "add-credits-at-workspace-creation-for-org", default = 0)
 
 object WorkloadApiRouting : Permanent<String>(key = "workload-api-routing", default = "workload_default")
@@ -186,8 +184,18 @@ object FailSyncOnInvalidChecksum : Temporary<Boolean>(key = "platform.fail-sync-
 
 object HydrateAggregatedStats : Temporary<Boolean>(key = "platform.hydrate-aggregated-stats", default = true)
 
-object BillingCronScopeChangeTimestamp : Permanent<String>(key = "platform.billing-cron-scope-change-timestamp", default = "1735711200")
-
 object UseWorkloadApiForDiscover : Temporary<Boolean>(key = "platform.use-workload-api-for-discover", default = false)
 
 object UseWorkloadApiForSpec : Temporary<Boolean>(key = "platform.use-workload-api-for-spec", default = false)
+
+object ActivateRefreshes : Temporary<Boolean>(key = "platform.activate-refreshes", default = false)
+
+object WriteOutputCatalogToObjectStorage : Temporary<Boolean>(key = "platform.write-output-catalog-to-object-storage", default = false)
+
+object NullOutputCatalogOnSyncOutput : Temporary<Boolean>(key = "platform.null-output-catalog-on-sync-output", default = false)
+
+object UseCustomK8sInitCheck : Temporary<Boolean>(key = "platform.use-custom-k8s-init-check", default = true)
+
+object DeleteFullRefreshState : Temporary<Boolean>(key = "platform.delete-full-refresh-state", default = false)
+
+object UseClear : Temporary<Boolean>(key = "connection.clearNotReset", default = false)

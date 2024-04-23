@@ -1,7 +1,6 @@
 import { FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
-import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
@@ -21,32 +20,26 @@ export const GeneralWorkspaceSettingsPage = () => {
   return (
     <FlexContainer direction="column" gap="xl">
       <Box>
-        <Heading as="h2" size="md">
+        <Heading as="h1" size="md">
           <FormattedMessage id="settings.members" />
         </Heading>
       </Box>
-      <Card>
-        <UpdateWorkspaceNameForm />
-      </Card>
+      <UpdateWorkspaceNameForm />
 
       {isAccessManagementEnabled && (
-        <Card>
-          <FlexContainer direction="column" gap="xl">
-            <WorkspaceAccessManagementSection />
-          </FlexContainer>
-        </Card>
+        <FlexContainer direction="column" gap="xl">
+          <WorkspaceAccessManagementSection />
+        </FlexContainer>
       )}
       {canDeleteWorkspace && (
-        <Card>
-          <FlexContainer direction="column">
-            <Heading as="h3" size="sm">
-              <FormattedMessage id="settings.general.danger" />
-            </Heading>
-            <FlexContainer>
-              <DeleteWorkspace />
-            </FlexContainer>
+        <FlexContainer direction="column">
+          <Heading as="h3" size="sm">
+            <FormattedMessage id="settings.general.danger" />
+          </Heading>
+          <FlexContainer>
+            <DeleteWorkspace />
           </FlexContainer>
-        </Card>
+        </FlexContainer>
       )}
     </FlexContainer>
   );

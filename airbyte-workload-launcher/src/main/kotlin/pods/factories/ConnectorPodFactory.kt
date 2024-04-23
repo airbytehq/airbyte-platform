@@ -1,6 +1,5 @@
 package io.airbyte.workload.launcher.pods.factories
 
-import io.airbyte.config.ResourceRequirements
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
@@ -9,21 +8,29 @@ import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.process.KubePodProcess
 import io.airbyte.workers.sync.OrchestratorConstants
+import io.fabric8.kubernetes.api.model.CapabilitiesBuilder
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
+import io.fabric8.kubernetes.api.model.PodSecurityContext
+import io.fabric8.kubernetes.api.model.PodSecurityContextBuilder
+import io.fabric8.kubernetes.api.model.ResourceRequirements
+import io.fabric8.kubernetes.api.model.SeccompProfileBuilder
+import io.fabric8.kubernetes.api.model.SecurityContext
+import io.fabric8.kubernetes.api.model.SecurityContextBuilder
 import io.fabric8.kubernetes.api.model.Toleration
 import io.fabric8.kubernetes.api.model.Volume
 import io.fabric8.kubernetes.api.model.VolumeMount
+import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
 class ConnectorPodFactory(
   private val operationCommand: String,
   private val featureFlagClient: FeatureFlagClient,
-  private val connectorReqs: ResourceRequirements,
-  private val sidecarReqs: ResourceRequirements,
+  private val connectorReqs: AirbyteResourceRequirements,
+  private val sidecarReqs: AirbyteResourceRequirements,
   private val tolerations: List<Toleration>,
   private val imagePullSecrets: List<LocalObjectReference>,
   private val connectorEnvVars: List<EnvVar>,
@@ -31,6 +38,7 @@ class ConnectorPodFactory(
   private val sidecarContainerInfo: KubeContainerInfo,
   private val serviceAccount: String?,
   private val volumeFactory: VolumeFactory,
+  private val initContainerFactory: InitContainerFactory,
   private val connectorArgs: Map<String, String>,
 ) {
   fun create(
@@ -60,8 +68,10 @@ class ConnectorPodFactory(
       secretVolumeMounts.add(dataPlaneCreds.mount)
     }
 
-    val init: Container = buildInitContainer(volumeMounts)
-    val main: Container = buildMainContainer(volumeMounts, kubePodInfo.mainContainerInfo, extraEnvVars)
+    val connectorResourceReqs = KubePodProcess.getResourceRequirementsBuilder(connectorReqs).build()
+
+    val init: Container = initContainerFactory.create(connectorResourceReqs, volumeMounts)
+    val main: Container = buildMainContainer(connectorResourceReqs, volumeMounts, kubePodInfo.mainContainerInfo, extraEnvVars)
     val sidecar: Container = buildSidecarContainer(volumeMounts + secretVolumeMounts)
 
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
@@ -85,49 +95,13 @@ class ConnectorPodFactory(
       .withNodeSelector<String, String>(nodeSelectors)
       .withTolerations(tolerations)
       .withImagePullSecrets(imagePullSecrets) // An empty list or an empty LocalObjectReference turns this into a no-op setting.
+      .withSecurityContext(podSecurityContext())
       .endSpec()
       .build()
   }
 
-  private fun buildInitContainer(volumeMounts: List<VolumeMount>): Container {
-    return ContainerBuilder()
-      .withName(KubePodProcess.INIT_CONTAINER_NAME)
-      .withImage("busybox:1.35")
-      .withWorkingDir(KubePodProcess.CONFIG_DIR)
-      .withCommand(
-        listOf(
-          "sh",
-          "-c",
-          String.format(
-            """
-            i=0
-            until [ ${'$'}i -gt 60 ]
-            do
-              echo "${'$'}i - waiting for config file transfer to complete..."
-              # check if the upload-complete file exists, if so exit without error
-              if [ -f "%s/%s" ]; then
-                # Wait 50ms for the incoming kubectl cp call to cleanly exit
-                sleep .05
-                exit 0
-              fi
-              i=${'$'}((i+1))
-              sleep 1
-            done
-            echo "config files did not transfer in time"
-            # no upload-complete file was created in time, exit with error
-            exit 1
-            """.trimIndent(),
-            KubePodProcess.CONFIG_DIR,
-            KubePodProcess.SUCCESS_FILE_NAME,
-          ),
-        ),
-      )
-      .withResources(KubePodProcess.getResourceRequirementsBuilder(connectorReqs).build())
-      .withVolumeMounts(volumeMounts)
-      .build()
-  }
-
   private fun buildMainContainer(
+    resourceReqs: ResourceRequirements,
     volumeMounts: List<VolumeMount>,
     containerInfo: KubeContainerInfo,
     extraEnvVars: List<EnvVar>,
@@ -157,7 +131,8 @@ class ConnectorPodFactory(
       .withEnv(connectorEnvVars + extraEnvVars)
       .withWorkingDir(KubePodProcess.CONFIG_DIR)
       .withVolumeMounts(volumeMounts)
-      .withResources(KubePodProcess.getResourceRequirementsBuilder(connectorReqs).build())
+      .withResources(resourceReqs)
+      .withSecurityContext(containerSecurityContext())
       .build()
   }
 
@@ -170,6 +145,7 @@ class ConnectorPodFactory(
       .withEnv(sideCarEnvVars)
       .withVolumeMounts(volumeMounts)
       .withResources(KubePodProcess.getResourceRequirementsBuilder(sidecarReqs).build())
+      .withSecurityContext(containerSecurityContext())
       .build()
   }
 
@@ -179,3 +155,24 @@ class ConnectorPodFactory(
     val SPEC_OPERATION_NAME = "spec"
   }
 }
+
+private fun containerSecurityContext(): SecurityContext? =
+  when (io.airbyte.commons.envvar.EnvVar.ROOTLESS_WORKLOAD.fetch(default = "false").toBoolean()) {
+    true ->
+      SecurityContextBuilder()
+        .withAllowPrivilegeEscalation(false)
+        .withRunAsUser(1000L)
+        .withRunAsGroup(1000L)
+        .withReadOnlyRootFilesystem(false)
+        .withRunAsNonRoot(true)
+        .withCapabilities(CapabilitiesBuilder().addAllToDrop(listOf("ALL")).build())
+        .withSeccompProfile(SeccompProfileBuilder().withType("RuntimeDefault").build())
+        .build()
+    false -> null
+  }
+
+private fun podSecurityContext(): PodSecurityContext? =
+  when (io.airbyte.commons.envvar.EnvVar.ROOTLESS_WORKLOAD.fetch(default = "false").toBoolean()) {
+    true -> PodSecurityContextBuilder().withFsGroup(1000L).build()
+    false -> null
+  }

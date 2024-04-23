@@ -1,5 +1,5 @@
 import React from "react";
-import { useController, useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 
 import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
@@ -39,9 +39,11 @@ export const BuilderOneOf = <T extends OneOfType>({
   onSelect,
 }: BuilderOneOfProps<T>) => {
   const { setValue, unregister } = useFormContext();
-  const { field } = useController({ name: `${path}.type` });
+  const fieldName = `${path}.type`;
+  // Use value from useWatch instead of from useController, since the former will respect updates made to parent paths from setValue
+  const fieldValue = useWatch({ name: fieldName });
 
-  const selectedOption = options.find((option) => option.default.type === field.value);
+  const selectedOption = options.find((option) => option.default.type === fieldValue);
   const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(
     label,
     tooltip,
@@ -65,7 +67,7 @@ export const BuilderOneOf = <T extends OneOfType>({
           adaptiveWidth={false}
           selectedValue={selectedOption ?? options[0]}
           onSelect={(selectedOption: OneOfOption<T>) => {
-            if (selectedOption.default.type === field.value) {
+            if (selectedOption.default.type === fieldValue) {
               return;
             }
             // clear all values for this oneOf and set selected option and default values
@@ -74,7 +76,7 @@ export const BuilderOneOf = <T extends OneOfType>({
 
             onSelect?.(selectedOption.default.type);
           }}
-          data-testid={field.name}
+          data-testid={fieldName}
         />
       }
     >

@@ -11,19 +11,23 @@ metadata:
     {{- include "airbyte.labels" . | nindent 4 }}
 data:
   AIRBYTE_VERSION: {{ .Values.version | default .Chart.AppVersion }}
-  AIRBYTE_EDITION: {{ .Values.global.edition | default "community" | quote }}
+{{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+  AIRBYTE_EDITION: "pro"
+{{- else }}
+  AIRBYTE_EDITION: "community"
+{{- end }}
   API_URL: {{ .Values.webapp.api.url }}
   CONNECTOR_BUILDER_API_URL: {{ index .Values.webapp "connector-builder-server" "url" | quote }}
   CONFIG_API_HOST: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }} # temporary solution for oss kube deploys for airbyte api server until that server is wrapped into the config server
   CONFIG_ROOT: /configs
   CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: "0.35.15.001"
   DATA_DOCKER_MOUNT: airbyte_data
+  DB_DOCKER_MOUNT: airbyte_db
   DATABASE_DB: {{ include "airbyte.database.name" . }}
-  DATABASE_HOST: {{ include "airbyte.database.host" . }}
+  DATABASE_HOST: {{ include "airbyte.database.host" . }} # todo: database information into secrets
   DATABASE_PORT: {{ include "airbyte.database.port" . | quote }}
   DATABASE_URL: {{ include "airbyte.database.url" . | quote }}
   KEYCLOAK_DATABASE_URL: {{ include "keycloak.database.url" . | quote }}
-  DB_DOCKER_MOUNT: airbyte_db
   GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.gcpLogCredentialsPath" . | quote }}
   INTERNAL_API_HOST: {{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
 {{- if eq (index .Values "workload-api-server" "enabled") true }}
@@ -33,7 +37,7 @@ data:
 {{- else }}
   WORKLOAD_API_HOST: http://localhost # placeholder value
 {{- end }}
-{{- if eq .Values.global.edition "pro" }}
+{{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
   KEYCLOAK_INTERNAL_HOST: {{ .Release.Name }}-airbyte-keycloak-svc:{{ .Values.keycloak.service.port }}
   KEYCLOAK_PORT: {{ .Values.keycloak.service.port | quote }}
   KEYCLOAK_HOSTNAME_URL: {{ printf "%s/auth" (index $airbyteYmlDict "webapp-url") | quote }}
@@ -42,7 +46,11 @@ data:
   KEYCLOAK_INTERNAL_HOST: localhost # just a placeholder so that nginx template is valid - shouldn't be used when edition isn't "pro"
 {{- end }}
   CONNECTOR_BUILDER_API_HOST: {{ .Release.Name }}-airbyte-connector-builder-server-svc:{{ index .Values "connector-builder-server" "service" "port" }}
-  AIRBYTE_API_HOST: {{ .Release.Name }}-airbyte-api-server-svc:{{ index .Values "airbyte-api-server" "service" "port" }}
+{{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+  AIRBYTE_API_HOST: {{ printf "%s/api/public" (index $airbyteYmlDict "webapp-url") | quote }}
+{{- else }}
+  AIRBYTE_API_HOST: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}/api/public
+{{- end }}
 {{- if $.Values.global.jobs.kube.annotations }}
   JOB_KUBE_ANNOTATIONS: {{ $.Values.global.jobs.kube.annotations | include "airbyte.flattenMap" | quote }}
 {{- end }}
@@ -79,11 +87,14 @@ data:
   RUN_DATABASE_MIGRATION_ON_STARTUP: {{ index .Values "airbyte-bootloader" "runDatabaseMigrationsOnStartup" | default "true" | quote  }}
   SEGMENT_WRITE_KEY: 7UDdp5K55CyiGgsauOr2pNNujGvmhaeu
   # Storage start
-  STORAGE_TYPE:  {{ .Values.global.storage.type | quote }}
-  STORAGE_BUCKET_LOG: {{ .Values.global.storage.bucket.log | quote }}
-  STORAGE_BUCKET_STATE: {{ .Values.global.storage.bucket.state | quote }}
-  STORAGE_BUCKET_WORKLOAD_OUTPUT: {{ .Values.global.storage.bucket.workloadOutput | quote }}
-  AWS_DEFAULT_REGION: {{ .Values.global.storage.s3.region | quote }}
+  STORAGE_TYPE: {{ (((.Values.global).storage).type) | default "minio" | quote }}
+  STORAGE_BUCKET_ACTIVITY_PAYLOAD: {{ ((((.Values.global).storage).bucket).activityPayload) | default "airbyte-storage" | quote }}
+  STORAGE_BUCKET_LOG: {{ ((((.Values.global).storage).bucket).log) | default "airbyte-storage" | quote }}
+  STORAGE_BUCKET_STATE: {{ ((((.Values.global).storage).bucket).state) | default "airbyte-storage" | quote }}
+  STORAGE_BUCKET_WORKLOAD_OUTPUT: {{ ((((.Values.global).storage).bucket).workloadOutput) | default "airbyte-storage" | quote }}
+  {{- with .Values.global.storage.s3 }}
+  AWS_DEFAULT_REGION: {{ .region | default ""  | quote }}
+  {{- end}}
   MINIO_ENDPOINT: {{ include "airbyte.storage.minio.endpoint" . | quote }}
   S3_PATH_STYLE_ACCESS: {{ include "airbyte.s3PathStyleAccess" . | quote }}
   # Storage end

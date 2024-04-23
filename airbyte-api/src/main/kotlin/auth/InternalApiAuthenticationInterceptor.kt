@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2024 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.api.client.auth
 
 import com.google.common.base.CaseFormat
@@ -9,7 +13,11 @@ import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
 
-private val LOGGER = KotlinLogging.logger {}
+private val logger = KotlinLogging.logger {}
+
+fun formatUserAgent(userAgent: String): String {
+  return CaseFormat.LOWER_HYPHEN.to(CaseFormat.UPPER_CAMEL, userAgent)
+}
 
 @Singleton
 class InternalApiAuthenticationInterceptor(
@@ -22,14 +30,14 @@ class InternalApiAuthenticationInterceptor(
     val builder: Request.Builder = originalRequest.newBuilder()
 
     if (originalRequest.header(HttpHeaders.USER_AGENT) == null) {
-      builder.addHeader(HttpHeaders.USER_AGENT, CaseFormat.LOWER_HYPHEN.to(CaseFormat.UPPER_CAMEL, userAgent))
+      builder.addHeader(HttpHeaders.USER_AGENT, formatUserAgent(userAgent))
     }
 
     if (authHeaderName.isNotBlank() && authHeaderValue.isNotBlank()) {
-      LOGGER.debug { "Adding authorization header..." }
+      logger.debug { "Adding authorization header..." }
       builder.addHeader(authHeaderName, authHeaderValue)
     } else {
-      LOGGER.debug { "Bearer token not provided." }
+      logger.debug { "Bearer token not provided." }
     }
 
     return chain.proceed(builder.build())

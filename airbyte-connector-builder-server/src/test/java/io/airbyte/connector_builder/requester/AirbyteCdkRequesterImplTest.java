@@ -64,7 +64,7 @@ class AirbyteCdkRequesterImplTest {
             + "\"2023-11-01T00:00:00+00:00\", \"listItem\": \"item\"}, \"state\": {\"airbyte\": \"state\"}}, {\"pages\": []}],"
             + "\"inferred_schema\": {\"schema\": 1}, \"latest_config_update\": { \"config_key\": \"config_value\"},"
             + "\"auxiliary_requests\": [{\"title\": \"Refresh token\",\"description\": \"Obtains access token\",\"request\": {\"url\": "
-            + "\"https://a-url.com/oauth2/v1/tokens/bearer\",\"parameters\": null,\"headers\": {\"Content-Type\": "
+            + "\"https://a-url.com/oauth2/v1/tokens/bearer\",\"headers\": {\"Content-Type\": "
             + "\"application/x-www-form-urlencoded\"},\"http_method\": \"POST\",\"body\": \"a_request_body\"},\"response\": {\"status\": 200,"
             + "\"body\": \"a_response_body\",\"headers\": {\"Date\": \"Tue, 11 Jul 2023 16:28:10 GMT\"}}}]}");
     final ArgumentCaptor<String> configCaptor = ArgumentCaptor.forClass(String.class);

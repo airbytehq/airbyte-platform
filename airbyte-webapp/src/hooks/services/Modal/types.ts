@@ -10,14 +10,13 @@ export interface ModalOptions<T> {
   testId?: string;
 }
 
-export type ModalResult<T> = { type: "canceled" } | { type: "closed"; reason: T };
+export type ModalResult<T> = { type: "canceled" } | { type: "completed"; reason: T };
 
 export interface ModalContentProps<T> {
-  onClose: (reason: T) => void;
+  onComplete: (result: T) => void;
   onCancel: () => void;
 }
 
 export interface ModalServiceContext {
   openModal: <ResultType>(options: ModalOptions<ResultType>) => Promise<ModalResult<ResultType>>;
-  closeModal: () => void;
 }

@@ -91,6 +91,7 @@ const createApi = (inputSpecFile: string, name: string, apiFn?: ApiFn, excludedP
   };
 };
 
+// IMPORTANT: Whenever you change/add OpenAPI specs here, make sure to also adjust the outsideWebappDependencies list in build.gradle.kts
 export default defineConfig({
   api: createApi("../airbyte-api/src/main/openapi/config.yaml", "AirbyteClient", "apiCall", [
     // Required to exclude, due to us not being able to convert JSON parameters

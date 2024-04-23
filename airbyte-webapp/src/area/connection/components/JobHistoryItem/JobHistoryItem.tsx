@@ -7,7 +7,6 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
@@ -20,7 +19,7 @@ import { getJobCreatedAt } from "area/connection/utils/jobs";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
 import { copyToClipboard } from "core/utils/clipboard";
-import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
+import { downloadFile, FILE_TYPE_DOWNLOAD, fileizeString } from "core/utils/file";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useModalService } from "hooks/services/Modal";
@@ -216,7 +215,7 @@ export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts 
         ]}
         onChange={handleClick}
       >
-        {() => <Button variant="clear" icon={<Icon type="options" />} />}
+        {() => <Button variant="clear" icon="options" />}
       </DropdownMenu>
     </div>
   );

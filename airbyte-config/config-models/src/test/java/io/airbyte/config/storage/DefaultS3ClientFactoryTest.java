@@ -12,7 +12,7 @@ class DefaultS3ClientFactoryTest {
 
   @Test
   void testS3() {
-    final var bucket = new StorageBucketConfig("log", "state", "workload");
+    final var bucket = new StorageBucketConfig("log", "state", "workload", "payload");
     final var config = new S3StorageConfig(bucket, "access-key", "access-key-secret", "us-east-1");
 
     assertDoesNotThrow(() -> new DefaultS3ClientFactory(config).get());

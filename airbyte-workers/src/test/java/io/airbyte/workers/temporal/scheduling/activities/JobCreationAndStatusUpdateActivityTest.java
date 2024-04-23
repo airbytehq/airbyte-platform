@@ -32,6 +32,10 @@ import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
+import io.airbyte.config.State;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.workers.storage.activities.OutputStorageClient;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.EnsureCleanJobStateInput;
@@ -66,6 +70,15 @@ class JobCreationAndStatusUpdateActivityTest {
   @Mock
   private AttemptApi attemptApi;
 
+  @Mock
+  private TestClient featureFlagClient;
+
+  @Mock
+  private OutputStorageClient<State> outputStateStorageClient;
+
+  @Mock
+  private OutputStorageClient<ConfiguredAirbyteCatalog> outputCatalogStorageClient;
+
   private JobCreationAndStatusUpdateActivityImpl jobCreationAndStatusUpdateActivity;
 
   private static final UUID CONNECTION_ID = UUID.randomUUID();
@@ -89,7 +102,12 @@ class JobCreationAndStatusUpdateActivityTest {
 
   @BeforeEach
   void beforeEach() {
-    jobCreationAndStatusUpdateActivity = new JobCreationAndStatusUpdateActivityImpl(jobsApi, attemptApi);
+    jobCreationAndStatusUpdateActivity = new JobCreationAndStatusUpdateActivityImpl(
+        jobsApi,
+        attemptApi,
+        featureFlagClient,
+        outputStateStorageClient,
+        outputCatalogStorageClient);
   }
 
   @Nested
@@ -181,7 +199,7 @@ class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     void setJobSuccess() throws ApiException {
-      var request =
+      final var request =
           new JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, standardSyncOutput);
       jobCreationAndStatusUpdateActivity.jobSuccessWithAttemptNumber(request);
       verify(jobsApi).jobSuccessWithAttemptNumber(new JobSuccessWithAttemptNumberRequest()
@@ -199,7 +217,7 @@ class JobCreationAndStatusUpdateActivityTest {
 
       Assertions
           .assertThatThrownBy(() -> jobCreationAndStatusUpdateActivity.jobSuccessWithAttemptNumber(
-              new JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, null)))
+              new JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, standardSyncOutput)))
           .isInstanceOf(RetryableException.class)
           .hasCauseInstanceOf(ApiException.class);
     }

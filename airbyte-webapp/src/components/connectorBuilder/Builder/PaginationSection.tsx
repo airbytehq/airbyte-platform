@@ -13,6 +13,7 @@ import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderRequestInjection } from "./BuilderRequestInjection";
 import { ToggleGroupField } from "./ToggleGroupField";
+import { manifestPaginatorToBuilder } from "../convertManifestToBuilderForm";
 import {
   BuilderCursorPagination,
   BuilderPaginator,
@@ -21,6 +22,7 @@ import {
   PAGE_INCREMENT,
   StreamPathFn,
   useBuilderWatch,
+  builderPaginatorToManifest,
 } from "../types";
 
 interface PaginationSectionProps {
@@ -39,7 +41,8 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
       docLink={links.connectorBuilderPagination}
       label={formatMessage({ id: "connectorBuilder.pagination.label" })}
       tooltip={formatMessage({ id: "connectorBuilder.pagination.tooltip" })}
-      toggleConfig={{
+      inputsConfig={{
+        toggleable: true,
         path: streamFieldPath("paginator"),
         defaultValue: {
           strategy: {
@@ -55,6 +58,10 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
             inject_into: "request_parameter",
             field_name: "",
           },
+        },
+        yamlConfig: {
+          builderToManifest: builderPaginatorToManifest,
+          manifestToBuilder: manifestPaginatorToBuilder,
         },
       }}
       copyConfig={{
@@ -83,6 +90,8 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   manifestPath="OffsetIncrement.properties.page_size"
                   path={streamFieldPath("paginator.strategy.page_size")}
                   optional
+                  step={1}
+                  min={1}
                 />
                 {pageSize ? (
                   <PageSizeOption
@@ -112,12 +121,16 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   path={streamFieldPath("paginator.strategy.page_size")}
                   manifestPath="PageIncrement.properties.page_size"
                   optional
+                  step={1}
+                  min={1}
                 />
                 <BuilderField
                   type="number"
                   path={streamFieldPath("paginator.strategy.start_from_page")}
                   manifestPath="PageIncrement.properties.start_from_page"
                   optional
+                  step={1}
+                  min={0}
                 />
                 {pageSize ? (
                   <PageSizeOption
@@ -254,6 +267,8 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                     }
                   }}
                   optional
+                  step={1}
+                  min={1}
                 />
                 {pageSize ? (
                   <PageSizeOption

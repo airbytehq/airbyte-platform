@@ -5,8 +5,11 @@
 package io.airbyte.persistence.job;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -28,6 +31,7 @@ import io.airbyte.config.JobTypeResourceLimit;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
 import io.airbyte.config.OperatorNormalization;
 import io.airbyte.config.OperatorNormalization.Option;
+import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ResourceRequirementsType;
@@ -38,13 +42,24 @@ import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
+import io.airbyte.config.StateType;
+import io.airbyte.config.StateWrapper;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.SyncResourceRequirementsKey;
+import io.airbyte.config.persistence.RefreshJobStateUpdater;
+import io.airbyte.config.persistence.StatePersistence;
+import io.airbyte.config.persistence.StreamRefreshesRepository;
+import io.airbyte.config.persistence.domain.StreamRefresh;
+import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
+import io.airbyte.config.persistence.helper.GenerationBumper;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
+import io.airbyte.featureflag.ActivateRefreshes;
 import io.airbyte.featureflag.DestResourceOverrides;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.OrchestratorResourceOverrides;
 import io.airbyte.featureflag.SourceResourceOverrides;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.UseResourceRequirementsVariant;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
@@ -99,11 +114,16 @@ class DefaultJobCreatorTest {
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
 
   private JobPersistence jobPersistence;
+  private StatePersistence statePersistence;
+  private RefreshJobStateUpdater refreshJobStateUpdater;
+  private StreamRefreshesRepository streamRefreshesRepository;
   private JobCreator jobCreator;
   private ResourceRequirementsProvider resourceRequirementsProvider;
   private ResourceRequirements workerResourceRequirements;
   private ResourceRequirements sourceResourceRequirements;
   private ResourceRequirements destResourceRequirements;
+  private GenerationBumper generationBumper;
+  private CatalogGenerationSetter catalogGenerationSetter;
 
   private static final JsonNode PERSISTED_WEBHOOK_CONFIGS;
 
@@ -179,9 +199,10 @@ class DefaultJobCreatorTest {
         String.format("{\"webhookConfigs\": [{\"id\": \"%s\", \"name\": \"%s\", \"authToken\": {\"_secret\": \"a-secret_v1\"}}]}",
             WEBHOOK_CONFIG_ID, WEBHOOK_NAME));
 
-    STANDARD_SOURCE_DEFINITION = new StandardSourceDefinition().withCustom(false);
-    STANDARD_SOURCE_DEFINITION_WITH_SOURCE_TYPE = new StandardSourceDefinition().withSourceType(SourceType.DATABASE).withCustom(false);
-    STANDARD_DESTINATION_DEFINITION = new StandardDestinationDefinition().withCustom(false);
+    STANDARD_SOURCE_DEFINITION = new StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID()).withCustom(false);
+    STANDARD_SOURCE_DEFINITION_WITH_SOURCE_TYPE =
+        new StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID()).withSourceType(SourceType.DATABASE).withCustom(false);
+    STANDARD_DESTINATION_DEFINITION = new StandardDestinationDefinition().withDestinationDefinitionId(UUID.randomUUID()).withCustom(false);
 
     SOURCE_DEFINITION_VERSION = new ActorDefinitionVersion().withVersionId(UUID.randomUUID());
     DESTINATION_DEFINITION_VERSION = new ActorDefinitionVersion().withVersionId(UUID.randomUUID());
@@ -190,6 +211,9 @@ class DefaultJobCreatorTest {
   @BeforeEach
   void setup() {
     jobPersistence = mock(JobPersistence.class);
+    statePersistence = mock(StatePersistence.class);
+    refreshJobStateUpdater = new RefreshJobStateUpdater(statePersistence);
+    streamRefreshesRepository = mock(StreamRefreshesRepository.class);
     workerResourceRequirements = new ResourceRequirements()
         .withCpuLimit("0.2")
         .withCpuRequest("0.2")
@@ -208,49 +232,174 @@ class DefaultJobCreatorTest {
     resourceRequirementsProvider = mock(ResourceRequirementsProvider.class);
     when(resourceRequirementsProvider.getResourceRequirements(any(), any(), any()))
         .thenReturn(workerResourceRequirements);
-    jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, new TestClient());
+    generationBumper = mock(GenerationBumper.class);
+    catalogGenerationSetter = mock(CatalogGenerationSetter.class);
+    jobCreator =
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, new TestClient(), generationBumper, statePersistence,
+            refreshJobStateUpdater,
+            streamRefreshesRepository);
+  }
+
+  @Test
+  void testCreateRefreshJob() throws IOException {
+    final String streamToRefresh = "name";
+    final String streamNamespace = "namespace";
+
+    final FeatureFlagClient mFeatureFlagClient = mock(TestClient.class);
+    when(mFeatureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(true);
+    when(mFeatureFlagClient.stringVariation(eq(UseResourceRequirementsVariant.INSTANCE), any())).thenReturn("default");
+    when(jobPersistence.enqueueJob(any(), any())).thenReturn(Optional.of(1L));
+
+    final StateWrapper stateWrapper = new StateWrapper().withStateType(StateType.STREAM)
+        .withStateMessages(List.of());
+
+    when(statePersistence.getCurrentState(STANDARD_SYNC.getConnectionId())).thenReturn(Optional.of(stateWrapper));
+
+    jobCreator =
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, generationBumper,
+            statePersistence,
+            refreshJobStateUpdater,
+            streamRefreshesRepository);
+
+    final Optional<String> expectedSourceType = Optional.of("database");
+    final ResourceRequirements destStderrResourceRequirements = new ResourceRequirements().withCpuLimit("10");
+    final ResourceRequirements destStdinResourceRequirements = new ResourceRequirements().withCpuLimit("11");
+    final ResourceRequirements destStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("12");
+    final ResourceRequirements heartbeatResourceRequirements = new ResourceRequirements().withCpuLimit("13");
+    final ResourceRequirements srcStderrResourceRequirements = new ResourceRequirements().withCpuLimit("14");
+    final ResourceRequirements srcStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("14");
+
+    mockResourcesRequirement(expectedSourceType,
+        destStderrResourceRequirements,
+        destStdinResourceRequirements,
+        destStdoutResourceRequirements,
+        heartbeatResourceRequirements,
+        srcStderrResourceRequirements,
+        srcStdoutResourceRequirements);
+
+    final SyncResourceRequirements expectedSyncResourceRequirements = getExpectedResourcesRequirement(destStderrResourceRequirements,
+        destStdinResourceRequirements,
+        destStdoutResourceRequirements,
+        heartbeatResourceRequirements,
+        srcStderrResourceRequirements,
+        srcStdoutResourceRequirements);
+
+    final RefreshConfig refreshConfig = getRefreshConfig(expectedSyncResourceRequirements, List.of(
+        new StreamDescriptor().withName(streamToRefresh).withNamespace(streamNamespace)));
+
+    final JobConfig jobConfig = new JobConfig()
+        .withConfigType(ConfigType.REFRESH)
+        .withRefresh(refreshConfig);
+
+    final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
+    when(jobPersistence.enqueueJob(expectedScope, jobConfig)).thenReturn(Optional.of(JOB_ID));
+
+    List<StreamRefresh> refreshes =
+        List.of(new StreamRefresh(UUID.randomUUID(), STANDARD_SYNC.getConnectionId(), streamToRefresh, streamNamespace, null));
+    List<StreamDescriptor> refreshesSD =
+        List.of(new StreamDescriptor().withName(streamToRefresh).withNamespace(streamNamespace));
+
+    when(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(any(), anyLong(), any(), any()))
+        .thenReturn(STANDARD_SYNC.getCatalog());
+
+    jobCreator.createRefreshConnection(
+        STANDARD_SYNC,
+        SOURCE_IMAGE_NAME,
+        SOURCE_PROTOCOL_VERSION,
+        DESTINATION_IMAGE_NAME,
+        DESTINATION_PROTOCOL_VERSION,
+        List.of(STANDARD_SYNC_OPERATION),
+        PERSISTED_WEBHOOK_CONFIGS,
+        STANDARD_SOURCE_DEFINITION_WITH_SOURCE_TYPE,
+        STANDARD_DESTINATION_DEFINITION,
+        SOURCE_DEFINITION_VERSION,
+        DESTINATION_DEFINITION_VERSION,
+        WORKSPACE_ID,
+        refreshes);
+
+    verify(jobPersistence).enqueueJob(expectedScope, jobConfig);
+    verify(generationBumper).updateGenerationForStreams(STANDARD_SYNC.getConnectionId(), JOB_ID, refreshes);
+
+    final StateWrapper expected =
+        new StateWrapper().withStateType(StateType.STREAM);
+
+    verify(statePersistence).updateOrCreateState(STANDARD_SYNC.getConnectionId(), expected);
+    verify(streamRefreshesRepository).deleteByConnectionIdAndStreamNameAndStreamNamespace(STANDARD_SYNC.getConnectionId(), streamToRefresh,
+        streamNamespace);
+  }
+
+  private static RefreshConfig getRefreshConfig(final SyncResourceRequirements expectedSyncResourceRequirements,
+                                                final List<StreamDescriptor> streamToRefresh) {
+    return new RefreshConfig()
+        .withNamespaceDefinition(STANDARD_SYNC.getNamespaceDefinition())
+        .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
+        .withPrefix(STANDARD_SYNC.getPrefix())
+        .withSourceDockerImage(SOURCE_IMAGE_NAME)
+        .withSourceProtocolVersion(SOURCE_PROTOCOL_VERSION)
+        .withDestinationDockerImage(DESTINATION_IMAGE_NAME)
+        .withDestinationProtocolVersion(DESTINATION_PROTOCOL_VERSION)
+        .withConfiguredAirbyteCatalog(STANDARD_SYNC.getCatalog())
+        .withOperationSequence(List.of(STANDARD_SYNC_OPERATION))
+        .withSyncResourceRequirements(expectedSyncResourceRequirements)
+        .withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
+        .withIsSourceCustomConnector(false)
+        .withIsDestinationCustomConnector(false)
+        .withWorkspaceId(WORKSPACE_ID)
+        .withSourceDefinitionVersionId(SOURCE_DEFINITION_VERSION.getVersionId())
+        .withDestinationDefinitionVersionId(DESTINATION_DEFINITION_VERSION.getVersionId())
+        .withStreamsToRefresh(streamToRefresh);
+  }
+
+  @Test
+  void testFailToCreateRefreshIfNotAllowed() {
+    final FeatureFlagClient mFeatureFlagClient = mock(TestClient.class);
+    when(mFeatureFlagClient.boolVariation(eq(ActivateRefreshes.INSTANCE), any())).thenReturn(false);
+    jobCreator =
+        new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, generationBumper,
+            statePersistence,
+            refreshJobStateUpdater,
+            streamRefreshesRepository);
+
+    assertThrows(IllegalStateException.class, () -> jobCreator.createRefreshConnection(
+        STANDARD_SYNC,
+        SOURCE_IMAGE_NAME,
+        SOURCE_PROTOCOL_VERSION,
+        DESTINATION_IMAGE_NAME,
+        DESTINATION_PROTOCOL_VERSION,
+        List.of(STANDARD_SYNC_OPERATION),
+        PERSISTED_WEBHOOK_CONFIGS,
+        STANDARD_SOURCE_DEFINITION_WITH_SOURCE_TYPE,
+        STANDARD_DESTINATION_DEFINITION,
+        SOURCE_DEFINITION_VERSION,
+        DESTINATION_DEFINITION_VERSION,
+        WORKSPACE_ID,
+        List.of()));
   }
 
   @Test
   void testCreateSyncJob() throws IOException {
     final Optional<String> expectedSourceType = Optional.of("database");
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(workerResourceRequirements);
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(sourceResourceRequirements);
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(destResourceRequirements);
-    // More explicit resource requirements to verify data mapping
     final ResourceRequirements destStderrResourceRequirements = new ResourceRequirements().withCpuLimit("10");
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDERR, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(destStderrResourceRequirements);
     final ResourceRequirements destStdinResourceRequirements = new ResourceRequirements().withCpuLimit("11");
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDIN, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(destStdinResourceRequirements);
     final ResourceRequirements destStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("12");
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDOUT, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(destStdoutResourceRequirements);
     final ResourceRequirements heartbeatResourceRequirements = new ResourceRequirements().withCpuLimit("13");
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.HEARTBEAT, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(heartbeatResourceRequirements);
     final ResourceRequirements srcStderrResourceRequirements = new ResourceRequirements().withCpuLimit("14");
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDERR, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(srcStderrResourceRequirements);
     final ResourceRequirements srcStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("14");
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDOUT, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(srcStdoutResourceRequirements);
 
-    final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
-        .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT).withSubType("database"))
-        .withDestination(destResourceRequirements)
-        .withDestinationStdErr(destStderrResourceRequirements)
-        .withDestinationStdIn(destStdinResourceRequirements)
-        .withDestinationStdOut(destStdoutResourceRequirements)
-        .withOrchestrator(workerResourceRequirements)
-        .withHeartbeat(heartbeatResourceRequirements)
-        .withSource(sourceResourceRequirements)
-        .withSourceStdErr(srcStderrResourceRequirements)
-        .withSourceStdOut(srcStdoutResourceRequirements);
+    mockResourcesRequirement(expectedSourceType,
+        destStderrResourceRequirements,
+        destStdinResourceRequirements,
+        destStdoutResourceRequirements,
+        heartbeatResourceRequirements,
+        srcStderrResourceRequirements,
+        srcStdoutResourceRequirements);
+
+    final SyncResourceRequirements expectedSyncResourceRequirements = getExpectedResourcesRequirement(destStderrResourceRequirements,
+        destStdinResourceRequirements,
+        destStdoutResourceRequirements,
+        heartbeatResourceRequirements,
+        srcStderrResourceRequirements,
+        srcStdoutResourceRequirements);
 
     final JobSyncConfig jobSyncConfig = new JobSyncConfig()
         .withNamespaceDefinition(STANDARD_SYNC.getNamespaceDefinition())
@@ -292,6 +441,53 @@ class DefaultJobCreatorTest {
 
     final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
     verify(jobPersistence).enqueueJob(expectedScope, jobConfig);
+  }
+
+  private void mockResourcesRequirement(final Optional<String> expectedSourceType,
+                                        final ResourceRequirements destStderrResourceRequirements,
+                                        final ResourceRequirements destStdinResourceRequirements,
+                                        final ResourceRequirements destStdoutResourceRequirements,
+                                        final ResourceRequirements heartbeatResourceRequirements,
+                                        final ResourceRequirements srcStderrResourceRequirements,
+                                        final ResourceRequirements srcStdoutResourceRequirements) {
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(workerResourceRequirements);
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(sourceResourceRequirements);
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(destResourceRequirements);
+    // More explicit resource requirements to verify data mapping
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDERR, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(destStderrResourceRequirements);
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDIN, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(destStdinResourceRequirements);
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDOUT, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(destStdoutResourceRequirements);
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.HEARTBEAT, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(heartbeatResourceRequirements);
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDERR, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(srcStderrResourceRequirements);
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDOUT, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(srcStdoutResourceRequirements);
+  }
+
+  private SyncResourceRequirements getExpectedResourcesRequirement(final ResourceRequirements destStderrResourceRequirements,
+                                                                   final ResourceRequirements destStdinResourceRequirements,
+                                                                   final ResourceRequirements destStdoutResourceRequirements,
+                                                                   final ResourceRequirements heartbeatResourceRequirements,
+                                                                   final ResourceRequirements srcStderrResourceRequirements,
+                                                                   final ResourceRequirements srcStdoutResourceRequirements) {
+    return new SyncResourceRequirements()
+        .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT).withSubType("database"))
+        .withDestination(destResourceRequirements)
+        .withDestinationStdErr(destStderrResourceRequirements)
+        .withDestinationStdIn(destStdinResourceRequirements)
+        .withDestinationStdOut(destStdoutResourceRequirements)
+        .withOrchestrator(workerResourceRequirements)
+        .withHeartbeat(heartbeatResourceRequirements)
+        .withSource(sourceResourceRequirements)
+        .withSourceStdErr(srcStderrResourceRequirements)
+        .withSourceStdOut(srcStdoutResourceRequirements);
   }
 
   @Test
@@ -475,9 +671,11 @@ class DefaultJobCreatorTest {
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
-        new StandardSourceDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
-        new StandardDestinationDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
-            new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(destResourceRequirements)))),
+        new StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
+        new StandardDestinationDefinition().withDestinationDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
+                new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(destResourceRequirements)))),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
         WORKSPACE_ID);
@@ -548,7 +746,10 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))));
+        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), generationBumper,
+        statePersistence,
+        refreshJobStateUpdater,
+        streamRefreshesRepository);
 
     jobCreator.createSyncJob(
         SOURCE_CONNECTION,
@@ -560,9 +761,11 @@ class DefaultJobCreatorTest {
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
-        new StandardSourceDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
-        new StandardDestinationDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
-            new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
+        new StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
+        new StandardDestinationDefinition().withDestinationDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
+                new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
         WORKSPACE_ID);
@@ -612,7 +815,10 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(OrchestratorResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))));
+        new TestClient(Map.of(OrchestratorResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), generationBumper,
+        statePersistence,
+        refreshJobStateUpdater,
+        streamRefreshesRepository);
 
     final var standardSync = new StandardSync()
         .withConnectionId(UUID.randomUUID())
@@ -637,8 +843,10 @@ class DefaultJobCreatorTest {
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
-        new StandardSourceDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
-        new StandardDestinationDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(destResourceRequirements)),
+        new StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
+        new StandardDestinationDefinition().withDestinationDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(destResourceRequirements)),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
         WORKSPACE_ID);
@@ -688,7 +896,10 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(SourceResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))));
+        new TestClient(Map.of(SourceResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))), generationBumper,
+        statePersistence,
+        refreshJobStateUpdater,
+        streamRefreshesRepository);
 
     jobCreator.createSyncJob(
         SOURCE_CONNECTION,
@@ -700,9 +911,11 @@ class DefaultJobCreatorTest {
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
-        new StandardSourceDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
-            new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
-        new StandardDestinationDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(destResourceRequirements)),
+        new StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
+                new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
+        new StandardDestinationDefinition().withDestinationDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(destResourceRequirements)),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
         WORKSPACE_ID);
@@ -744,7 +957,10 @@ class DefaultJobCreatorTest {
         .withMemoryRequest("800Mi");
 
     final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
-        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(weirdness))));
+        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(weirdness))), generationBumper,
+        statePersistence,
+        refreshJobStateUpdater,
+        streamRefreshesRepository);
 
     jobCreator.createSyncJob(
         SOURCE_CONNECTION,
@@ -756,9 +972,11 @@ class DefaultJobCreatorTest {
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         null,
-        new StandardSourceDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
-        new StandardDestinationDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
-            new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
+        new StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
+        new StandardDestinationDefinition().withDestinationDefinitionId(UUID.randomUUID())
+            .withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
+                new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
         WORKSPACE_ID);

@@ -7,7 +7,7 @@ import { finalize, Subject } from "rxjs";
 import { LoadingPage } from "components";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useConfig } from "core/config";
+import { config } from "core/config";
 import { useAnalyticsService } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 import { FeatureSet, FeatureItem, useFeatureService } from "core/services/features";
@@ -215,6 +215,10 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
           })
         );
       },
+      getAllExperiments(): Partial<Experiments> {
+        // Return all feature flags from the LD client
+        return ldClient.current?.allFlags() ?? {};
+      },
     }),
     [addContext, removeContext]
   );
@@ -234,7 +238,7 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
 };
 
 export const LDExperimentServiceProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
-  const { launchDarkly: launchdarklyKey } = useConfig();
+  const { launchDarkly: launchdarklyKey } = config;
 
   return !launchdarklyKey ? (
     <>{children}</>

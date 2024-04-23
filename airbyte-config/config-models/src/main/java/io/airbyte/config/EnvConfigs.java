@@ -54,7 +54,6 @@ public class EnvConfigs implements Configs {
   private static final String DEFAULT_JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY = "IfNotPresent";
   private static final String DEFAULT_JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY = "IfNotPresent";
   private static final String DEFAULT_JOB_KUBE_SOCAT_IMAGE = "alpine/socat:1.7.4.4-r0";
-  private static final String DEFAULT_JOB_KUBE_BUSYBOX_IMAGE = "busybox:1.35";
   public static final int DEFAULT_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE = 100;
   public static final int DEFAULT_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE = 14;
 
@@ -87,7 +86,8 @@ public class EnvConfigs implements Configs {
     final var buckets = new StorageBucketConfig(
         getEnsureEnv(EnvVar.STORAGE_BUCKET_LOG),
         getEnsureEnv(EnvVar.STORAGE_BUCKET_STATE),
-        getEnsureEnv(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT));
+        getEnsureEnv(EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT),
+        getEnsureEnv(EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD));
 
     return switch (getEnsureEnv(EnvVar.STORAGE_TYPE)) {
       case "GCS" -> new GcsStorageConfig(

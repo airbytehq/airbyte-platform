@@ -27,7 +27,7 @@ public class MockSynchronousPythonCdkCommandRunner extends SynchronousPythonCdkC
   public MockSynchronousPythonCdkCommandRunner(
                                                final AirbyteFileWriter writer,
                                                final AirbyteStreamFactory streamFactory) {
-    super(writer, streamFactory, "", "");
+    super(writer, streamFactory, "", "", "");
   }
 
   public MockSynchronousPythonCdkCommandRunner(
@@ -38,7 +38,7 @@ public class MockSynchronousPythonCdkCommandRunner extends SynchronousPythonCdkC
                                                final InputStream inputStream,
                                                final InputStream errorStream,
                                                final OutputStream outputStream) {
-    super(writer, streamFactory, "", "");
+    super(writer, streamFactory, "", "", "");
     this.shouldThrow = shouldThrow;
     this.exitCode = exitCode;
     this.inputStream = inputStream;

@@ -39,8 +39,9 @@ object WorkspacesResponseMapper {
   ): WorkspacesResponse {
     val uriBuilder =
       PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(WORKSPACES_PATH))
-        .queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
         .queryParam(INCLUDE_DELETED, includeDeleted)
+    if (workspaceIds.isNotEmpty()) uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+
     val workspacesResponse = WorkspacesResponse()
     workspacesResponse.next =
       PaginationMapper.getNextUrl(workspaceReadList.workspaces, limit, offset, uriBuilder)

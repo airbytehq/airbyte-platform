@@ -77,6 +77,10 @@ class RuntimeSecretPersistence(private val secretPersistenceConfig: SecretPersis
     secretPersistence.write(coordinate, payload)
   }
 
+  override fun delete(coordinate: SecretCoordinate) {
+    return
+  }
+
   private fun buildAwsSecretManager(configuration: Map<String, String>): AwsSecretManagerPersistence {
     // We default to ACCESS_KEY auth
     val authType = configuration["auth_type"]?.uppercase() ?: AwsAuthType.ACCESS_KEY.value

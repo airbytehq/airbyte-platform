@@ -4,7 +4,6 @@ import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { Message } from "components/ui/Message";
 import { Modal, ModalBody } from "components/ui/Modal";
 import { NumberBadge } from "components/ui/NumberBadge";
@@ -66,7 +65,8 @@ export const TestingValuesMenu: React.FC<TestingValuesMenuProps> = ({ testingVal
               disabled={
                 isFetching || !spec || Object.keys(spec.connection_specification?.properties || {}).length === 0
               }
-              icon={<Icon type="user" className={styles.icon} />}
+              icon="user"
+              iconClassName={styles.icon}
             >
               <FormattedMessage id="connectorBuilder.inputsButton" />
             </Button>
@@ -89,7 +89,7 @@ export const TestingValuesMenu: React.FC<TestingValuesMenuProps> = ({ testingVal
       {isOpen && spec && (
         <Modal
           size="lg"
-          onClose={() => setIsOpen(false)}
+          onCancel={() => setIsOpen(false)}
           title={<FormattedMessage id="connectorBuilder.testingValuesMenuTitle" />}
         >
           <ModalBody>
@@ -101,12 +101,11 @@ export const TestingValuesMenu: React.FC<TestingValuesMenuProps> = ({ testingVal
               <FlexContainer direction="column">
                 {showInputsWarning && (
                   <Message
-                    className={styles.warningBox}
-                    type="warning"
+                    type="info"
                     onClose={() => {
                       setShowInputsWarning(false);
                     }}
-                    text={<FormattedMessage id="connectorBuilder.inputsFormWarning" />}
+                    text={<FormattedMessage id="connectorBuilder.inputsFormMessage" />}
                   />
                 )}
                 {permission === "adminReadOnly" && (

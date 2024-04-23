@@ -8,8 +8,10 @@ import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.model.generated.Pagination
 import io.airbyte.api.model.generated.WorkspaceCreate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.api.model.generated.WorkspaceUpdateName
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
 import io.airbyte.public_api.model.generated.WorkspaceCreateRequest
 import io.airbyte.public_api.model.generated.WorkspaceOAuthCredentialsRequest
 import io.airbyte.public_api.model.generated.WorkspaceResponse
@@ -19,6 +21,7 @@ import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
 import io.airbyte.server.apis.publicapi.constants.DELETE
 import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
+import io.airbyte.server.apis.publicapi.constants.PATCH
 import io.airbyte.server.apis.publicapi.constants.POST
 import io.airbyte.server.apis.publicapi.constants.WORKSPACES_PATH
 import io.airbyte.server.apis.publicapi.constants.WORKSPACES_WITH_ID_PATH
@@ -91,7 +94,13 @@ open class WorkspaceServiceImpl(
    * Creates a workspace.
    */
   override fun createWorkspace(workspaceCreateRequest: WorkspaceCreateRequest): WorkspaceResponse {
-    val workspaceCreate = WorkspaceCreate().name(workspaceCreateRequest.name)
+    // For now this should always be true in OSS.
+    val organizationId = DEFAULT_ORGANIZATION_ID
+
+    val workspaceCreate =
+      WorkspaceCreate().name(
+        workspaceCreateRequest.name,
+      ).email(currentUserService.currentUser.email).organizationId(organizationId)
     val result =
       kotlin.runCatching { workspacesHandler.createWorkspace(workspaceCreate) }
         .onFailure {
@@ -127,21 +136,49 @@ open class WorkspaceServiceImpl(
   }
 
   /**
-   * No-op in OSS.
+   * Updates a workspace name in OSS.
    */
   override fun updateWorkspace(
     workspaceId: UUID,
     workspaceUpdateRequest: WorkspaceUpdateRequest,
   ): WorkspaceResponse {
-    // Update workspace in the cloud version of the airbyte API currently only supports name updates, but we don't have name updates in OSS.
-    return WorkspaceResponse()
+    val workspaceUpdate =
+      WorkspaceUpdateName().apply {
+        this.name = workspaceUpdateRequest.name
+        this.workspaceId = workspaceId
+      }
+    val result =
+      kotlin.runCatching { workspacesHandler.updateWorkspaceName(workspaceUpdate) }
+        .onFailure {
+          log.error("Error for updateWorkspace", it)
+          ConfigClientErrorHandler.handleError(it, workspaceId.toString())
+        }
+    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    return WorkspaceResponseMapper.from(result.getOrNull()!!)
   }
 
   override fun controllerUpdateWorkspace(
     workspaceId: UUID,
     workspaceUpdateRequest: WorkspaceUpdateRequest,
   ): Response {
-    return Response.status(Response.Status.NOT_IMPLEMENTED).build()
+    val userId: UUID = currentUserService.currentUser.userId
+
+    val workspaceResponse: Any =
+      trackingHelper.callWithTracker(
+        { updateWorkspace(workspaceId, workspaceUpdateRequest) },
+        WORKSPACES_WITH_ID_PATH,
+        PATCH,
+        userId,
+      )
+    trackingHelper.trackSuccess(
+      WORKSPACES_WITH_ID_PATH,
+      PATCH,
+      userId,
+    )
+    return Response
+      .status(Response.Status.OK.statusCode)
+      .entity(workspaceResponse)
+      .build()
   }
 
   /**

@@ -10,8 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.github.dockerjava.api.DockerClient;
-import com.github.dockerjava.api.model.Network;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
@@ -105,8 +103,6 @@ import io.airbyte.db.Database;
 import io.airbyte.db.factory.DataSourceFactory;
 import io.airbyte.db.jdbc.JdbcUtils;
 import io.airbyte.test.container.AirbyteTestContainer;
-import io.fabric8.kubernetes.client.DefaultKubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClient;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import java.io.File;
@@ -116,6 +112,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
+import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
@@ -133,7 +130,6 @@ import org.jooq.SQLDialect;
 import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.shaded.org.apache.commons.lang3.RandomStringUtils;
 import org.testcontainers.utility.DockerImageName;
@@ -159,6 +155,7 @@ public class AcceptanceTestHarness {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AcceptanceTestHarness.class);
 
+  private static final UUID DEFAULT_ORGANIZATION_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
   private static final String DOCKER_COMPOSE_FILE_NAME = "docker-compose.yaml";
   // assume env file is one directory level up from airbyte-tests.
   private static final File ENV_FILE = Path.of(System.getProperty("user.dir")).getParent().resolve(".env").toFile();
@@ -182,9 +179,6 @@ public class AcceptanceTestHarness {
   private static final String SOURCE_USERNAME = "sourceusername";
   public static final String SOURCE_PASSWORD = "hunter2";
   public static final String PUBLIC_SCHEMA_NAME = "public";
-  public static final String STAGING_SCHEMA_NAME = "staging";
-  public static final String COOL_EMPLOYEES_TABLE_NAME = "cool_employees";
-  public static final String AWESOME_PEOPLE_TABLE_NAME = "awesome_people";
   public static final String PUBLIC = "public";
 
   private static final String DEFAULT_POSTGRES_INIT_SQL_FILE = "postgres_init.sql";
@@ -194,13 +188,13 @@ public class AcceptanceTestHarness {
   public static final int MAX_TRIES = 5;
   public static final int MAX_ALLOWED_SECOND_PER_RUN = 120;
 
+  private static final String CLOUD_SQL_DATABASE_PREFIX = "acceptance_test_";
+
   // NOTE: we include `INCOMPLETE` here because the job may still retry; see
   // https://docs.airbyte.com/understanding-airbyte/jobs/.
   public static final Set<JobStatus> IN_PROGRESS_JOB_STATUSES = Set.of(JobStatus.PENDING, JobStatus.INCOMPLETE, JobStatus.RUNNING);
 
   private static final String KUBE_PROCESS_RUNNER_HOST = java.util.Optional.ofNullable(System.getenv("KUBE_PROCESS_RUNNER_HOST")).orElse("");
-
-  private static final String DOCKER_NETWORK = java.util.Optional.ofNullable(System.getenv("DOCKER_NETWORK")).orElse("bridge");
 
   private static boolean isKube;
   private static boolean isMinikube;
@@ -208,6 +202,7 @@ public class AcceptanceTestHarness {
   private static boolean isMac;
   private static boolean useExternalDeployment;
   private static boolean ensureCleanSlate;
+  private CloudSqlDatabaseProvisioner cloudSqlDatabaseProvisioner;
 
   /**
    * When the acceptance tests are run against a local instance of docker-compose or KUBE then these
@@ -216,14 +211,15 @@ public class AcceptanceTestHarness {
    */
   private PostgreSQLContainer sourcePsql;
   private PostgreSQLContainer destinationPsql;
+  private String sourceDatabaseName;
+  private String destinationDatabaseName;
+
   private AirbyteTestContainer airbyteTestContainer;
   private AirbyteApiClient apiClient;
 
   private WebBackendApi webBackendApi;
   private final UUID defaultWorkspaceId;
   private final String postgresSqlInitFile;
-
-  private KubernetesClient kubernetesClient;
 
   private final List<UUID> sourceIds = Lists.newArrayList();
   private final List<UUID> connectionIds = Lists.newArrayList();
@@ -232,11 +228,13 @@ public class AcceptanceTestHarness {
   private final List<UUID> sourceDefinitionIds = Lists.newArrayList();
   private DataSource sourceDataSource;
   private DataSource destinationDataSource;
-  private String postgresPassword;
 
-  public KubernetesClient getKubernetesClient() {
-    return kubernetesClient;
-  }
+  private String gcpProjectId;
+  private String cloudSqlInstanceId;
+  private String cloudSqlInstanceUsername;
+  private String cloudSqlInstancePassword;
+  private String cloudSqlInstancePrivateIp;
+  private String cloudSqlInstancePublicIp;
 
   public void removeConnection(final UUID connection) {
     connectionIds.remove(connection);
@@ -246,7 +244,7 @@ public class AcceptanceTestHarness {
                                final WebBackendApi webBackendApi,
                                final UUID defaultWorkspaceId,
                                final String postgresSqlInitFile)
-      throws URISyntaxException, IOException, InterruptedException {
+      throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
     // reads env vars to assign static variables
     assignEnvVars();
     this.apiClient = apiClient;
@@ -258,28 +256,23 @@ public class AcceptanceTestHarness {
       throw new RuntimeException("KUBE Flag should also be enabled if GKE flag is enabled");
     }
     if (!isGke) {
-      // we attach the container to the appropriate network since there are environments where we use one
-      // other than the default
-      final DockerClient dockerClient = DockerClientFactory.lazyClient();
-      final List<Network> dockerNetworks = dockerClient.listNetworksCmd().withNameFilter(DOCKER_NETWORK).exec();
-      final Network dockerNetwork = dockerNetworks.get(0);
-      final org.testcontainers.containers.Network containerNetwork =
-          org.testcontainers.containers.Network.builder().id(dockerNetwork.getId()).build();
-      sourcePsql = (PostgreSQLContainer) new PostgreSQLContainer(SOURCE_POSTGRES_IMAGE_NAME)
-          .withNetwork(containerNetwork);
+      sourcePsql = new PostgreSQLContainer(SOURCE_POSTGRES_IMAGE_NAME);
       sourcePsql.withUsername(SOURCE_USERNAME)
           .withPassword(SOURCE_PASSWORD);
       sourcePsql.start();
 
-      destinationPsql = (PostgreSQLContainer) new PostgreSQLContainer(DESTINATION_POSTGRES_IMAGE_NAME)
-          .withNetwork(containerNetwork);
+      destinationPsql = new PostgreSQLContainer(DESTINATION_POSTGRES_IMAGE_NAME);
       destinationPsql.start();
-    }
-
-    if (isKube && !isGke) {
-      // TODO(mfsiega-airbyte): get the Kube client to work with GKE tests. We don't use it yet but we
-      // will want to someday.
-      kubernetesClient = new DefaultKubernetesClient();
+    } else {
+      this.cloudSqlDatabaseProvisioner = new CloudSqlDatabaseProvisioner();
+      sourceDatabaseName = cloudSqlDatabaseProvisioner.createDatabase(
+          gcpProjectId,
+          cloudSqlInstanceId,
+          generateRandomCloudSqlDatabaseName());
+      destinationDatabaseName = cloudSqlDatabaseProvisioner.createDatabase(
+          gcpProjectId,
+          cloudSqlInstanceId,
+          generateRandomCloudSqlDatabaseName());
     }
 
     // by default use airbyte deployment governed by a test container.
@@ -303,7 +296,7 @@ public class AcceptanceTestHarness {
   }
 
   public AcceptanceTestHarness(final AirbyteApiClient apiClient, final WebBackendApi webBackendApi, final UUID defaultWorkspaceId)
-      throws URISyntaxException, IOException, InterruptedException {
+      throws URISyntaxException, IOException, InterruptedException, GeneralSecurityException {
     this(apiClient, webBackendApi, defaultWorkspaceId, DEFAULT_POSTGRES_INIT_SQL_FILE);
   }
 
@@ -328,29 +321,36 @@ public class AcceptanceTestHarness {
   public void setup() throws SQLException, URISyntaxException, IOException, ApiException {
     if (isGke) {
       // Prepare the database data sources.
-      LOGGER.info("postgresPassword: {}", postgresPassword);
-      sourceDataSource = GKEPostgresConfig.getSourceDataSource(postgresPassword);
-      destinationDataSource = GKEPostgresConfig.getDestinationDataSource(postgresPassword);
+      LOGGER.info("postgresPassword: {}", cloudSqlInstancePassword);
+      sourceDataSource = GKEPostgresConfig.getDataSource(
+          cloudSqlInstanceUsername,
+          cloudSqlInstancePassword,
+          cloudSqlInstancePrivateIp,
+          sourceDatabaseName);
+      destinationDataSource = GKEPostgresConfig.getDataSource(
+          cloudSqlInstanceUsername,
+          cloudSqlInstancePassword,
+          cloudSqlInstancePrivateIp,
+          destinationDatabaseName);
       // seed database.
       GKEPostgresConfig.runSqlScript(Path.of(MoreResources.readResourceAsFile(postgresSqlInitFile).toURI()), getSourceDatabase());
     } else {
       PostgreSQLContainerHelper.runSqlScript(MountableFile.forClasspathResource(postgresSqlInitFile), sourcePsql);
 
-      destinationPsql = new PostgreSQLContainer("postgres:13-alpine");
-      destinationPsql.start();
-
       sourceDataSource = Databases.createDataSource(sourcePsql);
       destinationDataSource = Databases.createDataSource(destinationPsql);
-    }
 
-    // Pinning Postgres destination version
-    final DestinationDefinitionRead postgresDestDef = getPostgresDestinationDefinition();
-    if (!postgresDestDef.getDockerImageTag().equals(POSTGRES_DESTINATION_CONNECTOR_VERSION)) {
-      LOGGER.info("Setting postgres destination connector to version {}...", POSTGRES_DESTINATION_CONNECTOR_VERSION);
-      try {
-        updateDestinationDefinitionVersion(postgresDestDef.getDestinationDefinitionId(), POSTGRES_DESTINATION_CONNECTOR_VERSION);
-      } catch (final ApiException e) {
-        LOGGER.error("Error while updating destination definition version", e);
+      // Pinning Postgres destination version. This doesn't work on GKE since the
+      // airbyte-cron will revert this change. On GKE we are pinning the version by
+      // adding an entry to the scoped_configuration table.
+      final DestinationDefinitionRead postgresDestDef = getPostgresDestinationDefinition();
+      if (!postgresDestDef.getDockerImageTag().equals(POSTGRES_DESTINATION_CONNECTOR_VERSION)) {
+        LOGGER.info("Setting postgres destination connector to version {}...", POSTGRES_DESTINATION_CONNECTOR_VERSION);
+        try {
+          updateDestinationDefinitionVersion(postgresDestDef.getDestinationDefinitionId(), POSTGRES_DESTINATION_CONNECTOR_VERSION);
+        } catch (final ApiException e) {
+          LOGGER.error("Error while updating destination definition version", e);
+        }
       }
     }
   }
@@ -379,8 +379,18 @@ public class AcceptanceTestHarness {
       if (isGke) {
         DataSourceFactory.close(sourceDataSource);
         DataSourceFactory.close(destinationDataSource);
+
+        cloudSqlDatabaseProvisioner.deleteDatabase(
+            gcpProjectId,
+            cloudSqlInstanceId,
+            sourceDatabaseName);
+        cloudSqlDatabaseProvisioner.deleteDatabase(
+            gcpProjectId,
+            cloudSqlInstanceId,
+            destinationDatabaseName);
       } else {
         destinationPsql.stop();
+        sourcePsql.stop();
       }
       // TODO(mfsiega-airbyte): clean up created source definitions.
     } catch (final Exception e) {
@@ -448,9 +458,12 @@ public class AcceptanceTestHarness {
             && System.getenv("USE_EXTERNAL_DEPLOYMENT").equalsIgnoreCase("true");
     ensureCleanSlate = System.getenv("ENSURE_CLEAN_SLATE") != null
         && System.getenv("ENSURE_CLEAN_SLATE").equalsIgnoreCase("true");
-    postgresPassword = System.getenv("POSTGRES_PASSWORD") != null
-        ? System.getenv("POSTGRES_PASSWORD")
-        : "admin123";
+    gcpProjectId = System.getenv("GCP_PROJECT_ID");
+    cloudSqlInstanceId = System.getenv("CLOUD_SQL_INSTANCE_ID");
+    cloudSqlInstanceUsername = System.getenv("CLOUD_SQL_INSTANCE_USERNAME");
+    cloudSqlInstancePassword = System.getenv("CLOUD_SQL_INSTANCE_PASSWORD");
+    cloudSqlInstancePrivateIp = System.getenv("CLOUD_SQL_INSTANCE_PRIVATE_IP");
+    cloudSqlInstancePublicIp = System.getenv("CLOUD_SQL_INSTANCE_PUBLIC_IP");
   }
 
   private WorkflowClient getWorkflowClient() {
@@ -745,7 +758,7 @@ public class AcceptanceTestHarness {
     return createNormalizationOperation(defaultWorkspaceId);
   }
 
-  private OperationRead createNormalizationOperation(final UUID workspaceId) {
+  public OperationRead createNormalizationOperation(final UUID workspaceId) {
     final OperatorConfiguration normalizationConfig = new OperatorConfiguration()
         .operatorType(OperatorType.NORMALIZATION).normalization(new OperatorNormalization().option(
             OperatorNormalization.OptionEnum.BASIC));
@@ -783,25 +796,29 @@ public class AcceptanceTestHarness {
   }
 
   public JsonNode getSourceDbConfig() {
-    return getDbConfig(sourcePsql, false, false, Type.SOURCE);
+    return getDbConfig(sourcePsql, false, false, sourceDatabaseName);
   }
 
   public JsonNode getDestinationDbConfig() {
-    return getDbConfig(destinationPsql, false, true, Type.DESTINATION);
+    return getDbConfig(destinationPsql, false, true, destinationDatabaseName);
   }
 
   public JsonNode getDestinationDbConfigWithHiddenPassword() {
-    return getDbConfig(destinationPsql, true, true, Type.DESTINATION);
+    return getDbConfig(destinationPsql, true, true, destinationDatabaseName);
   }
 
   public JsonNode getDbConfig(final PostgreSQLContainer psql,
                               final boolean hiddenPassword,
                               final boolean withSchema,
-                              final Type connectorType) {
+                              final String databaseName) {
     try {
       final Map<Object, Object> dbConfig =
-          (isKube && isGke) ? GKEPostgresConfig.dbConfig(connectorType, hiddenPassword ? null : postgresPassword, withSchema)
-              : localConfig(psql, hiddenPassword, withSchema);
+          (isKube && isGke) ? GKEPostgresConfig.dbConfig(
+              hiddenPassword ? null : cloudSqlInstancePassword,
+              withSchema,
+              cloudSqlInstanceUsername,
+              cloudSqlInstancePublicIp,
+              databaseName) : localConfig(psql, hiddenPassword, withSchema);
       final var config = Jsons.jsonNode(dbConfig);
       LOGGER.info("Using db config: {}", Jsons.toPrettyString(config));
       return config;
@@ -814,9 +831,7 @@ public class AcceptanceTestHarness {
                                           final boolean hiddenPassword,
                                           final boolean withSchema) {
     final Map<Object, Object> dbConfig = new HashMap<>();
-    // don't use psql.getHost() directly since the ip we need differs depending on environment
-    // NOTE: Use the container ip IFF we aren't on the "bridge" network
-    dbConfig.put(JdbcUtils.HOST_KEY, DOCKER_NETWORK.equals("bridge") ? getHostname() : psql.getHost());
+    dbConfig.put(JdbcUtils.HOST_KEY, getHostname());
 
     if (hiddenPassword) {
       dbConfig.put(JdbcUtils.PASSWORD_KEY, "**********");
@@ -872,6 +887,20 @@ public class AcceptanceTestHarness {
                 .name("E2E Test Source")
                 .dockerRepository("airbyte/source-e2e-test")
                 .dockerImageTag(SOURCE_E2E_TEST_CONNECTOR_VERSION)
+                .documentationUrl(URI.create("https://example.com")))),
+        "create customer source definition", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+    sourceDefinitionIds.add(sourceDefinitionRead.getSourceDefinitionId());
+    return sourceDefinitionRead;
+  }
+
+  public SourceDefinitionRead createPostgresSourceDefinition(final UUID workspaceId, final String dockerImageTag) throws Exception {
+    final var sourceDefinitionRead = AirbyteApiClient.retryWithJitterThrows(
+        () -> apiClient.getSourceDefinitionApi().createCustomSourceDefinition(new CustomSourceDefinitionCreate()
+            .workspaceId(workspaceId)
+            .sourceDefinition(new SourceDefinitionCreate()
+                .name("Custom Postgres Source")
+                .dockerRepository("airbyte/source-postgres")
+                .dockerImageTag(dockerImageTag)
                 .documentationUrl(URI.create("https://example.com")))),
         "create customer source definition", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
     sourceDefinitionIds.add(sourceDefinitionRead.getSourceDefinitionId());
@@ -1217,7 +1246,7 @@ public class AcceptanceTestHarness {
         .createWorkspaceIfNotExist(new WorkspaceCreateWithId()
             .id(workspaceId)
             .email("acceptance-tests@airbyte.io")
-            .name("Airbyte Acceptance Tests" + UUID.randomUUID())),
+            .name("Airbyte Acceptance Tests" + UUID.randomUUID()).organizationId(DEFAULT_ORGANIZATION_ID)),
         "create workspace", 10, FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 
@@ -1229,14 +1258,6 @@ public class AcceptanceTestHarness {
         .workspaceId(workspaceId)
         .pagination(new Pagination().pageSize(100).rowOffset(0))),
         "get stream statuses", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
-  }
-
-  /**
-   * Connector type.
-   */
-  public enum Type {
-    SOURCE,
-    DESTINATION
   }
 
   public void setIncrementalAppendSyncMode(final AirbyteCatalog airbyteCatalog, final List<String> cursorField) {
@@ -1305,6 +1326,10 @@ public class AcceptanceTestHarness {
             .config(expectedStreamConfig)));
 
     assertEquals(expected, actual);
+  }
+
+  private static String generateRandomCloudSqlDatabaseName() {
+    return CLOUD_SQL_DATABASE_PREFIX + UUID.randomUUID();
   }
 
 }

@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import { useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 
 import { CloudInviteUsersHint } from "components/CloudInviteUsersHint";
@@ -13,6 +13,7 @@ import { Link } from "components/ui/Link";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useConnectionList, useDestinationList } from "core/api";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useExperiment } from "hooks/services/Experiment";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
@@ -29,6 +30,8 @@ export const DESTINATION_TYPE_PARAM = "destinationType";
 export const DESTINATION_ID_PARAM = "destinationId";
 
 export const SelectDestination: React.FC = () => {
+  useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_DEFINE_DESTINATION);
+  const { formatMessage } = useIntl();
   const { destinations } = useDestinationList();
   const connectionList = useConnectionList();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -89,14 +92,14 @@ export const SelectDestination: React.FC = () => {
                     options={[
                       {
                         value: EXISTING_DESTINATION_TYPE,
-                        label: "connectionForm.destinationExisting",
-                        description: "connectionForm.destinationExistingDescription",
+                        label: formatMessage({ id: "connectionForm.destinationExisting" }),
+                        description: formatMessage({ id: "connectionForm.destinationExistingDescription" }),
                         disabled: destinations.length === 0,
                       },
                       {
                         value: NEW_DESTINATION_TYPE,
-                        label: "connectionForm.destinationNew",
-                        description: "connectionForm.destinationNewDescription",
+                        label: formatMessage({ id: "connectionForm.destinationNew" }),
+                        description: formatMessage({ id: "connectionForm.destinationNewDescription" }),
                       },
                     ]}
                     selectedValue={selectedDestinationType}
@@ -121,7 +124,7 @@ export const SelectDestination: React.FC = () => {
             <FlexContainer>
               <Link
                 to={createLink(`/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`)}
-                className={classNames(styles.button, styles.typeSecondary, styles.sizeXS, styles.linkText)}
+                className={classNames(styles.linkText)}
               >
                 <FormattedMessage id="connectionForm.backToDefineSource" />
               </Link>

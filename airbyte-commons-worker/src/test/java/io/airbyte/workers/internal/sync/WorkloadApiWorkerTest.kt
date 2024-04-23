@@ -1,6 +1,7 @@
 package io.airbyte.workers.internal.sync
 
 import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.api.client.generated.ConnectionApi
 import io.airbyte.api.client.model.generated.ConnectionRead
 import io.airbyte.api.client.model.generated.Geography
@@ -17,6 +18,7 @@ import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.storage.StorageClient
 import io.airbyte.workers.sync.WorkloadApiWorker
+import io.airbyte.workers.sync.WorkloadClient
 import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workers.workload.WorkloadIdGenerator
 import io.airbyte.workload.api.client.generated.WorkloadApi
@@ -40,6 +42,7 @@ internal class WorkloadApiWorkerTest {
   private var apiClient: AirbyteApiClient = mockk()
   private var connectionApi: ConnectionApi = mockk()
   private var workloadApi: WorkloadApi = mockk()
+  private var workloadApiClient: WorkloadApiClient = mockk()
   private var featureFlagClient: FeatureFlagClient = mockk()
   private var jobOutputDocStore: JobOutputDocStore = mockk()
   private lateinit var replicationActivityInput: ReplicationActivityInput
@@ -50,6 +53,7 @@ internal class WorkloadApiWorkerTest {
   @BeforeEach
   fun beforeEach() {
     every { apiClient.connectionApi } returns connectionApi
+    every { workloadApiClient.workloadApi } returns workloadApi
     featureFlagClient = TestClient()
     jobRoot = Path.of("test", "path")
     replicationActivityInput = ReplicationActivityInput()
@@ -58,7 +62,8 @@ internal class WorkloadApiWorkerTest {
       WorkloadApiWorker(
         jobOutputDocStore,
         apiClient,
-        workloadApi,
+        workloadApiClient,
+        WorkloadClient(workloadApiClient, jobOutputDocStore),
         workloadIdGenerator,
         replicationActivityInput,
         featureFlagClient,
@@ -70,7 +75,6 @@ internal class WorkloadApiWorkerTest {
     val jobId = 13L
     val attemptNumber = 37
     val workloadId = "my-workload"
-    val expectedDocPrefix = "testNs/orchestrator-repl-job-$jobId-attempt-$attemptNumber"
     val expectedOutput =
       ReplicationOutput()
         .withReplicationAttemptSummary(ReplicationAttemptSummary().withStatus(StandardSyncSummary.ReplicationStatus.COMPLETED))
@@ -93,7 +97,6 @@ internal class WorkloadApiWorkerTest {
     val jobId = 13L
     val attemptNumber = 37
     val workloadId = "my-workload"
-    val expectedDocPrefix = "testNs/orchestrator-repl-job-$jobId-attempt-$attemptNumber"
     val expectedOutput =
       ReplicationOutput()
         .withReplicationAttemptSummary(ReplicationAttemptSummary().withStatus(StandardSyncSummary.ReplicationStatus.COMPLETED))
@@ -117,7 +120,6 @@ internal class WorkloadApiWorkerTest {
     val jobId = 313L
     val attemptNumber = 37
     val workloadId = "my-workload"
-    val expectedDocPrefix = "testNs/orchestrator-repl-job-$jobId-attempt-$attemptNumber"
     val expectedOutput =
       ReplicationOutput()
         .withReplicationAttemptSummary(ReplicationAttemptSummary().withStatus(StandardSyncSummary.ReplicationStatus.COMPLETED))
@@ -237,7 +239,7 @@ internal class WorkloadApiWorkerTest {
     assertThrows<DestinationException> { workloadApiWorker.run(replicationInput, jobRoot) }
   }
 
-  fun initializeReplicationInput(
+  private fun initializeReplicationInput(
     jobId: Long,
     attemptNumber: Int,
   ) {
@@ -262,7 +264,7 @@ internal class WorkloadApiWorkerTest {
     }
   }
 
-  fun mockWorkload(
+  private fun mockWorkload(
     status: WorkloadStatus,
     terminationSource: String? = null,
     terminationReason: String? = null,

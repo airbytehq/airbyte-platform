@@ -6,6 +6,7 @@ package io.airbyte.keycloak.setup;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.times;
@@ -27,27 +28,31 @@ import org.mockito.MockitoAnnotations;
 class KeycloakServerTest {
 
   private static final String REALM_NAME = "airbyte";
+  private static final String WEBAPP_URL = "http://localhost:8000";
+  private static final String AUTH_PATH = "/auth";
+  private static final String FRONTEND_URL_ATTRIBUTE = "frontendUrl";
 
   @Mock
   private KeycloakAdminClientProvider keycloakAdminClientProvider;
   @Mock
   private AirbyteKeycloakConfiguration keycloakConfiguration;
   @Mock
-  private UserCreator userCreator;
+  private UserConfigurator userConfigurator;
   @Mock
-  private WebClientCreator webClientCreator;
+  private WebClientConfigurator webClientConfigurator;
   @Mock
-  private IdentityProvidersCreator identityProvidersCreator;
+  private IdentityProvidersConfigurator identityProvidersConfigurator;
   @Mock
-  private AccountClientUpdater accountClientUpdater;
-  @Mock
-  private ClientScopeCreator clientScopeCreator;
+  private ClientScopeConfigurator clientScopeConfigurator;
   @Mock
   private Keycloak keycloakAdminClient;
   @Mock
   private RealmsResource realmsResource;
   @Mock
   private RealmResource airbyteRealm;
+  @Mock
+  private RealmRepresentation airbyteRealmRep;
+
   private KeycloakServer keycloakServer;
 
   @BeforeEach
@@ -62,26 +67,28 @@ class KeycloakServerTest {
     when(keycloakAdminClient.realms()).thenReturn(realmsResource);
     when(realmsResource.findAll()).thenReturn(Collections.emptyList());
     when(keycloakAdminClient.realm(anyString())).thenReturn(airbyteRealm);
+    when(airbyteRealm.toRepresentation()).thenReturn(airbyteRealmRep);
 
     keycloakServer = new KeycloakServer(keycloakAdminClientProvider,
         keycloakConfiguration,
-        userCreator,
-        webClientCreator,
-        identityProvidersCreator,
-        accountClientUpdater,
-        clientScopeCreator);
+        userConfigurator,
+        webClientConfigurator,
+        identityProvidersConfigurator,
+        clientScopeConfigurator,
+        WEBAPP_URL);
   }
 
   @Test
-  void testCreateAirbyteRealm() {
-    keycloakServer.createAirbyteRealm();
+  void testSetupAirbyteRealmWhenRealmDoesNotExist() {
+    keycloakServer.setupAirbyteRealm();
 
     verify(realmsResource, times(1)).findAll();
     verify(realmsResource, times(1)).create(any());
-    verify(userCreator, times(1)).createUser(airbyteRealm);
-    verify(webClientCreator, times(1)).createWebClient(airbyteRealm);
-    verify(identityProvidersCreator, times(1)).createIdps(airbyteRealm);
-    verify(accountClientUpdater, times(1)).updateAccountClientHomeUrl(airbyteRealm);
+    verify(userConfigurator, times(1)).configureUser(airbyteRealm);
+    verify(webClientConfigurator, times(1)).configureWebClient(airbyteRealm);
+    verify(identityProvidersConfigurator, times(1)).configureIdp(airbyteRealm);
+    verify(airbyteRealmRep, times(1)).setAttributes(argThat(map -> map.get(FRONTEND_URL_ATTRIBUTE).equals(WEBAPP_URL + AUTH_PATH)));
+    verify(airbyteRealm, times(1)).update(airbyteRealmRep);
   }
 
   @Test
@@ -92,19 +99,20 @@ class KeycloakServerTest {
     when(realmsResource.findAll()).thenReturn(Collections.singletonList(existingRealm));
     when(keycloakConfiguration.getAirbyteRealm()).thenReturn(REALM_NAME);
 
-    keycloakServer.createAirbyteRealm();
+    keycloakServer.setupAirbyteRealm();
 
     verify(realmsResource, times(1)).findAll();
-    verify(realmsResource, times(0)).create(any());
-    verify(userCreator, times(0)).createUser(any());
-    verify(webClientCreator, times(0)).createWebClient(any());
-    verify(identityProvidersCreator, times(0)).createIdps(any());
-    verify(accountClientUpdater, times(0)).updateAccountClientHomeUrl(any());
+    verify(realmsResource, times(0)).create(any()); // create not called, but other configuration methods should be called every time
+    verify(userConfigurator, times(1)).configureUser(any());
+    verify(webClientConfigurator, times(1)).configureWebClient(any());
+    verify(identityProvidersConfigurator, times(1)).configureIdp(any());
+    verify(airbyteRealmRep, times(1)).setAttributes(argThat(map -> map.get(FRONTEND_URL_ATTRIBUTE).equals(WEBAPP_URL + AUTH_PATH)));
+    verify(airbyteRealm, times(1)).update(airbyteRealmRep);
   }
 
   @Test
   void testBuildRealmRepresentation() {
-    keycloakServer.createAirbyteRealm();
+    keycloakServer.setupAirbyteRealm();
 
     final ArgumentCaptor<RealmRepresentation> realmRepresentationCaptor = ArgumentCaptor.forClass(RealmRepresentation.class);
     verify(realmsResource).create(realmRepresentationCaptor.capture());
@@ -121,29 +129,31 @@ class KeycloakServerTest {
     existingRealm.setRealm(REALM_NAME);
     when(realmsResource.findAll()).thenReturn(Collections.singletonList(existingRealm));
 
-    keycloakServer.recreateAirbyteRealm();
+    keycloakServer.destroyAndRecreateAirbyteRealm();
 
     verify(airbyteRealm, times(1)).remove();
     verify(realmsResource, times(1)).create(any());
-    verify(userCreator, times(1)).createUser(airbyteRealm);
-    verify(webClientCreator, times(1)).createWebClient(airbyteRealm);
-    verify(identityProvidersCreator, times(1)).createIdps(airbyteRealm);
-    verify(accountClientUpdater, times(1)).updateAccountClientHomeUrl(airbyteRealm);
+    verify(userConfigurator, times(1)).configureUser(airbyteRealm);
+    verify(webClientConfigurator, times(1)).configureWebClient(airbyteRealm);
+    verify(identityProvidersConfigurator, times(1)).configureIdp(airbyteRealm);
+    verify(airbyteRealmRep, times(1)).setAttributes(argThat(map -> map.get(FRONTEND_URL_ATTRIBUTE).equals(WEBAPP_URL + AUTH_PATH)));
+    verify(airbyteRealm, times(1)).update(airbyteRealmRep);
   }
 
   @Test
   void testRecreateAirbyteRealmWhenRealmDoesNotExist() {
     when(realmsResource.findAll()).thenReturn(Collections.emptyList());
 
-    keycloakServer.recreateAirbyteRealm();
+    keycloakServer.destroyAndRecreateAirbyteRealm();
 
     // should behave the same as createAirbyteRealm in this case.
     verify(airbyteRealm, times(0)).remove();
     verify(realmsResource, times(1)).create(any());
-    verify(userCreator, times(1)).createUser(airbyteRealm);
-    verify(webClientCreator, times(1)).createWebClient(airbyteRealm);
-    verify(identityProvidersCreator, times(1)).createIdps(airbyteRealm);
-    verify(accountClientUpdater, times(1)).updateAccountClientHomeUrl(airbyteRealm);
+    verify(userConfigurator, times(1)).configureUser(airbyteRealm);
+    verify(webClientConfigurator, times(1)).configureWebClient(airbyteRealm);
+    verify(identityProvidersConfigurator, times(1)).configureIdp(airbyteRealm);
+    verify(airbyteRealmRep, times(1)).setAttributes(argThat(map -> map.get(FRONTEND_URL_ATTRIBUTE).equals(WEBAPP_URL + AUTH_PATH)));
+    verify(airbyteRealm, times(1)).update(airbyteRealmRep);
   }
 
 }

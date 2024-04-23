@@ -22,10 +22,7 @@ import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.logging.MdcScope.Builder;
 import io.airbyte.commons.protocol.ProtocolSerializer;
 import io.airbyte.config.WorkerSourceConfig;
-import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.workers.WorkerUtils;
@@ -64,13 +61,12 @@ public class DefaultAirbyteSource implements AirbyteSource {
   private final AirbyteStreamFactory streamFactory;
   private final ProtocolSerializer protocolSerializer;
   private final HeartbeatMonitor heartbeatMonitor;
-  private final MetricClient metricClient;
+  private final MessageMetricsTracker messageMetricsTracker;
 
   private Process sourceProcess = null;
   private Iterator<AirbyteMessage> messageIterator = null;
   private Integer exitValue = null;
   private final boolean featureFlagLogConnectorMsgs;
-  private MetricAttribute connectionAttribute = null;
 
   public DefaultAirbyteSource(final IntegrationLauncher integrationLauncher,
                               final AirbyteStreamFactory streamFactory,
@@ -83,7 +79,7 @@ public class DefaultAirbyteSource implements AirbyteSource {
     this.protocolSerializer = protocolSerializer;
     this.heartbeatMonitor = heartbeatMonitor;
     this.featureFlagLogConnectorMsgs = featureFlags.logConnectorMessages();
-    this.metricClient = metricClient;
+    this.messageMetricsTracker = new MessageMetricsTracker(metricClient);
   }
 
   @Override
@@ -91,7 +87,7 @@ public class DefaultAirbyteSource implements AirbyteSource {
     Preconditions.checkState(sourceProcess == null);
 
     if (connectionId != null) {
-      connectionAttribute = new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString());
+      messageMetricsTracker.trackConnectionId(connectionId);
     }
 
     sourceProcess = integrationLauncher.read(jobRoot,
@@ -152,18 +148,15 @@ public class DefaultAirbyteSource implements AirbyteSource {
 
     final Optional<AirbyteMessage> m = Optional.ofNullable(messageIterator.hasNext() ? messageIterator.next() : null);
     if (m.isPresent()) {
-      final MetricAttribute typeAttribute = new MetricAttribute(MetricTags.MESSAGE_TYPE, m.get().getType().toString());
-      if (connectionAttribute != null) {
-        metricClient.count(OssMetricsRegistry.WORKER_SOURCE_MESSAGE_READ, 1, connectionAttribute, typeAttribute);
-      } else {
-        metricClient.count(OssMetricsRegistry.WORKER_SOURCE_MESSAGE_READ, 1, typeAttribute);
-      }
+      messageMetricsTracker.trackSourceRead(m.get().getType());
     }
     return m;
   }
 
   @Override
   public void close() throws Exception {
+    emitSourceMessageReadCountMetric();
+
     if (sourceProcess == null) {
       LOGGER.debug("Source process already exited");
       return;
@@ -184,6 +177,8 @@ public class DefaultAirbyteSource implements AirbyteSource {
   @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public void cancel() throws Exception {
+    emitSourceMessageReadCountMetric();
+
     LOGGER.info("Attempting to cancel source process...");
 
     if (sourceProcess == null) {
@@ -193,6 +188,10 @@ public class DefaultAirbyteSource implements AirbyteSource {
       WorkerUtils.cancelProcess(sourceProcess);
       LOGGER.info("Cancelled source process!");
     }
+  }
+
+  private void emitSourceMessageReadCountMetric() {
+    messageMetricsTracker.flushSourceReadCountMetric();
   }
 
   private void logInitialStateAsJSON(final WorkerSourceConfig sourceConfig) {

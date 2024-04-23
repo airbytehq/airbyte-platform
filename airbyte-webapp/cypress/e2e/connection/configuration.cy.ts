@@ -410,9 +410,9 @@ describe("Connection Configuration", () => {
       createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
         connection = connectionResponse;
         visit(connection);
+        connectionSettings.goToSettingsPage();
+        deleteEntity();
       });
-      connectionSettings.goToSettingsPage();
-      deleteEntity();
     });
   });
 
@@ -534,15 +534,6 @@ describe("Connection Configuration", () => {
               notifySchemaChanges: connection.notifySchemaChanges,
             });
           });
-        });
-      });
-    });
-    describe("Transformations tab", () => {
-      it("cannot edit Custom transformations form settings", () => {
-        cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
-          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Transformation}`);
-
-          cy.get('form[data-testid="custom-transformation-form"]').children("fieldset").should("be.disabled");
         });
       });
     });

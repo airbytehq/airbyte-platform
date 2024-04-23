@@ -1,0 +1,15 @@
+# Adds ports to the db and access to the temporal UI for debugging purposes.
+# Expected to be used like this:
+# PATH_TO_CONNECTORS=/<path_to>/airbyte/airbyte-integrations/connectors docker compose -f docker-compose.yaml -f docker-compose.builder.yaml up
+version: "3.8"
+services:
+  airbyte-connector-builder-server:
+    environment:
+      - PATH_TO_CONNECTORS=${PATH_TO_CONNECTORS}
+    volumes:
+      - ${PATH_TO_CONNECTORS}:/connectors
+  server:
+    environment:
+      - PATH_TO_CONNECTORS=${PATH_TO_CONNECTORS}
+    volumes:
+      - ${PATH_TO_CONNECTORS}:/connectors

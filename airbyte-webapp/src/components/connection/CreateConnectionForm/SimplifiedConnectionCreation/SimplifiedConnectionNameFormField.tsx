@@ -6,6 +6,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 import { FormFieldLayout } from "components/connection/ConnectionForm/FormFieldLayout";
 import { ControlLabels } from "components/LabeledControl";
+import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Input } from "components/ui/Input";
 import { Text } from "components/ui/Text";
@@ -21,7 +22,7 @@ export const SimplifiedConnectionNameFormField = () => {
     <Controller
       name="name"
       control={control}
-      render={({ field }) => (
+      render={({ field, fieldState }) => (
         <FormFieldLayout alignItems="flex-start" nextSizing>
           <ControlLabels
             htmlFor={controlId}
@@ -46,6 +47,13 @@ export const SimplifiedConnectionNameFormField = () => {
               onChange={field.onChange}
             />
           </InputContainer>
+          {fieldState.error && (
+            <Box mt="sm">
+              <Text color="red">
+                <FormattedMessage id={fieldState.error.message} />
+              </Text>
+            </Box>
+          )}
         </FormFieldLayout>
       )}
     />

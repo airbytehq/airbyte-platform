@@ -33,6 +33,7 @@ services:
       - MICRONAUT_ENVIRONMENTS=${WORKERS_MICRONAUT_ENVIRONMENTS}
       - PUBLISH_METRICS=${PUBLISH_METRICS}
       - SEGMENT_WRITE_KEY=${SEGMENT_WRITE_KEY}
+      - STORAGE_BUCKET_ACTIVITY_PAYLOAD=${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
       - STORAGE_BUCKET_LOG=${STORAGE_BUCKET_LOG}
       - STORAGE_BUCKET_STATE=${STORAGE_BUCKET_LOG}
       - STORAGE_BUCKET_WORKLOAD_OUTPUT=${STORAGE_BUCKET_WORKLOAD_OUTPUT}
@@ -51,7 +52,7 @@ services:
     volumes:
       - workspace:${WORKSPACE_ROOT}
       - data:${CONFIG_ROOT}
-      - ${LOCAL_ROOT}:${LOCAL_ROOT}
+      - local_root:${LOCAL_ROOT}
       - ./configs:/app/configs:ro
     networks:
       - airbyte_internal
@@ -73,6 +74,7 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - DATABASE_USER=${DATABASE_USER}
       - DATA_PLANE_ID=local
+      - DOCKER_HOST=docker-proxy:2375
       - DOCKER_NETWORK=${COMPOSE_PROJECT_NAME}_airbyte_internal
       - DOCKER_SOCKET=${DOCKER_SOCKET}
       - DEPLOYMENT_MODE=${DEPLOYMENT_MODE}
@@ -94,6 +96,7 @@ services:
       - SEGMENT_WRITE_KEY=${SEGMENT_WRITE_KEY}
       - STATSD_HOST=${STATSD_HOST}
       - STATSD_PORT=${STATSD_PORT}
+      - STORAGE_BUCKET_ACTIVITY_PAYLOAD=${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
       - STORAGE_BUCKET_LOG=${STORAGE_BUCKET_LOG}
       - STORAGE_BUCKET_STATE=${STORAGE_BUCKET_STATE}
       - STORAGE_BUCKET_WORKLOAD_OUTPUT=${STORAGE_BUCKET_WORKLOAD_OUTPUT}
@@ -108,10 +111,9 @@ services:
     configs:
       - flags
     volumes:
-      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - workspace:${WORKSPACE_ROOT}
       - data:${CONFIG_ROOT}
-      - ${LOCAL_ROOT}:${LOCAL_ROOT}
+      - local_root:${LOCAL_ROOT}
       - ./configs:/app/configs:ro
     networks:
       - airbyte_internal

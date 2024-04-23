@@ -36,6 +36,7 @@ import io.airbyte.api.client.model.generated.SynchronousJobRead;
 import io.airbyte.api.client.model.generated.WorkloadPriority;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
+import io.airbyte.commons.temporal.utils.PayloadChecker;
 import io.airbyte.featureflag.AutoBackfillOnNewColumns;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
@@ -46,6 +47,7 @@ import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.workers.models.RefreshSchemaActivityInput;
+import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivityImpl;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -65,6 +67,7 @@ class RefreshSchemaActivityTest {
   private WorkspaceApi mWorkspaceApi;
   private EnvVariableFeatureFlags mEnvVariableFeatureFlags;
   private TestClient mFeatureFlagClient;
+  private PayloadChecker mPayloadChecker;
 
   private RefreshSchemaActivityImpl refreshSchemaActivity;
 
@@ -90,6 +93,7 @@ class RefreshSchemaActivityTest {
     mConnectionApi = mock(ConnectionApi.class);
     mFeatureFlagClient = mock(TestClient.class, withSettings().strictness(Strictness.LENIENT));
     mWorkspaceApi = mock(WorkspaceApi.class, withSettings().strictness(Strictness.LENIENT));
+    mPayloadChecker = mock(PayloadChecker.class, withSettings().strictness(Strictness.LENIENT));
     when(mEnvVariableFeatureFlags.autoDetectSchema()).thenReturn(true);
     when(mWorkspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(CONNECTION_ID)))
         .thenReturn(new WorkspaceRead().workspaceId(WORKSPACE_ID));
@@ -103,7 +107,8 @@ class RefreshSchemaActivityTest {
                     .catalogDiff(CATALOG_DIFF)
                     .catalogId(CATALOG_ID)
                     .jobInfo(new SynchronousJobRead().succeeded(true)));
-    refreshSchemaActivity = new RefreshSchemaActivityImpl(mSourceApi, mConnectionApi, mWorkspaceApi, mEnvVariableFeatureFlags, mFeatureFlagClient);
+    refreshSchemaActivity =
+        new RefreshSchemaActivityImpl(mSourceApi, mConnectionApi, mWorkspaceApi, mEnvVariableFeatureFlags, mFeatureFlagClient, mPayloadChecker);
   }
 
   @Test
@@ -224,6 +229,22 @@ class RefreshSchemaActivityTest {
         .catalogId(CATALOG_ID)
         .catalog(CATALOG));
     assertEquals(CATALOG_DIFF, result.getAppliedDiff());
+  }
+
+  @Test
+  void refreshV2ValidatesPayloadSize() throws Exception {
+    when(mFeatureFlagClient.boolVariation(eq(ShouldRunRefreshSchema.INSTANCE), any())).thenReturn(true);
+    when(mFeatureFlagClient.boolVariation(eq(AutoBackfillOnNewColumns.INSTANCE), any())).thenReturn(true);
+    when(mConnectionApi.applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange()
+        .connectionId(CONNECTION_ID)
+        .catalogId(CATALOG_ID)
+        .catalog(CATALOG)
+        .workspaceId(WORKSPACE_ID))).thenReturn(new ConnectionAutoPropagateResult()
+            .propagatedDiff(CATALOG_DIFF));
+
+    refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(SOURCE_ID, CONNECTION_ID, WORKSPACE_ID));
+
+    verify(mPayloadChecker, times(1)).validatePayloadSize(eq(new RefreshSchemaActivityOutput(CATALOG_DIFF)), any());
   }
 
 }

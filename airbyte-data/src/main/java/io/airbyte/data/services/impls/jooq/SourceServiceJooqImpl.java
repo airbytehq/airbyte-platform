@@ -10,7 +10,6 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINIT
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.jooq.impl.DSL.asterisk;
-import static org.jooq.impl.DSL.field;
 import static org.jooq.impl.DSL.noCondition;
 import static org.jooq.impl.DSL.select;
 
@@ -29,6 +28,7 @@ import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
@@ -73,7 +73,6 @@ import org.jooq.Record;
 import org.jooq.Record1;
 import org.jooq.Result;
 import org.jooq.SelectJoinStep;
-import org.jooq.Table;
 import org.jooq.impl.DSL;
 
 @Slf4j
@@ -88,21 +87,22 @@ public class SourceServiceJooqImpl implements SourceService {
   private final SecretsRepositoryWriter secretsRepositoryWriter;
   private final SecretPersistenceConfigService secretPersistenceConfigService;
   private final ConnectionService connectionService;
-  private final ConnectorMetadataJooqHelper connectorMetadataJooqHelper;
+  private final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
 
   public SourceServiceJooqImpl(@Named("configDatabase") final Database database,
                                final FeatureFlagClient featureFlagClient,
                                final SecretsRepositoryReader secretsRepositoryReader,
                                final SecretsRepositoryWriter secretsRepositoryWriter,
                                final SecretPersistenceConfigService secretPersistenceConfigService,
-                               final ConnectionService connectionService) {
+                               final ConnectionService connectionService,
+                               final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater) {
     this.database = new ExceptionWrappingDatabase(database);
     this.connectionService = connectionService;
     this.featureFlagClient = featureFlagClient;
     this.secretRepositoryReader = secretsRepositoryReader;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.secretPersistenceConfigService = secretPersistenceConfigService;
-    this.connectorMetadataJooqHelper = new ConnectorMetadataJooqHelper(featureFlagClient, connectionService);
+    this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater;
   }
 
   /**
@@ -286,21 +286,6 @@ public class SourceServiceJooqImpl implements SourceService {
   }
 
   /**
-   * Delete a source by id.
-   *
-   * @param sourceId
-   * @return true if a source was deleted, false otherwise.
-   * @throws JsonValidationException - throws if returned sources are invalid
-   * @throws ConfigNotFoundException - throws if no source with that id can be found.
-   * @throws IOException - you never know when you IO
-   */
-  @Override
-  public boolean deleteSource(final UUID sourceId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    return deleteById(ACTOR, sourceId);
-  }
-
-  /**
    * Returns all sources in the database. Does not contain secrets.
    *
    * @return sources
@@ -417,6 +402,9 @@ public class SourceServiceJooqImpl implements SourceService {
       writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, breakingChangesForDefinition, ctx);
       return null;
     });
+
+    // FIXME(pedro): this should be moved out of this service
+    actorDefinitionVersionUpdater.updateSourceDefaultVersion(sourceDefinition, actorDefinitionVersion, breakingChangesForDefinition);
   }
 
   @Override
@@ -431,6 +419,8 @@ public class SourceServiceJooqImpl implements SourceService {
           io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType.valueOf(scopeType.toString()), ctx);
       return null;
     });
+
+    actorDefinitionVersionUpdater.updateSourceDefaultVersion(sourceDefinition, defaultVersion, List.of());
   }
 
   /**
@@ -459,7 +449,7 @@ public class SourceServiceJooqImpl implements SourceService {
    * @param sourceDefinitionId to retrieve the default max seconds between messages for.
    * @return
    */
-  private Long retrieveDefaultMaxSecondsBetweenMessages(UUID sourceDefinitionId) {
+  private Long retrieveDefaultMaxSecondsBetweenMessages(final UUID sourceDefinitionId) {
     return Long.parseLong(featureFlagClient.stringVariation(HeartbeatMaxSecondsBetweenMessages.INSTANCE, new SourceDefinition(sourceDefinitionId)));
   }
 
@@ -485,7 +475,7 @@ public class SourceServiceJooqImpl implements SourceService {
                                       final DSLContext ctx) {
     writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
     ConnectorMetadataJooqHelper.writeActorDefinitionBreakingChanges(breakingChangesForDefinition, ctx);
-    connectorMetadataJooqHelper.setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
+    ConnectorMetadataJooqHelper.writeActorDefinitionVersion(actorDefinitionVersion, ctx);
   }
 
   private Stream<StandardSourceDefinition> sourceDefQuery(final Optional<UUID> sourceDefId, final boolean includeTombstone) throws IOException {
@@ -560,7 +550,7 @@ public class SourceServiceJooqImpl implements SourceService {
         .fetch());
   }
 
-  public Optional<UUID> getOrganizationIdFromWorkspaceId(final UUID scopeId) throws IOException {
+  private Optional<UUID> getOrganizationIdFromWorkspaceId(final UUID scopeId) throws IOException {
     final Optional<Record1<UUID>> optionalRecord = database.query(ctx -> ctx.select(WORKSPACE.ORGANIZATION_ID).from(WORKSPACE)
         .where(WORKSPACE.ID.eq(scopeId)).fetchOptional());
     return optionalRecord.map(Record1::value1);
@@ -573,7 +563,7 @@ public class SourceServiceJooqImpl implements SourceService {
     return Map.entry(actorDefinition, granted);
   }
 
-  static void writeStandardSourceDefinition(final List<StandardSourceDefinition> configs, final DSLContext ctx) {
+  private static void writeStandardSourceDefinition(final List<StandardSourceDefinition> configs, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     configs.forEach((standardSourceDefinition) -> {
       final boolean isExistingConfig = ctx.fetchExists(DSL.select()
@@ -670,30 +660,7 @@ public class SourceServiceJooqImpl implements SourceService {
   }
 
   private ActorDefinitionVersion getDefaultVersionForActorDefinitionId(final UUID actorDefinitionId, final DSLContext ctx) {
-    return getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx).orElseThrow();
-  }
-
-  /**
-   * Get an optional ADV for an actor definition's default version. The optional will be empty if the
-   * defaultVersionId of the actor definition is set to null in the DB. The only time this should be
-   * the case is if we are in the process of inserting and have already written the source definition,
-   * but not yet set its default version.
-   */
-  private Optional<ActorDefinitionVersion> getDefaultVersionForActorDefinitionIdOptional(final UUID actorDefinitionId, final DSLContext ctx) {
-    return ConnectorMetadataJooqHelper.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx);
-  }
-
-  /**
-   * Deletes all records with given id. If it deletes anything, returns true. Otherwise, false.
-   *
-   * @param table - table from which to delete the record
-   * @param id - id of the record to delete
-   * @return true if anything was deleted, otherwise false.
-   * @throws IOException - you never know when you io
-   */
-  @SuppressWarnings("SameParameterValue")
-  private boolean deleteById(final Table<?> table, final UUID id) throws IOException {
-    return database.transaction(ctx -> ctx.deleteFrom(table)).where(field(DSL.name(PRIMARY_KEY)).eq(id)).execute() > 0;
+    return ConnectorMetadataJooqHelper.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx).orElseThrow();
   }
 
   private Stream<SourceConnection> listSourceQuery(final Optional<UUID> configId) throws IOException {
@@ -780,7 +747,7 @@ public class SourceServiceJooqImpl implements SourceService {
     writeSourceConnectionNoSecrets(partialSource);
   }
 
-  public Optional<SourceConnection> getSourceIfExists(final UUID sourceId) {
+  private Optional<SourceConnection> getSourceIfExists(final UUID sourceId) {
     try {
       return Optional.of(getSourceConnection(sourceId));
     } catch (final ConfigNotFoundException | JsonValidationException | IOException e) {

@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { getFrequencyFromScheduleData, useAnalyticsService, Action, Namespace } from "core/services/analytics";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { RoutePaths } from "pages/routePaths";
@@ -20,6 +21,7 @@ import {
   getConnectionUptimeHistory,
   getState,
   getStateType,
+  refreshConnectionStream,
   resetConnection,
   resetConnectionStream,
   syncConnection,
@@ -194,6 +196,39 @@ export const useResetConnectionStream = (connectionId: string) => {
   });
 };
 
+export const useRefreshConnectionStreams = (connectionId: string) => {
+  const queryClient = useQueryClient();
+  const requestOptions = useRequestOptions();
+  const setConnectionRunState = useSetConnectionRunState();
+  const platformSupportsRefresh = useExperiment("platform.activate-refreshes", false);
+  const { registerNotification } = useNotificationService();
+  const { formatMessage } = useIntl();
+
+  return useMutation(
+    async (streams?: ConnectionStream[]) => {
+      if (!platformSupportsRefresh) {
+        return;
+      }
+
+      await refreshConnectionStream({ connectionId, streams }, requestOptions);
+    },
+    {
+      onSuccess: () => {
+        setConnectionRunState(connectionId, true);
+        queryClient.setQueriesData<JobReadList>(jobsKeys.useListJobsForConnectionStatus(connectionId), (prevJobList) =>
+          prependArtificialJobToStatus({ status: JobStatus.running, configType: "refresh" }, prevJobList)
+        );
+      },
+      onError: () => {
+        registerNotification({
+          id: "connection.actions.error",
+          text: formatMessage({ id: "connection.actions.error" }),
+        });
+      },
+    }
+  );
+};
+
 export const useGetConnectionQuery = () => {
   const requestOptions = useRequestOptions();
   return useMutation((request: WebBackendConnectionRequestBody) => webBackendGetConnection(request, requestOptions))
@@ -218,6 +253,7 @@ export const useCreateConnection = () => {
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
   const invalidateWorkspaceSummary = useInvalidateWorkspaceStateQuery();
+  const isSimplifiedCreation = useExperiment("connection.simplifiedCreation", false);
 
   return useMutation(
     async ({
@@ -253,6 +289,8 @@ export const useCreateConnection = () => {
         available_streams: values.syncCatalog.streams.length,
         enabled_streams: enabledStreams.length,
         enabled_streams_list: JSON.stringify(enabledStreams),
+        connection_id: response.connectionId,
+        is_simplified_creation: isSimplifiedCreation,
       });
 
       return response;
@@ -358,7 +396,9 @@ export const useRemoveConnectionsFromList = (): ((connectionIds: string[]) => vo
 };
 
 export const getConnectionListQueryKey = (connectorIds?: string[]) => {
-  return connectionsKeys.lists(connectorIds);
+  return !connectorIds?.length
+    ? [...connectionsKeys.lists(connectorIds), "empty"]
+    : connectionsKeys.lists(connectorIds);
 };
 
 export const useConnectionListQuery = (

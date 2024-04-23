@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.WorkloadApiClient;
 import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
@@ -35,6 +36,7 @@ import io.airbyte.workers.CheckConnectionInputHydrator;
 import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.models.CheckConnectionInput;
 import io.airbyte.workers.process.ProcessFactory;
+import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
@@ -42,6 +44,7 @@ import io.airbyte.workload.api.client.model.generated.Workload;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus;
 import io.airbyte.workload.api.client.model.generated.WorkloadType;
+import io.temporal.activity.ActivityOptions;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Optional;
@@ -68,6 +71,7 @@ public class CheckConnectionActivityTest {
   private final FeatureFlags featureFlags = mock(FeatureFlags.class);
   private final GsonPksExtractor gsonPksExtractor = mock(GsonPksExtractor.class);
   private final WorkloadApi workloadApi = mock(WorkloadApi.class);
+  private final WorkloadApiClient workloadApiClient = mock(WorkloadApiClient.class);
   private final WorkloadIdGenerator workloadIdGenerator = mock(WorkloadIdGenerator.class);
   private final JobOutputDocStore jobOutputDocStore = mock(JobOutputDocStore.class);
   private final FeatureFlagClient featureFlagClient = mock(ConfigFileClient.class);
@@ -101,11 +105,11 @@ public class CheckConnectionActivityTest {
         featureFlags,
         featureFlagClient,
         gsonPksExtractor,
-        workloadApi,
+        new WorkloadClient(workloadApiClient, jobOutputDocStore),
         workloadIdGenerator,
-        jobOutputDocStore,
         mock(CheckConnectionInputHydrator.class),
-        mock(MetricClient.class)));
+        mock(MetricClient.class),
+        mock(ActivityOptions.class)));
 
     when(workloadIdGenerator.generateCheckWorkloadId(ACTOR_DEFINITION_ID, JOB_ID, ATTEMPT_NUMBER_AS_INT))
         .thenReturn(WORKLOAD_ID);
@@ -113,6 +117,7 @@ public class CheckConnectionActivityTest {
     when(workloadApi.workloadGet(WORKLOAD_ID))
         .thenReturn(getWorkloadWithStatus(WorkloadStatus.RUNNING))
         .thenReturn(getWorkloadWithStatus(WorkloadStatus.SUCCESS));
+    when(workloadApiClient.getWorkloadApi()).thenReturn(workloadApi);
   }
 
   @Test

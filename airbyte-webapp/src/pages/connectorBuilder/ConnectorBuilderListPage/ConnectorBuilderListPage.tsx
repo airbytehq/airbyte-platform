@@ -6,7 +6,6 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { ConnectorBuilderProjectTable } from "components/ConnectorBuilderProjectTable";
 import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
-import { Icon } from "components/ui/Icon";
 import { PageHeader } from "components/ui/PageHeader";
 
 import { useCurrentWorkspace, useListBuilderProjects } from "core/api";
@@ -33,7 +32,7 @@ export const ConnectorBuilderListPage: React.FC = () => {
           endComponent={
             <Button
               disabled={!canCreateConnector}
-              icon={<Icon type="plus" />}
+              icon="plus"
               onClick={() => navigate(ConnectorBuilderRoutePaths.Create)}
               size="sm"
               data-testid="new-custom-connector"

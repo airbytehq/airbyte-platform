@@ -35,7 +35,7 @@ class BlockingShutdownAnalyticsPluginTest {
     val bodyJson = "{}"
     val client: Client = mockk()
     val response: Response = mockk()
-    val flushInterval = 120L
+    val flushInterval = 3L
     val writeKey = "write-key"
     val plugin = BlockingShutdownAnalyticsPlugin(flushInterval)
 
@@ -54,12 +54,13 @@ class BlockingShutdownAnalyticsPluginTest {
         .builder(writeKey)
         .client(client)
         .flushInterval(flushInterval, TimeUnit.SECONDS)
+        .flushQueueSize(5001)
         .plugin(plugin)
         .build()
 
     assertDoesNotThrow {
       CompletableFuture.supplyAsync {
-        for (i in 0..50000) {
+        for (i in 0..5000) {
           val builder = TrackMessage.builder("track").userId("user-id").properties(mapOf("property" to "value"))
           analytics.enqueue(builder)
         }

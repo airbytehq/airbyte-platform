@@ -7,12 +7,13 @@
  */
 
 export interface Experiments {
+  "authPage.keycloak": boolean;
   "authPage.rightSideUrl": string | undefined;
   "authPage.signup.hideCompanyName": boolean;
   "authPage.signup.hideName": boolean;
   "billing.early-sync-enabled": boolean;
   "billing.autoRecharge": boolean;
-  "connections.summaryView": boolean;
+  "connection.clearNotReset": boolean;
   "connection.columnSelection": boolean;
   "connection.simplifiedCreation": boolean;
   "connection.onboarding.destinations": string;
@@ -21,14 +22,12 @@ export interface Experiments {
   "connection.streamCentricUI.lateMultiplier": number;
   "connection.streamCentricUI.v2": boolean;
   "connection.streamCentricUI.historicalOverview": boolean;
-  "connection.syncCatalog.simplifiedCatalogRow": boolean;
   "connector.airbyteCloudIpAddresses": string;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
-  "onboarding.speedyConnection": boolean;
   "platform.auto-backfill-on-new-columns": boolean;
+  "platform.activate-refreshes": boolean;
   "settings.breakingChangeNotifications": boolean;
-  "settings.invitationSystemv2": boolean;
   "settings.token-management-ui": boolean;
   "settings.showAdvancedSettings": boolean;
   "upcomingFeaturesPage.url": string;

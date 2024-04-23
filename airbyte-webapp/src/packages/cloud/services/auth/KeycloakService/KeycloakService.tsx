@@ -1,3 +1,6 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { BroadcastChannel } from "broadcast-channel";
+import Keycloak from "keycloak-js";
 import isEqual from "lodash/isEqual";
 import { User, WebStorageStateStore, UserManager } from "oidc-client-ts";
 import {
@@ -29,8 +32,11 @@ export type KeycloakServiceContext = {
   changeRealmAndRedirectToSignin: (realm: string) => Promise<void>;
   // The access token is stored in a ref so we don't cause a re-render each time it changes. Instead, we can use the current ref value when we call the API.
   accessTokenRef: MutableRefObject<string | null>;
+  updateAirbyteUser: (airbyteUser: UserRead) => void;
   redirectToSignInWithGoogle: () => Promise<void>;
   redirectToSignInWithGithub: () => Promise<void>;
+  redirectToSignInWithPassword: () => Promise<void>;
+  redirectToRegistrationWithPassword: () => Promise<void>;
 } & KeycloakAuthState;
 
 const keycloakServiceContext = createContext<KeycloakServiceContext | undefined>(undefined);
@@ -51,6 +57,7 @@ interface KeycloakAuthState {
   error: Error | null;
   didInitialize: boolean;
   isAuthenticated: boolean;
+  isSso: boolean | null;
 }
 
 const keycloakAuthStateInitialState: KeycloakAuthState = {
@@ -59,6 +66,7 @@ const keycloakAuthStateInitialState: KeycloakAuthState = {
   error: null,
   didInitialize: false,
   isAuthenticated: false,
+  isSso: null,
 };
 
 type KeycloakAuthStateAction =
@@ -73,7 +81,13 @@ type KeycloakAuthStateAction =
   | {
       type: "error";
       error: Error;
+    }
+  | {
+      type: "userUpdated";
+      airbyteUser: UserRead;
     };
+
+type BroadcastEvent = Extract<KeycloakAuthStateAction, { type: "userLoaded" | "userUnloaded" }>;
 
 const keycloakAuthStateReducer = (state: KeycloakAuthState, action: KeycloakAuthStateAction): KeycloakAuthState => {
   switch (action.type) {
@@ -84,7 +98,14 @@ const keycloakAuthStateReducer = (state: KeycloakAuthState, action: KeycloakAuth
         airbyteUser: action.airbyteUser,
         isAuthenticated: true,
         didInitialize: true,
+        // We are using an SSO login if we're not in the AIRBYTE_CLOUD_REALM, which would be the end of the issuer
+        isSso: !action.keycloakUser.profile.iss.endsWith(AIRBYTE_CLOUD_REALM),
         error: null,
+      };
+    case "userUpdated":
+      return {
+        ...state,
+        airbyteUser: action.airbyteUser,
       };
     case "userUnloaded":
       return {
@@ -93,6 +114,7 @@ const keycloakAuthStateReducer = (state: KeycloakAuthState, action: KeycloakAuth
         airbyteUser: null,
         isAuthenticated: false,
         didInitialize: true,
+        isSso: null,
         error: null,
       };
     case "error":
@@ -104,14 +126,34 @@ const keycloakAuthStateReducer = (state: KeycloakAuthState, action: KeycloakAuth
   }
 };
 
+const broadcastChannel = new BroadcastChannel<BroadcastEvent>("keycloak-state-sync");
+
 export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
   const userSigninInitialized = useRef(false);
+  const queryClient = useQueryClient();
   const [userManager] = useState<UserManager>(initializeUserManager);
   const [authState, dispatch] = useReducer(keycloakAuthStateReducer, keycloakAuthStateInitialState);
   const { mutateAsync: getAirbyteUser } = useGetOrCreateUser();
 
   // Allows us to get the access token as a callback, instead of re-rendering every time a new access token arrives
   const keycloakAccessTokenRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    broadcastChannel.onmessage = (event) => {
+      console.log("broadcastChannel.onmessage", event);
+      if (event.type === "userUnloaded") {
+        console.debug("🔑 Received userUnloaded event from other tab.");
+        dispatch({ type: "userUnloaded" });
+        // Need to clear all queries from cache. In the tab that triggered the logout this is
+        // handled inside CloudAuthService.logout
+        queryClient.removeQueries();
+      } else if (event.type === "userLoaded") {
+        console.debug("🔑 Received userLoaded event from other tab.");
+        keycloakAccessTokenRef.current = event.keycloakUser.access_token;
+        dispatch({ type: "userLoaded", keycloakUser: event.keycloakUser, airbyteUser: event.airbyteUser });
+      }
+    };
+  }, [queryClient]);
 
   // Initialization of the current user
   useEffect(() => {
@@ -165,12 +207,16 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
       // Only if actual user values (not just access_token) have changed, do we need to update the state and cause a re-render
       if (!usersAreSame({ keycloakUser, airbyteUser }, authState)) {
         dispatch({ type: "userLoaded", keycloakUser, airbyteUser });
+        // Notify other tabs that this tab got a new user loaded (usually meaning this tab signed in)
+        broadcastChannel.postMessage({ type: "userLoaded", keycloakUser, airbyteUser });
       }
     };
     userManager.events.addUserLoaded(handleUserLoaded);
 
     const handleUserUnloaded = () => {
       dispatch({ type: "userUnloaded" });
+      // Notify other open tabs that the user got unloaded (i.e. this tab signed out)
+      broadcastChannel.postMessage({ type: "userUnloaded" });
     };
     userManager.events.addUserUnloaded(handleUserUnloaded);
 
@@ -215,35 +261,72 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
     await newUserManager.signinRedirect({ extraQueryParams: { kc_idp_hint: "github" } });
   }, []);
 
+  const redirectToSignInWithPassword = useCallback(async () => {
+    const newUserManager = createUserManager(AIRBYTE_CLOUD_REALM);
+    await newUserManager.signinRedirect();
+  }, []);
+
+  /**
+   * Using the keycloak-js library here instead of oidc-ts, because keycloak-js knows how to route us directly to Keycloak's registration page.
+   * oidc-ts does not (because that's not part of the OIDC spec) and recreating the logic to set the correct state, code_challenge, etc. would be complicated to maintain.
+   */
+  const redirectToRegistrationWithPassword = useCallback(async () => {
+    const keycloak = new Keycloak({
+      url: `${config.keycloakBaseUrl}/auth`,
+      realm: AIRBYTE_CLOUD_REALM,
+      clientId: DEFAULT_KEYCLOAK_CLIENT_ID,
+    });
+    await keycloak.init({});
+    keycloak.register({ redirectUri: createRedirectUri(AIRBYTE_CLOUD_REALM) });
+  }, []);
+
+  const updateAirbyteUser = useCallback((airbyteUser: UserRead) => {
+    dispatch({ type: "userUpdated", airbyteUser });
+  }, []);
+
   const contextValue = useMemo(() => {
     const value = {
       ...authState,
       userManager,
       signin: () => userManager.signinRedirect(),
       signout: () => userManager.signoutRedirect({ post_logout_redirect_uri: window.location.origin }),
+      updateAirbyteUser,
       isAuthenticated: authState.isAuthenticated,
       changeRealmAndRedirectToSignin,
       accessTokenRef: keycloakAccessTokenRef,
       redirectToSignInWithGoogle,
       redirectToSignInWithGithub,
+      redirectToSignInWithPassword,
+      redirectToRegistrationWithPassword,
     };
     return value;
-  }, [authState, userManager, changeRealmAndRedirectToSignin, redirectToSignInWithGoogle, redirectToSignInWithGithub]);
+  }, [
+    authState,
+    userManager,
+    updateAirbyteUser,
+    changeRealmAndRedirectToSignin,
+    redirectToSignInWithGoogle,
+    redirectToSignInWithGithub,
+    redirectToSignInWithPassword,
+    redirectToRegistrationWithPassword,
+  ]);
 
   return <keycloakServiceContext.Provider value={contextValue}>{children}</keycloakServiceContext.Provider>;
 };
 
-function createUserManager(realm: string) {
+function createRedirectUri(realm: string) {
   const searchParams = new URLSearchParams(window.location.search);
   searchParams.set("realm", realm);
-  const redirect_uri = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}`;
-  const userManager = new UserManager({
+  return `${window.location.origin}${window.location.pathname}?${searchParams.toString()}`;
+}
+
+function createUserManager(realm: string) {
+  return new UserManager({
     userStore: new WebStorageStateStore({ store: window.localStorage }),
     authority: `${config.keycloakBaseUrl}/auth/realms/${realm}`,
     client_id: DEFAULT_KEYCLOAK_CLIENT_ID,
-    redirect_uri,
+    redirect_uri: createRedirectUri(realm),
   });
-  return userManager;
 }
 
 export function initializeUserManager() {

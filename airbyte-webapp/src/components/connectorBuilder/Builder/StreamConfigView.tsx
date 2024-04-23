@@ -246,7 +246,7 @@ const StreamTab = ({
 const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => {
   const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
-  const { permission } = useConnectorBuilderFormState();
+  const { permission, streamNames } = useConnectorBuilderFormState();
   const autoImportSchemaFieldPath = streamFieldPath("autoImportSchema");
   const autoImportSchema = useBuilderWatch(autoImportSchemaFieldPath);
   const schemaFieldPath = streamFieldPath("schema");
@@ -256,10 +256,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
   const path = streamFieldPath("schema");
   const { errors } = useFormState({ name: path });
   const error = get(errors, path);
-  const {
-    resolvedManifest: { streams },
-    streamRead,
-  } = useConnectorBuilderTestRead();
+  const { streamRead } = useConnectorBuilderTestRead();
 
   const showImportButton = !autoImportSchema && isEmptyOrDefault(schema) && streamRead.data?.inferred_schema;
   const formattedSchema = useMemo(() => {
@@ -294,7 +291,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
             setValue(path, formattedJson);
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.OVERWRITE_SCHEMA, {
               actionDescription: "Declared schema overwritten by detected schema",
-              stream_name: streams[testStreamIndex]?.name,
+              stream_name: streamNames[testStreamIndex],
             });
           }}
         >

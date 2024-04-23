@@ -11,7 +11,6 @@ import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.protocol.VersionedProtocolSerializer;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.featureflag.Connection;
-import io.airbyte.featureflag.FailSyncIfTooBig;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.PrintLongRecordPks;
@@ -29,8 +28,6 @@ import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
-import io.airbyte.workers.internal.exception.DestinationException;
-import io.airbyte.workers.internal.exception.SourceException;
 import jakarta.inject.Singleton;
 import java.util.Collections;
 import java.util.List;
@@ -107,21 +104,14 @@ public class AirbyteIntegrationLauncherFactory {
                                            final HeartbeatMonitor heartbeatMonitor) {
     final IntegrationLauncher sourceLauncher = createIntegrationLauncher(sourceLauncherConfig, syncResourceRequirements);
 
-    final boolean failTooLongRecords = featureFlagClient.boolVariation(FailSyncIfTooBig.INSTANCE,
-        new Multi(List.of(
-            new Connection(sourceLauncherConfig.getConnectionId()),
-            new Workspace(sourceLauncherConfig.getWorkspaceId()))));
-
     final boolean printLongRecordPks = featureFlagClient.boolVariation(PrintLongRecordPks.INSTANCE,
         new Multi(List.of(
             new Connection(sourceLauncherConfig.getConnectionId()),
             new Workspace(sourceLauncherConfig.getWorkspaceId()))));
 
     return new DefaultAirbyteSource(sourceLauncher,
-        getStreamFactory(sourceLauncherConfig, configuredAirbyteCatalog, SourceException.class, DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER,
-            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(
-                failTooLongRecords,
-                printLongRecordPks)),
+        getStreamFactory(sourceLauncherConfig, configuredAirbyteCatalog, DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER,
+            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(printLongRecordPks)),
         heartbeatMonitor,
         getProtocolSerializer(sourceLauncherConfig),
         featureFlags,
@@ -144,9 +134,8 @@ public class AirbyteIntegrationLauncherFactory {
     return new DefaultAirbyteDestination(destinationLauncher,
         getStreamFactory(destinationLauncherConfig,
             configuredAirbyteCatalog,
-            DestinationException.class,
             DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER,
-            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false)),
+            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false)),
         new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
             Optional.of(configuredAirbyteCatalog)),
         getProtocolSerializer(destinationLauncherConfig),
@@ -160,11 +149,10 @@ public class AirbyteIntegrationLauncherFactory {
 
   private AirbyteStreamFactory getStreamFactory(final IntegrationLauncherConfig launcherConfig,
                                                 final ConfiguredAirbyteCatalog configuredAirbyteCatalog,
-                                                final Class<? extends RuntimeException> exceptionClass,
                                                 final MdcScope.Builder mdcScopeBuilder,
                                                 final VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration invalidLineFailureConfiguration) {
     return new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(),
-        Optional.of(launcherConfig.getConnectionId()), Optional.of(configuredAirbyteCatalog), mdcScopeBuilder, Optional.of(exceptionClass),
+        Optional.of(launcherConfig.getConnectionId()), Optional.of(configuredAirbyteCatalog), mdcScopeBuilder,
         invalidLineFailureConfiguration, gsonPksExtractor);
   }
 

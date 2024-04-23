@@ -1,0 +1,21 @@
+webapp-url: http://airyte.example.com
+
+# Add user details for creation of your instance's initial user.
+initial-user:
+  email: octavia@example.com
+  first-name: Octavia
+  last-name: Squidington
+  username: octavia
+  password: iInkTherforeIAm
+
+# Add your Airbyte license key here.
+license-key: "abc-123-def-456-ghi"
+
+auth:
+  # If you are using SSO, add your identity provider configs here
+  identity-providers:
+    - type: octa
+      domain: sso.octa.com
+      app-name: Test
+      client-id: test-client
+      client-secret: test-client-secret

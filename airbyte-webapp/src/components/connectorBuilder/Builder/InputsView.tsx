@@ -1,10 +1,10 @@
-import { DndContext, closestCenter, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { closestCenter, DndContext, DragEndEvent, useSensor, useSensors } from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
   useSortable,
+  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import React, { useMemo, useState } from "react";
@@ -22,19 +22,16 @@ import { BuilderConfigView } from "./BuilderConfigView";
 import { KeyboardSensor, PointerSensor } from "./dndSensors";
 import { InputForm, InputInEditing, newInputInEditing } from "./InputsForm";
 import styles from "./InputsView.module.scss";
-import { BuilderFormInput, orderInputs, useBuilderWatch } from "../types";
-import { useInferredInputs } from "../useInferredInputs";
+import { BuilderFormInput, useBuilderWatch } from "../types";
 
 const supportedTypes = ["string", "integer", "number", "array", "boolean", "enum", "unknown"] as const;
 
 export const InputsView: React.FC = () => {
   const { formatMessage } = useIntl();
   const inputs = useBuilderWatch("formValues.inputs");
-  const storedInputOrder = useBuilderWatch("formValues.inputOrder");
   const { setValue } = useFormContext();
   const { permission } = useConnectorBuilderFormState();
   const [inputInEditing, setInputInEditing] = useState<InputInEditing | undefined>(undefined);
-  const inferredInputs = useInferredInputs();
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -42,19 +39,15 @@ export const InputsView: React.FC = () => {
     })
   );
 
-  const { orderedInputs, inputOrder } = useMemo(() => {
-    const orderedInputs = orderInputs(inputs, inferredInputs, storedInputOrder);
-    const inputOrder = orderedInputs.map((input) => input.id);
-    return { orderedInputs, inputOrder };
-  }, [inferredInputs, storedInputOrder, inputs]);
+  const inputsWithIds = useMemo(() => inputs.map((input) => ({ input, id: input.key })), [inputs]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (over !== null && active.id !== over.id) {
-      const oldIndex = inputOrder.indexOf(active.id.toString());
-      const newIndex = inputOrder.indexOf(over.id.toString());
-      setValue("formValues.inputOrder", arrayMove(inputOrder, oldIndex, newIndex));
+      const oldIndex = inputs.findIndex((input) => input.key === active.id.toString());
+      const newIndex = inputs.findIndex((input) => input.key === over.id.toString());
+      setValue("formValues.inputs", arrayMove(inputs, oldIndex, newIndex));
     }
   };
 
@@ -66,9 +59,9 @@ export const InputsView: React.FC = () => {
         </Text>
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={orderedInputs} strategy={verticalListSortingStrategy}>
-            {orderedInputs.map((input) => (
-              <SortableInput key={input.id} {...input} setInputInEditing={setInputInEditing} />
+          <SortableContext items={inputsWithIds} strategy={verticalListSortingStrategy}>
+            {inputsWithIds.map((inputWithId) => (
+              <SortableInput key={inputWithId.id} {...inputWithId} setInputInEditing={setInputInEditing} />
             ))}
           </SortableContext>
         </DndContext>
@@ -78,7 +71,7 @@ export const InputsView: React.FC = () => {
           onClick={() => {
             setInputInEditing(newInputInEditing());
           }}
-          icon={<Icon type="plus" />}
+          icon="plus"
           iconPosition="left"
           variant="secondary"
           type="button"
@@ -115,30 +108,26 @@ function getType(definition: BuilderFormInput["definition"]): InputInEditing["ty
   return supportedType;
 }
 
-function formInputToInputInEditing(
-  { key, definition, required }: BuilderFormInput,
-  isInferredInputOverride: boolean
-): InputInEditing {
+function formInputToInputInEditing({ key, definition, required, isLocked }: BuilderFormInput): InputInEditing {
   return {
     key,
     previousKey: key,
     definition,
     required,
+    isLocked,
     isNew: false,
     showDefaultValueField: Boolean(definition.default),
     type: getType(definition),
-    isInferredInputOverride,
   };
 }
 
 interface SortableInputProps {
   input: BuilderFormInput;
-  isInferred: boolean;
   id: string;
   setInputInEditing: (inputInEditing: InputInEditing) => void;
 }
 
-const SortableInput: React.FC<SortableInputProps> = ({ input, isInferred, id, setInputInEditing }) => {
+const SortableInput: React.FC<SortableInputProps> = ({ input, id, setInputInEditing }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const { permission } = useConnectorBuilderFormState();
   const canEdit = permission !== "readOnly";
@@ -164,7 +153,7 @@ const SortableInput: React.FC<SortableInputProps> = ({ input, isInferred, id, se
           aria-label="Edit"
           type="button"
           onClick={() => {
-            setInputInEditing(formInputToInputInEditing(input, isInferred));
+            setInputInEditing(formInputToInputInEditing(input));
           }}
           data-no-dnd="true"
         >

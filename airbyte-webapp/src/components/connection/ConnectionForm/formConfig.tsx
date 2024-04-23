@@ -19,14 +19,14 @@ import {
   SchemaChangeBackfillPreference,
 } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
-import {
-  ConnectionOrPartialConnection,
-  useConnectionFormService,
-} from "hooks/services/ConnectionForm/ConnectionFormService";
+import { ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { analyzeSyncCatalogBreakingChanges } from "./calculateInitialCatalog";
-import { BASIC_FREQUENCY_DEFAULT_VALUE } from "./ScheduleFormField/useBasicFrequencyDropdownData";
+import {
+  BASIC_FREQUENCY_DEFAULT_VALUE,
+  SOURCE_SPECIFIC_FREQUENCY_DEFAULT,
+} from "./ScheduleFormField/useBasicFrequencyDropdownData";
 import { createConnectionValidationSchema } from "./schema";
 import { DbtOperationRead } from "../TransformationForm";
 
@@ -34,7 +34,7 @@ import { DbtOperationRead } from "../TransformationForm";
  * react-hook-form form values type for the connection form
  */
 export interface FormConnectionFormValues {
-  name?: string;
+  name: string;
   scheduleType: ConnectionScheduleType;
   scheduleData?: ConnectionScheduleData;
   namespaceDefinition: NamespaceDefinitionType;
@@ -71,11 +71,10 @@ export const SUPPORTED_MODES: Array<[SyncMode, DestinationSyncMode]> = [
 export const useConnectionValidationSchema = () => {
   const allowSubOneHourCronExpressions = useFeature(FeatureItem.AllowSyncSubOneHourCronExpressions);
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
-  const { mode } = useConnectionFormService();
 
   return useMemo(
-    () => createConnectionValidationSchema(mode, allowSubOneHourCronExpressions, allowAutoDetectSchema),
-    [allowAutoDetectSchema, allowSubOneHourCronExpressions, mode]
+    () => createConnectionValidationSchema(allowSubOneHourCronExpressions, allowAutoDetectSchema),
+    [allowAutoDetectSchema, allowSubOneHourCronExpressions]
   );
 };
 
@@ -119,23 +118,16 @@ export const useInitialFormValues = (
 
   return useMemo(() => {
     const initialValues: FormConnectionFormValues = {
-      // set name field
-      ...(isEditMode
-        ? {}
-        : {
-            name: connection.name ?? `${connection.source.name} → ${connection.destination.name}`,
-          }),
+      name: connection.name ?? `${connection.source.name} → ${connection.destination.name}`,
       scheduleType: connection.scheduleType ?? ConnectionScheduleType.basic,
-      // set scheduleData field if it's defined, otherwise there is no need to set it
-      ...{
-        ...(connection.scheduleData
-          ? { scheduleData: connection.scheduleData }
-          : connection.scheduleType === ConnectionScheduleType.manual
-          ? {}
-          : {
-              scheduleData: { basicSchedule: BASIC_FREQUENCY_DEFAULT_VALUE },
-            }),
-      },
+      scheduleData: connection.scheduleData
+        ? connection.scheduleData
+        : connection.scheduleType === ConnectionScheduleType.manual
+        ? undefined
+        : {
+            basicSchedule:
+              SOURCE_SPECIFIC_FREQUENCY_DEFAULT[connection.source?.sourceDefinitionId] ?? BASIC_FREQUENCY_DEFAULT_VALUE,
+          },
       namespaceDefinition: connection.namespaceDefinition || NamespaceDefinitionType.destination,
       // set connection's namespaceFormat if it's defined, otherwise there is no need to set it
       ...{
@@ -165,9 +157,9 @@ export const useInitialFormValues = (
 
     return initialValues;
   }, [
-    isEditMode,
     connection.name,
     connection.source.name,
+    connection.source?.sourceDefinitionId,
     connection.destination.name,
     connection.scheduleType,
     connection.scheduleData,
@@ -182,6 +174,7 @@ export const useInitialFormValues = (
     defaultNonBreakingChangesPreference,
     workspace.defaultGeography,
     destDefinitionVersion.supportsDbt,
+    isEditMode,
     syncCatalog,
     catalogDiff,
     schemaChange,

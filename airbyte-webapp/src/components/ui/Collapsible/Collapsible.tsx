@@ -18,6 +18,7 @@ interface CollapsibleProps {
   hideWhenEmpty?: boolean;
   "data-testid"?: string;
   initiallyOpen?: boolean;
+  noBodyPadding?: boolean;
   onClick?: (newOpenState: boolean) => void;
 }
 
@@ -31,6 +32,7 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
   children,
   "data-testid": dataTestId,
   initiallyOpen = false,
+  noBodyPadding = false,
   onClick,
 }) => {
   const childrenCount = React.Children.count(children);
@@ -70,7 +72,10 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
               {showErrorIndicator && <Indicator className={styles.errorIndicator} />}
             </FlexContainer>
           </Disclosure.Button>
-          <Disclosure.Panel className={styles.body} unmount={false}>
+          <Disclosure.Panel
+            className={classNames(styles.body, { [styles["body--noPadding"]]: noBodyPadding })}
+            unmount={false}
+          >
             {children}
           </Disclosure.Panel>
         </FlexContainer>

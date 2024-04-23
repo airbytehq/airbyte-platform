@@ -21,8 +21,9 @@ class DefaultReplicationWorkerTest extends ReplicationWorkerTest {
   ReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled) {
     final var fieldSelector = new FieldSelector(recordSchemaValidator, workerMetricReporter, fieldSelectionEnabled, false);
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
-        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApi, false, analyticsMessageTracker,
-        Optional.empty()));
+        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApiClient, false,
+        analyticsMessageTracker,
+        Optional.empty(), sourceApi, destinationApi, streamStatusCompletionTracker));
     return new DefaultReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,
@@ -33,7 +34,8 @@ class DefaultReplicationWorkerTest extends ReplicationWorkerTest {
         heartbeatTimeoutChaperone,
         replicationFeatureFlagReader,
         replicationWorkerHelper,
-        destinationTimeoutMonitor);
+        destinationTimeoutMonitor,
+        streamStatusCompletionTracker);
   }
 
   // DefaultReplicationWorkerTests.

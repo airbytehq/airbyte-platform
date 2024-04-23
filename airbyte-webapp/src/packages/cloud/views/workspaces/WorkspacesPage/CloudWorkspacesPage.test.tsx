@@ -5,7 +5,7 @@ import { useListPermissions } from "core/api";
 import { useListCloudWorkspacesInfinite } from "core/api/cloud";
 import { OrganizationRead } from "core/api/types/AirbyteClient";
 
-import { CloudWorkspacesPage } from "./CloudWorkspacesPage";
+import { CloudWorkspacesPageInner } from "./CloudWorkspacesPage";
 
 jest.mock("core/services/auth", () => ({
   useAuthService: () => ({}),
@@ -47,7 +47,7 @@ describe("CloudWorkspacesPage", () => {
           { permissionType: "organization_member", userId: "123", permissionId: "123", organizationId: "321" },
         ],
       });
-      const wrapper = await render(<CloudWorkspacesPage />);
+      const wrapper = await render(<CloudWorkspacesPageInner />);
       expect(wrapper.queryByTestId("noWorkspacePermissionsBanner")).toBeInTheDocument();
       expect(wrapper.getByTestId("noWorkspacePermissionsBanner")).toHaveTextContent("321@example.com");
     });
@@ -58,7 +58,7 @@ describe("CloudWorkspacesPage", () => {
           { permissionType: "organization_member", userId: "123", permissionId: "123", organizationId: "456" },
         ],
       });
-      const wrapper = await render(<CloudWorkspacesPage />);
+      const wrapper = await render(<CloudWorkspacesPageInner />);
       expect(wrapper.queryByTestId("noWorkspacePermissionsBanner")).toBeInTheDocument();
       expect(wrapper.getByTestId("noWorkspacePermissionsBanner")).toHaveTextContent("321@example.com");
     });
@@ -76,7 +76,7 @@ describe("CloudWorkspacesPage", () => {
           { permissionType: "instance_admin", userId: "123", permissionId: "2" },
         ],
       });
-      const wrapper = await render(<CloudWorkspacesPage />);
+      const wrapper = await render(<CloudWorkspacesPageInner />);
       expect(wrapper.queryByTestId("noWorkspacePermissionsBanner")).not.toBeInTheDocument();
     });
     it("should not show if you see any workspaces (e.g. as an instance admin)", async () => {
@@ -92,7 +92,7 @@ describe("CloudWorkspacesPage", () => {
           { permissionType: "organization_member", userId: "123", permissionId: "123", organizationId: "321" },
         ],
       });
-      const wrapper = await render(<CloudWorkspacesPage />);
+      const wrapper = await render(<CloudWorkspacesPageInner />);
       expect(wrapper.queryByTestId("noWorkspacePermissionsBanner")).not.toBeInTheDocument();
     });
 
@@ -103,7 +103,7 @@ describe("CloudWorkspacesPage", () => {
           { permissionType: "organization_editor", userId: "123", permissionId: "2", organizationId: "456" },
         ],
       });
-      const wrapper = await render(<CloudWorkspacesPage />);
+      const wrapper = await render(<CloudWorkspacesPageInner />);
       expect(wrapper.queryByTestId("noWorkspacePermissionsBanner")).not.toBeInTheDocument();
     });
   });

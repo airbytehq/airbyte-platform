@@ -7,6 +7,8 @@ package io.airbyte.config.secrets.persistence
 import com.amazonaws.secretsmanager.caching.SecretCache
 import com.amazonaws.services.secretsmanager.AWSSecretsManager
 import com.amazonaws.services.secretsmanager.model.CreateSecretResult
+import com.amazonaws.services.secretsmanager.model.DeleteSecretRequest
+import com.amazonaws.services.secretsmanager.model.DeleteSecretResult
 import com.amazonaws.services.secretsmanager.model.DescribeSecretResult
 import com.amazonaws.services.secretsmanager.model.GetSecretValueResult
 import com.amazonaws.services.secretsmanager.model.ResourceNotFoundException
@@ -173,5 +175,27 @@ class AwsSecretManagerPersistenceTest {
     persistence.write(coordinate, secret)
 
     verify { mockAwsClient.updateSecret(any()) }
+  }
+
+  @Test
+  fun `test deleting a secret via the client deletes the secret`() {
+    val secret = "secret value"
+    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val mockClient: AwsClient = mockk()
+    val mockCache: AwsCache = mockk()
+    val mockAwsCache: SecretCache = mockk()
+    val mockAwsClient: AWSSecretsManager = mockk()
+    val persistence = AwsSecretManagerPersistence(mockClient, mockCache)
+    every { mockAwsCache.getSecretString(any()) } returns secret
+    every { mockAwsClient.deleteSecret(any()) } returns mockk<DeleteSecretResult>()
+    every { mockCache.cache } returns mockAwsCache
+    every { mockClient.client } returns mockAwsClient
+    every { mockClient.serializedConfig } returns null
+    every { mockClient.kmsKeyArn } returns null
+    every { mockClient.tags } returns emptyMap()
+
+    persistence.delete(coordinate)
+
+    verify { mockAwsClient.deleteSecret(any<DeleteSecretRequest>()) }
   }
 }

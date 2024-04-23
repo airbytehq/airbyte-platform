@@ -2,7 +2,6 @@ import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
-import { Icon } from "components/ui/Icon";
 
 import { useGetConnectorsOutOfDate, useUpdateAllConnectors } from "hooks/services/useConnector";
 
@@ -30,13 +29,7 @@ const UpgradeAllButton: React.FC<UpdateAllButtonProps> = ({ connectorType }) => 
   };
 
   return (
-    <Button
-      size="xs"
-      onClick={handleUpdateAllConnectors}
-      isLoading={isLoading}
-      disabled={!hasNewVersion}
-      icon={<Icon type="reset" />}
-    >
+    <Button size="xs" onClick={handleUpdateAllConnectors} isLoading={isLoading} disabled={!hasNewVersion} icon="reset">
       <FormattedMessage id="admin.upgradeAll" />
     </Button>
   );

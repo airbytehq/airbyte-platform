@@ -9,14 +9,16 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { Form, FormControl } from "components/forms";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
-import { FlexContainer } from "components/ui/Flex";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { LoginFormErrorCodes } from "packages/cloud/services/auth/types";
@@ -53,7 +55,11 @@ export const LoginPage: React.FC = () => {
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
   const [searchParams] = useSearchParams();
+  const [keycloakAuthEnabledLocalStorage] = useLocalStorage("airbyte_keycloak-auth-ui", true);
+  const keycloakAuthEnabledExperiment = useExperiment("authPage.keycloak", true);
+  const keycloakAuthEnabled = keycloakAuthEnabledExperiment || keycloakAuthEnabledLocalStorage;
   const loginRedirectString = searchParams.get("loginRedirect");
+  const isAcceptingInvitation = loginRedirectString?.includes("accept-invite");
 
   const navigate = useNavigate();
 
@@ -96,56 +102,66 @@ export const LoginPage: React.FC = () => {
   return (
     <FlexContainer direction="column" gap="xl" className={styles.container}>
       <HeadTitle titles={[{ id: "login.login" }]} />
-      <Heading as="h1" size="xl" color="blue">
-        <FormattedMessage id="login.loginTitle" />
-      </Heading>
+      <FlexItem>
+        <Heading as="h1" size="xl" color="blue">
+          <FormattedMessage id={isAcceptingInvitation ? "login.acceptInvite" : "login.loginTitle"} />
+        </Heading>
+        {isAcceptingInvitation && (
+          <Box pt="md">
+            <Heading as="h2" size="md" color="darkBlue">
+              <FormattedMessage id="login.acceptInvite.subtitle" />
+            </Heading>
+          </Box>
+        )}
+      </FlexItem>
 
       {loginWithOAuth && (
         <>
-          <OAuthLogin loginWithOAuth={loginWithOAuth} />
-          <Separator />
+          <OAuthLogin loginWithOAuth={loginWithOAuth} type="login" />
+          {!keycloakAuthEnabled && <Separator />}
         </>
       )}
+      {!keycloakAuthEnabled && (
+        <Form<LoginPageFormValues>
+          defaultValues={{
+            email: "",
+            password: "",
+          }}
+          schema={LoginPageValidationSchema}
+          onSubmit={onSubmit}
+          onError={onError}
+        >
+          <FormControl
+            name="email"
+            fieldType="input"
+            type="text"
+            label={formatMessage({ id: "login.yourEmail" })}
+            placeholder={formatMessage({ id: "login.yourEmail.placeholder" })}
+            autoComplete="email"
+            data-testid="login.email"
+          />
+          <FormControl
+            name="password"
+            fieldType="input"
+            type="password"
+            label={formatMessage({ id: "login.yourPassword" })}
+            placeholder={formatMessage({ id: "login.yourPassword.placeholder" })}
+            autoComplete="current-password"
+            data-testid="login.password"
+          />
 
-      <Form<LoginPageFormValues>
-        defaultValues={{
-          email: "",
-          password: "",
-        }}
-        schema={LoginPageValidationSchema}
-        onSubmit={onSubmit}
-        onError={onError}
-      >
-        <FormControl
-          name="email"
-          fieldType="input"
-          type="text"
-          label={formatMessage({ id: "login.yourEmail" })}
-          placeholder={formatMessage({ id: "login.yourEmail.placeholder" })}
-          autoComplete="email"
-          data-testid="login.email"
-        />
-        <FormControl
-          name="password"
-          fieldType="input"
-          type="password"
-          label={formatMessage({ id: "login.yourPassword" })}
-          placeholder={formatMessage({ id: "login.yourPassword.placeholder" })}
-          autoComplete="current-password"
-          data-testid="login.password"
-        />
-
-        <Box mt="2xl">
-          <FlexContainer direction="row" justifyContent="space-between" alignItems="center">
-            <Text size="sm" color="grey300">
-              <Link to={resetPasswordTo} data-testid="reset-password-link">
-                <FormattedMessage id="login.forgotPassword" />
-              </Link>
-            </Text>
-            <LoginButton />
-          </FlexContainer>
-        </Box>
-      </Form>
+          <Box mt="2xl">
+            <FlexContainer direction="row" justifyContent="space-between" alignItems="center">
+              <Text size="sm" color="grey300">
+                <Link to={resetPasswordTo} data-testid="reset-password-link">
+                  <FormattedMessage id="login.forgotPassword" />
+                </Link>
+              </Text>
+              <LoginButton />
+            </FlexContainer>
+          </Box>
+        </Form>
+      )}
       <Disclaimer />
       <LoginSignupNavigation type="signup" />
     </FlexContainer>

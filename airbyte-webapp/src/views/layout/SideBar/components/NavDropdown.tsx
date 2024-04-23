@@ -1,11 +1,12 @@
-import { DropdownMenu, DropdownMenuOptionType, DropdownMenuOptions } from "components/ui/DropdownMenu";
+import { DropdownMenu, DropdownMenuOptions, DropdownMenuOptionType } from "components/ui/DropdownMenu";
+import { IconProps } from "components/ui/Icon";
 
 import { NavItem } from "./NavItem";
 
 interface NavDropdownProps {
   options: DropdownMenuOptions;
   label: React.ReactNode;
-  icon: React.ReactNode;
+  icon: IconProps["type"];
   onChange?: (data: DropdownMenuOptionType) => false | void;
   buttonTestId?: string;
 }

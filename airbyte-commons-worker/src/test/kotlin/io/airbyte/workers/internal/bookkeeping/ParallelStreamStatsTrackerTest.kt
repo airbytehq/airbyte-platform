@@ -15,6 +15,7 @@ import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.AirbyteGlobalState
+import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteRecordMessage
 import io.airbyte.protocol.models.AirbyteStateMessage
 import io.airbyte.protocol.models.AirbyteStateStats
@@ -23,12 +24,15 @@ import io.airbyte.protocol.models.AirbyteStreamState
 import io.airbyte.protocol.models.StreamDescriptor
 import io.airbyte.workers.context.ReplicationFeatureFlags
 import io.airbyte.workers.exception.InvalidChecksumException
+import io.airbyte.workers.models.StateWithId
 import io.airbyte.workers.test_utils.AirbyteMessageUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
@@ -529,7 +533,7 @@ class ParallelStreamStatsTrackerTest {
   @Test
   fun testNoStatsForNullStreamAreReturned() {
     // Checking for LegacyStates
-    val legacyState = AirbyteMessageUtils.createStateMessage(1337).state
+    val legacyState = StateWithId.attachIdToStateMessageFromSource(AirbyteMessageUtils.createStateMessage(1337)).state
 
     statsTracker.updateSourceStatesStats(legacyState)
     statsTracker.updateDestinationStateStats(legacyState)
@@ -545,7 +549,7 @@ class ParallelStreamStatsTrackerTest {
     Assertions.assertTrue(statsTracker.getStreamToCommittedBytes().isEmpty())
 
     // Checking for GlobalStates
-    val globalState = AirbyteMessageUtils.createGlobalStateMessage(1337).state
+    val globalState = createGlobalState(1337)
 
     statsTracker.updateSourceStatesStats(globalState)
     statsTracker.updateDestinationStateStats(globalState)
@@ -560,23 +564,31 @@ class ParallelStreamStatsTrackerTest {
     val namespace = "namespace"
     val recordCount = 10
     val stateMessage1 =
-      AirbyteStateMessage()
-        .withStream(
-          AirbyteStreamState()
-            .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
-            .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
-        )
-        .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
-        .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
+      StateWithId.attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
+          AirbyteStateMessage()
+            .withStream(
+              AirbyteStreamState()
+                .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
+                .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
+            )
+            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
+        ),
+      )
     val stateMessage2 =
-      AirbyteStateMessage()
-        .withStream(
-          AirbyteStreamState()
-            .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
-            .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
-        )
-        .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
-        .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
+      StateWithId.attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
+          AirbyteStateMessage()
+            .withStream(
+              AirbyteStreamState()
+                .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
+                .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
+            )
+            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
+        ),
+      )
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
@@ -585,12 +597,12 @@ class ParallelStreamStatsTrackerTest {
     trackRecords(recordCount, name, namespace)
 
     // First assert that the checksums match
-    statsTracker.updateSourceStatesStats(stateMessage1)
+    statsTracker.updateSourceStatesStats(stateMessage1.state)
 
     trackRecords(recordCount - 2, name, namespace)
 
     Assertions.assertThrows(InvalidChecksumException::class.java) {
-      statsTracker.updateSourceStatesStats(stateMessage2)
+      statsTracker.updateSourceStatesStats(stateMessage2.state)
     }
   }
 
@@ -600,25 +612,33 @@ class ParallelStreamStatsTrackerTest {
     val namespace = "namespace"
     val recordCount = 10
     val stateMessage1 =
-      AirbyteStateMessage()
-        .withStream(
-          AirbyteStreamState()
-            .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
-            .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
-        )
-        .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
-        .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
-        .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
+      StateWithId.attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
+          AirbyteStateMessage()
+            .withStream(
+              AirbyteStreamState()
+                .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
+                .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
+            )
+            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
+        ),
+      )
     val stateMessage2 =
-      AirbyteStateMessage()
-        .withStream(
-          AirbyteStreamState()
-            .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
-            .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
-        )
-        .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble() - 2))
-        .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
-        .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
+      StateWithId.attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
+          AirbyteStateMessage()
+            .withStream(
+              AirbyteStreamState()
+                .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
+                .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
+            )
+            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble() - 2))
+            .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
+        ),
+      )
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
@@ -627,15 +647,15 @@ class ParallelStreamStatsTrackerTest {
     trackRecords(recordCount, name, namespace)
 
     // First assert that the checksums match
-    statsTracker.updateSourceStatesStats(stateMessage1)
-    statsTracker.updateDestinationStateStats(stateMessage1)
+    statsTracker.updateSourceStatesStats(stateMessage1.state)
+    statsTracker.updateDestinationStateStats(stateMessage1.state)
 
     trackRecords(recordCount - 2, name, namespace)
 
-    statsTracker.updateSourceStatesStats(stateMessage2)
+    statsTracker.updateSourceStatesStats(stateMessage2.state)
 
     Assertions.assertThrows(InvalidChecksumException::class.java) {
-      statsTracker.updateDestinationStateStats(stateMessage2)
+      statsTracker.updateDestinationStateStats(stateMessage2.state)
     }
   }
 
@@ -645,25 +665,33 @@ class ParallelStreamStatsTrackerTest {
     val namespace = "namespace"
     val recordCount = 10
     val stateMessage1 =
-      AirbyteStateMessage()
-        .withStream(
-          AirbyteStreamState()
-            .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
-            .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
-        )
-        .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
-        .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
-        .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
+      StateWithId.attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
+          AirbyteStateMessage()
+            .withStream(
+              AirbyteStreamState()
+                .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
+                .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
+            )
+            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
+        ),
+      )
     val stateMessage2 =
-      AirbyteStateMessage()
-        .withStream(
-          AirbyteStreamState()
-            .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
-            .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
-        )
-        .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
-        .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
-        .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
+      StateWithId.attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
+          AirbyteStateMessage()
+            .withStream(
+              AirbyteStreamState()
+                .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
+                .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
+            )
+            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
+        ),
+      )
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
@@ -672,15 +700,15 @@ class ParallelStreamStatsTrackerTest {
     trackRecords(recordCount, name, namespace)
 
     // First assert that the checksums match
-    statsTracker.updateSourceStatesStats(stateMessage1)
-    statsTracker.updateDestinationStateStats(stateMessage1)
+    statsTracker.updateSourceStatesStats(stateMessage1.state)
+    statsTracker.updateDestinationStateStats(stateMessage1.state)
 
     trackRecords(recordCount, name, namespace)
-    statsTracker.updateSourceStatesStats(stateMessage2)
+    statsTracker.updateSourceStatesStats(stateMessage2.state)
 
     Assertions.assertThrows(InvalidChecksumException::class.java) {
-      stateMessage2.sourceStats.recordCount = (recordCount - 2).toDouble()
-      statsTracker.updateDestinationStateStats(stateMessage2)
+      stateMessage2.state.sourceStats.recordCount = (recordCount - 2).toDouble()
+      statsTracker.updateDestinationStateStats(stateMessage2.state)
     }
   }
 
@@ -690,25 +718,33 @@ class ParallelStreamStatsTrackerTest {
     val namespace = "namespace"
     val recordCount = 10
     val stateMessage1 =
-      AirbyteStateMessage()
-        .withStream(
-          AirbyteStreamState()
-            .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
-            .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
-        )
-        .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
-        .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
-        .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
+      StateWithId.attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
+          AirbyteStateMessage()
+            .withStream(
+              AirbyteStreamState()
+                .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
+                .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
+            )
+            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
+        ),
+      )
     val stateMessage2 =
-      AirbyteStateMessage()
-        .withStream(
-          AirbyteStreamState()
-            .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
-            .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
-        )
-        .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
-        .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
-        .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
+      StateWithId.attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
+          AirbyteStateMessage()
+            .withStream(
+              AirbyteStreamState()
+                .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
+                .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
+            )
+            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
+        ),
+      )
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
@@ -717,17 +753,55 @@ class ParallelStreamStatsTrackerTest {
     assertDoesNotThrow {
       trackRecords(recordCount, name, namespace)
       // First assert that the checksums match
-      statsTracker.updateSourceStatesStats(stateMessage1)
-      statsTracker.updateDestinationStateStats(stateMessage1)
+      statsTracker.updateSourceStatesStats(stateMessage1.state)
+      statsTracker.updateDestinationStateStats(stateMessage1.state)
 
       trackRecords(recordCount, name, namespace)
-      statsTracker.updateSourceStatesStats(stateMessage2)
-      statsTracker.updateDestinationStateStats(stateMessage2)
+      statsTracker.updateSourceStatesStats(stateMessage2.state)
+      statsTracker.updateDestinationStateStats(stateMessage2.state)
     }
   }
 
   @Test
   internal fun `test that no exception is raised when the state message checksum comparison is disabled due to collisions`() {
+    val name = "name"
+    val namespace = "namespace"
+    val recordCount = 10
+    val stateMessage1 =
+      StateWithId.attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
+          AirbyteStateMessage()
+            .withStream(
+              AirbyteStreamState()
+                .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
+                .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
+            )
+            .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+            .withType(AirbyteStateMessage.AirbyteStateType.STREAM),
+        ),
+      )
+
+    val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
+    every { replicationFeatureFlags.failOnInvalidChecksum } returns true
+    statsTracker.setReplicationFeatureFlags(replicationFeatureFlags)
+
+    assertDoesNotThrow {
+      trackRecords(recordCount, name, namespace)
+      // First assert that the checksums match
+      statsTracker.updateSourceStatesStats(stateMessage1.state)
+
+      trackRecords(recordCount, name, namespace)
+      statsTracker.updateSourceStatesStats(stateMessage1.state)
+
+      statsTracker.updateDestinationStateStats(stateMessage1.state)
+      statsTracker.updateDestinationStateStats(stateMessage1.state)
+    }
+    assertFalse(statsTracker.isChecksumValidationEnabled())
+  }
+
+  @Test
+  internal fun `test that hash collision doesnt happen when same state messages arrive`() {
     val name = "name"
     val namespace = "namespace"
     val recordCount = 10
@@ -741,6 +815,23 @@ class ParallelStreamStatsTrackerTest {
         .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
         .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
         .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
+    val copyOfStateMessage1 =
+      AirbyteStateMessage()
+        .withStream(
+          AirbyteStreamState()
+            .withStreamDescriptor(StreamDescriptor().withName(name).withNamespace(namespace))
+            .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
+        )
+        .withSourceStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+        .withDestinationStats(AirbyteStateStats().withRecordCount(recordCount.toDouble()))
+        .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
+
+    assertEquals(stateMessage1, copyOfStateMessage1)
+    val state = StateWithId.attachIdToStateMessageFromSource(AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(stateMessage1)).state
+    val state2 =
+      StateWithId.attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(copyOfStateMessage1),
+      ).state
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
@@ -749,15 +840,15 @@ class ParallelStreamStatsTrackerTest {
     assertDoesNotThrow {
       trackRecords(recordCount, name, namespace)
       // First assert that the checksums match
-      statsTracker.updateSourceStatesStats(stateMessage1)
+      statsTracker.updateSourceStatesStats(state)
 
       trackRecords(recordCount, name, namespace)
-      statsTracker.updateSourceStatesStats(stateMessage1)
+      statsTracker.updateSourceStatesStats(state2)
 
-      statsTracker.updateDestinationStateStats(stateMessage1)
-      statsTracker.updateDestinationStateStats(stateMessage1)
+      statsTracker.updateDestinationStateStats(state)
+      statsTracker.updateDestinationStateStats(state2)
     }
-    assertFalse(statsTracker.isChecksumValidationEnabled())
+    assertTrue(statsTracker.isChecksumValidationEnabled())
   }
 
   @Test
@@ -769,43 +860,51 @@ class ParallelStreamStatsTrackerTest {
     val recordCountStream1 = 10
     val recordCountStream2 = 15
     val stateMessage1 =
-      AirbyteStateMessage()
-        .withGlobal(
-          AirbyteGlobalState()
-            .withSharedState(Jsons.jsonNode(mapOf("wal" to 10)))
-            .withStreamStates(
-              listOf(
-                AirbyteStreamState()
-                  .withStreamDescriptor(StreamDescriptor().withName(name1).withNamespace(namespace1))
-                  .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
-                AirbyteStreamState()
-                  .withStreamDescriptor(StreamDescriptor().withName(name2).withNamespace(namespace2))
-                  .withStreamState(Jsons.jsonNode(mapOf("id" to 15))),
-              ),
-            ),
-        )
-        .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
-        .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
-        .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
+      StateWithId.attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
+          AirbyteStateMessage()
+            .withGlobal(
+              AirbyteGlobalState()
+                .withSharedState(Jsons.jsonNode(mapOf("wal" to 10)))
+                .withStreamStates(
+                  listOf(
+                    AirbyteStreamState()
+                      .withStreamDescriptor(StreamDescriptor().withName(name1).withNamespace(namespace1))
+                      .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
+                    AirbyteStreamState()
+                      .withStreamDescriptor(StreamDescriptor().withName(name2).withNamespace(namespace2))
+                      .withStreamState(Jsons.jsonNode(mapOf("id" to 15))),
+                  ),
+                ),
+            )
+            .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL),
+        ),
+      )
     val stateMessage2 =
-      AirbyteStateMessage()
-        .withGlobal(
-          AirbyteGlobalState()
-            .withSharedState(Jsons.jsonNode(mapOf("wal" to 20)))
-            .withStreamStates(
-              listOf(
-                AirbyteStreamState()
-                  .withStreamDescriptor(StreamDescriptor().withName(name1).withNamespace(namespace1))
-                  .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
-                AirbyteStreamState()
-                  .withStreamDescriptor(StreamDescriptor().withName(name2).withNamespace(namespace2))
-                  .withStreamState(Jsons.jsonNode(mapOf("id" to 30))),
-              ),
-            ),
-        )
-        .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
-        .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
-        .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
+      StateWithId.attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
+          AirbyteStateMessage()
+            .withGlobal(
+              AirbyteGlobalState()
+                .withSharedState(Jsons.jsonNode(mapOf("wal" to 20)))
+                .withStreamStates(
+                  listOf(
+                    AirbyteStreamState()
+                      .withStreamDescriptor(StreamDescriptor().withName(name1).withNamespace(namespace1))
+                      .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
+                    AirbyteStreamState()
+                      .withStreamDescriptor(StreamDescriptor().withName(name2).withNamespace(namespace2))
+                      .withStreamState(Jsons.jsonNode(mapOf("id" to 30))),
+                  ),
+                ),
+            )
+            .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL),
+        ),
+      )
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
@@ -816,13 +915,13 @@ class ParallelStreamStatsTrackerTest {
       trackRecords(recordCountStream2, name2, namespace2)
 
       // First assert that the checksums match
-      statsTracker.updateSourceStatesStats(stateMessage1)
-      statsTracker.updateDestinationStateStats(stateMessage1)
+      statsTracker.updateSourceStatesStats(stateMessage1.state)
+      statsTracker.updateDestinationStateStats(stateMessage1.state)
 
       trackRecords(recordCountStream1, name1, namespace1)
       trackRecords(recordCountStream2, name2, namespace2)
-      statsTracker.updateSourceStatesStats(stateMessage2)
-      statsTracker.updateDestinationStateStats(stateMessage2)
+      statsTracker.updateSourceStatesStats(stateMessage2.state)
+      statsTracker.updateDestinationStateStats(stateMessage2.state)
     }
   }
 
@@ -835,43 +934,51 @@ class ParallelStreamStatsTrackerTest {
     val recordCountStream1 = 10
     val recordCountStream2 = 15
     val stateMessage1 =
-      AirbyteStateMessage()
-        .withGlobal(
-          AirbyteGlobalState()
-            .withSharedState(Jsons.jsonNode(mapOf("wal" to 10)))
-            .withStreamStates(
-              listOf(
-                AirbyteStreamState()
-                  .withStreamDescriptor(StreamDescriptor().withName(name1).withNamespace(namespace1))
-                  .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
-                AirbyteStreamState()
-                  .withStreamDescriptor(StreamDescriptor().withName(name2).withNamespace(namespace2))
-                  .withStreamState(Jsons.jsonNode(mapOf("id" to 15))),
-              ),
-            ),
-        )
-        .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
-        .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
-        .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
+      StateWithId.attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
+          AirbyteStateMessage()
+            .withGlobal(
+              AirbyteGlobalState()
+                .withSharedState(Jsons.jsonNode(mapOf("wal" to 10)))
+                .withStreamStates(
+                  listOf(
+                    AirbyteStreamState()
+                      .withStreamDescriptor(StreamDescriptor().withName(name1).withNamespace(namespace1))
+                      .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
+                    AirbyteStreamState()
+                      .withStreamDescriptor(StreamDescriptor().withName(name2).withNamespace(namespace2))
+                      .withStreamState(Jsons.jsonNode(mapOf("id" to 15))),
+                  ),
+                ),
+            )
+            .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL),
+        ),
+      )
     val stateMessage2 =
-      AirbyteStateMessage()
-        .withGlobal(
-          AirbyteGlobalState()
-            .withSharedState(Jsons.jsonNode(mapOf("wal" to 20)))
-            .withStreamStates(
-              listOf(
-                AirbyteStreamState()
-                  .withStreamDescriptor(StreamDescriptor().withName(name1).withNamespace(namespace1))
-                  .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
-                AirbyteStreamState()
-                  .withStreamDescriptor(StreamDescriptor().withName(name2).withNamespace(namespace2))
-                  .withStreamState(Jsons.jsonNode(mapOf("id" to 30))),
-              ),
-            ),
-        )
-        .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
-        .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
-        .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
+      StateWithId.attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
+          AirbyteStateMessage()
+            .withGlobal(
+              AirbyteGlobalState()
+                .withSharedState(Jsons.jsonNode(mapOf("wal" to 20)))
+                .withStreamStates(
+                  listOf(
+                    AirbyteStreamState()
+                      .withStreamDescriptor(StreamDescriptor().withName(name1).withNamespace(namespace1))
+                      .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
+                    AirbyteStreamState()
+                      .withStreamDescriptor(StreamDescriptor().withName(name2).withNamespace(namespace2))
+                      .withStreamState(Jsons.jsonNode(mapOf("id" to 30))),
+                  ),
+                ),
+            )
+            .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL),
+        ),
+      )
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
@@ -882,14 +989,14 @@ class ParallelStreamStatsTrackerTest {
       trackRecords(recordCountStream2, name2, namespace2)
 
       // First assert that the checksums match
-      statsTracker.updateSourceStatesStats(stateMessage1)
+      statsTracker.updateSourceStatesStats(stateMessage1.state)
 
       trackRecords(recordCountStream1, name1, namespace1)
       trackRecords(recordCountStream2, name2, namespace2)
-      statsTracker.updateSourceStatesStats(stateMessage2)
+      statsTracker.updateSourceStatesStats(stateMessage2.state)
 
-      statsTracker.updateDestinationStateStats(stateMessage1)
-      statsTracker.updateDestinationStateStats(stateMessage2)
+      statsTracker.updateDestinationStateStats(stateMessage1.state)
+      statsTracker.updateDestinationStateStats(stateMessage2.state)
     }
   }
 
@@ -902,24 +1009,28 @@ class ParallelStreamStatsTrackerTest {
     val recordCountStream1 = 10
     val recordCountStream2 = 15
     val stateMessage1 =
-      AirbyteStateMessage()
-        .withGlobal(
-          AirbyteGlobalState()
-            .withSharedState(Jsons.jsonNode(mapOf("wal" to 10)))
-            .withStreamStates(
-              listOf(
-                AirbyteStreamState()
-                  .withStreamDescriptor(StreamDescriptor().withName(name1).withNamespace(namespace1))
-                  .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
-                AirbyteStreamState()
-                  .withStreamDescriptor(StreamDescriptor().withName(name2).withNamespace(namespace2))
-                  .withStreamState(Jsons.jsonNode(mapOf("id" to 15))),
-              ),
-            ),
-        )
-        .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
-        .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
-        .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
+      StateWithId.attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
+          AirbyteStateMessage()
+            .withGlobal(
+              AirbyteGlobalState()
+                .withSharedState(Jsons.jsonNode(mapOf("wal" to 10)))
+                .withStreamStates(
+                  listOf(
+                    AirbyteStreamState()
+                      .withStreamDescriptor(StreamDescriptor().withName(name1).withNamespace(namespace1))
+                      .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
+                    AirbyteStreamState()
+                      .withStreamDescriptor(StreamDescriptor().withName(name2).withNamespace(namespace2))
+                      .withStreamState(Jsons.jsonNode(mapOf("id" to 15))),
+                  ),
+                ),
+            )
+            .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL),
+        ),
+      )
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
@@ -930,14 +1041,14 @@ class ParallelStreamStatsTrackerTest {
       trackRecords(recordCountStream2, name2, namespace2)
 
       // First assert that the checksums match
-      statsTracker.updateSourceStatesStats(stateMessage1)
+      statsTracker.updateSourceStatesStats(stateMessage1.state)
 
       trackRecords(recordCountStream1, name1, namespace1)
       trackRecords(recordCountStream2, name2, namespace2)
-      statsTracker.updateSourceStatesStats(stateMessage1)
+      statsTracker.updateSourceStatesStats(stateMessage1.state)
 
-      statsTracker.updateDestinationStateStats(stateMessage1)
-      statsTracker.updateDestinationStateStats(stateMessage1)
+      statsTracker.updateDestinationStateStats(stateMessage1.state)
+      statsTracker.updateDestinationStateStats(stateMessage1.state)
     }
 
     assertFalse(statsTracker.isChecksumValidationEnabled())
@@ -952,43 +1063,51 @@ class ParallelStreamStatsTrackerTest {
     val recordCountStream1 = 10
     val recordCountStream2 = 15
     val stateMessage1 =
-      AirbyteStateMessage()
-        .withGlobal(
-          AirbyteGlobalState()
-            .withSharedState(Jsons.jsonNode(mapOf("wal" to 10)))
-            .withStreamStates(
-              listOf(
-                AirbyteStreamState()
-                  .withStreamDescriptor(StreamDescriptor().withName(name1).withNamespace(namespace1))
-                  .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
-                AirbyteStreamState()
-                  .withStreamDescriptor(StreamDescriptor().withName(name2).withNamespace(namespace2))
-                  .withStreamState(Jsons.jsonNode(mapOf("id" to 15))),
-              ),
-            ),
-        )
-        .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
-        .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
-        .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
+      StateWithId.attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
+          AirbyteStateMessage()
+            .withGlobal(
+              AirbyteGlobalState()
+                .withSharedState(Jsons.jsonNode(mapOf("wal" to 10)))
+                .withStreamStates(
+                  listOf(
+                    AirbyteStreamState()
+                      .withStreamDescriptor(StreamDescriptor().withName(name1).withNamespace(namespace1))
+                      .withStreamState(Jsons.jsonNode(mapOf("id" to 10))),
+                    AirbyteStreamState()
+                      .withStreamDescriptor(StreamDescriptor().withName(name2).withNamespace(namespace2))
+                      .withStreamState(Jsons.jsonNode(mapOf("id" to 15))),
+                  ),
+                ),
+            )
+            .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL),
+        ),
+      )
     val stateMessage2 =
-      AirbyteStateMessage()
-        .withGlobal(
-          AirbyteGlobalState()
-            .withSharedState(Jsons.jsonNode(mapOf("wal" to 20)))
-            .withStreamStates(
-              listOf(
-                AirbyteStreamState()
-                  .withStreamDescriptor(StreamDescriptor().withName(name1).withNamespace(namespace1))
-                  .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
-                AirbyteStreamState()
-                  .withStreamDescriptor(StreamDescriptor().withName(name2).withNamespace(namespace2))
-                  .withStreamState(Jsons.jsonNode(mapOf("id" to 30))),
-              ),
-            ),
-        )
-        .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
-        .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
-        .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
+      StateWithId.attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
+          AirbyteStateMessage()
+            .withGlobal(
+              AirbyteGlobalState()
+                .withSharedState(Jsons.jsonNode(mapOf("wal" to 20)))
+                .withStreamStates(
+                  listOf(
+                    AirbyteStreamState()
+                      .withStreamDescriptor(StreamDescriptor().withName(name1).withNamespace(namespace1))
+                      .withStreamState(Jsons.jsonNode(mapOf("id" to 20))),
+                    AirbyteStreamState()
+                      .withStreamDescriptor(StreamDescriptor().withName(name2).withNamespace(namespace2))
+                      .withStreamState(Jsons.jsonNode(mapOf("id" to 30))),
+                  ),
+                ),
+            )
+            .withSourceStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            .withDestinationStats(AirbyteStateStats().withRecordCount((recordCountStream1 + recordCountStream2).toDouble()))
+            .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL),
+        ),
+      )
 
     val replicationFeatureFlags: ReplicationFeatureFlags = mockk()
     every { replicationFeatureFlags.failOnInvalidChecksum } returns true
@@ -998,15 +1117,15 @@ class ParallelStreamStatsTrackerTest {
     trackRecords(recordCountStream2, name2, namespace2)
 
     // First assert that the checksums match
-    statsTracker.updateSourceStatesStats(stateMessage1)
-    statsTracker.updateDestinationStateStats(stateMessage1)
+    statsTracker.updateSourceStatesStats(stateMessage1.state)
+    statsTracker.updateDestinationStateStats(stateMessage1.state)
 
     trackRecords(recordCountStream1, name1, namespace1)
     trackRecords(recordCountStream2, name2, namespace2)
-    statsTracker.updateSourceStatesStats(stateMessage2)
+    statsTracker.updateSourceStatesStats(stateMessage2.state)
     Assertions.assertThrows(InvalidChecksumException::class.java) {
-      stateMessage2.sourceStats.recordCount = recordCountStream1.toDouble()
-      statsTracker.updateDestinationStateStats(stateMessage2)
+      stateMessage2.state.sourceStats.recordCount = recordCountStream1.toDouble()
+      statsTracker.updateDestinationStateStats(stateMessage2.state)
     }
   }
 
@@ -1145,7 +1264,11 @@ class ParallelStreamStatsTrackerTest {
     streamName: String,
     value: Int,
   ): AirbyteStateMessage {
-    return AirbyteMessageUtils.createStreamStateMessage(streamName, value)
+    return StateWithId.attachIdToStateMessageFromSource(
+      AirbyteMessage()
+        .withType(AirbyteMessage.Type.STATE)
+        .withState(AirbyteMessageUtils.createStreamStateMessage(streamName, value)),
+    ).state
   }
 
   private fun createGlobalState(
@@ -1156,8 +1279,17 @@ class ParallelStreamStatsTrackerTest {
     for (streamName in streamNames) {
       streamStates.add(AirbyteMessageUtils.createStreamState(streamName).withStreamState(Jsons.jsonNode(value)))
     }
-    return AirbyteStateMessage().withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
-      .withGlobal(AirbyteGlobalState().withStreamStates(streamStates))
+    return StateWithId.attachIdToStateMessageFromSource(
+      AirbyteMessage()
+        .withType(AirbyteMessage.Type.STATE)
+        .withState(
+          AirbyteStateMessage().withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
+            .withGlobal(
+              AirbyteGlobalState()
+                .withStreamStates(streamStates),
+            ),
+        ),
+    ).state
   }
 
   private fun trackRecords(

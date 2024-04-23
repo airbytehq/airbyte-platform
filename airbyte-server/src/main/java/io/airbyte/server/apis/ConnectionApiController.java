@@ -12,6 +12,8 @@ import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.ConnectionApi;
 import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
+import io.airbyte.api.model.generated.BooleanRead;
+import io.airbyte.api.model.generated.ConnectionAndJobIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
 import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
@@ -25,6 +27,7 @@ import io.airbyte.api.model.generated.ConnectionStatusRead;
 import io.airbyte.api.model.generated.ConnectionStatusesRequestBody;
 import io.airbyte.api.model.generated.ConnectionStreamHistoryReadItem;
 import io.airbyte.api.model.generated.ConnectionStreamHistoryRequestBody;
+import io.airbyte.api.model.generated.ConnectionStreamRefreshRequestBody;
 import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionSyncProgressReadItem;
 import io.airbyte.api.model.generated.ConnectionSyncResultRead;
@@ -41,6 +44,7 @@ import io.airbyte.commons.server.handlers.ConnectionsHandler;
 import io.airbyte.commons.server.handlers.MatchSearchHandler;
 import io.airbyte.commons.server.handlers.OperationsHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
+import io.airbyte.commons.server.handlers.StreamRefreshesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.commons.temporal.scheduling.RouterService;
@@ -54,11 +58,14 @@ import io.micronaut.http.annotation.Status;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
+import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
 @Controller("/api/v1/connections")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
+@Slf4j
 public class ConnectionApiController implements ConnectionApi {
 
   private final ConnectionsHandler connectionsHandler;
@@ -67,19 +74,22 @@ public class ConnectionApiController implements ConnectionApi {
   private final RouterService routerService;
   private final StreamStatusesHandler streamStatusesHandler;
   private final MatchSearchHandler matchSearchHandler;
+  private final StreamRefreshesHandler streamRefreshesHandler;
 
   public ConnectionApiController(final ConnectionsHandler connectionsHandler,
                                  final OperationsHandler operationsHandler,
                                  final SchedulerHandler schedulerHandler,
                                  final RouterService routerService,
                                  final StreamStatusesHandler streamStatusesHandler,
-                                 final MatchSearchHandler matchSearchHandler) {
+                                 final MatchSearchHandler matchSearchHandler,
+                                 final StreamRefreshesHandler streamRefreshesHandler) {
     this.connectionsHandler = connectionsHandler;
     this.operationsHandler = operationsHandler;
     this.schedulerHandler = schedulerHandler;
     this.routerService = routerService;
     this.streamStatusesHandler = streamStatusesHandler;
     this.matchSearchHandler = matchSearchHandler;
+    this.streamRefreshesHandler = streamRefreshesHandler;
   }
 
   @Override
@@ -124,6 +134,16 @@ public class ConnectionApiController implements ConnectionApi {
     return ApiHelper.execute(() -> connectionsHandler.listConnectionsForWorkspaces(listConnectionsForWorkspacesRequestBody));
   }
 
+  @Post(uri = "/refresh")
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @Override
+  public BooleanRead refreshConnectionStream(@Body final ConnectionStreamRefreshRequestBody connectionStreamRefreshRequestBody) {
+    return ApiHelper.execute(() -> new BooleanRead().value(streamRefreshesHandler.createRefreshesForConnection(
+        connectionStreamRefreshRequestBody.getConnectionId(),
+        connectionStreamRefreshRequestBody.getStreams() != null ? connectionStreamRefreshRequestBody.getStreams() : new ArrayList<>())));
+  }
+
   @Override
   @Post(uri = "/list_all")
   @Secured({WORKSPACE_READER, ORGANIZATION_READER})
@@ -160,6 +180,15 @@ public class ConnectionApiController implements ConnectionApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public List<ConnectionDataHistoryReadItem> getConnectionDataHistory(@Body final ConnectionDataHistoryRequestBody connectionDataHistoryRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.getConnectionDataHistory(connectionDataHistoryRequestBody));
+  }
+
+  @Override
+  @Post(uri = "/getForJob")
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public ConnectionRead getConnectionForJob(@Body final ConnectionAndJobIdRequestBody connectionAndJobIdRequestBody) {
+    return ApiHelper.execute(
+        () -> connectionsHandler.getConnectionForJob(connectionAndJobIdRequestBody.getConnectionId(), connectionAndJobIdRequestBody.getJobId()));
   }
 
   @Override
@@ -231,6 +260,22 @@ public class ConnectionApiController implements ConnectionApi {
   @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   public JobInfoRead resetConnectionStream(@Body final ConnectionStreamRequestBody connectionStreamRequestBody) {
+    return ApiHelper.execute(() -> schedulerHandler.resetConnectionStream(connectionStreamRequestBody));
+  }
+
+  @Override
+  @Post(uri = "/clear")
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  public JobInfoRead clearConnection(@Body ConnectionIdRequestBody connectionIdRequestBody) {
+    return ApiHelper.execute(() -> schedulerHandler.resetConnection(connectionIdRequestBody));
+  }
+
+  @Override
+  @Post(uri = "/clear/stream")
+  @Secured({WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
+  @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  public JobInfoRead clearConnectionStream(@Body ConnectionStreamRequestBody connectionStreamRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.resetConnectionStream(connectionStreamRequestBody));
   }
 

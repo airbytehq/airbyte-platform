@@ -1,4 +1,2 @@
-export * from "./CommonRequestError";
-export * from "./VersionError";
-export * from "./LogsRequestError";
-export * from "./ServerError";
+export * from "./ErrorWithJobInfo";
+export * from "./HttpError";

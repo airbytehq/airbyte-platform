@@ -6,8 +6,6 @@ import ReactDatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useIntl } from "react-intl";
 
-import { Icon } from "components/ui/Icon";
-
 import { CustomHeader } from "./CustomHeader";
 import styles from "./DatePicker.module.scss";
 import {
@@ -55,7 +53,7 @@ const DatepickerButton = React.forwardRef<HTMLButtonElement, DatePickerButtonTri
       ref={ref}
       type="button"
       variant="clear"
-      icon={<Icon type="calendar" />}
+      icon="calendar"
     />
   );
 });

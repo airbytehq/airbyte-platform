@@ -17,7 +17,6 @@ import io.airbyte.commons.temporal.annotations.TemporalActivityStub;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.NormalizationSummary;
-import io.airbyte.config.OperatorDbtInput;
 import io.airbyte.config.OperatorWebhookInput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOperation;
@@ -137,7 +136,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
             LOGGER.info("Not Running Normalization Container for connection {}, attempt id {}, because it ran in destination",
                 connectionId, jobRunConfig.getAttemptId());
           } else {
-            final NormalizationInput normalizationInput = generateNormalizationInput(syncInput, syncOutput);
+            final NormalizationInput normalizationInput = generateNormalizationInput(syncInput);
             final NormalizationSummary normalizationSummary =
                 normalizationActivity.normalize(jobRunConfig, destinationLauncherConfig, normalizationInput);
             syncOutput = syncOutput.withNormalizationSummary(normalizationSummary);
@@ -145,16 +144,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                 new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
           }
         } else if (standardSyncOperation.getOperatorType() == OperatorType.DBT) {
-          final OperatorDbtInput operatorDbtInput = new OperatorDbtInput()
-              .withConnectionId(syncInput.getConnectionId())
-              .withWorkspaceId(syncInput.getWorkspaceId())
-              .withDestinationConfiguration(syncInput.getDestinationConfiguration())
-              .withOperatorDbt(standardSyncOperation.getOperatorDbt())
-              .withConnectionContext(syncInput.getConnectionContext());
-
-          dbtTransformationActivity.run(jobRunConfig, destinationLauncherConfig,
-              syncInput.getSyncResourceRequirements() != null ? syncInput.getSyncResourceRequirements().getOrchestrator() : null,
-              operatorDbtInput);
+          LOGGER.info("skipping custom dbt. deprecated.");
         } else if (standardSyncOperation.getOperatorType() == OperatorType.WEBHOOK) {
           LOGGER.info("running webhook operation");
           LOGGER.debug("webhook operation input: {}", standardSyncOperation);
@@ -187,10 +177,9 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     return syncOutput;
   }
 
-  private NormalizationInput generateNormalizationInput(final StandardSyncInput syncInput,
-                                                        final StandardSyncOutput syncOutput) {
+  private NormalizationInput generateNormalizationInput(final StandardSyncInput syncInput) {
     return normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(syncInput.getDestinationConfiguration(),
-        syncOutput.getOutputCatalog(),
+        null,
         syncInput.getWorkspaceId(),
         syncInput.getConnectionId(),
         syncInput.getConnectionContext().getOrganizationId());

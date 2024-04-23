@@ -11,7 +11,7 @@ class CloudLogsClientTest {
 
   @Test
   void testGcs() {
-    final var bucket = new StorageBucketConfig("log", "state", "workload");
+    final var bucket = new StorageBucketConfig("log", "state", "workload", "payload");
     final var config = new GcsStorageConfig(bucket, "path/to/google/secret");
     new DefaultGcsClientFactory(config);
   }

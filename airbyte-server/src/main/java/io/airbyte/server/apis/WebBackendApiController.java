@@ -25,13 +25,13 @@ import io.airbyte.api.model.generated.WebBackendGeographiesListResult;
 import io.airbyte.api.model.generated.WebBackendWorkspaceState;
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult;
 import io.airbyte.commons.lang.MoreBooleans;
+import io.airbyte.commons.server.authorization.ApiAuthorizationHelper;
+import io.airbyte.commons.server.authorization.Scope;
 import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler;
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler;
 import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.airbyte.metrics.lib.TracingHelper;
-import io.airbyte.server.apis.publicapi.authorization.AirbyteApiAuthorizationHelper;
-import io.airbyte.server.apis.publicapi.authorization.Scope;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
@@ -47,16 +47,16 @@ public class WebBackendApiController implements WebBackendApi {
   private final WebBackendConnectionsHandler webBackendConnectionsHandler;
   private final WebBackendGeographiesHandler webBackendGeographiesHandler;
   private final WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler;
-  private final AirbyteApiAuthorizationHelper airbyteApiAuthorizationHelper;
+  private final ApiAuthorizationHelper apiAuthorizationHelper;
 
   public WebBackendApiController(final WebBackendConnectionsHandler webBackendConnectionsHandler,
                                  final WebBackendGeographiesHandler webBackendGeographiesHandler,
                                  final WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler,
-                                 final AirbyteApiAuthorizationHelper airbyteApiAuthorizationHelper) {
+                                 final ApiAuthorizationHelper apiAuthorizationHelper) {
     this.webBackendConnectionsHandler = webBackendConnectionsHandler;
     this.webBackendGeographiesHandler = webBackendGeographiesHandler;
     this.webBackendCheckUpdatesHandler = webBackendCheckUpdatesHandler;
-    this.airbyteApiAuthorizationHelper = airbyteApiAuthorizationHelper;
+    this.apiAuthorizationHelper = apiAuthorizationHelper;
   }
 
   @Post("/state/get_type")
@@ -99,7 +99,7 @@ public class WebBackendApiController implements WebBackendApi {
       if (MoreBooleans.isTruthy(webBackendConnectionRequestBody.getWithRefreshedCatalog())) {
         // only allow refresh catalog if the user is at least a workspace editor or
         // organization editor for the connection's workspace
-        airbyteApiAuthorizationHelper.checkWorkspacePermissions(
+        apiAuthorizationHelper.checkWorkspacePermissions(
             webBackendConnectionRequestBody.getConnectionId().toString(),
             Scope.CONNECTION,
             Set.of(PermissionType.WORKSPACE_EDITOR, PermissionType.ORGANIZATION_EDITOR));

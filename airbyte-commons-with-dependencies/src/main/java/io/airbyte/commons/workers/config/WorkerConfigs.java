@@ -19,7 +19,7 @@ import java.util.Optional;
  */
 public class WorkerConfigs {
 
-  private static final String DEFAULT_JOB_KUBE_BUSYBOX_IMAGE = "busybox:1.35";
+  public static final String DEFAULT_JOB_KUBE_BUSYBOX_IMAGE = "busybox:1.35";
   private static final String DEFAULT_JOB_KUBE_CURL_IMAGE = "curlimages/curl:7.87.0";
   private static final String DEFAULT_JOB_KUBE_SOCAT_IMAGE = "alpine/socat:1.7.4.4-r0";
   private final Configs.WorkerEnvironment workerEnvironment;

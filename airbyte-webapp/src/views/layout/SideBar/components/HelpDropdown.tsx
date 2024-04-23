@@ -54,7 +54,7 @@ export const HelpDropdown: React.FC = () => {
         },
       ]}
       label={<FormattedMessage id="sidebar.help" />}
-      icon={<Icon type="question" />}
+      icon="question"
     />
   );
 };

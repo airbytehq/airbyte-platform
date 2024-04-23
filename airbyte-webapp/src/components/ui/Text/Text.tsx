@@ -12,10 +12,12 @@ type TextColor =
   | "green600"
   | "red"
   | "red200"
+  | "red400"
   | "grey600"
   | "grey400"
   | "grey500"
-  | "blue";
+  | "blue"
+  | "yellow600";
 type TextElementType = "p" | "span" | "div";
 type TextHTMLElement = HTMLParagraphElement | HTMLSpanElement | HTMLDivElement;
 
@@ -50,10 +52,12 @@ const colors: Record<TextColor, string> = {
   grey300: styles.grey300,
   red: styles.red,
   red200: styles.red200,
+  red400: styles.red400,
   blue: styles.blue,
   grey400: styles.grey400,
   grey500: styles.grey500,
   grey600: styles.grey600,
+  yellow600: styles.yellow600,
 };
 
 const textAlignments: Record<TextAlignment, string> = {

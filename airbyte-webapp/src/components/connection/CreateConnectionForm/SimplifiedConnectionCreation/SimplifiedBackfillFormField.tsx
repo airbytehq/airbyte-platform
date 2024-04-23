@@ -13,7 +13,7 @@ import { Text } from "components/ui/Text";
 import { SchemaChangeBackfillPreference } from "core/api/types/AirbyteClient";
 import { isCloudApp } from "core/utils/app";
 
-export const SimplifiedBackfillFormField = () => {
+export const SimplifiedBackfillFormField: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
   const { control } = useFormContext<FormConnectionFormValues>();
   const [controlId] = useState(`input-control-${uniqueId()}`);
 
@@ -53,6 +53,7 @@ export const SimplifiedBackfillFormField = () => {
               );
             }}
             size="lg"
+            disabled={disabled}
           />
         </FormFieldLayout>
       )}

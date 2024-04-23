@@ -4,17 +4,17 @@ import { InitialBadge } from "components/InitialBadge/InitialBadge";
 import { Badge } from "components/ui/Badge";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
-export const UserCell: React.FC<{ name?: string; email: string; isCurrentUser: boolean; userId: string }> = ({
+export const UserCell: React.FC<{ name?: string; email: string; isCurrentUser: boolean; uniqueId: string }> = ({
   name,
   email,
-  userId,
+  uniqueId,
   isCurrentUser,
 }) => {
   const nameToDisplay = name || email;
 
   return (
     <FlexContainer direction="row" alignItems="center">
-      <InitialBadge inputString={nameToDisplay} hashingString={userId} />
+      <InitialBadge inputString={nameToDisplay} hashingString={uniqueId} />
       <FlexContainer direction="column" gap="xs">
         <FlexContainer direction="row">
           <Text size="sm">{nameToDisplay}</Text>

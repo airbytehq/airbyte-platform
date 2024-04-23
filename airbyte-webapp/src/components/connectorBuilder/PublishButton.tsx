@@ -2,13 +2,9 @@ import { useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
-import { Icon } from "components/ui/Icon";
 import { Tooltip } from "components/ui/Tooltip";
 
-import {
-  useConnectorBuilderFormState,
-  useConnectorBuilderTestRead,
-} from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./PublishButton.module.scss";
 import { PublishModal } from "./PublishModal";
@@ -20,10 +16,9 @@ interface PublishButtonProps {
 
 export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
   const [isModalOpen, setModalOpen] = useState(false);
-  const { currentProject, yamlIsValid, formValuesValid, permission } = useConnectorBuilderFormState();
+  const { currentProject, yamlIsValid, formValuesValid, permission, resolveErrorMessage } =
+    useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
-
-  const { resolveErrorMessage } = useConnectorBuilderTestRead();
 
   let buttonDisabled = permission === "readOnly";
   let showWarningIcon = false;
@@ -57,7 +52,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
       }}
       disabled={buttonDisabled}
       data-testid="publish-button"
-      icon={showWarningIcon ? <Icon type="warningOutline" /> : undefined}
+      {...(showWarningIcon && { type: "warningOutline" })}
       type="button"
     >
       <FormattedMessage

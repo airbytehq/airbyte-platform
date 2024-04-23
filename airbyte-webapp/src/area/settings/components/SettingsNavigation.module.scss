@@ -1,0 +1,66 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.settingsNavigation {
+  width: 200px;
+  padding: variables.$spacing-xl;
+
+  &__blockTitle {
+    text-transform: uppercase;
+  }
+
+  &__link,
+  &__button {
+    border: none;
+    text-align: left;
+    background: none;
+    width: 100%;
+    padding: 6px 8px 7px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-style: normal;
+    font-weight: 500;
+    font-size: 12px;
+    line-height: normal;
+    color: colors.$grey-500;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: variables.$spacing-md;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &:hover {
+      color: colors.$grey-500;
+    }
+  }
+
+  &__linkIcon,
+  &__buttonIcon {
+    flex: 0 0 auto;
+  }
+
+  &__link--active {
+    color: colors.$blue;
+    background-color: colors.$blue-50;
+    font-weight: bold;
+
+    &:hover {
+      color: colors.$blue;
+    }
+  }
+
+  &__counter {
+    min-width: 12px;
+    height: 12px;
+    padding: 0 3px;
+    text-align: center;
+    border-radius: 15px;
+    background: colors.$red;
+    font-size: 8px;
+    line-height: 13px;
+    color: colors.$foreground;
+    display: inline-block;
+  }
+}
