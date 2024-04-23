@@ -243,6 +243,7 @@ Helm chart to deploy airbyte
 | postgresql.postgresqlDatabase | string | `"db-airbyte"` | Airbyte Postgresql database |
 | postgresql.postgresqlPassword | string | `"airbyte"` | Airbyte Postgresql password |
 | postgresql.postgresqlUsername | string | `"airbyte"` | Airbyte Postgresql username |
+| postgresql.storage.volumeClaimValue | string | `500Mi` |  |
 | postgresql.tolerations | list | `[]` | Tolerations for postgresql pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ |
 | server.affinity | object | `{}` | Affinity and anti-affinity for server pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity |
 | server.containerSecurityContext | object | `{}` | Security context for the container |
